@@ -645,18 +645,26 @@ const CartPage = {
         }
         const ev = item && item.event ? item.event : {};
         const rangeStart = ev.range_start_date || ev.date;
-        const rangeEnd = ev.range_end_date || (ev.end_date && ev.end_date !== ev.date ? ev.end_date : null);
-        // Only render the "X - Y Lună YYYY" range format when the two
-        // endpoints actually differ. Some events arrive with
-        // duration_mode='range' even though range_start_date ===
-        // range_end_date (single-day concerts mis-tagged at import), and
-        // the previous OR-on-duration-mode branch produced "2 - 2 Iul
-        // 2026" on the cart row. Now the format is purely date-driven:
-        // distinct start + end → range; equal or missing end → single
-        // date.
-        const isRange = rangeStart && rangeEnd && rangeEnd !== rangeStart;
+        const rangeEnd = ev.range_end_date || ev.end_date || null;
+        // Range format ("X - Y Lună YYYY") only when start and end fall
+        // on DIFFERENT calendar days. The previous strict !== check
+        // compared the full ISO strings, so a single-day concert with
+        // start_time 20:30 and end_time 22:00 (date 2026-07-02 for
+        // both) was treated as a range and the cart printed "2 - 2 Iul
+        // 2026". Normalize each side to its YYYY-MM-DD slice before the
+        // comparison.
+        const dayOf = (v) => {
+            if (!v) return null;
+            if (typeof v === 'string') return v.substring(0, 10);
+            // Date / Carbon-from-server case: format as YYYY-MM-DD.
+            try { return new Date(v).toISOString().substring(0, 10); }
+            catch (e) { return null; }
+        };
+        const startDay = dayOf(rangeStart);
+        const endDay = dayOf(rangeEnd);
+        const isRange = startDay && endDay && startDay !== endDay;
         if (isRange) {
-            return this._formatRange(rangeStart, rangeEnd);
+            return this._formatRange(startDay, endDay);
         }
         return fallbackDate ? AmbiletUtils.formatDate(fallbackDate, 'medium') : '';
     },
