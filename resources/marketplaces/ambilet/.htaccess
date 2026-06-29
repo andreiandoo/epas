@@ -53,6 +53,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^evenimente/?$ events.php [L,QSA]
 
+# Handle today's events landing - /azi
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^azi/?$ azi.php [L,QSA]
+
 # Handle past events listing - /evenimente-trecute
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
