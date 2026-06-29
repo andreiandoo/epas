@@ -200,7 +200,19 @@ class MarketplaceEventsController extends BaseController
                 default => $dateParam,
             };
 
-            $today = now()->startOfDay();
+            // Anchor "today" on the LOCAL calendar day (Bucharest), not the
+            // server's UTC day. Server runs UTC; at 00:39 local Bucharest
+            // (UTC+3) it's still the previous day in UTC, so now()->today
+            // skipped to "tomorrow" and an event scheduled for the local
+            // day landed under /maine. events.event_date is stored as a
+            // bare DATE (no timezone), entered by organizers as the
+            // Bucharest date — comparing against a Bucharest-anchored
+            // Carbon stays correct year-round, DST included.
+            //
+            // TODO once we onboard a non-RO marketplace, lift the TZ from
+            // marketplace_clients.timezone (already wired in MarketplaceTz)
+            // and pass it through instead of hardcoding Europe/Bucharest.
+            $today = \Carbon\Carbon::now('Europe/Bucharest')->startOfDay();
             switch ($dateParam) {
                 case 'today':
                     $query->whereDate('event_date', $today);
