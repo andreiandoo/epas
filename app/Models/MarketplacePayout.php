@@ -183,28 +183,6 @@ class MarketplacePayout extends Model
             $rowGross = $r['qty'] * $r['unit_price'] + ($isOnTop ? $r['qty'] * $r['commission_per_ticket'] : 0);
             $rowComm = $r['qty'] * $r['commission_per_ticket'];
             $rowDiscount = (float) ($r['discount'] ?? 0);
-
-            // Auto-derive discount from tiers when the explicit discount
-            // field is zero/absent. unit_price is the CATALOG reference;
-            // tiers carry the REAL paid prices per bucket (presale rows
-            // typically have a lower per-ticket price than catalog). The
-            // gap is the real promo/discount applied across the slice —
-            // without this, the snapshot's `net` stays at catalog × qty
-            // and the PDF row 1a drifts away from computeOrganizerNetFromTickets
-            // (the bug surfaced on payout 3114: net showed 16,140 catalog
-            // but the organizer was actually owed 13,840).
-            if ($rowDiscount < 0.01 && !empty($r['tiers']) && (float) $r['unit_price'] > 0 && (int) $r['qty'] > 0) {
-                $tierSum = 0.0;
-                foreach ($r['tiers'] as $tier) {
-                    $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
-                }
-                $catalogSum = (float) $r['qty'] * (float) $r['unit_price'];
-                $derived = round($catalogSum - $tierSum, 2);
-                if ($derived > 0.01) {
-                    $rowDiscount = $derived;
-                }
-            }
-
             $rowNet = $rowGross - $rowComm - $rowDiscount;
 
             $breakdown[] = [
@@ -404,15 +382,42 @@ class MarketplacePayout extends Model
             $remaining = max(0, $totalSold - $paid);
             if ($remaining <= 0) continue;
 
-            // unit_price stays CATALOG so the operator sees the real ticket
-            // price in the repeater. The discount actually applied across
-            // all sold tickets of this type lives in its own 'discount' field
-            // — surfaced to the form's discount_amount input by the action
-            // that fills the repeater. Sum of catalog × qty − discount =
-            // effective collected.
-            $catalogPrice = (float) ($tt->sale_price_cents
+            // unit_price comes from the ACTUAL ticket data (tickets.price
+            // per row), not from the current ticket_type catalog. The two
+            // diverge when operators edit a ticket_type's price AFTER
+            // sales were made (e.g. presale 90 → bumped to regular 110
+            // post-sale): tt->sale_price_cents now reads 110, but the 60
+            // tickets sold during presale still have tickets.price=90.
+            // Using ttCatalog as unit_price would inflate the snapshot's
+            // gross/net by the post-sale increase × qty and produce a
+            // fictional "discount" gap against the tiers (payout 3114
+            // incident: 16,140 stored net vs 13,840 real net = +2,300
+            // RON of phantom value).
+            //
+            // We use max(catalog across sorted_tickets) which:
+            //   - matches tt catalog when nothing was bumped (common case)
+            //   - reflects the highest paid price in the slice when ticket_type
+            //     was edited post-sale (uses real ticket data)
+            //   - preserves real promo signal: tickets.price stores the
+            //     original catalog at sale time + meta.discount_amount
+            //     stores the per-ticket cut, so the latest-N catalog max
+            //     IS the catalog at sale time, and discount accumulates
+            //     correctly through the (catalog - effective) loop below
+            $ttCatalog = (float) ($tt->sale_price_cents
                 ? $tt->sale_price_cents / 100
                 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+            $catalogFromTickets = 0.0;
+            $latestTickets = (array) ($agg['sorted_tickets'] ?? []);
+            $latestPicked = !empty($latestTickets) && $remaining > 0
+                ? array_slice($latestTickets, 0, $remaining)
+                : [];
+            foreach ($latestPicked as $pickedTicket) {
+                $cat = (float) ($pickedTicket['catalog'] ?? 0);
+                if ($cat > $catalogFromTickets) {
+                    $catalogFromTickets = $cat;
+                }
+            }
+            $catalogPrice = $catalogFromTickets > 0 ? $catalogFromTickets : $ttCatalog;
 
             // Per-row discount = Σ(catalog − effective) over the LATEST
             // `remaining` tickets of this type. Skips the first `paid`
@@ -429,17 +434,20 @@ class MarketplacePayout extends Model
             // under-attributed when effective_total had per-ticket misses.
             // Reading directly from the sorted-latest tickets removes both
             // problems.
+            // Discount = Σ(catalog − effective) over the LATEST `remaining`
+            // tickets (reusing $latestPicked from the unit_price pass above).
+            // Now uses the SAME catalog source as unit_price — the per-ticket
+            // sorted_tickets.catalog — so the (catalog − effective) signal
+            // ONLY captures real promos (meta.discount_amount populated). A
+            // post-sale ticket_type price bump no longer manufactures a
+            // discount the customer never received.
             $discountForRemaining = 0.0;
-            $latestTickets = (array) ($agg['sorted_tickets'] ?? []);
-            if (!empty($latestTickets) && $remaining > 0) {
-                $picked = array_slice($latestTickets, 0, $remaining);
-                foreach ($picked as $pickedTicket) {
-                    $effective = (float) ($pickedTicket['effective'] ?? 0);
-                    $cat = (float) ($pickedTicket['catalog'] ?? 0);
-                    $discountForRemaining += max(0.0, $cat - $effective);
-                }
-                $discountForRemaining = round($discountForRemaining, 2);
+            foreach ($latestPicked as $pickedTicket) {
+                $effective = (float) ($pickedTicket['effective'] ?? 0);
+                $cat = (float) ($pickedTicket['catalog'] ?? 0);
+                $discountForRemaining += max(0.0, $cat - $effective);
             }
+            $discountForRemaining = round($discountForRemaining, 2);
 
             // Commission on CATALOG — marketplace earns its full fee even
             // when the promo cuts the customer-paying side; the discount
@@ -945,41 +953,14 @@ class MarketplacePayout extends Model
             $discount = $hasPerRowDiscount
                 ? (float) ($item['discount'] ?? 0)
                 : (float) ($legacyDiscountsByType[$ttId] ?? 0);
-
-            // Tier-derived discount fallback. When the snapshot stored
-            // discount=0 but the row's tiers carry a price below catalog
-            // (presale promos), the gap IS the discount applied — see the
-            // matching logic in MarketplaceTaxTemplate::enrichBreakdownWith-
-            // LiveDiscount. Without this, the UI "Acest decont" cards stay
-            // at catalog overstatement while the PDF (which uses the enrich
-            // pass) shows the corrected net (payout 3114 incident).
-            if ($discount < 0.01 && !empty($item['tiers']) && $qty > 0 && $price > 0) {
-                $tierSum = 0.0;
-                foreach ((array) $item['tiers'] as $tier) {
-                    $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
-                }
-                $derived = round($price * $qty - $tierSum, 2);
-                if ($derived > 0.01) {
-                    $discount = $derived;
-                }
-            }
-
             $extras = (float) ($item['extras'] ?? 0);
 
             // Prefer the snapshot's stored net when present (post-discount/extras);
             // else compute uniformly. The blade uses the same precedence so
             // "Net final" in the table matches what we add here.
-            // EXCEPT when we just derived a non-zero discount from tiers above
-            // but the stored net was the catalog × qty − commission (zero-disc
-            // formula). In that case the stored net contradicts the tier-derived
-            // discount; recompute so the totals stay coherent.
-            $storedNet = isset($item['net']) ? (float) $item['net'] : null;
-            $computedNet = $gross - $commission - $discount - $extras;
-            if ($storedNet !== null && abs($storedNet - $computedNet) > 0.01 && $discount > 0.01) {
-                $net = $computedNet;
-            } else {
-                $net = $storedNet ?? $computedNet;
-            }
+            $net = isset($item['net'])
+                ? (float) $item['net']
+                : ($gross - $commission - $discount - $extras);
 
             $result[$bucket]['gross'] += $gross;
             $result[$bucket]['commission'] += $commission;

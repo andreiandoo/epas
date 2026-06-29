@@ -2047,56 +2047,7 @@ class MarketplaceTaxTemplate extends Model
             return $breakdown;
         }
 
-        // Pass 1 — derive per-row discount from tiers when missing or zero.
-        // tiers store the real per-ticket prices that were paid in this
-        // slice; unit_price stays at catalog. For presale rows where the
-        // promo cut the per-ticket price (catalog 90 → effective 70), the
-        // tier-sum is BELOW catalog × qty by exactly the discount applied.
-        //
-        // The old logic bailed on any breakdown that carried a `discount`
-        // key — including modern snapshots that wrote `discount=0` while
-        // tiers clearly show a gap (payout 3114 incident: discount=0
-        // everywhere but tier-derived discount totals 2,300 RON, exactly
-        // the amount by which 1a was overstated against computeOrganizerNet).
-        $changedFromTiers = false;
-        foreach ($breakdown as &$row) {
-            $existing = (float) ($row['discount'] ?? 0);
-            if ($existing >= 0.01) {
-                continue; // explicit non-zero — trust as authoritative
-            }
-            $tiers = $row['tiers'] ?? null;
-            if (!is_array($tiers) || empty($tiers)) {
-                continue;
-            }
-            $qty = (int) ($row['quantity'] ?? $row['qty'] ?? 0);
-            $catalog = (float) ($row['unit_price'] ?? $row['price'] ?? 0);
-            if ($qty <= 0 || $catalog <= 0) {
-                continue;
-            }
-            $tierSum = 0.0;
-            foreach ($tiers as $tier) {
-                $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
-            }
-            $derived = round($catalog * $qty - $tierSum, 2);
-            if ($derived > 0.01) {
-                $row['discount'] = $derived;
-                // Recompute net so downstream consumers (grand totals,
-                // PDF reconciliation Pass 4) see a consistent row.
-                $existingNet = $row['net'] ?? null;
-                $rowGross = (float) ($row['gross'] ?? ($catalog * $qty));
-                $rowComm = (float) ($row['commission_amount'] ?? 0);
-                $row['net'] = round($rowGross - $rowComm - $derived, 2);
-                $changedFromTiers = true;
-            }
-        }
-        unset($row);
-
-        if ($changedFromTiers) {
-            return $breakdown;
-        }
-
-        // Modern breakdowns already carry per-row discount — bail when
-        // the tier-derivation above found nothing to fix.
+        // Modern breakdowns already carry per-row discount — bail.
         $firstRow = $breakdown[0] ?? [];
         if (array_key_exists('discount', $firstRow)) {
             return $breakdown;
