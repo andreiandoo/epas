@@ -646,8 +646,16 @@ const CartPage = {
         const ev = item && item.event ? item.event : {};
         const rangeStart = ev.range_start_date || ev.date;
         const rangeEnd = ev.range_end_date || (ev.end_date && ev.end_date !== ev.date ? ev.end_date : null);
-        const isRange = ev.duration_mode === 'range' || (rangeEnd && rangeEnd !== rangeStart);
-        if (isRange && rangeStart && rangeEnd) {
+        // Only render the "X - Y Lună YYYY" range format when the two
+        // endpoints actually differ. Some events arrive with
+        // duration_mode='range' even though range_start_date ===
+        // range_end_date (single-day concerts mis-tagged at import), and
+        // the previous OR-on-duration-mode branch produced "2 - 2 Iul
+        // 2026" on the cart row. Now the format is purely date-driven:
+        // distinct start + end → range; equal or missing end → single
+        // date.
+        const isRange = rangeStart && rangeEnd && rangeEnd !== rangeStart;
+        if (isRange) {
             return this._formatRange(rangeStart, rangeEnd);
         }
         return fallbackDate ? AmbiletUtils.formatDate(fallbackDate, 'medium') : '';
