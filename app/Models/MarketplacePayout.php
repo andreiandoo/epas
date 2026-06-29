@@ -649,11 +649,81 @@ class MarketplacePayout extends Model
         // $this->refund_amount on top of that was a DOUBLE deduction
         // — payout 3052 came out as 2,920 instead of 3,200 (refund
         // nominal 280 subtracted twice).
+        //
+        // The exception: refund items whose commission_refunded=true.
+        // Those represent refunds where the marketplace gave back the
+        // commission too, meaning the ORGANIZER absorbs the face-value
+        // loss (current Ambilet model). Subtract those, but ONLY those.
+        // Refunds with commission_refunded=false are tracked for
+        // reporting but don't deduct from the organizer's payment.
         $organizerNet = $this->computeOrganizerNetFromTickets();
         $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
+        $deductibleRefund = $this->deductible_refund_amount;
 
-        $this->finalNetAmountCache = max(0.0, round($organizerNet - $advance, 2));
+        $this->finalNetAmountCache = max(0.0, round($organizerNet - $advance - $deductibleRefund, 2));
         return $this->finalNetAmountCache;
+    }
+
+    /**
+     * Refund face-value sum that DOES come out of the organizer's slice.
+     * Reads MarketplaceRefundItem rows whose refund_request is linked to
+     * this payout AND commission_refunded=true (marketplace handed back
+     * the commission too → organizer eats the face value).
+     */
+    public function getDeductibleRefundAmountAttribute(): float
+    {
+        $sum = (float) \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) {
+                $q->where('marketplace_payout_id', $this->id)
+                  ->whereIn('status', ['refunded', 'partially_refunded']);
+            })
+            ->where('status', 'refunded')
+            ->where('commission_refunded', true)
+            ->sum('face_value');
+        return round($sum, 2);
+    }
+
+    /**
+     * Refund face-value sum that's tracked for reporting but does NOT
+     * deduct from the organizer's payment (commission_refunded=false).
+     * The marketplace covers the customer side from its own commission
+     * pool; the organizer's slice stays whole.
+     *
+     * Legacy fallback: when the payout pre-dates per-item refund tracking
+     * (no MarketplaceRefundItem rows linked) but `refund_amount` is
+     * populated on the payout row, we surface that as informational so
+     * the existing decont still shows the refund — and crucially, doesn't
+     * deduct it, matching the historic behavior the original final_net
+     * accessor encoded.
+     */
+    public function getInformationalRefundAmountAttribute(): float
+    {
+        $sum = (float) \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) {
+                $q->where('marketplace_payout_id', $this->id)
+                  ->whereIn('status', ['refunded', 'partially_refunded']);
+            })
+            ->where('status', 'refunded')
+            ->where('commission_refunded', false)
+            ->sum('face_value');
+
+        // Legacy fallback only when ZERO refund_items found at all.
+        if ($sum < 0.01) {
+            $itemsExist = \App\Models\MarketplaceRefundItem::query()
+                ->whereHas('refundRequest', function ($q) {
+                    $q->where('marketplace_payout_id', $this->id)
+                      ->whereIn('status', ['refunded', 'partially_refunded']);
+                })
+                ->exists();
+            if (!$itemsExist) {
+                $legacy = (float) ($this->refund_amount ?? 0);
+                if ($legacy > 0.01) {
+                    return round($legacy, 2);
+                }
+            }
+        }
+
+        return round($sum, 2);
     }
 
     /**

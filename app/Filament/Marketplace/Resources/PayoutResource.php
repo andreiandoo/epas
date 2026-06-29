@@ -335,18 +335,36 @@ class PayoutResource extends Resource
                                         $com = (float) ($totals['online']['commission'] + $totals['pos']['commission']);
                                         $disc = (float) ($totals['online']['discount'] + $totals['pos']['discount']);
                                         $extras = (float) ($totals['online']['extras'] + $totals['pos']['extras']);
-                                        $ticketNet = (float) ($totals['online']['net'] + $totals['pos']['net']);
-                                        $refund = (float) ($record->refund_amount ?? 0);
-                                        $finalNet = $ticketNet - $refund;
+
+                                        // Refund split: deductible items (commission_refunded=true)
+                                        // come out of the organizer's slice; informational items
+                                        // (commission_refunded=false) are tracked for reporting but
+                                        // the marketplace covers them out of its commission pool.
+                                        // final_net_amount accessor already subtracts the deductible
+                                        // part, so we don't double-deduct here.
+                                        $deductibleRefund = (float) $record->deductible_refund_amount;
+                                        $informationalRefund = (float) $record->informational_refund_amount;
+                                        $finalNet = (float) $record->final_net_amount;
 
                                         $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
-                                        $hasRefund = $refund > 0.01;
-                                        $cols = $hasRefund ? 5 : 4;
+                                        $hasDeductible = $deductibleRefund > 0.01;
+                                        $hasInformational = $informationalRefund > 0.01;
+                                        $extraCards = ($hasDeductible ? 1 : 0) + ($hasInformational ? 1 : 0);
+                                        $cols = 4 + $extraCards;
 
-                                        $refundCard = $hasRefund
+                                        $deductibleCard = $hasDeductible
                                             ? "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
-                                                . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări incluse</div>"
-                                                . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($refund)}</div>"
+                                                . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări deductibile</div>"
+                                                . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($deductibleRefund)}</div>"
+                                                . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>scad din net</div>"
+                                                . "</div>"
+                                            : '';
+
+                                        $informationalCard = $hasInformational
+                                            ? "<div style='padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;'>"
+                                                . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
+                                                . "<div style='font-size:16px;font-weight:700;color:#6b7280;'>{$fmt($informationalRefund)}</div>"
+                                                . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu scad din net</div>"
                                                 . "</div>"
                                             : '';
 
@@ -364,7 +382,8 @@ class PayoutResource extends Resource
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Discount + Extras</div>
                                                 <div style='font-size:16px;font-weight:700;color:#92400e;'>-{$fmt($disc + $extras)}</div>
                                             </div>
-                                            {$refundCard}
+                                            {$deductibleCard}
+                                            {$informationalCard}
                                             <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
                                                 <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Net de plată</div>
                                                 <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($finalNet)}</div>
