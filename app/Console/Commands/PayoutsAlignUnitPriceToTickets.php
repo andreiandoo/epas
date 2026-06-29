@@ -164,7 +164,16 @@ class PayoutsAlignUnitPriceToTickets extends Command
                 $aggregateStale = abs($storedGross - $newGrossTotalAgg) > 0.01
                     || abs($storedComm - $newCommTotal) > 0.01;
 
-                if (!$rowChanged && !$aggregateStale) {
+                // When --update-amount is on we also need to fire when only
+                // amount is stale (rows + aggregates already aligned by a
+                // previous run). Without this third check, calling the
+                // command a second time with --update-amount silently does
+                // nothing because aggregateStale is false.
+                $storedAmount = (float) ($p->amount ?? 0);
+                $proposedAmount = round($newNetTotal, 2);
+                $amountStale = $updateAmount && abs($storedAmount - $proposedAmount) > 0.01;
+
+                if (!$rowChanged && !$aggregateStale && !$amountStale) {
                     $unchanged++;
                     continue;
                 }
