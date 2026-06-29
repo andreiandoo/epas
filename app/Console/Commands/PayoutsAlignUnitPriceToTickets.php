@@ -112,12 +112,29 @@ class PayoutsAlignUnitPriceToTickets extends Command
                     }
 
                     // Only correct when tiers reveal a max BELOW current
-                    // unit_price. When tiers match or exceed unit_price,
-                    // the snapshot is already truthful — leave it alone.
+                    // unit_price AND no discount was previously captured.
+                    //
+                    // The discount=0 safety prevents double-subtraction on
+                    // rows where buildRemainingTicketsItems already detected
+                    // a real promo (tickets.price=catalog with
+                    // meta.discount_amount per ticket → discount populated
+                    // correctly; tier prices reflect effective paid). In
+                    // that case the snapshot is internally consistent — we
+                    // must NOT override unit_price, because subtracting
+                    // the same discount again would underpay by `discount`.
+                    //
+                    // The fix only fires for the "ticket_type edited
+                    // post-sale" pattern (payout 3114): tickets.price
+                    // stored as the lower paid amount, meta.discount_amount
+                    // absent, snapshot.discount=0, tier-max below current
+                    // ticket_type catalog. There the gap is real but
+                    // unrecorded — overriding unit_price to tier-max
+                    // brings the snapshot to ground truth.
+                    //
                     // Also guard against zero-tier rows (Invitatie 0×N
                     // would otherwise wipe the row's unit_price to 0
                     // and lose the type name attribution).
-                    if ($maxTier > 0 && $maxTier < $oldUnit - 0.005) {
+                    if ($maxTier > 0 && $maxTier < $oldUnit - 0.005 && $oldDisc < 0.005) {
                         // Commission scales with the new catalog basis.
                         // Per row config the rate isn't stored, so we
                         // back it out from the old (commission per ticket
