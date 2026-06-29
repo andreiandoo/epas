@@ -42,11 +42,15 @@ $navVenues = $navVenues ?? getFeaturedVenues();
 // Shows venue categories from marketplace admin
 $navVenueTypes = $navVenueTypes ?? getVenueCategories();
 
-// Quick links for events section - link to filtered events page
+// Quick links for events section — point at the three "when" landings
+// (/azi, /maine, /weekend) introduced in 2026-06. The old filter-based
+// quick links (Gratuite, Noi) are gone because the new tabbed landings
+// answer the same question — "ce găsesc acum" — without leaving
+// visitors on a generic filtered listing.
 $navQuickLinks = $navQuickLinks ?? [
-    ['name' => 'Weekend', 'slug' => 'evenimente?filter=weekend', 'icon' => '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'],
-    ['name' => 'Gratuite', 'slug' => 'evenimente?filter=gratuite', 'icon' => '<path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 3v12"/><path d="M12 3L8 7"/><path d="M12 3l4 4"/><rect x="2" y="7" width="20" height="5" rx="1"/>'],
-    ['name' => 'Noi', 'slug' => 'evenimente?filter=noi', 'icon' => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>']
+    ['name' => 'Azi', 'slug' => 'azi', 'icon' => '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'],
+    ['name' => 'Mâine', 'slug' => 'maine', 'icon' => '<path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/>'],
+    ['name' => 'Weekend', 'slug' => 'weekend', 'icon' => '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'],
 ];
 
 // ==================== APPLY CACHED COUNTS ====================
