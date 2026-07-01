@@ -118,6 +118,9 @@ class Settings extends Page
                 'mail_domain' => $smtp['domain'] ?? $settings['mail']['domain'] ?? '',
                 'mail_region' => $smtp['region'] ?? $settings['mail']['region'] ?? '',
 
+                // Transactional routing mode ('auto' | 'primary_only' | 'transactional_only')
+                'transactional_mode' => $marketplace->transactional_mode ?: 'auto',
+
                 // Transactional Mail Settings — second provider for the 14 transactional templates
                 'transactional_mail_driver' => $txSmtp['driver'] ?? '',
                 'transactional_mail_host' => $txSmtp['host'] ?? '',
@@ -667,6 +670,22 @@ class Settings extends Page
                         SC\Tabs\Tab::make('Emails')
                             ->icon('heroicon-o-envelope')
                             ->schema([
+                                SC\Section::make('Routare mailuri tranzacționale')
+                                    ->description('Alege prin ce provider pleacă toate mailurile tranzacționale (bilete, facturi, resetare parolă, alerte stoc, refunds, etc.). Pentru testarea comparativă Brevo vs SMTP propriu.')
+                                    ->icon('heroicon-o-arrows-right-left')
+                                    ->schema([
+                                        Forms\Components\Radio::make('transactional_mode')
+                                            ->label(false)
+                                            ->options([
+                                                'auto' => 'Automat (recomandat) — încearcă SMTP propriu, cu fallback la providerul primar dacă cel tranzacțional pică',
+                                                'primary_only' => 'Forțează providerul primar (Brevo) — pentru testare A/B',
+                                                'transactional_only' => 'Forțează SMTP propriu — fără fallback (surprinde erorile silențioase ale tranzacționalului)',
+                                            ])
+                                            ->default('auto')
+                                            ->required()
+                                            ->columnSpanFull(),
+                                    ])->columns(1),
+
                                 SC\Section::make('Email Configuration')
                                     ->description('Configure custom mail settings for sending emails. Leave empty to use platform default.')
                                     ->schema([
@@ -1082,6 +1101,16 @@ class Settings extends Page
         $update['settings'] = $settings;
         $update['smtp_settings'] = $currentSmtp;
         $update['transactional_smtp_settings'] = $currentTxSmtp;
+
+        // Transactional routing mode ('auto' | 'primary_only' | 'transactional_only').
+        // Only persist when the form actually submitted a valid value — a save
+        // from another tab may not carry the field and we don't want to
+        // silently reset the mode back to 'auto' on those.
+        if (isset($data['transactional_mode'])
+            && in_array($data['transactional_mode'], ['auto', 'primary_only', 'transactional_only'], true)
+        ) {
+            $update['transactional_mode'] = $data['transactional_mode'];
+        }
 
         $marketplace->update($update);
 

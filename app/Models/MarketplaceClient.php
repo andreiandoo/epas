@@ -56,6 +56,10 @@ class MarketplaceClient extends Model
         'language',
         'smtp_settings',
         'transactional_smtp_settings',
+        // Routing switch for transactional emails: 'auto' (try tx, fall
+        // back to primary), 'primary_only' (skip tx), 'transactional_only'
+        // (no fallback). Default 'auto' keeps historical behaviour.
+        'transactional_mode',
         'email_settings',
         'next_contract_number',
         'signature_image',
@@ -671,6 +675,22 @@ class MarketplaceClient extends Model
         return [];
     }
 
+    /**
+     * Routing switch consumed by sendTransactionalEmail:
+     *   'auto'                (default) — historical behaviour: try tx, fall back to primary
+     *   'primary_only'                  — skip tx entirely, send via primary (Brevo, testing)
+     *   'transactional_only'            — try tx only, no fallback (surface silent tx failures)
+     * Any unknown value collapses to 'auto' so a bad DB write can't
+     * silently break the send pipeline.
+     */
+    public function getTransactionalMode(): string
+    {
+        $mode = (string) ($this->transactional_mode ?? 'auto');
+        return in_array($mode, ['auto', 'primary_only', 'transactional_only'], true)
+            ? $mode
+            : 'auto';
+    }
+
     public function hasTransactionalMailConfigured(): bool
     {
         $mail = $this->getTransactionalMailSettings();
@@ -764,6 +784,7 @@ class MarketplaceClient extends Model
     public function sendTransactionalEmail(\Symfony\Component\Mime\Email $email): array
     {
         $errors = [];
+        $mode = $this->getTransactionalMode();
         $hasTransactional = $this->hasTransactionalMailConfigured();
         $hasPrimary = $this->hasMailConfigured();
 
@@ -776,7 +797,57 @@ class MarketplaceClient extends Model
             ];
         }
 
-        // Try transactional first when available
+        // Mode override: 'primary_only' → skip the transactional path and
+        // send directly via primary. Useful when the operator wants to
+        // confirm the Brevo (or any other primary) side still delivers
+        // without relying on the auto-fallback to hide upstream failures.
+        if ($mode === 'primary_only') {
+            if (!$hasPrimary) {
+                return [
+                    'success' => false,
+                    'message_id' => null,
+                    'transport_used' => 'none',
+                    'error' => "transactional_mode=primary_only but no primary provider configured",
+                ];
+            }
+            try {
+                $transport = $this->getMailTransport();
+                if (!$transport) {
+                    return [
+                        'success' => false,
+                        'message_id' => null,
+                        'transport_used' => 'none',
+                        'error' => 'primary_only: transport could not be created',
+                    ];
+                }
+                $sent = $transport->send($email);
+                return [
+                    'success' => true,
+                    'message_id' => $sent?->getMessageId(),
+                    'transport_used' => 'primary',
+                    'error' => null,
+                ];
+            } catch (\Throwable $e) {
+                try {
+                    \Log::channel('marketplace')->error('primary_only mail send failed', [
+                        'marketplace_client_id' => $this->id,
+                        'to' => $this->extractAddressForLog($email),
+                        'subject' => $email->getSubject(),
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (\Throwable $logEx) {
+                    // swallow
+                }
+                return [
+                    'success' => false,
+                    'message_id' => null,
+                    'transport_used' => 'none',
+                    'error' => 'primary_only: ' . $e->getMessage(),
+                ];
+            }
+        }
+
+        // Try transactional first when available (modes: 'auto', 'transactional_only')
         if ($hasTransactional) {
             try {
                 $transport = $this->getTransactionalMailTransport();
@@ -793,11 +864,12 @@ class MarketplaceClient extends Model
             } catch (\Throwable $e) {
                 $errors[] = 'transactional: ' . $e->getMessage();
                 try {
-                    \Log::channel('marketplace')->warning('Transactional mail failed, falling back to primary', [
+                    \Log::channel('marketplace')->warning('Transactional mail failed', [
                         'marketplace_client_id' => $this->id,
                         'to' => $this->extractAddressForLog($email),
                         'subject' => $email->getSubject(),
                         'error' => $e->getMessage(),
+                        'mode' => $mode,
                     ]);
                 } catch (\Throwable $logEx) {
                     // never let logging break the email pipeline
@@ -805,7 +877,19 @@ class MarketplaceClient extends Model
             }
         }
 
-        // Fallback to primary (or use primary directly when no transactional configured)
+        // Mode 'transactional_only' — never fall back, even if primary is
+        // configured. Surfaces silent transactional failures the operator
+        // would otherwise miss because auto-fallback covered for them.
+        if ($mode === 'transactional_only') {
+            return [
+                'success' => false,
+                'message_id' => null,
+                'transport_used' => 'none',
+                'error' => 'transactional_only: ' . (implode(' | ', $errors) ?: 'transactional not configured'),
+            ];
+        }
+
+        // Fallback to primary (mode 'auto' only reaches here)
         if ($hasPrimary) {
             try {
                 $transport = $this->getMailTransport();
