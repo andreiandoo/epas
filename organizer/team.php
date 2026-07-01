@@ -301,6 +301,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <option value="validation_tow">Operator validare tractări</option>
                         <option value="pos_cashier">Operator fix casă POS</option>
                         <option value="admin_mobile">Membru admin (scan + vânzare mobilă)</option>
+                        <option value="kiosk_selfcheckin">🖥 Tabletă auto-check-in (kiosk clienți)</option>
                     </select>
                     <p class="mt-1 text-[11px] text-muted">Determină ce ecran vede operatorul în aplicația mobilă când nu are turnetă activă.</p>
                 </div>
@@ -375,6 +376,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <option value="validation_tow">Operator validare tractări</option>
                         <option value="pos_cashier">Operator fix casă POS</option>
                         <option value="admin_mobile">Membru admin (scan + vânzare mobilă)</option>
+                        <option value="kiosk_selfcheckin">🖥 Tabletă auto-check-in (kiosk clienți)</option>
                     </select>
                     <p class="mt-1 text-[11px] text-muted">Determină ce ecran vede operatorul în aplicația mobilă când nu are turnetă activă.</p>
                 </div>
