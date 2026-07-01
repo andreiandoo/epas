@@ -34,6 +34,7 @@ class MarketplaceOrganizerTeamMember extends Model
         'validation_tow',     // operator validare tractari
         'pos_cashier',        // operator fix casa POS
         'admin_mobile',       // membru admin — scan + vanzare prin app mobila
+        'kiosk_selfcheckin',  // tableta self-service pentru clienti (auto-checkin)
     ];
 
     public const LEISURE_ROLE_LABELS = [
@@ -45,6 +46,7 @@ class MarketplaceOrganizerTeamMember extends Model
         'validation_tow'     => 'Operator validare tractări',
         'pos_cashier'        => 'Operator fix casă POS',
         'admin_mobile'       => 'Membru admin (scan + vânzare mobilă)',
+        'kiosk_selfcheckin'  => '🖥 Tabletă auto-check-in (kiosk clienți)',
     ];
 
     protected $hidden = [
