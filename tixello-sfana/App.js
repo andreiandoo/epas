@@ -18,6 +18,7 @@ import PontoonOperatorScreen from './src/screens/PontoonOperatorScreen';
 import POSScreen from './src/screens/POSScreen';
 import CheckinOperatorScreen from './src/screens/CheckinOperatorScreen';
 import FieldOperatorScreen from './src/screens/FieldOperatorScreen';
+import KioskScreen from './src/screens/KioskScreen';
 
 import { colors } from './src/theme/colors';
 
@@ -40,6 +41,11 @@ function AppNavigator() {
     );
   }
 
+  // Kiosk mode: user cu team_member.leisure_role === 'kiosk_selfcheckin' vede
+  // DOAR ecranul de self-checkin (fara nav, fara logout accesibil). Se
+  // seteaza la crearea contului in /organizator/echipa.
+  const isKiosk = user?.team_member?.leisure_role === 'kiosk_selfcheckin';
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -50,6 +56,9 @@ function AppNavigator() {
     >
       {!user ? (
         <Stack.Screen name="Login" component={LoginScreen} />
+      ) : isKiosk ? (
+        // Kiosk mode: SINGUR ecran, fara alte rute. Blocheaza back button.
+        <Stack.Screen name="Kiosk" component={KioskScreen} options={{ gestureEnabled: false }} />
       ) : (
         <>
           <Stack.Screen name="Hub" component={HubScreen} />

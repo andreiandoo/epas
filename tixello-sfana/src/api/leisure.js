@@ -104,3 +104,10 @@ export async function lookupTicket(code) {
   // Folosesc endpoint-ul public de verificare
   return apiGet(`/tickets/lookup`, { code });
 }
+
+// Auto-checkin ca operator organizator (marcheaza checked_in_at + returneaza
+// numele/tipul biletului). Folosita de KioskScreen pentru tableta self-service.
+// Backend: POST /organizer/participants/checkin { ticket_code } (checkInByCode).
+export async function organizerCheckInByCode(ticketCode) {
+  return apiPost('/organizer/participants/checkin', { ticket_code: ticketCode });
+}
