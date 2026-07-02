@@ -21,7 +21,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
     <main class="flex-1 p-4 lg:p-8 print:p-0">
         <div class="mb-4 print:hidden flex flex-wrap items-center justify-between gap-3">
-            <h1 class="text-lg font-bold text-secondary lg:text-xl flex items-center gap-2">🎫 POS — Emite bilete</h1>
+            <h1 class="text-lg font-bold text-secondary lg:text-xl flex items-center gap-2">🎫 InfoPoint — Emite bilete</h1>
             <div class="flex flex-wrap items-center gap-3 ml-auto">
                 <!-- Selector data vizită (mutat din header-ul grid-ului) -->
                 <label class="flex items-center gap-2 text-xs bg-white border border-border rounded-xl px-3 py-2">

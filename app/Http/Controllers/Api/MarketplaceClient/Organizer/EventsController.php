@@ -4442,10 +4442,12 @@ class EventsController extends BaseController
      */
     private function ensureVenueGatesTable(): void
     {
-        if (!\Illuminate\Support\Facades\Schema::hasTable('venue_gates')) {
-            \Illuminate\Support\Facades\Schema::create('venue_gates', function (\Illuminate\Database\Schema\Blueprint $table) {
+        $schema = \Illuminate\Support\Facades\Schema::class;
+        if (!$schema::hasTable('venue_gates')) {
+            $schema::create('venue_gates', function (\Illuminate\Database\Schema\Blueprint $table) {
                 $table->id();
                 $table->foreignId('venue_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('marketplace_organizer_id')->nullable()->constrained('marketplace_organizers')->nullOnDelete();
                 $table->string('name');
                 $table->string('type')->default('entry');
                 $table->string('location')->nullable();
@@ -4453,6 +4455,21 @@ class EventsController extends BaseController
                 $table->integer('sort_order')->default(0);
                 $table->timestamps();
                 $table->index(['venue_id', 'type']);
+                $table->index(['venue_id', 'marketplace_organizer_id']);
+            });
+            return;
+        }
+        // Self-heal: pe prod migratia 2026_06_03_120000 poate sa nu fi rulat.
+        // Adauga coloana + index daca lipsesc; altfel operatiile de create/list
+        // filtreaza pe o coloana inexistenta si erorile 500 sunt silentioase.
+        if (!$schema::hasColumn('venue_gates', 'marketplace_organizer_id')) {
+            $schema::table('venue_gates', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->foreignId('marketplace_organizer_id')
+                    ->nullable()
+                    ->after('venue_id')
+                    ->constrained('marketplace_organizers')
+                    ->nullOnDelete();
+                $table->index(['venue_id', 'marketplace_organizer_id']);
             });
         }
     }
