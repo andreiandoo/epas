@@ -77,6 +77,9 @@
                             <span class="font-medium">{{ number_format($d['online_sold']['on_top_value'], 2) }}</span>
                         </div>
                     </div>
+                    <p class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-[11px] italic leading-snug text-gray-500 dark:text-gray-400">
+                        Include comisioanele organizator (peste preț) + fees checkout. Baza pentru cei {{ $d['commission_rate'] }}% Tixello se ia doar din valoarea biletului — vezi cardul "Bilete vândute".
+                    </p>
                 </div>
 
                 <!-- Vânzări POS -->
@@ -101,6 +104,9 @@
                             <span class="font-medium">{{ number_format($d['pos_sold']['on_top_value'], 2) }}</span>
                         </div>
                     </div>
+                    <p class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-[11px] italic leading-snug text-gray-500 dark:text-gray-400">
+                        Include comisioanele organizator (peste preț) + fees checkout. Baza pentru cei {{ $d['commission_rate'] }}% Tixello se ia doar din valoarea biletului.
+                    </p>
                 </div>
 
                 <!-- Bilete vândute -->
