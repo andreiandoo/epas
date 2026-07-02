@@ -159,7 +159,11 @@ class BillingBreakdown extends Page
             ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
-            ->selectRaw('COUNT(*) as order_count')
+            // Only count non-refunded orders so the events table totals row
+            // matches the "Vânzări online + POS" cards (which also exclude
+            // refunded — refunded orders return cash to the customer, they
+            // aren't a sale for reporting purposes).
+            ->selectRaw("COUNT(*) FILTER (WHERE status <> 'refunded') as order_count")
             ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 0 ELSE total END) as revenue")
             ->selectRaw('SUM(total) as revenue_with_refunds')
             ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as marketplace_commission')
@@ -202,17 +206,25 @@ class BillingBreakdown extends Page
                 ->toArray();
         }
 
-        // Get ticket counts per event
+        // Get ticket counts per event — matches the "Bilete vândute" card:
+        // inner-join with orders so invitations (no order) and legacy /
+        // external imports drop out, and refunded tickets are excluded
+        // (refunded tickets are shown separately in their own card).
         $ticketCounts = [];
         if (!empty($eventIds)) {
-            // Join through ticket_types to get event_id (same as TicketResource logic)
-            $ticketCounts = DB::table('tickets')
-                ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
-                ->whereIn('ticket_types.event_id', $eventIds)
-                ->whereIn('tickets.status', ['valid', 'used'])
-                ->whereBetween('tickets.created_at', [$monthStart, $monthEnd])
-                ->selectRaw('ticket_types.event_id as resolved_event_id, COUNT(tickets.id) as cnt')
-                ->groupBy('ticket_types.event_id')
+            $ticketCounts = DB::table('tickets as t')
+                ->join('orders as o', 'o.id', '=', 't.order_id')
+                ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->whereIn('tt.event_id', $eventIds)
+                ->whereNotIn('o.source', $excludedSources)
+                ->whereIn('t.status', ['valid', 'used'])
+                ->where(function ($q) {
+                    $q->whereNull('t.refund_status')
+                      ->orWhere('t.refund_status', '<>', 'refunded');
+                })
+                ->whereBetween('t.created_at', [$monthStart, $monthEnd])
+                ->selectRaw('tt.event_id as resolved_event_id, COUNT(t.id) as cnt')
+                ->groupBy('tt.event_id')
                 ->pluck('cnt', 'resolved_event_id')
                 ->toArray();
         }
