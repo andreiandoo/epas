@@ -195,6 +195,11 @@ class LeisureController extends BaseController
                     'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
                     'daily_capacity' => $tt->daily_capacity,
                     'ticket_group' => $tt->ticket_group,
+                    // Cantitatea minima/maxima pe comanda — folosita de POS ca
+                    // pe primul click sa punem in cos direct min_per_order
+                    // (ex: bilet grup min=8 => click = 8 in cos), nu 1.
+                    'min_per_order' => (int) ($tt->min_per_order ?? 1),
+                    'max_per_order' => (int) ($tt->max_per_order ?? 0),
                     'issuing_company' => $tt->effective_issuing_company,
                     'issuing_explicit' => (bool) $tt->issuing_company,
                     'meta' => $metaArr ?: (object) [],
@@ -1250,6 +1255,55 @@ class LeisureController extends BaseController
                             'price' => $it['unit_price'],
                             'variant' => $variantMeta,
                         ];
+                    }
+
+                    // Guide bonus: pentru bilete de grup cu group_includes_guide,
+                    // emitem +1 bilet GRATUIT (ghid) la fiecare multiplu de
+                    // min_per_order cumparat. Mirror comportament CheckoutController
+                    // pentru consistenta (customer flow + POS flow emit acelasi tip).
+                    if (
+                        !empty($tt->meta['is_group_ticket'])
+                        && !empty($tt->meta['group_includes_guide'])
+                    ) {
+                        $minPerGroup = max(1, (int) ($tt->min_per_order ?? 1));
+                        $bonusCount = intdiv((int) $it['qty'], $minPerGroup);
+                        $guideLabel = trim((string) ($tt->meta['group_guide_label'] ?? '')) ?: 'Ghid grup';
+                        for ($g = 0; $g < $bonusCount; $g++) {
+                            $codeBonus = strtoupper(Str::random(10));
+                            $bonusTicket = Ticket::create([
+                                'order_id' => $order->id,
+                                'order_item_id' => $orderItem->id,
+                                'ticket_type_id' => $tt->id,
+                                'event_id' => $eventModel->id,
+                                'tenant_id' => $eventModel->tenant_id,
+                                'marketplace_client_id' => $marketplace->id,
+                                'code' => $codeBonus,
+                                'barcode' => $codeBonus,
+                                'locale' => $posLocale,
+                                'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                                'price' => 0,
+                                'attendee_name' => $validated['customer']['name'] ?? null,
+                                'attendee_email' => $validated['customer']['email'] ?? null,
+                                'meta' => array_filter([
+                                    'pos' => true,
+                                    'visit_date' => $visitDate,
+                                    'service_category' => $tt->service_category ?? 'access',
+                                    'issuing_company' => $tt->issuing_company ?? 'primary',
+                                    'guide_bonus' => true,
+                                    'label_override' => $guideLabel,
+                                    'parent_ticket_type_id' => $tt->id,
+                                ]),
+                            ]);
+                            $issued[] = [
+                                'id' => $bonusTicket->id,
+                                'code' => $bonusTicket->code,
+                                'ticket_type' => $guideLabel,
+                                'service_category' => $tt->service_category ?? 'access',
+                                'price' => 0,
+                                'variant' => null,
+                                'guide_bonus' => true,
+                            ];
+                        }
                     }
                 }
             }
