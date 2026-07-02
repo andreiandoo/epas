@@ -20,11 +20,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
     <main class="flex-1 p-4 lg:p-8 print:p-0">
-        <div class="mb-6 print:hidden flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">🎫 POS — Emite bilete</h1>
-                <p class="mt-1 text-sm text-muted">Vânzare on-site rapidă cu chitanță 80mm.</p>
-            </div>
+        <div class="mb-4 print:hidden flex flex-wrap items-center justify-between gap-3">
+            <h1 class="text-lg font-bold text-secondary lg:text-xl flex items-center gap-2">🎫 POS — Emite bilete</h1>
+            <div class="flex flex-wrap items-center gap-3 ml-auto">
+                <!-- Selector data vizită (mutat din header-ul grid-ului) -->
+                <label class="flex items-center gap-2 text-xs bg-white border border-border rounded-xl px-3 py-2">
+                    <span class="text-muted whitespace-nowrap">📅 Data vizită:</span>
+                    <input id="lv-visit-date" type="date" value="<?= date('Y-m-d') ?>" class="text-sm border-0 p-0 focus:outline-none focus:ring-0 bg-transparent">
+                </label>
             <!-- Panou imprimantă termică (WebUSB) — collapsible -->
             <details id="lv-printer-panel" class="bg-white border border-border rounded-xl text-sm min-w-[320px]">
                 <summary class="px-4 py-2.5 cursor-pointer font-semibold text-secondary flex items-center gap-2">
@@ -67,41 +70,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </p>
                 </div>
             </details>
+            </div>
         </div>
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
 
-        <div class="grid lg:grid-cols-3 gap-6 print:hidden">
-            <!-- Grid bilete -->
-            <div class="lg:col-span-2 bg-white border rounded-2xl border-border">
-                <div class="px-5 py-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="font-bold text-secondary">Tipuri de bilete</h2>
-                    <label class="flex items-center gap-2 text-sm">
-                        <span class="text-muted">Data vizită:</span>
-                        <input id="lv-visit-date" type="date" value="<?= date('Y-m-d') ?>" class="px-2 py-1 text-sm border border-border rounded-lg">
-                    </label>
-                </div>
+        <div class="grid lg:grid-cols-3 gap-6 print:hidden items-start">
+            <!-- Grid bilete: header eliminat, categoriile devin acordeoane full-width fara padding -->
+            <div class="lg:col-span-2 bg-white border rounded-2xl border-border overflow-hidden">
                 <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
-                <div id="lv-grid" class="hidden p-5 grid-cols-2 md:grid-cols-3 gap-3"></div>
+                <div id="lv-grid" class="hidden"></div>
             </div>
 
-            <!-- Sumar coș -->
-            <div class="bg-white border rounded-2xl border-border flex flex-col">
+            <!-- Sumar coș: sticky pe desktop cu overflow intern, ca sa vezi tot fara scroll de pagina -->
+            <div class="bg-white border rounded-2xl border-border flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
                     <h2 class="font-bold text-secondary">Coș</h2>
                     <button id="lv-cart-clear" type="button" hidden class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-700 hover:text-white hover:bg-rose-600 border border-rose-300 hover:border-rose-600 rounded-lg transition-colors" title="Șterge toate produsele din coș">
                         🗑️ Golește coș
                     </button>
                 </div>
-                <div id="lv-cart" class="flex-1 p-4 space-y-2 max-h-[400px] overflow-y-auto">
+                <!-- Zona centrala scrollabila: cos + toate secțiunile collapsibile -->
+                <div class="flex-1 flex flex-col min-h-0 lg:overflow-y-auto">
+                <div id="lv-cart" class="p-4 space-y-2">
                     <p class="text-sm text-muted text-center py-6">Coș gol. Apasă pe un bilet ca să-l adaugi.</p>
-                </div>
-                <div class="px-5 py-3 border-t border-border bg-slate-50 space-y-1 text-sm">
-                    <div class="flex justify-between"><span class="text-muted">Subtotal bilete</span><span id="lv-subtotal">0.00 RON</span></div>
-                    <div id="lv-commission-line" class="hidden justify-between text-muted">
-                        <span>Comision ticketing</span><span id="lv-commission-amount">+0.00 RON</span>
-                    </div>
-                    <div class="flex justify-between font-bold text-lg pt-1 border-t border-border"><span>Total</span><span id="lv-total" class="text-primary">0.00 RON</span></div>
                 </div>
 
                 <!-- F6: Banner gating bilete acces -->
@@ -157,6 +149,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
 
+                </div>
+                <!-- Footer fix: totals + payment + checkout (mereu vizibile) -->
+                <div class="px-5 py-3 border-t border-border bg-slate-50 space-y-1 text-sm">
+                    <div class="flex justify-between"><span class="text-muted">Subtotal bilete</span><span id="lv-subtotal">0.00 RON</span></div>
+                    <div id="lv-commission-line" class="hidden justify-between text-muted">
+                        <span>Comision ticketing</span><span id="lv-commission-amount">+0.00 RON</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-lg pt-1 border-t border-border"><span>Total</span><span id="lv-total" class="text-primary">0.00 RON</span></div>
+                </div>
                 <!-- Plată -->
                 <div class="px-5 py-4 border-t border-border space-y-2">
                     <p class="text-xs uppercase tracking-wider text-muted font-semibold">Metodă plată</p>
@@ -307,13 +308,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         if (!hasAnyGroup) {
             // Render plat (înainte) — grid simplu fără headere
-            $('lv-grid').classList.remove('grid');
-            $('lv-grid').classList.add('flex', 'flex-col', 'gap-0');
-            $('lv-grid').innerHTML = `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${posTypes.map(renderProductCard).join('')}</div>`;
+            $('lv-grid').innerHTML = `<div class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">${posTypes.map(renderProductCard).join('')}</div>`;
         } else {
             // Grupeaza posTypes după ticket_group, păstrând ordinea din `cats`.
-            $('lv-grid').classList.remove('grid');
-            $('lv-grid').classList.add('flex', 'flex-col', 'gap-6');
             const grouped = {};
             posTypes.forEach(t => {
                 const gid = t.ticket_group || '__uncategorized__';
@@ -335,20 +332,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (leftovers.length) {
                 sections.push({ id: '__other__', name: 'Altele', items: leftovers });
             }
-            // Accordion render: header click-able toggle. Implicit deschis = true.
-            $('lv-grid').innerHTML = sections.map(sec => {
+            // Accordion render: header full-width, fara border/rounded, delimitator
+            // subtil intre categorii. Implicit deschis = true.
+            $('lv-grid').innerHTML = sections.map((sec, idx) => {
                 const isOpen = categoryAccordionState[sec.id] !== false; // default true
+                const divider = idx > 0 ? 'border-t border-border' : '';
                 return `
-                <div class="border border-border rounded-xl bg-white overflow-hidden" data-cat-section="${sec.id}">
-                    <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50 transition-colors" data-cat-toggle="${sec.id}">
+                <div class="${divider}" data-cat-section="${sec.id}">
+                    <button type="button" class="w-full flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50 transition-colors" data-cat-toggle="${sec.id}">
                         <span class="text-sm font-bold text-secondary uppercase tracking-wider flex items-center gap-2">
                             ${sec.name || ''}
                             <span class="text-[10px] font-normal text-muted bg-slate-100 px-1.5 py-0.5 rounded">${sec.items.length}</span>
                         </span>
                         <svg class="w-4 h-4 text-muted transition-transform ${isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
-                    <div class="px-4 pb-4 ${isOpen ? '' : 'hidden'}" data-cat-body="${sec.id}">
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">${sec.items.map(renderProductCard).join('')}</div>
+                    <div class="px-3 pb-3 ${isOpen ? '' : 'hidden'}" data-cat-body="${sec.id}">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">${sec.items.map(renderProductCard).join('')}</div>
                     </div>
                 </div>
             `;}).join('');
