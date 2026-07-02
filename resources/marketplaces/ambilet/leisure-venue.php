@@ -687,8 +687,10 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 </div>
 
-<!-- ============ QUICK STATS BAR (sticky doar pe desktop) ============ -->
-<section class="bg-white border-y border-forest-100 lg:sticky lg:top-0 lg:z-20 backdrop-blur">
+<!-- ============ QUICK STATS BAR (sticky doar pe desktop) ============
+     Sub timer cand acesta e activ. --timer-h e injectat de JS in setupCartTimer /
+     hideCartTimer si se aplica ca offset la sticky top pe quick-stats-bar. -->
+<section id="quick-stats-bar" class="bg-white border-y border-forest-100 lg:sticky lg:top-[var(--timer-h,0px)] lg:z-20 backdrop-blur" style="--timer-h:0px;">
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
         <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-forest-100">
             <div class="py-4 px-4 flex items-center gap-3">
@@ -1792,6 +1794,10 @@ function reservationPage() {
                 }
                 bar.style.display = '';
                 bar.classList.remove('hidden');
+                // Impinge Quick Stats bar-ul sticky mai jos cu inaltimea timer-ului
+                // ca sa nu se suprapuna. Reciteste inaltimea reala din DOM.
+                const stats = document.getElementById('quick-stats-bar');
+                if (stats) stats.style.setProperty('--timer-h', bar.offsetHeight + 'px');
                 const tick = () => {
                     const remaining = Math.max(0, endTime - Date.now());
                     const mm = Math.floor(remaining / 60000);
@@ -1823,6 +1829,9 @@ function reservationPage() {
         hideCartTimer() {
             const bar = document.getElementById('timer-bar');
             if (bar) { bar.style.display = 'none'; bar.classList.add('hidden'); }
+            // Reset offset-ul Quick Stats la 0 cand timer-ul dispare
+            const stats = document.getElementById('quick-stats-bar');
+            if (stats) stats.style.setProperty('--timer-h', '0px');
             if (this._cartTimerInterval) { clearInterval(this._cartTimerInterval); this._cartTimerInterval = null; }
         },
 
