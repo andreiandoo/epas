@@ -77,10 +77,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div>
                         <p class="text-xs uppercase tracking-wider text-blue-800 font-semibold mb-1 flex items-center gap-1.5">
                             💰 Comision AmBilet
-                            <span id="r-commission-formula" class="text-[10px] font-normal text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">—</span>
                         </p>
                         <p class="text-2xl font-bold text-blue-900"><span id="r-total-commission">0.00</span> <span class="text-sm text-blue-700">RON</span></p>
-                        <p class="text-[11px] text-blue-700 mt-1">Rata efectivă <span id="r-commission-pct" class="font-semibold">0.00%</span> · <span id="r-commission-avg">0.00</span> RON/comandă</p>
                     </div>
                     <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -90,7 +88,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
                 <p class="text-xs uppercase tracking-wider text-emerald-800 font-semibold mb-1">Venit net (după comision)</p>
                 <p class="text-2xl font-bold text-emerald-900"><span id="r-net-revenue">0.00</span> <span class="text-sm text-emerald-700">RON</span></p>
-                <p class="text-[11px] text-emerald-700 mt-1">= Venit total − Comision</p>
             </div>
         </div>
 
@@ -179,10 +176,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             // Comision AmBilet
             $('r-total-commission').textContent = fmtMoney(t.commission);
             $('r-net-revenue').textContent = fmtMoney(t.net_revenue);
-            $('r-commission-pct').textContent = (t.commission_pct_effective || 0).toFixed(2) + '%';
-            $('r-commission-avg').textContent = fmtMoney(t.avg_commission_per_order);
-            const cfg = data.commission_config || {};
-            $('r-commission-formula').textContent = cfg.formula || '—';
             renderSources(data.by_source || [], t.revenue || 0);
             renderCashiers(data.by_cashier || []);
             renderTicketTypes(data.by_ticket_type || []);
@@ -223,7 +216,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="text-right text-xs text-muted whitespace-nowrap">
                     <span class="font-bold text-secondary">${fmtMoney(r.revenue)} RON</span>
                     <div>${r.orders} comenzi · ${r.tickets} bilete</div>
-                    <div class="text-blue-700 mt-0.5">💰 ${fmtMoney(r.commission || 0)} RON comision</div>
                 </div>
             </div>
         `).join('');
