@@ -1,7 +1,7 @@
 // KioskScreen — self-service check-in pentru tableta clientilor Sf. Ana.
 //
 // Comportament:
-//  - Camera activa permanent (fullscreen) cu chenar de scan + text amabil
+//  - Camera activa permanent cu chenar de scan + text amabil
 //  - Debounce 2.5s intre scanari (evita lecturi duble ale aceluiasi QR)
 //  - POST /organizer/participants/checkin { ticket_code }
 //  - Success = ecran verde uriaș cu ✓ + tip bilet + "Bine ai venit, {nume}!"
@@ -9,6 +9,17 @@
 //  - Invalid  = ecran rosu cu ✕ + "Adresati-va unui membru al echipei"
 //  - Auto-revine la starea de scan dupa 3.5s (success) / 4.5s (eroare)
 //  - Blocheaza system back (kiosk mode). expo-keep-awake tine ecranul aprins.
+//
+// Layout responsiv:
+//  - Landscape / tableta (width > height): split 2 coloane
+//      LEFT  = fundal + branding + mesaj bun venit + pasi ilustrati
+//      RIGHT = camera + chenar scan + overlays de rezultat
+//  - Portrait / telefon: fullscreen camera cu overlay peste (varianta veche)
+//
+// Camera flip:
+//  - Buton mic in colt dreapta-sus al zonei camerei
+//  - Toggle "back" <-> "front" pentru cazuri de test / self-check tabletă
+//    unde biletul e prezentat frontal.
 //
 // Activare: user cu team_member.leisure_role === 'kiosk_selfcheckin'
 // este rutat direct aici in App.js (nu vede Hub / login card / setari).
@@ -21,7 +32,8 @@ import {
   ActivityIndicator,
   BackHandler,
   Platform,
-  Dimensions,
+  Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -41,15 +53,16 @@ const S_SUCCESS = 'success';
 const S_DUPLICATE = 'duplicate';
 const S_INVALID = 'invalid';
 
-const { width: SW, height: SH } = Dimensions.get('window');
-const FRAME = Math.min(SW, SH) * 0.55; // patrat 55% din latura mica
-
 export default function KioskScreen() {
   useKeepAwake();
+  const { width: SW, height: SH } = useWindowDimensions();
+  const isLandscape = SW > SH;
+
   const [permission, requestPermission] = useCameraPermissions();
   const [status, setStatus] = useState(S_READY);
   const [payload, setPayload] = useState(null);   // rezultat check-in
   const [errorMsg, setErrorMsg] = useState('');
+  const [cameraFacing, setCameraFacing] = useState('back');
   const lastScanRef = useRef({ code: null, at: 0 });
   const returnTimerRef = useRef(null);
 
@@ -80,6 +93,10 @@ export default function KioskScreen() {
       setPayload(null);
       setErrorMsg('');
     }, ms);
+  }, []);
+
+  const flipCamera = useCallback(() => {
+    setCameraFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   }, []);
 
   const handleScan = useCallback(async ({ data }) => {
@@ -147,19 +164,113 @@ export default function KioskScreen() {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // LANDSCAPE (tabletă): 2 coloane
+  // ─────────────────────────────────────────────────────────────────
+  if (isLandscape) {
+    // 45% stanga (welcome) / 55% dreapta (camera). Camera > text ca proportie
+    // pentru ca acolo se intampla actiunea.
+    const rightW = Math.max(360, Math.round(SW * 0.55));
+    const frameSize = Math.min(rightW, SH) * 0.7;
+
+    return (
+      <View style={styles.rowLayout}>
+        {/* LEFT — welcome + branding + pasi */}
+        <View style={styles.leftPanel}>
+          <View style={styles.leftAccentTop} />
+
+          <View style={styles.leftHeader}>
+            <Text style={styles.brandKicker}>Lacul Sf. Ana</Text>
+            <Text style={styles.brandTitle}>Bun venit!</Text>
+            <Text style={styles.brandSubtitle}>
+              Îți dorim o zi plăcută. Scanează biletul pentru a intra rapid.
+            </Text>
+          </View>
+
+          <View style={styles.stepsBlock}>
+            <StepRow
+              n="1"
+              title="Deschide biletul"
+              body="Pe telefon, deschide QR-ul primit prin email după cumpărare."
+            />
+            <StepRow
+              n="2"
+              title="Îndreaptă spre cameră"
+              body="Ține telefonul la ~20 cm în fața camerei din partea dreaptă."
+            />
+            <StepRow
+              n="3"
+              title="Așteaptă semnalul"
+              body="Ecran verde ✓ = poți intra. Ecran galben / roșu = un membru al echipei te ajută."
+            />
+          </View>
+
+          <View style={styles.leftFooter}>
+            <Text style={styles.footerHint}>
+              Ai nevoie de ajutor? Adresează-te unui membru al echipei. 🌲
+            </Text>
+          </View>
+        </View>
+
+        {/* RIGHT — camera + chenar + overlays */}
+        <View style={[styles.rightPanel, { width: rightW }]}>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            facing={cameraFacing}
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'pdf417', 'code128', 'code39', 'ean13'] }}
+            onBarcodeScanned={status === S_READY ? handleScan : undefined}
+          />
+
+          {/* Chenar de scan + buton flip (doar in READY) */}
+          {status === S_READY && (
+            <>
+              <View style={styles.rightScrim} />
+              <View style={styles.readyRightWrap} pointerEvents="box-none">
+                <View style={[styles.frame, { width: frameSize, height: frameSize }]} />
+                <Text style={styles.rightHint}>
+                  🎫 QR-ul biletului trebuie să fie în chenar
+                </Text>
+              </View>
+              <FlipCameraButton onPress={flipCamera} facing={cameraFacing} />
+            </>
+          )}
+
+          {/* Overlay LOADING - acopera doar coloana dreapta */}
+          {status === S_LOADING && (
+            <View style={[styles.fullRightOverlay, styles.overlayLoading]}>
+              <ActivityIndicator size="large" color={colors.paper} />
+              <Text style={styles.loadingText}>Se verifică biletul...</Text>
+            </View>
+          )}
+
+          {status === S_SUCCESS && <SuccessOverlay data={payload} rightSide />}
+          {status === S_DUPLICATE && <DuplicateOverlay data={payload} message={errorMsg} rightSide />}
+          {status === S_INVALID && <InvalidOverlay message={errorMsg} rightSide />}
+        </View>
+      </View>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // PORTRAIT (telefon): fullscreen camera cu overlay (varianta veche)
+  // ─────────────────────────────────────────────────────────────────
+  const frameSize = Math.min(SW, SH) * 0.55;
   return (
     <View style={styles.container}>
       <CameraView
         style={StyleSheet.absoluteFillObject}
-        facing="back"
+        facing={cameraFacing}
         barcodeScannerSettings={{ barcodeTypes: ['qr', 'pdf417', 'code128', 'code39', 'ean13'] }}
         onBarcodeScanned={status === S_READY ? handleScan : undefined}
       />
 
-      {/* Overlay READY: chenar + text amabil */}
-      {status === S_READY && <ReadyOverlay />}
+      {status === S_READY && (
+        <>
+          <ReadyOverlay frameSize={frameSize} />
+          <FlipCameraButton onPress={flipCamera} facing={cameraFacing} />
+        </>
+      )}
 
-      {/* Overlay LOADING */}
       {status === S_LOADING && (
         <View style={[styles.fullOverlay, styles.overlayLoading]}>
           <ActivityIndicator size="large" color={colors.paper} />
@@ -167,23 +278,49 @@ export default function KioskScreen() {
         </View>
       )}
 
-      {/* Overlay SUCCESS */}
       {status === S_SUCCESS && <SuccessOverlay data={payload} />}
-
-      {/* Overlay DUPLICATE */}
       {status === S_DUPLICATE && <DuplicateOverlay data={payload} message={errorMsg} />}
-
-      {/* Overlay INVALID */}
       {status === S_INVALID && <InvalidOverlay message={errorMsg} />}
     </View>
   );
 }
 
 // ============================================================================
-// Overlays
+// Sub-components
 // ============================================================================
 
-function ReadyOverlay() {
+function StepRow({ n, title, body }) {
+  return (
+    <View style={styles.stepRow}>
+      <View style={styles.stepBadge}>
+        <Text style={styles.stepBadgeText}>{n}</Text>
+      </View>
+      <View style={styles.stepBody}>
+        <Text style={styles.stepTitle}>{title}</Text>
+        <Text style={styles.stepText}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+function FlipCameraButton({ onPress, facing }) {
+  const label = facing === 'back' ? 'Cameră frontală' : 'Cameră spate';
+  return (
+    <View style={styles.flipWrap} pointerEvents="box-none">
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.flipBtn, pressed && styles.flipBtnPressed]}
+        accessibilityLabel={label}
+      >
+        <Text style={styles.flipIcon}>🔄</Text>
+        <Text style={styles.flipLabel}>{label}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function ReadyOverlay({ frameSize }) {
+  // Legacy portrait ready overlay — pastrat pentru telefoane si test dev
   return (
     <View style={styles.readyOverlay}>
       <View style={styles.readyTop}>
@@ -194,7 +331,7 @@ function ReadyOverlay() {
         </Text>
       </View>
 
-      <View style={styles.frame} />
+      <View style={[styles.frame, { width: frameSize, height: frameSize }]} />
 
       <View style={styles.readyBottom}>
         <Text style={styles.readyHint}>
@@ -205,11 +342,11 @@ function ReadyOverlay() {
   );
 }
 
-function SuccessOverlay({ data }) {
+function SuccessOverlay({ data, rightSide }) {
   const tName = data?.ticket?.ticket_type || 'Bilet';
   const attendee = data?.ticket?.attendee_name || data?.customer?.name || '';
   return (
-    <View style={[styles.fullOverlay, styles.overlaySuccess]}>
+    <View style={[rightSide ? styles.fullRightOverlay : styles.fullOverlay, styles.overlaySuccess]}>
       <Text style={styles.bigIcon}>✓</Text>
       <Text style={styles.bigTitle}>Bine ai venit!</Text>
       {attendee ? <Text style={styles.bigSubtitle}>{attendee}</Text> : null}
@@ -223,13 +360,13 @@ function SuccessOverlay({ data }) {
   );
 }
 
-function DuplicateOverlay({ data, message }) {
+function DuplicateOverlay({ data, message, rightSide }) {
   const tName = data?.ticket?.ticket_type || 'Bilet';
   const checkedAt = data?.ticket?.checked_in_at
     ? new Date(data.ticket.checked_in_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
     : null;
   return (
-    <View style={[styles.fullOverlay, styles.overlayDuplicate]}>
+    <View style={[rightSide ? styles.fullRightOverlay : styles.fullOverlay, styles.overlayDuplicate]}>
       <Text style={styles.bigIcon}>⚠</Text>
       <Text style={styles.bigTitle}>Bilet deja validat</Text>
       <View style={styles.pill}>
@@ -249,9 +386,9 @@ function DuplicateOverlay({ data, message }) {
   );
 }
 
-function InvalidOverlay({ message }) {
+function InvalidOverlay({ message, rightSide }) {
   return (
-    <View style={[styles.fullOverlay, styles.overlayInvalid]}>
+    <View style={[rightSide ? styles.fullRightOverlay : styles.fullOverlay, styles.overlayInvalid]}>
       <Text style={styles.bigIcon}>✕</Text>
       <Text style={styles.bigTitle}>Bilet invalid</Text>
       <Text style={styles.politeMessage}>
@@ -281,7 +418,165 @@ const styles = StyleSheet.create({
   permText: { fontSize: 18, color: colors.textSecondary, textAlign: 'center', marginBottom: 8 },
   permHint: { fontSize: 15, color: colors.textTertiary, textAlign: 'center' },
 
-  // READY
+  // ── Landscape (tabletă) — 2 coloane
+  rowLayout: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#000',
+  },
+  leftPanel: {
+    flex: 1,
+    // Fundal padure/lac — verde-negru profund din tema (ink)
+    backgroundColor: colors.ink,
+    paddingHorizontal: 40,
+    paddingVertical: 48,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  leftAccentTop: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 260,
+    backgroundColor: colors.primary + '22', // tint verde subtil, colt dreapta-sus
+  },
+  leftHeader: {
+    zIndex: 1,
+  },
+  brandKicker: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.lake300,
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    marginBottom: 16,
+  },
+  brandTitle: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: colors.paper,
+    marginBottom: 12,
+    lineHeight: 62,
+  },
+  brandSubtitle: {
+    fontSize: 20,
+    color: colors.paper,
+    opacity: 0.85,
+    lineHeight: 28,
+    maxWidth: 480,
+  },
+
+  stepsBlock: {
+    zIndex: 1,
+    gap: 20,
+    marginVertical: 24,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  stepBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBadgeText: {
+    color: colors.paper,
+    fontWeight: '900',
+    fontSize: 20,
+  },
+  stepBody: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.paper,
+    marginBottom: 4,
+  },
+  stepText: {
+    fontSize: 15,
+    color: colors.paper,
+    opacity: 0.8,
+    lineHeight: 22,
+  },
+
+  leftFooter: {
+    zIndex: 1,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.15)',
+  },
+  footerHint: {
+    fontSize: 15,
+    color: colors.paper,
+    opacity: 0.7,
+    textAlign: 'left',
+  },
+
+  rightPanel: {
+    height: '100%',
+    backgroundColor: '#000',
+  },
+  rightScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,44,32,0.35)',
+  },
+  readyRightWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  rightHint: {
+    marginTop: 28,
+    fontSize: 16,
+    color: colors.paper,
+    opacity: 0.9,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  // Buton flip cameră (colț dreapta-sus al zonei camerei)
+  flipWrap: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 20,
+  },
+  flipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  flipBtnPressed: {
+    backgroundColor: 'rgba(0,0,0,0.75)',
+  },
+  flipIcon: {
+    fontSize: 18,
+    color: colors.paper,
+  },
+  flipLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.paper,
+    letterSpacing: 0.3,
+  },
+
+  // READY portrait (varianta veche, telefon)
   readyOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'space-between',
@@ -313,8 +608,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   frame: {
-    width: FRAME,
-    height: FRAME,
     borderRadius: 32,
     borderWidth: 4,
     borderColor: colors.primary,
@@ -329,8 +622,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // FULL OVERLAY (used for loading + result screens)
+  // FULL OVERLAY (folosit pentru loading + rezultate in portrait)
   fullOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  // Variant care se aplica peste doar coloana dreapta in landscape
+  fullRightOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
