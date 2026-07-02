@@ -1717,14 +1717,24 @@ function reservationPage() {
             // AmbiletCart are itemi pentru EVENT.id — re-selectam data lor +
             // hidratam qtyById dupa ce ticketsRaw e incarcat. Astfel cosul
             // float ramane plin, nu se reseteaza la 0.
-            this.restoreCartState();
-            // Bara de timer rezervare (vizibila cat timp avem item-uri in cart)
-            this.setupCartTimer();
-            // Refresh contor storage la init + la fiecare eveniment cart
-            this.refreshStorageCartCount();
-            // Re-evalueaza timer + contor cand AmbiletCart se schimba
-            window.addEventListener('ambilet:cart:update', () => { this.setupCartTimer(); this.refreshStorageCartCount(); });
-            window.addEventListener('ambilet:cart:clear', () => { this.hideCartTimer(); this.refreshStorageCartCount(); });
+            // Poll pentru AmbiletCart — cart.js este defer + declara AmbiletCart
+            // la parse-time, dar in unele cazuri (cache, order defer) Alpine
+            // init ruleaza inainte. Retry-uim pana e disponibil, apoi apelam
+            // restoreCartState + refresh + timer.
+            const waitForCart = (tries = 30) => {
+                if (typeof window.AmbiletCart !== 'undefined') {
+                    this.restoreCartState();
+                    this.setupCartTimer();
+                    this.refreshStorageCartCount();
+                    // Re-evalueaza timer + contor cand AmbiletCart se schimba
+                    window.addEventListener('ambilet:cart:update', () => { this.setupCartTimer(); this.refreshStorageCartCount(); });
+                    window.addEventListener('ambilet:cart:clear', () => { this.hideCartTimer(); this.refreshStorageCartCount(); });
+                    return;
+                }
+                if (tries <= 0) { console.warn('[leisure] AmbiletCart never became available'); return; }
+                setTimeout(() => waitForCart(tries - 1), 100);
+            };
+            waitForCart();
             // BFCACHE fix: cand utilizatorul face BACK din /cos, pagina poate fi
             // servita din back-forward cache si init nu ruleaza. pageshow cu
             // persisted=true acopera acest caz — recitim cart-ul + repornim
