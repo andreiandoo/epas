@@ -127,9 +127,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
         wrap.innerHTML = stream.map(ev => {
-            const isSale = ev.type === 'sale';
-            const icon = isSale ? '💰' : '🎟️';
-            const colorRing = isSale ? 'bg-amber-100' : 'bg-emerald-100';
+            let icon = '🎟️';
+            let colorRing = 'bg-emerald-100';
+            if (ev.type === 'sale') { icon = '💰'; colorRing = 'bg-amber-100'; }
+            else if (ev.type === 'staff_scan') { icon = '👷'; colorRing = 'bg-sky-100'; }
             return `<div class="px-2 py-2 flex items-start gap-3">
                 <div class="w-9 h-9 ${colorRing} rounded-full flex items-center justify-center text-base flex-shrink-0">${icon}</div>
                 <div class="flex-1 min-w-0">

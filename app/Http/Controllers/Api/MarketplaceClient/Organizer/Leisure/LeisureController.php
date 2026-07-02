@@ -648,18 +648,29 @@ class LeisureController extends BaseController
             ->limit(50)
             ->get(['id', 'order_id', 'ticket_type_id', 'code', 'checked_in_at']);
 
+        // Check-ins de STAFF (QR angajati permanent) in ultima ora, pentru
+        // acelasi event. Alt tabel: leisure_staff_checkins.
+        $recentStaffScans = \App\Models\LeisureStaffCheckin::query()
+            ->where('event_id', $eventModel->id)
+            ->where('checked_in_at', '>=', $hourAgo)
+            ->with(['staffMember:id,first_name,last_name,position'])
+            ->orderByDesc('checked_in_at')
+            ->limit(50)
+            ->get(['id', 'staff_member_id', 'event_id', 'location', 'checked_in_at']);
+
         $buckets = [];
-        foreach ($recentScans as $s) {
-            $ts = $s->checked_in_at;
-            if (!$ts) continue;
+        $bucketAdd = function ($ts) use (&$buckets) {
+            if (!$ts) return;
             $bucketMinute = (int) floor($ts->minute / 5) * 5;
             $key = $ts->copy()->minute($bucketMinute)->second(0)->format('H:i');
             if (!isset($buckets[$key])) $buckets[$key] = ['time' => $key, 'count' => 0];
             $buckets[$key]['count']++;
-        }
+        };
+        foreach ($recentScans as $s) $bucketAdd($s->checked_in_at);
+        foreach ($recentStaffScans as $s) $bucketAdd($s->checked_in_at);
         ksort($buckets);
 
-        // Stream — combinăm orders recente (vânzări) + check-ins recente
+        // Stream — combinăm orders recente (vânzări) + check-ins bilete + check-ins staff
         $recentOrders = Order::query()
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['paid', 'completed'])
@@ -684,13 +695,27 @@ class LeisureController extends BaseController
                 'type' => 'scan',
                 'at' => optional($s->checked_in_at)->toIso8601String(),
                 'ts' => optional($s->checked_in_at)->timestamp ?? 0,
-                'label' => 'Check-in',
+                'label' => 'Check-in bilet',
                 'detail' => ($s->ticketType->name ?? 'Bilet') . ' · cod ' . ($s->code ?: '—'),
                 'ticket_id' => $s->id,
             ];
         }
+        foreach ($recentStaffScans as $s) {
+            $sm = $s->staffMember;
+            $staffName = $sm ? trim(($sm->first_name ?? '') . ' ' . ($sm->last_name ?? '')) : 'Angajat';
+            if ($staffName === '') $staffName = 'Angajat';
+            $position = $sm?->position;
+            $stream[] = [
+                'type' => 'staff_scan',
+                'at' => optional($s->checked_in_at)->toIso8601String(),
+                'ts' => optional($s->checked_in_at)->timestamp ?? 0,
+                'label' => '👷 Pontaj angajat',
+                'detail' => $staffName . ($position ? ' · ' . $position : '') . ($s->location ? ' · @ ' . $s->location : ''),
+                'staff_id' => $s->staff_member_id,
+            ];
+        }
         usort($stream, fn ($a, $b) => ($b['ts'] ?? 0) <=> ($a['ts'] ?? 0));
-        $stream = array_slice($stream, 0, 20);
+        $stream = array_slice($stream, 0, 30);
 
         return $this->success([
             'now' => Carbon::now()->toIso8601String(),
