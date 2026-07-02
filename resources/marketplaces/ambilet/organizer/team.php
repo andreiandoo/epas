@@ -281,6 +281,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="email" name="email" required class="w-full px-4 py-2.5 text-sm border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="ex: ion@companie.ro">
                 </div>
                 <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-sm font-medium text-secondary">Parolă <span class="text-xs font-normal text-muted">(min. 8 caractere)</span></label>
+                        <button type="button" onclick="TeamManager.generatePassword()" class="text-[11px] text-primary hover:underline">🎲 Generează</button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" name="password" id="invite-password" required minlength="8" maxlength="100" class="w-full px-4 py-2.5 pr-9 text-sm border rounded-lg border-border font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Setează parola">
+                        <button type="button" onclick="TeamManager.copyPassword()" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-primary" title="Copiază">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div>
                     <label class="block mb-1.5 text-sm font-medium text-secondary">Rol</label>
                     <select name="role" required class="w-full px-4 py-2.5 text-sm border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                         <option value="">Selectează rol</option>
@@ -330,12 +342,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </label>
                     </div>
                 </div>
+                <div class="pt-3 border-t border-border">
+                    <label class="flex items-start gap-2 text-sm cursor-pointer select-none">
+                        <input type="checkbox" name="send_welcome_email" id="invite-send-email" checked class="w-4 h-4 mt-0.5 border-2 rounded text-primary focus:ring-primary">
+                        <span class="flex-1">
+                            <span class="font-medium text-secondary">Trimite email cu credențiale</span>
+                            <span class="block text-[11px] text-muted mt-0.5">Debifează pentru conturi tehnice (kiosk tabletă etc.) — comunici parola direct.</span>
+                        </span>
+                    </label>
+                </div>
                 <div class="flex gap-3 pt-4">
                     <button type="button" onclick="TeamManager.hideInviteModal()" class="flex-1 px-4 py-2.5 text-sm font-semibold border rounded-lg border-border text-muted hover:bg-slate-50">
                         Anulează
                     </button>
-                    <button type="submit" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary hover:bg-primary-dark">
-                        Trimite invitație
+                    <button type="submit" id="invite-submit-btn" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary hover:bg-primary-dark">
+                        Adaugă membru
                     </button>
                 </div>
             </form>
@@ -460,6 +481,22 @@ const TeamManager = {
         // Setup role change handlers
         document.querySelector('select[name="role"]').addEventListener('change', this.handleRoleChange.bind(this));
         document.querySelector('#edit-role').addEventListener('change', this.handleEditRoleChange.bind(this));
+
+        // Cand user selecteaza leisure_role=kiosk_selfcheckin: auto-Staff + uncheck send-email
+        // (contul e tehnic; parola se comunica direct tabletei, nu prin email).
+        const leisureSel = document.querySelector('select[name="leisure_role"]');
+        if (leisureSel) {
+            leisureSel.addEventListener('change', (e) => {
+                if (e.target.value === 'kiosk_selfcheckin') {
+                    const roleSel = document.querySelector('#invite-form select[name="role"]');
+                    if (roleSel && !roleSel.value) roleSel.value = 'staff';
+                    const emailChk = document.getElementById('invite-send-email');
+                    if (emailChk) emailChk.checked = false;
+                    const pwdInput = document.getElementById('invite-password');
+                    if (pwdInput && !pwdInput.value) this.generatePassword();
+                }
+            });
+        }
 
         // Detect daca organizatorul are evenimente leisure → arata leisure_role dropdown
         try {
@@ -710,12 +747,22 @@ const TeamManager = {
         const form = e.target;
         const formData = new FormData(form);
 
+        const password = String(formData.get('password') || '').trim();
+        if (password.length < 8) {
+            this.showError('Parola trebuie să aibă minim 8 caractere');
+            return;
+        }
+
+        const sendEmail = !!form.querySelector('#invite-send-email')?.checked;
+
         const data = {
             name: formData.get('name'),
             email: formData.get('email'),
+            password: password,
             role: formData.get('role'),
             leisure_role: formData.get('leisure_role') || null,
-            permissions: formData.getAll('permissions[]')
+            permissions: formData.getAll('permissions[]'),
+            send_welcome_email: sendEmail,
         };
 
         try {
@@ -726,14 +773,35 @@ const TeamManager = {
 
             if (response.success) {
                 this.hideInviteModal();
-                this.showSuccess('Invitație trimisă cu succes');
+                this.showSuccess(sendEmail ? 'Membru adăugat. Email trimis.' : 'Membru adăugat (fără email).');
                 await this.loadTeam();
             } else {
-                this.showError(response.message || 'Eroare la trimiterea invitației');
+                this.showError(response.message || 'Eroare la adăugarea membrului');
             }
         } catch (error) {
-            console.error('Error sending invite:', error);
-            this.showError('Eroare la trimiterea invitației');
+            console.error('Error adding member:', error);
+            this.showError('Eroare la adăugarea membrului');
+        }
+    },
+
+    // Generează o parolă random ușor de tastat (12 caractere, fără chars ambigue).
+    generatePassword() {
+        const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let pwd = '';
+        for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+        const input = document.getElementById('invite-password');
+        if (input) input.value = pwd;
+    },
+
+    async copyPassword() {
+        const input = document.getElementById('invite-password');
+        if (!input || !input.value) return;
+        try {
+            await navigator.clipboard.writeText(input.value);
+            this.showSuccess('Parolă copiată');
+        } catch (e) {
+            input.select();
+            document.execCommand('copy');
         }
     },
 

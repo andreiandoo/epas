@@ -110,12 +110,15 @@ class TeamController extends BaseController
             'email' => 'required|email|max:255',
             'password' => 'required|string|min:8|max:100',
             'role' => 'required|in:admin,manager,staff',
-            'leisure_role' => 'nullable|in:check_in,rental_boats,rental_pontoon,validation_pontoon,rental_sled,validation_tow,pos_cashier,admin_mobile',
+            'leisure_role' => 'nullable|in:check_in,rental_boats,rental_pontoon,validation_pontoon,rental_sled,validation_tow,pos_cashier,admin_mobile,kiosk_selfcheckin',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
             'gate_id' => 'nullable|integer',
             'event_ids' => 'nullable|array',
             'event_ids.*' => 'integer|exists:events,id',
+            // Cand false, nu trimitem emailul de welcome (admin comunica parola direct).
+            // Util pentru conturi tehnice (kiosk tableta, cont robot etc.).
+            'send_welcome_email' => 'nullable|boolean',
         ]);
 
         // Name is optional now — fall back to the email's local part so the
@@ -192,11 +195,18 @@ class TeamController extends BaseController
             ->get()
             ->each(fn (MarketplaceOrganizerTeamMember $other) => $other->updateQuietly(['password' => $hashedPassword]));
 
-        $emailSent = $this->sendWelcomeEmail($member, $organizer, $validated['password']);
+        $shouldSendEmail = $validated['send_welcome_email'] ?? true;
+        $emailSent = $shouldSendEmail
+            ? $this->sendWelcomeEmail($member, $organizer, $validated['password'])
+            : false;
 
-        $message = $emailSent
-            ? 'Membru adaugat. Email-ul cu credențialele a fost trimis.'
-            : 'Membru adaugat, dar emailul nu a putut fi trimis. Comunica-i credentialele direct.';
+        if (!$shouldSendEmail) {
+            $message = 'Membru adăugat. Emailul cu credentialele NU a fost trimis (skip explicit).';
+        } else {
+            $message = $emailSent
+                ? 'Membru adaugat. Email-ul cu credențialele a fost trimis.'
+                : 'Membru adaugat, dar emailul nu a putut fi trimis. Comunica-i credentialele direct.';
+        }
 
         $member->load('events:id');
 
@@ -230,7 +240,7 @@ class TeamController extends BaseController
         $validated = $request->validate([
             'member_id' => 'required|string',
             'role' => 'sometimes|in:admin,manager,staff',
-            'leisure_role' => 'nullable|in:check_in,rental_boats,rental_pontoon,validation_pontoon,rental_sled,validation_tow,pos_cashier,admin_mobile',
+            'leisure_role' => 'nullable|in:check_in,rental_boats,rental_pontoon,validation_pontoon,rental_sled,validation_tow,pos_cashier,admin_mobile,kiosk_selfcheckin',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
             'gate_id' => 'nullable|integer',
