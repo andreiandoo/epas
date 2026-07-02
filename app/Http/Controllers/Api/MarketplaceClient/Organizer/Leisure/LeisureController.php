@@ -2161,16 +2161,26 @@ class LeisureController extends BaseController
             $rev = (float) ($o->total ?? 0);
             $totalRevenue += $rev;
 
-            // Comisionul pe comanda: prefer meta.commission_total (POS il scrie)
-            // sau il calculam per-bilet din pretul biletului cu floor:
-            //   max(price * rate/100, floor)
+            // Comisionul pe comanda:
+            //  - meta.commission_total > 0 => e comision on-top scris de POS
+            //    (prefereram valoarea snapshot ca sa nu re-calculam variabila)
+            //  - meta.commission_total = 0 sau lipsa => e mod 'included' sau
+            //    comanda customer online => recalculam per-bilet din pretul
+            //    biletului aplicand floor-ul:  max(price * rate/100, floor)
+            //    Asta face BACKTRACE automat: comenzi vechi (chiar fara meta)
+            //    apar cu comision corect in raport, folosind config-ul curent
+            //    al organizatorului.
             $orderCommission = 0.0;
-            if (isset($o->meta['commission_total']) && is_numeric($o->meta['commission_total'])) {
-                $orderCommission = (float) $o->meta['commission_total'];
+            $posSnapshot = isset($o->meta['commission_total']) && is_numeric($o->meta['commission_total'])
+                ? (float) $o->meta['commission_total']
+                : null;
+            if ($posSnapshot !== null && $posSnapshot > 0) {
+                $orderCommission = $posSnapshot;
             } else {
                 foreach ($o->tickets as $t) {
                     if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
                     $tp = (float) ($t->price ?? 0);
+                    if ($tp <= 0) continue; // biletele bonus/componente pachet = 0 lei -> fara comision
                     $pct = round($tp * $orgRate / 100, 2);
                     $orderCommission += $orgFloor > 0 ? max($pct, $orgFloor) : $pct;
                 }
