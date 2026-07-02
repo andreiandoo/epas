@@ -676,21 +676,11 @@ require_once __DIR__ . '/includes/head.php';
      in localStorage de AmbiletCart.startReservationTimer(). Re-foloseste id=countdown
      ca scripts-ul global de timer (din cart.js / cart-page.js) sa sincronizeze
      daca user-ul are deja tab cu /cos deschis. -->
-<div id="timer-bar" class="hidden sticky top-0 z-30 border-b bg-warning/10 border-warning/20" style="display:none">
-    <div class="px-4 py-2.5 mx-auto max-w-7xl">
-        <div class="flex items-center justify-center gap-2 text-sm">
-            <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span class="text-forest-900" x-text="t('timer_message') || 'Biletele sunt rezervate pentru tine încă'"></span>
-            <span id="countdown" class="font-bold text-warning tabular-nums">15:00</span>
-            <span class="text-forest-900" x-text="t('timer_minutes') || 'minute'"></span>
-        </div>
-    </div>
-</div>
-
-<!-- ============ QUICK STATS BAR (sticky doar pe desktop) ============
-     Sub timer cand acesta e activ. --timer-h e injectat de JS in setupCartTimer /
-     hideCartTimer si se aplica ca offset la sticky top pe quick-stats-bar. -->
-<section id="quick-stats-bar" class="bg-white border-y border-forest-100 lg:sticky lg:top-[var(--timer-h,0px)] lg:z-20 backdrop-blur" style="--timer-h:0px;">
+<!-- ============ QUICK STATS BAR ============
+     Sticky doar cand timer-bar NU e activ (are clasa lg:sticky by default,
+     scoasa de JS in setupCartTimer cand timer-ul apare — ca sa nu ai 2
+     bare sticky suprapuse). -->
+<section id="quick-stats-bar" class="bg-white border-y border-forest-100 lg:sticky lg:top-0 lg:z-20 backdrop-blur">
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
         <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-forest-100">
             <div class="py-4 px-4 flex items-center gap-3">
@@ -749,6 +739,21 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </div>
 </section>
+
+<!-- ============ RESERVATION TIMER BAR ============
+     Plasat SUB quick-stats. Cand e vizibil, JS scoate 'lg:sticky' de pe
+     quick-stats, iar timer-bar devine sticky-top. Fundal solid (#f8f1e3)
+     ca sa nu se vada continut prin el. -->
+<div id="timer-bar" class="hidden sticky top-0 z-30 border-b border-warning/20" style="display:none; background:#f8f1e3;">
+    <div class="px-4 py-2.5 mx-auto max-w-7xl">
+        <div class="flex items-center justify-center gap-2 text-sm">
+            <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-forest-900" x-text="t('timer_message') || 'Biletele sunt rezervate pentru tine încă'"></span>
+            <span id="countdown" class="font-bold text-warning tabular-nums">15:00</span>
+            <span class="text-forest-900" x-text="t('timer_minutes') || 'minute'"></span>
+        </div>
+    </div>
+</div>
 
 <!-- ============ CALENDAR + BILETE ============ -->
 <section id="bilete" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-fog">
@@ -1794,10 +1799,10 @@ function reservationPage() {
                 }
                 bar.style.display = '';
                 bar.classList.remove('hidden');
-                // Impinge Quick Stats bar-ul sticky mai jos cu inaltimea timer-ului
-                // ca sa nu se suprapuna. Reciteste inaltimea reala din DOM.
+                // Cand timer-ul e activ, quick-stats nu mai e sticky — timer-bar
+                // ramane singurul sticky top. Asa nu ai 2 bare care se acopera.
                 const stats = document.getElementById('quick-stats-bar');
-                if (stats) stats.style.setProperty('--timer-h', bar.offsetHeight + 'px');
+                if (stats) { stats.classList.remove('lg:sticky'); }
                 const tick = () => {
                     const remaining = Math.max(0, endTime - Date.now());
                     const mm = Math.floor(remaining / 60000);
@@ -1829,9 +1834,9 @@ function reservationPage() {
         hideCartTimer() {
             const bar = document.getElementById('timer-bar');
             if (bar) { bar.style.display = 'none'; bar.classList.add('hidden'); }
-            // Reset offset-ul Quick Stats la 0 cand timer-ul dispare
+            // Re-activeaza sticky pe quick-stats cand timer-ul dispare
             const stats = document.getElementById('quick-stats-bar');
-            if (stats) stats.style.setProperty('--timer-h', '0px');
+            if (stats) { stats.classList.add('lg:sticky'); }
             if (this._cartTimerInterval) { clearInterval(this._cartTimerInterval); this._cartTimerInterval = null; }
         },
 
