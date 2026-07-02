@@ -482,6 +482,25 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     }).join('') +
                 '</div>';
             }
+            // Package breakdown: pentru bilete de tip 'package' cu componente
+            // configurate, afisam VIZUAL lista de bilete ce se vor emite la
+            // finalizare. Fiecare componenta e multiplicata cu qty coş.
+            let packageRow = '';
+            if (tt && tt.service_category === 'package' && Array.isArray(tt.package_outputs) && tt.package_outputs.length > 0) {
+                const escapeHtml = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+                const rowsHtml = tt.package_outputs.map(comp => {
+                    const totalQty = (parseInt(comp.qty, 10) || 1) * it.qty;
+                    const label = comp.component_name + (comp.variant_label ? ' — ' + comp.variant_label : '');
+                    return `<li class="text-rose-900 flex items-center gap-1.5">
+                        <span class="text-rose-500">•</span>
+                        <span><strong>${totalQty}×</strong> ${escapeHtml(label)}</span>
+                    </li>`;
+                }).join('');
+                packageRow = `<div class="mt-1 pt-1 border-t border-slate-200">
+                    <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-0.5">🎁 Se emit bilete</p>
+                    <ul class="space-y-0.5 text-xs pl-1">${rowsHtml}</ul>
+                </div>`;
+            }
             // Guide bonus: pentru bilete de grup cu meta.is_group_ticket +
             // meta.group_includes_guide, emitem VIZUAL +N bilete gratis
             // (ghid) la fiecare multiplu de min_per_order cumparat.
@@ -517,6 +536,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <button data-act="del" data-id="${key}" class="text-rose-500 hover:text-rose-700">✕</button>
                 </div>
                 ${comRow}
+                ${packageRow}
                 ${guideRow}
                 ${addonsRows}
             </div>`;
@@ -793,16 +813,50 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const lineTotal = it.qty * it.price;
             subtotal += lineTotal;
             items.push({ name: it.name, qty: it.qty, unit_price: it.price, line_total: lineTotal, service_category: it.category, issuing_company: issuingCompany });
-            for (let i = 0; i < it.qty; i++) {
-                tickets.push({
-                    id: 'TEST-' + Math.random().toString(36).substring(2, 8),
-                    code: 'TEST-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-                    ticket_type: it.name,
-                    service_category: it.category,
-                    issuing_company: issuingCompany,
-                    price: it.price,
-                    variant: it.variant || null,
-                });
+
+            // Pachet: emitem 1 ticket "parinte" (pachet) + componentele reale
+            // cu price=0. Mirror backend posSale pentru consistenta.
+            const isPackage = tt && tt.service_category === 'package' && Array.isArray(tt.package_outputs) && tt.package_outputs.length > 0;
+            if (isPackage) {
+                for (let i = 0; i < it.qty; i++) {
+                    tickets.push({
+                        id: 'TEST-P-' + Math.random().toString(36).substring(2, 8),
+                        code: 'TEST-P-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                        ticket_type: it.name + ' (pachet)',
+                        service_category: 'package',
+                        issuing_company: issuingCompany,
+                        price: it.price,
+                        variant: null,
+                    });
+                    tt.package_outputs.forEach(comp => {
+                        const compQty = parseInt(comp.qty, 10) || 1;
+                        const compLabel = comp.component_name + (comp.variant_label ? ' — ' + comp.variant_label : '');
+                        for (let c = 0; c < compQty; c++) {
+                            tickets.push({
+                                id: 'TEST-C-' + Math.random().toString(36).substring(2, 8),
+                                code: 'TEST-C-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                                ticket_type: compLabel,
+                                service_category: comp.service_category || 'access',
+                                issuing_company: issuingCompany,
+                                price: 0,
+                                variant: comp.variant_label ? { id: comp.variant_id, label: comp.variant_label } : null,
+                                from_package: true,
+                            });
+                        }
+                    });
+                }
+            } else {
+                for (let i = 0; i < it.qty; i++) {
+                    tickets.push({
+                        id: 'TEST-' + Math.random().toString(36).substring(2, 8),
+                        code: 'TEST-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                        ticket_type: it.name,
+                        service_category: it.category,
+                        issuing_company: issuingCompany,
+                        price: it.price,
+                        variant: it.variant || null,
+                    });
+                }
             }
             // Guide bonus tickets — mirror backend posSale + printare test.
             if (tt && tt.meta && tt.meta.is_group_ticket && tt.meta.group_includes_guide) {

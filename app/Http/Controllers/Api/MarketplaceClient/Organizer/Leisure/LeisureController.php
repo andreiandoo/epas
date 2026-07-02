@@ -167,12 +167,27 @@ class LeisureController extends BaseController
                         }
                         $qty = (int) ($row['qty'] ?? 1);
                         $packageSum += $compPrice * $qty;
+                        // Variant label pentru afisare in POS breakdown
+                        // ("Adult — 1h" in loc de doar "Adult").
+                        $variantLabel = null;
+                        if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                            foreach ($compTt->meta['variants'] as $cv) {
+                                if (!is_array($cv) || empty($cv['label'])) continue;
+                                $cvid = $cv['id'] ?? \Illuminate\Support\Str::slug($cv['label']);
+                                if ($cvid === $row['variant_id']) {
+                                    $variantLabel = $cv['label'];
+                                    break;
+                                }
+                            }
+                        }
                         $packageOutputs[] = [
                             'ticket_type_id' => (int) $row['ticket_type_id'],
                             'variant_id' => $row['variant_id'] ?? null,
+                            'variant_label' => $variantLabel,
                             'qty' => $qty,
                             'component_name' => is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name,
                             'component_unit_price' => $compPrice,
+                            'service_category' => $compTt->effective_service_category ?? 'access',
                         ];
                     }
                 }
