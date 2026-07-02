@@ -1542,7 +1542,7 @@ require_once __DIR__ . '/includes/head.php';
 <!-- ============ STICKY CART ============ -->
 <div x-show="cartCount > 0" x-transition class="fixed bottom-0 left-0 right-0 z-[110] lg:bottom-24 lg:right-6 lg:left-auto lg:max-w-sm">
     <div class="bg-forest-900 text-white shadow-2xl lg:rounded-2xl overflow-hidden">
-        <button @click="cartOpen = !cartOpen" class="w-full p-4 flex items-center justify-between gap-4 hover:bg-forest-800 transition-colors">
+        <button @click="hasStorageOnlyItems ? openStorageCart() : (cartOpen = !cartOpen)" class="w-full p-4 flex items-center justify-between gap-4 hover:bg-forest-800 transition-colors">
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 bg-lake-400 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-forest-900" x-text="cartCount"></div>
                 <div class="text-left min-w-0">
@@ -1679,6 +1679,10 @@ function reservationPage() {
         t: t,
         cartOpen: false,
         hoverTooltipKey: null,
+        // Count total items in localStorage cart for THIS event (indiferent de visit_date).
+        // Sursa de adevar pentru vizibilitatea floating cart + a numarului afisat.
+        // Actualizat la init + pe eveniment 'ambilet:cart:update'.
+        _storageCartCount: 0,
         // Categorie selectata in flow-ul nou (null = arata picker categorii)
         selectedCategoryId: null,
         openFaq: 0,
@@ -1716,9 +1720,49 @@ function reservationPage() {
             this.restoreCartState();
             // Bara de timer rezervare (vizibila cat timp avem item-uri in cart)
             this.setupCartTimer();
-            // Re-evalueaza timer-ul cand AmbiletCart se schimba (add din alte tab-uri etc.)
-            window.addEventListener('ambilet:cart:update', () => this.setupCartTimer());
-            window.addEventListener('ambilet:cart:clear', () => this.hideCartTimer());
+            // Refresh contor storage la init + la fiecare eveniment cart
+            this.refreshStorageCartCount();
+            // Re-evalueaza timer + contor cand AmbiletCart se schimba
+            window.addEventListener('ambilet:cart:update', () => { this.setupCartTimer(); this.refreshStorageCartCount(); });
+            window.addEventListener('ambilet:cart:clear', () => { this.hideCartTimer(); this.refreshStorageCartCount(); });
+            // BFCACHE fix: cand utilizatorul face BACK din /cos, pagina poate fi
+            // servita din back-forward cache si init nu ruleaza. pageshow cu
+            // persisted=true acopera acest caz — recitim cart-ul + repornim
+            // timer-ul din localStorage pentru a nu ramane in stare stale.
+            window.addEventListener('pageshow', (ev) => {
+                if (ev.persisted) {
+                    this.refreshStorageCartCount();
+                    this.setupCartTimer();
+                    // Daca ticketsRaw e populat + qtyById gol, re-hidram din cart
+                    // (fara sa reincarcam data — items sunt deja acolo)
+                    try {
+                        const items = (AmbiletCart.getItems() || []).filter(i => Number(i.eventId) === Number(EVENT.id));
+                        items.forEach(it => {
+                            const key = this.cartKey(Number(it.ticketTypeId), it.meta?.variant_id || null);
+                            if (this.qtyById[key] === 0 || this.qtyById[key] === undefined) {
+                                this.qtyById[key] = Number(it.quantity) || 0;
+                            }
+                        });
+                    } catch (e) { /* best-effort */ }
+                }
+            });
+        },
+
+        // Numara items din localStorage AmbiletCart pentru EVENT.id (indiferent
+        // de visit_date). Sursa de adevar pentru vizibilitatea floating cart.
+        refreshStorageCartCount() {
+            try {
+                if (typeof AmbiletCart === 'undefined' || !EVENT.id) { this._storageCartCount = 0; return; }
+                const items = (AmbiletCart.getItems() || []).filter(i => Number(i?.eventId) === Number(EVENT.id));
+                this._storageCartCount = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+            } catch (e) { this._storageCartCount = 0; }
+        },
+        // Called cand user click pe cos flotant si acesta e populat DOAR din
+        // storage (nu se vede in UI, ex: data selectata != visit_date items).
+        // In loc sa arate panou gol, redirectam direct la /cos.
+        openStorageCart() {
+            const langParam = PUBLIC_LOCALE && PUBLIC_LOCALE !== 'ro' ? ('?lang=' + encodeURIComponent(PUBLIC_LOCALE)) : '';
+            window.location.href = '/cos' + langParam;
         },
 
         // ========== Reservation timer bar ==========
@@ -2180,7 +2224,17 @@ function reservationPage() {
             return out;
         },
         get cartCount() {
-            return this.cartItems.reduce((s, t) => s + t.qty, 0);
+            // Prioritizam localul (ce vede pe ecran); daca e 0 dar avem items in
+            // localStorage (ex: back din /cos sau utilizatorul a schimbat data),
+            // aratam contorul din storage ca sa nu para gol coșul.
+            const local = this.cartItems.reduce((s, t) => s + t.qty, 0);
+            return local > 0 ? local : this._storageCartCount;
+        },
+        // True cand avem items in localStorage pt EVENT.id dar nu apar in UI
+        // (data selectata != visit_date-ul lor sau nu am selectat inca o data).
+        get hasStorageOnlyItems() {
+            const local = this.cartItems.reduce((s, t) => s + t.qty, 0);
+            return local === 0 && this._storageCartCount > 0;
         },
         // Comision per UN bilet din acel tip: max(price * rate%, fixed) — numai daca mode='added_on_top'
         commissionPerTicket(price) {
