@@ -142,6 +142,12 @@ class BillingBreakdown extends Page
         // Include orders for marketplace events (migrated may lack marketplace_client_id)
         $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
 
+        // Excluded sources everywhere: test orders, external imports (Ambilet
+        // migrations from Wordpress), and legacy_import (older Wordpress data
+        // pre-migration). Mirrors Dashboard::computeMonthlyBilling so the two
+        // pages agree on which orders count toward monthly commission.
+        $excludedSources = ['test_order', 'external_import', 'legacy_import'];
+
         $eventBreakdown = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
                 $q->where('marketplace_client_id', $marketplaceId);
                 if (!empty($mpEventIds)) {
@@ -150,7 +156,7 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereIn('status', $validStatuses)
-            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
             ->selectRaw('COUNT(*) as order_count')
@@ -167,7 +173,7 @@ class BillingBreakdown extends Page
         if (!empty($eventIds)) {
             $eventDetails = Event::with(['venue', 'marketplaceOrganizer'])->whereIn('id', $eventIds)
                 ->get()
-                ->mapWithKeys(function ($e) {
+                ->mapWithKeys(function ($e) use ($marketplace) {
                     $name = $e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en');
                     $venueName = $e->venue ? (is_array($e->venue->name) ? ($e->venue->name['ro'] ?? $e->venue->name['en'] ?? '') : $e->venue->name) : null;
                     $venueCity = $e->venue?->city;
@@ -176,12 +182,21 @@ class BillingBreakdown extends Page
                     $eventCommRate = $e->commission_rate
                         ?? $e->marketplaceOrganizer?->commission_rate
                         ?? null;
+                    // Commission mode fallback: event → organizer → marketplace
+                    // → 'included'. Mirrors Ticket::getCommissionPerUnit so
+                    // the transparent breakdown here matches what was billed
+                    // on each individual ticket sale.
+                    $mode = $e->commission_mode
+                        ?? $e->marketplaceOrganizer?->default_commission_mode
+                        ?? $marketplace->commission_mode
+                        ?? 'included';
                     return [$e->id => [
                         'name' => $name,
                         'date' => $eventDate?->format('d.m.Y'),
                         'venue' => $venueName,
                         'city' => $venueCity,
                         'commission_rate' => $eventCommRate,
+                        'commission_mode' => $mode,
                     ]];
                 })
                 ->toArray();
@@ -205,7 +220,7 @@ class BillingBreakdown extends Page
         $events = $eventBreakdown->map(function ($row) use ($eventDetails, $ticketCounts, $commissionRate, $marketplace) {
             $eventId = $row->resolved_event_id;
             $revenue = (float) $row->revenue; // excludes refunded
-            $revenueAll = (float) $row->revenue_with_refunds; // includes refunded (for commission calc)
+            $revenueAll = (float) $row->revenue_with_refunds; // order.total incl refunded (informational only)
             $marketplaceCommission = (float) ($row->marketplace_commission ?? 0);
             $details = $eventDetails[$eventId] ?? null;
 
@@ -217,33 +232,30 @@ class BillingBreakdown extends Page
                 $marketplaceCommission = round($revenueAll * ((float) $eventCommRate / 100), 2);
             }
 
-            // Tixello commission also from all orders (including refunded)
-            $tixelloCommission = round($revenueAll * ($commissionRate / 100), 2);
-
             return [
                 'event_id' => $eventId,
                 'event_name' => $details['name'] ?? ($eventId ? 'Eveniment #' . $eventId : 'Necunoscut'),
                 'event_date' => $details['date'] ?? null,
                 'venue' => $details['venue'] ?? null,
                 'city' => $details['city'] ?? null,
+                'commission_mode' => $details['commission_mode'] ?? 'included',
                 'order_count' => (int) $row->order_count,
                 'ticket_count' => (int) ($ticketCounts[$eventId] ?? 0),
                 'revenue' => $revenue,
                 'marketplace_commission' => $marketplaceCommission,
-                'tixello_commission' => $tixelloCommission,
+                // tixello_commission filled in below (after ticket totals per event are known)
+                'tixello_commission' => 0.0,
+                'ticket_price_base' => 0.0,
             ];
-        })->toArray();
+        })->keyBy('event_id')->toArray();
 
         $revenueTotal = collect($events)->sum('revenue');
-        // Tixello commission total from per-event calculated values (which use revenue_with_refunds)
-        $ticketingTotal = collect($events)->sum('tixello_commission');
         $marketplaceCommissionTotal = collect($events)->sum('marketplace_commission');
 
-        // === REVENUE SPLIT: ONLINE vs POS ===
-        // POS bucket = orders originating from the POS app or venue-owner POS
-        // terminal. Online = everything else that isn't a test / external
-        // import. Uses the same status set as the per-event breakdown BUT
-        // excludes 'refunded' so the split reflects actual cash-in.
+        // === REVENUE SPLIT (order-level): ONLINE vs POS ===
+        // Order-level totals (order.total). Used for the "valoarea totală
+        // a încasărilor" line on the Vânzări cards. Excludes refunded so
+        // the number reflects cash-in.
         $posSources = ['pos_app', 'venue_owner_pos'];
         $paidStatuses = ['paid', 'confirmed', 'completed'];
 
@@ -255,7 +267,7 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereIn('status', $paidStatuses)
-            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw("SUM(CASE WHEN source IN ('pos_app','venue_owner_pos') THEN total ELSE 0 END) as pos_revenue")
             ->selectRaw("SUM(CASE WHEN source NOT IN ('pos_app','venue_owner_pos') THEN total ELSE 0 END) as online_revenue")
@@ -268,33 +280,160 @@ class BillingBreakdown extends Page
         $onlineOrders = (int) ($revenueSplit->online_orders ?? 0);
         $posOrders = (int) ($revenueSplit->pos_orders ?? 0);
 
-        // === TICKETS SOLD vs REFUNDED (with value) ===
-        // Sold = ticket rows with a paid/confirmed/completed order behind
-        // them (matches how the dashboard counts sold tickets). Refunded
-        // = tickets whose refund_status='refunded' regardless of parent
-        // status, so refunds show up even when the order itself stays
-        // 'confirmed' (partial refund case).
-        $ticketStats = DB::table('tickets')
-            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+        // === TICKET-LEVEL BREAKDOWN with commission_mode ===
+        // The Tixello 1% is charged on ticket.price under the rule:
+        //   - "included" tickets  → price already contains the commission,
+        //                           so 1% applies to the full ticket price
+        //   - "added_on_top" tickets → price is the nominal ticket value
+        //                              (organizer's cut sits on top of it
+        //                              in order.total but is NOT part of the
+        //                              billable base). 1% applies to ticket.price
+        //                              only, never to the on-top portion.
+        // We load every ticket sold or refunded in the period with its
+        // parent order source + resolved event_id, then bucket in PHP
+        // (online vs pos × included vs on_top × sold vs refunded).
+        $ticketRows = DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
             ->where(function ($q) use ($marketplaceId, $mpEventIds) {
-                $q->where('orders.marketplace_client_id', $marketplaceId);
+                $q->where('o.marketplace_client_id', $marketplaceId);
                 if (!empty($mpEventIds)) {
-                    $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
-                      ->orWhereIn('orders.event_id', $mpEventIds);
+                    $q->orWhereIn('o.marketplace_event_id', $mpEventIds)
+                      ->orWhereIn('o.event_id', $mpEventIds);
                 }
             })
-            ->whereNotIn('orders.source', ['test_order', 'external_import'])
-            ->whereBetween('tickets.created_at', [$monthStart, $monthEnd])
-            ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid','used') AND (tickets.refund_status IS NULL OR tickets.refund_status <> 'refunded') THEN 1 ELSE 0 END) as sold_count")
-            ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid','used') AND (tickets.refund_status IS NULL OR tickets.refund_status <> 'refunded') THEN COALESCE(tickets.price, 0) ELSE 0 END) as sold_value")
-            ->selectRaw("SUM(CASE WHEN tickets.refund_status = 'refunded' THEN 1 ELSE 0 END) as refunded_count")
-            ->selectRaw("SUM(CASE WHEN tickets.refund_status = 'refunded' THEN COALESCE(tickets.price, 0) ELSE 0 END) as refunded_value")
-            ->first();
+            ->whereNotIn('o.source', $excludedSources)
+            ->whereBetween('t.created_at', [$monthStart, $monthEnd])
+            ->select(
+                't.id',
+                DB::raw('COALESCE(t.price, 0) as price'),
+                't.status',
+                't.refund_status',
+                'o.source as order_source',
+                DB::raw('COALESCE(tt.event_id, o.marketplace_event_id, o.event_id) as resolved_event_id')
+            )
+            ->get();
 
-        $soldTicketCount = (int) ($ticketStats->sold_count ?? 0);
-        $soldTicketValue = (float) ($ticketStats->sold_value ?? 0);
-        $refundedTicketCount = (int) ($ticketStats->refunded_count ?? 0);
-        $refundedTicketValue = (float) ($ticketStats->refunded_value ?? 0);
+        // Empty template for each bucket
+        $emptyBucket = fn () => [
+            'included_count' => 0, 'included_value' => 0.0,
+            'on_top_count' => 0,   'on_top_value' => 0.0,
+        ];
+        $onlineSold     = $emptyBucket();
+        $onlinRefunded  = $emptyBucket();
+        $posSold        = $emptyBucket();
+        $posRefunded    = $emptyBucket();
+
+        $freeSoldOnlineCount = 0;
+        $freeSoldPosCount = 0;
+
+        foreach ($ticketRows as $t) {
+            $isPos = in_array($t->order_source, $posSources, true);
+            $isRefunded = $t->refund_status === 'refunded';
+            $isSold = !$isRefunded && in_array($t->status, ['valid', 'used'], true);
+            if (!$isSold && !$isRefunded) {
+                continue;
+            }
+
+            $mode = $eventDetails[$t->resolved_event_id]['commission_mode'] ?? 'included';
+            $modeKey = $mode === 'added_on_top' ? 'on_top' : 'included';
+            $price = (float) $t->price;
+
+            if ($isSold && $isPos) {
+                $posSold["{$modeKey}_count"] += 1;
+                $posSold["{$modeKey}_value"] += $price;
+                if ($price === 0.0) $freeSoldPosCount++;
+            } elseif ($isSold && !$isPos) {
+                $onlineSold["{$modeKey}_count"] += 1;
+                $onlineSold["{$modeKey}_value"] += $price;
+                if ($price === 0.0) $freeSoldOnlineCount++;
+            } elseif ($isRefunded && $isPos) {
+                $posRefunded["{$modeKey}_count"] += 1;
+                $posRefunded["{$modeKey}_value"] += $price;
+            } elseif ($isRefunded && !$isPos) {
+                $onlinRefunded["{$modeKey}_count"] += 1;
+                $onlinRefunded["{$modeKey}_value"] += $price;
+            }
+        }
+
+        // Round bucket values once, at the end
+        foreach ([&$onlineSold, &$onlinRefunded, &$posSold, &$posRefunded] as &$b) {
+            $b['included_value'] = round($b['included_value'], 2);
+            $b['on_top_value'] = round($b['on_top_value'], 2);
+        }
+        unset($b);
+
+        $soldTicketCount = $onlineSold['included_count'] + $onlineSold['on_top_count']
+                         + $posSold['included_count'] + $posSold['on_top_count'];
+        $soldTicketValue = round(
+            $onlineSold['included_value'] + $onlineSold['on_top_value']
+            + $posSold['included_value'] + $posSold['on_top_value'], 2
+        );
+        $refundedTicketCount = $onlinRefunded['included_count'] + $onlinRefunded['on_top_count']
+                             + $posRefunded['included_count'] + $posRefunded['on_top_count'];
+        $refundedTicketValue = round(
+            $onlinRefunded['included_value'] + $onlinRefunded['on_top_value']
+            + $posRefunded['included_value'] + $posRefunded['on_top_value'], 2
+        );
+
+        // === TIXELLO COMMISSION FROM TICKET PRICES (transparent derivation) ===
+        // Marketplace rule: 1% × (sold + refunded ticket prices). The
+        // per-event tixello_commission column in the events table below is
+        // also switched to this basis so per-event totals sum to the same
+        // grand total shown at the top.
+        $tixelloCommissionByBucket = [
+            'online_sold_included'    => round($onlineSold['included_value']    * ($commissionRate/100), 2),
+            'online_sold_on_top'      => round($onlineSold['on_top_value']      * ($commissionRate/100), 2),
+            'pos_sold_included'       => round($posSold['included_value']       * ($commissionRate/100), 2),
+            'pos_sold_on_top'         => round($posSold['on_top_value']         * ($commissionRate/100), 2),
+            'online_refunded_included'=> round($onlinRefunded['included_value'] * ($commissionRate/100), 2),
+            'online_refunded_on_top'  => round($onlinRefunded['on_top_value']   * ($commissionRate/100), 2),
+            'pos_refunded_included'   => round($posRefunded['included_value']   * ($commissionRate/100), 2),
+            'pos_refunded_on_top'     => round($posRefunded['on_top_value']     * ($commissionRate/100), 2),
+        ];
+
+        // === INVITATIONS ISSUED IN PERIOD ===
+        // Standalone invitations = tickets with order_id NULL and meta.is_invitation=true.
+        // Scoped to marketplace events (via ticket_types.event_id).
+        $invitationCount = 0;
+        if (!empty($mpEventIds)) {
+            $invitationCount = (int) DB::table('tickets as t')
+                ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->whereNull('t.order_id')
+                ->whereIn('tt.event_id', $mpEventIds)
+                ->whereBetween('t.created_at', [$monthStart, $monthEnd])
+                ->whereRaw("(t.meta::jsonb ->> 'is_invitation') = 'true'")
+                ->count();
+        }
+
+        // === FREE TICKETS SOLD (via a real order, price = 0) ===
+        // Excludes invitations (which have no order). Includes tickets sold
+        // for free through bulk_admin / marketplace_free / promo_100_percent.
+        $freeTicketCount = $freeSoldOnlineCount + $freeSoldPosCount;
+
+        // === PER-EVENT TICKET PRICE BASE + TIXELLO COMMISSION ===
+        // Second pass over the same ticket rows to bucket per event id, so
+        // the events table's tixello_commission column agrees with the
+        // grand total shown at the top of the page. Both sold and refunded
+        // tickets contribute per the marketplace rule.
+        foreach ($ticketRows as $t) {
+            $isRefunded = $t->refund_status === 'refunded';
+            $isSold = !$isRefunded && in_array($t->status, ['valid', 'used'], true);
+            if (!$isSold && !$isRefunded) continue;
+            $eid = $t->resolved_event_id;
+            if (!isset($events[$eid])) continue;
+            $events[$eid]['ticket_price_base'] += (float) $t->price;
+        }
+        foreach ($events as $eid => &$evt) {
+            $evt['ticket_price_base'] = round($evt['ticket_price_base'], 2);
+            $evt['tixello_commission'] = round($evt['ticket_price_base'] * ($commissionRate / 100), 2);
+        }
+        unset($evt);
+        $events = array_values($events);
+
+        // Grand total Tixello commission (ticketing) = 1% × total ticket price base
+        $ticketBaseTotal = round($soldTicketValue + $refundedTicketValue, 2);
+        $ticketingTotal = round($ticketBaseTotal * ($commissionRate / 100), 2);
 
         // === SERVICE ORDERS BREAKDOWN ===
         $serviceOrders = ServiceOrder::where('marketplace_client_id', $marketplaceId)
@@ -364,6 +503,20 @@ class BillingBreakdown extends Page
                 'sold_ticket_value' => $soldTicketValue,
                 'refunded_ticket_count' => $refundedTicketCount,
                 'refunded_ticket_value' => $refundedTicketValue,
+
+                // Breakdown by commission mode
+                'online_sold' => $onlineSold,           // included/on_top count+value
+                'online_refunded' => $onlinRefunded,
+                'pos_sold' => $posSold,
+                'pos_refunded' => $posRefunded,
+
+                // Extra counts
+                'invitation_count' => $invitationCount,
+                'free_ticket_count' => $freeTicketCount,
+
+                // Transparent commission derivation
+                'commission_by_bucket' => $tixelloCommissionByBucket,
+                'ticket_base_total' => $ticketBaseTotal,
             ],
         ];
     }

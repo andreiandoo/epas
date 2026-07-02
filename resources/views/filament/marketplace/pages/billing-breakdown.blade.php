@@ -43,15 +43,19 @@
             </div>
         </div>
 
-        <!-- Revenue + Tickets Breakdown -->
+        <!-- Revenue + Tickets Breakdown (with commission-mode split) -->
         <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="flex items-center gap-2 mb-4">
+            <div class="flex items-center gap-2 mb-1">
                 <x-heroicon-o-chart-bar-square class="w-5 h-5 text-indigo-500" />
                 <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Breakdown încasări &amp; bilete</h3>
             </div>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
+                Split pe modul de comisionare al biletelor: <strong>comision inclus în preț</strong> vs <strong>comision peste preț</strong>. Baza pentru cei {{ $d['commission_rate'] }}% Tixello se ia din valoarea biletelor (regula: inclus → preț integral cu tot cu comision; peste → doar valoarea nominală a biletului, fără comisionul de deasupra).
+            </p>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <!-- Online sales -->
+
+                <!-- Vânzări online -->
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-globe-alt class="w-4 h-4 text-emerald-500" />
@@ -60,12 +64,22 @@
                     <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                         {{ number_format($d['online_revenue'], 2) }} {{ $d['currency'] }}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         {{ number_format($d['online_orders']) }} {{ $d['online_orders'] === 1 ? 'comandă' : 'comenzi' }}
                     </p>
+                    <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span>Bilete cu comision <em>inclus</em></span>
+                            <span class="font-medium">{{ number_format($d['online_sold']['included_value'], 2) }}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span>Bilete cu comision <em>peste</em></span>
+                            <span class="font-medium">{{ number_format($d['online_sold']['on_top_value'], 2) }}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- POS sales -->
+                <!-- Vânzări POS -->
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-device-phone-mobile class="w-4 h-4 text-sky-500" />
@@ -74,12 +88,22 @@
                     <p class="text-xl font-bold text-sky-600 dark:text-sky-400">
                         {{ number_format($d['pos_revenue'], 2) }} {{ $d['currency'] }}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         {{ number_format($d['pos_orders']) }} {{ $d['pos_orders'] === 1 ? 'comandă' : 'comenzi' }}
                     </p>
+                    <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span>Bilete cu comision <em>inclus</em></span>
+                            <span class="font-medium">{{ number_format($d['pos_sold']['included_value'], 2) }}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span>Bilete cu comision <em>peste</em></span>
+                            <span class="font-medium">{{ number_format($d['pos_sold']['on_top_value'], 2) }}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Tickets sold -->
+                <!-- Bilete vândute -->
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-ticket class="w-4 h-4 text-indigo-500" />
@@ -88,12 +112,22 @@
                     <p class="text-xl font-bold text-gray-900 dark:text-white">
                         {{ number_format($d['sold_ticket_count']) }}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         ({{ number_format($d['sold_ticket_value'], 2) }} {{ $d['currency'] }})
                     </p>
+                    <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span><em>Inclus</em></span>
+                            <span class="font-medium">{{ number_format($d['online_sold']['included_count'] + $d['pos_sold']['included_count']) }} · {{ number_format($d['online_sold']['included_value'] + $d['pos_sold']['included_value'], 2) }}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span><em>Peste</em></span>
+                            <span class="font-medium">{{ number_format($d['online_sold']['on_top_count'] + $d['pos_sold']['on_top_count']) }} · {{ number_format($d['online_sold']['on_top_value'] + $d['pos_sold']['on_top_value'], 2) }}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Tickets refunded -->
+                <!-- Bilete returnate -->
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-arrow-uturn-left class="w-4 h-4 text-rose-500" />
@@ -102,10 +136,91 @@
                     <p class="text-xl font-bold text-rose-600 dark:text-rose-400">
                         {{ number_format($d['refunded_ticket_count']) }}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         ({{ number_format($d['refunded_ticket_value'], 2) }} {{ $d['currency'] }})
                     </p>
+                    <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span><em>Inclus</em></span>
+                            <span class="font-medium">{{ number_format($d['online_refunded']['included_count'] + $d['pos_refunded']['included_count']) }} · {{ number_format($d['online_refunded']['included_value'] + $d['pos_refunded']['included_value'], 2) }}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span><em>Peste</em></span>
+                            <span class="font-medium">{{ number_format($d['online_refunded']['on_top_count'] + $d['pos_refunded']['on_top_count']) }} · {{ number_format($d['online_refunded']['on_top_value'] + $d['pos_refunded']['on_top_value'], 2) }}</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Extra: invitations + free tickets -->
+            <div class="grid grid-cols-1 gap-3 pt-4 mt-4 border-t border-gray-200 sm:grid-cols-2 dark:border-gray-700">
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
+                    <x-heroicon-o-envelope-open class="w-5 h-5 text-violet-500" />
+                    <div class="flex-1">
+                        <p class="text-xs text-violet-700 dark:text-violet-300">Invitații emise în lună</p>
+                        <p class="text-lg font-bold text-violet-900 dark:text-violet-100">{{ number_format($d['invitation_count']) }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <x-heroicon-o-gift class="w-5 h-5 text-amber-500" />
+                    <div class="flex-1">
+                        <p class="text-xs text-amber-700 dark:text-amber-300">Bilete cu valoare 0 vândute</p>
+                        <p class="text-lg font-bold text-amber-900 dark:text-amber-100">{{ number_format($d['free_ticket_count']) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Derivare comision Tixello (transparent, breakdown pe buckets) -->
+        <div class="p-5 mb-5 bg-white border-2 border-rose-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-rose-800">
+            <div class="flex items-center gap-2 mb-1">
+                <x-heroicon-o-calculator class="w-5 h-5 text-rose-500" />
+                <h3 class="text-sm font-semibold tracking-wide text-rose-800 uppercase dark:text-rose-200">Derivare comision Tixello ({{ $d['commission_rate'] }}%)</h3>
+            </div>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
+                Baza de calcul = suma valorilor de bilet (sold + returnat, incluse și cele returnate, per regula marketplace). Se aplică {{ $d['commission_rate'] }}% pe fiecare bucket și se însumează. Exclude: comenzi test, importuri externe și importuri legacy.
+            </p>
+
+            @php
+                $cb = $d['commission_by_bucket'];
+                $rows = [
+                    ['Online — vândute — comision inclus',   $d['online_sold']['included_value'],    $cb['online_sold_included']],
+                    ['Online — vândute — comision peste',    $d['online_sold']['on_top_value'],      $cb['online_sold_on_top']],
+                    ['POS — vândute — comision inclus',      $d['pos_sold']['included_value'],       $cb['pos_sold_included']],
+                    ['POS — vândute — comision peste',       $d['pos_sold']['on_top_value'],         $cb['pos_sold_on_top']],
+                    ['Online — returnate — comision inclus', $d['online_refunded']['included_value'],$cb['online_refunded_included']],
+                    ['Online — returnate — comision peste',  $d['online_refunded']['on_top_value'],  $cb['online_refunded_on_top']],
+                    ['POS — returnate — comision inclus',    $d['pos_refunded']['included_value'],   $cb['pos_refunded_included']],
+                    ['POS — returnate — comision peste',     $d['pos_refunded']['on_top_value'],     $cb['pos_refunded_on_top']],
+                ];
+            @endphp
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Bucket</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Bază ({{ $d['currency'] }})</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">× {{ $d['commission_rate'] }}%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($rows as [$label, $base, $comm])
+                        <tr class="border-b border-gray-100 dark:border-gray-700/50 {{ $base == 0 ? 'opacity-50' : '' }}">
+                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $label }}</td>
+                            <td class="px-3 py-2 text-right text-gray-900 dark:text-gray-100 tabular-nums">{{ number_format($base, 2) }}</td>
+                            <td class="px-3 py-2 text-right font-medium text-rose-600 dark:text-rose-400 tabular-nums">{{ number_format($comm, 2) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-t-2 border-rose-300 dark:border-rose-700 bg-rose-50/50 dark:bg-rose-900/20">
+                            <td class="px-3 py-3 font-semibold text-gray-900 dark:text-white">TOTAL</td>
+                            <td class="px-3 py-3 text-right font-semibold text-gray-900 dark:text-white tabular-nums">{{ number_format($d['ticket_base_total'], 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-3 text-right font-bold text-rose-600 dark:text-rose-400 tabular-nums">{{ number_format($d['ticketing_total'], 2) }} {{ $d['currency'] }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
 
