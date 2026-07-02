@@ -22,6 +22,26 @@ $skipJsComponents = true;
             <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
+        <!-- Branding POS cashier (afisat doar pentru leisure_role=pos_cashier).
+             Doua randuri: 'ticketing' + 'by AmBilet.ro'. -->
+        <div id="pos-branding" class="hidden items-center gap-3 pr-3 mr-3 border-r border-slate-700">
+            <div class="flex items-center justify-center w-9 h-9 bg-primary rounded-xl flex-shrink-0">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            </div>
+            <div class="leading-none">
+                <div class="text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">ticketing</div>
+                <div class="text-sm font-extrabold text-white mt-0.5">by <span class="text-primary">AmBilet</span><span class="text-slate-400">.ro</span></div>
+            </div>
+        </div>
+
+        <!-- Numele rezervatiei / organizatorului (POS cashier) -->
+        <div id="pos-orgname" class="hidden items-center pr-3 mr-3 border-r border-slate-700">
+            <div class="leading-none">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Locație</div>
+                <div id="pos-orgname-text" class="text-sm font-bold text-white mt-1">—</div>
+            </div>
+        </div>
+
         <!-- Search: ascuns pentru rol restrictionat POS cashier -->
         <div id="header-search-wrap" class="items-center flex-1 hidden max-w-md md:flex">
             <div class="relative w-full" id="header-search-container">
@@ -45,16 +65,59 @@ $skipJsComponents = true;
             </a>
         </div>
 
+        <!-- Ceas live (data + ora, actualizat la fiecare secunda) pentru POS cashier -->
+        <div id="pos-clock" class="hidden items-center gap-2 pl-3 ml-3 border-l border-slate-700">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="leading-none">
+                <div id="pos-clock-time" class="text-base font-bold text-white tabular-nums">00:00:00</div>
+                <div id="pos-clock-date" class="text-[10px] text-slate-400 mt-0.5 tabular-nums">—</div>
+            </div>
+        </div>
+
         <script>
         (function(){
             // Detecteaza rol restrictionat imediat ce sidebar-ul seteaza body[data-restricted-role].
             // Sidebar init este async (fetch /organizer/me), asa ca observam mutarile pe body.
+            let posClockInterval = null;
+
+            const DAYS_RO = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+            const MONTHS_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function tickClock() {
+                const timeEl = document.getElementById('pos-clock-time');
+                const dateEl = document.getElementById('pos-clock-date');
+                if (!timeEl || !dateEl) return;
+                const now = new Date();
+                timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+                dateEl.textContent = DAYS_RO[now.getDay()] + ', ' + now.getDate() + ' ' + MONTHS_RO[now.getMonth()] + ' ' + now.getFullYear();
+            }
+
             function applyPOSCashierUI() {
                 if (document.body.getAttribute('data-restricted-role') !== 'pos_cashier') return;
                 const wrap = document.getElementById('header-search-wrap');
                 const nav = document.getElementById('pos-cashier-nav');
+                const branding = document.getElementById('pos-branding');
+                const orgname = document.getElementById('pos-orgname');
+                const clock = document.getElementById('pos-clock');
                 if (wrap) wrap.style.display = 'none';
                 if (nav) { nav.classList.remove('hidden'); nav.classList.add('flex'); }
+                if (branding) { branding.classList.remove('hidden'); branding.classList.add('flex'); }
+                if (orgname) { orgname.classList.remove('hidden'); orgname.classList.add('flex'); }
+                if (clock) { clock.classList.remove('hidden'); clock.classList.add('flex'); }
+
+                // Populeaza numele locatiei (public_name) din cache-ul local scris de sidebar-init
+                try {
+                    const cached = JSON.parse(localStorage.getItem('ambilet_organizer_data') || '{}');
+                    const orgEl = document.getElementById('pos-orgname-text');
+                    if (orgEl && cached.public_name) orgEl.textContent = cached.public_name;
+                } catch (e) { /* ignore */ }
+
+                // Ceas live 1Hz — pornim doar o data
+                if (!posClockInterval) {
+                    tickClock();
+                    posClockInterval = setInterval(tickClock, 1000);
+                }
+
                 // Highlight tab-ul curent
                 const path = window.location.pathname.replace(/\/$/, '');
                 const posBtn = document.querySelector('[data-nav-pos]');
