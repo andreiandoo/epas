@@ -2136,16 +2136,13 @@ class LeisureController extends BaseController
             ? (float) ($eventOrganizer?->fixed_commission_default ?? 0)
             : 0.0;
 
-        // Pre-load team members pentru resolvare nume operator (cashier_team_member_id
-        // in meta) + fallback la cashier_organizer_id (organizer principal). Colecta
-        // ID-urile unice mai intai ca sa facem un singur query.
+        // Pre-load numele team-member-ilor care au operat POS-ul (unici, un singur
+        // query). Owner login (fara team member) apare ca 'InfoPoint' — statia
+        // fizica de vanzare on-site.
         $tmIds = [];
-        $orgIds = [];
         foreach ($orders as $o) {
             $tmId = $o->meta['cashier_team_member_id'] ?? null;
-            $orgId = $o->meta['cashier_organizer_id'] ?? null;
             if ($tmId) $tmIds[(int) $tmId] = true;
-            if ($orgId && !$tmId) $orgIds[(int) $orgId] = true;
         }
         $tmNames = [];
         if (!empty($tmIds)) {
@@ -2153,13 +2150,6 @@ class LeisureController extends BaseController
                 ->whereIn('id', array_keys($tmIds))
                 ->get(['id', 'name'])
                 ->each(function ($tm) use (&$tmNames) { $tmNames[$tm->id] = $tm->name; });
-        }
-        $orgNames = [];
-        if (!empty($orgIds)) {
-            MarketplaceOrganizer::query()
-                ->whereIn('id', array_keys($orgIds))
-                ->get(['id', 'name', 'contact_name'])
-                ->each(function ($org) use (&$orgNames) { $orgNames[$org->id] = $org->contact_name ?: $org->name; });
         }
 
         foreach ($orders as $o) {
@@ -2210,8 +2200,11 @@ class LeisureController extends BaseController
                 $cashierKey = 'tm_' . $cashierTmId;
                 $cashierLabel = $tmNames[$cashierTmId] ?? ('Angajat #' . $cashierTmId);
             } elseif ($cashierId) {
-                $cashierKey = 'org_' . $cashierId;
-                $cashierLabel = $orgNames[$cashierId] ?? ('Operator #' . $cashierId);
+                // Vanzari facute direct de owner (login organizator, fara team
+                // member) apar ca 'InfoPoint' — statia fizica de vanzare on-site.
+                // Numele organizatorului nu are sens ca 'cine a vandut' aici.
+                $cashierKey = 'infopoint_' . $cashierId;
+                $cashierLabel = 'InfoPoint';
             } else {
                 $cashierKey = 'online';
                 $cashierLabel = 'Online (auto)';
