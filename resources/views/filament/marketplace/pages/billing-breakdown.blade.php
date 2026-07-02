@@ -59,7 +59,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-globe-alt class="w-4 h-4 text-emerald-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări online</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări online <span class="text-[10px] normal-case text-gray-400">(doar canal online)</span></p>
                     </div>
                     <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                         {{ number_format($d['online_revenue'], 2) }} {{ $d['currency'] }}
@@ -83,7 +83,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-device-phone-mobile class="w-4 h-4 text-sky-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări POS</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări POS <span class="text-[10px] normal-case text-gray-400">(doar canal POS)</span></p>
                     </div>
                     <p class="text-xl font-bold text-sky-600 dark:text-sky-400">
                         {{ number_format($d['pos_revenue'], 2) }} {{ $d['currency'] }}
@@ -107,7 +107,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-ticket class="w-4 h-4 text-indigo-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete vândute <span class="text-[10px] normal-case text-gray-400">(online + POS)</span></p>
                     </div>
                     <p class="text-xl font-bold text-gray-900 dark:text-white">
                         {{ number_format($d['sold_ticket_count']) }}
@@ -131,7 +131,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-arrow-uturn-left class="w-4 h-4 text-rose-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete returnate</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete returnate <span class="text-[10px] normal-case text-gray-400">(online + POS)</span></p>
                     </div>
                     <p class="text-xl font-bold text-rose-600 dark:text-rose-400">
                         {{ number_format($d['refunded_ticket_count']) }}
@@ -152,20 +152,47 @@
                 </div>
             </div>
 
-            <!-- Extra: invitations + free tickets -->
-            <div class="grid grid-cols-1 gap-3 pt-4 mt-4 border-t border-gray-200 sm:grid-cols-2 dark:border-gray-700">
+            <!-- Extra: invitations + free tickets + combined ratio -->
+            @php
+                $invitations = (int) $d['invitation_count'];
+                $freeSold = (int) $d['free_ticket_count'];
+                $sold = (int) $d['sold_ticket_count'];
+                // Denominator = all tickets that "reached hands": paid + free
+                // (already in `sold`) + invitations (which have no order).
+                $ticketTotalForRatio = max(1, $sold + $invitations);
+                $invitationPct = ($invitations / $ticketTotalForRatio) * 100;
+                $freePct = ($freeSold / $ticketTotalForRatio) * 100;
+                $gratisPct = (($invitations + $freeSold) / $ticketTotalForRatio) * 100;
+            @endphp
+            <div class="grid grid-cols-1 gap-3 pt-4 mt-4 border-t border-gray-200 sm:grid-cols-3 dark:border-gray-700">
                 <div class="flex items-center gap-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
                     <x-heroicon-o-envelope-open class="w-5 h-5 text-violet-500" />
                     <div class="flex-1">
                         <p class="text-xs text-violet-700 dark:text-violet-300">Invitații emise în lună</p>
-                        <p class="text-lg font-bold text-violet-900 dark:text-violet-100">{{ number_format($d['invitation_count']) }}</p>
+                        <p class="text-lg font-bold text-violet-900 dark:text-violet-100">
+                            {{ number_format($invitations) }}
+                            <span class="text-xs font-normal text-violet-600 dark:text-violet-400">({{ number_format($invitationPct, 2) }}%)</span>
+                        </p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                     <x-heroicon-o-gift class="w-5 h-5 text-amber-500" />
                     <div class="flex-1">
                         <p class="text-xs text-amber-700 dark:text-amber-300">Bilete cu valoare 0 vândute</p>
-                        <p class="text-lg font-bold text-amber-900 dark:text-amber-100">{{ number_format($d['free_ticket_count']) }}</p>
+                        <p class="text-lg font-bold text-amber-900 dark:text-amber-100">
+                            {{ number_format($freeSold) }}
+                            <span class="text-xs font-normal text-amber-600 dark:text-amber-400">({{ number_format($freePct, 2) }}%)</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
+                    <x-heroicon-o-scale class="w-5 h-5 text-slate-500" />
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-700 dark:text-slate-300">Gratis din total (invitații + bilete 0)</p>
+                        <p class="text-lg font-bold text-slate-900 dark:text-slate-100">
+                            {{ number_format($invitations + $freeSold) }} / {{ number_format($ticketTotalForRatio) }}
+                            <span class="text-xs font-normal text-slate-600 dark:text-slate-400">({{ number_format($gratisPct, 2) }}%)</span>
+                        </p>
                     </div>
                 </div>
             </div>
