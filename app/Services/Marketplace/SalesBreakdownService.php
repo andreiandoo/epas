@@ -162,6 +162,10 @@ class SalesBreakdownService
             ?? $event->marketplaceOrganizer?->default_commission_mode
             ?? $event->marketplaceClient?->commission_mode
             ?? 'included';
+        // Floor comision per bilet (organizer.fixed_commission_default) — cand > 0,
+        // aplicam max(pct, floor). Coerent cu leisureController::posSale + customer
+        // CheckoutController + build() per-order slice de mai jos.
+        $organizerFloor = (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0);
 
         $perType = [];
         $sumValidGross = 0.0;
@@ -245,6 +249,10 @@ class SalesBreakdownService
                 $gross = $unitPrice * $validCount;
                 $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
                 $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+                // Aplica floor per bilet daca organizator > 0 si biletul are pret > 0
+                if ($organizerFloor > 0 && $unitPrice > 0 && $commPerTicket < $organizerFloor) {
+                    $commPerTicket = $organizerFloor;
+                }
                 $commission = $commPerTicket * $validCount;
                 $mode = $effective['mode'];
 
@@ -572,6 +580,10 @@ class SalesBreakdownService
             ?? $event->marketplaceOrganizer?->default_commission_mode
             ?? $event->marketplaceClient?->commission_mode
             ?? 'included';
+        // Floor comision per bilet (organizer.fixed_commission_default) — cand > 0,
+        // aplicam max(pct, floor) pe fiecare bilet. Matches leisureController::posSale
+        // + customer CheckoutController fix din 2026-07.
+        $organizerFloor = (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0);
 
         $currency = $event->currency ?? 'RON';
 
@@ -639,6 +651,12 @@ class SalesBreakdownService
 
             $commPerTicket = (float) $tt->calculateCommission($commissionBase, $defaultRate, $defaultMode);
             $effectiveCommission = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+            // Aplica floor per bilet daca organizatorul are fixed_commission_default > 0
+            // si biletul are pret > 0 (biletele bonus/componente pachet = 0 lei NU
+            // genereaza comision — floor-ul e o regula pentru bilete platite).
+            if ($organizerFloor > 0 && $commissionBase > 0 && $commPerTicket < $organizerFloor) {
+                $commPerTicket = $organizerFloor;
+            }
             $commissionAmount = $commPerTicket * $qty;
             $mode = $effectiveCommission['mode'];
             $isOnTop = in_array($mode, ['on_top', 'added_on_top'], true);
