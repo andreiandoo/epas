@@ -342,14 +342,30 @@ function ReadyOverlay({ frameSize }) {
   );
 }
 
+// Extrage primul nume dintr-un string full-name. Backend returneaza
+// customer.name ca "Prenume Nume" (asamblat din marketplace_customers).
+// Cazuri edge: null/empty -> null; "John" -> "John"; "John Doe" -> "John";
+// spatii multiple / trim / capitalizare surse -> normalizat.
+function firstNameOf(fullName) {
+  if (!fullName || typeof fullName !== 'string') return null;
+  const cleaned = fullName.trim().replace(/\s+/g, ' ');
+  if (!cleaned) return null;
+  const first = cleaned.split(' ')[0];
+  return first || null;
+}
+
 function SuccessOverlay({ data, rightSide }) {
   const tName = data?.ticket?.ticket_type || 'Bilet';
-  const attendee = data?.ticket?.attendee_name || data?.customer?.name || '';
+  // Preferam customer.name (assembly first_name+last_name din backend),
+  // fallback la ticket.attendee_name pentru invitatii fara customer.
+  const fullName = data?.customer?.name || data?.ticket?.attendee_name || '';
+  const firstName = firstNameOf(fullName);
   return (
     <View style={[rightSide ? styles.fullRightOverlay : styles.fullOverlay, styles.overlaySuccess]}>
       <Text style={styles.bigIcon}>✓</Text>
-      <Text style={styles.bigTitle}>Bine ai venit!</Text>
-      {attendee ? <Text style={styles.bigSubtitle}>{attendee}</Text> : null}
+      <Text style={styles.bigTitle}>
+        {firstName ? `Bun venit, ${firstName}!` : 'Bun venit!'}
+      </Text>
       <View style={styles.pill}>
         <Text style={styles.pillText}>{tName}</Text>
       </View>
