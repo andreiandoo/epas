@@ -35,10 +35,10 @@ $skipJsComponents = true;
         </div>
 
         <!-- Numele rezervatiei / organizatorului (POS cashier) -->
-        <div id="pos-orgname" class="hidden items-center pr-3 mr-3 border-r border-slate-700">
+        <div id="pos-orgname" class="hidden items-center pr-3 mr-3">
             <div class="leading-none">
                 <div class="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Locație</div>
-                <div id="pos-orgname-text" class="text-sm font-bold text-white mt-1">—</div>
+                <div id="pos-orgname-text" class="text-sm font-bold text-white mt-1">Rezervația Sf. Ana</div>
             </div>
         </div>
 
@@ -66,8 +66,7 @@ $skipJsComponents = true;
         </div>
 
         <!-- Ceas live (data + ora, actualizat la fiecare secunda) pentru POS cashier -->
-        <div id="pos-clock" class="hidden items-center gap-2 pl-3 ml-3 border-l border-slate-700">
-            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div id="pos-clock" class="hidden items-center gap-2 pr-3 ml-3 mr-3 border-r border-slate-700">
             <div class="leading-none">
                 <div id="pos-clock-time" class="text-base font-bold text-white tabular-nums">00:00:00</div>
                 <div id="pos-clock-date" class="text-[10px] text-slate-400 mt-0.5 tabular-nums">—</div>
