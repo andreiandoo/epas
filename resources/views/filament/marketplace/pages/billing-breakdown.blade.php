@@ -165,26 +165,34 @@
                 $gratisPct = (($invitations + $freeSold) / $ticketTotalForRatio) * 100;
             @endphp
             <div class="grid grid-cols-3 gap-3 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
+                <button type="button"
+                        wire:click="toggleDetail('invitations')"
+                        class="flex items-center w-full gap-3 p-3 text-left transition rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/40 cursor-pointer {{ $d['active_detail'] === 'invitations' ? 'ring-2 ring-violet-400 dark:ring-violet-500' : '' }}">
                     <x-heroicon-o-envelope-open class="w-5 h-5 text-violet-500 shrink-0" />
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs text-violet-700 dark:text-violet-300">Invitații emise în lună</p>
+                        <p class="text-xs text-violet-700 dark:text-violet-300">Invitații emise în lună <span class="opacity-60">· click pt detalii</span></p>
                         <p class="text-lg font-bold text-violet-900 dark:text-violet-100">
                             {{ number_format($invitations) }}
                             <span class="text-xs font-normal text-violet-600 dark:text-violet-400">({{ number_format($invitationPct, 2) }}%)</span>
                         </p>
                     </div>
-                </div>
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <x-heroicon-o-chevron-down class="w-4 h-4 text-violet-400 shrink-0 transition-transform {{ $d['active_detail'] === 'invitations' ? 'rotate-180' : '' }}" />
+                </button>
+
+                <button type="button"
+                        wire:click="toggleDetail('free')"
+                        class="flex items-center w-full gap-3 p-3 text-left transition rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer {{ $d['active_detail'] === 'free' ? 'ring-2 ring-amber-400 dark:ring-amber-500' : '' }}">
                     <x-heroicon-o-gift class="w-5 h-5 text-amber-500 shrink-0" />
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs text-amber-700 dark:text-amber-300">Bilete cu valoare 0 vândute</p>
+                        <p class="text-xs text-amber-700 dark:text-amber-300">Bilete cu valoare 0 vândute <span class="opacity-60">· click pt detalii</span></p>
                         <p class="text-lg font-bold text-amber-900 dark:text-amber-100">
                             {{ number_format($freeSold) }}
                             <span class="text-xs font-normal text-amber-600 dark:text-amber-400">({{ number_format($freePct, 2) }}%)</span>
                         </p>
                     </div>
-                </div>
+                    <x-heroicon-o-chevron-down class="w-4 h-4 text-amber-400 shrink-0 transition-transform {{ $d['active_detail'] === 'free' ? 'rotate-180' : '' }}" />
+                </button>
+
                 <div class="flex items-center gap-3 p-3 rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800">
                     <x-heroicon-o-scale class="w-5 h-5 text-rose-500 shrink-0" />
                     <div class="flex-1 min-w-0">
@@ -196,6 +204,69 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Expandable per-event breakdown for the active tile --}}
+            @if ($d['active_detail'] === 'invitations' || $d['active_detail'] === 'free')
+                @php
+                    $panelIsInvitations = $d['active_detail'] === 'invitations';
+                    $panelRows = $panelIsInvitations ? $d['invitation_rows'] : $d['free_ticket_rows'];
+                    $panelTitle = $panelIsInvitations ? 'Invitații emise per eveniment' : 'Bilete cu valoare 0 vândute per eveniment';
+                    $panelTotal = $panelIsInvitations ? $invitations : $freeSold;
+                    $panelBg = $panelIsInvitations ? 'bg-violet-50/50 dark:bg-violet-900/10 border-violet-200 dark:border-violet-800' : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800';
+                    $panelAccent = $panelIsInvitations ? 'text-violet-700 dark:text-violet-300' : 'text-amber-700 dark:text-amber-300';
+                    $panelValueColor = $panelIsInvitations ? 'text-violet-900 dark:text-violet-100' : 'text-amber-900 dark:text-amber-100';
+                @endphp
+                <div class="mt-3 p-4 rounded-lg border {{ $panelBg }}">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-semibold tracking-wide uppercase {{ $panelAccent }}">{{ $panelTitle }}</h4>
+                        <span class="text-xs {{ $panelAccent }}">Total: <span class="font-bold {{ $panelValueColor }}">{{ number_format($panelTotal) }}</span></span>
+                    </div>
+
+                    @if (count($panelRows) === 0)
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Niciun eveniment în această lună.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Data</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Locație</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">
+                                            {{ $panelIsInvitations ? 'Invitații' : 'Bilete 0 RON' }}
+                                        </th>
+                                        <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">% din total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($panelRows as $row)
+                                        @php
+                                            $pctOfPanel = $panelTotal > 0 ? ($row['count'] / $panelTotal) * 100 : 0;
+                                        @endphp
+                                        <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-white/50 dark:hover:bg-gray-900/30">
+                                            <td class="px-3 py-2">
+                                                <a href="{{ route('filament.marketplace.resources.events.edit', $row['event_id']) }}" class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+                                                    {{ $row['event_name'] }}
+                                                </a>
+                                            </td>
+                                            <td class="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $row['event_date'] ?? '-' }}</td>
+                                            <td class="px-3 py-2 text-gray-500 dark:text-gray-400">
+                                                @if($row['venue'])
+                                                    {{ $row['venue'] }}@if($row['city']), {{ $row['city'] }}@endif
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                            <td class="px-3 py-2 text-right font-semibold tabular-nums {{ $panelValueColor }}">{{ number_format($row['count']) }}</td>
+                                            <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{{ number_format($pctOfPanel, 2) }}%</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
 
         <!-- Derivare comision Tixello (transparent, breakdown pe buckets) -->

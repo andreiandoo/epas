@@ -27,6 +27,13 @@ class BillingBreakdown extends Page
     #[Url]
     public string $month = '';
 
+    /**
+     * Which detail section is expanded under the Extras row.
+     * Empty string = collapsed. 'invitations' or 'free' when a tile
+     * is clicked.
+     */
+    public string $activeDetail = '';
+
     public function mount(): void
     {
         $admin = Auth::guard('marketplace_admin')->user();
@@ -35,6 +42,15 @@ class BillingBreakdown extends Page
         if (empty($this->month)) {
             $this->month = Carbon::now()->format('Y-m');
         }
+    }
+
+    /**
+     * Toggle the invitations / free-tickets breakdown panel. Clicking the
+     * same tile again collapses it.
+     */
+    public function toggleDetail(string $type): void
+    {
+        $this->activeDetail = $this->activeDetail === $type ? '' : $type;
     }
 
     public function getTitle(): string
@@ -408,20 +424,89 @@ class BillingBreakdown extends Page
         // Standalone invitations = tickets with order_id NULL and meta.is_invitation=true.
         // Scoped to marketplace events (via ticket_types.event_id).
         $invitationCount = 0;
+        $invitationByEvent = [];
         if (!empty($mpEventIds)) {
-            $invitationCount = (int) DB::table('tickets as t')
+            $invitationRows = DB::table('tickets as t')
                 ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                 ->whereNull('t.order_id')
                 ->whereIn('tt.event_id', $mpEventIds)
                 ->whereBetween('t.created_at', [$monthStart, $monthEnd])
                 ->whereRaw("(t.meta::jsonb ->> 'is_invitation') = 'true'")
-                ->count();
+                ->selectRaw('tt.event_id, COUNT(t.id) as cnt')
+                ->groupBy('tt.event_id')
+                ->get();
+
+            foreach ($invitationRows as $r) {
+                $invitationByEvent[(int) $r->event_id] = (int) $r->cnt;
+            }
+            $invitationCount = (int) collect($invitationByEvent)->sum();
         }
 
         // === FREE TICKETS SOLD (via a real order, price = 0) ===
         // Excludes invitations (which have no order). Includes tickets sold
         // for free through bulk_admin / marketplace_free / promo_100_percent.
         $freeTicketCount = $freeSoldOnlineCount + $freeSoldPosCount;
+
+        // Free tickets per event — aggregate from the already-loaded ticket
+        // rows so we don't re-query. Same filter as the "free_ticket_count"
+        // scalar above.
+        $freeByEvent = [];
+        foreach ($ticketRows as $t) {
+            if (!in_array($t->status, ['valid', 'used'], true)) continue;
+            if ($t->refund_status === 'refunded') continue;
+            if ((float) $t->price !== 0.0) continue;
+            $eid = (int) ($t->resolved_event_id ?? 0);
+            if ($eid <= 0) continue;
+            $freeByEvent[$eid] = ($freeByEvent[$eid] ?? 0) + 1;
+        }
+
+        // === EVENT DETAILS FOR EXPANDABLE PANELS ===
+        // Union of event ids referenced by invitations + free tickets. We
+        // reuse $eventDetails (already loaded for the main table) plus
+        // fetch names for any event only referenced by invitations.
+        $detailEventIds = array_unique(array_merge(
+            array_keys($invitationByEvent),
+            array_keys($freeByEvent)
+        ));
+        $extraEventDetails = [];
+        $missingIds = array_diff($detailEventIds, array_keys($eventDetails));
+        if (!empty($missingIds)) {
+            $extraEventDetails = Event::whereIn('id', $missingIds)
+                ->with('venue:id,name,city')
+                ->get()
+                ->mapWithKeys(function ($e) {
+                    $name = $e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en');
+                    $venueName = $e->venue ? (is_array($e->venue->name) ? ($e->venue->name['ro'] ?? $e->venue->name['en'] ?? '') : $e->venue->name) : null;
+                    $eventDate = $e->event_date ?? $e->range_start_date;
+                    return [$e->id => [
+                        'name' => $name,
+                        'date' => $eventDate?->format('d.m.Y'),
+                        'venue' => $venueName,
+                        'city' => $e->venue?->city,
+                    ]];
+                })
+                ->toArray();
+        }
+
+        $buildDetailRows = function (array $countsByEvent) use (&$eventDetails, &$extraEventDetails) {
+            $rows = [];
+            foreach ($countsByEvent as $eid => $count) {
+                $d = $eventDetails[$eid] ?? $extraEventDetails[$eid] ?? null;
+                $rows[] = [
+                    'event_id' => (int) $eid,
+                    'event_name' => $d['name'] ?? ('Eveniment #' . $eid),
+                    'event_date' => $d['date'] ?? null,
+                    'venue' => $d['venue'] ?? null,
+                    'city' => $d['city'] ?? null,
+                    'count' => (int) $count,
+                ];
+            }
+            usort($rows, fn ($a, $b) => $b['count'] <=> $a['count']);
+            return $rows;
+        };
+
+        $invitationDetailRows = $buildDetailRows($invitationByEvent);
+        $freeTicketDetailRows = $buildDetailRows($freeByEvent);
 
         // === PER-EVENT TICKET PRICE BASE + TIXELLO COMMISSION ===
         // Second pass over the same ticket rows to bucket per event id, so
@@ -522,9 +607,12 @@ class BillingBreakdown extends Page
                 'pos_sold' => $posSold,
                 'pos_refunded' => $posRefunded,
 
-                // Extra counts
+                // Extra counts + expandable per-event breakdowns
                 'invitation_count' => $invitationCount,
                 'free_ticket_count' => $freeTicketCount,
+                'invitation_rows' => $invitationDetailRows,
+                'free_ticket_rows' => $freeTicketDetailRows,
+                'active_detail' => $this->activeDetail,
 
                 // Transparent commission derivation
                 'commission_by_bucket' => $tixelloCommissionByBucket,
