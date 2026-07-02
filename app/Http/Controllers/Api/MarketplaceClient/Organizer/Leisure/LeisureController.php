@@ -2789,6 +2789,112 @@ class LeisureController extends BaseController
         return $organizer;
     }
 
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/payouts
+     *
+     * Lista deconturi (MarketplacePayout) pentru event-ul cerut + document PDF
+     * decont daca a fost generat + breakdown detaliat (ticket_breakdown JSON).
+     */
+    public function payouts(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        // Scoping: organizatorul evenimentului (nu utilizatorul autentificat —
+        // pentru cazul in care e un team member logat)
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        $payouts = \App\Models\MarketplacePayout::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->with(['decontDocument:id,marketplace_payout_id,file_path,file_name'])
+            ->orderByDesc('created_at')
+            ->get([
+                'id',
+                'reference',
+                'decont_series',
+                'amount',
+                'currency',
+                'period_start',
+                'period_end',
+                'gross_amount',
+                'commission_amount',
+                'discount_amount',
+                'refund_amount',
+                'fees_amount',
+                'status',
+                'source',
+                'ticket_breakdown',
+                'created_at',
+                'completed_at',
+            ]);
+
+        return $this->success([
+            'event' => [
+                'id' => $eventModel->id,
+                'title' => $this->localizedTitle($eventModel),
+            ],
+            'currency' => $payouts->first()?->currency ?? 'RON',
+            'payouts' => $payouts->map(function ($p) {
+                $doc = $p->decontDocument;
+                $docUrl = null;
+                if ($doc && $doc->file_path) {
+                    $docUrl = url('storage/' . $doc->file_path);
+                }
+                // Breakdown per tip bilet — reduce ticket_breakdown JSON la doar
+                // campurile de care are nevoie UI-ul (nume, qty, unit_price,
+                // gross, comision, discount, net).
+                $breakdownRows = [];
+                foreach ((array) $p->ticket_breakdown as $row) {
+                    if (!is_array($row)) continue;
+                    $qty = (int) ($row['quantity'] ?? $row['qty'] ?? 0);
+                    if ($qty <= 0) continue;
+                    $unit = (float) ($row['unit_price'] ?? $row['price'] ?? 0);
+                    $gross = (float) ($row['gross'] ?? ($qty * $unit));
+                    $comm = (float) ($row['commission_amount'] ?? ($qty * (float) ($row['commission_per_ticket'] ?? 0)));
+                    $disc = (float) ($row['discount'] ?? 0);
+                    $net = (float) ($row['net'] ?? ($gross - $comm - $disc));
+                    $breakdownRows[] = [
+                        'ticket_type_id' => (int) ($row['ticket_type_id'] ?? 0),
+                        'name' => $row['ticket_type_name'] ?? ('Tip #' . ($row['ticket_type_id'] ?? '?')),
+                        'qty' => $qty,
+                        'unit_price' => round($unit, 2),
+                        'gross' => round($gross, 2),
+                        'commission' => round($comm, 2),
+                        'discount' => round($disc, 2),
+                        'net' => round($net, 2),
+                    ];
+                }
+                return [
+                    'id' => $p->id,
+                    'reference' => $p->reference,
+                    'decont_series' => $p->decont_series,
+                    'amount' => (float) $p->amount,
+                    'gross_amount' => (float) $p->gross_amount,
+                    'commission_amount' => (float) $p->commission_amount,
+                    'discount_amount' => (float) $p->discount_amount,
+                    'refund_amount' => (float) $p->refund_amount,
+                    'fees_amount' => (float) $p->fees_amount,
+                    'currency' => $p->currency ?? 'RON',
+                    'status' => $p->status,
+                    'source' => $p->source,
+                    'period_start' => optional($p->period_start)->toDateString(),
+                    'period_end' => optional($p->period_end)->toDateString(),
+                    'created_at' => optional($p->created_at)->toIso8601String(),
+                    'completed_at' => optional($p->completed_at)->toIso8601String(),
+                    'pdf_url' => $docUrl,
+                    'breakdown' => $breakdownRows,
+                ];
+            })->values(),
+        ]);
+    }
+
     protected function localizedTitle(Event $event): string
     {
         $title = $event->title;

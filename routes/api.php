@@ -1855,6 +1855,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::put('/events/{event}/leisure/venue-config', [OrganizerLeisureController::class, 'updateVenueConfig'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.venue-config.update');
+        // Deconturi/payouts per event (list + PDF url + breakdown ticket)
+        Route::get('/events/{event}/leisure/payouts', [OrganizerLeisureController::class, 'payouts'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.payouts');
         // Societati emitente (primary + secondary) — edit complet date juridice + numerotare facturi + TVA
         Route::get('/events/{event}/leisure/issuers', [OrganizerLeisureController::class, 'issuersShow'])
             ->whereNumber('event')
