@@ -478,6 +478,12 @@ class CheckoutController extends BaseController
                     ?? $event?->marketplaceOrganizer?->default_commission_mode
                     ?? $client->commission_mode
                     ?? 'included';
+                // Floor comision per bilet — cand organizatorul are
+                // fixed_commission_default > 0, comisionul rezultat NU poate fi
+                // mai mic decat aceasta valoare per bilet. Matches POS behavior
+                // (leisureController::posSale linia 1059 aplica acelasi
+                // max($unit*$rate/100, $fixed) invariant fata de mod).
+                $organizerFloorPerTicket = (float) ($event?->marketplaceOrganizer?->fixed_commission_default ?? 0);
 
                 // Use ticket-type commission override if available
                 $itemCommission = 0;
@@ -491,8 +497,21 @@ class CheckoutController extends BaseController
                     $itemCommissionRate = $effective['rate'];
                     $itemCommissionMode = $effective['mode'];
                 } else {
-                    // Use default rate
-                    $itemCommission = round($itemTotal * ($defaultCommissionRate / 100), 2);
+                    // Use default rate + apply per-ticket floor din organizer
+                    $perTicketPct = round($unitPrice * ($defaultCommissionRate / 100), 2);
+                    $perTicketEffective = $organizerFloorPerTicket > 0
+                        ? max($perTicketPct, $organizerFloorPerTicket)
+                        : $perTicketPct;
+                    $itemCommission = round($perTicketEffective * $quantity, 2);
+                }
+                // Aplica floor si pe cazul cu commission_type ticket-type override,
+                // in caz ca ticket type-ul are commission_fixed=0 dar organizatorul
+                // are un floor global. Doar cand fara commission_fixed propriu.
+                if ($ticketType && $ticketType->commission_type && $organizerFloorPerTicket > 0) {
+                    $minTotal = round($organizerFloorPerTicket * $quantity, 2);
+                    if ($itemCommission < $minTotal) {
+                        $itemCommission = $minTotal;
+                    }
                 }
                 $totalCommission += $itemCommission;
 

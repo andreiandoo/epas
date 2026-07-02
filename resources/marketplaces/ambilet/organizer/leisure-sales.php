@@ -67,10 +67,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <h2 class="font-bold text-secondary mb-3">Vânzări în timp</h2>
                 <div class="h-64"><canvas id="lv-chart"></canvas></div>
             </div>
-            <div class="bg-white border rounded-2xl border-border p-5">
-                <h2 class="font-bold text-secondary mb-3">Pe categorii</h2>
-                <div id="lv-categories" class="space-y-2 text-sm">
-                    <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
+            <div class="bg-white border rounded-2xl border-border p-5 space-y-5">
+                <div>
+                    <h2 class="font-bold text-secondary mb-3">Pe categorii</h2>
+                    <div id="lv-categories" class="space-y-2 text-sm">
+                        <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-border">
+                    <h2 class="font-bold text-secondary mb-3">Pe tip bilet</h2>
+                    <div id="lv-ticket-types" class="space-y-2 text-sm max-h-96 overflow-y-auto pr-1">
+                        <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,6 +125,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             data: { labels, datasets: [{ label: 'Vânzări (RON)', data, borderColor: '#22C55E', backgroundColor: 'rgba(34,197,94,0.12)', fill: true, tension: 0.3, pointRadius: 3 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
+    }
+
+    // Breakdown per tip bilet (nume + count + venit + procent din total)
+    function renderTicketTypes(rows) {
+        const wrap = $('lv-ticket-types');
+        if (!rows || !rows.length) {
+            wrap.innerHTML = '<p class="text-muted text-center py-4">Nicio vânzare în această perioadă.</p>';
+            return;
+        }
+        const totalTickets = rows.reduce((s, r) => s + Number(r.tickets || 0), 0);
+        wrap.innerHTML = rows.map(r => {
+            const pct = totalTickets > 0 ? Math.round((r.tickets / totalTickets) * 100) : 0;
+            const color = categoryColor(r.service_category || 'access');
+            const rev = Number(r.revenue || 0);
+            const safeName = String(r.name || 'Bilet').replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
+            return `
+            <div>
+                <div class="flex justify-between text-xs mb-1 gap-2">
+                    <span class="font-medium truncate" style="color:${color}" title="${safeName}">${safeName}</span>
+                    <span class="text-muted whitespace-nowrap">${r.tickets} × · ${fmtMoney(rev)} RON</span>
+                </div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full" style="width:${pct}%;background:${color}"></div>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     function renderCategories(byCat) {
@@ -181,6 +215,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-stat-avg').textContent = fmtMoney(totals.avg_order);
             renderChart(data.rows || [], data.group_by || 'day');
             renderCategories(data.by_category || {});
+            renderTicketTypes(data.by_ticket_type || []);
         } catch (e) {
             console.error('[leisure-sales] load failed', e);
             $('lv-error').textContent = 'Eroare la încărcarea datelor: ' + (e?.message || 'necunoscut');

@@ -556,7 +556,7 @@ class LeisureController extends BaseController
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['completed', 'paid'])
             ->whereBetween('paid_at', [$from, $to])
-            ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,service_category'])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category'])
             ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency']);
 
         // Format key per groupBy
@@ -571,6 +571,7 @@ class LeisureController extends BaseController
         $totalTickets = 0;
         $totalOrders = $orders->count();
         $byCategory = [];
+        $byTicketType = [];
 
         foreach ($orders as $order) {
             $key = $fmtKey($order->paid_at);
@@ -588,10 +589,37 @@ class LeisureController extends BaseController
                 $totalTickets++;
                 $cat = $ticket->ticketType->service_category ?? 'access';
                 $byCategory[$cat] = ($byCategory[$cat] ?? 0) + 1;
+                // Per tip bilet — foloseste label_override daca exista (guide bonus),
+                // altfel numele tipului. Grupeaza cate bucati + venit + categoria.
+                $ttId = $ticket->ticket_type_id;
+                $rawName = null;
+                if (is_array($ticket->meta ?? null) && !empty($ticket->meta['label_override'])) {
+                    $rawName = $ticket->meta['label_override'];
+                    $ttKey = 'lbl_' . $rawName; // grupam bilete guide bonus separat de parintele lor
+                } else {
+                    $rawName = $ticket->ticketType->name ?? "Tip #{$ttId}";
+                    if (is_array($rawName)) $rawName = $rawName['ro'] ?? reset($rawName);
+                    $ttKey = 'tt_' . $ttId;
+                }
+                if (!isset($byTicketType[$ttKey])) {
+                    $byTicketType[$ttKey] = [
+                        'ticket_type_id' => $ttId,
+                        'name' => $rawName,
+                        'service_category' => $cat,
+                        'tickets' => 0,
+                        'revenue' => 0.0,
+                    ];
+                }
+                $byTicketType[$ttKey]['tickets']++;
+                $byTicketType[$ttKey]['revenue'] += (float) ($ticket->price ?? 0);
             }
         }
 
         ksort($buckets);
+        // Sortez by_ticket_type descrescator dupa nr. bilete
+        usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
+        foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
 
         return $this->success([
             'from' => $from->toDateString(),
@@ -606,6 +634,7 @@ class LeisureController extends BaseController
                 'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
             ],
             'by_category' => $byCategory,
+            'by_ticket_type' => array_values($byTicketType),
         ]);
     }
 
@@ -690,23 +719,48 @@ class LeisureController extends BaseController
         foreach ($recentStaffScans as $s) $bucketAdd($s->checked_in_at);
         ksort($buckets);
 
-        // Stream — combinăm orders recente (vânzări) + check-ins bilete + check-ins staff
+        // Stream — combinăm orders recente (vânzări) + check-ins bilete + check-ins staff.
+        // Sumarizam tipurile de bilete cumparate pe fiecare comanda ('2× Adult · 1× Elev').
         $recentOrders = Order::query()
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['paid', 'completed'])
             ->where('paid_at', '>=', $hourAgo)
             ->orderByDesc('paid_at')
+            ->with(['tickets:id,order_id,ticket_type_id,status,meta', 'tickets.ticketType:id,name'])
             ->limit(20)
             ->get(['id', 'customer_name', 'total', 'currency', 'paid_at']);
 
         $stream = [];
         foreach ($recentOrders as $o) {
+            // Agrega tipurile de bilete: 2× Adult · 1× Copil (ignora anulate + bonusuri fara pret,
+            // dar pastreaza componentele pachetelor sub numele lor)
+            $byType = [];
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $rawName = null;
+                if (is_array($t->meta ?? null) && !empty($t->meta['label_override'])) {
+                    $rawName = $t->meta['label_override'];
+                } else {
+                    $rawName = $t->ticketType->name ?? 'Bilet';
+                    if (is_array($rawName)) $rawName = $rawName['ro'] ?? reset($rawName);
+                }
+                if (!isset($byType[$rawName])) $byType[$rawName] = 0;
+                $byType[$rawName]++;
+            }
+            arsort($byType);
+            $ticketSummary = [];
+            foreach (array_slice($byType, 0, 4, true) as $name => $qty) {
+                $ticketSummary[] = $qty . '× ' . $name;
+            }
+            if (count($byType) > 4) $ticketSummary[] = '+' . (count($byType) - 4);
+            $detail = ($ticketSummary ? implode(' · ', $ticketSummary) : 'Bilete') . ' · ' . number_format((float) $o->total, 2) . ' RON';
+
             $stream[] = [
                 'type' => 'sale',
                 'at' => optional($o->paid_at)->toIso8601String(),
                 'ts' => optional($o->paid_at)->timestamp ?? 0,
                 'label' => 'Vânzare nouă',
-                'detail' => ($o->customer_name ?? 'Client') . ' · ' . number_format((float) $o->total, 2) . ' RON',
+                'detail' => $detail,
                 'order_id' => $o->id,
             ];
         }
@@ -1062,6 +1116,16 @@ class LeisureController extends BaseController
                     'visit_date' => $visitDate,
                     'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
                     'cashier_organizer_id' => $organizer->id,
+                    // Team member care a operat POS-ul (pentru raport per operator).
+                    // Detectat din numele token-ului sanctum: 'team-member-{id}'.
+                    // NULL cand loginul e ownership direct pe organizer.
+                    'cashier_team_member_id' => (function () use ($request) {
+                        $tokenName = $request->user()?->currentAccessToken()?->name ?? '';
+                        if (str_starts_with($tokenName, 'team-member-')) {
+                            return (int) str_replace('team-member-', '', $tokenName);
+                        }
+                        return null;
+                    })(),
                     'commission_total' => $commissionTotal,
                     'commission_rate' => $commissionRate,
                     'commission_fixed' => $commissionFixed,
@@ -2057,6 +2121,32 @@ class LeisureController extends BaseController
         $totalTickets = 0;
         $totalOrders = $orders->count();
 
+        // Pre-load team members pentru resolvare nume operator (cashier_team_member_id
+        // in meta) + fallback la cashier_organizer_id (organizer principal). Colecta
+        // ID-urile unice mai intai ca sa facem un singur query.
+        $tmIds = [];
+        $orgIds = [];
+        foreach ($orders as $o) {
+            $tmId = $o->meta['cashier_team_member_id'] ?? null;
+            $orgId = $o->meta['cashier_organizer_id'] ?? null;
+            if ($tmId) $tmIds[(int) $tmId] = true;
+            if ($orgId && !$tmId) $orgIds[(int) $orgId] = true;
+        }
+        $tmNames = [];
+        if (!empty($tmIds)) {
+            \App\Models\MarketplaceOrganizerTeamMember::query()
+                ->whereIn('id', array_keys($tmIds))
+                ->get(['id', 'name'])
+                ->each(function ($tm) use (&$tmNames) { $tmNames[$tm->id] = $tm->name; });
+        }
+        $orgNames = [];
+        if (!empty($orgIds)) {
+            MarketplaceOrganizer::query()
+                ->whereIn('id', array_keys($orgIds))
+                ->get(['id', 'name', 'contact_name'])
+                ->each(function ($org) use (&$orgNames) { $orgNames[$org->id] = $org->contact_name ?: $org->name; });
+        }
+
         foreach ($orders as $o) {
             $rev = (float) ($o->total ?? 0);
             $totalRevenue += $rev;
@@ -2068,10 +2158,22 @@ class LeisureController extends BaseController
             $bySource[$source]['orders']++;
             $bySource[$source]['revenue'] += $rev;
 
-            // Cashier (operator POS) — din meta.cashier_organizer_id
+            // Cashier (operator POS) — team_member_id (prioritate) sau organizer_id
+            // (owner cand nu e team member). Cheia de grupare distinge intre ele
+            // ca sa nu se combine team member 5 cu organizer 5.
+            $cashierTmId = $o->meta['cashier_team_member_id'] ?? null;
             $cashierId = $o->meta['cashier_organizer_id'] ?? null;
-            $cashierKey = $cashierId ? "org_{$cashierId}" : 'online';
-            if (!isset($byCashier[$cashierKey])) $byCashier[$cashierKey] = ['cashier_id' => $cashierId, 'cashier_label' => $cashierId ? "Operator #{$cashierId}" : 'Online (auto)', 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            if ($cashierTmId) {
+                $cashierKey = 'tm_' . $cashierTmId;
+                $cashierLabel = $tmNames[$cashierTmId] ?? ('Angajat #' . $cashierTmId);
+            } elseif ($cashierId) {
+                $cashierKey = 'org_' . $cashierId;
+                $cashierLabel = $orgNames[$cashierId] ?? ('Operator #' . $cashierId);
+            } else {
+                $cashierKey = 'online';
+                $cashierLabel = 'Online (auto)';
+            }
+            if (!isset($byCashier[$cashierKey])) $byCashier[$cashierKey] = ['cashier_id' => $cashierTmId ?: $cashierId, 'cashier_label' => $cashierLabel, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
             $byCashier[$cashierKey]['orders']++;
             $byCashier[$cashierKey]['revenue'] += $rev;
 
