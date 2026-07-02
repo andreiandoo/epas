@@ -478,12 +478,14 @@ class CheckoutController extends BaseController
                     ?? $event?->marketplaceOrganizer?->default_commission_mode
                     ?? $client->commission_mode
                     ?? 'included';
-                // Floor comision per bilet — cand organizatorul are
-                // fixed_commission_default > 0, comisionul rezultat NU poate fi
-                // mai mic decat aceasta valoare per bilet. Matches POS behavior
-                // (leisureController::posSale linia 1059 aplica acelasi
-                // max($unit*$rate/100, $fixed) invariant fata de mod).
-                $organizerFloorPerTicket = (float) ($event?->marketplaceOrganizer?->fixed_commission_default ?? 0);
+                // Floor comision per bilet — DOAR cand organizator opt-in via
+                // commission_use_floor === true. Cand bifat: comisionul per bilet
+                // nu poate fi mai mic decat fixed_commission_default. Cand NU
+                // bifat (default pentru toti org-urii existenti): floor-ul e 0
+                // -> zero impact fata de comportamentul dinainte.
+                $organizerFloorPerTicket = ($event?->marketplaceOrganizer?->commission_use_floor)
+                    ? (float) ($event?->marketplaceOrganizer?->fixed_commission_default ?? 0)
+                    : 0.0;
 
                 // Use ticket-type commission override if available
                 $itemCommission = 0;

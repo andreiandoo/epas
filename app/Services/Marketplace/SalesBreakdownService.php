@@ -162,10 +162,12 @@ class SalesBreakdownService
             ?? $event->marketplaceOrganizer?->default_commission_mode
             ?? $event->marketplaceClient?->commission_mode
             ?? 'included';
-        // Floor comision per bilet (organizer.fixed_commission_default) — cand > 0,
-        // aplicam max(pct, floor). Coerent cu leisureController::posSale + customer
-        // CheckoutController + build() per-order slice de mai jos.
-        $organizerFloor = (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0);
+        // Floor comision per bilet — DOAR cand organizator opt-in via
+        // commission_use_floor === true. Cand NU bifat: floor=0, deci comportament
+        // vechi (pur procentual). Aliniat cu customer checkout + raport backend.
+        $organizerFloor = ($event->marketplaceOrganizer?->commission_use_floor)
+            ? (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0)
+            : 0.0;
 
         $perType = [];
         $sumValidGross = 0.0;
@@ -580,10 +582,12 @@ class SalesBreakdownService
             ?? $event->marketplaceOrganizer?->default_commission_mode
             ?? $event->marketplaceClient?->commission_mode
             ?? 'included';
-        // Floor comision per bilet (organizer.fixed_commission_default) — cand > 0,
-        // aplicam max(pct, floor) pe fiecare bilet. Matches leisureController::posSale
-        // + customer CheckoutController fix din 2026-07.
-        $organizerFloor = (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0);
+        // Floor comision per bilet — DOAR cand organizator opt-in via
+        // commission_use_floor === true. Cand NU bifat: floor=0 (comportament
+        // vechi, pur procentual). Aliniat cu buildCurrent() de mai sus.
+        $organizerFloor = ($event->marketplaceOrganizer?->commission_use_floor)
+            ? (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0)
+            : 0.0;
 
         $currency = $event->currency ?? 'RON';
 

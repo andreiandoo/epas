@@ -2125,11 +2125,16 @@ class LeisureController extends BaseController
         // Commission rate + floor pentru organizatorul evenimentului. Folosite pt
         // fallback cand order.meta.commission_total nu exista (comenzi vechi
         // sau ordonate de customer flow inainte de fix-ul din 2026-07).
+        // FLOOR se aplica DOAR daca organizator.commission_use_floor === true
+        // (opt-in explicit, ca sa nu impactam org-urile care au
+        // fixed_commission_default setat cu alta intentie).
         $eventOrganizer = $eventModel->marketplace_organizer_id
             ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
             : $organizer;
         $orgRate = (float) ($eventOrganizer?->getEffectiveCommissionRate() ?? 5);
-        $orgFloor = (float) ($eventOrganizer?->fixed_commission_default ?? 0);
+        $orgFloor = ($eventOrganizer?->commission_use_floor)
+            ? (float) ($eventOrganizer?->fixed_commission_default ?? 0)
+            : 0.0;
 
         // Pre-load team members pentru resolvare nume operator (cashier_team_member_id
         // in meta) + fallback la cashier_organizer_id (organizer principal). Colecta

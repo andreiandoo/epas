@@ -1129,6 +1129,17 @@ class OrganizerResource extends Resource
                                 ->placeholder('Use marketplace default')
                                 ->helperText('Applied automatically when creating events for this organizer'),
 
+                            // Opt-in explicit pentru semantica "floor" a comisionului fix.
+                            // Cand bifat: comisionul per bilet = max(rate% * pret, fixed).
+                            // Cand debifat (default): comisionul e strict pur procentual
+                            // (fixed_commission_default e ignorat in customer/admin/raport,
+                            // dar POS on_top pastreaza invariantul istoric max()).
+                            Forms\Components\Toggle::make('commission_use_floor')
+                                ->label('Calculează cu floor (minim per bilet)')
+                                ->helperText('Când e bifat: comisionul per bilet nu poate fi mai mic decât „Fixed Commission" de mai sus. Aplicat în: POS, customer checkout, pagina de vânzări din admin, raport organizator.')
+                                ->default(false)
+                                ->inline(false),
+
                             // Per-organizer override of marketplace.payment_fees.pass_to_customer.
                             // Visible only when the marketplace has the feature enabled (otherwise
                             // it's a config that goes nowhere). For ambilet/tics this section
