@@ -43,6 +43,72 @@
             </div>
         </div>
 
+        <!-- Revenue + Tickets Breakdown -->
+        <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <div class="flex items-center gap-2 mb-4">
+                <x-heroicon-o-chart-bar-square class="w-5 h-5 text-indigo-500" />
+                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Breakdown încasări &amp; bilete</h3>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <!-- Online sales -->
+                <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <x-heroicon-o-globe-alt class="w-4 h-4 text-emerald-500" />
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări online</p>
+                    </div>
+                    <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {{ number_format($d['online_revenue'], 2) }} {{ $d['currency'] }}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ number_format($d['online_orders']) }} {{ $d['online_orders'] === 1 ? 'comandă' : 'comenzi' }}
+                    </p>
+                </div>
+
+                <!-- POS sales -->
+                <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <x-heroicon-o-device-phone-mobile class="w-4 h-4 text-sky-500" />
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări POS</p>
+                    </div>
+                    <p class="text-xl font-bold text-sky-600 dark:text-sky-400">
+                        {{ number_format($d['pos_revenue'], 2) }} {{ $d['currency'] }}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ number_format($d['pos_orders']) }} {{ $d['pos_orders'] === 1 ? 'comandă' : 'comenzi' }}
+                    </p>
+                </div>
+
+                <!-- Tickets sold -->
+                <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <x-heroicon-o-ticket class="w-4 h-4 text-indigo-500" />
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                    </div>
+                    <p class="text-xl font-bold text-gray-900 dark:text-white">
+                        {{ number_format($d['sold_ticket_count']) }}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        ({{ number_format($d['sold_ticket_value'], 2) }} {{ $d['currency'] }})
+                    </p>
+                </div>
+
+                <!-- Tickets refunded -->
+                <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <x-heroicon-o-arrow-uturn-left class="w-4 h-4 text-rose-500" />
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete returnate</p>
+                    </div>
+                    <p class="text-xl font-bold text-rose-600 dark:text-rose-400">
+                        {{ number_format($d['refunded_ticket_count']) }}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        ({{ number_format($d['refunded_ticket_value'], 2) }} {{ $d['currency'] }})
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Ticketing Breakdown per Event -->
         <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <div class="flex items-center gap-2 mb-4">

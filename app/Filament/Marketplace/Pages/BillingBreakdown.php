@@ -239,6 +239,63 @@ class BillingBreakdown extends Page
         $ticketingTotal = collect($events)->sum('tixello_commission');
         $marketplaceCommissionTotal = collect($events)->sum('marketplace_commission');
 
+        // === REVENUE SPLIT: ONLINE vs POS ===
+        // POS bucket = orders originating from the POS app or venue-owner POS
+        // terminal. Online = everything else that isn't a test / external
+        // import. Uses the same status set as the per-event breakdown BUT
+        // excludes 'refunded' so the split reflects actual cash-in.
+        $posSources = ['pos_app', 'venue_owner_pos'];
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+        $revenueSplit = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
+                $q->where('marketplace_client_id', $marketplaceId);
+                if (!empty($mpEventIds)) {
+                    $q->orWhereIn('marketplace_event_id', $mpEventIds)
+                      ->orWhereIn('event_id', $mpEventIds);
+                }
+            })
+            ->whereIn('status', $paidStatuses)
+            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(CASE WHEN source IN ('pos_app','venue_owner_pos') THEN total ELSE 0 END) as pos_revenue")
+            ->selectRaw("SUM(CASE WHEN source NOT IN ('pos_app','venue_owner_pos') THEN total ELSE 0 END) as online_revenue")
+            ->selectRaw("COUNT(CASE WHEN source IN ('pos_app','venue_owner_pos') THEN 1 END) as pos_orders")
+            ->selectRaw("COUNT(CASE WHEN source NOT IN ('pos_app','venue_owner_pos') THEN 1 END) as online_orders")
+            ->first();
+
+        $onlineRevenue = (float) ($revenueSplit->online_revenue ?? 0);
+        $posRevenue = (float) ($revenueSplit->pos_revenue ?? 0);
+        $onlineOrders = (int) ($revenueSplit->online_orders ?? 0);
+        $posOrders = (int) ($revenueSplit->pos_orders ?? 0);
+
+        // === TICKETS SOLD vs REFUNDED (with value) ===
+        // Sold = ticket rows with a paid/confirmed/completed order behind
+        // them (matches how the dashboard counts sold tickets). Refunded
+        // = tickets whose refund_status='refunded' regardless of parent
+        // status, so refunds show up even when the order itself stays
+        // 'confirmed' (partial refund case).
+        $ticketStats = DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->where(function ($q) use ($marketplaceId, $mpEventIds) {
+                $q->where('orders.marketplace_client_id', $marketplaceId);
+                if (!empty($mpEventIds)) {
+                    $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
+                      ->orWhereIn('orders.event_id', $mpEventIds);
+                }
+            })
+            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereBetween('tickets.created_at', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid','used') AND (tickets.refund_status IS NULL OR tickets.refund_status <> 'refunded') THEN 1 ELSE 0 END) as sold_count")
+            ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid','used') AND (tickets.refund_status IS NULL OR tickets.refund_status <> 'refunded') THEN COALESCE(tickets.price, 0) ELSE 0 END) as sold_value")
+            ->selectRaw("SUM(CASE WHEN tickets.refund_status = 'refunded' THEN 1 ELSE 0 END) as refunded_count")
+            ->selectRaw("SUM(CASE WHEN tickets.refund_status = 'refunded' THEN COALESCE(tickets.price, 0) ELSE 0 END) as refunded_value")
+            ->first();
+
+        $soldTicketCount = (int) ($ticketStats->sold_count ?? 0);
+        $soldTicketValue = (float) ($ticketStats->sold_value ?? 0);
+        $refundedTicketCount = (int) ($ticketStats->refunded_count ?? 0);
+        $refundedTicketValue = (float) ($ticketStats->refunded_value ?? 0);
+
         // === SERVICE ORDERS BREAKDOWN ===
         $serviceOrders = ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['active', 'completed'])
@@ -298,6 +355,15 @@ class BillingBreakdown extends Page
                 'services_total' => $servicesTotal,
                 'grand_total' => $ticketingTotal + $servicesTotal,
                 'is_current_month' => $monthDate->format('Y-m') === Carbon::now()->format('Y-m'),
+                // Detailed breakdown under the 4 summary cards
+                'online_revenue' => $onlineRevenue,
+                'online_orders' => $onlineOrders,
+                'pos_revenue' => $posRevenue,
+                'pos_orders' => $posOrders,
+                'sold_ticket_count' => $soldTicketCount,
+                'sold_ticket_value' => $soldTicketValue,
+                'refunded_ticket_count' => $refundedTicketCount,
+                'refunded_ticket_value' => $refundedTicketValue,
             ],
         ];
     }
