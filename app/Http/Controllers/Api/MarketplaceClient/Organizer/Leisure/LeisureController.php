@@ -2120,6 +2120,16 @@ class LeisureController extends BaseController
         $totalRevenue = 0.0;
         $totalTickets = 0;
         $totalOrders = $orders->count();
+        $totalCommission = 0.0; // Comisioane cumulate (POS + customer)
+
+        // Commission rate + floor pentru organizatorul evenimentului. Folosite pt
+        // fallback cand order.meta.commission_total nu exista (comenzi vechi
+        // sau ordonate de customer flow inainte de fix-ul din 2026-07).
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        $orgRate = (float) ($eventOrganizer?->getEffectiveCommissionRate() ?? 5);
+        $orgFloor = (float) ($eventOrganizer?->fixed_commission_default ?? 0);
 
         // Pre-load team members pentru resolvare nume operator (cashier_team_member_id
         // in meta) + fallback la cashier_organizer_id (organizer principal). Colecta
@@ -2151,12 +2161,30 @@ class LeisureController extends BaseController
             $rev = (float) ($o->total ?? 0);
             $totalRevenue += $rev;
 
+            // Comisionul pe comanda: prefer meta.commission_total (POS il scrie)
+            // sau il calculam per-bilet din pretul biletului cu floor:
+            //   max(price * rate/100, floor)
+            $orderCommission = 0.0;
+            if (isset($o->meta['commission_total']) && is_numeric($o->meta['commission_total'])) {
+                $orderCommission = (float) $o->meta['commission_total'];
+            } else {
+                foreach ($o->tickets as $t) {
+                    if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                    $tp = (float) ($t->price ?? 0);
+                    $pct = round($tp * $orgRate / 100, 2);
+                    $orderCommission += $orgFloor > 0 ? max($pct, $orgFloor) : $pct;
+                }
+                $orderCommission = round($orderCommission, 2);
+            }
+            $totalCommission += $orderCommission;
+
             // Source: pos vs online
             $source = $o->source === 'pos' ? 'pos' : ($o->source ?: 'online');
             if ($source !== 'pos') $source = 'online';
-            if (!isset($bySource[$source])) $bySource[$source] = ['source' => $source, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            if (!isset($bySource[$source])) $bySource[$source] = ['source' => $source, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0];
             $bySource[$source]['orders']++;
             $bySource[$source]['revenue'] += $rev;
+            $bySource[$source]['commission'] += $orderCommission;
 
             // Cashier (operator POS) — team_member_id (prioritate) sau organizer_id
             // (owner cand nu e team member). Cheia de grupare distinge intre ele
@@ -2173,9 +2201,10 @@ class LeisureController extends BaseController
                 $cashierKey = 'online';
                 $cashierLabel = 'Online (auto)';
             }
-            if (!isset($byCashier[$cashierKey])) $byCashier[$cashierKey] = ['cashier_id' => $cashierTmId ?: $cashierId, 'cashier_label' => $cashierLabel, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            if (!isset($byCashier[$cashierKey])) $byCashier[$cashierKey] = ['cashier_id' => $cashierTmId ?: $cashierId, 'cashier_label' => $cashierLabel, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0];
             $byCashier[$cashierKey]['orders']++;
             $byCashier[$cashierKey]['revenue'] += $rev;
+            $byCashier[$cashierKey]['commission'] += $orderCommission;
 
             foreach ($o->tickets as $t) {
                 if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
@@ -2195,18 +2224,25 @@ class LeisureController extends BaseController
                         'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
                         'tickets' => 0,
                         'revenue' => 0.0,
+                        'commission' => 0.0,
                     ];
                 }
                 $byTicketType[$key]['tickets']++;
-                $byTicketType[$key]['revenue'] += (float) ($t->price ?? 0);
+                $tp = (float) ($t->price ?? 0);
+                $byTicketType[$key]['revenue'] += $tp;
+                // Comision per bilet cu floor
+                $ticketCommission = round($tp * $orgRate / 100, 2);
+                if ($orgFloor > 0 && $ticketCommission < $orgFloor) $ticketCommission = $orgFloor;
+                $byTicketType[$key]['commission'] += $ticketCommission;
             }
         }
 
         // Round totals
         $totalRevenue = round($totalRevenue, 2);
-        foreach ($bySource as &$row) $row['revenue'] = round($row['revenue'], 2);
-        foreach ($byCashier as &$row) $row['revenue'] = round($row['revenue'], 2);
-        foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        $totalCommission = round($totalCommission, 2);
+        foreach ($bySource as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
+        foreach ($byCashier as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
+        foreach ($byTicketType as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         unset($row);
 
         return $this->success([
@@ -2217,7 +2253,17 @@ class LeisureController extends BaseController
                 'orders' => $totalOrders,
                 'tickets' => $totalTickets,
                 'revenue' => $totalRevenue,
+                'commission' => $totalCommission,
+                'net_revenue' => round($totalRevenue - $totalCommission, 2),
                 'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+                'avg_commission_per_order' => $totalOrders > 0 ? round($totalCommission / $totalOrders, 2) : 0,
+                'commission_pct_effective' => $totalRevenue > 0 ? round(($totalCommission / $totalRevenue) * 100, 2) : 0,
+            ],
+            'commission_config' => [
+                'rate' => $orgRate,
+                'floor' => $orgFloor,
+                'mode' => $eventOrganizer?->getEffectiveCommissionMode() ?? 'included',
+                'formula' => $orgFloor > 0 ? "max({$orgRate}% × preț, {$orgFloor} lei)" : "{$orgRate}% × preț",
             ],
             'by_source' => array_values($bySource),
             'by_ticket_type' => array_values($byTicketType),
