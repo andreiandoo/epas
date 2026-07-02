@@ -228,6 +228,28 @@ window.addEventListener('load', async function() {
             el.style.display = (showFor === orgType) ? 'flex' : 'none';
         });
 
+        // Kiosk POS: rol restrictionat 'pos_cashier' vede DOAR
+        // /organizator/leisure-dashboard si /organizator/leisure-pos.
+        // Ascunde sidebar-ul complet + redirect din alte pagini.
+        const leisureRole = (orgData && orgData.team_member && orgData.team_member.leisure_role) || null;
+        if (leisureRole === 'pos_cashier') {
+            const allowedPaths = ['/organizator/leisure-dashboard', '/organizator/leisure-pos'];
+            const currentPath = window.location.pathname.replace(/\/$/, '');
+            if (!allowedPaths.includes(currentPath)) {
+                window.location.replace('/organizator/leisure-pos');
+                return;
+            }
+            // Ascunde sidebar + overlay ca sa nu poata naviga aiurea
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar) sidebar.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
+            // Ascunde si butonul hamburger de pe mobile (topbar)
+            document.querySelectorAll('[onclick*="toggleSidebar"]').forEach(el => { el.style.display = 'none'; });
+            // Marker CSS pt eventuale ajustari de layout
+            document.body.setAttribute('data-restricted-role', 'pos_cashier');
+        }
+
         if (orgData) {
             const orgName = document.getElementById('sidebar-org-name');
             const orgInitials = document.getElementById('sidebar-org-initials');

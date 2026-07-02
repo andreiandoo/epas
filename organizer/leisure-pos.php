@@ -111,18 +111,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
 
-                <!-- Limba bilet/email (RO default, HU/EN pentru turisti) -->
-                <div class="px-5 py-3 border-t border-border text-sm">
-                    <p class="text-xs text-muted mb-1.5">🌐 Limba bilet & email</p>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button data-lang="ro" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-primary bg-primary/10 rounded">🇷🇴 RO</button>
-                        <button data-lang="hu" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-border bg-white rounded">🇭🇺 HU</button>
-                        <button data-lang="en" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-border bg-white rounded">🇬🇧 EN</button>
-                    </div>
-                    <p class="text-[10px] text-muted mt-1.5">Determină limba textelor pe biletul PDF (dacă template-ul are traduceri) și pe emailurile trimise.</p>
-                </div>
-
-                <!-- Date firma (opțional — pentru factura B2B) -->
+                <!-- Date firma (opțional — pentru factura B2B). Plasat sub Date client pt fluxul B2B. -->
                 <details id="lv-company-section" class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary flex items-center gap-2">
                         <span>🏢 Date firmă (opțional)</span>
@@ -149,6 +138,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
 
+                <!-- Limba bilet/email (RO default, HU/EN pentru turisti) -->
+                <div class="px-5 py-3 border-t border-border text-sm">
+                    <p class="text-xs text-muted mb-1.5">🌐 Limba bilet & email</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-lang="ro" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-primary bg-primary/10 rounded flex items-center justify-center gap-1.5">
+                            <svg viewBox="0 0 3 2" class="w-4 h-3 rounded-sm shadow-sm"><rect width="1" height="2" fill="#002B7F"/><rect x="1" width="1" height="2" fill="#FCD116"/><rect x="2" width="1" height="2" fill="#CE1126"/></svg>
+                            <span>RO</span>
+                        </button>
+                        <button data-lang="hu" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-border bg-white rounded flex items-center justify-center gap-1.5">
+                            <svg viewBox="0 0 3 2" class="w-4 h-3 rounded-sm shadow-sm"><rect width="3" height="0.667" fill="#CE2939"/><rect y="0.667" width="3" height="0.667" fill="#FFFFFF"/><rect y="1.333" width="3" height="0.667" fill="#477050"/></svg>
+                            <span>HU</span>
+                        </button>
+                        <button data-lang="en" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-border bg-white rounded flex items-center justify-center gap-1.5">
+                            <svg viewBox="0 0 60 30" class="w-4 h-3 rounded-sm shadow-sm"><clipPath id="lv-uk"><rect width="60" height="30"/></clipPath><rect width="60" height="30" fill="#012169"/><g clip-path="url(#lv-uk)"><path d="M0,0 L60,30 M60,0 L0,30" stroke="#FFF" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V30 M0,15 H60" stroke="#FFF" stroke-width="10"/><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" stroke-width="6"/></g></svg>
+                            <span>EN</span>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-muted mt-1.5">Determină limba textelor pe biletul PDF (dacă template-ul are traduceri) și pe emailurile trimise.</p>
+                </div>
+
                 </div>
                 <!-- Footer fix: totals + payment + checkout (mereu vizibile) -->
                 <div class="px-5 py-3 border-t border-border bg-slate-50 space-y-1 text-sm">
@@ -164,7 +173,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="grid grid-cols-3 gap-2">
                         <button data-pay="cash" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💵 Cash</button>
                         <button data-pay="card" title="Înregistrează plata cu cardul (procesată la POS-ul bancar fizic) — fără integrare automată cu terminalul" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💳 Card</button>
-                        <button data-pay="invoice" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Link plată pe email</button>
+                        <button data-pay="invoice" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Link plată</button>
                     </div>
                     <p class="text-[10px] text-muted leading-snug mt-1">
                         💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Link plată pe email</strong>: clientul primește un link pentru plată online — biletele rămân în „așteptare" până la confirmare.
@@ -332,10 +341,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (leftovers.length) {
                 sections.push({ id: '__other__', name: 'Altele', items: leftovers });
             }
-            // Accordion render: header full-width, fara border/rounded, delimitator
-            // subtil intre categorii. Implicit deschis = true.
+            // Accordion render EXCLUSIV: doar UN singur accordion e deschis
+            // simultan. Default: primul open, restul inchise. Cand user-ul
+            // deschide altul, cel curent activ se inchide automat.
+            // Selectam accordion-ul activ dintre cele pe care le stim din
+            // state (persist per session) SAU implicit primul disponibil.
+            let activeAccordionId = null;
+            const knownActive = Object.keys(categoryAccordionState).find(k => categoryAccordionState[k] === true);
+            if (knownActive && sections.some(s => s.id === knownActive)) {
+                activeAccordionId = knownActive;
+            } else if (sections.length > 0) {
+                activeAccordionId = sections[0].id;
+            }
+            // Normalizeaza state-ul astfel incat doar activeAccordionId e true.
+            sections.forEach(s => { categoryAccordionState[s.id] = (s.id === activeAccordionId); });
+
             $('lv-grid').innerHTML = sections.map((sec, idx) => {
-                const isOpen = categoryAccordionState[sec.id] !== false; // default true
+                const isOpen = sec.id === activeAccordionId;
                 const divider = idx > 0 ? 'border-t border-border' : '';
                 return `
                 <div class="${divider}" data-cat-section="${sec.id}">
@@ -352,20 +374,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             `;}).join('');
 
-            // Toggle handlers pentru accordions
+            // Toggle handlers: comportament EXCLUSIV — click pe unul inchide
+            // toate celelalte. Click pe cel activ il inchide (nu ramane nimic
+            // deschis — utilizatorul poate vrea sa vada doar header-ele).
             $('lv-grid').querySelectorAll('[data-cat-toggle]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.dataset.catToggle;
-                    const body = $('lv-grid').querySelector(`[data-cat-body="${id}"]`);
-                    const chevron = btn.querySelector('svg');
-                    const isOpen = !body.classList.contains('hidden');
-                    if (isOpen) {
+                    const isAlreadyOpen = categoryAccordionState[id] === true;
+                    // Inchide TOATE
+                    $('lv-grid').querySelectorAll('[data-cat-body]').forEach(body => {
                         body.classList.add('hidden');
-                        chevron?.classList.remove('rotate-180');
-                        categoryAccordionState[id] = false;
-                    } else {
-                        body.classList.remove('hidden');
-                        chevron?.classList.add('rotate-180');
+                    });
+                    $('lv-grid').querySelectorAll('[data-cat-toggle] svg').forEach(sv => {
+                        sv.classList.remove('rotate-180');
+                    });
+                    Object.keys(categoryAccordionState).forEach(k => { categoryAccordionState[k] = false; });
+                    // Daca nu era deja deschis, deschide-l pe cel apasat
+                    if (!isAlreadyOpen) {
+                        const body = $('lv-grid').querySelector(`[data-cat-body="${id}"]`);
+                        body?.classList.remove('hidden');
+                        btn.querySelector('svg')?.classList.add('rotate-180');
                         categoryAccordionState[id] = true;
                     }
                 });
