@@ -482,6 +482,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     }).join('') +
                 '</div>';
             }
+            // Guide bonus: pentru bilete de grup cu meta.is_group_ticket +
+            // meta.group_includes_guide, emitem VIZUAL +N bilete gratis
+            // (ghid) la fiecare multiplu de min_per_order cumparat.
+            let guideRow = '';
+            if (tt && tt.meta && tt.meta.is_group_ticket && tt.meta.group_includes_guide) {
+                const minPerGroup = Math.max(1, parseInt(tt.min_per_order, 10) || 1);
+                const bonusCount = Math.floor(it.qty / minPerGroup);
+                if (bonusCount > 0) {
+                    const guideLabel = (tt.meta.group_guide_label || '').toString().trim() || 'Ghid grup';
+                    const guideLabelHtml = guideLabel.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
+                    guideRow = `<div class="mt-1 pt-1 border-t border-slate-200 flex items-center gap-2 text-xs">
+                        <span class="text-amber-600">🎁</span>
+                        <span class="flex-1 text-amber-900">
+                            <span class="font-semibold">+${bonusCount} × ${guideLabelHtml}</span>
+                            <span class="text-muted"> · gratuit (bonus grup)</span>
+                        </span>
+                        <span class="text-emerald-700 font-semibold">0.00 RON</span>
+                    </div>`;
+                }
+            }
             return `<div class="bg-slate-50 rounded-lg p-2">
                 <div class="flex items-center gap-2 text-sm">
                     <div class="flex-1 min-w-0">
@@ -497,6 +517,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <button data-act="del" data-id="${key}" class="text-rose-500 hover:text-rose-700">✕</button>
                 </div>
                 ${comRow}
+                ${guideRow}
                 ${addonsRows}
             </div>`;
         }).join('');
@@ -782,6 +803,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     price: it.price,
                     variant: it.variant || null,
                 });
+            }
+            // Guide bonus tickets — mirror backend posSale + printare test.
+            if (tt && tt.meta && tt.meta.is_group_ticket && tt.meta.group_includes_guide) {
+                const minPerGroup = Math.max(1, parseInt(tt.min_per_order, 10) || 1);
+                const bonusCount = Math.floor(it.qty / minPerGroup);
+                const guideLabel = (tt.meta.group_guide_label || '').toString().trim() || 'Ghid grup';
+                for (let g = 0; g < bonusCount; g++) {
+                    tickets.push({
+                        id: 'TEST-G-' + Math.random().toString(36).substring(2, 8),
+                        code: 'TEST-G-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                        ticket_type: guideLabel,
+                        service_category: it.category,
+                        issuing_company: issuingCompany,
+                        price: 0,
+                        variant: null,
+                        guide_bonus: true,
+                    });
+                }
             }
         });
         const hasCompany = !!($('lv-co-cui').value.trim() || $('lv-co-name').value.trim());
