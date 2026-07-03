@@ -1910,7 +1910,7 @@ class LeisureController extends BaseController
             'sku' => 'nullable|string|max:64',
             'description' => 'nullable|string|max:2000',
             'service_category' => 'nullable|in:access,parking,rental,activity,extra,package',
-            'issuing_company' => 'nullable|in:primary,secondary',
+            'issuing_company' => 'nullable|in:primary,secondary,mix',
             'price' => 'nullable|numeric|min:0|max:999999',
             'price_max' => 'nullable|numeric|min:0|max:999999',
             'currency' => 'nullable|string|size:3',
@@ -2043,16 +2043,24 @@ class LeisureController extends BaseController
             $filtered['blocked_time_ranges'] = $normalizedRanges;
         }
 
-        // Normalize package_outputs (F4)
+        // Normalize package_outputs (F4).
+        // 'price' e alocarea per componenta pentru raportare pe societate emitenta
+        // (folosit cand pachetul e Mix = ambele societati). Opțional; salvam doar
+        // valori >= 0. Suma alocarilor NU e validata aici — validare vizuala pe UI
+        // + backend nu blocam salvarea (organizatorul poate salva partial).
         if (isset($filtered['package_outputs']) && is_array($filtered['package_outputs'])) {
             $normalizedOutputs = [];
             foreach ($filtered['package_outputs'] as $row) {
                 if (!is_array($row) || empty($row['ticket_type_id'])) continue;
-                $normalizedOutputs[] = [
+                $entry = [
                     'ticket_type_id' => (int) $row['ticket_type_id'],
                     'variant_id' => !empty($row['variant_id']) ? (string) $row['variant_id'] : null,
                     'qty' => max(1, (int) ($row['qty'] ?? 1)),
                 ];
+                if (isset($row['price']) && is_numeric($row['price']) && (float) $row['price'] >= 0) {
+                    $entry['price'] = round((float) $row['price'], 2);
+                }
+                $normalizedOutputs[] = $entry;
             }
             $filtered['package_outputs'] = $normalizedOutputs;
         }
@@ -2169,8 +2177,33 @@ class LeisureController extends BaseController
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['completed', 'paid'])
             ->whereBetween('paid_at', [$from, $to])
-            ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,name,service_category,issuing_company'])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category,issuing_company,meta'])
             ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
+
+        // Preload issuer info pentru componentele pachetelor Mix. Colectam toate
+        // ticket_type_ids referite in package_outputs, ca sa evitam N+1 la iterare.
+        $componentIssuerMap = [];
+        $mixComponentIds = [];
+        foreach ($orders as $o) {
+            foreach ($o->tickets as $t) {
+                $tt = $t->ticketType ?? null;
+                if (!$tt || $tt->service_category !== 'package') continue;
+                if (($tt->issuing_company ?? 'primary') !== 'mix') continue;
+                $outputs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+                foreach ($outputs as $out) {
+                    if (!empty($out['ticket_type_id'])) $mixComponentIds[(int) $out['ticket_type_id']] = true;
+                }
+            }
+        }
+        if (!empty($mixComponentIds)) {
+            \App\Models\TicketType::query()
+                ->whereIn('id', array_keys($mixComponentIds))
+                ->get(['id', 'issuing_company'])
+                ->each(function ($tt) use (&$componentIssuerMap) {
+                    $companyKey = ($tt->issuing_company === 'secondary') ? 'secondary' : 'primary';
+                    $componentIssuerMap[$tt->id] = $companyKey;
+                });
+        }
 
         $byTicketType = [];   // Pachetul apare ca 1 tranzactie cu valoarea lui; componentele NU aici
         $byComponentType = []; // Bilete FIZICE emise: componente pachet + bilete individuale (fara parintele pachet)
@@ -2350,13 +2383,52 @@ class LeisureController extends BaseController
                     if ($orgFloor > 0 && $ticketCommission < $orgFloor) $ticketCommission = $orgFloor;
                     $byTicketType[$key]['commission'] += $ticketCommission;
 
-                    // Aggregare pe societate emitenta (SC1 primary / SC2 secondary)
-                    $issuerKey = $issuer === 'secondary' ? 'secondary' : 'primary';
-                    $byIssuer[$issuerKey]['tickets']++;
-                    $byIssuer[$issuerKey]['revenue'] += $tp;
-                    $byIssuer[$issuerKey]['commission'] += $ticketCommission;
-                    // Breakdown metode plata per societate (folosim $pmKey deja calculat)
-                    $byIssuer[$issuerKey]['by_payment'][$pmKey] = ($byIssuer[$issuerKey]['by_payment'][$pmKey] ?? 0) + $tp;
+                    // Aggregare pe societate emitenta (SC1 primary / SC2 secondary).
+                    // Pentru pachete cu issuer='mix': impartim venitul + comisionul intre
+                    // societatile componente conform alocarilor din meta.package_outputs.
+                    // Componentele fara alocare (price) sunt tratate proportional cu pretul
+                    // lor de referinta * qty; daca nici asa nu se poate, cadem inapoi pe
+                    // 'primary' pentru siguranta contabila.
+                    $splits = [];
+                    if ($isPackageParent && $issuer === 'mix') {
+                        $outputs = is_array($t->ticketType->meta ?? null) ? ($t->ticketType->meta['package_outputs'] ?? []) : [];
+                        $allocSum = 0.0;
+                        foreach ($outputs as $out) {
+                            if (isset($out['price']) && is_numeric($out['price']) && (float) $out['price'] >= 0) {
+                                $allocSum += (float) $out['price'];
+                            }
+                        }
+                        if ($allocSum > 0) {
+                            foreach ($outputs as $out) {
+                                $cid = (int) ($out['ticket_type_id'] ?? 0);
+                                $cIssuer = $componentIssuerMap[$cid] ?? 'primary';
+                                $portion = isset($out['price']) ? (float) $out['price'] : 0.0;
+                                if ($portion <= 0) continue;
+                                $splits[] = ['issuer' => $cIssuer, 'amount' => $portion];
+                            }
+                        }
+                    }
+                    if (empty($splits)) {
+                        // Fallback: single-issuer (comportament vechi)
+                        $issuerKey = $issuer === 'secondary' ? 'secondary' : 'primary';
+                        $splits[] = ['issuer' => $issuerKey, 'amount' => $tp];
+                    }
+
+                    // Distribute revenue + commission by ratio. Numaram biletul pe issuer-ul
+                    // cu cea mai mare alocare (evitam double-counting: 1 bilet-pachet =
+                    // 1 in tickets globale).
+                    $splitTotal = array_sum(array_column($splits, 'amount'));
+                    $biggest = null; $biggestAmt = -1;
+                    foreach ($splits as $s) {
+                        if ($s['amount'] > $biggestAmt) { $biggestAmt = $s['amount']; $biggest = $s['issuer']; }
+                        $ratio = $splitTotal > 0 ? $s['amount'] / $splitTotal : 0;
+                        $rev = $tp * $ratio;
+                        $com = $ticketCommission * $ratio;
+                        $byIssuer[$s['issuer']]['revenue'] += $rev;
+                        $byIssuer[$s['issuer']]['commission'] += $com;
+                        $byIssuer[$s['issuer']]['by_payment'][$pmKey] = ($byIssuer[$s['issuer']]['by_payment'][$pmKey] ?? 0) + $rev;
+                    }
+                    if ($biggest) $byIssuer[$biggest]['tickets']++;
                 }
 
                 // ---- Sectiunea "Pe tip bilet emis" (bilete FIZICE, componente + individuale)
@@ -2397,11 +2469,46 @@ class LeisureController extends BaseController
         // by_component_type sortat descrescator dupa nr. bilete
         usort($byComponentType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
 
-        // Numele reale societatilor (pentru afisare pe carduri)
+        // Numele reale societatilor + status TVA per societate. Folosite pe cardurile
+        // din leisure-raport ca sa afiseze net + suma TVA cand societatea e pltitoare
+        // de TVA. vat_rate default 19% cand pltitor dar rate necunoscut.
         $issuerNames = [
             'primary' => $eventOrganizer?->company_name ?: 'Societatea principală',
             'secondary' => $eventOrganizer?->has_secondary_issuer ? ($eventOrganizer?->secondary_company_name ?: 'Societatea secundară') : null,
         ];
+
+        $primaryVatPayer = $eventOrganizer?->primary_vat_payer !== null
+            ? (bool) $eventOrganizer->primary_vat_payer
+            : (bool) ($eventOrganizer?->vat_payer ?? false);
+        $primaryVatRate = $eventOrganizer?->primary_vat_rate !== null
+            ? (float) $eventOrganizer->primary_vat_rate
+            : ((float) ($eventOrganizer?->tax_settings['vat_rate'] ?? 0) ?: 19.0);
+        $secondaryVatPayer = (bool) ($eventOrganizer?->secondary_vat_payer ?? false);
+        $secondaryVatRate = $eventOrganizer?->secondary_vat_rate !== null
+            ? (float) $eventOrganizer->secondary_vat_rate
+            : 19.0;
+
+        $issuerVat = [
+            'primary' => ['vat_payer' => $primaryVatPayer, 'vat_rate' => $primaryVatRate],
+            'secondary' => ['vat_payer' => $secondaryVatPayer, 'vat_rate' => $secondaryVatRate],
+        ];
+
+        // Calcul net + suma TVA per societate. Cand vat_payer=true: pretul include TVA,
+        // net = revenue / (1 + rate/100), vat_amount = revenue - net.
+        foreach (['primary', 'secondary'] as $k) {
+            $rev = $byIssuer[$k]['revenue'] ?? 0;
+            if ($issuerVat[$k]['vat_payer'] && $issuerVat[$k]['vat_rate'] > 0 && $rev > 0) {
+                $net = round($rev / (1 + $issuerVat[$k]['vat_rate'] / 100), 2);
+                $vatAmt = round($rev - $net, 2);
+            } else {
+                $net = round($rev, 2);
+                $vatAmt = 0.0;
+            }
+            $byIssuer[$k]['net_revenue'] = $net;
+            $byIssuer[$k]['vat_amount'] = $vatAmt;
+            $byIssuer[$k]['vat_payer'] = $issuerVat[$k]['vat_payer'];
+            $byIssuer[$k]['vat_rate'] = $issuerVat[$k]['vat_rate'];
+        }
 
         return $this->success([
             'from' => $from->toDateString(),

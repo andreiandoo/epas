@@ -184,7 +184,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <select id="pr-f-issuer" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="primary">Principală</option>
                             <option value="secondary">Secundară</option>
+                            <option value="mix" data-only-package="1">🎁 Mix (ambele societăți — doar pachete)</option>
                         </select>
+                        <p id="pr-f-issuer-mix-hint" class="hidden mt-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                            Mix: alocă manual în „Conține (componente pachet)" cât din prețul pachetului merge la fiecare componentă. Suma alocărilor = prețul pachetului.
+                        </p>
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
@@ -1981,6 +1985,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const el = $(id);
             if (el && el.closest('label')) el.closest('label').classList.toggle('hidden', isPkg);
         });
+        // Optiunea "mix" e valida DOAR pe pachete. Pentru celelalte categorii
+        // o ascundem si daca era selectata, fallback pe 'primary'.
+        const mixOpt = document.querySelector('#pr-f-issuer option[value="mix"]');
+        if (mixOpt) {
+            mixOpt.hidden = !isPkg;
+            mixOpt.disabled = !isPkg;
+        }
+        if (!isPkg && $('pr-f-issuer').value === 'mix') {
+            $('pr-f-issuer').value = 'primary';
+        }
         if (isPkg) updatePackageSavings();
     }
 
@@ -2122,13 +2136,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             .join('');
         row.innerHTML = `
             <div class="grid grid-cols-12 gap-2 items-center">
-                <select data-pkg="ticket_type_id" class="col-span-6 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <select data-pkg="ticket_type_id" class="col-span-5 px-2 py-1.5 text-sm border border-border rounded bg-white">
                     <option value="">— Selectează component —</option>
                     ${opts}
                 </select>
-                <input type="text" data-pkg="variant_id" placeholder="Variantă (ex: 1h)" maxlength="32" value="${escapeHtml(o.variant_id || '')}" class="col-span-3 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="text" data-pkg="variant_id" placeholder="Variantă" maxlength="32" value="${escapeHtml(o.variant_id || '')}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="number" data-pkg="qty" placeholder="Cant." min="1" value="${o.qty ?? 1}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-pkg="price" placeholder="Aloc. (RON)" min="0" step="0.01" value="${o.price != null ? o.price : ''}" title="Cât din prețul pachetului se alocă acestei componente. Suma tuturor = prețul pachetului." class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <button type="button" data-pkg-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-[10px] text-muted px-1">
+                <span data-pkg-issuer-badge>&nbsp;</span>
+                <button type="button" data-pkg-autofill class="text-primary hover:underline" title="Alocă suma proporțional cu prețurile componentelor">Auto-alocare</button>
             </div>
         `;
         row.querySelector('[data-pkg-rm]').addEventListener('click', () => { row.remove(); updatePackageSavings(); });
@@ -2158,6 +2177,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             item.ticket_type_id = parseInt(item.ticket_type_id, 10);
             item.qty = Math.max(1, parseInt(item.qty || 1, 10));
             if (!item.variant_id) delete item.variant_id;
+            // Alocare pret per componenta (float). 0 valid; gol -> nu trimit.
+            if (item.price !== undefined && item.price !== '') {
+                const px = parseFloat(item.price);
+                if (!Number.isNaN(px) && px >= 0) item.price = Math.round(px * 100) / 100;
+                else delete item.price;
+            } else {
+                delete item.price;
+            }
             out.push(item);
         });
         return out;
@@ -2166,7 +2193,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function updatePackageSavings() {
         const outputs = collectPackageOutputs();
         const price = parseFloat($('pr-f-price').value) || 0;
-        let sum = 0;
+        const issuer = $('pr-f-issuer').value;
+        let sum = 0;      // suma preturilor componentelor la valoarea de referinta (fara alocare)
+        let allocSum = 0; // suma valorilor alocate manual (price per componenta)
+        let allocCount = 0;
+
+        // Actualizeaza badge-urile de societate pe fiecare rand (util pentru Mix)
+        $('pr-f-package-list').querySelectorAll(':scope > div').forEach((row, idx) => {
+            const sel = row.querySelector('[data-pkg="ticket_type_id"]');
+            const badge = row.querySelector('[data-pkg-issuer-badge]');
+            if (!sel || !badge) return;
+            const compId = parseInt(sel.value, 10) || 0;
+            const comp = productsCache.find(p => p.id === compId);
+            if (comp) {
+                const comp_issuer = comp.issuing_company || 'primary';
+                const lbl = comp_issuer === 'secondary' ? 'SC2' : (comp_issuer === 'mix' ? 'MIX' : 'SC1');
+                const cls = comp_issuer === 'secondary' ? 'text-accent' : (comp_issuer === 'mix' ? 'text-amber-700' : 'text-primary');
+                badge.innerHTML = `<span class="font-semibold ${cls}">${lbl}</span> · preț unitar: ${(parseFloat(comp.price || 0)).toFixed(2)} RON`;
+            } else {
+                badge.innerHTML = '';
+            }
+        });
+
         outputs.forEach(o => {
             const comp = productsCache.find(p => p.id === o.ticket_type_id);
             if (!comp) return;
@@ -2176,22 +2224,75 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (v) unit = parseFloat(v.price);
             }
             sum += unit * o.qty;
+            if (typeof o.price === 'number' && o.price >= 0) { allocSum += o.price; allocCount++; }
         });
         const savings = sum - price;
         const wrap = $('pr-f-package-savings');
         if (!wrap) return;
+
+        let html = '';
         if (sum > 0 && price > 0) {
-            wrap.classList.remove('hidden');
             const pct = sum > 0 ? Math.round((savings / sum) * 100) : 0;
-            wrap.innerHTML = `Suma componentelor: <strong>${sum.toFixed(2)} RON</strong> · ` +
+            html = `Suma componentelor: <strong>${sum.toFixed(2)} RON</strong> · ` +
                 (savings > 0
                     ? `Economisești <strong class="text-emerald-700">${savings.toFixed(2)} RON</strong> (${pct}%)`
                     : (savings < 0
                         ? `<span class="text-amber-700">Prețul pachetului e mai mare decât suma componentelor (+${Math.abs(savings).toFixed(2)} RON)</span>`
                         : `Preț egal cu suma componentelor`));
-        } else {
-            wrap.classList.add('hidden');
         }
+
+        // Alocare pentru raportare (Mix). Recomandat si pentru non-mix daca vrei
+        // sa se contorizeze corect pe raport per societate.
+        if (allocCount > 0 || issuer === 'mix') {
+            const delta = Math.round((allocSum - price) * 100) / 100;
+            const ok = Math.abs(delta) < 0.01 && allocCount === outputs.length;
+            const badge = ok
+                ? `<span class="text-emerald-700 font-semibold">✓ Alocare corectă</span>`
+                : (Math.abs(delta) < 0.01
+                    ? `<span class="text-amber-700">⚠ ${outputs.length - allocCount} componente fără alocare</span>`
+                    : (delta > 0
+                        ? `<span class="text-rose-700 font-semibold">⚠ Alocat +${delta.toFixed(2)} RON peste prețul pachetului</span>`
+                        : `<span class="text-rose-700 font-semibold">⚠ Mai trebuie alocați ${Math.abs(delta).toFixed(2)} RON</span>`));
+            html += (html ? '<br>' : '') + `Alocare pachet: <strong>${allocSum.toFixed(2)}</strong> / ${price.toFixed(2)} RON · ${badge}`;
+        }
+
+        if (html) { wrap.classList.remove('hidden'); wrap.innerHTML = html; }
+        else { wrap.classList.add('hidden'); }
+
+        // Toggle hint Mix
+        const hint = $('pr-f-issuer-mix-hint');
+        if (hint) hint.classList.toggle('hidden', issuer !== 'mix');
+    }
+
+    // Auto-alocare: imparte pretul pachetului proportional cu pretul unitar al fiecarei
+    // componente (unit_price * qty). Corectie diferenta de rotunjire pe ultimul rand.
+    function autoAllocatePackagePrices() {
+        const price = parseFloat($('pr-f-price').value) || 0;
+        if (price <= 0) { alert('Setează întâi prețul pachetului.'); return; }
+        const rows = Array.from($('pr-f-package-list').querySelectorAll(':scope > div'));
+        const refs = rows.map(row => {
+            const compId = parseInt(row.querySelector('[data-pkg="ticket_type_id"]').value, 10) || 0;
+            const qty = Math.max(1, parseInt(row.querySelector('[data-pkg="qty"]').value || 1, 10));
+            const variantId = row.querySelector('[data-pkg="variant_id"]').value?.trim() || '';
+            const comp = productsCache.find(p => p.id === compId);
+            let unit = comp ? parseFloat(comp.price || 0) : 0;
+            if (comp && variantId && Array.isArray(comp.variants)) {
+                const v = comp.variants.find(x => x.id === variantId);
+                if (v) unit = parseFloat(v.price);
+            }
+            return { row, ref: unit * qty };
+        });
+        const totalRef = refs.reduce((a, b) => a + b.ref, 0);
+        if (totalRef <= 0) { alert('Componentele nu au preț de referință.'); return; }
+        let allocated = 0;
+        refs.forEach((r, idx) => {
+            let val;
+            if (idx === refs.length - 1) val = Math.round((price - allocated) * 100) / 100;
+            else { val = Math.round((price * r.ref / totalRef) * 100) / 100; allocated += val; }
+            const inp = r.row.querySelector('[data-pkg="price"]');
+            if (inp) inp.value = val.toFixed(2);
+        });
+        updatePackageSavings();
     }
 
     function makeVariantRow(v) {
@@ -2425,6 +2526,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Package outputs: add row + auto-recalc savings on price change
         const pkgAdd = $('pr-f-package-add'); if (pkgAdd) pkgAdd.addEventListener('click', () => { $('pr-f-package-list').appendChild(makePackageRow({})); updatePackageSavings(); });
         const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
+        const issuerSel = $('pr-f-issuer'); if (issuerSel) issuerSel.addEventListener('change', updatePackageSavings);
+        // Delegat click: butonul auto-alocare din fiecare rand pachet
+        const pkgList = $('pr-f-package-list');
+        if (pkgList) pkgList.addEventListener('click', (e) => {
+            if (e.target && e.target.matches('[data-pkg-autofill]')) autoAllocatePackagePrices();
+        });
         // Add-ons: add row
         const aoAdd = $('pr-f-addon-add'); if (aoAdd) aoAdd.addEventListener('click', () => $('pr-f-addons-list').appendChild(makeAddonRow({})));
         // F10 Block ranges: add row
