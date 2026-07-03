@@ -3538,11 +3538,16 @@ class LeisureController extends BaseController
         $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
 
         $dateInput = $request->query('date');
-        $day = $dateInput ? Carbon::parse($dateInput, 'Europe/Bucharest') : Carbon::now('Europe/Bucharest');
-        $dayStart = $day->copy()->startOfDay();
-        $dayEnd = $day->copy()->endOfDay();
+        $dayRo = $dateInput ? Carbon::parse($dateInput, 'Europe/Bucharest') : Carbon::now('Europe/Bucharest');
+        // Coloanele opened_at/closed_at sunt stocate in UTC de PostgreSQL. Trebuie
+        // sa convertim bounds la UTC pentru whereBetween, altfel sesiunea deschisa
+        // pe 03.07 21:02 RO si inchisa 04.07 02:29 RO (= 03.07 23:29 UTC) nu apare
+        // la 04.07 pentru ca 23:29 UTC nu e intre 04.07 00:00 si 04.07 23:59
+        // interpretate ca string-uri fara timezone.
+        $dayStart = $dayRo->copy()->startOfDay()->setTimezone('UTC');
+        $dayEnd = $dayRo->copy()->endOfDay()->setTimezone('UTC');
 
-        // Sesiuni deschise SAU inchise in aceasta zi
+        // Sesiuni deschise SAU inchise in aceasta zi (RO)
         $sessions = \App\Models\LeisureCashierSession::query()
             ->where('marketplace_organizer_id', $eventOrganizerId)
             ->where('event_id', $eventModel->id)
@@ -3553,19 +3558,41 @@ class LeisureController extends BaseController
             ->orderByDesc('opened_at')
             ->get();
 
+        // Fallback: cand nu sunt sesiuni astazi (sau doar deschise fara snapshot),
+        // includem ULTIMA sesiune inchisa cu snapshot ca referinta. Marcat cu
+        // 'is_last_closed_reference'=true ca frontend-ul sa-l afiseze sub o alta
+        // sectiune ("Ultima inchidere de casa").
+        $hasClosedToday = $sessions->contains(fn ($s) => $s->closed_at !== null);
+        $lastClosedRef = null;
+        if (!$hasClosedToday) {
+            $last = \App\Models\LeisureCashierSession::query()
+                ->where('marketplace_organizer_id', $eventOrganizerId)
+                ->where('event_id', $eventModel->id)
+                ->whereNotNull('closed_at')
+                ->orderByDesc('closed_at')
+                ->first();
+            if ($last && !$sessions->contains(fn ($s) => $s->id === $last->id)) {
+                $lastClosedRef = $last;
+            }
+        }
+
+        $mapSession = function ($s, bool $isReference = false) {
+            return [
+                'id' => $s->id,
+                'opened_at' => $s->opened_at?->toIso8601String(),
+                'closed_at' => $s->closed_at?->toIso8601String(),
+                'opened_label' => $s->opened_label,
+                'duration_minutes' => $s->closed_at ? (int) $s->opened_at->diffInMinutes($s->closed_at) : null,
+                'snapshot' => $s->closing_snapshot,
+                'is_open' => $s->closed_at === null,
+                'is_last_closed_reference' => $isReference,
+            ];
+        };
+
         return $this->success([
-            'date' => $day->toDateString(),
-            'sessions' => $sessions->map(function ($s) {
-                return [
-                    'id' => $s->id,
-                    'opened_at' => $s->opened_at?->toIso8601String(),
-                    'closed_at' => $s->closed_at?->toIso8601String(),
-                    'opened_label' => $s->opened_label,
-                    'duration_minutes' => $s->closed_at ? (int) $s->opened_at->diffInMinutes($s->closed_at) : null,
-                    'snapshot' => $s->closing_snapshot,
-                    'is_open' => $s->closed_at === null,
-                ];
-            })->values(),
+            'date' => $dayRo->toDateString(),
+            'sessions' => $sessions->map(fn ($s) => $mapSession($s, false))->values(),
+            'last_closed_reference' => $lastClosedRef ? $mapSession($lastClosedRef, true) : null,
         ]);
     }
 
