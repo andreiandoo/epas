@@ -12,12 +12,35 @@ $pageCacheTTL = 300; // 5 minutes
 require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
 
-// Get venue slug from URL
+// Get venue slug from URL — the /locatie/{slug} rewrite passes it as
+// ?slug=, but recover from REQUEST_URI as a defense in depth (older
+// bookmarks / direct hits without the rewrite still resolve).
 $venueSlug = $_GET['slug'] ?? '';
+if (empty($venueSlug)) {
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (preg_match('#/locatie/([a-z0-9-]+)#i', $uri, $matches)) {
+        $venueSlug = $matches[1];
+    }
+}
 
-$pageTitle = 'Locație'; // Updated by JS when data loads
-$pageDescription = 'Descoperă evenimente și informații despre această locație.';
+// Fetch the venue's real display name server-side so <title>, meta
+// description, og:*, twitter:* reflect the actual venue (not the literal
+// placeholder "Locație" that Googlebot / social crawlers were seeing
+// on every page). Cached 5 min in /tmp/ambilet_cache.
+$venueName = 'această locație';
+if (!empty($venueSlug)) {
+    $venueData = api_cached('venue_meta_' . $venueSlug, function () use ($venueSlug) {
+        return api_get('/venues/' . urlencode($venueSlug));
+    }, 300);
+    if (!empty($venueData['success']) && !empty($venueData['data']['name'])) {
+        $venueName = (string) $venueData['data']['name'];
+    }
+}
+
+$pageTitle = "Evenimente la {$venueName}";
+$pageDescription = "Descoperă evenimente și informații despre {$venueName}. Cumpără bilete online pe {$siteName}.";
 $bodyClass = 'bg-slate-50';
 
 $cssBundle = 'single';
