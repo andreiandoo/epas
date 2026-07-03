@@ -1865,6 +1865,34 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.cashier.sessions':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        if (isset($_GET['date'])) $q['date'] = $_GET['date'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/cashier/sessions' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.scans':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        if (isset($_GET['from'])) $q['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $q['to'] = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/scans' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.scans.detail':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        if (isset($_GET['date'])) $q['date'] = $_GET['date'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/scans-detail' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.issuers':
         // GET → show, PUT → update partial pentru o societate (primary|secondary)
         $eventId = (int) ($_GET['event'] ?? 0);

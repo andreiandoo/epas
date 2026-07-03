@@ -1869,6 +1869,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::post('/events/{event}/leisure/cashier/close', [OrganizerLeisureController::class, 'cashierClose'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.cashier.close');
+        Route::get('/events/{event}/leisure/cashier/sessions', [OrganizerLeisureController::class, 'cashierSessions'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.cashier.sessions');
+        // Scanari — chart per zi + detalii pe zi
+        Route::get('/events/{event}/leisure/scans', [OrganizerLeisureController::class, 'scansOverview'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.scans');
+        Route::get('/events/{event}/leisure/scans-detail', [OrganizerLeisureController::class, 'scansDetail'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.scans.detail');
         // Societati emitente (primary + secondary) — edit complet date juridice + numerotare facturi + TVA
         Route::get('/events/{event}/leisure/issuers', [OrganizerLeisureController::class, 'issuersShow'])
             ->whereNumber('event')

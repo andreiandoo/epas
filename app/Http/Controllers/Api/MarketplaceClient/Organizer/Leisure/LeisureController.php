@@ -3108,6 +3108,268 @@ class LeisureController extends BaseController
         ], 'Casa a fost închisă.');
     }
 
+    // ========================================================================
+    // SCANARI — raport per zi (expected/valid/staff/invalid) + detaliu per zi
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/scans?from=&to=
+     *
+     * Chart per zi cu:
+     *   - expected: bilete acces cu visit_date=zi + status IN (valid/used) — cate scanari de intrare ar trebui sa avem
+     *   - valid: bilete efectiv scanate (checked_in_at cade in ziua respectiva)
+     *   - staff: staff check-ins (leisure_staff_checkins) pe zi
+     *   - invalid: leisure_scan_attempts pe zi (result IN invalid/duplicate)
+     */
+    public function scansOverview(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+        $from = isset($validated['from']) ? Carbon::parse($validated['from'])->startOfDay() : Carbon::today()->subDays(29)->startOfDay();
+        $to = isset($validated['to']) ? Carbon::parse($validated['to'])->endOfDay() : Carbon::today()->endOfDay();
+
+        // Expected: bilete acces (service_category='access') cu visit_date in interval,
+        // status IN (valid/used), pe comenzi platite. Grupam pe visit_date din meta.
+        $expected = \App\Models\Ticket::query()
+            ->whereHas('ticketType', fn ($q) => $q->where('event_id', $eventModel->id)->where('service_category', 'access'))
+            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
+            ->whereIn('status', ['valid', 'used'])
+            ->get(['id', 'meta', 'checked_in_at']);
+        $expectedByDay = [];
+        foreach ($expected as $t) {
+            $vd = is_array($t->meta ?? null) ? ($t->meta['visit_date'] ?? null) : null;
+            if (!$vd) continue;
+            if ($vd < $from->toDateString() || $vd > $to->toDateString()) continue;
+            $expectedByDay[$vd] = ($expectedByDay[$vd] ?? 0) + 1;
+        }
+
+        // Valid: bilete cu checked_in_at pe ziua respectiva (in fus RO)
+        $validScans = \App\Models\Ticket::query()
+            ->whereHas('ticketType', fn ($q) => $q->where('event_id', $eventModel->id))
+            ->whereBetween('checked_in_at', [$from, $to])
+            ->get(['id', 'checked_in_at']);
+        $validByDay = [];
+        foreach ($validScans as $t) {
+            $day = $t->checked_in_at?->copy()->setTimezone('Europe/Bucharest')->toDateString();
+            if (!$day) continue;
+            $validByDay[$day] = ($validByDay[$day] ?? 0) + 1;
+        }
+
+        // Staff: leisure_staff_checkins
+        $staffScans = \App\Models\LeisureStaffCheckin::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('checked_in_at', [$from, $to])
+            ->get(['id', 'checked_in_at']);
+        $staffByDay = [];
+        foreach ($staffScans as $c) {
+            $day = $c->checked_in_at?->copy()->setTimezone('Europe/Bucharest')->toDateString();
+            if (!$day) continue;
+            $staffByDay[$day] = ($staffByDay[$day] ?? 0) + 1;
+        }
+
+        // Invalid: leisure_scan_attempts
+        $invalidScans = \App\Models\LeisureScanAttempt::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('occurred_at', [$from, $to])
+            ->get(['id', 'occurred_at']);
+        $invalidByDay = [];
+        foreach ($invalidScans as $s) {
+            $day = $s->occurred_at?->copy()->setTimezone('Europe/Bucharest')->toDateString();
+            if (!$day) continue;
+            $invalidByDay[$day] = ($invalidByDay[$day] ?? 0) + 1;
+        }
+
+        // Compune array de zile (fara gap-uri)
+        $rows = [];
+        $cursor = $from->copy();
+        while ($cursor->lte($to)) {
+            $day = $cursor->toDateString();
+            $rows[] = [
+                'date' => $day,
+                'expected' => (int) ($expectedByDay[$day] ?? 0),
+                'valid' => (int) ($validByDay[$day] ?? 0),
+                'staff' => (int) ($staffByDay[$day] ?? 0),
+                'invalid' => (int) ($invalidByDay[$day] ?? 0),
+            ];
+            $cursor->addDay();
+        }
+
+        // Elimin zilele complet goale de la marginile intervalului (dar pastrez interior)
+        // Nu — le tin toate pentru continuitate axa.
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'rows' => $rows,
+            'totals' => [
+                'expected' => array_sum(array_column($rows, 'expected')),
+                'valid' => array_sum(array_column($rows, 'valid')),
+                'staff' => array_sum(array_column($rows, 'staff')),
+                'invalid' => array_sum(array_column($rows, 'invalid')),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/scans-detail?date=YYYY-MM-DD
+     * Lista TOATE scanarile inregistrate intr-o zi anume.
+     */
+    public function scansDetail(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['date' => 'required|date']);
+        $day = Carbon::parse($validated['date'], 'Europe/Bucharest');
+        $dayStart = $day->copy()->startOfDay();
+        $dayEnd = $day->copy()->endOfDay();
+
+        $items = [];
+
+        // 1) Bilete acces (valid checked in)
+        $validScans = \App\Models\Ticket::query()
+            ->with(['ticketType:id,name', 'order.marketplaceCustomer:id,first_name,last_name,email', 'order:id,customer_name,customer_email'])
+            ->whereHas('ticketType', fn ($q) => $q->where('event_id', $eventModel->id))
+            ->whereBetween('checked_in_at', [$dayStart, $dayEnd])
+            ->orderBy('checked_in_at')
+            ->get(['id', 'order_id', 'ticket_type_id', 'code', 'checked_in_at', 'attendee_name', 'attendee_email', 'meta']);
+        foreach ($validScans as $t) {
+            $cust = $t->order?->marketplaceCustomer;
+            $name = $cust ? trim(($cust->first_name ?? '') . ' ' . ($cust->last_name ?? '')) : ($t->attendee_name ?? $t->order?->customer_name ?? 'Client');
+            $email = $cust?->email ?? $t->attendee_email ?? $t->order?->customer_email;
+            $items[] = [
+                'type' => 'ticket_valid',
+                'time' => $t->checked_in_at?->copy()->setTimezone('Europe/Bucharest')->format('H:i:s'),
+                'timestamp' => $t->checked_in_at?->toIso8601String(),
+                'name' => $name ?: '—',
+                'status' => 'valid',
+                'code' => $t->code,
+                'email' => $email,
+                'ticket_type' => is_array($t->ticketType?->name) ? ($t->ticketType->name['ro'] ?? '') : $t->ticketType?->name,
+            ];
+        }
+
+        // 2) Staff check-ins
+        $staffScans = \App\Models\LeisureStaffCheckin::query()
+            ->with(['staffMember:id,first_name,last_name,position'])
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('checked_in_at', [$dayStart, $dayEnd])
+            ->orderBy('checked_in_at')
+            ->get(['id', 'staff_member_id', 'checked_in_at', 'location']);
+        foreach ($staffScans as $c) {
+            $sm = $c->staffMember;
+            $name = $sm ? trim(($sm->first_name ?? '') . ' ' . ($sm->last_name ?? '')) : 'Angajat';
+            $items[] = [
+                'type' => 'staff',
+                'time' => $c->checked_in_at?->copy()->setTimezone('Europe/Bucharest')->format('H:i:s'),
+                'timestamp' => $c->checked_in_at?->toIso8601String(),
+                'name' => $name . ($sm?->position ? ' · ' . $sm->position : ''),
+                'status' => 'staff',
+                'code' => null,
+                'email' => null,
+                'ticket_type' => 'Angajat',
+            ];
+        }
+
+        // 3) Invalid attempts
+        $invalidScans = \App\Models\LeisureScanAttempt::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('occurred_at', [$dayStart, $dayEnd])
+            ->orderBy('occurred_at')
+            ->get(['id', 'attempted_code', 'result', 'reason', 'occurred_at']);
+        foreach ($invalidScans as $s) {
+            $items[] = [
+                'type' => 'invalid',
+                'time' => $s->occurred_at?->copy()->setTimezone('Europe/Bucharest')->format('H:i:s'),
+                'timestamp' => $s->occurred_at?->toIso8601String(),
+                'name' => '—',
+                'status' => $s->result, // 'invalid' | 'duplicate'
+                'code' => $s->attempted_code,
+                'email' => null,
+                'ticket_type' => $s->reason ?: '—',
+            ];
+        }
+
+        // Sortez cronologic
+        usort($items, fn ($a, $b) => strcmp((string) $a['timestamp'], (string) $b['timestamp']));
+
+        return $this->success([
+            'date' => $day->toDateString(),
+            'items' => $items,
+            'totals' => [
+                'valid' => count(array_filter($items, fn ($i) => $i['type'] === 'ticket_valid')),
+                'staff' => count(array_filter($items, fn ($i) => $i['type'] === 'staff')),
+                'invalid' => count(array_filter($items, fn ($i) => $i['type'] === 'invalid')),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/cashier/sessions?date=YYYY-MM-DD
+     * Sesiuni de casa pentru o zi (default azi). Folosit pe leisure-pos ca
+     * 'desfasurator' cand casa e inchisa.
+     */
+    public function cashierSessions(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        $dateInput = $request->query('date');
+        $day = $dateInput ? Carbon::parse($dateInput, 'Europe/Bucharest') : Carbon::now('Europe/Bucharest');
+        $dayStart = $day->copy()->startOfDay();
+        $dayEnd = $day->copy()->endOfDay();
+
+        // Sesiuni deschise SAU inchise in aceasta zi
+        $sessions = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->where(function ($q) use ($dayStart, $dayEnd) {
+                $q->whereBetween('opened_at', [$dayStart, $dayEnd])
+                  ->orWhereBetween('closed_at', [$dayStart, $dayEnd]);
+            })
+            ->orderByDesc('opened_at')
+            ->get();
+
+        return $this->success([
+            'date' => $day->toDateString(),
+            'sessions' => $sessions->map(function ($s) {
+                return [
+                    'id' => $s->id,
+                    'opened_at' => $s->opened_at?->toIso8601String(),
+                    'closed_at' => $s->closed_at?->toIso8601String(),
+                    'opened_label' => $s->opened_label,
+                    'duration_minutes' => $s->closed_at ? (int) $s->opened_at->diffInMinutes($s->closed_at) : null,
+                    'snapshot' => $s->closing_snapshot,
+                    'is_open' => $s->closed_at === null,
+                ];
+            })->values(),
+        ]);
+    }
+
     /**
      * GET /marketplace-client/organizer/events/{event}/leisure/payouts
      *

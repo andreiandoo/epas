@@ -1189,6 +1189,7 @@ class EventsController extends BaseController
             ->first();
 
         if (!$ticket) {
+            $this->logScanAttempt($request, $eventIds->first(), $organizer, $barcode, 'invalid', 'not_found');
             return $this->checkInExternalTicket($barcode, $eventIds->toArray(), $organizer);
         }
 
@@ -1198,9 +1199,11 @@ class EventsController extends BaseController
         // TicketType.event_id which is reliably set for invitations)
         $resolvedEventId = $ticket->event_id ?? $ticket->ticketType?->event_id;
         if (!$resolvedEventId) {
+            $this->logScanAttempt($request, $eventIds->first(), $organizer, $barcode, 'invalid', 'no_event');
             return $this->error('Ticket is not linked to any event', 404);
         }
         if (!$eventIds->contains((int) $resolvedEventId)) {
+            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'invalid', 'not_yours');
             return $this->error('Ticket is not for one of your events', 403);
         }
 
@@ -1208,11 +1211,13 @@ class EventsController extends BaseController
         // have no order so we skip this check.
         if (!$isInvitation) {
             if (!$ticket->order || !in_array($ticket->order->status, $validOrderStatuses, true)) {
+                $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'invalid', 'order_' . ($ticket->order?->status ?? 'missing'));
                 return $this->error('Ticket order is not in a valid status', 400);
             }
         }
 
         if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
+            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'invalid', 'ticket_' . $ticket->status);
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
 
@@ -1220,6 +1225,7 @@ class EventsController extends BaseController
         $venueNotes = $this->resolveVenueNotesForTicket($ticket);
 
         if ($ticket->checked_in_at) {
+            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'duplicate', 'already_checked_in');
             $duplicate = $this->buildTicketScanPayload($ticket, $isInvitation);
             return response()->json(array_merge([
                 'success' => false,
@@ -1244,6 +1250,27 @@ class EventsController extends BaseController
      * Strip whitespace and any /t/{code} or /verify/{code} URL wrapper, just
      * in case the mobile sends the raw QR payload.
      */
+    /**
+     * Log o scanare esuata sau duplicat pentru raportare in
+     * /organizator/leisure-raport sectiunea 'Scanari'. Silent-fail — logging-ul
+     * nu poate rupe fluxul de check-in.
+     */
+    protected function logScanAttempt(Request $request, ?int $eventId, ?\App\Models\MarketplaceOrganizer $organizer, string $code, string $result, ?string $reason = null): void
+    {
+        if (!$eventId) return;
+        try {
+            \App\Models\LeisureScanAttempt::create([
+                'event_id' => $eventId,
+                'marketplace_organizer_id' => $organizer?->id,
+                'attempted_code' => substr($code, 0, 128),
+                'result' => $result,
+                'reason' => $reason ? substr($reason, 0, 255) : null,
+                'ip_address' => $request->ip(),
+                'occurred_at' => now(),
+            ]);
+        } catch (\Throwable $e) { /* silent */ }
+    }
+
     protected function normalizeTicketCode(string $raw): string
     {
         $trimmed = trim($raw);
