@@ -52,17 +52,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p id="lv-printer-paper" class="hidden text-xs leading-snug rounded p-2"></p>
                     <p id="lv-printer-error" class="hidden text-xs text-rose-700 leading-snug bg-rose-50 border border-rose-200 rounded p-2"></p>
                     <div class="flex flex-wrap gap-2">
-                        <button id="lv-printer-connect" type="button" class="flex-1 px-3 py-2 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">
+                        <button id="lv-printer-connect" type="button" class="w-full px-3 py-2 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">
                             🔌 Conectează
-                        </button>
-                        <button id="lv-printer-test" type="button" disabled class="flex-1 px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
-                            🧪 1 bilet
-                        </button>
-                        <button id="lv-printer-test3" type="button" disabled class="flex-1 px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
-                            🧪 3 bilete
-                        </button>
-                        <button id="lv-printer-test-invoice" type="button" disabled class="w-full px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
-                            🧾 Factură fiscală (test)
                         </button>
                     </div>
                     <!-- Re-print ultima comandă (vizibil doar dacă există state) -->
@@ -207,9 +198,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Link plată pe email</strong>: clientul primește un link pentru plată online — biletele rămân în „așteptare" până la confirmare.
                     </p>
                     <button id="lv-checkout" disabled class="w-full mt-2 px-4 py-3 bg-primary text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors">Finalizează</button>
-                    <button id="lv-checkout-test" type="button" class="w-full mt-2 px-4 py-2 bg-white border-2 border-dashed border-amber-400 text-amber-800 font-semibold rounded-lg hover:bg-amber-50 text-sm" title="Simulează vânzare: printează biletele (+ factura dacă e bifată) FĂRĂ să trimită în baza de date.">
-                        🧪 Finalizare TEST (fără DB)
-                    </button>
                 </div>
             </div>
         </div>

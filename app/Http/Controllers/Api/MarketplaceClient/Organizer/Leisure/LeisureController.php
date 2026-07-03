@@ -733,8 +733,11 @@ class LeisureController extends BaseController
         $buckets = [];
         $bucketAdd = function ($ts) use (&$buckets) {
             if (!$ts) return;
-            $bucketMinute = (int) floor($ts->minute / 5) * 5;
-            $key = $ts->copy()->minute($bucketMinute)->second(0)->format('H:i');
+            // Convertim la fus orar RO ca sa nu apara ora UTC pe grafic (timestamp
+            // DB e UTC; server-ul poate rula in UTC — display trebuie RO).
+            $tsRo = $ts->copy()->setTimezone('Europe/Bucharest');
+            $bucketMinute = (int) floor($tsRo->minute / 5) * 5;
+            $key = $tsRo->minute($bucketMinute)->second(0)->format('H:i');
             if (!isset($buckets[$key])) $buckets[$key] = ['time' => $key, 'count' => 0];
             $buckets[$key]['count']++;
         };
@@ -1954,6 +1957,12 @@ class LeisureController extends BaseController
             'slots_config', 'physical_inventory',
             'pos_price', 'is_child_ticket', 'access_requirement', 'blocked_time_ranges',
             'pos_only',
+            // Bilet de grup (Sf. Ana): meta pentru grupare + emitere bonus ghid.
+            //  - is_group_ticket: bifa 'Bilet de grup'
+            //  - group_includes_guide: emite +1 bilet gratuit ghid la cantitate minima
+            //  - group_guide_label: nume bilet ghid (afisat pe cos + printat)
+            //  - step_qty: incrementul cosului (+/-) pentru bilete de grup
+            'is_group_ticket', 'group_includes_guide', 'group_guide_label', 'step_qty',
             // Multi-locale (B2): traduceri opt-in pe name/description/etc. + pe variants/addons.
             'translations',
         ];
@@ -2010,6 +2019,12 @@ class LeisureController extends BaseController
             $val = $filtered['access_requirement'];
             $filtered['access_requirement'] = in_array($val, ['none', 'any', 'adult_only'], true) ? $val : 'none';
         }
+
+        // Normalize meta bilet de grup
+        if (isset($filtered['is_group_ticket'])) $filtered['is_group_ticket'] = (bool) $filtered['is_group_ticket'];
+        if (isset($filtered['group_includes_guide'])) $filtered['group_includes_guide'] = (bool) $filtered['group_includes_guide'];
+        if (isset($filtered['group_guide_label'])) $filtered['group_guide_label'] = trim((string) $filtered['group_guide_label']);
+        if (isset($filtered['step_qty'])) $filtered['step_qty'] = max(1, (int) $filtered['step_qty']);
 
         // Normalize blocked_time_ranges (F10 — informativ)
         if (isset($filtered['blocked_time_ranges']) && is_array($filtered['blocked_time_ranges'])) {
