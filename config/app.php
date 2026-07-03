@@ -4,7 +4,7 @@ return [
 
     // Staff mobile app latest version (used for update prompts)
     'staff_app_version' => env('STAFF_APP_VERSION', '1.6.6'),
-    'sfana_app_version' => env('SFANA_APP_VERSION', '0.1.0'),
+    'sfana_app_version' => env('SFANA_APP_VERSION', '0.1.1'),
 
     /*
     |--------------------------------------------------------------------------
