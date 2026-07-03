@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tixello Sfana",
     "slug": "tixello-sfana",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

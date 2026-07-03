@@ -44,6 +44,8 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
 import { organizerCheckInByCode } from '../api/leisure';
+import { useAppUpdate } from '../hooks/useAppUpdate';
+import UpdateBanner from '../components/UpdateBanner';
 
 // Fereastre de afisare rezultat inainte de auto-return
 const RESULT_MS_SUCCESS = 3500;
@@ -62,6 +64,7 @@ export default function KioskScreen() {
   useKeepAwake();
   const { width: SW, height: SH } = useWindowDimensions();
   const isLandscape = SW > SH;
+  const update = useAppUpdate();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [status, setStatus] = useState(S_READY);
@@ -302,6 +305,19 @@ export default function KioskScreen() {
           {status === S_DUPLICATE && <DuplicateOverlay data={payload} message={errorMsg} rightSide />}
           {status === S_INVALID && <InvalidOverlay message={errorMsg} rightSide />}
         </View>
+
+        {/* Banner update — doar in READY, ca sa nu perturbe rezultatele. In
+            landscape il pun bottom-left (panoul stang, sub explicatii) — nu
+            acopera camera. */}
+        {status === S_READY && (
+          <UpdateBanner
+            hasUpdate={update.hasUpdate}
+            latestVersion={update.latestVersion}
+            downloadUrl={update.downloadUrl}
+            forceUpdate={update.forceUpdate}
+            position="bottom-center"
+          />
+        )}
       </View>
     );
   }
@@ -336,6 +352,16 @@ export default function KioskScreen() {
       {status === S_SUCCESS && <SuccessOverlay data={payload} />}
       {status === S_DUPLICATE && <DuplicateOverlay data={payload} message={errorMsg} />}
       {status === S_INVALID && <InvalidOverlay message={errorMsg} />}
+
+      {status === S_READY && (
+        <UpdateBanner
+          hasUpdate={update.hasUpdate}
+          latestVersion={update.latestVersion}
+          downloadUrl={update.downloadUrl}
+          forceUpdate={update.forceUpdate}
+          position="bottom-center"
+        />
+      )}
     </View>
   );
 }
