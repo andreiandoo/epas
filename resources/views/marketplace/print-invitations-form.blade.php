@@ -71,7 +71,7 @@
                             </label>
                         @endforeach
                     </div>
-                    <p class="mt-1.5 text-xs text-gray-500">4 pe A4 e ideal pentru test-printuri fără bleed. 1 pe A5 = invitație full-page.</p>
+                    <p class="mt-1.5 text-xs text-gray-500">1 pe pagină folosește template-ul complet al invitației. 2+ pe pagină folosește layout compact (titlu + cod + QR) pentru batch print.</p>
                 </div>
 
                 {{-- Bleed (split X / Y) --}}
