@@ -773,13 +773,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try {
             const res = await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/pos-sale`, body);
             const data = res.data || {};
-            // Render chitanță și auto-print (browser dialog pentru chitanță hartie A4/POS print)
+            // Render chitanță A4 (browser dialog) — DOAR cand imprimanta termica
+            // WebUSB nu e disponibila sau nu e activat auto-print. Cand user-ul
+            // are deja printer termic conectat si vrea auto-print, dialog-ul
+            // browser-ului e enervant si duplicativ.
+            const hasThermalReady = typeof PosPrinter !== 'undefined'
+                && PosPrinter.isSupported()
+                && PosPrinter.getAutoPrintEnabled();
             $('lv-receipt').innerHTML = buildReceiptHtml(data);
-            $('lv-receipt').classList.remove('hidden');
-            setTimeout(() => {
-                window.print();
-                $('lv-receipt').classList.add('hidden');
-            }, 200);
+            if (!hasThermalReady) {
+                $('lv-receipt').classList.remove('hidden');
+                setTimeout(() => {
+                    window.print();
+                    $('lv-receipt').classList.add('hidden');
+                }, 200);
+            }
 
             // Print termic bilete (WebUSB ESC/POS) — non-blocking, eseuc != esec vanzare.
             // Toggle-ul "Print automat dupa fiecare comanda" e in panou imprimanta termica.
