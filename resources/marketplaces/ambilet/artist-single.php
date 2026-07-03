@@ -55,6 +55,10 @@ $pageDescription = "Descoperă concertele și evenimentele {$artistName}. Cumpă
 if ($artistImage) {
     $pageImage = $artistImage;
 }
+
+// CANARY 2026-07-03 — grep this on live to confirm the file made it
+// through deploy-ambilet.bat + opcache reset. Remove after diagnosis.
+echo "\n<!-- OG_CANARY_20260703: artistImage=" . ($artistImage ?? 'NULL') . " pageImage=" . ($pageImage ?? 'NULL') . " -->\n";
 $bodyClass = 'page-artist-single';
 
 // Include head
