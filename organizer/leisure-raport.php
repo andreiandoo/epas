@@ -51,44 +51,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="r-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900"></div>
         <div id="r-loading" class="hidden p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
 
-        <!-- Totaluri -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Venit total</p>
-                <p class="text-2xl font-bold text-secondary"><span id="r-total-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
+        <!-- Totaluri (toate pe un singur rand pe ecrane wide) -->
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+            <div class="p-3 bg-white border rounded-xl border-border">
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Venit total</p>
+                <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-revenue">0.00</span> <span class="text-xs text-muted">RON</span></p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Bilete</p>
-                <p class="text-2xl font-bold text-secondary"><span id="r-total-tickets">0</span></p>
+            <div class="p-3 bg-white border rounded-xl border-border">
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Bilete</p>
+                <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-tickets">0</span></p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Comenzi</p>
-                <p class="text-2xl font-bold text-secondary"><span id="r-total-orders">0</span></p>
+            <div class="p-3 bg-white border rounded-xl border-border">
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Comenzi</p>
+                <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-orders">0</span></p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Coș mediu</p>
-                <p class="text-2xl font-bold text-secondary"><span id="r-avg">0.00</span> <span class="text-sm text-muted">RON</span></p>
+            <div class="p-3 bg-white border rounded-xl border-border">
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Coș mediu</p>
+                <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-avg">0.00</span> <span class="text-xs text-muted">RON</span></p>
             </div>
-        </div>
-
-        <!-- Comision AmBilet (colored blue accent) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="p-4 bg-blue-50 border border-blue-200 rounded-2xl lg:col-span-2">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="text-xs uppercase tracking-wider text-blue-800 font-semibold mb-1 flex items-center gap-1.5">
-                            💰 Comision AmBilet
-                        </p>
-                        <p class="text-2xl font-bold text-blue-900"><span id="r-total-commission">0.00</span> <span class="text-sm text-blue-700">RON</span></p>
-                    </div>
-                    <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                </div>
+            <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <p class="text-[10px] uppercase tracking-wider text-blue-800 font-semibold mb-1">💰 Comision AmBilet</p>
+                <p class="text-lg xl:text-xl font-bold text-blue-900 leading-tight"><span id="r-total-commission">0.00</span> <span class="text-xs text-blue-700">RON</span></p>
             </div>
-            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-                <p class="text-xs uppercase tracking-wider text-emerald-800 font-semibold mb-1">Venit net (după comision)</p>
-                <p class="text-2xl font-bold text-emerald-900"><span id="r-net-revenue">0.00</span> <span class="text-sm text-emerald-700">RON</span></p>
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <p class="text-[10px] uppercase tracking-wider text-emerald-800 font-semibold mb-1">Venit net</p>
+                <p class="text-lg xl:text-xl font-bold text-emerald-900 leading-tight"><span id="r-net-revenue">0.00</span> <span class="text-xs text-emerald-700">RON</span></p>
             </div>
         </div>
 
@@ -102,8 +89,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <span class="text-xs uppercase tracking-wider text-muted font-semibold">Societatea principală</span>
                         </div>
                         <p id="r-issuer-primary-name" class="text-sm font-bold text-secondary truncate">—</p>
-                        <p class="text-2xl font-bold text-secondary mt-2"><span id="r-issuer-primary-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
-                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON</p>
+                        <div class="flex items-baseline flex-wrap gap-x-3 gap-y-1 mt-2">
+                            <p class="text-2xl font-bold text-secondary"><span id="r-issuer-primary-revenue">0.00</span> <span class="text-sm text-muted">RON</span> <span class="text-[10px] text-muted uppercase tracking-wider">brut</span></p>
+                            <p id="r-issuer-primary-net-wrap" class="hidden text-sm font-semibold text-emerald-700">Net: <span id="r-issuer-primary-net">0.00</span> RON</p>
+                        </div>
+                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-primary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-primary-vat-rate">19</span>%): <span id="r-issuer-primary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
                         <div id="r-issuer-primary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
                     <div class="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
@@ -117,8 +107,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <span class="text-xs uppercase tracking-wider text-muted font-semibold">Societatea secundară</span>
                         </div>
                         <p id="r-issuer-secondary-name" class="text-sm font-bold text-secondary truncate">—</p>
-                        <p class="text-2xl font-bold text-secondary mt-2"><span id="r-issuer-secondary-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
-                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON</p>
+                        <div class="flex items-baseline flex-wrap gap-x-3 gap-y-1 mt-2">
+                            <p class="text-2xl font-bold text-secondary"><span id="r-issuer-secondary-revenue">0.00</span> <span class="text-sm text-muted">RON</span> <span class="text-[10px] text-muted uppercase tracking-wider">brut</span></p>
+                            <p id="r-issuer-secondary-net-wrap" class="hidden text-sm font-semibold text-emerald-700">Net: <span id="r-issuer-secondary-net">0.00</span> RON</p>
+                        </div>
+                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-secondary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-secondary-vat-rate">19</span>%): <span id="r-issuer-secondary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
                         <div id="r-issuer-secondary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
                     <div class="w-11 h-11 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
@@ -365,6 +358,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>`;
         }).join('');
     }
+    function renderIssuerVat(prefix, row) {
+        // Afiseaza Net + TVA lângă suma brută cand societatea e platitoare TVA
+        // (vat_payer=true). Cand nu e — ascundem, dar aratam totusi 'Net' egal cu
+        // brutul ca sa dispara ambiguitatea 'brut vs net'.
+        const netWrap = $(prefix + '-net-wrap');
+        const netEl = $(prefix + '-net');
+        const vatWrap = $(prefix + '-vat-wrap');
+        const vatEl = $(prefix + '-vat');
+        const vatRateEl = $(prefix + '-vat-rate');
+        const rev = parseFloat(row.revenue || 0);
+        const net = parseFloat(row.net_revenue != null ? row.net_revenue : rev);
+        const vatAmt = parseFloat(row.vat_amount || 0);
+        const isVat = !!row.vat_payer && vatAmt > 0;
+        if (netEl) netEl.textContent = fmtMoney(net);
+        if (netWrap) netWrap.classList.remove('hidden'); // aratam net-ul mereu — cu sau fara TVA
+        if (isVat) {
+            if (vatWrap) vatWrap.classList.remove('hidden');
+            if (vatEl) vatEl.textContent = fmtMoney(vatAmt);
+            if (vatRateEl) vatRateEl.textContent = row.vat_rate != null ? Number(row.vat_rate).toFixed(0) : '19';
+        } else {
+            if (vatWrap) vatWrap.classList.add('hidden');
+        }
+    }
+
     function renderIssuers(byIssuer) {
         const cards = $('r-issuer-cards');
         const prim = byIssuer.primary || {};
@@ -376,6 +393,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('r-issuer-primary-tickets').textContent = prim.tickets || 0;
         $('r-issuer-primary-commission').textContent = fmtMoney(prim.commission || 0);
         renderIssuerPaymentBreakdown($('r-issuer-primary-payment'), prim.by_payment);
+        renderIssuerVat('r-issuer-primary', prim);
         // Secondary (afisat doar cand organizatorul are has_secondary_issuer)
         const secCard = $('r-issuer-secondary-card');
         if (sec) {
@@ -385,6 +403,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('r-issuer-secondary-tickets').textContent = sec.tickets || 0;
             $('r-issuer-secondary-commission').textContent = fmtMoney(sec.commission || 0);
             renderIssuerPaymentBreakdown($('r-issuer-secondary-payment'), sec.by_payment);
+            renderIssuerVat('r-issuer-secondary', sec);
             cards.classList.remove('lg:grid-cols-1');
             cards.classList.add('lg:grid-cols-2');
         } else {
