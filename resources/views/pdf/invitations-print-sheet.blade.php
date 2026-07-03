@@ -13,15 +13,7 @@
     $tileW = $innerW / $cols;
     $tileH = $innerH / $rows;
 
-    $useTemplate = !empty($renderedHtmls) && $templateWidthMm && $templateHeightMm;
-
-    // Fit the template inside the tile while preserving aspect. DomPDF's
-    // `zoom` property (unlike CSS `transform: scale`) actually reduces the
-    // element's layout box, so the scaled template stays clipped to the
-    // tile with no bleed into neighbouring tiles.
-    if ($useTemplate) {
-        $scale = min($tileW / $templateWidthMm, $tileH / $templateHeightMm);
-    }
+    $useTemplate = !empty($renderedHtmls);
 
     // Fallback simple-layout metadata.
     $eventTitle = is_array($event->title)
@@ -49,45 +41,16 @@
         * { box-sizing: border-box; font-family: 'DejaVu Sans', sans-serif; }
         body { background: #fff; color: #1f2937; }
 
+        /* Each .page fills the paper exactly. Absolute-positioned .tile
+           children sit inside a positioned parent, so DomPDF only sees ONE
+           block per page in the flow and paginates cleanly. */
         .page {
             width: {{ $paperMm['w'] }}mm;
             height: {{ $paperMm['h'] }}mm;
-            padding: {{ $bleedYMm }}mm {{ $bleedXMm }}mm;
-            position: relative;
-            page-break-inside: avoid;
-        }
-        .page + .page { page-break-before: always; }
-
-        /* table-layout: fixed + mm-sized cells is DomPDF's most reliable
-           grid mechanism — no cell spillover, no ambiguity. */
-        .grid {
-            width: 100%;
-            height: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        .grid td {
-            width: {{ $tileW }}mm;
-            height: {{ $tileH }}mm;
-            padding: 0;
-            vertical-align: top;
-            border: 0.4pt dashed #d1d5db;
-        }
-
-        /* Template mount inside a cell: fixed natural size + zoom.
-           zoom shrinks the layout box (unlike transform: scale which is
-           visual-only), so the scaled ticket stays clipped to the tile.
-           overflow: hidden is a safety net. */
-        .tpl-mount {
-            width: {{ $useTemplate ? $templateWidthMm : 0 }}mm;
-            height: {{ $useTemplate ? $templateHeightMm : 0 }}mm;
             position: relative;
             overflow: hidden;
-            background: {{ $templateBg ?? '#ffffff' }};
-            @if($useTemplate)
-                zoom: {{ number_format($scale, 4, '.', '') }};
-            @endif
         }
+        .page + .page { page-break-before: always; }
 
         /* Simple-fallback tile styles (used when no template available). */
         .simple { width: 100%; height: 100%; padding: 4mm; position: relative; }
@@ -108,62 +71,56 @@
 <body>
 @foreach($pages as $pageInvites)
     <div class="page">
-        <table class="grid">
-            @for($r = 0; $r < $rows; $r++)
-                <tr>
-                    @for($c = 0; $c < $cols; $c++)
-                        @php
-                            $i = $r * $cols + $c;
-                            $invite = $pageInvites[$i] ?? null;
-                            $renderedHtml = $invite ? ($renderedHtmls[$invite->id] ?? null) : null;
-                        @endphp
-                        <td>
-                            @if($invite && $useTemplate && $renderedHtml)
-                                <div class="tpl-mount">
-                                    {!! $renderedHtml !!}
-                                </div>
-                            @elseif($invite)
-                                @php
-                                    $recipient = is_array($invite->recipient) ? $invite->recipient : [];
-                                    $recipientName = trim(($recipient['first_name'] ?? '') . ' ' . ($recipient['last_name'] ?? ''));
-                                    if ($recipientName === '') $recipientName = $recipient['name'] ?? '';
-                                    $qrData = $invite->qr_data ?: $invite->invite_code;
-                                    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
-                                        'size' => '200x200',
-                                        'data' => $qrData,
-                                        'margin' => '2',
-                                        'ecc' => 'M',
-                                    ]);
-                                @endphp
-                                <div class="simple">
-                                    <div class="simple-header">
-                                        <div class="simple-watermark">Invitație</div>
-                                        <div class="simple-event-title">{{ $eventTitle }}</div>
-                                        <div class="simple-event-meta">
-                                            @if($eventDate){{ $eventDate }}@endif
-                                            @if($venueName)<br>{{ $venueName }}@if($venueCity), {{ $venueCity }}@endif @endif
-                                        </div>
-                                    </div>
-                                    <div class="simple-body">
-                                        <div class="simple-left">
-                                            @if($recipientName !== '')
-                                                <div class="simple-recip-label">Invitat</div>
-                                                <div class="simple-recip-name">{{ $recipientName }}</div>
-                                            @endif
-                                            <div class="simple-code-label">Cod</div>
-                                            <div class="simple-code">{{ $invite->invite_code }}</div>
-                                        </div>
-                                        <div class="simple-right">
-                                            <img class="simple-qr" src="{{ $qrUrl }}" alt="QR">
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                        </td>
-                    @endfor
-                </tr>
-            @endfor
-        </table>
+        @foreach($pageInvites as $i => $invite)
+            @php
+                $col = $i % $cols;
+                $row = intdiv($i, $cols);
+                $tileLeft = $bleedXMm + $col * $tileW;
+                $tileTop = $bleedYMm + $row * $tileH;
+                $renderedHtml = $useTemplate ? ($renderedHtmls[$invite->id] ?? null) : null;
+            @endphp
+            <div style="position:absolute; left:{{ $tileLeft }}mm; top:{{ $tileTop }}mm; width:{{ $tileW }}mm; height:{{ $tileH }}mm; overflow:hidden; background:{{ $templateBg ?? '#ffffff' }}; border: 0.3pt dashed #d1d5db;">
+                @if($renderedHtml)
+                    {!! $renderedHtml !!}
+                @else
+                    @php
+                        $recipient = is_array($invite->recipient) ? $invite->recipient : [];
+                        $recipientName = trim(($recipient['first_name'] ?? '') . ' ' . ($recipient['last_name'] ?? ''));
+                        if ($recipientName === '') $recipientName = $recipient['name'] ?? '';
+                        $qrData = $invite->qr_data ?: $invite->invite_code;
+                        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+                            'size' => '200x200',
+                            'data' => $qrData,
+                            'margin' => '2',
+                            'ecc' => 'M',
+                        ]);
+                    @endphp
+                    <div class="simple">
+                        <div class="simple-header">
+                            <div class="simple-watermark">Invitație</div>
+                            <div class="simple-event-title">{{ $eventTitle }}</div>
+                            <div class="simple-event-meta">
+                                @if($eventDate){{ $eventDate }}@endif
+                                @if($venueName)<br>{{ $venueName }}@if($venueCity), {{ $venueCity }}@endif @endif
+                            </div>
+                        </div>
+                        <div class="simple-body">
+                            <div class="simple-left">
+                                @if($recipientName !== '')
+                                    <div class="simple-recip-label">Invitat</div>
+                                    <div class="simple-recip-name">{{ $recipientName }}</div>
+                                @endif
+                                <div class="simple-code-label">Cod</div>
+                                <div class="simple-code">{{ $invite->invite_code }}</div>
+                            </div>
+                            <div class="simple-right">
+                                <img class="simple-qr" src="{{ $qrUrl }}" alt="QR">
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endforeach
     </div>
 @endforeach
 </body>

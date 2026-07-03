@@ -99,6 +99,23 @@ class PrintInvitationsController extends Controller
         $templateHeightMm = null;
         $templateBg = '#ffffff';
 
+        // Compute the scale from template natural size to actual tile size,
+        // then multiply every `pt` value in the rendered HTML by it. This is
+        // way more reliable than DomPDF's `zoom` — which shrinks visually
+        // but not layout box, so tiles overflow their cells.
+        $paperDims = match ($data['paper']) {
+            'A3' => ['w' => 297, 'h' => 420],
+            'A5' => ['w' => 148, 'h' => 210],
+            default => ['w' => 210, 'h' => 297],
+        };
+        if ($orientation === 'landscape') {
+            [$paperDims['w'], $paperDims['h']] = [$paperDims['h'], $paperDims['w']];
+        }
+        $innerWmm = $paperDims['w'] - 2 * (float) $data['bleed_x_mm'];
+        $innerHmm = $paperDims['h'] - 2 * (float) $data['bleed_y_mm'];
+        $tileWmm = $innerWmm / $layout['cols'];
+        $tileHmm = $innerHmm / $layout['rows'];
+
         if ($template && !empty($template->template_data['layers'])) {
             try {
                 $generator = app(TicketPreviewGenerator::class);
@@ -107,6 +124,14 @@ class PrintInvitationsController extends Controller
                 $templateWidthMm = (float) $size['width'];
                 $templateHeightMm = (float) $size['height'];
                 $templateBg = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+                // Fit-scale keeping aspect ratio: how much of the tile the
+                // scaled template actually occupies (leaves whitespace on
+                // one axis if aspect ratios differ).
+                $ptScale = min(
+                    $tileWmm / max($templateWidthMm, 0.01),
+                    $tileHmm / max($templateHeightMm, 0.01)
+                );
 
                 $eventTitle = is_array($event->title)
                     ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?? '')
@@ -160,17 +185,21 @@ class PrintInvitationsController extends Controller
                         $d['barcode'] = $invite->invite_code;
                         $d['qrcode'] = $qrData;
 
-                        // TicketPreviewGenerator emits layers with `position:
-                        // fixed`, positioning them relative to the PAGE. When
-                        // 4 templates share a single page, all 4 backgrounds
-                        // and their absolute-child layers overlap. Same fix
-                        // TicketsController::downloadPdf uses for multi-
-                        // ticket PDFs: rewrite to `position: absolute` so
-                        // each rendered template scopes to its OWN wrapper.
-                        $renderedHtmls[$invite->id] = str_replace(
-                            'position: fixed;',
-                            'position: absolute;',
-                            $generator->renderToHtml($template->template_data, $d)
+                        // Two mutations to make the template safely embeddable
+                        // in a small grid cell:
+                        //  1. `position: fixed` → `position: absolute` so
+                        //     layers scope to the tile wrapper instead of
+                        //     the page (same trick TicketsController uses).
+                        //  2. Multiply every `Npt` value by $ptScale so the
+                        //     rendered template physically shrinks — DomPDF
+                        //     `zoom` isn't reliable, so we scale the pt
+                        //     values in the emitted CSS directly.
+                        $rawHtml = $generator->renderToHtml($template->template_data, $d);
+                        $rawHtml = str_replace('position: fixed;', 'position: absolute;', $rawHtml);
+                        $renderedHtmls[$invite->id] = preg_replace_callback(
+                            '/(\d+(?:\.\d+)?)pt/',
+                            fn ($m) => round(((float) $m[1]) * $ptScale, 2) . 'pt',
+                            $rawHtml
                         );
                     } catch (\Throwable $e) {
                         Log::warning('Print invitations: template render failed for invite', [
