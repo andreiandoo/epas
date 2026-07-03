@@ -75,6 +75,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="pt-4 border-t border-border">
+                    <h2 class="font-bold text-secondary mb-3">Pe metodă plată</h2>
+                    <div id="lv-payment-methods" class="space-y-2 text-sm">
+                        <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-border">
                     <h2 class="font-bold text-secondary mb-3">Pe tip bilet</h2>
                     <div id="lv-ticket-types" class="space-y-2 text-sm max-h-96 overflow-y-auto pr-1">
                         <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
@@ -125,6 +131,37 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             data: { labels, datasets: [{ label: 'Vânzări (RON)', data, borderColor: '#22C55E', backgroundColor: 'rgba(34,197,94,0.12)', fill: true, tension: 0.3, pointRadius: 3 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
+    }
+
+    // Breakdown per metoda plata (cash / card / online)
+    const PM_META = {
+        cash:   { label: '💵 Cash',        color: '#F59E0B' }, // amber
+        card:   { label: '💳 Card',        color: '#6366F1' }, // indigo
+        online: { label: '🌐 Online',      color: '#10B981' }, // emerald
+    };
+    function renderPaymentMethods(rows) {
+        const wrap = $('lv-payment-methods');
+        if (!rows || !rows.length) {
+            wrap.innerHTML = '<p class="text-muted text-center py-4">Nicio vânzare în această perioadă.</p>';
+            return;
+        }
+        const totalRev = rows.reduce((s, r) => s + Number(r.revenue || 0), 0);
+        const orderByRev = [...rows].sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0));
+        wrap.innerHTML = orderByRev.map(r => {
+            const meta = PM_META[r.method] || { label: r.method, color: '#94A3B8' };
+            const rev = Number(r.revenue || 0);
+            const pct = totalRev > 0 ? Math.round((rev / totalRev) * 100) : 0;
+            return `
+            <div>
+                <div class="flex justify-between text-xs mb-1 gap-2">
+                    <span class="font-medium" style="color:${meta.color}">${meta.label}</span>
+                    <span class="text-muted whitespace-nowrap">${r.orders} comenzi · ${r.tickets} bilete · <strong>${fmtMoney(rev)} RON</strong> · ${pct}%</span>
+                </div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full" style="width:${pct}%;background:${meta.color}"></div>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     // Breakdown per tip bilet (nume + count + venit + procent din total)
@@ -215,6 +252,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-stat-avg').textContent = fmtMoney(totals.avg_order);
             renderChart(data.rows || [], data.group_by || 'day');
             renderCategories(data.by_category || {});
+            renderPaymentMethods(data.by_payment_method || []);
             renderTicketTypes(data.by_ticket_type || []);
         } catch (e) {
             console.error('[leisure-sales] load failed', e);

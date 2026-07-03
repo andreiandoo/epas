@@ -1840,6 +1840,31 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.cashier.current':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/cashier/current';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.open':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/cashier/open';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.close':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/cashier/close';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.issuers':
         // GET → show, PUT → update partial pentru o societate (primary|secondary)
         $eventId = (int) ($_GET['event'] ?? 0);

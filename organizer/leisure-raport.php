@@ -91,6 +91,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
+        <!-- Panou: Pe metoda plata -->
+        <div class="bg-white border rounded-2xl border-border mb-6">
+            <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+                <h2 class="font-bold text-secondary">💰 Pe metodă plată</h2>
+                <span class="text-xs text-muted">Cash / Card / Online</span>
+            </div>
+            <div class="p-5" id="r-payment-rows">
+                <p class="text-sm text-muted text-center py-6">Selectează o perioadă.</p>
+            </div>
+        </div>
+
         <!-- Grid: surse + cashiers + tipuri bilete -->
         <div class="grid lg:grid-cols-2 gap-6 mb-6">
             <div class="bg-white border rounded-2xl border-border">
@@ -177,6 +188,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('r-total-commission').textContent = fmtMoney(t.commission);
             $('r-net-revenue').textContent = fmtMoney(t.net_revenue);
             renderSources(data.by_source || [], t.revenue || 0);
+            renderPaymentMethods(data.by_payment_method || [], t.revenue || 0);
             renderCashiers(data.by_cashier || []);
             renderTicketTypes(data.by_ticket_type || []);
         } catch (e) {
@@ -202,6 +214,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <span class="text-muted">${r.orders} comenzi · ${r.tickets} bilete · <strong class="text-${color}-700">${fmtMoney(r.revenue)} RON</strong></span>
                 </div>
                 <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-${color}-500" style="width:${pct}%"></div></div>
+                <div class="text-[10px] text-muted mt-0.5 text-right">${pct}% din total</div>
+            </div>`;
+        }).join('');
+    }
+
+    // Breakdown per metoda plata: Cash / Card / Online
+    const PM_META = {
+        cash:   { label: '💵 Cash',   color: 'amber',    hex: '#F59E0B' },
+        card:   { label: '💳 Card',   color: 'indigo',   hex: '#6366F1' },
+        online: { label: '🌐 Online', color: 'emerald',  hex: '#10B981' },
+    };
+    function renderPaymentMethods(rows, totalRev) {
+        const wrap = $('r-payment-rows');
+        if (!rows.length) { wrap.innerHTML = '<p class="text-sm text-muted text-center py-6">Nicio vânzare în perioadă.</p>'; return; }
+        wrap.innerHTML = rows.map(r => {
+            const meta = PM_META[r.method] || { label: r.method, hex: '#94A3B8' };
+            const rev = Number(r.revenue || 0);
+            const pct = totalRev > 0 ? Math.round((rev / totalRev) * 100) : 0;
+            return `<div class="mb-3">
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-semibold" style="color:${meta.hex}">${meta.label}</span>
+                    <span class="text-muted">${r.orders} comenzi · ${r.tickets} bilete · <strong style="color:${meta.hex}">${fmtMoney(rev)} RON</strong></span>
+                </div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full" style="width:${pct}%;background:${meta.hex}"></div></div>
                 <div class="text-[10px] text-muted mt-0.5 text-right">${pct}% din total</div>
             </div>`;
         }).join('');
@@ -260,6 +296,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         rows.push([]);
         rows.push(['SURSĂ', 'Comenzi', 'Bilete', 'Venit', 'Comision']);
         (lastReport.by_source || []).forEach(s => rows.push([s.source, s.orders, s.tickets, s.revenue, s.commission || 0]));
+        rows.push([]);
+        rows.push(['METODA PLATA', 'Comenzi', 'Bilete', 'Venit', 'Comision']);
+        (lastReport.by_payment_method || []).forEach(p => rows.push([p.method, p.orders, p.tickets, p.revenue, p.commission || 0]));
         rows.push([]);
         rows.push(['OPERATOR', 'Comenzi', 'Bilete', 'Venit', 'Comision']);
         (lastReport.by_cashier || []).forEach(c => rows.push([c.cashier_label, c.orders, c.tickets, c.revenue, c.commission || 0]));

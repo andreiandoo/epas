@@ -28,6 +28,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <span class="text-muted whitespace-nowrap">📅 Data vizită:</span>
                     <input id="lv-visit-date" type="date" value="<?= date('Y-m-d') ?>" class="text-sm border-0 p-0 focus:outline-none focus:ring-0 bg-transparent">
                 </label>
+
+                <!-- Casa POS: Deschidere / Inchidere. Un singur buton vizibil in functie de starea sesiunii. -->
+                <button id="lv-cash-open" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700">
+                    🔓 Deschidere casă
+                </button>
+                <button id="lv-cash-close" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-amber-600 text-white rounded-xl hover:bg-amber-700">
+                    🔒 Închidere casă
+                    <span id="lv-cash-open-since" class="ml-1 opacity-80 text-[10px]"></span>
+                </button>
             <!-- Panou imprimantă termică (WebUSB) — collapsible -->
             <details id="lv-printer-panel" class="bg-white border border-border rounded-xl text-sm min-w-[320px]">
                 <summary class="px-4 py-2.5 cursor-pointer font-semibold text-secondary flex items-center gap-2">
@@ -188,6 +197,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <!-- Chitanță print -->
         <div id="lv-receipt" class="hidden"></div>
+
+        <!-- Modal 'Închidere casă' — snapshot incasari intre opened_at si acum -->
+        <div id="lv-cash-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-start justify-center p-6 md:p-10 overflow-y-auto">
+            <div class="bg-white rounded-2xl border border-border max-w-2xl w-full my-6 shadow-xl">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+                    <h3 class="font-bold text-lg text-secondary">🔒 Închidere casă</h3>
+                    <button type="button" id="lv-cash-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <div id="lv-cash-summary" class="text-sm">
+                        <p class="text-muted">Confirmă închiderea casei — se va salva un snapshot al încasărilor pentru intervalul acestei sesiuni.</p>
+                    </div>
+                    <details id="lv-cash-details" class="hidden text-sm">
+                        <summary class="cursor-pointer font-semibold text-secondary">📊 Detalii încasări (după închidere)</summary>
+                        <div id="lv-cash-details-body" class="mt-3 space-y-4"></div>
+                    </details>
+                </div>
+                <div class="flex justify-end gap-2 px-6 py-3 border-t border-border bg-slate-50 rounded-b-2xl">
+                    <button id="lv-cash-modal-cancel" type="button" class="px-4 py-2 text-sm border border-border rounded-lg hover:bg-slate-100">Anulează</button>
+                    <button id="lv-cash-modal-confirm" type="button" class="px-4 py-2 text-sm font-semibold bg-amber-600 text-white rounded-lg hover:bg-amber-700">Închide casa</button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 <script src="<?= asset('assets/js/pos-printer.js') ?>"></script>
@@ -724,6 +756,136 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         `;
     }
 
+    // ========== Casa POS: sesiuni deschidere / inchidere ==========
+    let cashierSession = null; // {id, opened_at, opened_label} sau null
+
+    function fmtTime(iso) {
+        if (!iso) return '';
+        try {
+            const d = new Date(iso);
+            return d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+        } catch { return ''; }
+    }
+
+    async function refreshCashierState() {
+        if (!currentEventId) return;
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/cashier/current`);
+            cashierSession = res.data?.session || null;
+        } catch (e) { cashierSession = null; }
+        renderCashierButtons();
+    }
+    function renderCashierButtons() {
+        const openBtn = $('lv-cash-open');
+        const closeBtn = $('lv-cash-close');
+        if (cashierSession) {
+            if (openBtn) openBtn.hidden = true;
+            if (closeBtn) {
+                closeBtn.hidden = false;
+                const since = $('lv-cash-open-since');
+                if (since) since.textContent = `· deschisă de la ${fmtTime(cashierSession.opened_at)}`;
+            }
+        } else {
+            if (openBtn) openBtn.hidden = false;
+            if (closeBtn) closeBtn.hidden = true;
+        }
+    }
+    async function openCashier() {
+        const btn = $('lv-cash-open');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Deschid...'; }
+        try {
+            const res = await AmbiletAPI.request(`/organizer/events/${currentEventId}/leisure/cashier/open`, {
+                method: 'POST', body: JSON.stringify({}),
+            });
+            cashierSession = res.data?.session || null;
+            renderCashierButtons();
+            alert('Casa a fost deschisă la ' + fmtTime(cashierSession?.opened_at));
+        } catch (e) {
+            alert('Eroare la deschidere casă: ' + (e?.message || ''));
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🔓 Deschidere casă'; }
+        }
+    }
+    function showCloseCashierModal() {
+        if (!cashierSession) return;
+        $('lv-cash-summary').innerHTML = `<p class="text-muted">Casa a fost deschisă la <strong>${fmtTime(cashierSession.opened_at)}</strong>` +
+            ` de <strong>${escapeHtml(cashierSession.opened_label || 'operator')}</strong>. Confirmarea va salva un snapshot al încasărilor de pe această sesiune.</p>`;
+        $('lv-cash-details').classList.add('hidden');
+        $('lv-cash-details-body').innerHTML = '';
+        const confirmBtn = $('lv-cash-modal-confirm');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Închide casa'; }
+        $('lv-cash-modal').classList.remove('hidden');
+        $('lv-cash-modal').classList.add('flex');
+    }
+    function hideCloseCashierModal() {
+        $('lv-cash-modal').classList.add('hidden');
+        $('lv-cash-modal').classList.remove('flex');
+    }
+    function escapeHtml(s) { return String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+    async function confirmCloseCashier() {
+        const btn = $('lv-cash-modal-confirm');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Închid + calculez...'; }
+        try {
+            const res = await AmbiletAPI.request(`/organizer/events/${currentEventId}/leisure/cashier/close`, {
+                method: 'POST', body: JSON.stringify({}),
+            });
+            const snap = res.data?.snapshot || {};
+            const sess = res.data?.session || {};
+            renderCashierSnapshot(sess, snap);
+            cashierSession = null;
+            renderCashierButtons();
+        } catch (e) {
+            alert('Eroare la închidere casă: ' + (e?.message || ''));
+            if (btn) { btn.disabled = false; btn.textContent = 'Închide casa'; }
+        }
+    }
+    function renderCashierSnapshot(session, snap) {
+        const t = snap.totals || {};
+        const byPay = Array.isArray(snap.by_payment) ? snap.by_payment : [];
+        const byTt = Array.isArray(snap.by_ticket_type) ? snap.by_ticket_type : [];
+        const PM = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
+
+        $('lv-cash-summary').innerHTML = `<div class="grid grid-cols-2 gap-3">
+            <div class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold">Total încasat</p>
+                <p class="text-lg font-bold text-emerald-800">${fmtMoney(t.revenue || 0)} <span class="text-xs text-muted">RON</span></p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold">Comenzi · Bilete</p>
+                <p class="text-lg font-bold text-secondary">${t.orders || 0} · ${t.tickets || 0}</p>
+            </div>
+        </div>
+        <p class="text-[11px] text-muted mt-2">Deschisă: ${fmtTime(session.opened_at)} · Închisă: ${fmtTime(session.closed_at)} · Durată: ${session.duration_minutes || 0} min</p>`;
+
+        const payHtml = byPay.length ? byPay.map(p => `
+            <div class="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
+                <span>${PM[p.method] || p.method}</span>
+                <span class="text-right"><strong>${fmtMoney(p.revenue)} RON</strong> · <span class="text-muted">${p.orders} comenzi · ${p.tickets} bilete</span></span>
+            </div>`).join('') : '<p class="text-muted text-xs">Nicio incasare</p>';
+
+        const ttHtml = byTt.length ? byTt.map(r => `
+            <div class="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0 gap-2">
+                <span class="flex-1 truncate">${escapeHtml(r.name)}</span>
+                <span class="text-right whitespace-nowrap"><strong>${r.tickets}×</strong> · ${fmtMoney(r.revenue)} RON</span>
+            </div>`).join('') : '<p class="text-muted text-xs">Niciun bilet</p>';
+
+        $('lv-cash-details-body').innerHTML = `
+            <div>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Pe metodă plată</p>
+                ${payHtml}
+            </div>
+            <div>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe tip bilet</p>
+                ${ttHtml}
+            </div>
+        `;
+        $('lv-cash-details').classList.remove('hidden');
+        $('lv-cash-details').setAttribute('open', '');
+
+        const confirmBtn = $('lv-cash-modal-confirm');
+        if (confirmBtn) { confirmBtn.textContent = 'Închide fereastra'; confirmBtn.disabled = false; confirmBtn.onclick = hideCloseCashierModal; }
+    }
+
     async function checkout() {
         if ($('lv-checkout').disabled) return;
         $('lv-checkout').disabled = true;
@@ -1097,6 +1259,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             // (altfel ramane "2" lipit pe cardul de unde s-au adaugat ultimele).
             renderGrid();
         });
+
+        // ============ Casa POS: refresh state + wire butoane ============
+        refreshCashierState();
+        $('lv-cash-open')?.addEventListener('click', openCashier);
+        $('lv-cash-close')?.addEventListener('click', showCloseCashierModal);
+        $('lv-cash-modal-close')?.addEventListener('click', hideCloseCashierModal);
+        $('lv-cash-modal-cancel')?.addEventListener('click', hideCloseCashierModal);
+        $('lv-cash-modal-confirm')?.addEventListener('click', confirmCloseCashier);
 
         // ============ Panou imprimantă termică (WebUSB) ============
         initPrinterPanel();
