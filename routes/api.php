@@ -1859,6 +1859,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/leisure/payouts', [OrganizerLeisureController::class, 'payouts'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.payouts');
+        // Casa POS — sesiuni deschidere/inchidere
+        Route::get('/events/{event}/leisure/cashier/current', [OrganizerLeisureController::class, 'cashierCurrent'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.cashier.current');
+        Route::post('/events/{event}/leisure/cashier/open', [OrganizerLeisureController::class, 'cashierOpen'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.cashier.open');
+        Route::post('/events/{event}/leisure/cashier/close', [OrganizerLeisureController::class, 'cashierClose'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.cashier.close');
         // Societati emitente (primary + secondary) — edit complet date juridice + numerotare facturi + TVA
         Route::get('/events/{event}/leisure/issuers', [OrganizerLeisureController::class, 'issuersShow'])
             ->whereNumber('event')

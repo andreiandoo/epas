@@ -557,7 +557,7 @@ class LeisureController extends BaseController
             ->whereIn('status', ['completed', 'paid'])
             ->whereBetween('paid_at', [$from, $to])
             ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category'])
-            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency']);
+            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
 
         // Format key per groupBy
         $fmtKey = function ($carbon) use ($groupBy) {
@@ -572,6 +572,7 @@ class LeisureController extends BaseController
         $totalOrders = $orders->count();
         $byCategory = [];
         $byTicketType = [];
+        $byPaymentMethod = []; // cash / card / online
 
         foreach ($orders as $order) {
             $key = $fmtKey($order->paid_at);
@@ -583,10 +584,21 @@ class LeisureController extends BaseController
             $buckets[$key]['revenue'] += $rev;
             $totalRevenue += $rev;
 
+            // Metoda plata: POS cash/card citite din meta.payment_method; restul 'online'
+            $isPos = $order->source === 'pos';
+            $posMethod = $order->meta['payment_method'] ?? null;
+            if ($isPos && $posMethod === 'cash') $pmKey = 'cash';
+            elseif ($isPos && $posMethod === 'card') $pmKey = 'card';
+            else $pmKey = 'online';
+            if (!isset($byPaymentMethod[$pmKey])) $byPaymentMethod[$pmKey] = ['method' => $pmKey, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $byPaymentMethod[$pmKey]['orders']++;
+            $byPaymentMethod[$pmKey]['revenue'] += $rev;
+
             foreach ($order->tickets as $ticket) {
                 if (in_array($ticket->status, ['cancelled', 'refunded'], true)) continue;
                 $buckets[$key]['tickets']++;
                 $totalTickets++;
+                $byPaymentMethod[$pmKey]['tickets']++;
                 $cat = $ticket->ticketType->service_category ?? 'access';
                 $byCategory[$cat] = ($byCategory[$cat] ?? 0) + 1;
                 // Per tip bilet — foloseste label_override daca exista (guide bonus),
@@ -620,6 +632,8 @@ class LeisureController extends BaseController
         usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
         foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
         unset($row);
+        foreach ($byPaymentMethod as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
 
         return $this->success([
             'from' => $from->toDateString(),
@@ -635,6 +649,7 @@ class LeisureController extends BaseController
             ],
             'by_category' => $byCategory,
             'by_ticket_type' => array_values($byTicketType),
+            'by_payment_method' => array_values($byPaymentMethod),
         ]);
     }
 
@@ -2117,6 +2132,7 @@ class LeisureController extends BaseController
         $byTicketType = [];
         $bySource = [];
         $byCashier = [];
+        $byPaymentMethod = []; // cash, card, online (Cash/Card = POS; Online = customer online)
         $totalRevenue = 0.0;
         $totalTickets = 0;
         $totalOrders = $orders->count();
@@ -2191,6 +2207,19 @@ class LeisureController extends BaseController
             $bySource[$source]['revenue'] += $rev;
             $bySource[$source]['commission'] += $orderCommission;
 
+            // Metoda plata:
+            //  - POS cash / card citite din meta.payment_method (posSale scrie)
+            //  - POS 'invoice' (link email) -> tratam ca 'online' (banii vin online)
+            //  - non-POS -> 'online'
+            $posMethod = $o->meta['payment_method'] ?? null;
+            if ($source === 'pos' && $posMethod === 'cash') $pmKey = 'cash';
+            elseif ($source === 'pos' && $posMethod === 'card') $pmKey = 'card';
+            else $pmKey = 'online';
+            if (!isset($byPaymentMethod[$pmKey])) $byPaymentMethod[$pmKey] = ['method' => $pmKey, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0];
+            $byPaymentMethod[$pmKey]['orders']++;
+            $byPaymentMethod[$pmKey]['revenue'] += $rev;
+            $byPaymentMethod[$pmKey]['commission'] += $orderCommission;
+
             // Cashier (operator POS) — team_member_id (prioritate) sau organizer_id
             // (owner cand nu e team member). Cheia de grupare distinge intre ele
             // ca sa nu se combine team member 5 cu organizer 5.
@@ -2219,6 +2248,7 @@ class LeisureController extends BaseController
                 $totalTickets++;
                 $bySource[$source]['tickets']++;
                 $byCashier[$cashierKey]['tickets']++;
+                $byPaymentMethod[$pmKey]['tickets']++;
 
                 $ttId = $t->ticket_type_id;
                 $ttName = $t->ticketType->name ?? "Tip #{$ttId}";
@@ -2251,6 +2281,7 @@ class LeisureController extends BaseController
         foreach ($bySource as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byCashier as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byTicketType as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
+        foreach ($byPaymentMethod as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         unset($row);
 
         return $this->success([
@@ -2276,6 +2307,7 @@ class LeisureController extends BaseController
             'by_source' => array_values($bySource),
             'by_ticket_type' => array_values($byTicketType),
             'by_cashier' => array_values($byCashier),
+            'by_payment_method' => array_values($byPaymentMethod),
         ]);
     }
 
@@ -2787,6 +2819,209 @@ class LeisureController extends BaseController
         }
 
         return $organizer;
+    }
+
+    // ========================================================================
+    // CASA POS — sesiuni deschidere/inchidere pentru infopoint on-site
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/cashier/current
+     * Returneaza sesiunea de casa deschisa curent (daca exista) pentru event.
+     */
+    public function cashierCurrent(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        $session = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->whereNull('closed_at')
+            ->orderByDesc('opened_at')
+            ->first();
+
+        return $this->success([
+            'session' => $session ? [
+                'id' => $session->id,
+                'opened_at' => $session->opened_at?->toIso8601String(),
+                'opened_label' => $session->opened_label,
+            ] : null,
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/cashier/open
+     * Deschide o sesiune noua. Refuza daca deja exista una deschisa.
+     */
+    public function cashierOpen(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        // Refuza dublu-deschidere
+        $existing = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->whereNull('closed_at')
+            ->first();
+        if ($existing) {
+            return $this->error('Există deja o sesiune de casă deschisă (ID ' . $existing->id . ').', 409);
+        }
+
+        // Detect team_member din token
+        $tmId = null;
+        $tmName = null;
+        $tokenName = $request->user()?->currentAccessToken()?->name ?? '';
+        if (str_starts_with($tokenName, 'team-member-')) {
+            $tmId = (int) str_replace('team-member-', '', $tokenName);
+            $tmName = \App\Models\MarketplaceOrganizerTeamMember::find($tmId)?->name;
+        }
+
+        $session = \App\Models\LeisureCashierSession::create([
+            'marketplace_client_id' => $marketplace->id,
+            'marketplace_organizer_id' => $eventOrganizerId,
+            'event_id' => $eventModel->id,
+            'team_member_id' => $tmId,
+            'opened_at' => Carbon::now(),
+            'opened_label' => $tmName ?: 'InfoPoint',
+            'opening_notes' => (string) ($request->input('notes') ?? '') ?: null,
+        ]);
+
+        return $this->success([
+            'session' => [
+                'id' => $session->id,
+                'opened_at' => $session->opened_at->toIso8601String(),
+                'opened_label' => $session->opened_label,
+            ],
+        ], 'Casa a fost deschisă.');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/cashier/close
+     * Inchide sesiunea curenta deschisa + snapshot incasari pe interval.
+     */
+    public function cashierClose(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        $session = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->whereNull('closed_at')
+            ->orderByDesc('opened_at')
+            ->first();
+        if (!$session) return $this->error('Nu există nicio sesiune de casă deschisă.', 404);
+
+        $closedAt = Carbon::now();
+        $openedAt = $session->opened_at ?? Carbon::now()->subHours(12);
+
+        // Incasari pe interval — comenzi platite intre opened_at si closed_at
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$openedAt, $closedAt])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category'])
+            ->get(['id', 'total', 'currency', 'source', 'meta']);
+
+        $byPayment = [];
+        $byTicketType = [];
+        $totalOrders = $orders->count();
+        $totalTickets = 0;
+        $totalRevenue = 0.0;
+
+        foreach ($orders as $o) {
+            $rev = (float) ($o->total ?? 0);
+            $totalRevenue += $rev;
+
+            $isPos = $o->source === 'pos';
+            $pmRaw = $o->meta['payment_method'] ?? null;
+            if ($isPos && $pmRaw === 'cash') $pm = 'cash';
+            elseif ($isPos && $pmRaw === 'card') $pm = 'card';
+            else $pm = 'online';
+            if (!isset($byPayment[$pm])) $byPayment[$pm] = ['method' => $pm, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $byPayment[$pm]['orders']++;
+            $byPayment[$pm]['revenue'] += $rev;
+
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $totalTickets++;
+                $byPayment[$pm]['tickets']++;
+                $ttId = $t->ticket_type_id;
+                $ttName = $t->ticketType->name ?? "Tip #{$ttId}";
+                if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+                // Guide bonus -> label_override
+                if (is_array($t->meta ?? null) && !empty($t->meta['label_override'])) {
+                    $ttName = $t->meta['label_override'];
+                    $key = 'lbl_' . $ttName;
+                } else {
+                    $key = 'tt_' . $ttId;
+                }
+                if (!isset($byTicketType[$key])) {
+                    $byTicketType[$key] = ['ticket_type_id' => $ttId, 'name' => $ttName, 'tickets' => 0, 'revenue' => 0.0];
+                }
+                $byTicketType[$key]['tickets']++;
+                $byTicketType[$key]['revenue'] += (float) ($t->price ?? 0);
+            }
+        }
+
+        foreach ($byPayment as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
+        usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
+
+        $snapshot = [
+            'totals' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'revenue' => round($totalRevenue, 2),
+                'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+            ],
+            'by_payment' => array_values($byPayment),
+            'by_ticket_type' => array_values($byTicketType),
+        ];
+
+        $session->update([
+            'closed_at' => $closedAt,
+            'closing_snapshot' => $snapshot,
+            'closing_notes' => (string) ($request->input('notes') ?? '') ?: null,
+        ]);
+
+        return $this->success([
+            'session' => [
+                'id' => $session->id,
+                'opened_at' => $session->opened_at->toIso8601String(),
+                'closed_at' => $closedAt->toIso8601String(),
+                'opened_label' => $session->opened_label,
+                'duration_minutes' => (int) $openedAt->diffInMinutes($closedAt),
+            ],
+            'snapshot' => $snapshot,
+        ], 'Casa a fost închisă.');
     }
 
     /**
