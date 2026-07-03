@@ -124,10 +124,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <div class="bg-white border rounded-2xl border-border">
+        <div class="bg-white border rounded-2xl border-border mb-6">
             <div class="px-5 py-3 border-b border-border flex items-center justify-between">
                 <h2 class="font-bold text-secondary">Per tip bilet</h2>
-                <span class="text-xs text-muted">Detaliu produse</span>
+                <span class="text-xs text-muted">Tranzacții (pachete + bilete individuale)</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -143,6 +143,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </thead>
                     <tbody id="r-tt-rows" class="divide-y divide-border">
                         <tr><td class="px-5 py-6 text-center text-muted" colspan="6">—</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bilete FIZICE emise (componente pachet + individuale). Fara pachetele parinte. -->
+        <div class="bg-white border rounded-2xl border-border">
+            <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+                <h2 class="font-bold text-secondary">🎟️ Pe tip bilet emis</h2>
+                <span class="text-xs text-muted">Bilete fizice (componente pachet + individuale)</span>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-b border-border text-xs text-muted">
+                Total bilete emise: <strong id="r-physical-total" class="text-secondary">0</strong> · Include componentele pachetelor emise (Adult, Copil, etc.) fără biletele-parinte pachet.
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-xs uppercase bg-slate-50 text-muted">
+                        <tr>
+                            <th class="px-5 py-3 text-left">Bilet</th>
+                            <th class="px-5 py-3 text-left">Categorie</th>
+                            <th class="px-5 py-3 text-right">Bucăți emise</th>
+                        </tr>
+                    </thead>
+                    <tbody id="r-comp-rows" class="divide-y divide-border">
+                        <tr><td class="px-5 py-6 text-center text-muted" colspan="3">—</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -191,6 +216,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             renderPaymentMethods(data.by_payment_method || [], t.revenue || 0);
             renderCashiers(data.by_cashier || []);
             renderTicketTypes(data.by_ticket_type || []);
+            renderComponents(data.by_component_type || [], data.total_physical_tickets || 0);
         } catch (e) {
             console.error('[raport] load', e);
             $('r-error').textContent = 'Eroare: ' + (e?.message || '');
@@ -257,6 +283,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         `).join('');
     }
 
+    // Bilete FIZICE emise (componente pachet + individuale), fara parintele pachet
+    function renderComponents(rows, totalPhysical) {
+        const totalEl = $('r-physical-total');
+        if (totalEl) totalEl.textContent = totalPhysical || 0;
+        const tbody = $('r-comp-rows');
+        if (!rows.length) { tbody.innerHTML = '<tr><td class="px-5 py-6 text-center text-muted" colspan="3">Niciun bilet emis în perioadă.</td></tr>'; return; }
+        rows.sort((a, b) => (b.tickets || 0) - (a.tickets || 0));
+        tbody.innerHTML = rows.map(r => {
+            const catLabel = CAT_LABEL[r.service_category] || r.service_category || '—';
+            return `<tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 font-medium text-secondary">${(typeof r.name === 'string' ? r.name : (r.name?.ro || '—'))}</td>
+                <td class="px-5 py-3 text-xs">${catLabel}</td>
+                <td class="px-5 py-3 text-right font-bold text-emerald-800">${r.tickets}</td>
+            </tr>`;
+        }).join('');
+    }
+
     function renderTicketTypes(rows) {
         const tbody = $('r-tt-rows');
         if (!rows.length) { tbody.innerHTML = '<tr><td class="px-5 py-6 text-center text-muted" colspan="6">Nicio vânzare în perioadă.</td></tr>'; return; }
@@ -305,6 +348,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         rows.push([]);
         rows.push(['TIP BILET', 'Categorie', 'Emitent', 'Bilete', 'Venit', 'Comision']);
         (lastReport.by_ticket_type || []).forEach(t => rows.push([typeof t.name === 'string' ? t.name : (t.name?.ro || ''), t.service_category, t.issuing_company, t.tickets, t.revenue, t.commission || 0]));
+        rows.push([]);
+        rows.push(['BILETE FIZICE EMISE (componente + individuale)', 'Categorie', 'Bucăți']);
+        (lastReport.by_component_type || []).forEach(t => rows.push([typeof t.name === 'string' ? t.name : (t.name?.ro || ''), t.service_category, t.tickets]));
+        rows.push([]);
+        rows.push(['Total bilete fizice emise', lastReport.total_physical_tickets || 0]);
         const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
