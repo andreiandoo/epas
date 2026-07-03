@@ -6,10 +6,37 @@
  */
 
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/api.php';
 
-// Page configuration — updated dynamically after API load
-$pageTitle = "Organizator — Ambilet";
-$pageDescription = "Descoperă evenimentele acestui organizator pe Ambilet.";
+// Get organizer slug from URL — the /organizator/{slug} rewrite passes
+// it as ?slug=, but recover from REQUEST_URI as defense-in-depth.
+$organizerSlug = $_GET['slug'] ?? '';
+if (empty($organizerSlug)) {
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (preg_match('#/organizator/([a-z0-9-]+)#i', $uri, $matches)) {
+        $organizerSlug = $matches[1];
+    }
+}
+
+// Fetch the organizer's real display name server-side so <title>, meta
+// description, og:*, twitter:* reflect the actual organizer (not the
+// hardcoded "Organizator — Ambilet" that every organizer page previously
+// exposed to Googlebot / social crawlers). Cached 5 min in
+// /tmp/ambilet_cache.
+$organizerName = 'acestui organizator';
+if (!empty($organizerSlug)) {
+    $organizerData = api_cached('organizer_meta_' . $organizerSlug, function () use ($organizerSlug) {
+        return api_get('/organizers/' . urlencode($organizerSlug));
+    }, 300);
+    if (!empty($organizerData['success'])) {
+        $d = $organizerData['data'] ?? [];
+        $organizerName = (string) ($d['public_name'] ?? $d['name'] ?? $d['display_name'] ?? $organizerName);
+    }
+}
+
+// Page configuration — enriched by JS with the rest of the profile.
+$pageTitle = "Evenimente organizate de {$organizerName}";
+$pageDescription = "Descoperă evenimentele organizate de {$organizerName}. Concerte, festivaluri și experiențe de neuitat pe Ambilet.";
 $bodyClass = 'page-organizer';
 
 // Include head

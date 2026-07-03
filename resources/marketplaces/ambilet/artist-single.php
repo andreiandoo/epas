@@ -7,6 +7,7 @@ $pageCacheTTL = 300; // 5 minutes
 require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
 
 // Get artist slug from URL
 $artistSlug = $_GET['slug'] ?? '';
@@ -18,11 +19,24 @@ if (empty($artistSlug)) {
     }
 }
 
-$artistName = $_GET['name'] ?? 'artistului'; // Fallback name
+// Fetch the artist's real display name server-side so <title>, meta
+// description, og:*, twitter:*, and JSON-LD reflect the actual artist
+// (not the literal placeholder "artistului" the JS later overwrites in
+// the DOM but Googlebot/social crawlers never see). Cached 5 min in
+// /tmp/ambilet_cache — matches the page cache TTL.
+$artistName = 'artistului'; // safe RO genitive fallback if API misses
+if (!empty($artistSlug)) {
+    $artistData = api_cached('artist_meta_' . $artistSlug, function () use ($artistSlug) {
+        return api_get('/artists/' . urlencode($artistSlug));
+    }, 300);
+    if (!empty($artistData['success']) && !empty($artistData['data']['name'])) {
+        $artistName = (string) $artistData['data']['name'];
+    }
+}
 
 
-// Page configuration (will be updated by JS with real data)
-$pageTitle = "{$artistName} — {$siteName}";
+// Page configuration (will be enriched by JS with real data)
+$pageTitle = "Evenimentele {$artistName}";
 $pageDescription = "Descoperă concertele și evenimentele {$artistName}. Cumpără bilete online pe {$siteName}.";
 $bodyClass = 'page-artist-single';
 
