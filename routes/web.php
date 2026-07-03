@@ -105,6 +105,15 @@ Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
         \App\Http\Controllers\Marketplace\OrganizerImpersonationController::class,
         'loginAs',
     ])->name('marketplace.organizers.login-as');
+
+    // Print invitations as tiled PDF (N per page) with configurable paper
+    // size + bleed. GET without ?paper=... shows the config form; GET with
+    // params generates + downloads the PDF. Auth scope enforced against
+    // the marketplace admin's marketplace_client_id.
+    Route::get('/marketplace/events/{event}/print-invitations', [
+        \App\Http\Controllers\Marketplace\PrintInvitationsController::class,
+        'index',
+    ])->name('marketplace.events.print-invitations');
 });
 
 // Marketplace Client Switcher (for super-admins).

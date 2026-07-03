@@ -763,6 +763,14 @@ class EventResource extends Resource
 
                                         $exportUrl = url('/marketplace/tickets-export-csv?event_id=' . $eventId);
                                         $exportLabel = $t('Export date', 'Export data');
+                                        $printInvitationsUrl = url('/marketplace/events/' . $eventId . '/print-invitations');
+                                        $printInvitationsLabel = $t('Printează invitații', 'Print invitations');
+
+                                        // Count invitations issued for this event (via batches).
+                                        $invitationCount = (int) \App\Models\Invite::query()
+                                            ->whereHas('batch', fn ($q) => $q->where('marketplace_event_id', $eventId))
+                                            ->whereNotIn('status', ['void'])
+                                            ->count();
 
                                         $onlineLabel = $t('Online', 'Online');
                                         $appLabel = $t('Aplicație', 'App');
@@ -796,10 +804,16 @@ class EventResource extends Resource
                                                         <div class='text-[10px] text-gray-400 leading-tight'>{$invitationsLabel}</div>
                                                     </div>
                                                 </div>
-                                                <a href='{$exportUrl}' class='inline-flex items-center justify-center w-full gap-1.5 px-3 py-2 mt-3 text-sm font-semibold text-white transition-colors rounded-lg bg-indigo-600 hover:bg-indigo-700 no-underline'>
-                                                    <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3'/></svg>
-                                                    {$exportLabel}
-                                                </a>
+                                                <div class='grid grid-cols-2 gap-2 mt-3'>
+                                                    <a href='{$exportUrl}' class='inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-white transition-colors rounded-lg bg-indigo-600 hover:bg-indigo-700 no-underline'>
+                                                        <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3'/></svg>
+                                                        {$exportLabel}
+                                                    </a>
+                                                    <a href='{$printInvitationsUrl}' target='_blank' class='inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-white transition-colors rounded-lg bg-purple-600 hover:bg-purple-700 no-underline'>
+                                                        <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z'/></svg>
+                                                        {$printInvitationsLabel} ({$invitationCount})
+                                                    </a>
+                                                </div>
                                             </div>
                                         ");
                                     }),
