@@ -160,7 +160,18 @@ class PrintInvitationsController extends Controller
                         $d['barcode'] = $invite->invite_code;
                         $d['qrcode'] = $qrData;
 
-                        $renderedHtmls[$invite->id] = $generator->renderToHtml($template->template_data, $d);
+                        // TicketPreviewGenerator emits layers with `position:
+                        // fixed`, positioning them relative to the PAGE. When
+                        // 4 templates share a single page, all 4 backgrounds
+                        // and their absolute-child layers overlap. Same fix
+                        // TicketsController::downloadPdf uses for multi-
+                        // ticket PDFs: rewrite to `position: absolute` so
+                        // each rendered template scopes to its OWN wrapper.
+                        $renderedHtmls[$invite->id] = str_replace(
+                            'position: fixed;',
+                            'position: absolute;',
+                            $generator->renderToHtml($template->template_data, $d)
+                        );
                     } catch (\Throwable $e) {
                         Log::warning('Print invitations: template render failed for invite', [
                             'invite_id' => $invite->id,
