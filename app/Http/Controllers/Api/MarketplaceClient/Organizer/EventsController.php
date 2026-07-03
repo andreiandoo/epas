@@ -1163,10 +1163,16 @@ class EventsController extends BaseController
         ]);
 
         $rawCode = trim((string) $request->ticket_code);
+
+        // Rezolvam best-guess event id pentru logging (organizer poate avea
+        // mai multe evenimente; alegem cel mai recent/activ ca fallback cand
+        // scanner-ul nu trimite explicit event_id).
+        $currentEventId = $this->resolveCurrentEventIdForOrganizer($request, $organizer);
+
         // Staff QR-uri sunt prefixate cu STAFF-{12-hex}. Deviem catre flow-ul
         // de staff (check-in nelimitat, log separat in leisure_staff_checkins).
         if (str_starts_with(strtoupper($rawCode), \App\Models\LeisureStaffMember::QR_PREFIX)) {
-            return $this->checkInStaff($request, $rawCode, $organizer);
+            return $this->checkInStaff($request, $rawCode, $organizer, $currentEventId);
         }
 
         $barcode = $this->normalizeTicketCode($request->ticket_code);
@@ -1189,7 +1195,7 @@ class EventsController extends BaseController
             ->first();
 
         if (!$ticket) {
-            $this->logScanAttempt($request, $eventIds->first(), $organizer, $barcode, 'invalid', 'not_found');
+            $this->logScanAttempt($request, $currentEventId ?: $eventIds->first(), $organizer, $barcode, 'invalid', 'not_found');
             return $this->checkInExternalTicket($barcode, $eventIds->toArray(), $organizer);
         }
 
@@ -1199,7 +1205,7 @@ class EventsController extends BaseController
         // TicketType.event_id which is reliably set for invitations)
         $resolvedEventId = $ticket->event_id ?? $ticket->ticketType?->event_id;
         if (!$resolvedEventId) {
-            $this->logScanAttempt($request, $eventIds->first(), $organizer, $barcode, 'invalid', 'no_event');
+            $this->logScanAttempt($request, $currentEventId ?: $eventIds->first(), $organizer, $barcode, 'invalid', 'no_event');
             return $this->error('Ticket is not linked to any event', 404);
         }
         if (!$eventIds->contains((int) $resolvedEventId)) {
@@ -1269,6 +1275,54 @@ class EventsController extends BaseController
                 'occurred_at' => now(),
             ]);
         } catch (\Throwable $e) { /* silent */ }
+    }
+
+    /**
+     * Rezolva "event-ul curent" pentru un scan de la un organizer:
+     *   1. event_id explicit din request (validat sa apartina organizer-ului)
+     *   2. cel mai recent event care nu s-a terminat (start_date DESC)
+     *   3. altfel: cel mai recent event indiferent de data
+     *
+     * Folosit ca fallback consistent pentru staff check-ins si scan attempts
+     * cand scanner-ul (Kiosk / mobile) nu trimite event_id explicit.
+     */
+    protected function resolveCurrentEventIdForOrganizer(Request $request, ?\App\Models\MarketplaceOrganizer $organizer): ?int
+    {
+        if (!$organizer) return null;
+
+        $requested = $request->input('event_id');
+        if ($requested) {
+            $exists = Event::where('id', (int) $requested)
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->exists();
+            if ($exists) return (int) $requested;
+        }
+
+        // Preferat: cel mai recent event care nu s-a incheiat inca (event_date sau
+        // range_end_date >= azi). Coloanele Event: 'event_date' (single day),
+        // 'range_start_date'/'range_end_date' (range), 'recurring_start_date'.
+        $today = now('Europe/Bucharest')->toDateString();
+        $current = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where(function ($q) use ($today) {
+                $q->where('event_date', '>=', $today)
+                  ->orWhere('range_end_date', '>=', $today)
+                  ->orWhere('recurring_start_date', '>=', $today);
+            })
+            ->orderByDesc('id')
+            ->value('id');
+
+        if ($current) return (int) $current;
+
+        // Fallback total: cel mai recent event (dupa id). Pentru Sf. Ana / leisure
+        // organizer cu un singur event activ, asta pica pe eventul curent.
+        $latest = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->orderByDesc('id')
+            ->value('id');
+
+        return $latest ? (int) $latest : null;
     }
 
     protected function normalizeTicketCode(string $raw): string
@@ -1474,30 +1528,35 @@ class EventsController extends BaseController
      *   - Staff-ul trebuie să fie active=true
      *   - Staff-ul trebuie să aparțină organizer-ului autenticat (scoping)
      */
-    protected function checkInStaff(Request $request, string $rawCode, $organizer): JsonResponse
+    protected function checkInStaff(Request $request, string $rawCode, $organizer, ?int $fallbackEventId = null): JsonResponse
     {
         $qrCode = strtoupper(trim($rawCode));
+
+        // event_id: parametru explicit din request (prioritate), altfel fallback
+        // catre event-ul curent al organizer-ului (rezolvat de callerul checkInByCode).
+        // Fara asta, leisure_staff_checkins.event_id ramane NULL si scan-urile de
+        // staff nu apar in modalul "Detalii scanari" pe zi (filtreaza dupa event_id).
+        $requestedEventId = $request->input('event_id') ? (int) $request->input('event_id') : null;
+        $eventId = $requestedEventId ?: $fallbackEventId;
 
         $staff = \App\Models\LeisureStaffMember::where('qr_code', $qrCode)
             ->where('marketplace_organizer_id', $organizer->id)
             ->first();
 
         if (!$staff) {
+            $this->logScanAttempt($request, $eventId, $organizer, $qrCode, 'invalid', 'staff_qr_not_found');
             return $this->error('Cod QR de personal necunoscut sau nu aparține organizatorului.', 404);
         }
         if (!$staff->active) {
+            $this->logScanAttempt($request, $eventId, $organizer, $qrCode, 'invalid', 'staff_inactive');
             return $this->error('Angajat dezactivat: ' . $staff->full_name, 403);
         }
 
-        // Log check-in. event_id resolved best-effort din parametrul opțional
-        // din request (scanner-ul poate să-l trimită) sau din ultima sesiune
-        // de scanare. Locația = "Poarta X" dacă scanner-ul setează gate_label.
-        $eventId = $request->input('event_id');
         $location = $request->input('gate_label') ?: $request->input('location');
 
         $checkin = \App\Models\LeisureStaffCheckin::create([
             'staff_member_id'    => $staff->id,
-            'event_id'           => $eventId ? (int) $eventId : null,
+            'event_id'           => $eventId,
             'scanned_by_user_id' => auth()->id(),
             'location'           => $location ? substr((string) $location, 0, 120) : null,
             'ip_address'         => $request->ip(),

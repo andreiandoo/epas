@@ -3219,9 +3219,19 @@ class LeisureController extends BaseController
             $validByDay[$day] = ($validByDay[$day] ?? 0) + 1;
         }
 
-        // Staff: leisure_staff_checkins
+        // Staff: leisure_staff_checkins. Include si scan-uri unde event_id e NULL
+        // (kiosk / mobile care nu trimit event_id) — le filtram prin staffMember
+        // sa apartina organizer-ului curent. NU putem sa cerem event_id strict
+        // pentru ca /organizator/staff-raport valideaza corect prin staff, iar
+        // acest modal ar fi de altfel gol.
         $staffScans = \App\Models\LeisureStaffCheckin::query()
-            ->where('event_id', $eventModel->id)
+            ->where(function ($q) use ($eventModel, $organizer) {
+                $q->where('event_id', $eventModel->id)
+                  ->orWhere(function ($qq) use ($organizer) {
+                      $qq->whereNull('event_id')
+                         ->whereHas('staffMember', fn ($s) => $s->where('marketplace_organizer_id', $organizer->id));
+                  });
+            })
             ->whereBetween('checked_in_at', [$from, $to])
             ->get(['id', 'checked_in_at']);
         $staffByDay = [];
@@ -3233,10 +3243,18 @@ class LeisureController extends BaseController
 
         // Invalid: leisure_scan_attempts (defensive: tabela poate lipsi pe environments
         // unde migratia noua nu a rulat inca — tratam ca 0 in loc de 500).
+        // Include si scan attempts unde event_id e NULL (edge case) daca vin de
+        // la acest organizer.
         $invalidByDay = [];
         if (\Illuminate\Support\Facades\Schema::hasTable('leisure_scan_attempts')) {
             $invalidScans = \App\Models\LeisureScanAttempt::query()
-                ->where('event_id', $eventModel->id)
+                ->where(function ($q) use ($eventModel, $organizer) {
+                    $q->where('event_id', $eventModel->id)
+                      ->orWhere(function ($qq) use ($organizer) {
+                          $qq->whereNull('event_id')
+                             ->where('marketplace_organizer_id', $organizer->id);
+                      });
+                })
                 ->whereBetween('occurred_at', [$from, $to])
                 ->get(['id', 'occurred_at']);
             foreach ($invalidScans as $s) {
@@ -3322,10 +3340,19 @@ class LeisureController extends BaseController
             ];
         }
 
-        // 2) Staff check-ins
+        // 2) Staff check-ins. Include si event_id=NULL cand staff-ul apartine
+        // acestui organizer — vezi staff-raport care nu filtreaza dupa event_id
+        // (scanner-ul Kiosk nu trimite event_id, /organizator/staff-raport
+        // valideaza prin staff, deci trebuie sa fie consistent aici).
         $staffScans = \App\Models\LeisureStaffCheckin::query()
             ->with(['staffMember:id,first_name,last_name,position'])
-            ->where('event_id', $eventModel->id)
+            ->where(function ($q) use ($eventModel, $organizer) {
+                $q->where('event_id', $eventModel->id)
+                  ->orWhere(function ($qq) use ($organizer) {
+                      $qq->whereNull('event_id')
+                         ->whereHas('staffMember', fn ($s) => $s->where('marketplace_organizer_id', $organizer->id));
+                  });
+            })
             ->whereBetween('checked_in_at', [$dayStart, $dayEnd])
             ->orderBy('checked_in_at')
             ->get(['id', 'staff_member_id', 'checked_in_at', 'location']);
@@ -3344,10 +3371,17 @@ class LeisureController extends BaseController
             ];
         }
 
-        // 3) Invalid attempts (defensive: table poate lipsi)
+        // 3) Invalid attempts (defensive: table poate lipsi). Include si event_id=NULL
+        // pentru acest organizer, ca si la staff.
         $invalidScans = \Illuminate\Support\Facades\Schema::hasTable('leisure_scan_attempts')
             ? \App\Models\LeisureScanAttempt::query()
-                ->where('event_id', $eventModel->id)
+                ->where(function ($q) use ($eventModel, $organizer) {
+                    $q->where('event_id', $eventModel->id)
+                      ->orWhere(function ($qq) use ($organizer) {
+                          $qq->whereNull('event_id')
+                             ->where('marketplace_organizer_id', $organizer->id);
+                      });
+                })
                 ->whereBetween('occurred_at', [$dayStart, $dayEnd])
                 ->orderBy('occurred_at')
                 ->get(['id', 'attempted_code', 'result', 'reason', 'occurred_at'])
