@@ -1252,7 +1252,72 @@ class MarketplaceNewsletter extends Model
             }
         }
 
+        // Engagement stale filters — parity with resolveRecipientCustomerIds.
+        // Without these, the UI count included cohorts the send path was
+        // about to strip (opens/clicks stale), so the admin saw 6,658 but
+        // only 175 went out. Applied in email-space here: pull the stale-
+        // customer emails once and reject in one pass.
+        if ($this->exclude_stale_no_opens) {
+            $combined = $this->rejectStaleEngagementEmails(
+                $combined,
+                $clientId,
+                'opened_at',
+                (int) ($this->stale_no_opens_window_hours ?: 48)
+            );
+        }
+        if ($this->exclude_stale_no_clicks) {
+            $combined = $this->rejectStaleEngagementEmails(
+                $combined,
+                $clientId,
+                'clicked_at',
+                (int) ($this->stale_no_clicks_window_hours ?: 96)
+            );
+        }
+
         return $combined;
+    }
+
+    /**
+     * Email-space version of applyEngagementStaleFilter: given a set of
+     * emails, strip the ones belonging to customers who haven't engaged
+     * (opened / clicked) in the given window. Keeps the UI count aligned
+     * with what the send path actually mails.
+     */
+    protected function rejectStaleEngagementEmails(
+        \Illuminate\Support\Collection $emails,
+        int $clientId,
+        string $column,
+        int $windowHours
+    ): \Illuminate\Support\Collection {
+        if ($emails->isEmpty()) return $emails;
+
+        // Fetch every customer id whose email is a candidate + the same
+        // engagement snapshot the send-side filter uses. We compare in
+        // email-space so duplicate customer rows for the same email don't
+        // partially strip — if ANY row for that email has recent
+        // engagement, the email survives.
+        $cutoff = now()->subHours(max(1, $windowHours));
+
+        $engagedEmails = collect();
+        foreach ($emails->chunk(500) as $batch) {
+            $rows = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients as r')
+                ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                ->where('n.marketplace_client_id', $clientId)
+                ->whereNotNull('r.' . $column)
+                ->where('r.' . $column, '>=', $cutoff)
+                ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(TRIM(r.email))'), $batch->all())
+                ->pluck('r.email')
+                ->map(fn ($e) => strtolower(trim((string) $e)));
+            $engagedEmails = $engagedEmails->concat($rows);
+        }
+        $engagedEmails = $engagedEmails->unique()->flip();
+
+        if ($engagedEmails->isEmpty()) {
+            // Nobody engaged in the window → everyone is stale → return empty
+            return collect();
+        }
+
+        return $emails->reject(fn ($e) => !isset($engagedEmails[$e]))->values();
     }
 
     /**
