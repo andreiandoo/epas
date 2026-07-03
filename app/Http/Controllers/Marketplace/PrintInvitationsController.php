@@ -41,8 +41,16 @@ class PrintInvitationsController extends Controller
         $admin = auth('marketplace_admin')->user();
         abort_unless($admin && $event->marketplace_client_id === $admin->marketplace_client_id, 403);
 
+        // Marketplace-admin batches store the event id in `event_ref`
+        // (string OR int); organizer / tenant-side flows populate
+        // `marketplace_event_id`. Match either so both invitation
+        // sources are printable.
         $invites = Invite::query()
-            ->whereHas('batch', fn ($q) => $q->where('marketplace_event_id', $event->id))
+            ->whereHas('batch', function ($q) use ($event) {
+                $q->where('event_ref', (string) $event->id)
+                    ->orWhere('event_ref', $event->id)
+                    ->orWhere('marketplace_event_id', $event->id);
+            })
             ->whereNotIn('status', ['void'])
             ->orderBy('id')
             ->get();
@@ -59,7 +67,8 @@ class PrintInvitationsController extends Controller
             'paper' => 'required|in:A3,A4,A5',
             'orientation' => 'required|in:portrait,landscape',
             'per_page' => ['required', 'integer', 'in:' . implode(',', array_keys($this->layouts))],
-            'bleed_mm' => 'required|numeric|min:0|max:20',
+            'bleed_x_mm' => 'required|numeric|min:0|max:20',
+            'bleed_y_mm' => 'required|numeric|min:0|max:20',
         ]);
 
         if ($invites->isEmpty()) {
@@ -85,7 +94,8 @@ class PrintInvitationsController extends Controller
             'rows' => $layout['rows'],
             'paper' => $data['paper'],
             'orientation' => $orientation,
-            'bleedMm' => (float) $data['bleed_mm'],
+            'bleedXMm' => (float) $data['bleed_x_mm'],
+            'bleedYMm' => (float) $data['bleed_y_mm'],
         ])
             ->setPaper(strtolower($data['paper']), $orientation)
             ->setOption('isRemoteEnabled', true)

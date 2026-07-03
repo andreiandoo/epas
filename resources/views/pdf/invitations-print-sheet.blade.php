@@ -10,8 +10,8 @@
     if ($orientation === 'landscape') {
         [$paperMm['w'], $paperMm['h']] = [$paperMm['h'], $paperMm['w']];
     }
-    $innerW = $paperMm['w'] - 2 * $bleedMm;
-    $innerH = $paperMm['h'] - 2 * $bleedMm;
+    $innerW = $paperMm['w'] - 2 * $bleedXMm;
+    $innerH = $paperMm['h'] - 2 * $bleedYMm;
     $tileW = $innerW / $cols;
     $tileH = $innerH / $rows;
 
@@ -43,7 +43,7 @@
         .page {
             width: {{ $paperMm['w'] }}mm;
             height: {{ $paperMm['h'] }}mm;
-            padding: {{ $bleedMm }}mm;
+            padding: {{ $bleedYMm }}mm {{ $bleedXMm }}mm;
             page-break-after: always;
         }
         .page:last-child { page-break-after: auto; }

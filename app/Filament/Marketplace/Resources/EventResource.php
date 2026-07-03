@@ -767,8 +767,15 @@ class EventResource extends Resource
                                         $printInvitationsLabel = $t('Printează invitații', 'Print invitations');
 
                                         // Count invitations issued for this event (via batches).
+                                        // Batches store the event id in `event_ref` (marketplace
+                                        // admin flow, string/int) OR `marketplace_event_id`
+                                        // (organizer/tenant flow). Match either.
                                         $invitationCount = (int) \App\Models\Invite::query()
-                                            ->whereHas('batch', fn ($q) => $q->where('marketplace_event_id', $eventId))
+                                            ->whereHas('batch', function ($q) use ($eventId) {
+                                                $q->where('event_ref', (string) $eventId)
+                                                    ->orWhere('event_ref', $eventId)
+                                                    ->orWhere('marketplace_event_id', $eventId);
+                                            })
                                             ->whereNotIn('status', ['void'])
                                             ->count();
 

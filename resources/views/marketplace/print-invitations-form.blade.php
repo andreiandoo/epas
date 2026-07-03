@@ -47,7 +47,7 @@
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Orientare</label>
                     <div class="grid grid-cols-2 gap-2">
-                        @foreach([['portrait','Portret'], ['landscape','Vedere']] as [$val, $label])
+                        @foreach([['portrait','Portret'], ['landscape','Landscape']] as [$val, $label])
                             <label class="cursor-pointer">
                                 <input type="radio" name="orientation" value="{{ $val }}" {{ $val === 'portrait' ? 'checked' : '' }} class="peer sr-only" required>
                                 <div class="rounded-lg border-2 border-gray-200 py-3 px-4 text-center text-sm font-semibold peer-checked:border-indigo-600 peer-checked:bg-indigo-50 peer-checked:text-indigo-700">
@@ -74,12 +74,21 @@
                     <p class="mt-1.5 text-xs text-gray-500">4 pe A4 e ideal pentru test-printuri fără bleed. 1 pe A5 = invitație full-page.</p>
                 </div>
 
-                {{-- Bleed --}}
+                {{-- Bleed (split X / Y) --}}
                 <div>
-                    <label for="bleed_mm" class="block text-sm font-semibold text-gray-700 mb-1">Bleed (mm)</label>
-                    <input type="number" name="bleed_mm" id="bleed_mm" value="0" min="0" max="20" step="0.5" required
-                           class="w-full rounded-lg border border-gray-300 py-2.5 px-4 text-sm focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200">
-                    <p class="mt-1.5 text-xs text-gray-500">Distanță de sânge (marginea în afara conținutului) pentru tăiere profesională. 0 = fără bleed (test-print pe imprimantă normală).</p>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Bleed (mm)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="bleed_x_mm" class="block text-xs text-gray-500 mb-1">Stânga-dreapta</label>
+                            <input type="number" name="bleed_x_mm" id="bleed_x_mm" value="0" min="0" max="20" step="0.5" required
+                                   class="w-full rounded-lg border border-gray-300 py-2.5 px-4 text-sm focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200">
+                        </div>
+                        <div>
+                            <label for="bleed_y_mm" class="block text-xs text-gray-500 mb-1">Sus-jos</label>
+                            <input type="number" name="bleed_y_mm" id="bleed_y_mm" value="0" min="0" max="20" step="0.5" required
+                                   class="w-full rounded-lg border border-gray-300 py-2.5 px-4 text-sm focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200">
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Estimate --}}
