@@ -101,8 +101,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
+            <!-- Panou 'Desfasurator casa' — vizibil DOAR cand casa e inchisa
+                 (cart-ul e ascuns in paralel). Arata sesiunile deschise/inchise
+                 pe ziua curenta pentru operator. -->
+            <div id="lv-cash-timeline-panel" class="hidden bg-white border rounded-2xl border-border flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
+                <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
+                    <h2 class="font-bold text-secondary">📋 Desfășurător casă</h2>
+                    <button id="lv-cash-timeline-refresh" type="button" class="text-xs text-muted hover:text-secondary" title="Reîmprospătează">🔄</button>
+                </div>
+                <div id="lv-cash-timeline-body" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <p class="text-sm text-muted text-center py-8">Se încarcă...</p>
+                </div>
+            </div>
+
             <!-- Sumar coș: sticky pe desktop cu overflow intern, ca sa vezi tot fara scroll de pagina -->
-            <div class="bg-white border rounded-2xl border-border flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
+            <div id="lv-cart-panel" class="bg-white border rounded-2xl border-border flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
                     <h2 class="font-bold text-secondary">Coș</h2>
                     <button id="lv-cart-clear" type="button" hidden class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-700 hover:text-white hover:bg-rose-600 border border-rose-300 hover:border-rose-600 rounded-lg transition-colors" title="Șterge toate produsele din coș">
@@ -788,6 +801,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const closeBtn = $('lv-cash-close');
         const banner = $('lv-cash-locked-banner');
         const overlay = $('lv-cash-locked-overlay');
+        const cartPanel = $('lv-cart-panel');
+        const timelinePanel = $('lv-cash-timeline-panel');
         const checkoutBtn = $('lv-checkout');
         const checkoutTestBtn = $('lv-checkout-test');
         const isOpen = !!cashierSession;
@@ -801,17 +816,97 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             }
             if (banner) banner.classList.add('hidden');
             if (overlay) overlay.classList.add('hidden');
+            // Casa deschisa: cart vizibil, timeline ascuns
+            if (cartPanel) { cartPanel.classList.remove('hidden'); cartPanel.style.display = ''; }
+            if (timelinePanel) { timelinePanel.classList.add('hidden'); timelinePanel.classList.remove('flex'); }
         } else {
             if (openBtn) openBtn.hidden = false;
             if (closeBtn) closeBtn.hidden = true;
             if (banner) banner.classList.remove('hidden');
             if (overlay) overlay.classList.remove('hidden');
+            // Casa inchisa: cart ascuns, timeline vizibil + populate
+            if (cartPanel) { cartPanel.classList.add('hidden'); cartPanel.style.display = 'none'; }
+            if (timelinePanel) { timelinePanel.classList.remove('hidden'); timelinePanel.classList.add('flex'); }
+            loadCashTimeline();
         }
         // Blocheaza checkout cand casa e inchisa (chiar daca cart are produse).
-        // renderCart() apeleaza si el disable pe checkout in functie de cart size,
-        // dar aici setam un baseline la nivel de sesiune.
         if (checkoutBtn) checkoutBtn.disabled = !isOpen || Object.keys(cart).length === 0;
         if (checkoutTestBtn) checkoutTestBtn.disabled = !isOpen;
+    }
+
+    async function loadCashTimeline() {
+        const wrap = $('lv-cash-timeline-body');
+        if (!wrap || !currentEventId) return;
+        wrap.innerHTML = '<p class="text-sm text-muted text-center py-6">Se încarcă...</p>';
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/cashier/sessions`, {});
+            const data = res.data || {};
+            const sessions = data.sessions || [];
+            renderCashTimeline(sessions, data.date);
+        } catch (e) {
+            wrap.innerHTML = '<p class="text-sm text-rose-700 text-center py-6">Eroare la încărcare: ' + (e?.message || '') + '</p>';
+        }
+    }
+
+    function renderCashTimeline(sessions, date) {
+        const wrap = $('lv-cash-timeline-body');
+        if (!wrap) return;
+        const escapeHtml = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        const PM_LABELS = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
+
+        const header = `<div class="pb-2 border-b border-border">
+            <p class="text-xs uppercase tracking-wider text-muted font-semibold">Ziua</p>
+            <p class="text-sm font-bold text-secondary">${date ? new Date(date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'long', year:'numeric' }) : '—'}</p>
+        </div>`;
+
+        if (!sessions.length) {
+            wrap.innerHTML = header + '<p class="text-sm text-muted text-center py-8">Nicio sesiune de casă înregistrată astăzi.</p>' +
+                '<p class="text-xs text-muted text-center">Apasă „🔓 Deschidere casă" din partea de sus pentru a începe.</p>';
+            return;
+        }
+
+        // Total zi
+        let totalRev = 0, totalOrders = 0, totalTickets = 0;
+        sessions.forEach(s => {
+            const t = s.snapshot?.totals || {};
+            totalRev += Number(t.revenue || 0);
+            totalOrders += Number(t.orders || 0);
+            totalTickets += Number(t.tickets || 0);
+        });
+
+        const summary = `<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <p class="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Total zi</p>
+            <p class="text-2xl font-bold text-emerald-900">${fmtMoney(totalRev)} <span class="text-xs text-emerald-700">RON</span></p>
+            <p class="text-xs text-emerald-700 mt-0.5">${totalOrders} comenzi · ${totalTickets} bilete · ${sessions.length} sesiun${sessions.length === 1 ? 'e' : 'i'}</p>
+        </div>`;
+
+        const rows = sessions.map(s => {
+            const isOpen = s.is_open;
+            const openTime = fmtTime(s.opened_at);
+            const closeTime = s.closed_at ? fmtTime(s.closed_at) : '⏳ în desfășurare';
+            const dur = s.duration_minutes != null ? `${s.duration_minutes} min` : '';
+            const t = s.snapshot?.totals || {};
+            const byPay = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
+            const byPayHtml = byPay.map(p => `<div class="flex justify-between text-xs"><span>${PM_LABELS[p.method] || p.method}</span><strong>${fmtMoney(p.revenue)} RON</strong></div>`).join('');
+            const badge = isOpen
+                ? '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
+                : '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
+            return `<div class="border border-border rounded-xl p-3 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <div>
+                        <p class="text-sm font-bold text-secondary">${escapeHtml(s.opened_label || 'Operator')}</p>
+                        <p class="text-[11px] text-muted">${openTime} → ${closeTime} ${dur ? '· ' + dur : ''}</p>
+                    </div>
+                    ${badge}
+                </div>
+                ${!isOpen && t.revenue != null ? `<div class="pt-2 border-t border-slate-100">
+                    <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets || 0} bilete · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
+                    ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : ''}
+                </div>` : ''}
+            </div>`;
+        }).join('');
+
+        wrap.innerHTML = header + summary + '<div class="space-y-2">' + rows + '</div>';
     }
     async function openCashier() {
         const btn = $('lv-cash-open');
@@ -1299,6 +1394,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-cash-modal-close')?.addEventListener('click', hideCloseCashierModal);
         $('lv-cash-modal-cancel')?.addEventListener('click', hideCloseCashierModal);
         $('lv-cash-modal-confirm')?.addEventListener('click', confirmCloseCashier);
+        $('lv-cash-timeline-refresh')?.addEventListener('click', loadCashTimeline);
 
         // ============ Panou imprimantă termică (WebUSB) ============
         initPrinterPanel();

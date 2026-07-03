@@ -4,6 +4,7 @@ $pageTitle = 'Raport';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'leisure_raport';
 $cssBundle = 'organizer';
+$headExtra = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
@@ -172,7 +173,60 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </table>
             </div>
         </div>
+
+        <!-- Sectiune Scanari — chart stacked pe zi + modal detalii -->
+        <div class="bg-white border rounded-2xl border-border mt-6">
+            <div class="px-5 py-3 border-b border-border flex items-center justify-between flex-wrap gap-2">
+                <h2 class="font-bold text-secondary">📡 Scanări</h2>
+                <div class="flex items-center gap-3 text-xs">
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-slate-300"></span> Așteptate</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-emerald-500"></span> Valide</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-sky-500"></span> Angajați</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-rose-500"></span> Invalide</span>
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-b border-border text-xs text-muted">
+                Bara <strong class="text-slate-700">gri</strong> = câte scanări sunt așteptate în ziua respectivă (bilete de acces cu visit_date = ziua).
+                Culorile stacked = scanările efective: <strong class="text-emerald-700">valide</strong>, <strong class="text-sky-700">angajați</strong>, <strong class="text-rose-700">invalide</strong>. Click pe o zi pentru detalii.
+            </div>
+            <div class="p-5">
+                <div class="h-72"><canvas id="r-scans-chart"></canvas></div>
+            </div>
+        </div>
     </main>
+
+    <!-- Modal Detalii scanari pe zi -->
+    <div id="r-scans-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-start justify-center p-4 md:p-10 overflow-y-auto">
+        <div class="bg-white rounded-2xl border border-border max-w-4xl w-full my-6 shadow-xl">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+                <div>
+                    <h3 class="font-bold text-lg text-secondary">📡 Detalii scanări</h3>
+                    <p id="r-scans-modal-date" class="text-xs text-muted mt-0.5">—</p>
+                </div>
+                <button type="button" id="r-scans-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
+            </div>
+            <div class="px-6 py-4">
+                <div id="r-scans-modal-totals" class="mb-3 text-sm text-muted">—</div>
+                <div class="overflow-x-auto max-h-[60vh]">
+                    <table class="w-full text-sm">
+                        <thead class="text-xs uppercase bg-slate-50 text-muted sticky top-0">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Ora</th>
+                                <th class="px-3 py-2 text-left">Nume</th>
+                                <th class="px-3 py-2 text-left">Status</th>
+                                <th class="px-3 py-2 text-left">Cod</th>
+                                <th class="px-3 py-2 text-left">Email</th>
+                                <th class="px-3 py-2 text-left">Detaliu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="r-scans-modal-rows" class="divide-y divide-border">
+                            <tr><td class="px-3 py-6 text-center text-muted" colspan="6">Se încarcă...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
 (function(){
@@ -217,6 +271,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             renderCashiers(data.by_cashier || []);
             renderTicketTypes(data.by_ticket_type || []);
             renderComponents(data.by_component_type || [], data.total_physical_tickets || 0);
+            loadScansChart();
         } catch (e) {
             console.error('[raport] load', e);
             $('r-error').textContent = 'Eroare: ' + (e?.message || '');
@@ -317,6 +372,105 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
     }
 
+    // ============ Sectiune Scanari (chart stacked + modal detalii) ============
+    let scansChart = null;
+    let scansRows = [];
+
+    async function loadScansChart() {
+        if (!currentEventId) return;
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/scans`, {
+                from: $('r-from').value, to: $('r-to').value,
+            });
+            const data = res.data || {};
+            scansRows = data.rows || [];
+            renderScansChart(scansRows);
+        } catch (e) {
+            console.error('[scans] load', e);
+        }
+    }
+
+    function renderScansChart(rows) {
+        const ctx = $('r-scans-chart');
+        if (!ctx) return;
+        const labels = rows.map(r => {
+            try { return new Date(r.date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short' }); }
+            catch { return r.date; }
+        });
+        const cfg = {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Așteptate', data: rows.map(r => r.expected || 0), backgroundColor: '#CBD5E1', stack: 'expected' },
+                    { label: 'Valide', data: rows.map(r => r.valid || 0), backgroundColor: '#10B981', stack: 'actual' },
+                    { label: 'Angajați', data: rows.map(r => r.staff || 0), backgroundColor: '#0EA5E9', stack: 'actual' },
+                    { label: 'Invalide', data: rows.map(r => r.invalid || 0), backgroundColor: '#F43F5E', stack: 'actual' },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                scales: {
+                    x: { stacked: true, ticks: { autoSkip: true, maxRotation: 45 } },
+                    y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+                },
+                onClick: (evt, elements) => {
+                    if (!elements.length) return;
+                    const idx = elements[0].index;
+                    const row = rows[idx];
+                    if (row) openScansModal(row.date);
+                },
+            },
+        };
+        if (scansChart) { scansChart.destroy(); scansChart = null; }
+        scansChart = new Chart(ctx.getContext('2d'), cfg);
+    }
+
+    async function openScansModal(date) {
+        const modal = $('r-scans-modal');
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        $('r-scans-modal-date').textContent = new Date(date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'long', year:'numeric' });
+        $('r-scans-modal-rows').innerHTML = '<tr><td class="px-3 py-6 text-center text-muted" colspan="6">Se încarcă...</td></tr>';
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/scans-detail`, { date });
+            const data = res.data || {};
+            const items = data.items || [];
+            const totals = data.totals || {};
+            $('r-scans-modal-totals').innerHTML = `<strong class="text-emerald-700">${totals.valid || 0} valide</strong> · <strong class="text-sky-700">${totals.staff || 0} angajați</strong> · <strong class="text-rose-700">${totals.invalid || 0} invalide</strong> · Total: <strong>${items.length}</strong>`;
+            if (!items.length) {
+                $('r-scans-modal-rows').innerHTML = '<tr><td class="px-3 py-6 text-center text-muted" colspan="6">Nicio scanare înregistrată în această zi.</td></tr>';
+                return;
+            }
+            $('r-scans-modal-rows').innerHTML = items.map(it => {
+                const escapeHtml = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+                let statusPill = '';
+                if (it.type === 'ticket_valid') statusPill = '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">✓ VALID</span>';
+                else if (it.type === 'staff') statusPill = '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">👷 ANGAJAT</span>';
+                else if (it.type === 'invalid') {
+                    const label = it.status === 'duplicate' ? '⚠ DUPLICAT' : '✕ INVALID';
+                    statusPill = `<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-rose-100 text-rose-800">${label}</span>`;
+                }
+                return `<tr class="hover:bg-slate-50">
+                    <td class="px-3 py-2 text-xs font-mono">${escapeHtml(it.time)}</td>
+                    <td class="px-3 py-2">${escapeHtml(it.name)}</td>
+                    <td class="px-3 py-2">${statusPill}</td>
+                    <td class="px-3 py-2 text-xs font-mono">${escapeHtml(it.code || '')}</td>
+                    <td class="px-3 py-2 text-xs">${escapeHtml(it.email || '')}</td>
+                    <td class="px-3 py-2 text-xs text-muted">${escapeHtml(it.ticket_type || '')}</td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            $('r-scans-modal-rows').innerHTML = '<tr><td class="px-3 py-6 text-center text-rose-700" colspan="6">Eroare: ' + (e?.message || '') + '</td></tr>';
+        }
+    }
+
+    function closeScansModal() {
+        const modal = $('r-scans-modal');
+        modal.classList.add('hidden'); modal.classList.remove('flex');
+    }
+
     function exportCsv() {
         if (!lastReport) { alert('Încarcă mai întâi raportul.'); return; }
         const rows = [];
@@ -381,6 +535,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         document.querySelectorAll('.lv-range-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
         $('r-apply').addEventListener('click', loadReport);
         $('r-export').addEventListener('click', exportCsv);
+        $('r-scans-modal-close')?.addEventListener('click', closeScansModal);
         setRange('30');
     });
 })();
