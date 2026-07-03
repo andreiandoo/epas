@@ -600,9 +600,11 @@ class LeisureController extends BaseController
                 // Componentele pachetului (meta.from_package=true) NU trebuie sa apara
                 // in raport ca tranzactii separate — le sarim complet aici (raportul
                 // "Per tip bilet" trebuie sa arate DOAR pachetele si biletele
-                // individuale, cu valorile lor).
+                // individuale, cu valorile lor). Defensiv: si tickets cu price=0
+                // (legacy componente sau guide bonus).
                 $isFromPackage = is_array($ticket->meta ?? null) && !empty($ticket->meta['from_package']);
-                if ($isFromPackage) continue;
+                $tPrice = (float) ($ticket->price ?? 0);
+                if ($isFromPackage || $tPrice <= 0) continue;
 
                 $buckets[$key]['tickets']++;
                 $totalTickets++;
@@ -2175,6 +2177,7 @@ class LeisureController extends BaseController
         $bySource = [];
         $byCashier = [];
         $byPaymentMethod = []; // cash, card, online (Cash/Card = POS; Online = customer online)
+        $byIssuer = ['primary' => ['issuer' => 'primary', 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0], 'secondary' => ['issuer' => 'secondary', 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0]];
         $totalRevenue = 0.0;
         $totalTickets = 0;
         $totalPhysicalTickets = 0; // real emise (fara parintele pachet)
@@ -2312,27 +2315,41 @@ class LeisureController extends BaseController
 
                 // ---- Sectiunea "Per tip bilet" (contorizare TRANZACTII, nu bilete fizice)
                 // Componentele pachetului nu apar aici (nu au valoare proprie).
-                if (!$isFromPackage) {
+                //
+                // Filtru dublu:
+                //  (a) skip biletele marcate cu meta.from_package=true (metoda POS noua)
+                //  (b) defensiv: skip TOATE biletele cu price=0 (legacy — daca
+                //      cineva emitea pachete inainte de meta.from_package, componentele
+                //      cu price=0 nu trebuie sa apara ca 'tranzactii'; nici guide
+                //      bonus cu price=0 nu trebuie aici — apar la 'Pe tip bilet emis')
+                $tp = (float) ($t->price ?? 0);
+                if (!$isFromPackage && $tp > 0) {
                     $totalTickets++;
+                    $issuer = $t->ticketType->issuing_company ?? 'primary';
                     $key = $isPackageParent ? "pkg_{$ttId}" : "tt_{$ttId}";
                     if (!isset($byTicketType[$key])) {
                         $byTicketType[$key] = [
                             'ticket_type_id' => $ttId,
                             'name' => $ttName,
                             'service_category' => $svcCat,
-                            'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
+                            'issuing_company' => $issuer,
                             'tickets' => 0,
                             'revenue' => 0.0,
                             'commission' => 0.0,
                         ];
                     }
                     $byTicketType[$key]['tickets']++;
-                    $tp = (float) ($t->price ?? 0);
                     $byTicketType[$key]['revenue'] += $tp;
                     // Comision per bilet cu floor
                     $ticketCommission = round($tp * $orgRate / 100, 2);
                     if ($orgFloor > 0 && $ticketCommission < $orgFloor) $ticketCommission = $orgFloor;
                     $byTicketType[$key]['commission'] += $ticketCommission;
+
+                    // Aggregare pe societate emitenta (SC1 primary / SC2 secondary)
+                    $issuerKey = $issuer === 'secondary' ? 'secondary' : 'primary';
+                    $byIssuer[$issuerKey]['tickets']++;
+                    $byIssuer[$issuerKey]['revenue'] += $tp;
+                    $byIssuer[$issuerKey]['commission'] += $ticketCommission;
                 }
 
                 // ---- Sectiunea "Pe tip bilet emis" (bilete FIZICE, componente + individuale)
@@ -2362,9 +2379,16 @@ class LeisureController extends BaseController
         foreach ($byCashier as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byTicketType as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byPaymentMethod as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
+        foreach ($byIssuer as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'], 2); }
         unset($row);
         // by_component_type sortat descrescator dupa nr. bilete
         usort($byComponentType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
+
+        // Numele reale societatilor (pentru afisare pe carduri)
+        $issuerNames = [
+            'primary' => $eventOrganizer?->company_name ?: 'Societatea principală',
+            'secondary' => $eventOrganizer?->has_secondary_issuer ? ($eventOrganizer?->secondary_company_name ?: 'Societatea secundară') : null,
+        ];
 
         return $this->success([
             'from' => $from->toDateString(),
@@ -2392,6 +2416,10 @@ class LeisureController extends BaseController
             'total_physical_tickets' => $totalPhysicalTickets,
             'by_cashier' => array_values($byCashier),
             'by_payment_method' => array_values($byPaymentMethod),
+            'by_issuer' => [
+                'primary' => array_merge($byIssuer['primary'], ['name' => $issuerNames['primary']]),
+                'secondary' => $issuerNames['secondary'] ? array_merge($byIssuer['secondary'], ['name' => $issuerNames['secondary']]) : null,
+            ],
         ]);
     }
 
@@ -3178,16 +3206,19 @@ class LeisureController extends BaseController
             $staffByDay[$day] = ($staffByDay[$day] ?? 0) + 1;
         }
 
-        // Invalid: leisure_scan_attempts
-        $invalidScans = \App\Models\LeisureScanAttempt::query()
-            ->where('event_id', $eventModel->id)
-            ->whereBetween('occurred_at', [$from, $to])
-            ->get(['id', 'occurred_at']);
+        // Invalid: leisure_scan_attempts (defensive: tabela poate lipsi pe environments
+        // unde migratia noua nu a rulat inca — tratam ca 0 in loc de 500).
         $invalidByDay = [];
-        foreach ($invalidScans as $s) {
-            $day = $s->occurred_at?->copy()->setTimezone('Europe/Bucharest')->toDateString();
-            if (!$day) continue;
-            $invalidByDay[$day] = ($invalidByDay[$day] ?? 0) + 1;
+        if (\Illuminate\Support\Facades\Schema::hasTable('leisure_scan_attempts')) {
+            $invalidScans = \App\Models\LeisureScanAttempt::query()
+                ->where('event_id', $eventModel->id)
+                ->whereBetween('occurred_at', [$from, $to])
+                ->get(['id', 'occurred_at']);
+            foreach ($invalidScans as $s) {
+                $day = $s->occurred_at?->copy()->setTimezone('Europe/Bucharest')->toDateString();
+                if (!$day) continue;
+                $invalidByDay[$day] = ($invalidByDay[$day] ?? 0) + 1;
+            }
         }
 
         // Compune array de zile (fara gap-uri)
@@ -3288,12 +3319,14 @@ class LeisureController extends BaseController
             ];
         }
 
-        // 3) Invalid attempts
-        $invalidScans = \App\Models\LeisureScanAttempt::query()
-            ->where('event_id', $eventModel->id)
-            ->whereBetween('occurred_at', [$dayStart, $dayEnd])
-            ->orderBy('occurred_at')
-            ->get(['id', 'attempted_code', 'result', 'reason', 'occurred_at']);
+        // 3) Invalid attempts (defensive: table poate lipsi)
+        $invalidScans = \Illuminate\Support\Facades\Schema::hasTable('leisure_scan_attempts')
+            ? \App\Models\LeisureScanAttempt::query()
+                ->where('event_id', $eventModel->id)
+                ->whereBetween('occurred_at', [$dayStart, $dayEnd])
+                ->orderBy('occurred_at')
+                ->get(['id', 'attempted_code', 'result', 'reason', 'occurred_at'])
+            : collect();
         foreach ($invalidScans as $s) {
             $items[] = [
                 'type' => 'invalid',

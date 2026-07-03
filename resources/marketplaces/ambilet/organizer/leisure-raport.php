@@ -92,6 +92,38 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
+        <!-- Carduri incasari per societate emitenta (SC1 + SC2 daca activata) -->
+        <div id="r-issuer-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 hidden">
+            <div id="r-issuer-primary-card" class="p-4 bg-white border-2 border-primary/40 rounded-2xl">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold uppercase tracking-wider bg-primary text-white px-2 py-1 rounded">SC1</span>
+                            <span class="text-xs uppercase tracking-wider text-muted font-semibold">Societatea principală</span>
+                        </div>
+                        <p id="r-issuer-primary-name" class="text-sm font-bold text-secondary truncate">—</p>
+                        <p class="text-2xl font-bold text-secondary mt-2"><span id="r-issuer-primary-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
+                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON</p>
+                    </div>
+                    <div class="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
+                </div>
+            </div>
+            <div id="r-issuer-secondary-card" class="p-4 bg-white border-2 border-accent/40 rounded-2xl hidden">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold uppercase tracking-wider bg-accent text-white px-2 py-1 rounded">SC2</span>
+                            <span class="text-xs uppercase tracking-wider text-muted font-semibold">Societatea secundară</span>
+                        </div>
+                        <p id="r-issuer-secondary-name" class="text-sm font-bold text-secondary truncate">—</p>
+                        <p class="text-2xl font-bold text-secondary mt-2"><span id="r-issuer-secondary-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
+                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON</p>
+                    </div>
+                    <div class="w-11 h-11 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Panou: Pe metoda plata -->
         <div class="bg-white border rounded-2xl border-border mb-6">
             <div class="px-5 py-3 border-b border-border flex items-center justify-between">
@@ -185,9 +217,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-rose-500"></span> Invalide</span>
                 </div>
             </div>
-            <div class="px-5 py-3 bg-slate-50 border-b border-border text-xs text-muted">
-                Bara <strong class="text-slate-700">gri</strong> = câte scanări sunt așteptate în ziua respectivă (bilete de acces cu visit_date = ziua).
-                Culorile stacked = scanările efective: <strong class="text-emerald-700">valide</strong>, <strong class="text-sky-700">angajați</strong>, <strong class="text-rose-700">invalide</strong>. Click pe o zi pentru detalii.
+            <div class="px-5 py-3 bg-slate-50 border-b border-border flex items-center justify-between flex-wrap gap-3">
+                <div class="text-xs text-muted flex-1 min-w-0">
+                    <span id="r-scans-range" class="font-semibold text-secondary">—</span>
+                    <span class="block mt-0.5">Bara gri = scanări așteptate. Verde/albastru/roșu = scanări efective. Click pe o zi pentru detalii.</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button id="r-scans-prev" type="button" class="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-slate-100" title="Cu 30 zile în urmă">← Anterior</button>
+                    <button id="r-scans-today" type="button" class="px-3 py-1.5 text-sm border border-primary bg-primary/10 text-primary rounded-lg hover:bg-primary/20 font-semibold">Azi în centru</button>
+                    <button id="r-scans-next" type="button" class="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-slate-100" title="Cu 30 zile înainte">Următor →</button>
+                </div>
             </div>
             <div class="p-5">
                 <div class="h-72"><canvas id="r-scans-chart"></canvas></div>
@@ -266,12 +305,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             // Comision AmBilet
             $('r-total-commission').textContent = fmtMoney(t.commission);
             $('r-net-revenue').textContent = fmtMoney(t.net_revenue);
+            renderIssuers(data.by_issuer || {});
             renderSources(data.by_source || [], t.revenue || 0);
             renderPaymentMethods(data.by_payment_method || [], t.revenue || 0);
             renderCashiers(data.by_cashier || []);
             renderTicketTypes(data.by_ticket_type || []);
             renderComponents(data.by_component_type || [], data.total_physical_tickets || 0);
-            loadScansChart();
         } catch (e) {
             console.error('[raport] load', e);
             $('r-error').textContent = 'Eroare: ' + (e?.message || '');
@@ -298,6 +337,35 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="text-[10px] text-muted mt-0.5 text-right">${pct}% din total</div>
             </div>`;
         }).join('');
+    }
+
+    // Carduri incasari per societate emitenta
+    function renderIssuers(byIssuer) {
+        const cards = $('r-issuer-cards');
+        const prim = byIssuer.primary || {};
+        const sec = byIssuer.secondary; // null cand nu are secondary_issuer
+        cards.classList.remove('hidden');
+        // Primary
+        $('r-issuer-primary-name').textContent = prim.name || 'Societatea principală';
+        $('r-issuer-primary-revenue').textContent = fmtMoney(prim.revenue || 0);
+        $('r-issuer-primary-tickets').textContent = prim.tickets || 0;
+        $('r-issuer-primary-commission').textContent = fmtMoney(prim.commission || 0);
+        // Secondary (afisat doar cand organizatorul are has_secondary_issuer)
+        const secCard = $('r-issuer-secondary-card');
+        if (sec) {
+            secCard.classList.remove('hidden');
+            $('r-issuer-secondary-name').textContent = sec.name || 'Societatea secundară';
+            $('r-issuer-secondary-revenue').textContent = fmtMoney(sec.revenue || 0);
+            $('r-issuer-secondary-tickets').textContent = sec.tickets || 0;
+            $('r-issuer-secondary-commission').textContent = fmtMoney(sec.commission || 0);
+            cards.classList.remove('lg:grid-cols-2');
+            cards.classList.add('lg:grid-cols-2');
+        } else {
+            secCard.classList.add('hidden');
+            // Un singur card la lățime completă când n-am secundară
+            cards.classList.remove('lg:grid-cols-2');
+            cards.classList.add('lg:grid-cols-1');
+        }
     }
 
     // Breakdown per metoda plata: Cash / Card / Online
@@ -375,13 +443,33 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // ============ Sectiune Scanari (chart stacked + modal detalii) ============
     let scansChart = null;
     let scansRows = [];
+    // Offset in zile fata de azi. 0 = azi in centru. -30 = ferestra mutata cu 30 zile in urma.
+    let scansCenterOffset = 0;
 
+    function fmtDateISO(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function computeScansRange() {
+        // 30 zile totale, azi in centru = 15 zile inainte + 14 zile dupa (sau invers)
+        const today = new Date();
+        today.setDate(today.getDate() + scansCenterOffset);
+        const from = new Date(today);
+        from.setDate(from.getDate() - 15);
+        const to = new Date(today);
+        to.setDate(to.getDate() + 14);
+        return { from: fmtDateISO(from), to: fmtDateISO(to) };
+    }
     async function loadScansChart() {
         if (!currentEventId) return;
+        const range = computeScansRange();
+        const label = $('r-scans-range');
+        if (label) {
+            const f = new Date(range.from + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short' });
+            const t = new Date(range.to + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
+            label.textContent = `${f} → ${t}` + (scansCenterOffset === 0 ? ' (azi în centru)' : ` (${scansCenterOffset > 0 ? '+' + scansCenterOffset : scansCenterOffset} zile față de azi)`);
+        }
         try {
-            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/scans`, {
-                from: $('r-from').value, to: $('r-to').value,
-            });
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/scans`, range);
             const data = res.data || {};
             scansRows = data.rows || [];
             renderScansChart(scansRows);
@@ -536,6 +624,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('r-apply').addEventListener('click', loadReport);
         $('r-export').addEventListener('click', exportCsv);
         $('r-scans-modal-close')?.addEventListener('click', closeScansModal);
+        // Navigare fereastra 30 zile pentru chart-ul Scanari
+        $('r-scans-prev')?.addEventListener('click', () => { scansCenterOffset -= 30; loadScansChart(); });
+        $('r-scans-next')?.addEventListener('click', () => { scansCenterOffset += 30; loadScansChart(); });
+        $('r-scans-today')?.addEventListener('click', () => { scansCenterOffset = 0; loadScansChart(); });
+        // Auto-load chart-ul Scanari cand pagina deschide (independent de loadReport)
+        loadScansChart();
         setRange('30');
     });
 })();
