@@ -95,14 +95,9 @@ class PrintInvitationsController extends Controller
                 ->first();
 
         $renderedHtmls = [];
-        $templateWidthMm = null;
-        $templateHeightMm = null;
         $templateBg = '#ffffff';
 
-        // Compute the scale from template natural size to actual tile size,
-        // then multiply every `pt` value in the rendered HTML by it. This is
-        // way more reliable than DomPDF's `zoom` — which shrinks visually
-        // but not layout box, so tiles overflow their cells.
+        // Paper dims (with landscape swap) + bleed → naive cell size.
         $paperDims = match ($data['paper']) {
             'A3' => ['w' => 297, 'h' => 420],
             'A5' => ['w' => 148, 'h' => 210],
@@ -113,8 +108,15 @@ class PrintInvitationsController extends Controller
         }
         $innerWmm = $paperDims['w'] - 2 * (float) $data['bleed_x_mm'];
         $innerHmm = $paperDims['h'] - 2 * (float) $data['bleed_y_mm'];
-        $tileWmm = $innerWmm / $layout['cols'];
-        $tileHmm = $innerHmm / $layout['rows'];
+        $cellWmm = $innerWmm / $layout['cols'];
+        $cellHmm = $innerHmm / $layout['rows'];
+
+        // Default tile = the whole cell (used when we fall back to the
+        // simple no-template layout). If a template is available, this
+        // gets replaced with template-aspect dimensions below so rows
+        // stack tight with no whitespace between them.
+        $tileWmm = $cellWmm;
+        $tileHmm = $cellHmm;
 
         if ($template && !empty($template->template_data['layers'])) {
             try {
@@ -125,13 +127,16 @@ class PrintInvitationsController extends Controller
                 $templateHeightMm = (float) $size['height'];
                 $templateBg = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
-                // Fit-scale keeping aspect ratio: how much of the tile the
-                // scaled template actually occupies (leaves whitespace on
-                // one axis if aspect ratios differ).
+                // Fit template into the cell keeping aspect ratio, then
+                // COLLAPSE the tile to the scaled template's dimensions.
+                // This eliminates the empty band a fit-inside-fixed-cell
+                // approach leaves between rows.
                 $ptScale = min(
-                    $tileWmm / max($templateWidthMm, 0.01),
-                    $tileHmm / max($templateHeightMm, 0.01)
+                    $cellWmm / max($templateWidthMm, 0.01),
+                    $cellHmm / max($templateHeightMm, 0.01)
                 );
+                $tileWmm = $templateWidthMm * $ptScale;
+                $tileHmm = $templateHeightMm * $ptScale;
 
                 $eventTitle = is_array($event->title)
                     ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?? '')
@@ -147,6 +152,12 @@ class PrintInvitationsController extends Controller
                     $vn = $event->venue->name ?? null;
                     $venueName = is_array($vn) ? ($vn['ro'] ?? $vn['en'] ?? reset($vn)) : $vn;
                 }
+
+                // Resolve the actual event poster / hero URL once — the
+                // sample data hardcodes a "https://placehold.co/...text=Event+Image"
+                // placeholder, so without this override the template's
+                // `<img src="{{ event.image }}">` renders the placeholder text.
+                $eventImageUrl = $variableService->resolveEventImageUrl($event, null);
 
                 foreach ($invites as $invite) {
                     try {
@@ -166,6 +177,7 @@ class PrintInvitationsController extends Controller
                             'date' => $eventDate,
                             'time' => $eventTime,
                             'venue' => $venueName ?? '',
+                            'image' => $eventImageUrl,
                         ]);
                         $d['ticket'] = array_merge($d['ticket'], [
                             'type' => 'INVITAȚIE',
@@ -191,13 +203,23 @@ class PrintInvitationsController extends Controller
                         //     layers scope to the tile wrapper instead of
                         //     the page (same trick TicketsController uses).
                         //  2. Multiply every `Npt` value by $ptScale so the
-                        //     rendered template physically shrinks — DomPDF
+                        //     rendered template physically shrinks. DomPDF
                         //     `zoom` isn't reliable, so we scale the pt
                         //     values in the emitted CSS directly.
+                        //
+                        // CRITICAL — the regex is anchored with a lookbehind
+                        // on a CSS value delimiter (`:` or whitespace). Base64
+                        // strings in `data:image/...` URIs frequently contain
+                        // random `4pt` / `6pt` / etc. subsequences, and a
+                        // naive `/\dpt/` replace SILENTLY corrupts the base64
+                        // → the image (event poster, logo, QR) fails to
+                        // decode and disappears. The lookbehind excludes
+                        // base64 content because base64 chars can't sit in
+                        // `[\s:]`.
                         $rawHtml = $generator->renderToHtml($template->template_data, $d);
                         $rawHtml = str_replace('position: fixed;', 'position: absolute;', $rawHtml);
                         $renderedHtmls[$invite->id] = preg_replace_callback(
-                            '/(\d+(?:\.\d+)?)pt/',
+                            '/(?<=[\s:])(\d+(?:\.\d+)?)pt\b/',
                             fn ($m) => round(((float) $m[1]) * $ptScale, 2) . 'pt',
                             $rawHtml
                         );
@@ -215,8 +237,8 @@ class PrintInvitationsController extends Controller
                     'error' => $e->getMessage(),
                 ]);
                 $renderedHtmls = [];
-                $templateWidthMm = null;
-                $templateHeightMm = null;
+                $tileWmm = $cellWmm;
+                $tileHmm = $cellHmm;
             }
         }
 
@@ -230,9 +252,9 @@ class PrintInvitationsController extends Controller
             'orientation' => $orientation,
             'bleedXMm' => (float) $data['bleed_x_mm'],
             'bleedYMm' => (float) $data['bleed_y_mm'],
+            'tileWmm' => $tileWmm,
+            'tileHmm' => $tileHmm,
             'renderedHtmls' => $renderedHtmls,
-            'templateWidthMm' => $templateWidthMm,
-            'templateHeightMm' => $templateHeightMm,
             'templateBg' => $templateBg,
         ])
             ->setPaper(strtolower($data['paper']), $orientation)

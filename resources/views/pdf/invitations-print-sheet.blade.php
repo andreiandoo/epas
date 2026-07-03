@@ -1,5 +1,4 @@
 @php
-    // Paper size in mm. DomPDF's actual @page comes from the controller.
     $paperMm = match ($paper) {
         'A3' => ['w' => 297, 'h' => 420],
         'A5' => ['w' => 148, 'h' => 210],
@@ -8,14 +7,16 @@
     if ($orientation === 'landscape') {
         [$paperMm['w'], $paperMm['h']] = [$paperMm['h'], $paperMm['w']];
     }
-    $innerW = $paperMm['w'] - 2 * $bleedXMm;
-    $innerH = $paperMm['h'] - 2 * $bleedYMm;
-    $tileW = $innerW / $cols;
-    $tileH = $innerH / $rows;
+
+    // Controller now decides the tile size (template-aspect when a template
+    // is available, cell-sized otherwise). Rows stack tight because tileHmm
+    // matches the rendered template's actual height, not the paper/rows split.
+    $tileW = $tileWmm;
+    $tileH = $tileHmm;
 
     $useTemplate = !empty($renderedHtmls);
 
-    // Fallback simple-layout metadata.
+    // Fallback simple-layout metadata (only used when template render failed).
     $eventTitle = is_array($event->title)
         ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?? '')
         : ($event->title ?? '');
@@ -52,7 +53,7 @@
         }
         .page + .page { page-break-before: always; }
 
-        /* Simple-fallback tile styles (used when no template available). */
+        /* Simple-fallback tile styles (used only when no template available). */
         .simple { width: 100%; height: 100%; padding: 4mm; position: relative; }
         .simple-header { border-bottom: 1pt solid #4f46e5; padding-bottom: 2mm; margin-bottom: 3mm; }
         .simple-watermark { font-size: 6pt; letter-spacing: 2pt; color: #4f46e5; text-transform: uppercase; font-weight: bold; }
