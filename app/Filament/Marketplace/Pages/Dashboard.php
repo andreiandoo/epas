@@ -1128,20 +1128,50 @@ class Dashboard extends Page
                 ->orWhereIn('orders.event_id', $eventSub);
         };
 
-        // 1. Ticketing: per-event commission (matches BillingBreakdown logic exactly)
+        // 1. Ticketing: commission base = sum of tickets.price for sold and
+        //    refunded tickets in the period. Mirrors BillingBreakdown's
+        //    ticketBaseTotal exactly so the two views agree to the RON.
+        //
+        //    Historical bug: the old query multiplied orders.total × rate.
+        //    For added_on_top events, orders.total INCLUDES the commission
+        //    the customer paid on top of face value, so `rate × orders.total`
+        //    double-counted the commission (a 100 lei ticket sold as 105
+        //    would produce 5.25 lei instead of 5 lei). Aligning on tickets
+        //    .price (face value) removes the loop-back.
+
+        // orders.total still surfaces as "Comenzi" in the stats card
+        // above the billing card; it's not the commission base anymore.
         $orderRevenue = (float) Order::where($billingScope)
             ->whereIn('status', $validStatuses)
             ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->sum('total');
 
-        // Use DB-level SUM with ROUND to match BillingBreakdown per-event rounding
-        $ticketingCommission = (float) Order::where($billingScope)
-            ->whereIn('status', $validStatuses)
-            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw("SUM(ROUND(total * {$commissionRate} / 100, 2)) as total_commission")
-            ->value('total_commission') ?? 0;
+        // Sum of tickets.price over the marketplace-scoped orders in the
+        // month, counting tickets that are either currently sold
+        // (status IN valid/used and NOT refund_status=refunded) or
+        // refunded outright. Matches BillingBreakdown's ticket loop.
+        $ticketCommissionBase = (float) \DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where(function ($q) use ($marketplaceId, $eventSub) {
+                $q->where('o.marketplace_client_id', $marketplaceId)
+                    ->orWhereIn('o.marketplace_event_id', $eventSub)
+                    ->orWhereIn('o.event_id', $eventSub);
+            })
+            ->whereNotIn('o.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereBetween('t.created_at', [$monthStart, $monthEnd])
+            ->where(function ($q) {
+                $q->where(function ($q2) {
+                    $q2->whereIn('t.status', ['valid', 'used'])
+                        ->where(function ($q3) {
+                            $q3->whereNull('t.refund_status')
+                                ->orWhere('t.refund_status', '<>', 'refunded');
+                        });
+                })->orWhere('t.refund_status', 'refunded');
+            })
+            ->sum(\DB::raw('COALESCE(t.price, 0)'));
+
+        $ticketingCommission = round($ticketCommissionBase * ($commissionRate / 100), 2);
 
         // 2. Service orders for current month, grouped by service_type
         $serviceBreakdown = ServiceOrder::where('marketplace_client_id', $marketplaceId)
@@ -1179,6 +1209,12 @@ class Dashboard extends Page
             'month_label' => $monthDate->translatedFormat('F Y'),
             'commission_rate' => $commissionRate,
             'order_revenue' => $orderRevenue,
+            // Actual base the commission is computed on — sum of
+            // tickets.price (face value). Surfaced separately from
+            // order_revenue because the two diverge on added_on_top
+            // events and the "Comision X% din Y" label needs the base
+            // that yields the shown total.
+            'ticket_commission_base' => round($ticketCommissionBase, 2),
             'ticketing_commission' => $ticketingCommission,
             'services' => $services,
             'services_total' => $servicesTotal,
