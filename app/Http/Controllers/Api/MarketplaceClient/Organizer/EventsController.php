@@ -1247,6 +1247,11 @@ class EventsController extends BaseController
     protected function normalizeTicketCode(string $raw): string
     {
         $trimmed = trim($raw);
+        // /v/CODE — shortlink folosit de bilete emise POS
+        // (buildTicketCommands in pos-printer.js: https://ambilet.ro/v/CODE?p=pos)
+        if (preg_match('#/v/([A-Za-z0-9_-]+)#', $trimmed, $m)) {
+            return $m[1];
+        }
         if (preg_match('#/t/([A-Za-z0-9_-]+)#', $trimmed, $m)) {
             return $m[1];
         }
