@@ -104,6 +104,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p id="r-issuer-primary-name" class="text-sm font-bold text-secondary truncate">—</p>
                         <p class="text-2xl font-bold text-secondary mt-2"><span id="r-issuer-primary-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
                         <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON</p>
+                        <div id="r-issuer-primary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
                     <div class="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
                 </div>
@@ -118,6 +119,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p id="r-issuer-secondary-name" class="text-sm font-bold text-secondary truncate">—</p>
                         <p class="text-2xl font-bold text-secondary mt-2"><span id="r-issuer-secondary-revenue">0.00</span> <span class="text-sm text-muted">RON</span></p>
                         <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON</p>
+                        <div id="r-issuer-secondary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
                     <div class="w-11 h-11 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
                 </div>
@@ -340,6 +342,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     // Carduri incasari per societate emitenta
+    function renderIssuerPaymentBreakdown(el, byPayment) {
+        const pm = byPayment || {};
+        const total = (Number(pm.cash) || 0) + (Number(pm.card) || 0) + (Number(pm.online) || 0);
+        if (!el) return;
+        if (total <= 0) {
+            el.innerHTML = '<p class="text-muted">Nicio încasare.</p>';
+            return;
+        }
+        const rows = [
+            { key: 'cash',   label: '💵 Cash',   color: '#F59E0B' },
+            { key: 'card',   label: '💳 Card',   color: '#6366F1' },
+            { key: 'online', label: '🌐 Online', color: '#10B981' },
+        ];
+        el.innerHTML = rows.map(r => {
+            const v = Number(pm[r.key] || 0);
+            const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+            return `<div class="flex items-center gap-2">
+                <span class="flex-1" style="color:${r.color}">${r.label}</span>
+                <span class="text-muted whitespace-nowrap">${pct}%</span>
+                <span class="font-semibold whitespace-nowrap" style="color:${r.color}">${fmtMoney(v)} RON</span>
+            </div>`;
+        }).join('');
+    }
     function renderIssuers(byIssuer) {
         const cards = $('r-issuer-cards');
         const prim = byIssuer.primary || {};
@@ -350,6 +375,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('r-issuer-primary-revenue').textContent = fmtMoney(prim.revenue || 0);
         $('r-issuer-primary-tickets').textContent = prim.tickets || 0;
         $('r-issuer-primary-commission').textContent = fmtMoney(prim.commission || 0);
+        renderIssuerPaymentBreakdown($('r-issuer-primary-payment'), prim.by_payment);
         // Secondary (afisat doar cand organizatorul are has_secondary_issuer)
         const secCard = $('r-issuer-secondary-card');
         if (sec) {
@@ -358,11 +384,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('r-issuer-secondary-revenue').textContent = fmtMoney(sec.revenue || 0);
             $('r-issuer-secondary-tickets').textContent = sec.tickets || 0;
             $('r-issuer-secondary-commission').textContent = fmtMoney(sec.commission || 0);
-            cards.classList.remove('lg:grid-cols-2');
+            renderIssuerPaymentBreakdown($('r-issuer-secondary-payment'), sec.by_payment);
+            cards.classList.remove('lg:grid-cols-1');
             cards.classList.add('lg:grid-cols-2');
         } else {
             secCard.classList.add('hidden');
-            // Un singur card la lățime completă când n-am secundară
             cards.classList.remove('lg:grid-cols-2');
             cards.classList.add('lg:grid-cols-1');
         }

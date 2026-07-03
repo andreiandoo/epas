@@ -2177,7 +2177,12 @@ class LeisureController extends BaseController
         $bySource = [];
         $byCashier = [];
         $byPaymentMethod = []; // cash, card, online (Cash/Card = POS; Online = customer online)
-        $byIssuer = ['primary' => ['issuer' => 'primary', 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0], 'secondary' => ['issuer' => 'secondary', 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0]];
+        $byIssuer = [
+            'primary' => ['issuer' => 'primary', 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0,
+                'by_payment' => ['cash' => 0.0, 'card' => 0.0, 'online' => 0.0]],
+            'secondary' => ['issuer' => 'secondary', 'tickets' => 0, 'revenue' => 0.0, 'commission' => 0.0,
+                'by_payment' => ['cash' => 0.0, 'card' => 0.0, 'online' => 0.0]],
+        ];
         $totalRevenue = 0.0;
         $totalTickets = 0;
         $totalPhysicalTickets = 0; // real emise (fara parintele pachet)
@@ -2350,6 +2355,8 @@ class LeisureController extends BaseController
                     $byIssuer[$issuerKey]['tickets']++;
                     $byIssuer[$issuerKey]['revenue'] += $tp;
                     $byIssuer[$issuerKey]['commission'] += $ticketCommission;
+                    // Breakdown metode plata per societate (folosim $pmKey deja calculat)
+                    $byIssuer[$issuerKey]['by_payment'][$pmKey] = ($byIssuer[$issuerKey]['by_payment'][$pmKey] ?? 0) + $tp;
                 }
 
                 // ---- Sectiunea "Pe tip bilet emis" (bilete FIZICE, componente + individuale)
@@ -2379,7 +2386,13 @@ class LeisureController extends BaseController
         foreach ($byCashier as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byTicketType as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byPaymentMethod as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
-        foreach ($byIssuer as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'], 2); }
+        foreach ($byIssuer as &$row) {
+            $row['revenue'] = round($row['revenue'], 2);
+            $row['commission'] = round($row['commission'], 2);
+            foreach ($row['by_payment'] as $k => $v) {
+                $row['by_payment'][$k] = round($v, 2);
+            }
+        }
         unset($row);
         // by_component_type sortat descrescator dupa nr. bilete
         usort($byComponentType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
@@ -3164,8 +3177,18 @@ class LeisureController extends BaseController
             'from' => 'nullable|date',
             'to' => 'nullable|date|after_or_equal:from',
         ]);
-        $from = isset($validated['from']) ? Carbon::parse($validated['from'])->startOfDay() : Carbon::today()->subDays(29)->startOfDay();
-        $to = isset($validated['to']) ? Carbon::parse($validated['to'])->endOfDay() : Carbon::today()->endOfDay();
+        // Interpretam intervalul ca zile RO. Query-urile DB folosesc bounds UTC
+        // (coloanele stocheaza UTC), iar iterarea zilelor + bucket-urile
+        // folosesc datele RO — asa evitam mismatch-uri tz + label-uri corecte.
+        $fromRo = isset($validated['from'])
+            ? Carbon::parse($validated['from'], 'Europe/Bucharest')->startOfDay()
+            : Carbon::today('Europe/Bucharest')->subDays(29)->startOfDay();
+        $toRo = isset($validated['to'])
+            ? Carbon::parse($validated['to'], 'Europe/Bucharest')->endOfDay()
+            : Carbon::today('Europe/Bucharest')->endOfDay();
+        // Bounds efective pentru whereBetween (UTC)
+        $from = $fromRo->copy()->setTimezone('UTC');
+        $to = $toRo->copy()->setTimezone('UTC');
 
         // Expected: bilete acces (service_category='access') cu visit_date in interval,
         // status IN (valid/used), pe comenzi platite. Grupam pe visit_date din meta.
@@ -3175,10 +3198,12 @@ class LeisureController extends BaseController
             ->whereIn('status', ['valid', 'used'])
             ->get(['id', 'meta', 'checked_in_at']);
         $expectedByDay = [];
+        $roFromStr = $fromRo->toDateString();
+        $roToStr = $toRo->toDateString();
         foreach ($expected as $t) {
             $vd = is_array($t->meta ?? null) ? ($t->meta['visit_date'] ?? null) : null;
             if (!$vd) continue;
-            if ($vd < $from->toDateString() || $vd > $to->toDateString()) continue;
+            if ($vd < $roFromStr || $vd > $roToStr) continue;
             $expectedByDay[$vd] = ($expectedByDay[$vd] ?? 0) + 1;
         }
 
@@ -3221,10 +3246,10 @@ class LeisureController extends BaseController
             }
         }
 
-        // Compune array de zile (fara gap-uri)
+        // Compune array de zile (fara gap-uri), iterare pe RO
         $rows = [];
-        $cursor = $from->copy();
-        while ($cursor->lte($to)) {
+        $cursor = $fromRo->copy();
+        while ($cursor->lte($toRo)) {
             $day = $cursor->toDateString();
             $rows[] = [
                 'date' => $day,
@@ -3236,12 +3261,9 @@ class LeisureController extends BaseController
             $cursor->addDay();
         }
 
-        // Elimin zilele complet goale de la marginile intervalului (dar pastrez interior)
-        // Nu — le tin toate pentru continuitate axa.
-
         return $this->success([
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
+            'from' => $fromRo->toDateString(),
+            'to' => $toRo->toDateString(),
             'rows' => $rows,
             'totals' => [
                 'expected' => array_sum(array_column($rows, 'expected')),
@@ -3268,9 +3290,12 @@ class LeisureController extends BaseController
         if (!$eventModel) return $this->error('Event not found', 404);
 
         $validated = $request->validate(['date' => 'required|date']);
+        // Interpretam data ca ora locala RO, apoi convertim la UTC pentru query
+        // (coloanele DB stocheaza UTC). Fara conversie, laravel format() strip-uie
+        // tz-ul si compara ora locala string direct cu ora UTC din DB -> mismatch.
         $day = Carbon::parse($validated['date'], 'Europe/Bucharest');
-        $dayStart = $day->copy()->startOfDay();
-        $dayEnd = $day->copy()->endOfDay();
+        $dayStart = $day->copy()->startOfDay()->setTimezone('UTC');
+        $dayEnd = $day->copy()->endOfDay()->setTimezone('UTC');
 
         $items = [];
 
