@@ -26,12 +26,17 @@ if (empty($organizerSlug)) {
 $organizerName = 'acestui organizator';
 $organizerImage = null;
 if (!empty($organizerSlug)) {
+    // The organizer show route lives UNDER marketplace-events/, not at
+    // the marketplace-client root — our previous /organizers/{slug} hit
+    // a 404 and the whole meta block silently defaulted. The real path
+    // is /marketplace-events/organizers/{slug} once you factor in
+    // API_BASE_URL (already includes /marketplace-client).
     $organizerData = api_cached('organizer_meta_' . $organizerSlug, function () use ($organizerSlug) {
-        return api_get('/organizers/' . urlencode($organizerSlug));
+        return api_get('/marketplace-events/organizers/' . urlencode($organizerSlug));
     }, 300);
     if (!empty($organizerData['success'])) {
         $d = $organizerData['data'] ?? [];
-        $organizerName = (string) ($d['public_name'] ?? $d['name'] ?? $d['display_name'] ?? $organizerName);
+        $organizerName = (string) ($d['name'] ?? $d['public_name'] ?? $d['display_name'] ?? $organizerName);
         // Prefer cover_image (landscape banner, closer to og's 1200x630 spec).
         // Fall back to avatar (square logo) so Facebook still shows something
         // branded rather than the generic og-default.

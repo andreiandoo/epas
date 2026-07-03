@@ -40,8 +40,14 @@ if (!empty($venueSlug)) {
         if (!empty($d['name'])) {
             $venueName = (string) $d['name'];
         }
-        // Venue hero image lives under media.image_url.
-        $img = $d['media']['image_url'] ?? null;
+        // MarketplaceClient VenuesController::show emits flat keys:
+        // cover_image (landscape, closest to OG spec) → image →
+        // portrait. All URLs are pre-resolved to absolute by
+        // formatImageUrl(), so no post-processing needed here.
+        $img = $d['cover_image']
+            ?? $d['image']
+            ?? $d['portrait']
+            ?? null;
         if (!empty($img)) {
             $venueImage = (string) $img;
         }
