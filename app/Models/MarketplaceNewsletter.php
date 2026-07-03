@@ -184,15 +184,23 @@ class MarketplaceNewsletter extends Model
      */
     protected function resolveRecipientCustomerIds(int $clientId, bool $materializeOrganizers = false): \Illuminate\Support\Collection
     {
+        // Intersection at CUSTOMER_ID level silently drops emails that
+        // exist on multiple customer rows (very common on Ambilet — same
+        // person has one customer row from list subscription + a second
+        // from order with a determined_city_id). collectRecipientEmails
+        // intersects in EMAIL space and matches the UI count; the send
+        // path used to intersect in ID space and returned ~2% of the
+        // real audience (newsletter 37: UI=6658, send=176). This branch
+        // computes intersection in email-space per set, keeping the
+        // audience honest, then maps each email to its canonical
+        // customer id (lowest id per email for this marketplace). Emails
+        // without any existing customer row (organizer/artist/venue
+        // sources — only reachable when $materializeOrganizers=true) go
+        // through materializeFromSource so the recipient FK stays valid.
         [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
 
-        // ---- Base audience: lists + tags + organizer-typed lists.
-        // The organizer's list pick IS the consent — every email carries
-        // an unsubscribe link, and Filament's "Abonați" list is already
-        // the pre-segmented opt-in cohort. We do NOT filter by
-        // accepts_marketing here (would double-filter the "Clienți"
-        // non-marketing segment to empty).
-        $baseIds = collect();
+        // ---- Base audience: lists + tags + organizer-typed lists — in EMAIL space.
+        $baseEmails = collect();
         $hasBase = false;
 
         if (!empty($regularListIds) || !empty($this->target_tags)) {
@@ -209,33 +217,20 @@ class MarketplaceNewsletter extends Model
                     $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
                 });
             }
-            $baseIds = $baseIds->merge($q->pluck('id'));
+            $baseEmails = $baseEmails->concat($q->pluck('email'));
         }
 
         if (!empty($organizerListIds)) {
             $hasBase = true;
-            if ($materializeOrganizers) {
-                $baseIds = $baseIds->merge($this->materializeOrganizerCustomers($clientId));
-            } else {
-                // Read-only branch: count by joining organizer emails to
-                // existing customers, no firstOrCreate.
-                $emails = $this->collectOrganizerEmails($clientId);
-                if (!$emails->isEmpty()) {
-                    $existing = MarketplaceCustomer::where('marketplace_client_id', $clientId)
-                        ->whereIn('email', $emails->all())
-                        ->pluck('id');
-                    $baseIds = $baseIds->merge($existing);
-                }
-            }
+            $baseEmails = $baseEmails->concat($this->collectOrganizerEmails($clientId));
         }
 
-        // ---- Narrowing filter: events directly OR derived from
-        // city/organizer/category/artist picks. When target_event_ids
-        // is non-empty those exact events drive the filter and the
-        // other pickers are UI pre-filters only. Otherwise we resolve
-        // the AND-combined event set from city + organizer + category
-        // + artist; any of them being non-empty triggers the filter.
-        $filterIds = null;
+        $baseEmails = $this->normalizeEmailSet($baseEmails);
+
+        // ---- Event / derived filter — collected as EMAILS to match
+        // collectRecipientEmails semantics. getEventBuyerEmails already
+        // covers guest / legacy orders.
+        $filterEmails = null;
         $eventIds = (array) ($this->target_event_ids ?? []);
         $hasDerivedFilter = !empty($this->target_organizer_ids)
             || !empty($this->target_city_ids)
@@ -252,48 +247,49 @@ class MarketplaceNewsletter extends Model
         }
 
         if (!empty($eventIds)) {
-            // Send-time runs materialize orphan buyers (orders without a
-            // marketplace_customer row) so the recipient pivot stays
-            // FK-valid; read-only count runs don't write.
-            $filterIds = $this->getEventBuyerCustomerIds($eventIds, $materializeOrganizers);
+            $filterEmails = $this->normalizeEmailSet($this->getEventBuyerEmails($eventIds));
         } elseif ($hasDerivedFilter) {
-            // Filter was requested but resolves to zero events — the AND
-            // semantics yield zero recipients, never widen back to base.
-            $filterIds = collect();
+            // Filter requested but resolves to zero — AND semantics yield empty.
+            $filterEmails = collect();
         }
 
-        // ---- Resident-city narrowing filter. Independent dimension —
-        // applies an intersection on TOP of base/event sets so picking
-        // "Abonați" + "București" returns subscribers who live in
-        // București, not their union. Picked alone it's the only set,
-        // so resolve to "everyone living in București".
-        $residentIds = null;
+        // ---- Resident-city narrowing filter (EMAIL space).
+        $residentEmails = null;
         if (!empty($this->target_resident_cities)) {
-            $residentIds = $this->getResidentCustomerIds(
-                $clientId,
-                (array) $this->target_resident_cities
+            $residentIds = $this->getResidentCustomerIds($clientId, (array) $this->target_resident_cities);
+            $residentEmails = $this->normalizeEmailSet(
+                MarketplaceCustomer::whereIn('id', $residentIds->all())->pluck('email')
             );
         }
 
-        // ---- Combination semantics: intersect every active set. An
-        // "active" set is one the admin explicitly populated; absent
-        // sets don't constrain. Returns empty when nothing was selected
-        // or any active set is empty (an active resolved-to-zero filter
-        // never silently widens back).
+        // ---- N-way intersection in EMAIL space.
         $activeSets = [];
-        if ($hasBase) $activeSets[] = $baseIds->unique();
-        if ($filterIds !== null) $activeSets[] = $filterIds->unique();
-        if ($residentIds !== null) $activeSets[] = $residentIds->unique();
+        if ($hasBase) $activeSets[] = $baseEmails;
+        if ($filterEmails !== null) $activeSets[] = $filterEmails;
+        if ($residentEmails !== null) $activeSets[] = $residentEmails;
 
         if (empty($activeSets)) {
             return collect(); // nothing selected
         }
 
-        $resolved = array_shift($activeSets);
+        $intersectedEmails = array_shift($activeSets);
         foreach ($activeSets as $set) {
-            $resolved = $resolved->intersect($set);
+            $intersectedEmails = $intersectedEmails->intersect($set);
         }
-        $resolved = $resolved->values();
+        $intersectedEmails = $intersectedEmails->values();
+
+        if ($intersectedEmails->isEmpty()) {
+            return collect();
+        }
+
+        // ---- Map each intersected email → canonical customer id (lowest
+        // id for the marketplace, so we always pick a stable "primary"
+        // account when the same email exists on multiple rows).
+        $resolved = $this->resolveCanonicalCustomerIdsForEmails(
+            $clientId,
+            $intersectedEmails,
+            $materializeOrganizers
+        )->unique()->values();
 
         // Always strip customers who have actively unsubscribed (clicked
         // the unsubscribe link in a previous campaign), UNLESS the admin
@@ -631,6 +627,74 @@ class MarketplaceNewsletter extends Model
      * exactly the materializers needed (so a campaign that only targets
      * "Locații" doesn't fan out organizer rows it'll never email).
      */
+    /**
+     * Lowercase-trim-filter-unique an email collection so intersections
+     * between sets from different sources (customers, orders, organizers)
+     * compare apples to apples. Rejects strings that fail
+     * FILTER_VALIDATE_EMAIL so bad rows can't sneak into the send list.
+     */
+    protected function normalizeEmailSet(\Illuminate\Support\Collection $emails): \Illuminate\Support\Collection
+    {
+        return $emails
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Map each intersected email to a canonical customer id for this
+     * marketplace. Rules:
+     *   1. If the email exists on ≥1 marketplace_customers row → pick the
+     *      lowest id (stable "primary" account when the same email lives
+     *      on multiple rows — the same person subscribed once, ordered
+     *      once, etc.).
+     *   2. If the email exists on ZERO customer rows AND $materialize
+     *      is true → firstOrCreate a customer row (organizer/artist/
+     *      venue emails only reach here on send-time; the read-only
+     *      count path passes false and simply drops them).
+     *
+     * Batched by 500 emails per query so a 20k-email intersection never
+     * exceeds Postgres' 65535 bound-parameter cap on a single statement.
+     */
+    protected function resolveCanonicalCustomerIdsForEmails(
+        int $clientId,
+        \Illuminate\Support\Collection $emails,
+        bool $materialize
+    ): \Illuminate\Support\Collection {
+        if ($emails->isEmpty()) return collect();
+
+        $emailToId = [];
+        foreach ($emails->chunk(500) as $batch) {
+            $rows = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                ->whereIn(\DB::raw('LOWER(TRIM(email))'), $batch->all())
+                ->orderBy('id')
+                ->get(['id', 'email']);
+            foreach ($rows as $r) {
+                $key = strtolower(trim((string) $r->email));
+                if (!isset($emailToId[$key])) {
+                    $emailToId[$key] = $r->id;
+                }
+            }
+        }
+
+        $ids = collect();
+        $orphans = collect();
+        foreach ($emails as $email) {
+            if (isset($emailToId[$email])) {
+                $ids->push($emailToId[$email]);
+            } else {
+                $orphans->push(['email' => $email, 'name' => explode('@', $email)[0] ?: 'Client']);
+            }
+        }
+
+        if ($materialize && $orphans->isNotEmpty()) {
+            $ids = $ids->concat($this->materializeFromSource($clientId, $orphans));
+        }
+
+        return $ids;
+    }
+
     protected function materializeOrganizerCustomers(int $clientId): \Illuminate\Support\Collection
     {
         [$organizerListIds] = $this->splitListsByType((array) $this->target_lists);
