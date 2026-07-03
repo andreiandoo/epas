@@ -1531,6 +1531,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 let ok = 0;
                 for (const t of tickets) {
                     try {
+                        // Sar peste parintele pachet (wrapper contabil, nu se printeaza)
+                        if (t.service_category === 'package') continue;
                         const issuerForTicket = (t.issuing_company === 'secondary' && issuerSecondary)
                             ? issuerSecondary : issuerPrimary;
                         await PosPrinter.printTicket({
@@ -1697,6 +1699,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         for (const t of tickets) {
             try {
+                // Sar peste biletul PARINTE al pachetului: se emit doar componentele
+                // reale (adult/copil/etc). Parintele e doar wrapper contabil.
+                if (t.service_category === 'package') continue;
                 // Backend issued[] shape: { id, code, ticket_type, service_category,
                 // issuing_company, price, variant }
                 const ticketName = t.ticket_type || t.ticket_type_name || 'Bilet';

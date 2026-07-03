@@ -596,6 +596,14 @@ class LeisureController extends BaseController
 
             foreach ($order->tickets as $ticket) {
                 if (in_array($ticket->status, ['cancelled', 'refunded'], true)) continue;
+
+                // Componentele pachetului (meta.from_package=true) NU trebuie sa apara
+                // in raport ca tranzactii separate — le sarim complet aici (raportul
+                // "Per tip bilet" trebuie sa arate DOAR pachetele si biletele
+                // individuale, cu valorile lor).
+                $isFromPackage = is_array($ticket->meta ?? null) && !empty($ticket->meta['from_package']);
+                if ($isFromPackage) continue;
+
                 $buckets[$key]['tickets']++;
                 $totalTickets++;
                 $byPaymentMethod[$pmKey]['tickets']++;
@@ -611,7 +619,7 @@ class LeisureController extends BaseController
                 } else {
                     $rawName = $ticket->ticketType->name ?? "Tip #{$ttId}";
                     if (is_array($rawName)) $rawName = $rawName['ro'] ?? reset($rawName);
-                    $ttKey = 'tt_' . $ttId;
+                    $ttKey = $cat === 'package' ? 'pkg_' . $ttId : 'tt_' . $ttId;
                 }
                 if (!isset($byTicketType[$ttKey])) {
                     $byTicketType[$ttKey] = [
@@ -2129,12 +2137,14 @@ class LeisureController extends BaseController
             ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,name,service_category,issuing_company'])
             ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
 
-        $byTicketType = [];
+        $byTicketType = [];   // Pachetul apare ca 1 tranzactie cu valoarea lui; componentele NU aici
+        $byComponentType = []; // Bilete FIZICE emise: componente pachet + bilete individuale (fara parintele pachet)
         $bySource = [];
         $byCashier = [];
         $byPaymentMethod = []; // cash, card, online (Cash/Card = POS; Online = customer online)
         $totalRevenue = 0.0;
         $totalTickets = 0;
+        $totalPhysicalTickets = 0; // real emise (fara parintele pachet)
         $totalOrders = $orders->count();
         $totalCommission = 0.0; // Comisioane cumulate (POS + customer)
 
@@ -2245,7 +2255,15 @@ class LeisureController extends BaseController
 
             foreach ($o->tickets as $t) {
                 if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
-                $totalTickets++;
+
+                // Clasificare bilet:
+                //  - isFromPackage: componenta emisa din pachet (meta.from_package=true, price=0)
+                //  - isPackageParent: parintele pachet (service_category='package', poarta pretul intreg)
+                //  - Bilet individual normal (nici una, nici alta)
+                $isFromPackage = is_array($t->meta ?? null) && !empty($t->meta['from_package']);
+                $svcCat = $t->ticketType->service_category ?? 'access';
+                $isPackageParent = ($svcCat === 'package');
+
                 $bySource[$source]['tickets']++;
                 $byCashier[$cashierKey]['tickets']++;
                 $byPaymentMethod[$pmKey]['tickets']++;
@@ -2253,25 +2271,54 @@ class LeisureController extends BaseController
                 $ttId = $t->ticket_type_id;
                 $ttName = $t->ticketType->name ?? "Tip #{$ttId}";
                 if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
-                $key = "tt_{$ttId}";
-                if (!isset($byTicketType[$key])) {
-                    $byTicketType[$key] = [
-                        'ticket_type_id' => $ttId,
-                        'name' => $ttName,
-                        'service_category' => $t->ticketType->service_category ?? 'access',
-                        'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
-                        'tickets' => 0,
-                        'revenue' => 0.0,
-                        'commission' => 0.0,
-                    ];
+
+                // Cazul components (guide bonus, package output): label_override
+                if (is_array($t->meta ?? null) && !empty($t->meta['label_override'])) {
+                    $ttName = $t->meta['label_override'];
                 }
-                $byTicketType[$key]['tickets']++;
-                $tp = (float) ($t->price ?? 0);
-                $byTicketType[$key]['revenue'] += $tp;
-                // Comision per bilet cu floor
-                $ticketCommission = round($tp * $orgRate / 100, 2);
-                if ($orgFloor > 0 && $ticketCommission < $orgFloor) $ticketCommission = $orgFloor;
-                $byTicketType[$key]['commission'] += $ticketCommission;
+
+                // ---- Sectiunea "Per tip bilet" (contorizare TRANZACTII, nu bilete fizice)
+                // Componentele pachetului nu apar aici (nu au valoare proprie).
+                if (!$isFromPackage) {
+                    $totalTickets++;
+                    $key = $isPackageParent ? "pkg_{$ttId}" : "tt_{$ttId}";
+                    if (!isset($byTicketType[$key])) {
+                        $byTicketType[$key] = [
+                            'ticket_type_id' => $ttId,
+                            'name' => $ttName,
+                            'service_category' => $svcCat,
+                            'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
+                            'tickets' => 0,
+                            'revenue' => 0.0,
+                            'commission' => 0.0,
+                        ];
+                    }
+                    $byTicketType[$key]['tickets']++;
+                    $tp = (float) ($t->price ?? 0);
+                    $byTicketType[$key]['revenue'] += $tp;
+                    // Comision per bilet cu floor
+                    $ticketCommission = round($tp * $orgRate / 100, 2);
+                    if ($orgFloor > 0 && $ticketCommission < $orgFloor) $ticketCommission = $orgFloor;
+                    $byTicketType[$key]['commission'] += $ticketCommission;
+                }
+
+                // ---- Sectiunea "Pe tip bilet emis" (bilete FIZICE, componente + individuale)
+                // Parintele pachet nu apare aici (nu e un bilet fizic real emis).
+                if (!$isPackageParent) {
+                    $totalPhysicalTickets++;
+                    $compKey = is_array($t->meta ?? null) && !empty($t->meta['label_override'])
+                        ? 'lbl_' . $ttName
+                        : 'tt_' . $ttId;
+                    if (!isset($byComponentType[$compKey])) {
+                        $byComponentType[$compKey] = [
+                            'ticket_type_id' => $ttId,
+                            'name' => $ttName,
+                            'service_category' => $svcCat,
+                            'tickets' => 0,
+                        ];
+                    }
+                    $byComponentType[$compKey]['tickets']++;
+                }
             }
         }
 
@@ -2283,6 +2330,8 @@ class LeisureController extends BaseController
         foreach ($byTicketType as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         foreach ($byPaymentMethod as &$row) { $row['revenue'] = round($row['revenue'], 2); $row['commission'] = round($row['commission'] ?? 0, 2); }
         unset($row);
+        // by_component_type sortat descrescator dupa nr. bilete
+        usort($byComponentType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
 
         return $this->success([
             'from' => $from->toDateString(),
@@ -2306,6 +2355,8 @@ class LeisureController extends BaseController
             ],
             'by_source' => array_values($bySource),
             'by_ticket_type' => array_values($byTicketType),
+            'by_component_type' => array_values($byComponentType),
+            'total_physical_tickets' => $totalPhysicalTickets,
             'by_cashier' => array_values($byCashier),
             'by_payment_method' => array_values($byPaymentMethod),
         ]);
