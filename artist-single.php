@@ -25,12 +25,26 @@ if (empty($artistSlug)) {
 // the DOM but Googlebot/social crawlers never see). Cached 5 min in
 // /tmp/ambilet_cache — matches the page cache TTL.
 $artistName = 'artistului'; // safe RO genitive fallback if API misses
+$artistImage = null;
 if (!empty($artistSlug)) {
     $artistData = api_cached('artist_meta_' . $artistSlug, function () use ($artistSlug) {
         return api_get('/artists/' . urlencode($artistSlug));
     }, 300);
-    if (!empty($artistData['success']) && !empty($artistData['data']['name'])) {
-        $artistName = (string) $artistData['data']['name'];
+    if (!empty($artistData['success']) && !empty($artistData['data'])) {
+        $d = $artistData['data'];
+        if (!empty($d['name'])) {
+            $artistName = (string) $d['name'];
+        }
+        // og:image priority: main hero photo → logo → portrait. Whatever
+        // the organizer uploaded first is what social crawlers get; head.php
+        // falls back to og-default.jpg only when all three are empty.
+        $img = $d['images']['main_image_url']
+            ?? $d['images']['logo_url']
+            ?? $d['images']['portrait_url']
+            ?? null;
+        if (!empty($img)) {
+            $artistImage = (string) $img;
+        }
     }
 }
 
@@ -38,6 +52,9 @@ if (!empty($artistSlug)) {
 // Page configuration (will be enriched by JS with real data)
 $pageTitle = "Evenimentele {$artistName}";
 $pageDescription = "Descoperă concertele și evenimentele {$artistName}. Cumpără bilete online pe {$siteName}.";
+if ($artistImage) {
+    $pageImage = $artistImage;
+}
 $bodyClass = 'page-artist-single';
 
 // Include head

@@ -24,6 +24,7 @@ if (empty($organizerSlug)) {
 // exposed to Googlebot / social crawlers). Cached 5 min in
 // /tmp/ambilet_cache.
 $organizerName = 'acestui organizator';
+$organizerImage = null;
 if (!empty($organizerSlug)) {
     $organizerData = api_cached('organizer_meta_' . $organizerSlug, function () use ($organizerSlug) {
         return api_get('/organizers/' . urlencode($organizerSlug));
@@ -31,12 +32,22 @@ if (!empty($organizerSlug)) {
     if (!empty($organizerData['success'])) {
         $d = $organizerData['data'] ?? [];
         $organizerName = (string) ($d['public_name'] ?? $d['name'] ?? $d['display_name'] ?? $organizerName);
+        // Prefer cover_image (landscape banner, closer to og's 1200x630 spec).
+        // Fall back to avatar (square logo) so Facebook still shows something
+        // branded rather than the generic og-default.
+        $img = $d['cover_image'] ?? $d['avatar'] ?? null;
+        if (!empty($img)) {
+            $organizerImage = (string) $img;
+        }
     }
 }
 
 // Page configuration — enriched by JS with the rest of the profile.
 $pageTitle = "Evenimente organizate de {$organizerName}";
 $pageDescription = "Descoperă evenimentele organizate de {$organizerName}. Concerte, festivaluri și experiențe de neuitat pe Ambilet.";
+if ($organizerImage) {
+    $pageImage = $organizerImage;
+}
 $bodyClass = 'page-organizer';
 
 // Include head

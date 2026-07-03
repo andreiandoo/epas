@@ -30,17 +30,29 @@ if (empty($venueSlug)) {
 // placeholder "Locație" that Googlebot / social crawlers were seeing
 // on every page). Cached 5 min in /tmp/ambilet_cache.
 $venueName = 'această locație';
+$venueImage = null;
 if (!empty($venueSlug)) {
     $venueData = api_cached('venue_meta_' . $venueSlug, function () use ($venueSlug) {
         return api_get('/venues/' . urlencode($venueSlug));
     }, 300);
-    if (!empty($venueData['success']) && !empty($venueData['data']['name'])) {
-        $venueName = (string) $venueData['data']['name'];
+    if (!empty($venueData['success']) && !empty($venueData['data'])) {
+        $d = $venueData['data'];
+        if (!empty($d['name'])) {
+            $venueName = (string) $d['name'];
+        }
+        // Venue hero image lives under media.image_url.
+        $img = $d['media']['image_url'] ?? null;
+        if (!empty($img)) {
+            $venueImage = (string) $img;
+        }
     }
 }
 
 $pageTitle = "Evenimente la {$venueName}";
 $pageDescription = "Descoperă evenimente și informații despre {$venueName}. Cumpără bilete online pe {$siteName}.";
+if ($venueImage) {
+    $pageImage = $venueImage;
+}
 $bodyClass = 'bg-slate-50';
 
 $cssBundle = 'single';
