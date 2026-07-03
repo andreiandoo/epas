@@ -84,11 +84,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
 
+        <!-- Banner: Casa este INCHISA (blocheaza vizibil orice vanzare) -->
+        <div id="lv-cash-locked-banner" class="hidden mb-4 p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-sm text-rose-900 print:hidden">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-rose-200 rounded-full flex items-center justify-center flex-shrink-0 text-lg">🔒</div>
+                <div class="flex-1">
+                    <p class="font-bold text-base">Casa este închisă</p>
+                    <p class="text-sm mt-0.5">Nu se pot procesa vânzări până când nu apeși <strong>🔓 Deschidere casă</strong> din partea de sus. Ora deschiderii și cea a închiderii se salvează pentru raport.</p>
+                </div>
+            </div>
+        </div>
+
         <div class="grid lg:grid-cols-3 gap-6 print:hidden items-start">
             <!-- Grid bilete: header eliminat, categoriile devin acordeoane full-width fara padding -->
-            <div class="lg:col-span-2 bg-white border rounded-2xl border-border overflow-hidden">
+            <div class="lg:col-span-2 bg-white border rounded-2xl border-border overflow-hidden relative">
                 <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
                 <div id="lv-grid" class="hidden"></div>
+                <!-- Overlay cand casa e inchisa: capteaza click-urile -->
+                <div id="lv-cash-locked-overlay" class="hidden absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-auto">
+                    <div class="text-center p-6">
+                        <div class="text-5xl mb-2">🔒</div>
+                        <p class="font-bold text-lg text-rose-900">Casa este închisă</p>
+                        <p class="text-sm text-muted mt-1">Deschide casa pentru a începe vânzările</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Sumar coș: sticky pe desktop cu overflow intern, ca sa vezi tot fara scroll de pagina -->
@@ -645,7 +664,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 comLine.classList.remove('flex');
             }
         }
-        $('lv-checkout').disabled = !payment;
+        // Guard: casa deschisa OBLIGATORIU pentru orice vanzare
+        $('lv-checkout').disabled = !payment || !cashierSession;
 
         wrap.querySelectorAll('button[data-act]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -778,17 +798,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function renderCashierButtons() {
         const openBtn = $('lv-cash-open');
         const closeBtn = $('lv-cash-close');
-        if (cashierSession) {
+        const banner = $('lv-cash-locked-banner');
+        const overlay = $('lv-cash-locked-overlay');
+        const checkoutBtn = $('lv-checkout');
+        const checkoutTestBtn = $('lv-checkout-test');
+        const isOpen = !!cashierSession;
+
+        if (isOpen) {
             if (openBtn) openBtn.hidden = true;
             if (closeBtn) {
                 closeBtn.hidden = false;
                 const since = $('lv-cash-open-since');
                 if (since) since.textContent = `· deschisă de la ${fmtTime(cashierSession.opened_at)}`;
             }
+            if (banner) banner.classList.add('hidden');
+            if (overlay) overlay.classList.add('hidden');
         } else {
             if (openBtn) openBtn.hidden = false;
             if (closeBtn) closeBtn.hidden = true;
+            if (banner) banner.classList.remove('hidden');
+            if (overlay) overlay.classList.remove('hidden');
         }
+        // Blocheaza checkout cand casa e inchisa (chiar daca cart are produse).
+        // renderCart() apeleaza si el disable pe checkout in functie de cart size,
+        // dar aici setam un baseline la nivel de sesiune.
+        if (checkoutBtn) checkoutBtn.disabled = !isOpen || Object.keys(cart).length === 0;
+        if (checkoutTestBtn) checkoutTestBtn.disabled = !isOpen;
     }
     async function openCashier() {
         const btn = $('lv-cash-open');
@@ -888,6 +923,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     async function checkout() {
         if ($('lv-checkout').disabled) return;
+        // Guard defensiv: chiar daca butonul e activ, verifica sesiunea la click
+        if (!cashierSession) {
+            alert('Casa este închisă. Apasă „🔓 Deschidere casă" înainte de vânzare.');
+            return;
+        }
         $('lv-checkout').disabled = true;
         $('lv-checkout').textContent = 'Procesează...';
         $('lv-error').classList.add('hidden');
@@ -1112,6 +1152,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // Finalizare TEST: printeaza bilete + (opțional) factura pe imprimanta termica
     // folosind datele din cosul curent. NU trimite nimic in DB. Cosul ramane intact.
     async function checkoutTest() {
+        if (!cashierSession) {
+            alert('Casa este închisă. Apasă „🔓 Deschidere casă" înainte de testul de print.');
+            return;
+        }
         if (!Object.keys(cart).length) {
             alert('Cosul e gol — adauga produse inainte de testul de print.');
             return;

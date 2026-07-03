@@ -891,6 +891,20 @@ class LeisureController extends BaseController
             $posLocale = $validated['locale'];
         }
 
+        // Guard: refuza vanzarea daca nu exista sesiune de casa deschisa.
+        // Solicitat de operator: Sf. Ana vrea audit clar 'deschidere/inchidere
+        // casa' + niciun POS sale in afara sesiunii deschise.
+        $eventOrganizerIdForShift = $eventModel->marketplace_organizer_id ?? $organizer->id;
+        $openSession = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerIdForShift)
+            ->where('event_id', $eventModel->id)
+            ->whereNull('closed_at')
+            ->orderByDesc('opened_at')
+            ->first();
+        if (!$openSession) {
+            return $this->error('Casa este închisă. Deschide casa înainte de a face vânzări.', 403);
+        }
+
         $visitDate = isset($validated['date'])
             ? Carbon::parse($validated['date'])->toDateString()
             : Carbon::today()->toDateString();
@@ -1139,6 +1153,10 @@ class LeisureController extends BaseController
                     'visit_date' => $visitDate,
                     'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
                     'cashier_organizer_id' => $organizer->id,
+                    // Sesiunea de casa activa in momentul vanzarii — pentru audit
+                    // 'ce s-a vandut in sesiunea X'. Guard-ul de mai sus a asigurat
+                    // ca $openSession exista.
+                    'cashier_session_id' => $openSession->id,
                     // Team member care a operat POS-ul (pentru raport per operator).
                     // Detectat din numele token-ului sanctum: 'team-member-{id}'.
                     // NULL cand loginul e ownership direct pe organizer.
