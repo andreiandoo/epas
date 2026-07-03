@@ -59,6 +59,13 @@ if ($artistImage) {
 // CANARY 2026-07-03 — grep this on live to confirm the file made it
 // through deploy-ambilet.bat + opcache reset. Remove after diagnosis.
 echo "\n<!-- OG_CANARY_20260703: artistImage=" . ($artistImage ?? 'NULL') . " pageImage=" . ($pageImage ?? 'NULL') . " -->\n";
+echo "<!-- OG_CANARY_API: slug=" . htmlspecialchars($artistSlug) . " -->\n";
+echo "<!-- OG_CANARY_API_SUCCESS: " . var_export($artistData['success'] ?? '(no success key)', true) . " -->\n";
+echo "<!-- OG_CANARY_API_HAS_DATA: " . var_export(!empty($artistData['data']), true) . " -->\n";
+echo "<!-- OG_CANARY_API_DATA_KEYS: " . implode(',', array_keys((array)($artistData['data'] ?? []))) . " -->\n";
+echo "<!-- OG_CANARY_API_IMAGES: " . htmlspecialchars(json_encode($artistData['data']['images'] ?? '(no images key)')) . " -->\n";
+echo "<!-- OG_CANARY_API_NAME: " . htmlspecialchars($artistData['data']['name'] ?? '(no name key)') . " -->\n";
+echo "<!-- OG_CANARY_API_ERROR: " . htmlspecialchars($artistData['error'] ?? '(no error key)') . " -->\n";
 $bodyClass = 'page-artist-single';
 
 // Include head

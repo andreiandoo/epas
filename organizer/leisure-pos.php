@@ -773,33 +773,37 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try {
             const res = await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/pos-sale`, body);
             const data = res.data || {};
-            // Render chitanță A4 (browser dialog) — DOAR cand imprimanta termica
-            // WebUSB nu e disponibila sau nu e activat auto-print. Cand user-ul
-            // are deja printer termic conectat si vrea auto-print, dialog-ul
-            // browser-ului e enervant si duplicativ.
-            const hasThermalReady = typeof PosPrinter !== 'undefined'
-                && PosPrinter.isSupported()
-                && PosPrinter.getAutoPrintEnabled();
+
+            // 1. Print termic ESC/POS PRIMUL. Await ca sa nu apara window.print()
+            //    peste procesul de printare (era race condition — setTimeout(200ms)
+            //    fireata cand printarea bilet 2/3 era in curs).
+            let thermalDone = false;
+            if (typeof window.posAutoPrintTickets === 'function') {
+                try {
+                    await window.posAutoPrintTickets(data);
+                    // Setam flag DOAR cand PosPrinter chiar era disponibil + auto-print activ
+                    thermalDone = typeof PosPrinter !== 'undefined'
+                        && PosPrinter.isSupported()
+                        && PosPrinter.getAutoPrintEnabled();
+                } catch (e) { console.warn('[checkout] auto-print failed:', e); }
+            }
+
+            // 2. Print factura fiscala pe imprimanta termica daca operatorul a bifat
+            //    'Genereaza factura fiscala' + avem date firma cumparator.
+            if (typeof window.posPrintInvoiceFromSale === 'function' && $('lv-co-invoice').checked) {
+                try { await window.posPrintInvoiceFromSale(data); }
+                catch (e) { console.warn('[checkout] invoice print failed:', e); }
+            }
+
+            // 3. Chitanta A4 (browser dialog) DOAR daca thermal nu a mers.
+            //    Fallback pentru statii fara printer termic.
             $('lv-receipt').innerHTML = buildReceiptHtml(data);
-            if (!hasThermalReady) {
+            if (!thermalDone) {
                 $('lv-receipt').classList.remove('hidden');
                 setTimeout(() => {
                     window.print();
                     $('lv-receipt').classList.add('hidden');
                 }, 200);
-            }
-
-            // Print termic bilete (WebUSB ESC/POS) — non-blocking, eseuc != esec vanzare.
-            // Toggle-ul "Print automat dupa fiecare comanda" e in panou imprimanta termica.
-            if (typeof window.posAutoPrintTickets === 'function') {
-                try { await window.posAutoPrintTickets(data); }
-                catch (e) { console.warn('[checkout] auto-print failed:', e); }
-            }
-            // Print factura fiscala pe imprimanta termica daca operatorul a bifat
-            // "Genereaza factura fiscala" + avem date firma cumparator.
-            if (typeof window.posPrintInvoiceFromSale === 'function' && $('lv-co-invoice').checked) {
-                try { await window.posPrintInvoiceFromSale(data); }
-                catch (e) { console.warn('[checkout] invoice print failed:', e); }
             }
             // Daca operatorul a cerut factura si exista date firma → ofera-i butonul de generare
             const orderId = data?.order?.id;
