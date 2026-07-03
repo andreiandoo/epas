@@ -265,7 +265,14 @@ class PublicDataController extends Controller
                 'tiktok_url' => $venue->tiktok_url,
             ],
             'media' => [
-                'image_url' => $venue->image_url,
+                // Same absolute-URL contract as artist images: the
+                // column holds a bare "storage/"-relative path; external
+                // consumers (og:image on /locatie/{slug}, tenant sites)
+                // need a fully qualified URL or Facebook resolves it
+                // against the wrong origin and 404s.
+                'image_url' => $venue->image_url
+                    ? (str_starts_with($venue->image_url, 'http') ? $venue->image_url : url('storage/' . ltrim($venue->image_url, '/')))
+                    : null,
                 'video_type' => $venue->video_type,
                 'video_url' => $venue->video_url,
                 'gallery' => $venue->gallery,
@@ -519,9 +526,17 @@ class PublicDataController extends Controller
                 'spotify_id' => $artist->spotify_id,
             ],
             'images' => [
-                'main_image_url' => $artist->main_image_url,
-                'logo_url' => $artist->logo_url,
-                'portrait_url' => $artist->portrait_url,
+                // Serve ABSOLUTE URLs. The underlying columns hold
+                // bare storage-relative paths ("artists/xxx.jpg") but
+                // external consumers — og:image on the artist page,
+                // Facebook / Twitter link previews, tenant sites —
+                // resolve those relative to their own origin and 404.
+                // The Artist model already exposes *_full_url
+                // accessors that prepend APP_URL + /storage/, so use
+                // those and keep the keys stable.
+                'main_image_url' => $artist->main_image_full_url,
+                'logo_url' => $artist->logo_full_url,
+                'portrait_url' => $artist->portrait_full_url,
             ],
             'youtube_videos' => $artist->youtube_videos,
             'followers' => [
