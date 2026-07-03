@@ -17,9 +17,13 @@
 //  - Portrait / telefon: fullscreen camera cu overlay peste (varianta veche)
 //
 // Camera flip:
-//  - Buton mic in colt dreapta-sus al zonei camerei
-//  - Toggle "back" <-> "front" pentru cazuri de test / self-check tabletă
-//    unde biletul e prezentat frontal.
+//  - Iconita discreta in colt dreapta-sus, doar iconita, fara text.
+//    Clientii nu vor fi tentati sa dea click, dar operatorul stie ca e acolo.
+//  - Toggle "back" <-> "front".
+//
+// Sunete (expo-av, preincarcate la mount):
+//  - success.wav: chime C5->E5 la validare cu succes
+//  - error.wav:  buzz descendent F#4->D4->A3 la duplicate / invalid
 //
 // Activare: user cu team_member.leisure_role === 'kiosk_selfcheckin'
 // este rutat direct aici in App.js (nu vede Hub / login card / setari).
@@ -37,6 +41,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useKeepAwake } from 'expo-keep-awake';
+import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
 import { organizerCheckInByCode } from '../api/leisure';
 
@@ -65,6 +70,8 @@ export default function KioskScreen() {
   const [cameraFacing, setCameraFacing] = useState('back');
   const lastScanRef = useRef({ code: null, at: 0 });
   const returnTimerRef = useRef(null);
+  const successSoundRef = useRef(null);
+  const errorSoundRef = useRef(null);
 
   // Cerere permisiune la prima montare
   useEffect(() => {
@@ -72,6 +79,49 @@ export default function KioskScreen() {
       requestPermission();
     }
   }, [permission]);
+
+  // Preincarcare sunete la mount + cleanup la unmount. Le tinem in ref pentru
+  // ca playAsync sa poata rula fara re-load. replayAsync = re-declanseaza chiar
+  // daca sunetul era la mijlocul redarii (ex. 2 scanari rapide).
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          staysActiveInBackground: false,
+        });
+        const [{ sound: sSuccess }, { sound: sError }] = await Promise.all([
+          Audio.Sound.createAsync(require('../../assets/sounds/success.wav')),
+          Audio.Sound.createAsync(require('../../assets/sounds/error.wav')),
+        ]);
+        if (mounted) {
+          successSoundRef.current = sSuccess;
+          errorSoundRef.current = sError;
+        } else {
+          sSuccess.unloadAsync();
+          sError.unloadAsync();
+        }
+      } catch (e) {
+        // Fail silent — kiosk-ul functioneaza si fara audio.
+      }
+    })();
+    return () => {
+      mounted = false;
+      if (successSoundRef.current) successSoundRef.current.unloadAsync();
+      if (errorSoundRef.current) errorSoundRef.current.unloadAsync();
+    };
+  }, []);
+
+  const playSound = useCallback((kind) => {
+    const ref = kind === 'success' ? successSoundRef : errorSoundRef;
+    const snd = ref.current;
+    if (!snd) return;
+    // replayAsync repornește sunetul chiar dacă e la mijloc; fail silent daca nu
+    // e inca gata (mount race).
+    snd.replayAsync().catch(() => {});
+  }, []);
 
   // Blocheaza system back (kiosk mode)
   useEffect(() => {
@@ -114,6 +164,7 @@ export default function KioskScreen() {
       if (resp?.success) {
         setPayload(resp?.data || resp);
         setStatus(S_SUCCESS);
+        playSound('success');
         scheduleReturn(RESULT_MS_SUCCESS);
         return;
       }
@@ -123,11 +174,13 @@ export default function KioskScreen() {
         setPayload(resp?.data || resp);
         setErrorMsg(msg);
         setStatus(S_DUPLICATE);
+        playSound('error');
         scheduleReturn(RESULT_MS_ERROR);
         return;
       }
       setErrorMsg(msg || 'Bilet invalid');
       setStatus(S_INVALID);
+      playSound('error');
       scheduleReturn(RESULT_MS_ERROR);
     } catch (e) {
       const em = e?.message || 'Eroare la validare';
@@ -135,14 +188,16 @@ export default function KioskScreen() {
       if (/already checked in/i.test(em) || /deja/i.test(em)) {
         setErrorMsg(em);
         setStatus(S_DUPLICATE);
+        playSound('error');
         scheduleReturn(RESULT_MS_ERROR);
         return;
       }
       setErrorMsg(em);
       setStatus(S_INVALID);
+      playSound('error');
       scheduleReturn(RESULT_MS_ERROR);
     }
-  }, [status, scheduleReturn]);
+  }, [status, scheduleReturn, playSound]);
 
   // Camera permissions gates
   if (!permission) {
@@ -304,6 +359,8 @@ function StepRow({ n, title, body }) {
 }
 
 function FlipCameraButton({ onPress, facing }) {
+  // Doar iconita, fara text — nu vrem sa tentam clientii sa dea click.
+  // Discret in colt dreapta-sus; operatorul stie ca e acolo.
   const label = facing === 'back' ? 'Cameră frontală' : 'Cameră spate';
   return (
     <View style={styles.flipWrap} pointerEvents="box-none">
@@ -311,9 +368,9 @@ function FlipCameraButton({ onPress, facing }) {
         onPress={onPress}
         style={({ pressed }) => [styles.flipBtn, pressed && styles.flipBtnPressed]}
         accessibilityLabel={label}
+        hitSlop={10}
       >
         <Text style={styles.flipIcon}>🔄</Text>
-        <Text style={styles.flipLabel}>{label}</Text>
       </Pressable>
     </View>
   );
@@ -355,11 +412,29 @@ function firstNameOf(fullName) {
 }
 
 function SuccessOverlay({ data, rightSide }) {
-  const tName = data?.ticket?.ticket_type || 'Bilet';
-  // Preferam customer.name (assembly first_name+last_name din backend),
-  // fallback la ticket.attendee_name pentru invitatii fara customer.
-  const fullName = data?.customer?.name || data?.ticket?.attendee_name || '';
+  // Distinctia bilet client vs staff QR:
+  //   - Bilet client: backend returneaza data.customer.name (assembly
+  //     first_name+last_name din marketplace_customers) + data.ticket.ticket_type.
+  //   - Staff QR:     backend returneaza data.staff.full_name +
+  //     data.staff.position. Nu exista data.customer sau data.ticket.
+  //
+  // Fallback chain robusta pentru ambele cazuri + invitatii (attendee_name)
+  // + POS orders vechi (order.customer_name).
+  const isStaff = !!data?.is_staff || !!data?.staff;
+  const fullName =
+    data?.customer?.name ||
+    data?.staff?.full_name ||
+    data?.ticket?.attendee_name ||
+    data?.order?.customer_name ||
+    '';
   const firstName = firstNameOf(fullName);
+  const badge = isStaff
+    ? (data?.staff?.position || 'Personal')
+    : (data?.ticket?.ticket_type || 'Bilet');
+  const closingLine = isStaff
+    ? 'Spor la muncă! 🌲'
+    : 'Vă mulțumim! Ziua plăcută la Lacul Sf. Ana. 🌲';
+
   return (
     <View style={[rightSide ? styles.fullRightOverlay : styles.fullOverlay, styles.overlaySuccess]}>
       <Text style={styles.bigIcon}>✓</Text>
@@ -367,11 +442,9 @@ function SuccessOverlay({ data, rightSide }) {
         {firstName ? `Bun venit, ${firstName}!` : 'Bun venit!'}
       </Text>
       <View style={styles.pill}>
-        <Text style={styles.pillText}>{tName}</Text>
+        <Text style={styles.pillText}>{badge}</Text>
       </View>
-      <Text style={styles.politeMessage}>
-        Vă mulțumim! Ziua plăcută la Lacul Sf. Ana. 🌲
-      </Text>
+      <Text style={styles.politeMessage}>{closingLine}</Text>
     </View>
   );
 }
@@ -560,36 +633,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Buton flip cameră (colț dreapta-sus al zonei camerei)
+  // Buton flip camera (iconita discreta, colt dreapta-sus)
   flipWrap: {
     position: 'absolute',
-    top: 20,
-    right: 20,
+    top: 16,
+    right: 16,
     zIndex: 20,
   },
   flipBtn: {
-    flexDirection: 'row',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   flipBtnPressed: {
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
   },
   flipIcon: {
-    fontSize: 18,
+    fontSize: 16,
     color: colors.paper,
-  },
-  flipLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.paper,
-    letterSpacing: 0.3,
+    opacity: 0.85,
   },
 
   // READY portrait (varianta veche, telefon)
