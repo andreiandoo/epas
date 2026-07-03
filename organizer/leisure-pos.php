@@ -842,26 +842,76 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/cashier/sessions`, {});
             const data = res.data || {};
             const sessions = data.sessions || [];
-            renderCashTimeline(sessions, data.date);
+            renderCashTimeline(sessions, data.date, data.last_closed_reference || null);
         } catch (e) {
             wrap.innerHTML = '<p class="text-sm text-rose-700 text-center py-6">Eroare la încărcare: ' + (e?.message || '') + '</p>';
         }
     }
 
-    function renderCashTimeline(sessions, date) {
+    // Randare card sesiune (folosit atat pentru sesiunile zilei cat si pentru
+    // ultima inchidere afisata ca referinta cand nu sunt sesiuni azi).
+    function renderCashSessionCard(s) {
+        const escapeHtml = (v) => String(v || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        const PM_LABELS = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
+        const isOpen = s.is_open;
+        const openTime = fmtTime(s.opened_at);
+        const closeTime = s.closed_at ? fmtTime(s.closed_at) : '⏳ în desfășurare';
+        // Data completa cand sesiunea traverseaza miezul noptii sau e din alta zi
+        const openDate = s.opened_at ? new Date(s.opened_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
+        const closeDate = s.closed_at ? new Date(s.closed_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
+        const showDates = openDate && closeDate && openDate !== closeDate;
+        const dur = s.duration_minutes != null ? (s.duration_minutes >= 60 ? `${Math.floor(s.duration_minutes/60)}h ${s.duration_minutes%60}m` : `${s.duration_minutes} min`) : '';
+        const t = s.snapshot?.totals || {};
+        const byPay = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
+        const byPayHtml = byPay.map(p => `<div class="flex justify-between text-xs"><span>${PM_LABELS[p.method] || p.method}</span><strong>${fmtMoney(p.revenue)} RON</strong></div>`).join('');
+        const badge = isOpen
+            ? '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
+            : '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
+        const timeLine = showDates
+            ? `${openDate} ${openTime} → ${closeDate} ${closeTime}${dur ? ' · ' + dur : ''}`
+            : `${openTime} → ${closeTime}${dur ? ' · ' + dur : ''}`;
+        return `<div class="border border-border rounded-xl p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <p class="text-sm font-bold text-secondary">${escapeHtml(s.opened_label || 'Operator')}</p>
+                    <p class="text-[11px] text-muted">${timeLine}</p>
+                </div>
+                ${badge}
+            </div>
+            ${!isOpen && t.revenue != null ? `<div class="pt-2 border-t border-slate-100">
+                <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets || 0} bilete · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
+                ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : ''}
+            </div>` : ''}
+        </div>`;
+    }
+
+    function renderCashTimeline(sessions, date, lastClosedRef) {
         const wrap = $('lv-cash-timeline-body');
         if (!wrap) return;
         const escapeHtml = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        const PM_LABELS = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
 
         const header = `<div class="pb-2 border-b border-border">
             <p class="text-xs uppercase tracking-wider text-muted font-semibold">Ziua</p>
             <p class="text-sm font-bold text-secondary">${date ? new Date(date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'long', year:'numeric' }) : '—'}</p>
         </div>`;
 
+        // Cand nu sunt sesiuni azi dar avem ultima inchidere din alta zi → afisam
+        // ultima inchidere ca referinta.
         if (!sessions.length) {
-            wrap.innerHTML = header + '<p class="text-sm text-muted text-center py-8">Nicio sesiune de casă înregistrată astăzi.</p>' +
-                '<p class="text-xs text-muted text-center">Apasă „🔓 Deschidere casă" din partea de sus pentru a începe.</p>';
+            let content = header + '<p class="text-sm text-muted text-center py-4">Nicio sesiune de casă înregistrată astăzi.</p>';
+            if (lastClosedRef) {
+                const refDate = lastClosedRef.closed_at ? new Date(lastClosedRef.closed_at).toLocaleDateString('ro-RO', { day:'2-digit', month:'long', year:'numeric' }) : '—';
+                content += `<div class="pt-2">
+                    <div class="mb-2 flex items-center gap-2">
+                        <span class="text-[10px] uppercase tracking-wider text-amber-700 font-bold bg-amber-50 border border-amber-200 rounded px-2 py-0.5">📸 Ultima închidere</span>
+                        <span class="text-[11px] text-muted">${refDate}</span>
+                    </div>
+                    ${renderCashSessionCard(lastClosedRef)}
+                </div>`;
+            } else {
+                content += '<p class="text-xs text-muted text-center">Apasă „🔓 Deschidere casă" din partea de sus pentru a începe.</p>';
+            }
+            wrap.innerHTML = content;
             return;
         }
 
@@ -880,31 +930,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <p class="text-xs text-emerald-700 mt-0.5">${totalOrders} comenzi · ${totalTickets} bilete · ${sessions.length} sesiun${sessions.length === 1 ? 'e' : 'i'}</p>
         </div>`;
 
-        const rows = sessions.map(s => {
-            const isOpen = s.is_open;
-            const openTime = fmtTime(s.opened_at);
-            const closeTime = s.closed_at ? fmtTime(s.closed_at) : '⏳ în desfășurare';
-            const dur = s.duration_minutes != null ? `${s.duration_minutes} min` : '';
-            const t = s.snapshot?.totals || {};
-            const byPay = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
-            const byPayHtml = byPay.map(p => `<div class="flex justify-between text-xs"><span>${PM_LABELS[p.method] || p.method}</span><strong>${fmtMoney(p.revenue)} RON</strong></div>`).join('');
-            const badge = isOpen
-                ? '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
-                : '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
-            return `<div class="border border-border rounded-xl p-3 space-y-2">
-                <div class="flex items-center justify-between gap-2">
-                    <div>
-                        <p class="text-sm font-bold text-secondary">${escapeHtml(s.opened_label || 'Operator')}</p>
-                        <p class="text-[11px] text-muted">${openTime} → ${closeTime} ${dur ? '· ' + dur : ''}</p>
-                    </div>
-                    ${badge}
-                </div>
-                ${!isOpen && t.revenue != null ? `<div class="pt-2 border-t border-slate-100">
-                    <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets || 0} bilete · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
-                    ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : ''}
-                </div>` : ''}
-            </div>`;
-        }).join('');
+        const rows = sessions.map(s => renderCashSessionCard(s)).join('');
 
         wrap.innerHTML = header + summary + '<div class="space-y-2">' + rows + '</div>';
     }
