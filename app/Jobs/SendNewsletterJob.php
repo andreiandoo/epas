@@ -67,6 +67,17 @@ class SendNewsletterJob implements ShouldQueue
             return;
         }
 
+        // Keep total_recipients in lockstep with the actual row count so
+        // /marketplace/newsletters + the Send-stats card don't lie when
+        // recipients get topped up mid-send (e.g. a manual recovery run
+        // that inserts fresh pending rows without going through
+        // createRecipients()). Cheap COUNT — negligible next to the SMTP
+        // hop we're about to make.
+        $actualCount = MarketplaceNewsletterRecipient::where('newsletter_id', $newsletter->id)->count();
+        if ((int) $newsletter->total_recipients !== $actualCount) {
+            $newsletter->update(['total_recipients' => $actualCount]);
+        }
+
         // Check if SMTP is configured
         if (!$marketplace->hasSmtpConfigured()) {
             $newsletter->update([
