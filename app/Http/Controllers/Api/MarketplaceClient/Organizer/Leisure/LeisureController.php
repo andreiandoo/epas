@@ -2253,7 +2253,19 @@ class LeisureController extends BaseController
         }
 
         foreach ($orders as $o) {
-            $rev = (float) ($o->total ?? 0);
+            // Revenue = suma effective_price a biletelor NErefundate = ce a incasat efectiv
+            // organizatorul (post-discount, exclusiv processing_fee + insurance + on-top commission).
+            // NU folosim $o->total pentru ca include fee/insurance/on-top ce nu conteaza ca
+            // "vanzare organizator" si NU reflecta discount-uri per-ticket (ex. promo code 100%
+            // pe biletele elligible din cart mixt).
+            $rev = 0.0;
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $rev += method_exists($t, 'getEffectivePrice')
+                    ? (float) $t->getEffectivePrice()
+                    : (float) ($t->price ?? 0);
+            }
+            $rev = round($rev, 2);
             $totalRevenue += $rev;
 
             // Comisionul pe comanda:
@@ -2274,8 +2286,12 @@ class LeisureController extends BaseController
             } else {
                 foreach ($o->tickets as $t) {
                     if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
-                    $tp = (float) ($t->price ?? 0);
-                    if ($tp <= 0) continue; // biletele bonus/componente pachet = 0 lei -> fara comision
+                    // Comisionul se calculeaza pe SUMA REALA INCASATA (post-discount).
+                    // Bilete cu effective_price=0 (bonus, componente pachet, sau full-discount) → fara comision.
+                    $tp = method_exists($t, 'getEffectivePrice')
+                        ? (float) $t->getEffectivePrice()
+                        : (float) ($t->price ?? 0);
+                    if ($tp <= 0) continue;
                     $pct = round($tp * $orgRate / 100, 2);
                     $orderCommission += $orgFloor > 0 ? max($pct, $orgFloor) : $pct;
                 }
@@ -2354,13 +2370,23 @@ class LeisureController extends BaseController
                 // ---- Sectiunea "Per tip bilet" (contorizare TRANZACTII, nu bilete fizice)
                 // Componentele pachetului nu apar aici (nu au valoare proprie).
                 //
+                // IMPORTANT: folosim getEffectivePrice() (nu ticket.price) ca sa reflectam
+                // discount-ul din promo code aplicat pe order. Fara asta, o comanda cu
+                // reducere 100% aparea in raport cu suma pre-discount (bilete de 101 lei
+                // in loc de 0). Discount-ul e stocat in ticket.meta.discount_amount
+                // (per-ticket, scris la checkout) sau ca fallback proportional din
+                // order.subtotal/discount_amount pe biletele vechi.
+                //
                 // Filtru dublu:
                 //  (a) skip biletele marcate cu meta.from_package=true (metoda POS noua)
-                //  (b) defensiv: skip TOATE biletele cu price=0 (legacy — daca
-                //      cineva emitea pachete inainte de meta.from_package, componentele
-                //      cu price=0 nu trebuie sa apara ca 'tranzactii'; nici guide
-                //      bonus cu price=0 nu trebuie aici — apar la 'Pe tip bilet emis')
+                //  (b) defensiv: skip biletele cu effective_price=0 (legacy sau full-discount)
+                //      pentru sectiunea de tranzactii — apar totusi la "Pe tip bilet emis"
+                //      pentru a nu pierde inventarul emis.
+                //  (c) Un bilet FULL-DISCOUNT (effective_price=0) reprezinta o tranzactie
+                //      cu discount 100% — TREBUIE contorizat ca tranzactie (in tickets++)
+                //      dar cu revenue=0. Verificam pe ticket.price sa fim consecvenți.
                 $tp = (float) ($t->price ?? 0);
+                $effectivePrice = method_exists($t, 'getEffectivePrice') ? $t->getEffectivePrice() : $tp;
                 if (!$isFromPackage && $tp > 0) {
                     $totalTickets++;
                     $issuer = $t->ticketType->issuing_company ?? 'primary';
@@ -2377,10 +2403,16 @@ class LeisureController extends BaseController
                         ];
                     }
                     $byTicketType[$key]['tickets']++;
-                    $byTicketType[$key]['revenue'] += $tp;
-                    // Comision per bilet cu floor
-                    $ticketCommission = round($tp * $orgRate / 100, 2);
-                    if ($orgFloor > 0 && $ticketCommission < $orgFloor) $ticketCommission = $orgFloor;
+                    // Revenue post-discount (effective) pentru cifra reala incasata.
+                    $byTicketType[$key]['revenue'] += $effectivePrice;
+                    // Comision per bilet pe SUMA REALA INCASATA (nu pe pretul list).
+                    // Cand biletul e full-discount (effective_price=0), comisionul = 0.
+                    // Floor-ul se aplica DOAR daca biletul a fost incasat (effectivePrice > 0)
+                    // — pe biletele complet reduse nu percepem floor (nu ai ce colecta din 0).
+                    $ticketCommission = round($effectivePrice * $orgRate / 100, 2);
+                    if ($orgFloor > 0 && $ticketCommission < $orgFloor && $effectivePrice > 0) {
+                        $ticketCommission = $orgFloor;
+                    }
                     $byTicketType[$key]['commission'] += $ticketCommission;
 
                     // Aggregare pe societate emitenta (SC1 primary / SC2 secondary).
@@ -2404,6 +2436,8 @@ class LeisureController extends BaseController
                                 $cIssuer = $componentIssuerMap[$cid] ?? 'primary';
                                 $portion = isset($out['price']) ? (float) $out['price'] : 0.0;
                                 if ($portion <= 0) continue;
+                                // Alocarea din meta e in RATIO — o pastram pentru distribuire,
+                                // dar suma efectiva o luam din effective_price mai jos.
                                 $splits[] = ['issuer' => $cIssuer, 'amount' => $portion];
                             }
                         }
@@ -2411,18 +2445,19 @@ class LeisureController extends BaseController
                     if (empty($splits)) {
                         // Fallback: single-issuer (comportament vechi)
                         $issuerKey = $issuer === 'secondary' ? 'secondary' : 'primary';
-                        $splits[] = ['issuer' => $issuerKey, 'amount' => $tp];
+                        $splits[] = ['issuer' => $issuerKey, 'amount' => $tp > 0 ? $tp : 1];
                     }
 
-                    // Distribute revenue + commission by ratio. Numaram biletul pe issuer-ul
-                    // cu cea mai mare alocare (evitam double-counting: 1 bilet-pachet =
-                    // 1 in tickets globale).
+                    // Distribute revenue + commission POST-DISCOUNT proportional pe alocarile
+                    // originale (Mix pachete) sau integral pe single-issuer. Ratio-ul e din
+                    // meta.package_outputs (proportion din pretul catalog), suma REALA vine
+                    // din effectivePrice.
                     $splitTotal = array_sum(array_column($splits, 'amount'));
                     $biggest = null; $biggestAmt = -1;
                     foreach ($splits as $s) {
                         if ($s['amount'] > $biggestAmt) { $biggestAmt = $s['amount']; $biggest = $s['issuer']; }
                         $ratio = $splitTotal > 0 ? $s['amount'] / $splitTotal : 0;
-                        $rev = $tp * $ratio;
+                        $rev = $effectivePrice * $ratio;
                         $com = $ticketCommission * $ratio;
                         $byIssuer[$s['issuer']]['revenue'] += $rev;
                         $byIssuer[$s['issuer']]['commission'] += $com;
