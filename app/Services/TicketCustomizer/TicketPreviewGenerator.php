@@ -198,7 +198,19 @@ class TicketPreviewGenerator
         $fontSizePt = round(($layer['fontSize'] ?? 12) * self::MM_TO_PT, 1);
         $color = $layer['color'] ?? '#000000';
         $align = $layer['textAlign'] ?? 'left';
-        $fontWeight = $layer['fontWeight'] ?? 'normal';
+        // Normalizam fontWeight la 'normal' sau 'bold' — DejaVu Sans (font-ul built-in
+        // DomPDF) NU are variantele 500/600/medium/semibold. Cand nu gaseste weight-ul
+        // cerut, DomPDF cade pe fallback font (Times/Helvetica) care e WinAnsi encoded
+        // si NU contine caracterele romanesti Latin Extended-B (ș U+0219, ț U+021B).
+        // Rezultat: 'ș' se randeaza ca '?'. Fix: mapare simpla weight -> normal/bold.
+        $rawWeight = $layer['fontWeight'] ?? 'normal';
+        if (is_string($rawWeight) && (str_contains($rawWeight, 'bold') || $rawWeight === '700' || $rawWeight === '800' || $rawWeight === '900')) {
+            $fontWeight = 'bold';
+        } elseif (is_numeric($rawWeight) && (int) $rawWeight >= 600) {
+            $fontWeight = 'bold';
+        } else {
+            $fontWeight = 'normal';
+        }
         // Line-height proportional to font size (1.3x) for proper multi-line text wrapping
         $lineHeightPt = round($fontSizePt * 1.3, 1);
 
