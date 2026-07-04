@@ -526,17 +526,22 @@ class EventResource extends Resource
                                         // the same breakdown. Revenue reflects money customers paid for CURRENTLY
                                         // VALID tickets (excludes later-cancelled portion). See getSalesBreakdown.
                                         $breakdown = self::getSalesBreakdown($record);
-                                        $totalRevenue = $breakdown['total_revenue'];
-                                        $totalNet = $breakdown['total_net'];
                                         // Commission the platform earned on this event = commission on
                                         // still-valid tickets PLUS commission kept from refunded orders
                                         // where the operator chose "fara taxa" (commission_refunded=false).
                                         // The service intentionally keeps the raw total_commission untouched
                                         // — payout math already accounts for refund commission on its own
                                         // side — so we fold in the kept portion at the display layer.
-                                        // Repro: order MKT-FFNIQWKJ on event 4601 kept 16.80 that wouldn't
-                                        // show up on tab=vanzari before.
+                                        // Same portion must also be added to Venituri so the identity
+                                        // Net + Comisioane = Venituri holds. The kept 16.80 on order
+                                        // MKT-FFNIQWKJ / event 4601 is real revenue for the platform
+                                        // (customer paid it, we kept it) — it just isn't Net for the
+                                        // organizer. Without adding it to $totalRevenue the header
+                                        // reads "Venituri 6.307, Net+Com 6.323,80" and the operator
+                                        // immediately spots the mismatch.
                                         $keptFromRefunds = (float) ($breakdown['total_commission_kept_from_refunds'] ?? 0);
+                                        $totalRevenue = $breakdown['total_revenue'] + $keptFromRefunds;
+                                        $totalNet = $breakdown['total_net'];
                                         $totalCommission = $breakdown['total_commission'] + $keptFromRefunds;
                                         $totalExtras = $breakdown['total_extras'];
                                         $totalDiscount = $breakdown['total_discount'];
