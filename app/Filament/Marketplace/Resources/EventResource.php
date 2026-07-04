@@ -528,11 +528,26 @@ class EventResource extends Resource
                                         $breakdown = self::getSalesBreakdown($record);
                                         $totalRevenue = $breakdown['total_revenue'];
                                         $totalNet = $breakdown['total_net'];
-                                        $totalCommission = $breakdown['total_commission'];
+                                        // Commission the platform earned on this event = commission on
+                                        // still-valid tickets PLUS commission kept from refunded orders
+                                        // where the operator chose "fara taxa" (commission_refunded=false).
+                                        // The service intentionally keeps the raw total_commission untouched
+                                        // — payout math already accounts for refund commission on its own
+                                        // side — so we fold in the kept portion at the display layer.
+                                        // Repro: order MKT-FFNIQWKJ on event 4601 kept 16.80 that wouldn't
+                                        // show up on tab=vanzari before.
+                                        $keptFromRefunds = (float) ($breakdown['total_commission_kept_from_refunds'] ?? 0);
+                                        $totalCommission = $breakdown['total_commission'] + $keptFromRefunds;
                                         $totalExtras = $breakdown['total_extras'];
                                         $totalDiscount = $breakdown['total_discount'];
                                         $totalRevenuePos = $breakdown['total_revenue_pos'] ?? 0;
-                                        $totalCommissionOnline = $breakdown['total_commission_online'] ?? $totalCommission;
+                                        // Refunds only happen on ONLINE orders (the POS pipeline
+                                        // isn't wired for card refunds), so attribute all kept
+                                        // commission to the online split. Without this the
+                                        // Online + POS sub-labels would sum to less than the
+                                        // Total Comisioane card and the operator would spot the
+                                        // discrepancy immediately.
+                                        $totalCommissionOnline = ($breakdown['total_commission_online'] ?? $breakdown['total_commission']) + $keptFromRefunds;
                                         $totalCommissionPos = $breakdown['total_commission_pos'] ?? 0;
                                         $totalNetOnline = $breakdown['total_net_online'] ?? $totalNet;
                                         $totalNetPos = $breakdown['total_net_pos'] ?? 0;
@@ -5528,6 +5543,13 @@ class EventResource extends Resource
             'total_revenue' => $breakdown['total_revenue'],
             'total_net' => $breakdown['total_net'],
             'total_commission' => $breakdown['total_commission'],
+            // Commission the platform kept when refunds were issued
+            // WITHOUT the ticketing fee (commission_refunded=false on
+            // marketplace_refund_items). Bubbled up so the Vanzari
+            // header can fold it into its Comisioane total without
+            // touching the payout-side numbers.
+            'total_commission_kept_from_refunds' => $breakdown['total_commission_kept_from_refunds'] ?? 0,
+            'total_refunded_principal' => $breakdown['total_refunded_principal'] ?? 0,
             'total_extras' => $breakdown['total_extras'],
             'total_discount' => $breakdown['total_discount'],
             'total_revenue_online' => $onlineBreakdown['total_revenue'],

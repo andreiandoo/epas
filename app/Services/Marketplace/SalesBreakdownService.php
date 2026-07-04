@@ -381,6 +381,70 @@ class SalesBreakdownService
         $totalNet = max(0.0, $sumValidGross - $sumDiscountValid - $sumIncluded - $sumExtrasValid);
         $totalRevenue = $sumValidGross + $sumOnTop + $sumExtrasValid;
 
+        // Commission the platform KEPT from refunded orders — refunds
+        // where the operator chose "fara taxa" (commission_refunded=false
+        // on the item) mean the 6% fee never went back to the customer;
+        // the platform earned it. Historical build() dropped the whole
+        // refunded order (order.status='refunded' + ticket.status='refunded'
+        // both filtered out), so this kept portion silently disappeared
+        // from total_commission and the /marketplace/events/{id}?tab=vanzari
+        // header read as if the refund had reversed the taxa too.
+        // Repro: order MKT-FFNIQWKJ on event 4601 (refund_request 75) —
+        // commission_refund=0.00, four refund_items with commission_amount
+        // 4.20 each and commission_refunded=false; total_commission was
+        // 357.00, should have been 373.80.
+        //
+        // Sum ri.commission_amount over refund_items where the parent
+        // ticket belongs to this event AND commission stayed with the
+        // platform. Bounded by the same periodStart / periodEnd used
+        // above so payout slices remain historically consistent — the
+        // kept-commission anchor is the refund_item's updated_at (the
+        // moment the refund was actually processed).
+        $keptCommissionQ = \DB::table('marketplace_refund_items as ri')
+            ->join('tickets as t', 'ri.ticket_id', '=', 't.id')
+            ->where(function ($q) use ($eventId) {
+                $q->where('t.event_id', $eventId)
+                    ->orWhere('t.marketplace_event_id', $eventId);
+            })
+            ->where('ri.commission_refunded', false)
+            ->where('ri.status', 'refunded');
+        if ($periodStart) {
+            $operator = $exactBounds ? '>' : '>=';
+            $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+            $keptCommissionQ->where('ri.updated_at', $operator, $bound);
+        }
+        if ($periodEnd) {
+            $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+            $keptCommissionQ->where('ri.updated_at', '<=', $bound);
+        }
+        $keptCommission = (float) $keptCommissionQ->sum('ri.commission_amount');
+        // NB: we DO NOT fold $keptCommission into $totalCommission here
+        // — summarizeForPayout / buildForPayout would silently
+        // double-count refund commission on payouts (already tracked
+        // separately by the payout pipeline). The Vanzari header adds
+        // it in for display only, using the dedicated key emitted below.
+        // Refund principal that WAS returned to the customer (refund_amount
+        // rows only accumulate the ticket face value we sent back). Kept
+        // for transparency — surfaces on tab=vanzari so the operator sees
+        // both sides of every refund without having to open the payout.
+        $refundedPrincipalQ = \DB::table('marketplace_refund_items as ri')
+            ->join('tickets as t', 'ri.ticket_id', '=', 't.id')
+            ->where(function ($q) use ($eventId) {
+                $q->where('t.event_id', $eventId)
+                    ->orWhere('t.marketplace_event_id', $eventId);
+            })
+            ->where('ri.status', 'refunded');
+        if ($periodStart) {
+            $operator = $exactBounds ? '>' : '>=';
+            $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+            $refundedPrincipalQ->where('ri.updated_at', $operator, $bound);
+        }
+        if ($periodEnd) {
+            $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+            $refundedPrincipalQ->where('ri.updated_at', '<=', $bound);
+        }
+        $refundedPrincipal = (float) $refundedPrincipalQ->sum('ri.refund_amount');
+
         // F4 — sum payment processing fees across the orders touched by this
         // breakdown. orders.processing_fee_cents is 0 for marketplaces without
         // payment_fees configured (kill switch), so this total stays 0 on
@@ -426,6 +490,13 @@ class SalesBreakdownService
             'total_revenue' => round($totalRevenue, 2),
             'total_net' => round($totalNet, 2),
             'total_commission' => round($totalCommission, 2),
+            // Refund telemetry — surfaced so tab=vanzari can render a
+            // "din care taxa retinuta din refund-uri: X.YZ" line and the
+            // operator no longer has to reverse-engineer where the
+            // number came from. Both default to 0.00 when no refunds
+            // exist for the period, matching legacy output.
+            'total_commission_kept_from_refunds' => round($keptCommission, 2),
+            'total_refunded_principal' => round($refundedPrincipal, 2),
             'total_extras' => round($totalExtrasCard, 2),
             'total_discount' => round($totalDiscountCard, 2),
             // F4 — processing fee summed across orders in this period.
