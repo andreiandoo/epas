@@ -1869,38 +1869,43 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['total_discount_amount'] = number_format($totalDiscountAmount, 2);
 
-            // Row 1a (payout_net_amount) is the GROSS-sold-including-refunds
-            // value the operator expects in A=1a+3a. It equals the active
-            // ticket net (post-discount, refunded tickets already excluded
-            // by the ticket-status filter in computeOrganizerNetFromTickets)
-            // PLUS the refund nominal added back. That way the template's
-            // formula E = A − B − C − D resolves to organizer_net (active
-            // post-discount) when B=2a is the same refund nominal.
+            // Row 1a (payout_net_amount) shows organizer_net for CURRENTLY
+            // VALID tickets only — refunded tickets are surfaced separately
+            // in row 2a, not folded back into 1a. Row E then resolves to
+            // 1a − 2a (i.e. organizer_net − refund) = what the marketplace
+            // actually pays out.
             //
-            // Row E (payout_amount) is computed directly from
-            // computeOrganizerNetFromTickets minus advance — refund is NOT
-            // subtracted here because the underlying query already excludes
-            // refunded tickets. The previous code subtracted refund a
-            // SECOND time here, which gave payout 3052 an `amount` of 2,920
-            // instead of 3,200 (and propagated the same double-subtraction
-            // to the PDF's "VALOARE TOTALA").
-            $refundDeduction = (float) ($payout->refund_amount ?? 0);
+            // Old model: 1a added refund back so 1a − 2a = organizer_net.
+            // The operator on payout 3138 pushed back on that ("afisam ca
+            // am incasat 5.950, scadem 280 retururi, finalul pe PDF trebuie
+            // sa fie 5.670") — under the current Ambilet business model
+            // the marketplace refunds the customer from its own cash and
+            // recoups from the organizer's slice, so the refund principal
+            // IS a real deduction on the payout, not just a note.
+            //
+            // Row E (payout_amount) mirrors the same rule the new
+            // final_net_amount accessor uses: organizer_net minus advance
+            // minus refund. Deductible refund pulled off of refund_items
+            // (all commission_refunded values, since we no longer split
+            // absorption by that flag).
             $advanceDeduction = (float) ($payout->payout_method['advance_amount'] ?? 0);
+            $refundDeduction = method_exists($payout, 'getDeductibleRefundAmountAttribute')
+                ? (float) $payout->deductible_refund_amount
+                : (float) ($payout->refund_amount ?? 0);
 
             $organizerNetFromTickets = method_exists($payout, 'computeOrganizerNetFromTickets')
                 ? $payout->computeOrganizerNetFromTickets()
                 : max(0.0, $payoutAmount - $totalDiscountAmount);
 
-            // Row 1a — gross sold incl. refunded tickets nominally added back.
+            // Row 1a — organizer_net for valid tickets only.
             $variables['payout_net_amount'] = number_format(
-                max(0.0, $organizerNetFromTickets + $refundDeduction),
+                max(0.0, $organizerNetFromTickets),
                 2
             );
 
-            // Row E — active post-discount, advance subtracted, refund NOT
-            // subtracted (already excluded via Ticket status filter).
+            // Row E — 1a − 2a − advance = organizer_net − refund − advance.
             $variables['payout_amount'] = number_format(
-                max(0.0, $organizerNetFromTickets - $advanceDeduction),
+                max(0.0, $organizerNetFromTickets - $advanceDeduction - $refundDeduction),
                 2
             );
             // Sortat după număr de utilizări desc, "COD (xN)" format.
@@ -2264,21 +2269,15 @@ class MarketplaceTaxTemplate extends Model
             }
         }
 
-        // Pass 3: add refund per group → 1a = gross sold incl. refunded.
-        // Template's E = A − B brings it back down to active post-discount
-        // net. We also fold the refund's PER-PRICE breakdown into the
-        // group's tierMap so a 5 × 56 refund shows up as +5 in the 56-tier
-        // bucket (not as a value diff that reconciliation later smears
-        // into the lowest-price tier — that's how payout 3055 ended up
-        // with "133.33lei*3" on Cat III, which never had any refunds).
-        foreach ($refundAllocByGroup as $key => $refundData) {
-            if (!isset($groups[$key])) continue;
-            $groups[$key]['amount'] += (float) ($refundData['amount'] ?? 0);
-            $groups[$key]['qty'] += (int) ($refundData['qty'] ?? 0);
-            foreach (($refundData['tiers'] ?? []) as $priceKey => $tierQty) {
-                $groups[$key]['tierMap'][$priceKey] = ($groups[$key]['tierMap'][$priceKey] ?? 0) + $tierQty;
-            }
-        }
+        // Pass 3 removed 2026-07-04: refund nominal used to be added back
+        // into 1a's amount + qty + tierMap so template's E = A − B would
+        // resolve back to organizer_net. Under the current operator model
+        // ("afisam ca am incasat 5.950, scadem 280 retururi, finalul e
+        // 5.670" — payout 3138 pushback) that add-back is wrong. 1a now
+        // shows organizer_net for valid tickets only, 2a stays the refund
+        // nominal, and E = 1a − 2a subtracts a real (not synthetic) cost.
+        // Section 2 (2a/2b) is rendered by buildPayoutRefundBreakdownRows
+        // separately, so removing the fold-back here doesn't affect it.
 
         if (empty($groups)) return '';
 
