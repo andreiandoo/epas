@@ -212,7 +212,27 @@ class TicketEmail extends Mailable
         $heightPt = round($size['height'] * 2.8346, 2);
         $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
-        $html = <<<HTML
+        // Multi-page verso opt-in (template_data.page_2.enabled).
+        $page2Html = '';
+        $page2Data = $template->template_data['page_2'] ?? null;
+        if (is_array($page2Data) && ($page2Data['enabled'] ?? false) && !empty($page2Data['layers'] ?? [])) {
+            try {
+                $page2Content = $generator->renderToHtml($page2Data, $data, $locale);
+                if (!empty(trim($page2Content))) {
+                    $page2Bg = $page2Data['meta']['background']['color'] ?? $bgColor;
+                    $page2Html = '<div class="ep-ticket-page" style="page-break-before: always; background-color: ' . $page2Bg . ';">' . $page2Content . '</div>';
+                }
+            } catch (\Throwable $e) {
+                Log::channel('marketplace')->warning('TicketEmail page_2 render failed', [
+                    'ticket_id' => $ticket->id,
+                    'template_id' => $template->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($page2Html === '') {
+            $html = <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
@@ -228,6 +248,26 @@ class TicketEmail extends Mailable
 </body>
 </html>
 HTML;
+        } else {
+            $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { margin: 0; size: {$widthPt}pt {$heightPt}pt; }
+        * { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; }
+        .ep-ticket-page { width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; position: relative; }
+    </style>
+</head>
+<body>
+<div class="ep-ticket-page">{$content}</div>
+{$page2Html}
+</body>
+</html>
+HTML;
+        }
 
         $pdf = Pdf::loadHTML($html)
             ->setPaper([0, 0, $widthPt, $heightPt])

@@ -512,10 +512,32 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
                 // when off. Same wrapper switch as ViewTicket downloadCustomTemplate.
                 $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
 
-                if ($seatingPageHtml === '') {
+                // Multi-page verso opt-in (template_data.page_2.enabled).
+                // Randam pagina 2 folosind template_data.page_2 ca template separat.
+                $page2Html = '';
+                $page2Data = $template->template_data['page_2'] ?? null;
+                if (is_array($page2Data) && ($page2Data['enabled'] ?? false) && !empty($page2Data['layers'] ?? [])) {
+                    try {
+                        $page2Content = $generator->renderToHtml($page2Data, $data, $locale);
+                        if (!empty(trim($page2Content))) {
+                            $page2Bg = $page2Data['meta']['background']['color'] ?? $bgColor;
+                            $page2Html = '<div class="ep-ticket-page" style="page-break-before: always; background-color: ' . $page2Bg . ';">' . $page2Content . '</div>';
+                        }
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::channel('marketplace')->warning('Ticket download page_2 render failed', [
+                            'ticket_id' => $ticket->id,
+                            'template_id' => $template->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                $extraPagesHtml = $seatingPageHtml . $page2Html;
+
+                if ($extraPagesHtml === '') {
                     $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;width:{$widthPt}pt;height:{$heightPt}pt;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;overflow:hidden;}</style></head><body>{$content}</body></html>";
                 } else {
-                    $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;}.ep-ticket-page{width:{$widthPt}pt;height:{$heightPt}pt;overflow:hidden;position:relative;}</style></head><body><div class=\"ep-ticket-page\">{$content}</div>{$seatingPageHtml}</body></html>";
+                    $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;}.ep-ticket-page{width:{$widthPt}pt;height:{$heightPt}pt;overflow:hidden;position:relative;}</style></head><body><div class=\"ep-ticket-page\">{$content}</div>{$extraPagesHtml}</body></html>";
                 }
 
                 $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
