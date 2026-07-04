@@ -149,10 +149,23 @@ $pickTr = function (string $field) use ($heroTranslations, $publicLocale) {
     $value = $heroTranslations[$field][$publicLocale] ?? null;
     return ($value !== null && $value !== '') ? $value : null;
 };
+// Subtitlu hero: prioritate venue_config.hero_subtitle (nou), fallback la $shortDescription
+// (event.short_description existent). Astfel organizatorii care nu completeaza campul
+// pastreaza comportamentul actual.
+$heroSubtitle = $venueConfig['hero_subtitle'] ?? '';
+if ($heroSubtitle === '') $heroSubtitle = $shortDescription;
+// Titlu Floră & faună: default hardcoded "Floră & faună" — organizatorul poate suprascrie
+// prin venue_config.flora_title si per-locale in translations.flora_title.{locale}.
+$floraTitle = $venueConfig['flora_title'] ?? 'Floră & faună';
+// Titlu Despre — poate fi tradus per-locale.
+$aboutTitle = $venueConfig['about_title'] ?? 'Despre locație';
 if ($publicLocale !== 'ro') {
     if ($v = $pickTr('title_primary'))   $titlePrimary = $v;
     if ($v = $pickTr('title_secondary')) $titleSecondary = $v;
     if ($v = $pickTr('hero_kicker'))     $heroKicker = $v;
+    if ($v = $pickTr('hero_subtitle'))   $heroSubtitle = $v;
+    if ($v = $pickTr('about_title'))     $aboutTitle = $v;
+    if ($v = $pickTr('flora_title'))     $floraTitle = $v;
     // hero_badges: array de string-uri, varianta locale daca exista
     if (isset($heroTranslations['hero_badges'][$publicLocale]) && is_array($heroTranslations['hero_badges'][$publicLocale]) && !empty($heroTranslations['hero_badges'][$publicLocale])) {
         $heroBadges = $heroTranslations['hero_badges'][$publicLocale];
@@ -657,8 +670,8 @@ require_once __DIR__ . '/includes/head.php';
                 <?php endif; ?>
             </h1>
 
-            <?php if ($shortDescription): ?>
-            <p class="text-lg lg:text-xl text-white/80 max-w-2xl font-light leading-relaxed"><?= htmlspecialchars($shortDescription) ?></p>
+            <?php if ($heroSubtitle): ?>
+            <p class="text-lg lg:text-xl text-white/80 max-w-2xl font-light leading-relaxed"><?= htmlspecialchars($heroSubtitle) ?></p>
             <?php endif; ?>
 
             <div class="flex flex-wrap items-center gap-4 mt-8">
@@ -1279,7 +1292,7 @@ require_once __DIR__ . '/includes/head.php';
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-12">
             <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="know_the_place">Cunoaște locul</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3"><?= htmlspecialchars($venueConfig['about_title'] ?? 'Despre locație') ?></h2>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3"><?= htmlspecialchars($aboutTitle) ?></h2>
         </div>
         <?php if (!empty($attractions)): ?>
         <div class="grid lg:grid-cols-<?= min(count($attractions), 2) ?> gap-8 mb-16">
@@ -1320,11 +1333,27 @@ require_once __DIR__ . '/includes/head.php';
 
         <?php if (!empty($flora)): ?>
         <div class="bg-forest-50 rounded-3xl p-8 lg:p-12">
-            <h3 class="font-display text-2xl lg:text-3xl font-bold text-ink mb-6 text-center">Floră &amp; faună</h3>
+            <h3 class="font-display text-2xl lg:text-3xl font-bold text-ink mb-6 text-center"><?= htmlspecialchars($floraTitle) ?></h3>
             <div class="grid sm:grid-cols-2 lg:grid-cols-<?= min(count($flora), 4) ?> gap-6">
                 <?php foreach ($flora as $sp): ?>
+                <?php
+                    // Prioritate: imagine reala (image_url din upload) > emoji (fallback).
+                    // Suporta atat cheia 'image_url' (dupa upload) cat si 'image' cu path relativ.
+                    $spImgUrl = $sp['image_url'] ?? null;
+                    if (!$spImgUrl && !empty($sp['image'])) {
+                        $spImgUrl = str_starts_with($sp['image'], 'http') ? $sp['image'] : (STORAGE_URL . '/' . $sp['image']);
+                    }
+                    // Icon suporta atat cheia 'icon' (folosit in organizer form) cat si 'emoji' (legacy).
+                    $spIcon = $sp['icon'] ?? $sp['emoji'] ?? '🌿';
+                ?>
                 <div class="text-center">
-                    <div class="w-16 h-16 mx-auto bg-white rounded-2xl flex items-center justify-center mb-3 text-3xl shadow-sm"><?= htmlspecialchars($sp['emoji'] ?? '🌿') ?></div>
+                    <?php if ($spImgUrl): ?>
+                        <div class="w-20 h-20 mx-auto bg-white rounded-2xl overflow-hidden mb-3 shadow-sm">
+                            <img src="<?= htmlspecialchars($spImgUrl) ?>" alt="<?= htmlspecialchars($sp['name'] ?? '') ?>" class="w-full h-full object-cover" loading="lazy">
+                        </div>
+                    <?php else: ?>
+                        <div class="w-16 h-16 mx-auto bg-white rounded-2xl flex items-center justify-center mb-3 text-3xl shadow-sm"><?= htmlspecialchars($spIcon) ?></div>
+                    <?php endif; ?>
                     <p class="font-bold text-ink text-sm"><?= htmlspecialchars($sp['name'] ?? '') ?></p>
                     <p class="text-xs text-forest-700/60 italic"><?= htmlspecialchars($sp['latin'] ?? '') ?></p>
                 </div>
