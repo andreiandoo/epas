@@ -580,7 +580,19 @@ class LeisureController extends BaseController
                 $buckets[$key] = ['date' => $key, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
             }
             $buckets[$key]['orders']++;
-            $rev = (float) ($order->total ?? 0);
+
+            // Revenue post-discount = suma effective_price a biletelor NErefundate.
+            // Consistent cu /organizator/leisure-raport: NU folosim order.total (include
+            // on-top commission / insurance / fee, si NU reflecta discount-uri per-ticket
+            // cand promo code se aplica pe subset din cart).
+            $rev = 0.0;
+            foreach ($order->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $rev += method_exists($t, 'getEffectivePrice')
+                    ? (float) $t->getEffectivePrice()
+                    : (float) ($t->price ?? 0);
+            }
+            $rev = round($rev, 2);
             $buckets[$key]['revenue'] += $rev;
             $totalRevenue += $rev;
 
@@ -600,8 +612,10 @@ class LeisureController extends BaseController
                 // Componentele pachetului (meta.from_package=true) NU trebuie sa apara
                 // in raport ca tranzactii separate — le sarim complet aici (raportul
                 // "Per tip bilet" trebuie sa arate DOAR pachetele si biletele
-                // individuale, cu valorile lor). Defensiv: si tickets cu price=0
-                // (legacy componente sau guide bonus).
+                // individuale, cu valorile lor). Defensiv: si tickets cu list price=0
+                // (legacy componente sau guide bonus) — filtram pe ticket.price NU pe
+                // effective_price ca sa mentinem contorizarea unui bilet full-discount
+                // (list 460, discount 100%, effective 0) ca tranzactie.
                 $isFromPackage = is_array($ticket->meta ?? null) && !empty($ticket->meta['from_package']);
                 $tPrice = (float) ($ticket->price ?? 0);
                 if ($isFromPackage || $tPrice <= 0) continue;
@@ -633,7 +647,10 @@ class LeisureController extends BaseController
                     ];
                 }
                 $byTicketType[$ttKey]['tickets']++;
-                $byTicketType[$ttKey]['revenue'] += (float) ($ticket->price ?? 0);
+                // Revenue post-discount pentru consistenta cu totalurile
+                $byTicketType[$ttKey]['revenue'] += method_exists($ticket, 'getEffectivePrice')
+                    ? (float) $ticket->getEffectivePrice()
+                    : $tPrice;
             }
         }
 
