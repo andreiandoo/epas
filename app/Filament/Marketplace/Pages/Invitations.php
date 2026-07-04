@@ -725,7 +725,24 @@ class Invitations extends Page
                             $heightPt = round($size['height'] * 2.8346, 2);
                             $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
-                            $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$content}</body></html>";
+                            // Multi-page verso opt-in (template_data.page_2.enabled).
+                            $page2Section = '';
+                            $page2Data = $template->template_data['page_2'] ?? null;
+                            if (is_array($page2Data) && ($page2Data['enabled'] ?? false) && !empty($page2Data['layers'] ?? [])) {
+                                try {
+                                    $page2Content = $generator->renderToHtml($page2Data, $data);
+                                    if (!empty(trim($page2Content))) {
+                                        $page2Bg = $page2Data['meta']['background']['color'] ?? $bgColor;
+                                        $page2Section = "<div style=\"page-break-before: always; position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$page2Bg};\">" . str_replace('position: fixed;', 'position: absolute;', $page2Content) . "</div>";
+                                    }
+                                } catch (\Throwable $e) { /* silent */ }
+                            }
+
+                            if ($page2Section !== '') {
+                                $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; } .ep-ticket-page { width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; position: relative; }</style></head><body><div class=\"ep-ticket-page\">{$content}</div>{$page2Section}</body></html>";
+                            } else {
+                                $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$content}</body></html>";
+                            }
 
                             $customPdf = Pdf::loadHTML($html)
                                 ->setPaper([0, 0, $widthPt, $heightPt])

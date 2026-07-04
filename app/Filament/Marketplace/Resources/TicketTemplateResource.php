@@ -137,6 +137,37 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Safe area margin in millimeters'),
                     ])->columns(3),
 
+                // Multi-page opt-in: cand toggle-ul e activ, PDF-ul contine pagina 1 (design
+                // curent) + pagina 2 editabila separat prin Visual Editor. Util pentru
+                // Termeni & Conditii / Verso al biletului.
+                SC\Section::make('📄 Pagina 2 (Verso) — opțional')
+                    ->description('Activează dacă vrei ca PDF-ul biletului să includă o a doua pagină (ex. Termeni & Condiții, hartă, informații suplimentare).')
+                    ->schema([
+                        Forms\Components\Toggle::make('template_data.page_2.enabled')
+                            ->label('Activează pagina 2 (verso)')
+                            ->helperText('Când e activ, PDF-ul biletului va conține 2 pagini. Editează design-ul paginii 2 cu butonul Visual Editor Pagina 2 de mai jos.')
+                            ->live()
+                            ->default(false),
+
+                        Forms\Components\Placeholder::make('page_2_editor_link')
+                            ->label('')
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('template_data.page_2.enabled'))
+                            ->content(fn ($record) => $record
+                                ? new \Illuminate\Support\HtmlString(
+                                    '<a href="/marketplace/ticket-customizer/' . $record->id . '/editor?page=2"
+                                       target="_blank"
+                                       class="inline-flex items-center gap-2 px-4 py-2 font-medium text-white transition bg-purple-600 rounded-lg hover:bg-purple-700">
+                                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                       Visual Editor — Pagina 2 (Verso)
+                                    </a>
+                                    <p class="mt-2 text-xs text-gray-500">Se deschide într-un tab nou. Salvările pe pagina 2 nu afectează pagina 1.</p>'
+                                )
+                                : new \Illuminate\Support\HtmlString(
+                                    '<span class="text-gray-500">Salvează template-ul mai întâi ca să poți edita pagina 2.</span>'
+                                )
+                            ),
+                    ])->columns(1),
+
                 SC\Section::make('Preview')
                     ->schema([
                         Forms\Components\Placeholder::make('preview_display')

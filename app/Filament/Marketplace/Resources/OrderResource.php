@@ -2499,6 +2499,29 @@ class OrderResource extends Resource
                     if ($seatingPageHtml !== '') {
                         $pages[] = $seatingPageHtml;
                     }
+
+                    // Multi-page verso opt-in (template_data.page_2.enabled).
+                    // Randam pagina 2 pentru fiecare bilet, cu aceleasi dimensiuni ca pagina 1
+                    // (DomPDF nu suporta @page size diferit per pagina).
+                    $page2Data = $template->template_data['page_2'] ?? null;
+                    if (is_array($page2Data) && ($page2Data['enabled'] ?? false) && !empty($page2Data['layers'] ?? [])) {
+                        try {
+                            $page2Content = $generator->renderToHtml($page2Data, $data, $locale);
+                            if (!empty(trim($page2Content))) {
+                                $page2Bg = $page2Data['meta']['background']['color'] ?? $bgColor;
+                                $page2Wrapped = "<div style=\"position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$page2Bg};\">" .
+                                    str_replace('position: fixed;', 'position: absolute;', $page2Content) .
+                                    "</div>";
+                                $pages[] = $page2Wrapped;
+                            }
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::channel('marketplace')->warning('Bulk PDF page_2 render failed', [
+                                'ticket_id' => $ticket->id,
+                                'template_id' => $template->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
                 }
             }
 

@@ -33,11 +33,24 @@ class EditTicketTemplate extends EditRecord
         if (isset($data['template_data']) && $this->record) {
             $existing = $this->record->template_data ?? [];
             $formMeta = $data['template_data']['meta'] ?? [];
+            // Multi-page: toggle-ul 'template_data.page_2.enabled' din form trebuie
+            // pastrat, dar layers/meta pentru pagina 2 vin exclusiv din Visual Editor
+            // — nu suprascriem din formul asta. Asa ca facem array_merge_recursive doar
+            // pe cheia 'enabled' cu subtree-ul page_2 existent.
+            $formPage2Enabled = $data['template_data']['page_2']['enabled'] ?? null;
+            $existingPage2 = $existing['page_2'] ?? null;
 
-            // Merge: keep existing data, overlay form meta fields on top
-            $data['template_data'] = array_merge($existing, [
+            $merged = array_merge($existing, [
                 'meta' => array_merge($existing['meta'] ?? [], $formMeta),
             ]);
+            if ($formPage2Enabled !== null) {
+                $merged['page_2'] = array_merge(is_array($existingPage2) ? $existingPage2 : [], [
+                    'enabled' => (bool) $formPage2Enabled,
+                ]);
+                // Cand dezactivezi, pastram meta+layers-ul paginii 2 in caz ca reactivi
+                // (nu pierzi munca; le stergi manual daca vrei).
+            }
+            $data['template_data'] = $merged;
         }
 
         return $data;

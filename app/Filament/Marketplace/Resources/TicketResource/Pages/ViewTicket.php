@@ -358,7 +358,34 @@ class ViewTicket extends ViewRecord
             // HTML below is byte-identical to the original ticket PDF.
             $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
 
-            if ($seatingPageHtml === '') {
+            // Multi-page opt-in (template_data.page_2.enabled). Cand e activ,
+            // randam pagina 2 (verso) folosind template_data.page_2 ca template
+            // separat. Pagina 2 imparte @page size cu pagina 1 (DomPDF nu suporta
+            // dimensiuni diferite per pagina) — organizatorul isi seteaza dimensiuni
+            // egale pentru cele 2 pagini in editor.
+            $page2Html = '';
+            $page2Data = $template->template_data['page_2'] ?? null;
+            if (is_array($page2Data) && ($page2Data['enabled'] ?? false) && !empty($page2Data['layers'] ?? [])) {
+                try {
+                    $page2Content = $generator->renderToHtml($page2Data, $data, $locale);
+                    if (!empty(trim($page2Content))) {
+                        $page2Bg = $page2Data['meta']['background']['color'] ?? $bgColor;
+                        $page2Html = '<div class="ep-ticket-page" style="page-break-before: always; background-color: ' . $page2Bg . ';">' . $page2Content . '</div>';
+                    }
+                } catch (\Throwable $e) {
+                    Log::channel('marketplace')->warning('Ticket PDF page_2 render failed', [
+                        'ticket_id' => $ticket->id,
+                        'template_id' => $template->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Combina cele 2 posibile pagini suplimentare intr-un singur string.
+            // Ordinea: seating page (daca exista) -> page_2 verso (daca exista).
+            $extraPagesHtml = $seatingPageHtml . $page2Html;
+
+            if ($extraPagesHtml === '') {
                 // Original single-page HTML — preserved byte-for-byte so
                 // every live ticket renders identically.
                 $html = <<<HTML
@@ -380,7 +407,7 @@ HTML;
             } else {
                 // Multi-page variant: ticket content lives inside a fixed-
                 // size div (preserving its in-template positioning) so the
-                // body can flow to a second page. body's fixed height +
+                // body can flow to pagini suplimentare. body's fixed height +
                 // overflow:hidden would suppress page-break-before, so they
                 // move onto .ep-ticket-page instead.
                 $html = <<<HTML
@@ -397,7 +424,7 @@ HTML;
 </head>
 <body>
 <div class="ep-ticket-page">{$content}</div>
-{$seatingPageHtml}
+{$extraPagesHtml}
 </body>
 </html>
 HTML;

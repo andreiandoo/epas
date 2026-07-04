@@ -44,6 +44,12 @@
                 </a>
                 <h1 class="text-lg font-semibold">{{ $template->name }}</h1>
                 <span class="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300">{{ $template->tenant?->name ?? $template->marketplaceClient?->name ?? 'Template' }}</span>
+                @if (($editingPage ?? 1) === 2)
+                    <span class="px-2 py-1 text-xs rounded bg-purple-700 text-purple-100 font-bold">📄 PAGINA 2 (VERSO)</span>
+                    <a href="{{ preg_replace('/\?.*/', '', request()->fullUrl()) }}" class="text-xs text-gray-400 hover:text-white underline">← Pagina 1</a>
+                @else
+                    <span class="px-2 py-1 text-xs rounded bg-blue-700 text-blue-100 font-bold">📄 PAGINA 1</span>
+                @endif
             </div>
             <div class="flex items-center gap-3">
                 <span x-show="hasUnsavedChanges" class="text-yellow-400 text-sm">Unsaved changes</span>
@@ -707,7 +713,10 @@
         function ticketCustomizer() {
             return {
                 templateId: {{ $template->id }},
-                templateData: {!! json_encode($template->template_data ?: [
+                // Suport multi-pagina: $initialTemplateData vine din controller.
+                // Cand se editeaza pagina 1 -> template_data intreg (excluziv page_2).
+                // Cand se editeaza pagina 2 -> template_data.page_2 sau default A4 portrait.
+                templateData: {!! json_encode($initialTemplateData ?? $template->template_data ?: [
                     'meta' => [
                         'version' => '1.0',
                         'dpi' => 300,

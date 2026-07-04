@@ -11,7 +11,7 @@ class TicketCustomizerController extends Controller
     /**
      * Show the visual editor for a ticket template (marketplace admin access)
      */
-    public function edit(TicketTemplate $template)
+    public function edit(TicketTemplate $template, Request $request)
     {
         $user = auth('marketplace_admin')->user();
         $clientId = $user->marketplace_client_id;
@@ -23,6 +23,39 @@ class TicketCustomizerController extends Controller
 
         // Load the template
         $template->load('tenant');
+
+        // Multi-page support: ?page=2 editeaza layer-ele paginii 2 (verso).
+        // Pagina 2 e stocata in template_data.page_2 = { meta, assets, layers }.
+        // Cand nu exista, initializam cu A4 portrait default (297x210mm).
+        $editingPage = (int) $request->query('page', 1);
+        if ($editingPage !== 2) $editingPage = 1;
+
+        $fullData = is_array($template->template_data) ? $template->template_data : [];
+        if ($editingPage === 2) {
+            $initialTemplateData = $fullData['page_2'] ?? [];
+            // Defaults A4 portrait cand pagina 2 e goala
+            if (empty($initialTemplateData['meta'])) {
+                $initialTemplateData = array_merge([
+                    'meta' => [
+                        'version' => '1.0',
+                        'dpi' => $fullData['meta']['dpi'] ?? 300,
+                        'size_mm' => ['w' => 210, 'h' => 297],
+                        'orientation' => 'portrait',
+                        'bleed_mm' => ['top' => 3, 'right' => 3, 'bottom' => 3, 'left' => 3],
+                        'safe_area_mm' => 5,
+                        'background' => ['color' => '#ffffff', 'image' => ''],
+                    ],
+                    'assets' => [],
+                    'layers' => [],
+                    'enabled' => $initialTemplateData['enabled'] ?? true,
+                ], $initialTemplateData);
+            }
+        } else {
+            // Pagina 1 primeste toata structura EXCLUSIV cheia page_2 (ca sa nu apara
+            // in JSON-ul manipulat de editor). Preservarea page_2 la save se face in update().
+            $initialTemplateData = $fullData;
+            unset($initialTemplateData['page_2']);
+        }
 
         // Get available variables
         $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
@@ -66,8 +99,13 @@ class TicketCustomizerController extends Controller
             'variables' => $variables,
             'sampleData' => $sampleData,
             'presets' => $presets,
-            'saveUrl' => "/marketplace/ticket-customizer/{$template->id}/editor",
+            // Save endpoint pastreaza query-ul ?page ca sa stie unde sa scrie.
+            'saveUrl' => "/marketplace/ticket-customizer/{$template->id}/editor" . ($editingPage === 2 ? '?page=2' : ''),
             'backUrl' => "/marketplace/ticket-templates/{$template->id}/edit",
+            // Multi-page (opt-in): 1 sau 2. Editorul foloseste initialTemplateData in loc
+            // de template.template_data cand se editeaza o pagina specifica.
+            'editingPage' => $editingPage,
+            'initialTemplateData' => $initialTemplateData,
         ]);
     }
 
@@ -103,9 +141,24 @@ class TicketCustomizerController extends Controller
             ], 422);
         }
 
-        $template->update([
-            'template_data' => $request->input('template_data'),
-        ]);
+        // Multi-page save: cand ?page=2, salvam JSON-ul primit ca sub-cheia page_2
+        // fara sa suprascriem pagina 1. Cand page=1 (default), pastram cheia page_2
+        // existenta ca sa nu se piarda din pagina 2 la editarea paginii 1.
+        $incomingData = $request->input('template_data');
+        $editingPage = (int) $request->query('page', 1);
+        if ($editingPage === 2) {
+            $existing = is_array($template->template_data) ? $template->template_data : [];
+            // Snapshot enabled=true la primul save al paginii 2 daca lipsea.
+            if (!isset($incomingData['enabled'])) $incomingData['enabled'] = true;
+            $existing['page_2'] = $incomingData;
+            $template->update(['template_data' => $existing]);
+        } else {
+            $existing = is_array($template->template_data) ? $template->template_data : [];
+            // Editorul paginii 1 nu primeste page_2 in initialTemplateData -> nu-l trimite
+            // inapoi. Il pastram din DB pentru a nu-l pierde.
+            if (isset($existing['page_2'])) $incomingData['page_2'] = $existing['page_2'];
+            $template->update(['template_data' => $incomingData]);
+        }
 
         // Generate preview
         try {
