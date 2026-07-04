@@ -317,6 +317,27 @@ class TicketVariableService
                         'type' => 'text',
                         'example' => '• Acces VIP Lounge • Drink de bun venit • Loc rezervat',
                     ],
+                    [
+                        'path' => 'ticket.includes',
+                        'label' => 'Include (bullet list)',
+                        'description' => 'Lista "Include" din produsul leisure — un element per linie. Multi-locale: se traduce automat pe locale-ul biletului cand meta.translations.includes.{locale} exista. Format: fiecare linie prefixata cu "• ".',
+                        'type' => 'text',
+                        'example' => "• Acces toată ziua\n• Hartă tipărită\n• Apă gratuită",
+                    ],
+                    [
+                        'path' => 'ticket.includes_raw',
+                        'label' => 'Include (text simplu)',
+                        'description' => 'Aceeasi lista ca ticket.includes dar fara bullet-uri — doar cu newline intre linii. Util cand vrei formatare custom in template.',
+                        'type' => 'text',
+                        'example' => "Acces toată ziua\nHartă tipărită\nApă gratuită",
+                    ],
+                    [
+                        'path' => 'ticket.usage_terms',
+                        'label' => 'Termeni utilizare',
+                        'description' => 'Textul din campul "Termeni utilizare" al produsului leisure. Multi-locale: traduce automat pe locale-ul biletului cand meta.translations.usage_terms.{locale} exista.',
+                        'type' => 'text',
+                        'example' => 'Biletul este valabil doar pentru data si ora selectate. Nu se ramburseaza.',
+                    ],
                 ],
             ],
 
@@ -583,6 +604,9 @@ class TicketVariableService
                 'verify_url' => 'https://tickets.example.com/t/WLMVWB2G',
                 'description' => 'Acces VIP cu drink de bun venit și loc rezervat în primele rânduri',
                 'perks' => '• Acces VIP Lounge • Drink de bun venit • Loc rezervat',
+                'includes' => "• Acces toată ziua\n• Hartă tipărită\n• Apă gratuită",
+                'includes_raw' => "Acces toată ziua\nHartă tipărită\nApă gratuită",
+                'usage_terms' => 'Biletul este valabil doar pentru data selectată. Nu se rambursează.',
             ],
             'buyer' => [
                 'name' => 'Ion Popescu',
@@ -954,6 +978,9 @@ class TicketVariableService
                 'verify_url' => $ticket->getVerifyUrl(),
                 'description' => $this->resolveTicketDescription($ticketType),
                 'perks' => $this->resolveTicketPerks($ticketType),
+                'includes' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, true),
+                'includes_raw' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, false),
+                'usage_terms' => $this->resolveTicketUsageTerms($ticketType, $effectiveLocale),
             ],
             'buyer' => [
                 'name' => $buyerName,
@@ -1164,6 +1191,66 @@ class TicketVariableService
         if (empty($items)) return '';
 
         return '• ' . implode(' • ', $items);
+    }
+
+    /**
+     * Rezolva lista "Include" a produsului leisure (meta.includes).
+     * Suporta multi-locale prin meta.translations.includes.{locale}. Cand traducerea
+     * lipseste, cade pe RO (meta.includes) apoi EN.
+     *
+     * @param  bool  $bulleted  true -> fiecare linie prefixata cu "• "; false -> plain lines
+     */
+    private function resolveTicketIncludes($ticketType, string $locale, bool $bulleted): string
+    {
+        if (!$ticketType) return '';
+        $meta = $ticketType->meta ?? null;
+        if (!is_array($meta)) return '';
+
+        // 1. Locale preferat din meta.translations
+        $items = null;
+        $tr = $meta['translations']['includes'][$locale] ?? null;
+        if ($tr !== null && $tr !== '') {
+            $items = is_array($tr) ? $tr : preg_split('/\r?\n/', (string) $tr);
+        }
+        // 2. Fallback RO/EN in translations, apoi meta.includes (RO default)
+        if ($items === null) {
+            $trFallback = $meta['translations']['includes']['ro']
+                ?? $meta['translations']['includes']['en']
+                ?? null;
+            if ($trFallback !== null && $trFallback !== '') {
+                $items = is_array($trFallback) ? $trFallback : preg_split('/\r?\n/', (string) $trFallback);
+            }
+        }
+        if ($items === null) {
+            $raw = $meta['includes'] ?? null;
+            if ($raw === null || $raw === '') return '';
+            $items = is_array($raw) ? $raw : preg_split('/\r?\n/', (string) $raw);
+        }
+
+        $items = array_values(array_filter(array_map(fn ($s) => trim((string) $s), $items), fn ($s) => $s !== ''));
+        if (empty($items)) return '';
+
+        if ($bulleted) {
+            return implode("\n", array_map(fn ($s) => '• ' . $s, $items));
+        }
+        return implode("\n", $items);
+    }
+
+    /**
+     * Rezolva textul "Termeni utilizare" al produsului leisure (TicketType.usage_terms).
+     * Suporta multi-locale prin meta.translations.usage_terms.{locale}.
+     */
+    private function resolveTicketUsageTerms($ticketType, string $locale): string
+    {
+        if (!$ticketType) return '';
+        $meta = $ticketType->meta ?? null;
+        if (is_array($meta) && isset($meta['translations']['usage_terms']) && is_array($meta['translations']['usage_terms'])) {
+            $tr = $meta['translations']['usage_terms'];
+            $value = $tr[$locale] ?? $tr['ro'] ?? $tr['en'] ?? null;
+            if ($value !== null && $value !== '') return trim((string) $value);
+        }
+        $raw = $ticketType->usage_terms ?? '';
+        return $raw !== '' ? trim((string) $raw) : '';
     }
 
     /**

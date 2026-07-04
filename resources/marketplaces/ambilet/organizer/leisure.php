@@ -656,8 +656,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs text-muted mt-1 block">Folosește emoji + text. Separă cu virgulă.</span>
                     </label>
                     <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Subtitlu hero (paragraf sub titlu)</span>
+                        <textarea data-vc="hero_subtitle" rows="3" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="Singurul lac vulcanic din Europa Central-Estică..."></textarea>
+                        <span class="text-[11px] text-muted block mt-1">Textul de sub titlu în hero. Dacă e gol → folosește short_description din event.</span>
+                    </label>
+                    <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Titlu secțiune "Despre"</span>
                         <input type="text" data-vc="about_title" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="ex: Două cratere, o poveste">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Titlu secțiune "Floră & faună"</span>
+                        <input type="text" data-vc="flora_title" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="ex: Floră & faună (lăsat gol = default)">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Etichetă locație (afișată în Quick Stats Bar)</span>
@@ -709,6 +718,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <label class="block">
                                 <span class="text-[10px] uppercase text-amber-800">🇬🇧 Location label (EN)</span>
                                 <input type="text" data-vc-nested="translations.location_label.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="ex: Lăzărești">
+                            </label>
+                            <label class="block md:col-span-2">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Subtitlu hero (HU)</span>
+                                <textarea data-vc-nested="translations.hero_subtitle.hu" rows="2" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
+                            </label>
+                            <label class="block md:col-span-2">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Hero subtitle (EN)</span>
+                                <textarea data-vc-nested="translations.hero_subtitle.en" rows="2" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu "Despre" (HU)</span>
+                                <input type="text" data-vc-nested="translations.about_title.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 "About" title (EN)</span>
+                                <input type="text" data-vc-nested="translations.about_title.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu "Floră & faună" (HU)</span>
+                                <input type="text" data-vc-nested="translations.flora_title.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="Növény- és állatvilág">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 "Flora & Fauna" title (EN)</span>
+                                <input type="text" data-vc-nested="translations.flora_title.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="Flora & Fauna">
                             </label>
                         </div>
                     </details>
@@ -2817,9 +2850,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function makeFloraRow(d) {
+        const hasImage = d.image_url || d.image;
+        const imageUrl = d.image_url || (d.image ? (d.image.startsWith('http') ? d.image : d.image) : '');
         return repWrap(`
             <div class="flex items-start gap-2">
-                <input type="text" data-rep="icon" maxlength="6" class="w-16 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🌳" value="${escapeHtml(d.icon || '')}">
+                <!-- Icon fallback (folosit doar cand nu ai imagine) -->
+                <input type="text" data-rep="icon" maxlength="6" title="Emoji fallback (folosit doar cand nu ai imagine)" class="w-14 px-2 py-2 border border-border rounded-lg bg-white text-center" placeholder="🌳" value="${escapeHtml(d.icon || '')}">
+                <!-- Imagine (prioritate peste emoji) -->
+                <div class="flex flex-col gap-1">
+                    <input type="hidden" data-rep="image" value="${escapeHtml(d.image || '')}">
+                    <input type="hidden" data-rep="image_url" value="${escapeHtml(d.image_url || '')}">
+                    <div data-flora-img-wrap class="relative w-14 h-14 rounded-lg border-2 border-dashed ${hasImage ? 'border-primary' : 'border-border'} bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-primary" title="Adaugă imagine">
+                        <input type="file" data-flora-img-file accept="image/jpeg,image/png,image/webp" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                        <div data-flora-img-empty class="text-[10px] text-muted ${hasImage ? 'hidden' : ''}">📷 img</div>
+                        <img data-flora-img-thumb src="${escapeHtml(imageUrl)}" class="${hasImage ? '' : 'hidden'} absolute inset-0 w-full h-full object-cover">
+                        <div data-flora-img-loading class="hidden absolute inset-0 bg-white/70 flex items-center justify-center text-[10px] text-primary">⏳</div>
+                    </div>
+                    ${hasImage ? '<button type="button" data-flora-img-remove class="text-[10px] text-rose-600 hover:text-rose-800">🗑 img</button>' : ''}
+                </div>
                 <input type="text" data-rep="name" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume specie" value="${escapeHtml(d.name || '')}">
                 <input type="text" data-rep="description" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii (opțional)" value="${escapeHtml(d.description || '')}">
                 <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
@@ -3129,6 +3177,73 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (list) list.appendChild(factory({}));
             });
         });
+
+        // Delegat: upload imagine + stergere pentru randurile Flora (data-flora-img-file / data-flora-img-remove).
+        // Reutilizeaza endpoint-ul /leisure/upload-image cu type=flora (dir separat).
+        const floraList = $('flora-list');
+        if (floraList) {
+            floraList.addEventListener('change', async (e) => {
+                if (!e.target.matches('[data-flora-img-file]')) return;
+                const file = e.target.files?.[0];
+                if (!file) return;
+                // Row = <div class="flex items-start gap-2"> care e imediat sub repWrap.
+                const row = e.target.closest('div.flex.items-start');
+                if (!row) return;
+                const wrap = row.querySelector('[data-flora-img-wrap]');
+                const empty = row.querySelector('[data-flora-img-empty]');
+                const thumb = row.querySelector('[data-flora-img-thumb]');
+                const loading = row.querySelector('[data-flora-img-loading]');
+                const imgHidden = row.querySelector('[data-rep="image"]');
+                const imgUrlHidden = row.querySelector('[data-rep="image_url"]');
+                if (loading) loading.classList.remove('hidden');
+                try {
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    fd.append('type', 'flora');
+                    const res = await AmbiletAPI.upload(`/organizer/events/${currentEventId}/leisure/upload-image`, fd);
+                    if (res?.success && res.data) {
+                        if (imgHidden) imgHidden.value = res.data.path || '';
+                        if (imgUrlHidden) imgUrlHidden.value = res.data.url || '';
+                        if (thumb) { thumb.src = res.data.url || ''; thumb.classList.remove('hidden'); }
+                        if (empty) empty.classList.add('hidden');
+                        if (wrap) { wrap.classList.remove('border-border'); wrap.classList.add('border-primary'); }
+                        // Injecteaza butonul de stergere daca nu exista deja
+                        if (!row.querySelector('[data-flora-img-remove]')) {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.dataset.floraImgRemove = '1';
+                            btn.className = 'text-[10px] text-rose-600 hover:text-rose-800';
+                            btn.textContent = '🗑 img';
+                            row.querySelector('.flex.flex-col').appendChild(btn);
+                        }
+                    } else {
+                        alert('Eroare upload imagine floră: ' + (res?.message || 'necunoscut'));
+                    }
+                } catch (err) {
+                    console.error('[flora-img-upload]', err);
+                    alert('Eroare upload imagine floră: ' + (err?.message || 'necunoscut'));
+                } finally {
+                    if (loading) loading.classList.add('hidden');
+                    e.target.value = ''; // reset input pentru reincarcare aceleiasi imagini
+                }
+            });
+            floraList.addEventListener('click', (e) => {
+                if (!e.target.matches('[data-flora-img-remove]')) return;
+                const row = e.target.closest('div.flex.items-start');
+                if (!row) return;
+                const wrap = row.querySelector('[data-flora-img-wrap]');
+                const empty = row.querySelector('[data-flora-img-empty]');
+                const thumb = row.querySelector('[data-flora-img-thumb]');
+                const imgHidden = row.querySelector('[data-rep="image"]');
+                const imgUrlHidden = row.querySelector('[data-rep="image_url"]');
+                if (imgHidden) imgHidden.value = '';
+                if (imgUrlHidden) imgUrlHidden.value = '';
+                if (thumb) { thumb.src = ''; thumb.classList.add('hidden'); }
+                if (empty) empty.classList.remove('hidden');
+                if (wrap) { wrap.classList.remove('border-primary'); wrap.classList.add('border-border'); }
+                e.target.remove();
+            });
+        }
 
         setupTabs();
         setupProductsHandlers();
