@@ -167,23 +167,63 @@ class TicketPreviewGenerator
         $w = round(($frame['w'] ?? 0) * self::MM_TO_PT, 2);
         $h = round(($frame['h'] ?? 0) * self::MM_TO_PT, 2);
 
+        // Efecte layer: opacity + rotation. DomPDF 2.x suporta ambele pe CSS.
+        // Le calculam o singura data si le injectam ca fragment CSS in stiluri.
+        $effectCss = $this->buildLayerEffectCss($layer, $x, $y, $w, $h);
+
         switch ($type) {
             case 'text':
-                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h, $locale);
+                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h, $locale, $effectCss);
             case 'shape':
-                return $this->renderShapeLayerHtml($layer, $x, $y, $w, $h);
+                return $this->renderShapeLayerHtml($layer, $x, $y, $w, $h, $effectCss);
             case 'qr':
-                return $this->renderQRLayerHtml($layer, $data, $x, $y, $w, $h);
+                return $this->renderQRLayerHtml($layer, $data, $x, $y, $w, $h, $effectCss);
             case 'barcode':
-                return $this->renderBarcodeLayerHtml($layer, $data, $x, $y, $w, $h);
+                return $this->renderBarcodeLayerHtml($layer, $data, $x, $y, $w, $h, $effectCss);
             case 'image':
-                return $this->renderImageLayerHtml($layer, $data, $x, $y, $w, $h);
+                return $this->renderImageLayerHtml($layer, $data, $x, $y, $w, $h, $effectCss);
             default:
                 return '';
         }
     }
 
-    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, ?string $locale = null): string
+    /**
+     * Construieste fragmentul CSS pentru opacity + transform:rotate pe un layer.
+     * Aplicat direct pe primul element position:fixed al fiecarui renderer HTML.
+     *
+     * DomPDF 2.x suporta CSS `opacity` si `transform: rotate(Ndeg)` cu
+     * `transform-origin: Xpt Ypt`. Pentru rotation, transform-origin se seteaza
+     * la centrul bounding box-ului global al layer-ului (in coordonate pt).
+     *
+     * Return format: string cu declaratii CSS gata de concatenare intr-un
+     * atribut style (poate fi gol cand nu sunt efecte — hot path zero cost).
+     */
+    private function buildLayerEffectCss(array $layer, float $x, float $y, float $w, float $h): string
+    {
+        // Opacity: editor stocheaza fie 0..1 fie 0..100 (procente). Normalizam.
+        $opacity = isset($layer['opacity']) ? (float) $layer['opacity'] : 1.0;
+        if ($opacity > 1.0) $opacity = $opacity / 100.0;
+        $opacity = max(0.0, min(1.0, $opacity));
+
+        $rotation = isset($layer['rotation']) ? (float) $layer['rotation'] : 0.0;
+        $rotation = fmod($rotation, 360.0);
+
+        // Hot path: fara efecte -> string gol (nu adaugam CSS inutil).
+        if (abs($opacity - 1.0) < 0.001 && abs($rotation) < 0.001) return '';
+
+        $css = '';
+        if (abs($opacity - 1.0) > 0.001) {
+            $css .= " opacity: {$opacity};";
+        }
+        if (abs($rotation) > 0.001) {
+            $cx = round($x + $w / 2, 2);
+            $cy = round($y + $h / 2, 2);
+            $css .= " transform: rotate({$rotation}deg); transform-origin: {$cx}pt {$cy}pt;";
+        }
+        return $css;
+    }
+
+    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, ?string $locale = null, string $effectCss = ''): string
     {
         $rawContent = $this->resolveLayerContent($layer, $locale);
         // Detect dacă layer-ul folosește placeholder *_html — atunci sărim peste escape
@@ -220,10 +260,10 @@ class TicketPreviewGenerator
         $whiteSpaceCss = $hasMultiline ? ' white-space: pre-line;' : '';
 
         // Use DejaVu Sans (DomPDF built-in) to guarantee rendering
-        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; font-size: {$fontSizePt}pt; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: 'DejaVu Sans', sans-serif; line-height: {$lineHeightPt}pt; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word;{$whiteSpaceCss}\">{$content}</div>\n";
+        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; font-size: {$fontSizePt}pt; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: 'DejaVu Sans', sans-serif; line-height: {$lineHeightPt}pt; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word;{$whiteSpaceCss}{$effectCss}\">{$content}</div>\n";
     }
 
-    private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h): string
+    private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h, string $effectCss = ''): string
     {
         $kind = $layer['shapeKind'] ?? 'rect';
         $fill = $layer['fillColor'] ?? '#e5e7eb';
@@ -243,13 +283,13 @@ class TicketPreviewGenerator
         if ($kind === 'line') {
             $lineY = round($y + $h / 2, 2);
             $lineH = max($strokeWidthPt, 0.85);
-            return "<div style=\"position: fixed; left: {$x}pt; top: {$lineY}pt; width: {$w}pt; height: {$lineH}pt; background-color: {$stroke};\"></div>\n";
+            return "<div style=\"position: fixed; left: {$x}pt; top: {$lineY}pt; width: {$w}pt; height: {$lineH}pt; background-color: {$stroke};{$effectCss}\"></div>\n";
         }
 
-        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: {$fill}; {$borderStyle} {$radiusStyle}\"></div>\n";
+        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: {$fill}; {$borderStyle} {$radiusStyle}{$effectCss}\"></div>\n";
     }
 
-    private function renderQRLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
+    private function renderQRLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, string $effectCss = ''): string
     {
         $codeData = $layer['qrData'] ?? $layer['props']['data'] ?? 'QR';
         $codeData = $this->replacePlaceholders($codeData, $data);
@@ -265,11 +305,14 @@ class TicketPreviewGenerator
         $boxY = round($qrY - $borderPt, 2);
         $boxSize = round($size + 2 * $borderPt, 2);
 
-        return "<div style=\"position: fixed; left: {$boxX}pt; top: {$boxY}pt; width: {$boxSize}pt; height: {$boxSize}pt; background-color: #ffffff;\"></div>\n" .
-               "<img src=\"{$qrDataUri}\" style=\"position: fixed; left: {$qrX}pt; top: {$qrY}pt; width: {$size}pt; height: {$size}pt;\">\n";
+        // Aplicam effectCss pe fondul alb + img (ambele copii). Rotation-ul e
+        // aplicat cu transform-origin la centrul bounding box-ului global — asa
+        // ca ambele elemente se rotesc consistent in jurul aceluiasi punct.
+        return "<div style=\"position: fixed; left: {$boxX}pt; top: {$boxY}pt; width: {$boxSize}pt; height: {$boxSize}pt; background-color: #ffffff;{$effectCss}\"></div>\n" .
+               "<img src=\"{$qrDataUri}\" style=\"position: fixed; left: {$qrX}pt; top: {$qrY}pt; width: {$size}pt; height: {$size}pt;{$effectCss}\">\n";
     }
 
-    private function renderBarcodeLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
+    private function renderBarcodeLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, string $effectCss = ''): string
     {
         $codeData = $layer['barcodeData'] ?? $layer['props']['data'] ?? '123456789';
         $codeData = $this->replacePlaceholders($codeData, $data);
@@ -288,8 +331,10 @@ class TicketPreviewGenerator
         $availableW = round($w - 2 * $quietZonePt, 2);
         $unitW = $availableW / $totalUnits;
 
+        // effectCss aplicat pe TOATE elementele barcode-ului (background + bare + text).
+        // Rotation cu transform-origin la centrul global -> se rotesc consistent ca grup.
         // Background rect
-        $html = "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: {$background};\"></div>\n";
+        $html = "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: {$background};{$effectCss}\"></div>\n";
 
         // Bars
         $currentX = $x + $quietZonePt;
@@ -297,7 +342,7 @@ class TicketPreviewGenerator
             $barW = round($bar['width'] * $unitW, 3);
             if ($bar['black']) {
                 $bx = round($currentX, 3);
-                $html .= "<div style=\"position: fixed; left: {$bx}pt; top: {$y}pt; width: {$barW}pt; height: {$barH}pt; background-color: {$foreground};\"></div>\n";
+                $html .= "<div style=\"position: fixed; left: {$bx}pt; top: {$y}pt; width: {$barW}pt; height: {$barH}pt; background-color: {$foreground};{$effectCss}\"></div>\n";
             }
             $currentX += $barW;
         }
@@ -307,13 +352,13 @@ class TicketPreviewGenerator
             $textTopPt = round($y + $barH, 2);
             $textH = round($h - $barH, 2);
             $textFontPt = round(2.5 * self::MM_TO_PT, 1);
-            $html .= "<div style=\"position: fixed; left: {$x}pt; top: {$textTopPt}pt; width: {$w}pt; height: {$textH}pt; text-align: center; font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: {$textFontPt}pt; line-height: {$textH}pt; color: {$foreground};\">{$displayData}</div>\n";
+            $html .= "<div style=\"position: fixed; left: {$x}pt; top: {$textTopPt}pt; width: {$w}pt; height: {$textH}pt; text-align: center; font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: {$textFontPt}pt; line-height: {$textH}pt; color: {$foreground};{$effectCss}\">{$displayData}</div>\n";
         }
 
         return $html;
     }
 
-    private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
+    private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, string $effectCss = ''): string
     {
         $src = $layer['src'] ?? '';
         $objectFit = $layer['objectFit'] ?? 'fill';
@@ -323,7 +368,7 @@ class TicketPreviewGenerator
         }
 
         if (empty($src)) {
-            return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: #f3f4f6; border: 1pt solid #d1d5db;\"></div>\n";
+            return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: #f3f4f6; border: 1pt solid #d1d5db;{$effectCss}\"></div>\n";
         }
 
         $dataUri = $this->fetchImageAsDataUri($src);
@@ -342,11 +387,11 @@ class TicketPreviewGenerator
                 // Center within the container
                 $renderX = round($x + ($w - $renderW) / 2, 2);
                 $renderY = round($y + ($h - $renderH) / 2, 2);
-                return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$renderX}pt; top: {$renderY}pt; width: {$renderW}pt; height: {$renderH}pt;\">\n";
+                return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$renderX}pt; top: {$renderY}pt; width: {$renderW}pt; height: {$renderH}pt;{$effectCss}\">\n";
             }
         }
 
-        return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt;\">\n";
+        return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt;{$effectCss}\">\n";
     }
 
     /**
