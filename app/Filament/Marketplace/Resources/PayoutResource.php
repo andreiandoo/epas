@@ -336,12 +336,13 @@ class PayoutResource extends Resource
                                         $disc = (float) ($totals['online']['discount'] + $totals['pos']['discount']);
                                         $extras = (float) ($totals['online']['extras'] + $totals['pos']['extras']);
 
-                                        // Refund split: deductible items (commission_refunded=true)
-                                        // come out of the organizer's slice; informational items
-                                        // (commission_refunded=false) are tracked for reporting but
-                                        // the marketplace covers them out of its commission pool.
-                                        // final_net_amount accessor already subtracts the deductible
-                                        // part, so we don't double-deduct here.
+                                        // ALL refund items now deduct from the organizer's
+                                        // slice — commission_refunded flips only whether the
+                                        // marketplace keeps its own ticketing fee, never
+                                        // whether the face value goes back on the payout.
+                                        // The informational card is kept as a no-op stub
+                                        // (accessor returns 0) so the layout doesn't shift for
+                                        // legacy payouts; will drop it after one release cycle.
                                         $deductibleRefund = (float) $record->deductible_refund_amount;
                                         $informationalRefund = (float) $record->informational_refund_amount;
                                         $finalNet = (float) $record->final_net_amount;
