@@ -285,9 +285,9 @@ class TicketVariableService
                     [
                         'path' => 'ticket.price_detail',
                         'label' => 'Price + Commission Detail',
-                        'description' => 'Smart price text: "Preț: 60 lei + 5% taxă procesare (63 lei)" or "Preț: 60 lei (taxă procesare inclusă)"',
+                        'description' => 'Smart price text: on_top → "Preț: 60,00 lei + 3,00 lei taxă procesare (63,00 lei)"; included → "Preț: 60,00 lei (taxă procesare inclusă: 2,86 lei)".',
                         'type' => 'text',
-                        'example' => 'Preț: 60,00 lei + 5% taxă procesare (63,00 lei)',
+                        'example' => 'Preț: 60,00 lei (taxă procesare inclusă: 2,86 lei)',
                     ],
                     [
                         'path' => 'ticket.fees_text',
@@ -337,6 +337,28 @@ class TicketVariableService
                         'description' => 'Textul din campul "Termeni utilizare" al produsului leisure. Multi-locale: traduce automat pe locale-ul biletului cand meta.translations.usage_terms.{locale} exista.',
                         'type' => 'text',
                         'example' => 'Biletul este valabil doar pentru data si ora selectate. Nu se ramburseaza.',
+                    ],
+                    [
+                        'path' => 'ticket.visit_date',
+                        'label' => 'Data vizită (Leisure)',
+                        'description' => 'Data selectată în calendar la achiziție (leisure). Format: "24 iulie 2026". Fallback: event_date când biletul nu are visit_date. Empty pe evenimente non-leisure.',
+                        'type' => 'string',
+                        'example' => '24 iulie 2026',
+                    ],
+                    [
+                        'path' => 'ticket.visit_date_raw',
+                        'label' => 'Data vizită (raw ISO)',
+                        'description' => 'Aceeași dată ca visit_date, dar în format ISO YYYY-MM-DD (util pentru template-uri care aplică propriul formatter).',
+                        'type' => 'date',
+                        'example' => '2026-07-24',
+                        'format' => 'Y-m-d',
+                    ],
+                    [
+                        'path' => 'ticket.visit_day_name',
+                        'label' => 'Ziua vizitei (nume)',
+                        'description' => 'Numele zilei săptămânii pentru data selectată în calendar (ex. "Vineri"). Localizat pe locale-ul biletului (RO/HU/EN).',
+                        'type' => 'string',
+                        'example' => 'Vineri',
                     ],
                 ],
             ],
@@ -599,7 +621,7 @@ class TicketVariableService
                 'is_insured' => 'true',
                 'insurance_badge' => "\u{1F6E1}\u{FE0F}",
                 'insurance_label' => 'Bilet asigurat',
-                'price_detail' => 'Preț: 299,00 lei + 14,95 lei taxă procesare (313,95 lei)',
+                'price_detail' => 'Preț: 299,00 lei (taxă procesare inclusă: 14,24 lei)',
                 'fees_text' => 'Prețul include 5% Timbru Muzical, 2% Taxa de Monument Istoric',
                 'verify_url' => 'https://tickets.example.com/t/WLMVWB2G',
                 'description' => 'Acces VIP cu drink de bun venit și loc rezervat în primele rânduri',
@@ -607,6 +629,9 @@ class TicketVariableService
                 'includes' => "• Acces toată ziua\n• Hartă tipărită\n• Apă gratuită",
                 'includes_raw' => "Acces toată ziua\nHartă tipărită\nApă gratuită",
                 'usage_terms' => 'Biletul este valabil doar pentru data selectată. Nu se rambursează.',
+                'visit_date' => '24 iulie 2026',
+                'visit_date_raw' => '2026-07-24',
+                'visit_day_name' => 'Vineri',
             ],
             'buyer' => [
                 'name' => 'Ion Popescu',
@@ -940,6 +965,12 @@ class TicketVariableService
         $addonServices = $isLeisure ? $this->buildAddonServicesText($order, $ticket->id, $effectiveLocale) : '';
         $addonServicesHtml = $isLeisure ? $this->buildAddonServicesHtml($order, $ticket->id, $effectiveLocale) : '';
 
+        // Visit date fields (data selectata in calendar la achizitie). Populat DOAR
+        // pentru leisure_venue — pe evenimentele standard raman empty pentru back-compat.
+        $visitDateFields = $isLeisure
+            ? $this->buildVisitDateFields($visitDate, $effectiveLocale)
+            : ['visit_date' => '', 'visit_date_raw' => '', 'visit_day_name' => ''];
+
         return [
             'event' => [
                 'name' => $eventTitle,
@@ -981,6 +1012,9 @@ class TicketVariableService
                 'includes' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, true),
                 'includes_raw' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, false),
                 'usage_terms' => $this->resolveTicketUsageTerms($ticketType, $effectiveLocale),
+                'visit_date' => $visitDateFields['visit_date'],
+                'visit_date_raw' => $visitDateFields['visit_date_raw'],
+                'visit_day_name' => $visitDateFields['visit_day_name'],
             ],
             'buyer' => [
                 'name' => $buyerName,
@@ -1047,6 +1081,19 @@ class TicketVariableService
             return "Preț: {$formattedPrice} {$currencyLabel} + {$formattedCommission} {$currencyLabel} taxă procesare ({$formattedTotal} {$currencyLabel})";
         }
 
+        // Mod 'included': taxa e inclusa in pretul afisat. Calculam valoarea
+        // efectiva a comisionului ca sa apara pe bilet (transparenta cu
+        // clientul + trasabilitate contabila): "Preț: 46,00 lei (taxă
+        // procesare inclusă: 2,30 lei)". Cand nu avem comision snapshot
+        // (preview/editor), calculam din rate * pret (aceeasi formula ca
+        // TicketType::calculateCommission cu type=percentage).
+        $commissionValue = $commissionPerTicket > 0
+            ? $commissionPerTicket
+            : round($price * $commissionRate / 100, 2);
+        if ($commissionValue > 0) {
+            $formattedCommission = number_format($commissionValue, 2, ',', '.');
+            return "Preț: {$formattedPrice} {$currencyLabel} (taxă procesare inclusă: {$formattedCommission} {$currencyLabel})";
+        }
         return "Preț: {$formattedPrice} {$currencyLabel} (taxă procesare inclusă)";
     }
 
@@ -1251,6 +1298,47 @@ class TicketVariableService
         }
         $raw = $ticketType->usage_terms ?? '';
         return $raw !== '' ? trim((string) $raw) : '';
+    }
+
+    /**
+     * Rezolva data selectata in calendar la achizitie (leisure) + numele zilei.
+     * Foloseste Carbon translatedFormat cu locale explicit + tabel manual pentru
+     * numele zilelor (Carbon locale('ro')->dayName cade uneori pe engleza cand
+     * ICU / intl nu e complet incarcat, fix acelasi pattern ca buildDateBlock).
+     *
+     * @return array{visit_date:string, visit_date_raw:string, visit_day_name:string}
+     */
+    private function buildVisitDateFields(?string $visitDate, string $locale): array
+    {
+        $empty = ['visit_date' => '', 'visit_date_raw' => '', 'visit_day_name' => ''];
+        if (!$visitDate) return $empty;
+
+        try {
+            $c = \Carbon\Carbon::parse($visitDate);
+        } catch (\Throwable $e) {
+            return $empty;
+        }
+
+        // Formateaza data pe locale-ul biletului. Carbon translatedFormat aplica
+        // locale-ul curent al instantei. Fallback la RO cand locale-ul nu e cunoscut.
+        $formatLocale = in_array($locale, ['ro', 'en', 'hu', 'de', 'fr', 'es'], true) ? $locale : 'ro';
+        $formatted = $c->locale($formatLocale)->translatedFormat('j F Y');
+
+        // Numele zilei — tabel manual pentru RO/HU (Carbon nu are RO/HU consistent
+        // pe toate build-urile de ICU). EN/altele lasa Carbon.
+        $dayNames = [
+            'ro' => ['Monday' => 'Luni', 'Tuesday' => 'Marți', 'Wednesday' => 'Miercuri', 'Thursday' => 'Joi', 'Friday' => 'Vineri', 'Saturday' => 'Sâmbătă', 'Sunday' => 'Duminică'],
+            'hu' => ['Monday' => 'Hétfő', 'Tuesday' => 'Kedd', 'Wednesday' => 'Szerda', 'Thursday' => 'Csütörtök', 'Friday' => 'Péntek', 'Saturday' => 'Szombat', 'Sunday' => 'Vasárnap'],
+            'en' => ['Monday' => 'Monday', 'Tuesday' => 'Tuesday', 'Wednesday' => 'Wednesday', 'Thursday' => 'Thursday', 'Friday' => 'Friday', 'Saturday' => 'Saturday', 'Sunday' => 'Sunday'],
+        ];
+        $enDay = $c->format('l');
+        $dayName = $dayNames[$formatLocale][$enDay] ?? ($dayNames['ro'][$enDay] ?? $enDay);
+
+        return [
+            'visit_date' => $formatted,
+            'visit_date_raw' => $c->format('Y-m-d'),
+            'visit_day_name' => $dayName,
+        ];
     }
 
     /**
