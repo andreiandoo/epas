@@ -77,7 +77,17 @@ $heroImage      = !empty($heroImages) ? $heroImages[0] : ($ev['cover_image_url']
 if ($heroImage && !str_starts_with($heroImage, 'http')) {
     $heroImage = STORAGE_URL . '/' . $heroImage;
 }
-$posterImage    = $ev['poster_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
+// Fallback chain pentru imaginea folosita in cart/checkout (event.image).
+// Prioritate: Poster (poster_url) — imaginea "oficiala" a evenimentului. Cand
+// lipseste, cade pe imaginile hero/cover/venue-config ca sa nu apara placeholder
+// gri in cos la evenimente leisure cu doar hero setat.
+$posterImage    = $ev['poster_url']
+    ?? $ev['image_url']
+    ?? $ev['image']
+    ?? $ev['hero_image_url']
+    ?? $ev['cover_image_url']
+    ?? ($heroImages[0] ?? '')
+    ?: '';
 if ($posterImage && !str_starts_with($posterImage, 'http')) {
     $posterImage = STORAGE_URL . '/' . $posterImage;
 }
