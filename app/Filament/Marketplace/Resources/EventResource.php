@@ -557,6 +557,15 @@ class EventResource extends Resource
                                         $totalNetOnline = $breakdown['total_net_online'] ?? $totalNet;
                                         $totalNetPos = $breakdown['total_net_pos'] ?? 0;
                                         $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
+                                        // Hint under Venituri when a portion came from refund-
+                                        // kept commission — otherwise the operator sees
+                                        // Venituri (6.323,80) on the event vs Total brut (6.307,00)
+                                        // on the linked payout and there's no visible reason
+                                        // for the 16,80 gap. Empty string when there's nothing
+                                        // to disclose, so no card layout shifts on normal events.
+                                        $keptFromRefundsHint = $keptFromRefunds > 0.01
+                                            ? "<div class='text-[10px] text-gray-500 mt-1'>" . $t('din care ', 'incl. ') . number_format($keptFromRefunds, 2, ',', '.') . " " . $t('reținuți din refund', 'kept from refund') . "</div>"
+                                            : '';
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
                                         $extrasLabel = $t('Taxe / Asigurări (RON)', 'Fees / Insurance (RON)');
@@ -593,6 +602,7 @@ class EventResource extends Resource
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$revenueLabel}</div>
+                                                    {$keptFromRefundsHint}
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
