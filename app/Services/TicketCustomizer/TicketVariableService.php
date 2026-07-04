@@ -1242,8 +1242,13 @@ class TicketVariableService
 
     /**
      * Rezolva lista "Include" a produsului leisure (meta.includes).
-     * Suporta multi-locale prin meta.translations.includes.{locale}. Cand traducerea
-     * lipseste, cade pe RO (meta.includes) apoi EN.
+     *
+     * Cascada corecta (fix bug 2026-07-04):
+     *   1. meta.translations.includes[$locale] — traducerea exacta pentru locale-ul cerut
+     *   2. meta.includes (root) — VALOAREA DE BAZA (RO source-of-truth) — trebuie sa fie
+     *      inainte de EN fallback, altfel un organizator care are RO in main + doar EN in
+     *      translations vede EN pe biletele RO. Bug raportat: 2026-07-04.
+     *   3. meta.translations.includes['en'] — ultimul fallback pentru limbi exotice
      *
      * @param  bool  $bulleted  true -> fiecare linie prefixata cu "• "; false -> plain lines
      */
@@ -1253,26 +1258,24 @@ class TicketVariableService
         $meta = $ticketType->meta ?? null;
         if (!is_array($meta)) return '';
 
-        // 1. Locale preferat din meta.translations
-        $items = null;
-        $tr = $meta['translations']['includes'][$locale] ?? null;
-        if ($tr !== null && $tr !== '') {
-            $items = is_array($tr) ? $tr : preg_split('/\r?\n/', (string) $tr);
-        }
-        // 2. Fallback RO/EN in translations, apoi meta.includes (RO default)
-        if ($items === null) {
-            $trFallback = $meta['translations']['includes']['ro']
-                ?? $meta['translations']['includes']['en']
-                ?? null;
-            if ($trFallback !== null && $trFallback !== '') {
-                $items = is_array($trFallback) ? $trFallback : preg_split('/\r?\n/', (string) $trFallback);
+        $toItems = function ($raw) {
+            if ($raw === null || $raw === '') return null;
+            return is_array($raw) ? $raw : preg_split('/\r?\n/', (string) $raw);
+        };
+
+        // 1. Traducerea exacta pentru locale-ul cerut
+        $items = $toItems($meta['translations']['includes'][$locale] ?? null);
+        // 2. Root (RO source-of-truth) — inainte de orice fallback strain
+        if ($items === null) $items = $toItems($meta['includes'] ?? null);
+        // 3. Ultimul fallback: EN sau prima traducere disponibila
+        if ($items === null && isset($meta['translations']['includes']) && is_array($meta['translations']['includes'])) {
+            $items = $toItems($meta['translations']['includes']['en'] ?? null);
+            if ($items === null) {
+                $first = reset($meta['translations']['includes']) ?: null;
+                $items = $toItems($first);
             }
         }
-        if ($items === null) {
-            $raw = $meta['includes'] ?? null;
-            if ($raw === null || $raw === '') return '';
-            $items = is_array($raw) ? $raw : preg_split('/\r?\n/', (string) $raw);
-        }
+        if ($items === null) return '';
 
         $items = array_values(array_filter(array_map(fn ($s) => trim((string) $s), $items), fn ($s) => $s !== ''));
         if (empty($items)) return '';
@@ -1285,19 +1288,34 @@ class TicketVariableService
 
     /**
      * Rezolva textul "Termeni utilizare" al produsului leisure (TicketType.usage_terms).
-     * Suporta multi-locale prin meta.translations.usage_terms.{locale}.
+     *
+     * Cascada (fix bug 2026-07-04):
+     *   1. meta.translations.usage_terms[$locale] — traducerea exacta
+     *   2. TicketType.usage_terms (root) — RO source-of-truth
+     *   3. meta.translations.usage_terms['en'] — ultimul fallback
      */
     private function resolveTicketUsageTerms($ticketType, string $locale): string
     {
         if (!$ticketType) return '';
         $meta = $ticketType->meta ?? null;
-        if (is_array($meta) && isset($meta['translations']['usage_terms']) && is_array($meta['translations']['usage_terms'])) {
-            $tr = $meta['translations']['usage_terms'];
-            $value = $tr[$locale] ?? $tr['ro'] ?? $tr['en'] ?? null;
-            if ($value !== null && $value !== '') return trim((string) $value);
-        }
+
+        // 1. Traducerea exacta pentru locale-ul cerut
+        $tr = $meta['translations']['usage_terms'][$locale] ?? null;
+        if (is_string($tr) && trim($tr) !== '') return trim($tr);
+
+        // 2. Root — RO source-of-truth
         $raw = $ticketType->usage_terms ?? '';
-        return $raw !== '' ? trim((string) $raw) : '';
+        if (is_string($raw) && trim($raw) !== '') return trim($raw);
+
+        // 3. Ultimul fallback: EN sau prima traducere disponibila
+        if (is_array($meta) && isset($meta['translations']['usage_terms']) && is_array($meta['translations']['usage_terms'])) {
+            $en = $meta['translations']['usage_terms']['en'] ?? null;
+            if (is_string($en) && trim($en) !== '') return trim($en);
+            foreach ($meta['translations']['usage_terms'] as $val) {
+                if (is_string($val) && trim($val) !== '') return trim($val);
+            }
+        }
+        return '';
     }
 
     /**
@@ -1424,14 +1442,18 @@ class TicketVariableService
     {
         if (!$model) return null;
 
-        // Cale 1: trait Translatable → getTranslation()
+        // Cale 1: trait Translatable → getTranslation() cu useFallback=false ca sa
+        // controlam noi cascada. Cu useFallback=true (default), trait-ul cade
+        // automat pe 'en' cand locale-ul cerut e gol → pierdem controlul si RO
+        // apare EN pe bilete cand traducerea RO lipseste dar EN e completata.
+        // Cascada: locale exact → RO source-of-truth → EN final fallback.
         if (method_exists($model, 'getTranslation')) {
-            $value = $model->getTranslation($field, $locale);
+            $value = $model->getTranslation($field, $locale, false);
             if ($value !== null && $value !== '') return (string) $value;
-            // Fallback chain
-            $fallback = $model->getTranslation($field, 'ro')
-                ?? $model->getTranslation($field, 'en');
-            if ($fallback !== null && $fallback !== '') return (string) $fallback;
+            $ro = $model->getTranslation($field, 'ro', false);
+            if ($ro !== null && $ro !== '') return (string) $ro;
+            $en = $model->getTranslation($field, 'en', false);
+            if ($en !== null && $en !== '') return (string) $en;
         }
 
         // Cale 2: atribut JSON simplu (array) sau string
@@ -1448,27 +1470,47 @@ class TicketVariableService
 
     /**
      * Numele unui TicketType cu suport multi-locale prin `meta.translations.name`.
-     * Cand `meta.translations` lipseste sau locale-ul nu e completat, foloseste
-     * string-ul simplu actual (backward compat 100%).
      *
-     *   meta.translations: { "name": { "ro": "Bilet adult", "hu": "Felnőtt jegy", "en": "Adult ticket" } }
+     * Cascada corecta (fix bug 2026-07-04):
+     *   1. meta.translations.name[$locale] — traducerea exacta
+     *   2. TicketType.name (root, string sau array) — RO source-of-truth
+     *   3. meta.translations.name['en'] / prima traducere disponibila
+     *
+     * Bug anterior: cadea pe translations.en INAINTE de root -> nume in engleza pe
+     * biletele RO cand organizatorul completa doar traducerea EN.
      */
     private function localizedTicketTypeName($ticketType, string $locale): ?string
     {
         if (!$ticketType) return null;
 
         $meta = $ticketType->meta ?? null;
+
+        // 1. Traducerea exacta din meta.translations
         if (is_array($meta) && isset($meta['translations']['name']) && is_array($meta['translations']['name'])) {
-            $tt = $meta['translations']['name'];
-            $value = $tt[$locale] ?? $tt['ro'] ?? $tt['en'] ?? null;
+            $value = $meta['translations']['name'][$locale] ?? null;
             if ($value !== null && $value !== '') return (string) $value;
         }
 
+        // 2. Root TicketType.name — RO source-of-truth
         $name = $ticketType->name ?? null;
         if (is_array($name)) {
-            return (string) ($name[$locale] ?? $name['ro'] ?? $name['en'] ?? (reset($name) ?: ''));
+            $rooted = $name[$locale] ?? $name['ro'] ?? null;
+            if ($rooted !== null && $rooted !== '') return (string) $rooted;
+        } elseif ($name !== null && $name !== '') {
+            return (string) $name;
         }
-        return $name !== null && $name !== '' ? (string) $name : null;
+
+        // 3. Ultimul fallback: translations[en] / prima disponibila / root array first
+        if (is_array($meta) && isset($meta['translations']['name']) && is_array($meta['translations']['name'])) {
+            $en = $meta['translations']['name']['en'] ?? null;
+            if ($en !== null && $en !== '') return (string) $en;
+            $first = reset($meta['translations']['name']) ?: null;
+            if ($first !== null && $first !== '') return (string) $first;
+        }
+        if (is_array($name)) {
+            return (string) ($name['en'] ?? (reset($name) ?: ''));
+        }
+        return null;
     }
 
     /**
