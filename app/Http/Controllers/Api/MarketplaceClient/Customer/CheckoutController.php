@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Coupon\CouponCode;
 use App\Models\MarketplaceCart;
+use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizerPromoCode;
@@ -1204,7 +1205,17 @@ class CheckoutController extends BaseController
                         $ticketMeta['tour_slot_time'] = $tourSlot;
                     }
 
-                    Ticket::create([
+                    // Detecteaza pachet — daca da, creez bilet "umbrella" (pt raportare)
+                    // + N bilete-componente scanabile (unul pentru fiecare package_output).
+                    // Consistent cu flow-ul POS (LeisureController::posSale line 1259-1365).
+                    // Fara asta, un pachet cumparat online genera 1 singur bilet cu numele
+                    // pachetului -> nu poti scana componentele la intrare.
+                    $isPackage = ($tt && ($tt->service_category ?? null) === 'package');
+                    $packageOutputs = ($isPackage && is_array($tt->meta['package_outputs'] ?? null))
+                        ? $tt->meta['package_outputs']
+                        : [];
+
+                    $mainTicket = Ticket::create([
                         'marketplace_client_id' => $client->id,
                         'tenant_id' => $event?->tenant_id,
                         'order_id' => $order->id,
@@ -1230,8 +1241,28 @@ class CheckoutController extends BaseController
                         'seat_uid' => $seatUid ?? null,
                         'attendee_name' => $beneficiary['name'] ?? null,
                         'attendee_email' => $beneficiary['email'] ?? null,
-                        'meta' => !empty($ticketMeta) ? $ticketMeta : null,
+                        'meta' => $this->buildTicketMeta($ticketMeta, $isPackage, $packageOutputs, $tt),
                     ]);
+
+                    // Fan-out pachet: pentru fiecare package_output, creez N bilete-componente
+                    // (cu price=0, meta.from_package=true si meta.parent_package_ticket_id).
+                    // Componentele sunt scanabile la intrare; parintele apare pe raport ca tranzactie.
+                    if ($isPackage && !empty($packageOutputs)) {
+                        $this->fanOutPackageComponents(
+                            $mainTicket,
+                            $packageOutputs,
+                            $order,
+                            $orderItem,
+                            $client,
+                            $event,
+                            $marketplaceEvent,
+                            $customer,
+                            $beneficiary,
+                            $checkoutLocale,
+                            $isAutoConfirmed,
+                            $item['visit_date'] ?? null
+                        );
+                    }
 
                     $ticketIndex++;
                 }
@@ -1328,6 +1359,27 @@ class CheckoutController extends BaseController
             }
 
             DB::commit();
+
+            // Confirmarea email pentru comenzile FREE / TEST auto-confirmate DIRECT in checkout.
+            // Pentru comenzile paid, email-ul se trimite din PaymentController dupa Netopia
+            // callback (line 407-410 in PaymentController). Free orders (100% discount code /
+            // ticket gratuit) nu ajung in PaymentController -> daca nu trimitem aici, clientul
+            // NU primeste niciun email de confirmare.
+            if ($isAutoConfirmed && !$isTestOrder && $order->customer_email && $client) {
+                try {
+                    // sendOrderConfirmationEmail e public method pe PaymentController — o instantiem
+                    // via container ca sa mostenim toate dependintele. E logica identica cu email-ul
+                    // trimis pentru comenzile paid.
+                    app(\App\Http\Controllers\Api\MarketplaceClient\PaymentController::class)
+                        ->sendOrderConfirmationEmail($order);
+                } catch (\Throwable $e) {
+                    Log::channel('marketplace')->error('Failed to send free-order confirmation email', [
+                        'order_id' => $order->id,
+                        'customer_email' => $order->customer_email,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             // Send account created email with set-password link
             // Uses marketplace mail transport (same as order confirmation) for reliable delivery
@@ -2358,6 +2410,111 @@ class CheckoutController extends BaseController
             ]);
         } catch (\Exception $e) {
             \Log::warning('Failed to send low stock alert', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Construieste meta-ul biletului principal, adaugand marker-e pentru pachet.
+     * Cand tt.service_category = 'package', biletul primeste 'is_package_umbrella=true'
+     * + 'service_category=package' + 'package_outputs' snapshot pentru raportare.
+     * Consistent cu POS flow (LeisureController::posSale meta la line 1286-1293).
+     */
+    protected function buildTicketMeta(array $ticketMeta, bool $isPackage, array $packageOutputs, $tt): ?array
+    {
+        if ($isPackage) {
+            $ticketMeta['is_package_umbrella'] = true;
+            $ticketMeta['service_category'] = 'package';
+            if (!empty($packageOutputs)) {
+                $ticketMeta['package_outputs'] = $packageOutputs;
+            }
+            if ($tt && ($tt->issuing_company ?? null)) {
+                $ticketMeta['issuing_company'] = $tt->issuing_company;
+            }
+        }
+        return !empty($ticketMeta) ? $ticketMeta : null;
+    }
+
+    /**
+     * Emite bilete-componente pentru pachetul cumparat online. Pentru fiecare
+     * package_output (ticket_type_id, variant_id, qty), creez qty bilete cu:
+     *  - price = 0 (pretul e in parintele "umbrella")
+     *  - meta.from_package = true
+     *  - meta.parent_package_ticket_id = umbrella.id
+     *  - meta.visit_date + meta.variant + meta.issuing_company
+     *
+     * Fara componentele astea, un pachet cumparat online genera 1 singur bilet cu
+     * numele pachetului -> operatorul de la poarta nu putea scana produsele reale.
+     * Consistent cu POS flow (LeisureController::posSale line 1305-1364).
+     */
+    protected function fanOutPackageComponents(
+        Ticket $umbrella,
+        array $packageOutputs,
+        Order $order,
+        $orderItem,
+        MarketplaceClient $client,
+        $event,
+        $marketplaceEvent,
+        MarketplaceCustomer $customer,
+        ?array $beneficiary,
+        ?string $checkoutLocale,
+        bool $isAutoConfirmed,
+        ?string $visitDate
+    ): void {
+        $componentIds = collect($packageOutputs)->pluck('ticket_type_id')->filter()->unique();
+        if ($componentIds->isEmpty()) return;
+
+        $componentTypes = TicketType::query()->whereIn('id', $componentIds)->get()->keyBy('id');
+
+        foreach ($packageOutputs as $row) {
+            $compId = (int) ($row['ticket_type_id'] ?? 0);
+            if (!$compId) continue;
+            $compTt = $componentTypes->get($compId);
+            if (!$compTt) continue;
+
+            $compQty = max(1, (int) ($row['qty'] ?? 1));
+            $compVariant = null;
+            if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                foreach ($compTt->meta['variants'] as $cv) {
+                    if (!is_array($cv) || empty($cv['label'])) continue;
+                    $cvid = $cv['id'] ?? \Illuminate\Support\Str::slug($cv['label']);
+                    if ($cvid === $row['variant_id']) {
+                        $compVariant = [
+                            'id' => $cvid,
+                            'label' => $cv['label'],
+                            'duration_minutes' => $cv['duration_minutes'] ?? null,
+                        ];
+                        break;
+                    }
+                }
+            }
+
+            for ($c = 0; $c < $compQty; $c++) {
+                Ticket::create([
+                    'marketplace_client_id' => $client->id,
+                    'tenant_id' => $event?->tenant_id,
+                    'order_id' => $order->id,
+                    'order_item_id' => $orderItem->id,
+                    'event_id' => $event?->id,
+                    'marketplace_event_id' => $marketplaceEvent?->id,
+                    'ticket_type_id' => $compTt->id,
+                    'marketplace_customer_id' => $customer->id,
+                    'code' => strtoupper(Str::random(8)),
+                    'barcode' => Str::uuid()->toString(),
+                    'locale' => $checkoutLocale,
+                    'status' => $isAutoConfirmed ? 'valid' : 'pending',
+                    'price' => 0, // componentele nu au pret propriu; pretul e in parintele "umbrella"
+                    'attendee_name' => $beneficiary['name'] ?? null,
+                    'attendee_email' => $beneficiary['email'] ?? null,
+                    'meta' => array_filter([
+                        'from_package' => true,
+                        'parent_package_ticket_id' => $umbrella->id,
+                        'service_category' => $compTt->service_category ?? 'access',
+                        'issuing_company' => $compTt->issuing_company ?? 'primary',
+                        'visit_date' => $visitDate,
+                        'variant' => $compVariant,
+                    ], fn ($v) => $v !== null),
+                ]);
+            }
         }
     }
 }
