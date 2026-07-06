@@ -1399,16 +1399,17 @@ class LeisureController extends BaseController
                         ];
                     }
 
-                    // Guide bonus: pentru bilete de grup cu group_includes_guide,
-                    // emitem +1 bilet GRATUIT (ghid) la fiecare multiplu de
-                    // min_per_order cumparat. Mirror comportament CheckoutController
-                    // pentru consistenta (customer flow + POS flow emit acelasi tip).
+                    // Guide bonus: pentru bilete de grup cu group_includes_guide, emitem 1 SINGUR
+                    // bilet gratuit (ghid) pe order daca cantitatea >= minim, indiferent de multipli.
+                    // Vechea logica intdiv(qty/min) genera N ghizi (3 la qty=24 min=8), dar 1 ghid
+                    // coordoneaza tot grupul indiferent de marime. Mirror comportament
+                    // CheckoutController pentru consistenta customer + POS.
                     if (
                         !empty($tt->meta['is_group_ticket'])
                         && !empty($tt->meta['group_includes_guide'])
                     ) {
                         $minPerGroup = max(1, (int) ($tt->min_per_order ?? 1));
-                        $bonusCount = intdiv((int) $it['qty'], $minPerGroup);
+                        $bonusCount = ((int) $it['qty']) >= $minPerGroup ? 1 : 0;
                         $guideLabel = trim((string) ($tt->meta['group_guide_label'] ?? '')) ?: 'Ghid grup';
                         for ($g = 0; $g < $bonusCount; $g++) {
                             $codeBonus = strtoupper(Str::random(10));

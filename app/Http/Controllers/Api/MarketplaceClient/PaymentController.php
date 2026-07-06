@@ -624,9 +624,16 @@ class PaymentController extends BaseController
             return null;
         };
 
-        // Group tickets by marketplace event
+        // Group tickets by marketplace event.
+        // Skip "umbrella" tickets pentru pachete (meta.is_package_umbrella=true) — acele
+        // bilete exista in DB doar pentru raportare (Per tip bilet in raport pastreaza
+        // pretul pachetului), dar NU trebuie afisate customer-ului. Componentele reale
+        // (meta.from_package=true) sunt cele scanabile la intrare si le vede clientul.
         $ticketsByEvent = [];
         foreach ($order->tickets as $ticket) {
+            $meta = is_array($ticket->meta ?? null) ? $ticket->meta : [];
+            if (!empty($meta['is_package_umbrella'])) continue;
+
             $event = $resolveEvent($ticket);
             $eventKey = $ticket->marketplace_event_id ?? $ticket->event_id ?? 0;
             if (!isset($ticketsByEvent[$eventKey])) {

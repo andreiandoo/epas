@@ -1277,8 +1277,11 @@ class CheckoutController extends BaseController
                     && !empty($tt->meta['is_group_ticket'])
                     && !empty($tt->meta['group_includes_guide'])
                 ) {
+                    // Emite 1 SINGUR bilet gratuit pentru ghid pe order, indiferent de multipli.
+                    // Vechea logica proportionala (intdiv qty/min) genera 3 ghizi pentru qty=24 min=8
+                    // — nu aveam nevoie de asta (1 ghid coordoneaza tot grupul, nu 3).
                     $minPerGroup = max(1, (int) ($tt->min_per_order ?? 1));
-                    $bonusCount = intdiv((int) $item['quantity'], $minPerGroup);
+                    $bonusCount = ((int) $item['quantity']) >= $minPerGroup ? 1 : 0;
                     $guideLabel = trim((string) ($tt->meta['group_guide_label'] ?? '')) ?: 'Ghid grup';
                     for ($g = 0; $g < $bonusCount; $g++) {
                         Ticket::create([

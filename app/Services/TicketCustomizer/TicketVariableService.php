@@ -943,7 +943,7 @@ class TicketVariableService
         $currency = $order?->currency ?? $ticketType?->currency ?? 'RON';
 
         // Build computed fields
-        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency, $commissionPerUnit);
+        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency, $commissionPerUnit, $effectiveLocale);
         $feesText = $this->buildFeesText($event);
         $serial = $this->buildSerialNumber($ticket);
 
@@ -1007,7 +1007,7 @@ class TicketVariableService
                 'price_detail' => $priceDetail,
                 'fees_text' => $feesText,
                 'verify_url' => $ticket->getVerifyUrl(),
-                'description' => $this->resolveTicketDescription($ticketType),
+                'description' => $this->resolveTicketDescription($ticketType, $effectiveLocale),
                 'perks' => $this->resolveTicketPerks($ticketType),
                 'includes' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, true),
                 'includes_raw' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, false),
@@ -1063,38 +1063,59 @@ class TicketVariableService
      *         (preview / template editor) — in which case we fall back to
      *         rate × price so the preview still renders a plausible number.
      */
-    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency, float $commissionPerTicket = 0.0): string
+    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency, float $commissionPerTicket = 0.0, string $locale = 'ro'): string
     {
-        $currencyLabel = strtolower($currency) === 'ron' ? 'lei' : $currency;
-        $formattedPrice = number_format($price, 2, ',', '.');
+        // Currency label localizat: 'lei' pe RO, 'RON' pe EN/HU (mai universal in engleza).
+        $isRon = strtolower($currency) === 'ron';
+        $currencyLabel = $isRon
+            ? ($locale === 'ro' ? 'lei' : 'RON')
+            : $currency;
+        // Number format: RO/HU folosesc virgula ca separator zecimal + punct pt mii,
+        // EN cade pe punct decimal + virgula pt mii (standardul US/UK).
+        $decSep = $locale === 'en' ? '.' : ',';
+        $thouSep = $locale === 'en' ? ',' : '.';
+        $formattedPrice = number_format($price, 2, $decSep, $thouSep);
+
+        // Dictionar traduceri pentru cele 3 fraze care compun output-ul.
+        $t = [
+            'ro' => [
+                'price' => 'Preț',
+                'processing_fee' => 'taxă procesare',
+                'processing_fee_included' => 'taxă procesare inclusă',
+            ],
+            'hu' => [
+                'price' => 'Ár',
+                'processing_fee' => 'kezelési díj',
+                'processing_fee_included' => 'kezelési díj tartalmazza',
+            ],
+            'en' => [
+                'price' => 'Price',
+                'processing_fee' => 'processing fee',
+                'processing_fee_included' => 'processing fee included',
+            ],
+        ];
+        $L = $t[$locale] ?? $t['ro'];
 
         if (in_array($commissionMode, ['added_on_top', 'on_top'])) {
-            // Use the commission actually charged at sale time when known
-            // (so the line matches what the customer paid even after a
-            // promo-code discount shrinks the displayed base price).
             $commission = $commissionPerTicket > 0
                 ? $commissionPerTicket
                 : round($price * $commissionRate / 100, 2);
             $totalWithCommission = $price + $commission;
-            $formattedTotal = number_format($totalWithCommission, 2, ',', '.');
-            $formattedCommission = number_format($commission, 2, ',', '.');
-            return "Preț: {$formattedPrice} {$currencyLabel} + {$formattedCommission} {$currencyLabel} taxă procesare ({$formattedTotal} {$currencyLabel})";
+            $formattedTotal = number_format($totalWithCommission, 2, $decSep, $thouSep);
+            $formattedCommission = number_format($commission, 2, $decSep, $thouSep);
+            return "{$L['price']}: {$formattedPrice} {$currencyLabel} + {$formattedCommission} {$currencyLabel} {$L['processing_fee']} ({$formattedTotal} {$currencyLabel})";
         }
 
-        // Mod 'included': taxa e inclusa in pretul afisat. Calculam valoarea
-        // efectiva a comisionului ca sa apara pe bilet (transparenta cu
-        // clientul + trasabilitate contabila): "Preț: 46,00 lei (taxă
-        // procesare inclusă: 2,30 lei)". Cand nu avem comision snapshot
-        // (preview/editor), calculam din rate * pret (aceeasi formula ca
-        // TicketType::calculateCommission cu type=percentage).
+        // Mod 'included': taxa e inclusa in pretul afisat. Aratam valoarea concretă
+        // pentru transparenta (RO: "taxă procesare inclusă: 2,30 lei").
         $commissionValue = $commissionPerTicket > 0
             ? $commissionPerTicket
             : round($price * $commissionRate / 100, 2);
         if ($commissionValue > 0) {
-            $formattedCommission = number_format($commissionValue, 2, ',', '.');
-            return "Preț: {$formattedPrice} {$currencyLabel} (taxă procesare inclusă: {$formattedCommission} {$currencyLabel})";
+            $formattedCommission = number_format($commissionValue, 2, $decSep, $thouSep);
+            return "{$L['price']}: {$formattedPrice} {$currencyLabel} ({$L['processing_fee_included']}: {$formattedCommission} {$currencyLabel})";
         }
-        return "Preț: {$formattedPrice} {$currencyLabel} (taxă procesare inclusă)";
+        return "{$L['price']}: {$formattedPrice} {$currencyLabel} ({$L['processing_fee_included']})";
     }
 
     /**
@@ -1196,19 +1217,47 @@ class TicketVariableService
     }
 
     /**
-     * Resolve ticket type description (translatable or plain)
+     * Resolve ticket type description (translatable or plain).
+     *
+     * Cascada (fix bug 2026-07-06):
+     *   1. meta.translations.description[$locale] — traducerea exacta setata din
+     *      leisure -> Produse -> tab Traduceri -> "Descriere scurta (HU/EN)"
+     *   2. TicketType.description (root — poate fi string sau array cu keys ro/en)
+     *   3. meta.translations.description['en'] — ultimul fallback
      */
-    private function resolveTicketDescription($ticketType): string
+    private function resolveTicketDescription($ticketType, string $locale = 'ro'): string
     {
         if (!$ticketType) return '';
 
-        $desc = $ticketType->description ?? '';
+        $meta = $ticketType->meta ?? null;
 
-        if (is_array($desc)) {
-            return $desc['ro'] ?? $desc['en'] ?? (reset($desc) ?: '');
+        // 1. Traducerea exacta pentru locale-ul cerut
+        if (is_array($meta) && isset($meta['translations']['description'][$locale])) {
+            $tr = $meta['translations']['description'][$locale];
+            if (is_string($tr) && trim($tr) !== '') return trim($tr);
         }
 
-        return (string) $desc;
+        // 2. Root TicketType.description
+        $desc = $ticketType->description ?? '';
+        if (is_array($desc)) {
+            $rooted = $desc[$locale] ?? $desc['ro'] ?? null;
+            if ($rooted !== null && $rooted !== '') return (string) $rooted;
+        } elseif ($desc !== '') {
+            return (string) $desc;
+        }
+
+        // 3. Fallback EN sau prima traducere disponibila
+        if (is_array($meta) && isset($meta['translations']['description']) && is_array($meta['translations']['description'])) {
+            $en = $meta['translations']['description']['en'] ?? null;
+            if (is_string($en) && trim($en) !== '') return trim($en);
+            foreach ($meta['translations']['description'] as $val) {
+                if (is_string($val) && trim($val) !== '') return trim($val);
+            }
+        }
+        if (is_array($desc)) {
+            return (string) ($desc['en'] ?? (reset($desc) ?: ''));
+        }
+        return '';
     }
 
     /**

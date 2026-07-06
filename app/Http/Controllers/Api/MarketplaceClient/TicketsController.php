@@ -35,7 +35,10 @@ class TicketsController extends BaseController
             return $this->error('Tickets are only available for completed orders', 400);
         }
 
-        $tickets = $order->tickets->map(function ($ticket) use ($order) {
+        // Skip umbrella tickets ale pachetelor (customer vede doar componentele scanabile).
+        $tickets = $order->tickets->reject(function ($t) {
+            return is_array($t->meta ?? null) && !empty($t->meta['is_package_umbrella']);
+        })->map(function ($ticket) use ($order) {
             $event = $ticket->marketplaceEvent;
 
             return [
@@ -95,7 +98,12 @@ class TicketsController extends BaseController
             return $this->error('Order not found', 404);
         }
 
-        $tickets = $order->tickets;
+        // Skip umbrella tickets (meta.is_package_umbrella=true). Ele exista in DB pentru
+        // raportare dar customer-ul primeste doar componentele reale ale pachetului
+        // (meta.from_package=true), care sunt scanabile la intrare.
+        $tickets = $order->tickets->reject(function ($t) {
+            return is_array($t->meta ?? null) && !empty($t->meta['is_package_umbrella']);
+        })->values();
         if ($tickets->isEmpty()) {
             return $this->error('No tickets found for this order', 404);
         }
