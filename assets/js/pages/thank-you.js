@@ -1,8 +1,199 @@
+// Dictionar de traduceri pentru pagina /multumim. Locale-ul e citit prima data
+// din ?lang= (preservat din checkout), fallback pe order.locale la load, fallback
+// final pe cookie ambilet_locale_leisure. Cand locale === 'ro', translations nu
+// se aplica -> HTML-ul PHP ramane RO neschimbat.
+const THANK_YOU_I18N = {
+    ro: {
+        step_cart: 'Coș', step_checkout: 'Checkout', step_confirm: 'Confirmare',
+        order_number: 'Comandă',
+        payment_processed: 'Plata a fost procesată!',
+        tickets_printing: 'Biletele tale se printează...',
+        tickets_ready: 'Biletele tale sunt gata!',
+        loading: 'Se încarcă...',
+        swipe_hint: 'Glisează pentru a vedea toate biletele',
+        tickets_sent_email: 'Biletele au fost trimise pe email',
+        order_details: 'Detalii comandă',
+        status_confirmed: 'Confirmată',
+        tickets_purchased: 'Bilete achiziționate',
+        payment_method: 'Metoda de plată',
+        bank_card: 'Card bancar',
+        payment_summary: 'Sumar plată',
+        points_earned: 'Ai câștigat puncte!',
+        new_balance: 'Sold nou',
+        points: 'puncte',
+        print_tickets: 'Printează biletele',
+        print_or_pdf: 'Printează sau salvează ca PDF',
+        add_to_calendar: 'Adaugă în calendar',
+        share_with_friends: 'Spune-le și prietenilor despre eveniment!',
+        back_to_home: 'Înapoi la pagina principală',
+        // Dinamice (folosite in renderOrderData)
+        tickets_are_ready: 'Biletele sunt gata!',
+        your_email: 'Email-ul tău',
+        tickets_singular: 'bilet',
+        tickets_plural: 'bilete',
+        for_event: 'pentru',
+        event: 'eveniment',
+        no_tickets: 'Nu există bilete',
+        subtotal: 'Subtotal',
+        service_fee: 'Comision serviciu',
+        return_fee: 'Taxa de retur',
+        discount: 'Reducere',
+        total: 'Total',
+        // Failed / Pending
+        payment_failed: 'Plata nu a fost procesată',
+        payment_failed_desc: 'Din păcate, plata nu a putut fi finalizată. Te rugăm să verifici datele cardului și să încerci din nou.',
+        status_failed: 'Eșuată',
+        payment_pending: 'Plata este în procesare',
+        payment_pending_desc: 'Plata ta este în curs de verificare. Vei primi biletele pe email imediat ce plata este confirmată.',
+        email_after_confirmation: 'Vei primi biletele pe email după confirmarea plății',
+        status_pending: 'În așteptare',
+        // Order not found
+        order_not_found: 'Comanda nu a fost gasita',
+        order_not_found_desc: 'Nu am putut gasi informatii despre aceasta comanda. Verifica numarul comenzii sau contacteaza suportul.',
+    },
+    hu: {
+        step_cart: 'Kosár', step_checkout: 'Fizetés', step_confirm: 'Megerősítés',
+        order_number: 'Rendelés',
+        payment_processed: 'A fizetés sikeresen feldolgozva!',
+        tickets_printing: 'A jegyek nyomtatása folyamatban...',
+        tickets_ready: 'A jegyeid készen állnak!',
+        loading: 'Betöltés...',
+        swipe_hint: 'Húzd az ujjad az összes jegy megtekintéséhez',
+        tickets_sent_email: 'A jegyeket elküldtük emailben',
+        order_details: 'Rendelés részletei',
+        status_confirmed: 'Megerősítve',
+        tickets_purchased: 'Megvásárolt jegyek',
+        payment_method: 'Fizetési mód',
+        bank_card: 'Bankkártya',
+        payment_summary: 'Fizetési összefoglaló',
+        points_earned: 'Pontokat szereztél!',
+        new_balance: 'Új egyenleg',
+        points: 'pont',
+        print_tickets: 'Jegyek nyomtatása',
+        print_or_pdf: 'Nyomtatás vagy PDF mentés',
+        add_to_calendar: 'Naptárhoz adás',
+        share_with_friends: 'Meséld el a barátaidnak is az eseményről!',
+        back_to_home: 'Vissza a főoldalra',
+        tickets_are_ready: 'A jegyek készen állnak!',
+        your_email: 'Az email címed',
+        tickets_singular: 'jegy',
+        tickets_plural: 'jegy',
+        for_event: 'esemény:',
+        event: 'esemény',
+        no_tickets: 'Nincsenek jegyek',
+        subtotal: 'Részösszeg',
+        service_fee: 'Szolgáltatási díj',
+        return_fee: 'Visszatérítési díj',
+        discount: 'Kedvezmény',
+        total: 'Összesen',
+        payment_failed: 'A fizetés sikertelen',
+        payment_failed_desc: 'Sajnos a fizetést nem sikerült véglegesíteni. Kérjük, ellenőrizd a kártyaadatokat és próbáld újra.',
+        status_failed: 'Sikertelen',
+        payment_pending: 'A fizetés feldolgozás alatt',
+        payment_pending_desc: 'A fizetésed ellenőrzés alatt áll. A jegyeket emailben kapod meg, amint a fizetés megerősítést nyer.',
+        email_after_confirmation: 'A jegyeket a fizetés megerősítése után emailben kapod meg',
+        status_pending: 'Függőben',
+        order_not_found: 'A rendelés nem található',
+        order_not_found_desc: 'Nem találtunk információt erről a rendelésről. Ellenőrizd a rendelés számát vagy lépj kapcsolatba az ügyfélszolgálattal.',
+    },
+    en: {
+        step_cart: 'Cart', step_checkout: 'Checkout', step_confirm: 'Confirmation',
+        order_number: 'Order',
+        payment_processed: 'Payment processed!',
+        tickets_printing: 'Your tickets are being printed...',
+        tickets_ready: 'Your tickets are ready!',
+        loading: 'Loading...',
+        swipe_hint: 'Swipe to see all your tickets',
+        tickets_sent_email: 'Tickets have been sent to your email',
+        order_details: 'Order details',
+        status_confirmed: 'Confirmed',
+        tickets_purchased: 'Purchased tickets',
+        payment_method: 'Payment method',
+        bank_card: 'Bank card',
+        payment_summary: 'Payment summary',
+        points_earned: 'You earned points!',
+        new_balance: 'New balance',
+        points: 'points',
+        print_tickets: 'Print tickets',
+        print_or_pdf: 'Print or save as PDF',
+        add_to_calendar: 'Add to calendar',
+        share_with_friends: 'Tell your friends about the event!',
+        back_to_home: 'Back to homepage',
+        tickets_are_ready: 'Tickets are ready!',
+        your_email: 'Your email',
+        tickets_singular: 'ticket',
+        tickets_plural: 'tickets',
+        for_event: 'for',
+        event: 'event',
+        no_tickets: 'No tickets found',
+        subtotal: 'Subtotal',
+        service_fee: 'Service fee',
+        return_fee: 'Return insurance',
+        discount: 'Discount',
+        total: 'Total',
+        payment_failed: 'Payment was not processed',
+        payment_failed_desc: 'Unfortunately, the payment could not be completed. Please check your card details and try again.',
+        status_failed: 'Failed',
+        payment_pending: 'Payment is being processed',
+        payment_pending_desc: 'Your payment is being verified. You will receive the tickets by email as soon as the payment is confirmed.',
+        email_after_confirmation: 'You will receive the tickets by email after payment confirmation',
+        status_pending: 'Pending',
+        order_not_found: 'Order not found',
+        order_not_found_desc: 'We could not find information about this order. Check the order number or contact support.',
+    },
+};
+
+// Locale efectiv rezolvat pe pagina. Ordinea prioritatilor:
+//  1. ?lang= din URL (preservat din checkout)
+//  2. cookie ambilet_locale_leisure (setat pe pagini leisure_venue)
+//  3. order.locale (dupa ce order-ul se incarca)
+//  4. 'ro' default
+function _resolveThankYouLocale(order) {
+    try {
+        const p = new URLSearchParams(window.location.search).get('lang');
+        if (p && THANK_YOU_I18N[p]) return p;
+    } catch (e) {}
+    try {
+        const m = document.cookie.match(/(?:^|; )ambilet_locale_leisure=([^;]+)/);
+        if (m && THANK_YOU_I18N[m[1]]) return m[1];
+    } catch (e) {}
+    if (order && order.locale && THANK_YOU_I18N[order.locale]) return order.locale;
+    return 'ro';
+}
+
+// Aplica dictionarul pe elementele cu data-i18n. Idempotent — se poate rula
+// de mai multe ori (dupa order load daca locale-ul de pe order difera).
+function _applyThankYouI18n(locale) {
+    if (!locale || locale === 'ro') return; // RO ramane HTML-ul PHP (implicit)
+    const dict = THANK_YOU_I18N[locale];
+    if (!dict) return;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (dict[key]) el.textContent = dict[key];
+    });
+}
+
 const ThankYouPage = {
     order: null,
+    locale: 'ro', // rezolvat in init + reajustat dupa order load
+    t(key) {
+        return (THANK_YOU_I18N[this.locale] && THANK_YOU_I18N[this.locale][key])
+            || THANK_YOU_I18N.ro[key]
+            || key;
+    },
 
     async init() {
+        // Locale-ul se rezolva initial din URL/cookie (fara sa astepte order-ul).
+        // Dupa order load, se reajusteaza daca order.locale difera.
+        this.locale = _resolveThankYouLocale(null);
+        _applyThankYouI18n(this.locale);
         await this.loadOrderData();
+        // Reajustare locale post-load daca order.locale e mai autoritar.
+        const orderLocale = _resolveThankYouLocale(this.order);
+        if (orderLocale !== this.locale) {
+            this.locale = orderLocale;
+            _applyThankYouI18n(this.locale);
+        }
     },
 
     isPaymentFailed() {
@@ -144,11 +335,11 @@ const ThankYouPage = {
         }
 
         const heading = document.querySelector('h1');
-        if (heading) heading.textContent = 'Comanda nu a fost gasita';
+        if (heading) heading.textContent = this.t('order_not_found');
 
         const printingText = document.getElementById('printingText');
         if (printingText) {
-            printingText.textContent = 'Nu am putut gasi informatii despre aceasta comanda. Verifica numarul comenzii sau contacteaza suportul.';
+            printingText.textContent = this.t('order_not_found_desc');
             printingText.classList.remove('text-lg');
             printingText.classList.add('text-base');
         }
@@ -215,11 +406,11 @@ const ThankYouPage = {
         }
 
         const heading = document.querySelector('h1');
-        if (heading) heading.textContent = 'Plata nu a fost procesată';
+        if (heading) heading.textContent = this.t('payment_failed');
 
         const printingText = document.getElementById('printingText');
         if (printingText) {
-            printingText.textContent = 'Din păcate, plata nu a putut fi finalizată. Te rugăm să verifici datele cardului și să încerci din nou.';
+            printingText.textContent = this.t('payment_failed_desc');
             printingText.classList.remove('text-lg');
             printingText.classList.add('text-base');
         }
@@ -247,7 +438,7 @@ const ThankYouPage = {
         if (statusBadge) {
             statusBadge.classList.remove('bg-success/10', 'text-success');
             statusBadge.classList.add('bg-red-100', 'text-red-600');
-            statusBadge.textContent = 'Eșuată';
+            statusBadge.textContent = this.t('status_failed');
         }
 
         // Still render order details (event info, payment info) so user sees what they tried to buy
@@ -285,10 +476,10 @@ const ThankYouPage = {
         }
 
         const heading = document.querySelector('h1');
-        if (heading) heading.textContent = 'Plata este în procesare';
+        if (heading) heading.textContent = this.t('payment_pending');
 
         const printingText = document.getElementById('printingText');
-        if (printingText) printingText.textContent = 'Plata ta este în curs de verificare. Vei primi biletele pe email imediat ce plata este confirmată.';
+        if (printingText) printingText.textContent = this.t('payment_pending_desc');
 
         // Hide printer and tickets carousel
         const printerSection = document.querySelector('.printer-section');
@@ -305,7 +496,7 @@ const ThankYouPage = {
         const emailSection = document.querySelector('.email-animation');
         if (emailSection) {
             const emailText = emailSection.querySelector('.font-semibold');
-            if (emailText) emailText.textContent = 'Vei primi biletele pe email după confirmarea plății';
+            if (emailText) emailText.textContent = this.t('email_after_confirmation');
             const checkIcon = emailSection.querySelector('.text-success.flex-shrink-0');
             if (checkIcon) {
                 checkIcon.classList.remove('text-success');
@@ -319,7 +510,7 @@ const ThankYouPage = {
         if (statusBadge) {
             statusBadge.classList.remove('bg-success/10', 'text-success');
             statusBadge.classList.add('bg-yellow-100', 'text-yellow-700');
-            statusBadge.textContent = 'În așteptare';
+            statusBadge.textContent = this.t('status_pending');
         }
 
         // Render order details
@@ -372,29 +563,29 @@ const ThankYouPage = {
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
 
         document.getElementById('paymentSummary').innerHTML = `
-            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
+            <h4 class="mb-3 font-semibold text-secondary">${this.t('payment_summary')}</h4>
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
-                    <span class="text-muted">Subtotal</span>
+                    <span class="text-muted">${this.t('subtotal')}</span>
                     <span>${AmbiletUtils.formatCurrency(subtotal)}</span>
                 </div>
                 ${serviceFee > 0 ? `
                 <div class="flex justify-between">
-                    <span class="text-muted">Comision serviciu</span>
+                    <span class="text-muted">${this.t('service_fee') || 'Comision serviciu'}</span>
                     <span>${AmbiletUtils.formatCurrency(serviceFee)}</span>
                 </div>` : ''}
                 ${insuranceAmount > 0 ? `
                 <div class="flex justify-between">
-                    <span class="text-muted">Taxa de retur</span>
+                    <span class="text-muted">${this.t('return_fee') || 'Taxa de retur'}</span>
                     <span>${AmbiletUtils.formatCurrency(insuranceAmount)}</span>
                 </div>` : ''}
                 ${discount > 0 ? `
                 <div class="flex justify-between text-success">
-                    <span>Reducere</span>
+                    <span>${this.t('discount')}</span>
                     <span>-${AmbiletUtils.formatCurrency(discount)}</span>
                 </div>` : ''}
                 <div class="flex justify-between pt-2 text-lg font-bold border-t border-border">
-                    <span>Total</span>
+                    <span>${this.t('total')}</span>
                     <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
                 </div>
             </div>
@@ -422,8 +613,8 @@ const ThankYouPage = {
         const order = this.order;
 
         // Update texts
-        document.getElementById('printingText').textContent = 'Biletele sunt gata!';
-        document.getElementById('buyerEmail').textContent = order.customer_email || 'Email-ul tău';
+        document.getElementById('printingText').textContent = this.t('tickets_are_ready');
+        document.getElementById('buyerEmail').textContent = order.customer_email || this.t('your_email');
 
         // Event info
         const eventInfo = document.getElementById('eventInfo');
@@ -452,7 +643,7 @@ const ThankYouPage = {
         const ticketsSummary = document.getElementById('ticketsSummary');
         const seatedTickets = (order.tickets || []).filter(t => t.seat);
         if (order.items && order.items.length > 0) {
-            let html = `<h4 class="mb-3 font-semibold text-secondary">Bilete achiziționate</h4>`;
+            let html = `<h4 class="mb-3 font-semibold text-secondary">${this.t('tickets_purchased')}</h4>`;
             html += order.items.map(item => `
                 <div class="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <div>
@@ -498,32 +689,32 @@ const ThankYouPage = {
         const currency = order.currency || 'RON';
 
         document.getElementById('paymentSummary').innerHTML = `
-            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
+            <h4 class="mb-3 font-semibold text-secondary">${this.t('payment_summary')}</h4>
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
-                    <span class="text-muted">Subtotal</span>
+                    <span class="text-muted">${this.t('subtotal')}</span>
                     <span>${AmbiletUtils.formatCurrency(subtotal)}</span>
                 </div>
                 ${serviceFee > 0 ? `
                 <div class="flex justify-between">
-                    <span class="text-muted">Comision serviciu</span>
+                    <span class="text-muted">${this.t('service_fee') || 'Comision serviciu'}</span>
                     <span>${AmbiletUtils.formatCurrency(serviceFee)}</span>
                 </div>
                 ` : ''}
                 ${insuranceAmount > 0 ? `
                 <div class="flex justify-between">
-                    <span class="text-muted">Taxa de retur</span>
+                    <span class="text-muted">${this.t('return_fee') || 'Taxa de retur'}</span>
                     <span>${AmbiletUtils.formatCurrency(insuranceAmount)}</span>
                 </div>
                 ` : ''}
                 ${discount > 0 ? `
                 <div class="flex justify-between text-success">
-                    <span>Reducere</span>
+                    <span>${this.t('discount')}</span>
                     <span>-${AmbiletUtils.formatCurrency(discount)}</span>
                 </div>
                 ` : ''}
                 <div class="flex justify-between pt-2 text-lg font-bold border-t border-border">
-                    <span>Total plătit</span>
+                    <span>${this.t('total')}</span>
                     <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
                 </div>
             </div>
@@ -700,11 +891,13 @@ const ThankYouPage = {
         const total = tickets.length;
 
         if (total === 0) {
-            document.getElementById('ticketsCount').textContent = 'Nu există bilete';
+            document.getElementById('ticketsCount').textContent = this.t('no_tickets');
             return;
         }
 
-        document.getElementById('ticketsCount').textContent = `${total} bilet${total > 1 ? 'e' : ''} pentru ${this.order?.event?.name || this.order?.event?.title || 'eveniment'}`;
+        const ticketWord = total > 1 ? this.t('tickets_plural') : this.t('tickets_singular');
+        const eventName = this.order?.event?.name || this.order?.event?.title || this.t('event');
+        document.getElementById('ticketsCount').textContent = `${total} ${ticketWord} ${this.t('for_event')} ${eventName}`;
 
         container.innerHTML = tickets.map((ticket, idx) => this.renderTicketCard(ticket, idx, total)).join('');
 
