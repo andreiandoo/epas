@@ -125,8 +125,16 @@ class OrganizerDocumentResource extends Resource
                                     $orgReg = e($org->company_registration ?? '-');
                                     $orgAddr = e($org->company_address ?? '-');
                                     $orgCity = e($org->city ?? '-');
-                                    $orgIban = e($org->iban ?? '-');
-                                    $orgBank = e($org->bank_name ?? '-');
+                                    // Prefer primary bank_account (source of truth) over the
+                                    // legacy $org->iban / .bank_name — these fall out of sync
+                                    // once an organizer touches the bank-accounts UI.
+                                    $primaryBank = \DB::table('marketplace_organizer_bank_accounts')
+                                        ->where('marketplace_organizer_id', $org->id)
+                                        ->orderByDesc('is_primary')
+                                        ->orderByDesc('id')
+                                        ->first();
+                                    $orgIban = e(($primaryBank->iban ?? null) ?: ($org->iban ?? '-'));
+                                    $orgBank = e(($primaryBank->bank_name ?? null) ?: ($org->bank_name ?? '-'));
 
                                     $orgHtml = "
                                     <div style='font-weight:700;font-size:14px;color:#1a4a7a;margin-bottom:6px;'>{$orgCompany}</div>

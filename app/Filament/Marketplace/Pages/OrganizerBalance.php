@@ -74,12 +74,29 @@ class OrganizerBalance extends Page
                         ->helperText(fn () => 'Maximum: ' . number_format($this->organizer->available_balance, 2) . ' RON'),
                     Forms\Components\Placeholder::make('bank_info')
                         ->label('Bank Details')
-                        ->content(fn () => new \Illuminate\Support\HtmlString(
-                            '<div class="space-y-1">' .
-                            '<div><span class="font-medium text-gray-500 dark:text-gray-400">Bank:</span> <span class="text-gray-900 dark:text-white">' . ($this->organizer->bank_name ?: 'Not provided') . '</span></div>' .
-                            '<div><span class="font-medium text-gray-500 dark:text-gray-400">IBAN:</span> <span class="font-mono text-gray-900 dark:text-white">' . ($this->organizer->iban ?: 'Not provided') . '</span></div>' .
-                            '</div>'
-                        )),
+                        ->content(function () {
+                            // Prefer the primary row from marketplace_organizer_bank_accounts
+                            // (source of truth since 2026-02) over the legacy
+                            // organizer.bank_name / .iban columns that stop being
+                            // written once an organizer touches the new
+                            // bank-accounts UI. Falls back to the legacy columns
+                            // for un-migrated organizers.
+                            $primary = $this->organizer
+                                ? \DB::table('marketplace_organizer_bank_accounts')
+                                    ->where('marketplace_organizer_id', $this->organizer->id)
+                                    ->orderByDesc('is_primary')
+                                    ->orderByDesc('id')
+                                    ->first()
+                                : null;
+                            $bankName = $primary->bank_name ?? $this->organizer->bank_name ?? '';
+                            $iban = $primary->iban ?? $this->organizer->iban ?? '';
+                            return new \Illuminate\Support\HtmlString(
+                                '<div class="space-y-1">' .
+                                '<div><span class="font-medium text-gray-500 dark:text-gray-400">Bank:</span> <span class="text-gray-900 dark:text-white">' . e($bankName ?: 'Not provided') . '</span></div>' .
+                                '<div><span class="font-medium text-gray-500 dark:text-gray-400">IBAN:</span> <span class="font-mono text-gray-900 dark:text-white">' . e($iban ?: 'Not provided') . '</span></div>' .
+                                '</div>'
+                            );
+                        }),
                     Forms\Components\TextInput::make('payment_reference')
                         ->label('Payment Reference')
                         ->required()
