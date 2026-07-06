@@ -1928,48 +1928,58 @@ const EventPage = {
             website: 'hover:text-primary'
         };
 
-        var allHtml = '';
-        for (var i = 0; i < artists.length; i++) {
-            var artist = artists[i];
-            if (!artist) continue;
-
-            var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
-            var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
-            var artistDescription = artist.bio || artist.description || '';
-            var isHeadliner = artist.is_headliner === true;
-            var isCoHeadliner = artist.is_co_headliner === true;
-
-            // Build status badge HTML
-            var statusBadgeHtml = '';
-            if (isHeadliner) {
-                statusBadgeHtml = '<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-white rounded-full bg-gradient-to-r from-amber-500 to-amber-600 shadow-sm">' +
-                    '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
-                    'HEADLINER</span>';
-            } else if (isCoHeadliner) {
-                statusBadgeHtml = '<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-secondary/10 text-secondary">' +
-                    '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
-                    'CO-HEADLINER</span>';
+        // Helpers shared across the layout modes below.
+        function buildStatusBadge(artist, compact) {
+            var starSvg = '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+            var pad = compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs';
+            if (artist.is_headliner === true) {
+                return '<span class="inline-flex items-center gap-1 ' + pad + ' font-bold text-white rounded-full bg-gradient-to-r from-amber-500 to-amber-600 shadow-sm">' + starSvg + 'HEADLINER</span>';
             }
+            if (artist.is_co_headliner === true) {
+                return '<span class="inline-flex items-center gap-1 ' + pad + ' font-bold rounded-full bg-secondary/10 text-secondary">' + starSvg + 'CO-HEADLINER</span>';
+            }
+            return '';
+        }
 
-            var socialLinksHtml = '';
+        function buildSocialLinksHtml(artist, compact) {
             var socialLinks = artist.social_links || {};
-            if (Object.keys(socialLinks).length > 0) {
-                socialLinksHtml = '<div class="flex items-center gap-3">';
-                for (var platform in socialLinks) {
-                    if (socialLinks.hasOwnProperty(platform) && socialIcons[platform]) {
-                        socialLinksHtml += '<a href="' + socialLinks[platform] + '" target="_blank" rel="noopener noreferrer" class="p-2 text-muted transition-colors rounded-full bg-surface ' + (socialColors[platform] || 'hover:text-primary') + '" title="' + platform.charAt(0).toUpperCase() + platform.slice(1) + '">' + socialIcons[platform] + '</a>';
-                    }
+            if (!Object.keys(socialLinks).length) return '';
+            var padClass = compact ? 'p-1.5' : 'p-2';
+            var gapClass = compact ? 'gap-2' : 'gap-3';
+            var html = '<div class="flex items-center flex-wrap ' + gapClass + '">';
+            for (var platform in socialLinks) {
+                if (socialLinks.hasOwnProperty(platform) && socialIcons[platform]) {
+                    html += '<a href="' + socialLinks[platform] + '" target="_blank" rel="noopener noreferrer" class="' + padClass + ' text-muted transition-colors rounded-full bg-surface ' + (socialColors[platform] || 'hover:text-primary') + '" title="' + platform.charAt(0).toUpperCase() + platform.slice(1) + '">' + socialIcons[platform] + '</a>';
                 }
-                socialLinksHtml += '</div>';
             }
+            html += '</div>';
+            return html;
+        }
 
-            // Headliners get larger display
+        // Dynamic layout by count:
+        //  1        → full-row hero card with description + CTA (unchanged look)
+        //  2        → two side-by-side compact cards (image + short desc + CTA)
+        //  3+       → responsive grid of image-name cards (no description)
+        var count = artists.length;
+        var mode = count === 1 ? 'single' : (count === 2 ? 'duo' : 'grid');
+        var allHtml = '';
+        var i, artist, artistImage, artistLink, artistDescription, isHeadliner;
+
+        if (mode === 'single') {
+            artist = artists[0];
+            artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
+            artistLink = artist.slug ? '/artist/' + artist.slug : '#';
+            artistDescription = artist.bio || artist.description || '';
+            isHeadliner = artist.is_headliner === true;
+
+            var statusBadgeHtml = buildStatusBadge(artist, false);
+            var socialLinksHtml = buildSocialLinksHtml(artist, false);
             var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/4';
             var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-3/4';
             var nameClass = isHeadliner ? 'text-2xl' : 'text-xl';
             var containerClass = isHeadliner ? 'p-4 -m-4 rounded-2xl bg-gradient-to-r from-amber-50 to-transparent border border-amber-100' : '';
 
-            allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
+            allHtml = '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + '">' +
                 '<div class="' + imageColClass + '">' +
                     '<a href="' + artistLink + '" class="relative block">' +
                         '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105 mobile:h-40" loading="lazy" width="300" height="300">' +
@@ -1992,6 +2002,62 @@ const EventPage = {
                     '</div>' +
                 '</div>' +
             '</div>';
+        } else if (mode === 'duo') {
+            allHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+            for (i = 0; i < artists.length; i++) {
+                artist = artists[i];
+                if (!artist) continue;
+                artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
+                artistLink = artist.slug ? '/artist/' + artist.slug : '#';
+                artistDescription = artist.bio || artist.description || '';
+                isHeadliner = artist.is_headliner === true;
+
+                allHtml += '<div class="flex flex-col gap-4 sm:flex-row bg-white border border-border rounded-2xl p-4">' +
+                    '<div class="sm:w-2/5 flex-shrink-0">' +
+                        '<a href="' + artistLink + '" class="relative block">' +
+                            '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full aspect-square rounded-xl hover:scale-105 transition-transform" loading="lazy" width="220" height="220">' +
+                            (isHeadliner ? '<div class="absolute px-2 py-0.5 text-[10px] font-bold text-white rounded-md shadow-lg top-2 left-2 bg-gradient-to-r from-amber-500 to-amber-600">★ HEADLINER</div>' : '') +
+                        '</a>' +
+                    '</div>' +
+                    '<div class="sm:w-3/5 min-w-0 flex flex-col">' +
+                        '<div class="flex flex-wrap items-center gap-2 mb-2">' +
+                            '<a href="' + artistLink + '" class="text-lg font-bold text-secondary hover:text-primary line-clamp-1">' + artist.name + '</a>' +
+                            buildStatusBadge(artist, true) +
+                        '</div>' +
+                        (artistDescription ? '<p class="mb-3 text-sm leading-relaxed text-muted line-clamp-3">' + artistDescription + '</p>' : '') +
+                        '<div class="mt-auto flex flex-wrap items-center gap-3">' +
+                            '<a href="' + artistLink + '" class="inline-flex items-center gap-1 text-sm font-semibold text-primary border border-primary rounded-md py-1.5 px-4 hover:bg-primary hover:text-white transition-all">' +
+                                'Vezi profilul' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                            '</a>' +
+                            buildSocialLinksHtml(artist, true) +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }
+            allHtml += '</div>';
+        } else {
+            // grid: 2 per row on mobile, 3 on tablet, 4 on desktop.
+            allHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+            for (i = 0; i < artists.length; i++) {
+                artist = artists[i];
+                if (!artist) continue;
+                artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
+                artistLink = artist.slug ? '/artist/' + artist.slug : '#';
+                var badgeHtml = buildStatusBadge(artist, true);
+
+                allHtml += '<a href="' + artistLink + '" class="group block bg-white border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/40 transition-all">' +
+                    '<div class="relative">' +
+                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full aspect-square group-hover:scale-105 transition-transform" loading="lazy" width="300" height="300">' +
+                        (badgeHtml ? '<div class="absolute top-2 left-2">' + badgeHtml + '</div>' : '') +
+                    '</div>' +
+                    '<div class="p-3">' +
+                        '<div class="font-bold text-secondary group-hover:text-primary line-clamp-1">' + artist.name + '</div>' +
+                        (artist.verified ? '<div class="mt-1 inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">Verified</div>' : '') +
+                    '</div>' +
+                '</a>';
+            }
+            allHtml += '</div>';
         }
 
         document.getElementById(this.elements.artistContent).innerHTML = allHtml;
