@@ -19,25 +19,25 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <span class="text-sm font-medium text-green-600">Coș</span>
+                    <span class="text-sm font-medium text-green-600" data-i18n="step_cart">Coș</span>
                 </div>
                 <div class="w-12 h-px bg-green-500"></div>
                 <div class="flex items-center gap-2">
                     <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <span class="text-sm font-medium text-green-600">Checkout</span>
+                    <span class="text-sm font-medium text-green-600" data-i18n="step_checkout">Checkout</span>
                 </div>
                 <div class="w-12 h-px bg-green-500"></div>
                 <div class="flex items-center gap-2">
                     <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <span class="text-sm font-semibold text-green-600">Confirmare</span>
+                    <span class="text-sm font-semibold text-green-600" data-i18n="step_confirm">Confirmare</span>
                 </div>
             </div>
             <?php if ($orderRef): ?>
-            <p class="mt-2 text-sm text-center text-gray-500">Comandă #<?= htmlspecialchars($orderRef) ?></p>
+            <p class="mt-2 text-sm text-center text-gray-500"><span data-i18n="order_number">Comandă</span> #<?= htmlspecialchars($orderRef) ?></p>
             <?php endif; ?>
         </div>
     </div>
@@ -49,8 +49,8 @@ require_once __DIR__ . '/includes/header.php';
             <div class="inline-flex items-center justify-center w-20 h-20 mb-4 rounded-full bg-success/20">
                 <svg class="w-10 h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <h1 class="mb-2 text-3xl font-extrabold md:text-4xl text-secondary">Plata a fost procesată!</h1>
-            <p id="printingText" class="text-lg text-muted">Biletele tale se printează...</p>
+            <h1 class="mb-2 text-3xl font-extrabold md:text-4xl text-secondary" data-i18n="payment_processed">Plata a fost procesată!</h1>
+            <p id="printingText" class="text-lg text-muted" data-i18n="tickets_printing">Biletele tale se printează...</p>
         </div>
 
         <!-- Printer Section -->
@@ -83,14 +83,14 @@ require_once __DIR__ . '/includes/header.php';
         <!-- Tickets Carousel (appears after printing) -->
         <div class="mt-6 tickets-carousel" id="ticketsCarousel">
             <div class="mb-4 text-center">
-                <h2 class="mb-1 text-xl font-bold text-secondary">Biletele tale sunt gata!</h2>
-                <p id="ticketsCount" class="text-sm text-muted">Se încarcă...</p>
+                <h2 class="mb-1 text-xl font-bold text-secondary" data-i18n="tickets_ready">Biletele tale sunt gata!</h2>
+                <p id="ticketsCount" class="text-sm text-muted" data-i18n="loading">Se încarcă...</p>
             </div>
 
             <!-- Swipe hint for mobile -->
             <div class="swipe-hint">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
-                Glisează pentru a vedea toate biletele
+                <span data-i18n="swipe_hint">Glisează pentru a vedea toate biletele</span>
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
             </div>
 
@@ -107,8 +107,8 @@ require_once __DIR__ . '/includes/header.php';
                 <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
             <div class="flex-1">
-                <p class="font-semibold text-secondary">Biletele au fost trimise pe email</p>
-                <p id="buyerEmail" class="text-sm text-muted">Se încarcă...</p>
+                <p class="font-semibold text-secondary" data-i18n="tickets_sent_email">Biletele au fost trimise pe email</p>
+                <p id="buyerEmail" class="text-sm text-muted" data-i18n="loading">Se încarcă...</p>
             </div>
             <svg class="flex-shrink-0 w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         </div>
@@ -117,8 +117,8 @@ require_once __DIR__ . '/includes/header.php';
         <div class="mt-8 overflow-hidden bg-white border content-section delay-1 rounded-3xl border-border" id="orderDetails">
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-secondary">Detalii comandă</h2>
-                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-success/10 text-success">Confirmată</span>
+                    <h2 class="text-xl font-bold text-secondary" data-i18n="order_details">Detalii comandă</h2>
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-success/10 text-success" data-i18n="status_confirmed">Confirmată</span>
                 </div>
             </div>
 
@@ -135,7 +135,7 @@ require_once __DIR__ . '/includes/header.php';
 
                 <!-- Tickets Summary -->
                 <div id="ticketsSummary" class="p-4 mb-6 bg-surface rounded-xl">
-                    <h4 class="mb-3 font-semibold text-secondary">Bilete achiziționate</h4>
+                    <h4 class="mb-3 font-semibold text-secondary" data-i18n="tickets_purchased">Bilete achiziționate</h4>
                     <div class="h-16 rounded skeleton"></div>
                 </div>
 
@@ -143,19 +143,19 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="pt-6 border-t border-border">
                     <div class="grid gap-6 md:grid-cols-2">
                         <div>
-                            <h4 class="mb-3 font-semibold text-secondary">Metoda de plată</h4>
+                            <h4 class="mb-3 font-semibold text-secondary" data-i18n="payment_method">Metoda de plată</h4>
                             <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
                                 <div class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-blue-600 to-blue-800">
                                     <span class="text-white text-[8px] font-bold">NETOPIA</span>
                                 </div>
                                 <div>
-                                    <p class="text-sm font-medium text-secondary">Card bancar</p>
+                                    <p class="text-sm font-medium text-secondary" data-i18n="bank_card">Card bancar</p>
                                     <p id="cardNumber" class="text-xs text-muted">**** **** **** ****</p>
                                 </div>
                             </div>
                         </div>
                         <div id="paymentSummary">
-                            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
+                            <h4 class="mb-3 font-semibold text-secondary" data-i18n="payment_summary">Sumar plată</h4>
                             <div class="space-y-2 text-sm">
                                 <div class="h-4 rounded skeleton"></div>
                                 <div class="h-4 rounded skeleton"></div>
@@ -170,13 +170,13 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="flex items-center gap-3">
                         <span class="text-3xl">🎁</span>
                         <div>
-                            <p class="font-semibold text-secondary">Ai câștigat puncte!</p>
-                            <p class="text-sm text-muted">Sold nou: <span id="newPoints">0</span> puncte</p>
+                            <p class="font-semibold text-secondary" data-i18n="points_earned">Ai câștigat puncte!</p>
+                            <p class="text-sm text-muted"><span data-i18n="new_balance">Sold nou</span>: <span id="newPoints">0</span> <span data-i18n="points">puncte</span></p>
                         </div>
                     </div>
                     <div class="text-right">
                         <p id="earnedPoints" class="text-2xl font-bold text-accent">+0</p>
-                        <p class="text-xs text-muted">puncte</p>
+                        <p class="text-xs text-muted" data-i18n="points">puncte</p>
                     </div>
                 </div>
             </div>
@@ -189,8 +189,8 @@ require_once __DIR__ . '/includes/header.php';
                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 </div>
                 <div class="text-left">
-                    <p class="font-semibold text-secondary">Printează biletele</p>
-                    <p class="text-sm text-muted">Printează sau salvează ca PDF</p>
+                    <p class="font-semibold text-secondary" data-i18n="print_tickets">Printează biletele</p>
+                    <p class="text-sm text-muted" data-i18n="print_or_pdf">Printează sau salvează ca PDF</p>
                 </div>
             </a>
             <a href="#" id="calendarBtn" class="flex items-center justify-center gap-3 p-4 transition-all bg-white border rounded-2xl border-border hover:border-primary hover:shadow-lg">
@@ -198,7 +198,7 @@ require_once __DIR__ . '/includes/header.php';
                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 <div class="text-left">
-                    <p class="font-semibold text-secondary">Adaugă în calendar</p>
+                    <p class="font-semibold text-secondary" data-i18n="add_to_calendar">Adaugă în calendar</p>
                     <p class="text-sm text-muted">Google Calendar / iCal</p>
                 </div>
             </a>
@@ -206,7 +206,7 @@ require_once __DIR__ . '/includes/header.php';
 
         <!-- Share Section -->
         <div class="mt-8 text-center content-section delay-3">
-            <p class="mb-4 text-muted">Spune-le și prietenilor despre eveniment!</p>
+            <p class="mb-4 text-muted" data-i18n="share_with_friends">Spune-le și prietenilor despre eveniment!</p>
             <div class="flex items-center justify-center gap-3">
                 <a href="#" id="shareFb" class="w-12 h-12 bg-[#1877F2] text-white rounded-xl flex items-center justify-center hover:scale-110 transition-transform">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
@@ -224,7 +224,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="mt-12 text-center content-section delay-4">
             <a href="/" class="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold text-white btn-primary bg-primary rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                Înapoi la pagina principală
+                <span data-i18n="back_to_home">Înapoi la pagina principală</span>
             </a>
         </div>
     </main>
