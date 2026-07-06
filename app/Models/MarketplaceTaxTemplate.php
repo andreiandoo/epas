@@ -506,9 +506,25 @@ class MarketplaceTaxTemplate extends Model
                 default => $workMode,
             };
 
-            // Bank details
-            $variables['organizer_bank_name'] = $organizer->bank_name ?? '';
-            $variables['organizer_iban'] = $organizer->iban ?? '';
+            // Bank details — pulled from the primary row of
+            // marketplace_organizer_bank_accounts (the source of truth
+            // shown on /marketplace/organizers/{id}?tab=financiar and
+            // snapshot-persisted on new payouts as payout_method.iban).
+            // The legacy `organizer.bank_name` / `organizer.iban` columns
+            // stay for backwards compat but stopped being kept in sync
+            // once the bank_accounts table shipped — organizer 384 still
+            // had "RO17…" on organizer.iban while their actual banking
+            // config was "RO02…" from bank_accounts row 354, and every
+            // decont PDF read the stale legacy value. Prefer the primary
+            // bank account when present; fall back to the legacy columns
+            // for organizers who never migrated (mostly imported records).
+            $primaryBankAccount = \DB::table('marketplace_organizer_bank_accounts')
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->orderByDesc('is_primary')
+                ->orderByDesc('id')
+                ->first();
+            $variables['organizer_bank_name'] = $primaryBankAccount->bank_name ?? $organizer->bank_name ?? '';
+            $variables['organizer_iban'] = $primaryBankAccount->iban ?? $organizer->iban ?? '';
 
             // Guarantor variables
             $variables['guarantor_first_name'] = $organizer->guarantor_first_name ?? '';
@@ -1675,11 +1691,31 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_payment_reference'] = $payout->payment_reference ?? '';
             $variables['payout_payment_method'] = $payout->payment_method ?? '';
 
-            // Payout method (bank details)
+            // Payout method (bank details) — snapshot on the payout row
+            // is authoritative (captured at creation from the operator's
+            // bank_accounts pick). Fallback prefers the primary
+            // bank_account row over the legacy organizer.iban column for
+            // exactly the same reason the {{organizer_iban}} branch above
+            // does — organizer 384 had stale RO17… on the model.
             $payoutMethod = $payout->payout_method ?? [];
-            $variables['payout_bank_name'] = $payoutMethod['bank_name'] ?? $organizer?->bank_name ?? '';
-            $variables['payout_iban'] = $payoutMethod['iban'] ?? $organizer?->iban ?? '';
-            $variables['payout_account_holder'] = $payoutMethod['account_holder'] ?? '';
+            if (!isset($primaryBankAccount) && $organizer) {
+                $primaryBankAccount = \DB::table('marketplace_organizer_bank_accounts')
+                    ->where('marketplace_organizer_id', $organizer->id)
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('id')
+                    ->first();
+            }
+            $variables['payout_bank_name'] = $payoutMethod['bank_name']
+                ?? ($primaryBankAccount->bank_name ?? null)
+                ?? $organizer?->bank_name
+                ?? '';
+            $variables['payout_iban'] = $payoutMethod['iban']
+                ?? ($primaryBankAccount->iban ?? null)
+                ?? $organizer?->iban
+                ?? '';
+            $variables['payout_account_holder'] = $payoutMethod['account_holder']
+                ?? ($primaryBankAccount->account_holder ?? null)
+                ?? '';
 
             // === NEW VARIABLES FOR DECONT TEMPLATE ===
 
