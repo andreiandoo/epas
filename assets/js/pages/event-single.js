@@ -2617,14 +2617,20 @@ const EventPage = {
             groupOrder.forEach(function(gName, gIdx) {
                 var groupCards = groups[gName];
                 var groupId = 'ticket-group-' + gIdx;
+                var isFirst = gIdx === 0;
+                var hiddenClass = isFirst ? '' : ' hidden';
+                var chevronRotated = isFirst ? ' rotate-180' : '';
+                var scrollStyle = (isFirst && groupCards.length > 5)
+                    ? ' style="max-height:350px;overflow-y:auto;overflow-x:hidden;"'
+                    : '';
 
                 ticketCardsHtml += '<div class="mb-4 border rounded-2xl border-border">' +
-                    '<button type="button" onclick="document.getElementById(\'' + groupId + '\').classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
+                    '<button type="button" data-ticket-group-btn data-group-id="' + groupId + '" ' +
                         'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-primary hover:bg-primary/80 rounded-t-2xl">' +
                         '<span class="text-sm font-bold text-white">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-white/80">(' + groupCards.length + ')</span></span>' +
-                        '<svg class="w-5 h-5 transition-transform chevron-icon text-white/80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
+                        '<svg class="w-5 h-5 transition-transform chevron-icon' + chevronRotated + ' text-white/80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
                     '</button>' +
-                    '<div id="' + groupId + '" class="ticket-group-content">' +
+                    '<div id="' + groupId + '" class="ticket-group-content' + hiddenClass + '"' + scrollStyle + '>' +
                         groupCards.join('') +
                     '</div>' +
                 '</div>';
@@ -2663,6 +2669,28 @@ const EventPage = {
             btn.addEventListener('click', function() {
                 self.event.selectedPerformanceId = parseInt(btn.dataset.perfId);
                 self.renderTicketTypes(); // Re-render with new prices
+            });
+        });
+
+        // Exclusive-open ticket group accordions: clicking a header closes
+        // all other groups and toggles this one. First group starts open (set
+        // via markup). Header click on the already-open group closes it.
+        container.querySelectorAll('[data-ticket-group-btn]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var target = document.getElementById(btn.dataset.groupId);
+                if (!target) return;
+                var wasHidden = target.classList.contains('hidden');
+                container.querySelectorAll('.ticket-group-content').forEach(function(el) {
+                    el.classList.add('hidden');
+                });
+                container.querySelectorAll('[data-ticket-group-btn] .chevron-icon').forEach(function(icon) {
+                    icon.classList.remove('rotate-180');
+                });
+                if (wasHidden) {
+                    target.classList.remove('hidden');
+                    var chevron = btn.querySelector('.chevron-icon');
+                    if (chevron) chevron.classList.add('rotate-180');
+                }
             });
         });
     },
