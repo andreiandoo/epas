@@ -2037,23 +2037,36 @@ const EventPage = {
             }
             allHtml += '</div>';
         } else {
-            // grid: 2 per row on mobile, 3 on tablet, 4 on desktop.
-            allHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+            // Festival-poster grid: portrait 3:4 cards, full-bleed image,
+            // name overlaid at the bottom over a dark gradient, headliner
+            // badge stickers the top-left, hover reveals a circular arrow
+            // pill in the top-right. No description in this mode.
+            allHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">';
             for (i = 0; i < artists.length; i++) {
                 artist = artists[i];
                 if (!artist) continue;
                 artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
                 artistLink = artist.slug ? '/artist/' + artist.slug : '#';
+                isHeadliner = artist.is_headliner === true;
                 var badgeHtml = buildStatusBadge(artist, true);
 
-                allHtml += '<a href="' + artistLink + '" class="group block bg-white border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/40 transition-all">' +
-                    '<div class="relative">' +
-                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full aspect-square group-hover:scale-105 transition-transform" loading="lazy" width="300" height="300">' +
-                        (badgeHtml ? '<div class="absolute top-2 left-2">' + badgeHtml + '</div>' : '') +
+                allHtml += '<a href="' + artistLink + '" class="group relative block overflow-hidden rounded-2xl aspect-[3/4] shadow-sm hover:shadow-xl transition-all duration-300' + (isHeadliner ? ' ring-2 ring-amber-400/60 ring-offset-2 ring-offset-white' : '') + '">' +
+                    // Full-bleed image with hover zoom.
+                    '<img src="' + artistImage + '" alt="' + artist.name + '" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="300" height="400">' +
+                    // Vignette + bottom-heavy gradient so the name reads on ANY photo.
+                    '<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>' +
+                    // Headliner / co-headliner sticker, if any.
+                    (badgeHtml ? '<div class="absolute top-3 left-3 z-10">' + badgeHtml + '</div>' : '') +
+                    // Verified checkmark micro-badge, top-right (below hover arrow layer).
+                    (artist.verified ? '<div class="absolute top-3 right-3 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white shadow-md" title="Artist verificat"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>' : '') +
+                    // Hover-only arrow pill, slides in from the right.
+                    '<div class="absolute right-3 z-20 flex items-center justify-center w-9 h-9 rounded-full bg-white text-primary shadow-lg opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" style="bottom:5rem;">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
                     '</div>' +
-                    '<div class="p-3">' +
-                        '<div class="font-bold text-secondary group-hover:text-primary line-clamp-1">' + artist.name + '</div>' +
-                        (artist.verified ? '<div class="mt-1 inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">Verified</div>' : '') +
+                    // Name + tiny "vezi profilul" hint at the bottom.
+                    '<div class="absolute inset-x-0 bottom-0 p-3 md:p-4">' +
+                        '<div class="text-white font-extrabold text-base md:text-lg leading-tight line-clamp-2 group-hover:text-primary-foreground transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.5);">' + artist.name + '</div>' +
+                        '<div class="mt-1 text-[11px] font-medium text-white/80 opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-8 transition-all duration-300">Vezi profilul artistului →</div>' +
                     '</div>' +
                 '</a>';
             }
@@ -2080,37 +2093,57 @@ const EventPage = {
             venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
         }
 
-        var html = '<div class="flex flex-col md:items-center gap-6 md:flex-row px-8 mobile:px-0">' +
-            '<div class="md:w-1/4">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy" width="300" height="128">' +
-            '</div>' +
-            '<div class="md:w-3/4">' +
-                '<div class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</div>' +
-                '<div class="flex items-center gap-3 mb-2">' +
-                    '<p class="text-muted">' + venueAddress + '</p>' +
-                    (googleMapsUrl
-                        ? '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-xs rounded-md py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                            'Google Maps' +
-                          '</a>'
-                        : '') +
+        // Split-hero card: photo left (dominant), meta+CTA right. Uses the
+        // same rounded-3xl white shell + shadow-sm treatment as the tour
+        // events section for visual consistency with the rest of the page.
+        var pinSvg = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+
+        var html = '<div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-3xl">' +
+            '<div class="grid md:grid-cols-2 lg:grid-cols-[3fr_2fr]">' +
+                // LEFT — big photo with overlay badge
+                '<div class="relative overflow-hidden aspect-[16/10] md:aspect-auto md:min-h-[340px]">' +
+                    '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="absolute inset-0 w-full h-full object-cover" loading="lazy" width="800" height="500">' +
+                    '<div class="absolute inset-0 bg-gradient-to-tr from-black/50 via-black/10 to-transparent"></div>' +
+                    '<div class="absolute top-4 left-4">' +
+                        '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white rounded-full bg-primary shadow-md">' +
+                            '<span class="w-3.5 h-3.5">' + pinSvg + '</span>' +
+                            'LOCAȚIE' +
+                        '</span>' +
+                    '</div>' +
+                    (venue.city ? '<div class="absolute bottom-4 left-4 text-2xl font-extrabold text-white md:hidden" style="text-shadow: 0 2px 8px rgba(0,0,0,0.6);">' + venue.city + '</div>' : '') +
                 '</div>' +
-                '<div class="leading-relaxed text-muted text-sm line-clamp-2">' + (venue.description || '') + '</div>';
+
+                // RIGHT — details
+                '<div class="p-6 md:p-8 flex flex-col">' +
+                    '<h3 class="mb-3 text-2xl md:text-3xl font-extrabold text-secondary leading-tight">' + venue.name + '</h3>' +
+                    '<div class="flex items-start gap-2 mb-4 text-sm text-muted">' +
+                        '<span class="flex-shrink-0 w-4 h-4 mt-0.5 text-primary">' + pinSvg + '</span>' +
+                        '<span>' + venueAddress + '</span>' +
+                    '</div>' +
+                    (venue.description ? '<p class="mb-4 text-sm leading-relaxed text-muted line-clamp-3">' + venue.description + '</p>' : '');
 
         if (venue.amenities && venue.amenities.length) {
-            html += '<div class="mt-4 mb-6 space-y-3">';
+            html += '<div class="flex flex-wrap gap-2 mb-5">';
             venue.amenities.forEach(function(a) {
-                html += '<div class="flex items-center gap-3">' +
-                    '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">' +
-                        '<svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
-                    '</div>' +
-                    '<span class="text-sm text-secondary">' + a + '</span>' +
-                '</div>';
+                html += '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-success/10 text-success border border-success/20">' +
+                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' +
+                    a +
+                '</span>';
             });
             html += '</div>';
         }
 
-        html += '</div></div>';
+        if (googleMapsUrl) {
+            html += '<div class="mt-auto pt-2 flex flex-wrap gap-3">' +
+                '<a href="' + googleMapsUrl + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 py-2.5 px-5 text-sm font-semibold text-white transition-all rounded-xl bg-secondary hover:bg-secondary/90 shadow-sm hover:shadow-md">' +
+                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>' +
+                    'Deschide harta' +
+                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                '</a>' +
+            '</div>';
+        }
+
+        html += '</div></div></div>';
 
         document.getElementById(this.elements.venueContent).innerHTML = html;
     },
