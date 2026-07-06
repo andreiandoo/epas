@@ -625,16 +625,42 @@ class OrdersController extends BaseController
             }
         }
 
+        // Locale efectiv al comenzii — folosit pentru localizarea numelor de eveniment /
+        // bilet in raspunsul JSON. Fallback pe 'ro' pentru comenzile vechi (Order.locale=NULL).
+        // Helper local: alege valoarea locale-ului cerut din array-uri translatable
+        // ({"ro": "...", "hu": "...", "en": "..."}) sau intoarce string-ul asa cum e.
+        // Cascada: locale exact -> ro -> en -> prima valoare disponibila.
+        $orderLocale = $order->locale ?: 'ro';
+        $pickLocalized = function ($value, ?string $fallback = null) use ($orderLocale) {
+            if (!is_array($value)) return $value;
+            return $value[$orderLocale]
+                ?? $value['ro']
+                ?? $value['en']
+                ?? (reset($value) ?: $fallback);
+        };
+        // Nume bilet dintr-un TicketType — cascada 1) meta.translations.name[locale]
+        // (traduceri opt-in setate din leisure -> Produse), 2) root name (array/string),
+        // 3) fallback 'Bilet'.
+        $pickTicketTypeName = function ($ticketType) use ($orderLocale, $pickLocalized) {
+            if (!$ticketType) return 'Bilet';
+            $meta = $ticketType->meta ?? null;
+            if (is_array($meta) && isset($meta['translations']['name'][$orderLocale])) {
+                $tr = $meta['translations']['name'][$orderLocale];
+                if (is_string($tr) && $tr !== '') return $tr;
+            }
+            return $pickLocalized($ticketType->name, 'Bilet');
+        };
+
         // Build event data
         $eventData = null;
         if ($order->marketplaceEvent) {
             $eventData = [
                 'id' => $order->marketplaceEvent->id,
-                'name' => $order->marketplaceEvent->name,
+                'name' => $pickLocalized($order->marketplaceEvent->name, 'Eveniment'),
                 'slug' => $order->marketplaceEvent->slug,
                 'date' => $order->marketplaceEvent->starts_at?->toIso8601String(),
                 'doors_open' => $order->marketplaceEvent->doors_open_at?->toIso8601String(),
-                'venue' => $order->marketplaceEvent->venue_name,
+                'venue' => $pickLocalized($order->marketplaceEvent->venue_name),
                 'city' => $order->marketplaceEvent->venue_city,
                 'image' => $order->marketplaceEvent->image_url,
             ];
@@ -645,9 +671,9 @@ class OrdersController extends BaseController
             } elseif ($order->event->poster_url) {
                 $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->poster_url);
             }
-            $eventTitle = is_array($order->event->title)
-                ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title))
-                : $order->event->title;
+            // Titlul localizat conform order.locale (nu hardcodat pe 'ro'). Pentru
+            // comenzile HU/EN afiseaza traducerea corecta, cu fallback pe RO.
+            $eventTitle = $pickLocalized($order->event->title, 'Eveniment');
 
             // Combine event_date + start_time into proper ISO datetime so JS
             // `new Date(event.date).toLocaleTimeString()` returns the real start
@@ -681,7 +707,7 @@ class OrdersController extends BaseController
                 'date' => $eventDateIso,
                 'time' => $eventTimeStr,
                 'doors_open' => $order->event->door_time,
-                'venue' => $order->event->venue?->name,
+                'venue' => $pickLocalized($order->event->venue?->name),
                 'city' => $order->event->venue?->city,
                 'image' => $imageUrl,
             ];
@@ -690,12 +716,12 @@ class OrdersController extends BaseController
         // Build items grouped by ticket type
         $items = $order->tickets->groupBy(function ($ticket) {
             return $ticket->marketplace_ticket_type_id ?? $ticket->ticket_type_id ?? 0;
-        })->map(function ($tickets) {
+        })->map(function ($tickets) use ($pickTicketTypeName) {
             $first = $tickets->first();
             $ticketType = $first->marketplaceTicketType ?? $first->ticketType;
             $price = (float) ($first->price ?? $ticketType?->price ?? 0);
             return [
-                'name' => $ticketType?->name ?? 'Bilet',
+                'name' => $pickTicketTypeName($ticketType),
                 'quantity' => $tickets->count(),
                 'price' => $price,
                 'total' => $price * $tickets->count(),
@@ -719,6 +745,9 @@ class OrdersController extends BaseController
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
+                // Locale-ul comenzii — folosit de thank-you.js pentru aplicarea traducerilor
+                // pe UI. Comenzile vechi (fara Order.locale) intoarc null -> JS cade pe 'ro'.
+                'locale' => $order->locale,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
                 'subtotal' => number_format((float) $order->subtotal, 2, '.', ''),
@@ -729,7 +758,13 @@ class OrdersController extends BaseController
                 'currency' => $order->currency ?? 'RON',
                 'event' => $eventData,
                 'items' => $items,
-                'tickets' => $order->tickets->map(function ($ticket) {
+                'tickets' => $order->tickets
+                    ->reject(function ($t) {
+                        // Skip umbrella tickets ale pachetelor — customer vede doar componentele scanabile.
+                        return is_array($t->meta ?? null) && !empty($t->meta['is_package_umbrella']);
+                    })
+                    ->values()
+                    ->map(function ($ticket) use ($pickTicketTypeName) {
                     $ticketType = $ticket->marketplaceTicketType ?? $ticket->ticketType;
                     $seatDetails = $ticket->getSeatDetails();
                     $seatData = null;
@@ -745,7 +780,7 @@ class OrdersController extends BaseController
                         'id' => $ticket->id,
                         'code' => $ticket->code,
                         'barcode' => $ticket->barcode,
-                        'type' => $ticketType?->name,
+                        'type' => $pickTicketTypeName($ticketType),
                         'price' => (float) ($ticketType?->price ?? $ticket->price ?? 0),
                         'status' => $ticket->status,
                         'attendee_name' => $ticket->attendee_name,
