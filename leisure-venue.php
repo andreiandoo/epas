@@ -352,7 +352,7 @@ require_once __DIR__ . '/includes/head.php';
                 'label_program' => 'Program', 'label_contact' => 'Contact', 'label_location' => 'Locație',
                 'selected_date' => 'Data selectată',
                 // Booking section
-                'package_includes' => 'Include în pachet',
+                'package_includes' => 'Inclus în pachet',
                 'rental_start_time' => 'Ora de start a închirierii',
                 // Upsell
                 'upsell_title' => 'Fă vizita o experiență completă',
@@ -939,7 +939,7 @@ require_once __DIR__ . '/includes/head.php';
                                     <p x-show="ticket.description" class="text-xs text-forest-700/70 mt-0.5 line-clamp-2" x-text="ticket.description"></p>
                                     <!-- Lista componentelor (pentru pachet) — compact -->
                                     <div x-show="ticket.service_category === 'package' && ticket.package_outputs && ticket.package_outputs.length > 0" class="mt-1.5 p-2 bg-rose-50 rounded-lg text-xs">
-                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1" data-i18n="package_includes">Include în pachet</p>
+                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1" x-text="t('package_includes', 'Include în pachet')">Include în pachet</p>
                                         <ul class="space-y-0.5">
                                             <template x-for="comp in (ticket.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
                                                 <li class="text-rose-900 flex items-start gap-1">
