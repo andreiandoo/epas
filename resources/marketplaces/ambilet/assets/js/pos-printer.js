@@ -391,15 +391,16 @@
         parts.push(SIZE_SMALL, lineOf('Factura tiparita in doua exemplare'), SIZE_NORMAL);
 
         // ===== SERIA (MARE) =====
-        // Serie pastreaza case-ul asa cum a fost setat de organizator (ex: SZAMEC-000002).
-        // Backend uppercased-o deja la save. Aici o afisam ca atare.
+        // Doar seria + numarul (fara eticheta "Seria:") — bold + mare pentru vizibilitate.
+        // Serie pastreaza case-ul asa cum a fost setat de organizator (SZAMEC-000002).
         parts.push(FEED_N(1));
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
-        parts.push(SIZE_2X2, BOLD_ON, lineOf('Seria:'), lineOf(series), BOLD_OFF, SIZE_NORMAL);
-        // Sub Seria: linie centrata "Emis de {name} - {email}" (contact organizer).
-        const issuerEmail = issuer.contact_email || issuer.email || '';
-        const emisLine = 'Emis de ' + issuerName + (issuerEmail ? ' - ' + issuerEmail : '');
-        parts.push(SIZE_SMALL, lineOf(emisLine), SIZE_NORMAL);
+        parts.push(SIZE_2X2, BOLD_ON, lineOf(series), BOLD_OFF, SIZE_NORMAL);
+        // Sub serie: linie centrata "Emis de ECOCENTRU - info@szentanna-to.ro"
+        // (hardcoded conform cerere Sf. Ana — NU dinamic din issuer). Spacing minim
+        // intre serie si linia asta (fara FEED_N, doar linia).
+        parts.push(SIZE_SMALL, lineOf('Emis de ECOCENTRU - info@szentanna-to.ro'), SIZE_NORMAL);
+        // Spacing minim inainte de continut (buyer/data/produse)
         parts.push(FEED_N(1));
 
         // ===== CUMPARATOR: doar firma cumparator (daca exista) =====
@@ -587,12 +588,11 @@
         out += '<div class="center small">Factura tiparita in doua exemplare</div>';
 
         // ===== SERIA (MARE) =====
+        // Doar serie + numar (fara eticheta "Seria:"). Spacing minim jos.
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
-        out += '<div class="large">Seria:<br>' + esc(series) + '</div>';
-        // Linie centrata sub Seria: "Emis de {name} - {email}"
-        const issuerEmail = issuer.contact_email || issuer.email || '';
-        const emisLine = 'Emis de ' + issuerName + (issuerEmail ? ' - ' + issuerEmail : '');
-        out += '<div class="center small">' + esc(emisLine) + '</div>';
+        out += '<div class="large" style="margin: 2mm 0 1mm;">' + esc(series) + '</div>';
+        // Linie centrata "Emis de ECOCENTRU - info@szentanna-to.ro" (hardcoded).
+        out += '<div class="center small" style="margin-bottom: 3mm;">Emis de ECOCENTRU - info@szentanna-to.ro</div>';
 
         // ===== CUMPARATOR (firma) — doar cand exista date =====
         const buyer = inv.buyer_company || null;
