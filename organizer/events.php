@@ -494,6 +494,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <textarea name="ticket_terms" id="ticket-terms-editor"></textarea>
                                     <p class="mt-1 text-xs text-muted">Conditii de participare, restrictii de varsta, reguli speciale, politica de retur, etc.</p>
                                 </div>
+                                <div>
+                                    <label class="label">Mesaj dupa achizitie (thank-you)</label>
+                                    <textarea name="thank_you_message" id="thank-you-editor"></textarea>
+                                    <p class="mt-1 text-xs text-muted">Afisat clientului pe pagina de confirmare a comenzii, dupa plata reusita. Poti include text formatat, linkuri, imagini si embed video YouTube/Vimeo. Continutul este sanitizat automat impotriva XSS.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -895,12 +900,14 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
 let ticketTypeCount = 1;
 let descriptionEditor = null;
 let ticketTermsEditor = null;
+let thankYouEditor = null;
 // Content queued to be applied as soon as the TinyMCE editors finish
 // initialising — the editors load async from a CDN and the setTimeout
 // race used previously sometimes fired before init(), leaving the
 // editor empty even though the event had description/ticket_terms.
 let pendingDescription = null;
 let pendingTicketTerms = null;
+let pendingThankYouMessage = null;
 let categoriesData = [];
 let venueSearchTimeout = null;
 let artistSearchTimeout = null;
@@ -1258,9 +1265,11 @@ function resetFormState() {
     if (window.tinymce) {
         try { tinymce.get('description-editor')?.remove(); } catch (e) {}
         try { tinymce.get('ticket-terms-editor')?.remove(); } catch (e) {}
+        try { tinymce.get('thank-you-editor')?.remove(); } catch (e) {}
     }
     descriptionEditor = null;
     ticketTermsEditor = null;
+    thankYouEditor = null;
 
     const form = document.getElementById('create-event-form');
     if (form) {
@@ -1537,6 +1546,13 @@ async function loadEventForEdit(eventId) {
                 ticketTermsEditor.setContent(event.ticket_terms);
             } else {
                 pendingTicketTerms = event.ticket_terms;
+            }
+        }
+        if (event.thank_you_message) {
+            if (thankYouEditor) {
+                thankYouEditor.setContent(event.thank_you_message);
+            } else {
+                pendingThankYouMessage = event.thank_you_message;
             }
         }
         updateSummaries();
@@ -2047,6 +2063,33 @@ function initEditors() {
             });
         }
     });
+
+    tinymce.init({
+        ...baseConfig,
+        selector: '#thank-you-editor',
+        height: 240,
+        placeholder: 'Ex: Multumim pentru achizitie! Iti trimitem si un video de bun venit...',
+        // Same media whitelist as description so organizers can drop a
+        // YouTube trailer directly into the message. Server-side HTMLPurifier
+        // enforces YouTube+Vimeo only, so anything else pasted here gets
+        // stripped on save.
+        plugins: 'lists link autolink media image',
+        toolbar: 'bold italic underline | bullist numlist | link image media | hr | undo redo | removeformat',
+        extended_valid_elements: 'iframe[src|frameborder|style|scrolling|class|width|height|name|align|allow|allowfullscreen|loading|referrerpolicy|title]',
+        valid_children: '+body[iframe],+div[iframe]',
+        media_live_embeds: true,
+        media_alt_source: false,
+        media_poster: false,
+        setup: function(editor) {
+            editor.on('init', function() {
+                thankYouEditor = editor;
+                if (pendingThankYouMessage !== null) {
+                    editor.setContent(pendingThankYouMessage);
+                    pendingThankYouMessage = null;
+                }
+            });
+        }
+    });
 }
 
 // ==================== SHORT DESCRIPTION WORD COUNT ====================
@@ -2482,6 +2525,12 @@ function collectFormData() {
     // Ticket terms
     const ticketTerms = ticketTermsEditor ? ticketTermsEditor.getContent() : '';
     if (ticketTerms && ticketTerms !== '<p><br></p>' && ticketTerms.trim() !== '') data.ticket_terms = ticketTerms;
+
+    // Post-purchase thank-you message. Server sanitizes via HTMLPurifier
+    // before persist, so we send raw editor HTML — anything unsafe (script,
+    // on* handlers, non-YouTube/Vimeo iframes) is stripped there.
+    const thankYouMessage = thankYouEditor ? thankYouEditor.getContent() : '';
+    if (thankYouMessage && thankYouMessage !== '<p><br></p>' && thankYouMessage.trim() !== '') data.thank_you_message = thankYouMessage;
 
     if (tags && tags.length > 0) data.tags = tags;
     if (endsAt) data.ends_at = endsAt;
