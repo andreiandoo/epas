@@ -167,6 +167,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <span class="text-secondary font-medium">📄 Generează factură fiscală după finalizare</span>
                         </label>
                         <p class="text-[10px] text-muted leading-snug">💡 Datele firmei sunt salvate pe comandă. Facturarea se generează la pasul 2 după emiterea biletelor.</p>
+                        <!-- Preview factura (nu necesita imprimanta) -->
+                        <button id="lv-invoice-preview-btn" type="button" class="mt-2 w-full px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-secondary">
+                            🔍 Preview factură (fără imprimantă)
+                        </button>
+                        <p class="text-[10px] text-muted leading-snug mt-1">Deschide într-o fereastră nouă cu exact ce s-ar tipări (2 exemplare, TVA, semnături).</p>
                     </div>
                 </details>
 
@@ -1400,6 +1405,48 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         document.querySelectorAll('.lv-lang-btn').forEach(b => b.addEventListener('click', () => selectLocale(b.dataset.lang)));
         $('lv-checkout').addEventListener('click', checkout);
         $('lv-checkout-test')?.addEventListener('click', checkoutTest);
+        // Preview factura (nu necesita imprimanta). Deschide o fereastra noua
+        // cu HTML-ul care oglindeste layout-ul ESC/POS al facturii. Foloseste
+        // buildFakeSaleResponse ca sa reproduca datele din cart + form.
+        $('lv-invoice-preview-btn')?.addEventListener('click', () => {
+            if (typeof PosPrinter === 'undefined' || typeof PosPrinter.previewInvoice !== 'function') {
+                alert('PosPrinter.previewInvoice indisponibil — reincarca pagina.');
+                return;
+            }
+            if (!Object.keys(cart).length) {
+                alert('Cosul e gol — adauga produse ca sa poti vedea preview-ul facturii.');
+                return;
+            }
+            const fake = buildFakeSaleResponse();
+            const primaryItems = (fake.items || []).filter(it => (it.issuing_company || 'primary') === 'primary');
+            if (!primaryItems.length) {
+                alert('Toate produsele din cos sunt pe societatea secundara. Adauga cel putin unul pe SC1 ca sa poti face preview factura.');
+                return;
+            }
+            const total = primaryItems.reduce((s, i) => s + parseFloat(i.line_total || 0), 0);
+            const skipped = (fake.items || []).length - primaryItems.length;
+            // Series: pe fluxul real vine din backend (posSale rezerva secvential).
+            // Aici afisam un placeholder cu serie + numar generic ca sa vezi layout-ul.
+            const seriesPrefix = fake.issuer?.invoice_series || 'PREVIEW';
+            const nextNum = ((fake.issuer?.last_invoice_number || 0) + 1).toString().padStart(6, '0');
+            PosPrinter.previewInvoice({
+                issuer: fake.issuer || {},
+                series: seriesPrefix + '-' + nextNum + ' (preview — numar real la finalizare)',
+                customer: fake.customer || {},
+                buyer_company: fake.company_billing || null,
+                issued_at: new Date(),
+                items: primaryItems.map(it => ({
+                    name: it.name, qty: it.qty, unit_price: it.unit_price, total: it.line_total,
+                })),
+                total: total,
+                currency: fake.order?.currency || 'RON',
+                vat_payer: !!(fake.issuer && fake.issuer.vat_payer),
+                vat_rate: parseFloat((fake.issuer && fake.issuer.vat_rate) || 0),
+                footer_note: skipped > 0
+                    ? 'Produsele de pe SC2 nu sunt facturate aici (' + skipped + ' produse separate)'
+                    : null,
+            });
+        });
 
         // Golire cos (cu confirmare): sterge toate produsele + addon-urile.
         // Date client/firma/payment raman setate (operatorul poate reincerca).
