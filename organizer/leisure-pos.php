@@ -1434,14 +1434,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             }
             const total = invoicedItems.reduce((s, i) => s + parseFloat(i.line_total || 0), 0);
             const skipped = allItems.length - invoicedItems.length;
-            // Series: pe fluxul real vine din backend (posSale rezerva secvential).
-            // Aici afisam un placeholder cu serie + numar generic ca sa vezi layout-ul.
+            // Series: preview arata seria + urmatorul numar (fara sufix "preview"),
+            // ca operatorul sa vada EXACT cum arata factura la print. Numarul real
+            // la finalizare vine tot secvential — preview-ul e vizual identic.
             const seriesPrefix = issuer?.invoice_series || 'PREVIEW';
             const nextNum = ((issuer?.last_invoice_number || 0) + 1).toString().padStart(6, '0');
             const skippedLabel = invoiceCompanyKey === 'primary' ? 'SC2' : 'SC1';
             PosPrinter.previewInvoice({
                 issuer: issuer,
-                series: seriesPrefix + '-' + nextNum + ' (preview — numar real la finalizare)',
+                series: seriesPrefix + '-' + nextNum,
                 customer: fake.customer || {},
                 buyer_company: fake.company_billing || null,
                 issued_at: new Date(),
