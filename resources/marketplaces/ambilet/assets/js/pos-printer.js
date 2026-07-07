@@ -546,6 +546,136 @@
         return concat([...parts1, ...parts2]);
     }
 
+    /**
+     * Reda vizual (HTML) UN SINGUR exemplar al facturii, oglindind layout-ul din
+     * buildInvoiceSingleCopy. Text-based, 80mm width, monospace. NU foloseste
+     * ESC/POS commands — util pentru preview in browser fara imprimanta.
+     *
+     * Modificari majore fata de ESC/POS:
+     *  - toUpperCase pastrat pentru compatibilitate vizuala cu imprimanta termica
+     *    (font-A cu case-uri visibile)
+     *  - diacriticele NU sunt normalizate (ascii()) — browserul le reda nativ
+     *  - line width max 32 chars (mai apropiat de font-A pe hartie termica 80mm)
+     */
+    function buildInvoiceHtml(invoice) {
+        const inv = invoice || {};
+        const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+        const sep = '<div class="sep"></div>';
+        let out = '<div class="paper">';
+
+        // ===== TITLU =====
+        out += '<h2>FACTURA FISCALA</h2>';
+        out += sep;
+
+        // ===== EMITENT =====
+        const issuer = inv.issuer || {};
+        const issuerName = (issuer.name || issuer.company_name || 'AMBILET.RO').toString().trim();
+        out += '<div class="center bold">' + esc(issuerName.toUpperCase()) + '</div>';
+        const issuerCui = issuer.tax_id || issuer.cui || '';
+        const issuerReg = issuer.registration || issuer.reg_com || '';
+        const idLine = [];
+        if (issuerCui) idLine.push('CUI: ' + issuerCui);
+        if (issuerReg) idLine.push('Reg: ' + issuerReg);
+        if (idLine.length) out += '<div class="center small">' + esc(idLine.join('  ')) + '</div>';
+        const addrParts = [];
+        if (issuer.address) addrParts.push(issuer.address);
+        if (issuer.city && !String(issuer.address || '').toLowerCase().includes(String(issuer.city).toLowerCase())) addrParts.push(issuer.city);
+        if (issuer.county) addrParts.push(issuer.county);
+        if (addrParts.length) {
+            out += '<div class="center small">' + esc(addrParts.join(', ').replace(/\s+/g, ' ').trim()) + '</div>';
+        }
+
+        // ===== EXEMPLAR (fara Copia) =====
+        out += '<div style="height: 3mm;"></div>';
+        out += '<div class="center small">Factura tiparita in doua exemplare</div>';
+
+        // ===== SERIA (MARE) =====
+        const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
+        out += '<div class="large">Seria:<br>' + esc(series) + '</div>';
+
+        // ===== CUMPARATOR (firma) — doar cand exista date =====
+        const buyer = inv.buyer_company || null;
+        if (buyer && (buyer.name || buyer.cui)) {
+            out += '<div class="bold small">CUMPARATOR (FIRMA)</div>';
+            out += sep;
+            if (buyer.name) out += '<div>' + esc(buyer.name) + '</div>';
+            const buyerIds = [];
+            if (buyer.cui || buyer.tax_id) buyerIds.push('CUI: ' + (buyer.cui || buyer.tax_id));
+            if (buyer.reg_no || buyer.registration) buyerIds.push('Reg: ' + (buyer.reg_no || buyer.registration));
+            if (buyerIds.length) out += '<div class="small">' + esc(buyerIds.join('  ')) + '</div>';
+            if (buyer.address) out += '<div class="small">' + esc(buyer.address) + '</div>';
+        }
+
+        // ===== DATA EMITERII =====
+        out += '<div style="height: 3mm;"></div>';
+        const issuedDate = (() => {
+            const d = inv.issued_at instanceof Date ? inv.issued_at : (inv.issued_at ? new Date(inv.issued_at) : new Date());
+            const pad = n => String(n).padStart(2, '0');
+            return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        })();
+        out += '<div>Data emiterii: ' + esc(issuedDate) + '</div>';
+
+        // ===== PRODUSE =====
+        out += '<div style="height: 3mm;"></div>';
+        out += '<div class="bold small">PRODUSE</div>';
+        out += sep;
+        const items = Array.isArray(inv.items) ? inv.items : [];
+        const currency = inv.currency || 'RON';
+        for (const it of items) {
+            const name = String(it.name || 'Produs').trim();
+            const qty = parseFloat(it.qty || 1);
+            const unitPrice = parseFloat(it.unit_price || 0);
+            const total = parseFloat(it.total != null ? it.total : (qty * unitPrice));
+            out += '<div>' + esc(name) + '</div>';
+            out += '<div class="row small"><span>' + qty + ' x ' + unitPrice.toFixed(2) + '</span><span>' + total.toFixed(2) + ' ' + esc(currency) + '</span></div>';
+        }
+
+        // ===== TVA + TOTAL =====
+        out += sep;
+        const totalAmount = parseFloat(inv.total != null ? inv.total : items.reduce((s, i) => s + parseFloat(i.total != null ? i.total : ((i.qty || 1) * (i.unit_price || 0))), 0));
+        const vatRate = parseFloat(inv.vat_rate || 0);
+        const vatPayer = !!inv.vat_payer;
+        const vatAmount = (vatPayer && vatRate > 0)
+            ? Math.round((totalAmount * vatRate / (100 + vatRate)) * 100) / 100
+            : 0;
+        const vatLabel = 'TVA (' + (vatRate ? vatRate.toFixed(0) + '%' : '0%') + '):';
+        out += '<div class="row small"><span>' + vatLabel + '</span><span>' + vatAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
+        out += '<div class="row bold"><span>TOTAL:</span><span>' + totalAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
+
+        // ===== SEMNATURI =====
+        out += '<div style="height: 3mm;"></div>';
+        out += sep;
+        out += '<div class="row bold small"><span>Emitent</span><span>Preluat</span></div>';
+        // 3cm blank space simulat (60px @ ~5px/mm)
+        out += '<div class="signature-box"></div>';
+
+        // Nume Preluat (fallback ECOCENTRU cand nu are date reale)
+        const customer = inv.customer || {};
+        const custName = (customer.name || '').trim();
+        const isRealName = custName && !custName.toLowerCase().includes('pos') && !custName.toLowerCase().includes('vanzare');
+        const custEmail = (customer.email || '').trim();
+        const isRealEmail = custEmail && !custEmail.toLowerCase().startsWith('pos@');
+        out += '<div class="row small"><span></span><span style="text-align:right;">';
+        if (isRealName || isRealEmail) {
+            if (isRealName) out += esc(custName);
+            if (isRealEmail && !isRealName) out += esc(custEmail);
+        } else {
+            out += 'ECOCENTRU<br>info@szentanna-to.ro';
+        }
+        out += '</span></div>';
+
+        // ===== FOOTER =====
+        out += '<div style="height: 3mm;"></div>';
+        out += '<div class="center small">Achitat cu bon fiscal</div>';
+
+        if (inv.footer_note) {
+            out += '<div class="center small" style="margin-top:2mm; font-style: italic;">' + esc(inv.footer_note) + '</div>';
+        }
+
+        out += '</div>';
+        return out;
+    }
+
     // ========================= WebUSB connection management =========================
 
     let _device = null;
@@ -740,6 +870,58 @@
         /** Printează o factură fiscală formată conform specificaţiei Sf. Ana. */
         async printInvoice(invoice) {
             return await this.printRaw(buildInvoiceCommands(invoice));
+        },
+
+        /**
+         * Preview HTML pentru o factura — reda exact continutul textual care ar iesi
+         * pe imprimanta termica 80mm, dar in browser (fara imprimanta). Util pentru
+         * debug + preview inainte de vanzare, fara sa consumi rola de hartie.
+         *
+         * Returneaza HTML string cu 2 exemplare separate vizual (regulatie fiscala RO).
+         * Layout: 80mm width = ~303px, font monospace, spatiere identica cu ESC/POS.
+         */
+        renderInvoiceHtml(invoice) {
+            return buildInvoiceHtml(invoice);
+        },
+
+        /**
+         * Deschide preview-ul intr-o fereastra noua a browser-ului. Handy pentru
+         * operator sa vada exact ce s-ar tipari inainte de a apasa Finalizeaza.
+         */
+        previewInvoice(invoice) {
+            const html = buildInvoiceHtml(invoice);
+            const w = window.open('', 'invoice-preview', 'width=420,height=800,scrollbars=yes,resizable=yes');
+            if (!w) {
+                alert('Popup blocat. Permite popup-uri pentru preview factura.');
+                return;
+            }
+            w.document.open();
+            w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Preview factura</title>'
+                + '<style>'
+                + '  body { margin: 0; padding: 12px; background: #e5e7eb; font-family: system-ui, sans-serif; }'
+                + '  .header { text-align: center; margin-bottom: 12px; color: #64748b; font-size: 12px; }'
+                + '  .paper { width: 80mm; margin: 0 auto 12px; background: white; padding: 4mm; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-family: "Courier New", ui-monospace, monospace; font-size: 11px; line-height: 1.35; color: #000; white-space: pre-wrap; word-break: break-word; }'
+                + '  .paper h2 { font-size: 14px; text-align: center; margin: 0 0 4mm; letter-spacing: 1px; }'
+                + '  .center { text-align: center; }'
+                + '  .bold { font-weight: bold; }'
+                + '  .small { font-size: 9px; }'
+                + '  .large { font-size: 16px; font-weight: bold; text-align: center; margin: 4mm 0; }'
+                + '  .sep { border-top: 1px dashed #000; margin: 2mm 0; }'
+                + '  .row { display: flex; justify-content: space-between; }'
+                + '  .signature-box { min-height: 30mm; border-bottom: 1px solid #000; margin-top: 2mm; }'
+                + '  .exemplar-badge { text-align: center; background: #fef3c7; color: #92400e; padding: 8px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; }'
+                + '  .noprint { padding: 8px 12px; text-align: center; }'
+                + '  .noprint button { padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }'
+                + '  @media print { body { background: white; padding: 0; } .noprint, .header, .exemplar-badge { display: none; } .paper { box-shadow: none; margin: 0; } }'
+                + '</style></head><body>'
+                + '<div class="header">🖨️ Preview factura — 80mm width · ' + new Date().toLocaleString('ro-RO') + '</div>'
+                + '<div class="exemplar-badge">Exemplar 1 (Cumparator)</div>'
+                + html
+                + '<div class="exemplar-badge">Exemplar 2 (Emitent / Arhiva)</div>'
+                + html
+                + '<div class="noprint"><button onclick="window.print()">🖨️ Print (opțional)</button> <button onclick="window.close()" style="background:#64748b">Închide</button></div>'
+                + '</body></html>');
+            w.document.close();
         },
 
         /** Test factură — date dummy reprezentative pentru calibrarea layout-ului. */
