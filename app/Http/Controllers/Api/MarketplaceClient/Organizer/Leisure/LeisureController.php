@@ -1452,20 +1452,34 @@ class LeisureController extends BaseController
             }
 
             // Rezervare numar factura secvential — DOAR daca operatorul a bifat
-            // "Genereaza factura fiscala" + a introdus date firma. Se rezerva pe
-            // societatea PRIMARA (secundara se factureaza post-order via banner-ul
-            // "Genereaza factura"). Format din DB: "SZAMEC-000002" (serie + numar
-            // padded). Fara asta, factura tiparita afisa un numar random din
-            // order.order_number. Se salveaza in order.meta.invoice_number pentru
+            // "Genereaza factura fiscala" + a introdus date firma. Determinam
+            // AUTOMAT societatea emitenta din items: cand TOATE items sunt pe SC2,
+            // rezervam pe secondary; altfel (mix sau SC1 only) → primary. Consistent
+            // cu logica din pos-printer.js si generateInvoice() endpoint.
+            // Fara asta, factura tiparita afisa un numar random din order.order_number.
+            // Se salveaza in order.meta.invoice_number + invoice_company pentru
             // idempotenta si tras in raspunsul JSON pentru pos-printer.
             if (
                 !empty($validated['generate_invoice'])
                 && (!empty($validated['company']['cui']) || !empty($validated['company']['name']))
             ) {
                 try {
-                    $invoiceNumber = $organizer->reserveNextInvoiceNumber('primary');
+                    // Detecteaza societatea emitenta din items
+                    $hasAnyPrimary = false;
+                    $hasAnySecondary = false;
+                    foreach ($items as $it) {
+                        $c = $it['ticket_type']->effective_issuing_company ?? 'primary';
+                        if ($c === 'secondary') $hasAnySecondary = true;
+                        else $hasAnyPrimary = true;
+                    }
+                    $invoiceCompany = ($hasAnySecondary && !$hasAnyPrimary && $organizer->has_secondary_issuer)
+                        ? 'secondary'
+                        : 'primary';
+
+                    $invoiceNumber = $organizer->reserveNextInvoiceNumber($invoiceCompany);
                     $updatedMeta = is_array($order->meta) ? $order->meta : [];
                     $updatedMeta['invoice_number'] = $invoiceNumber;
+                    $updatedMeta['invoice_company'] = $invoiceCompany;
                     $updatedMeta['invoice_issued_at'] = Carbon::now()->toIso8601String();
                     $order->meta = $updatedMeta;
                     $order->save();

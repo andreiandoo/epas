@@ -1418,32 +1418,42 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 return;
             }
             const fake = buildFakeSaleResponse();
-            const primaryItems = (fake.items || []).filter(it => (it.issuing_company || 'primary') === 'primary');
-            if (!primaryItems.length) {
-                alert('Toate produsele din cos sunt pe societatea secundara. Adauga cel putin unul pe SC1 ca sa poti face preview factura.');
+            const allItems = fake.items || [];
+            // Determin societatea EMITENTA: cand toate produsele sunt pe SC2, factura
+            // se emite pe secundara; altfel (mix sau SC1 only) → primara. Consistent
+            // cu logica din posPrintInvoiceFromSale.
+            const hasAnyPrimary = allItems.some(it => (it.issuing_company || 'primary') === 'primary');
+            const hasAnySecondary = allItems.some(it => it.issuing_company === 'secondary');
+            const issueOnSecondary = hasAnySecondary && !hasAnyPrimary && !!posIssuerSecondary;
+            const issuer = issueOnSecondary ? posIssuerSecondary : (posIssuerPrimary || fake.issuer || {});
+            const invoiceCompanyKey = issueOnSecondary ? 'secondary' : 'primary';
+            const invoicedItems = allItems.filter(it => (it.issuing_company || 'primary') === invoiceCompanyKey);
+            if (!invoicedItems.length) {
+                alert('Nu am gasit produse pe societatea emitenta. Verifica cosul.');
                 return;
             }
-            const total = primaryItems.reduce((s, i) => s + parseFloat(i.line_total || 0), 0);
-            const skipped = (fake.items || []).length - primaryItems.length;
+            const total = invoicedItems.reduce((s, i) => s + parseFloat(i.line_total || 0), 0);
+            const skipped = allItems.length - invoicedItems.length;
             // Series: pe fluxul real vine din backend (posSale rezerva secvential).
             // Aici afisam un placeholder cu serie + numar generic ca sa vezi layout-ul.
-            const seriesPrefix = fake.issuer?.invoice_series || 'PREVIEW';
-            const nextNum = ((fake.issuer?.last_invoice_number || 0) + 1).toString().padStart(6, '0');
+            const seriesPrefix = issuer?.invoice_series || 'PREVIEW';
+            const nextNum = ((issuer?.last_invoice_number || 0) + 1).toString().padStart(6, '0');
+            const skippedLabel = invoiceCompanyKey === 'primary' ? 'SC2' : 'SC1';
             PosPrinter.previewInvoice({
-                issuer: fake.issuer || {},
+                issuer: issuer,
                 series: seriesPrefix + '-' + nextNum + ' (preview — numar real la finalizare)',
                 customer: fake.customer || {},
                 buyer_company: fake.company_billing || null,
                 issued_at: new Date(),
-                items: primaryItems.map(it => ({
+                items: invoicedItems.map(it => ({
                     name: it.name, qty: it.qty, unit_price: it.unit_price, total: it.line_total,
                 })),
                 total: total,
                 currency: fake.order?.currency || 'RON',
-                vat_payer: !!(fake.issuer && fake.issuer.vat_payer),
-                vat_rate: parseFloat((fake.issuer && fake.issuer.vat_rate) || 0),
+                vat_payer: !!(issuer && issuer.vat_payer),
+                vat_rate: parseFloat((issuer && issuer.vat_rate) || 0),
                 footer_note: skipped > 0
-                    ? 'Produsele de pe SC2 nu sunt facturate aici (' + skipped + ' produse separate)'
+                    ? 'Produsele de pe ' + skippedLabel + ' nu sunt facturate aici (' + skipped + ' produse separate)'
                     : null,
             });
         });
@@ -1947,17 +1957,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const order = saleResponse?.order || {};
         const customer = saleResponse?.customer || {};
         const buyerCompany = saleResponse?.company_billing || null;
-        // Factura fiscala se emite DOAR pe societatea PRINCIPALA. Filtram items
-        // catre cele cu issuing_company='primary' (sau lipsa = default primary).
-        // Produsele de pe societatea secundara nu apar pe factura — ele se vand
-        // separat (bilete imprimate pe alta societate, fara factura aici).
-        const issuer = posIssuerPrimary || saleResponse?.issuer || {};
         const allItems = Array.isArray(saleResponse?.items) ? saleResponse.items : [];
-        const primaryItems = allItems.filter(it => (it.issuing_company || 'primary') === 'primary');
-        if (!primaryItems.length) {
-            console.warn('[invoice-print] niciun produs pe societatea principala — nu se emite factura');
+        // Determinam SOCIETATEA EMITENTA: cand TOATE items sunt pe SC2, factura se emite
+        // pe secondary; altfel (mix sau SC1 only) → primary. Consistent cu logica de la
+        // generateInvoice endpoint din backend.
+        const hasAnyPrimary = allItems.some(it => (it.issuing_company || 'primary') === 'primary');
+        const hasAnySecondary = allItems.some(it => it.issuing_company === 'secondary');
+        const issueOnSecondary = hasAnySecondary && !hasAnyPrimary && !!posIssuerSecondary;
+        const issuer = issueOnSecondary ? posIssuerSecondary : (posIssuerPrimary || saleResponse?.issuer || {});
+        const invoiceCompanyKey = issueOnSecondary ? 'secondary' : 'primary';
+        // Items facturate: cele cu issuing_company = societatea emitenta.
+        // Cand mix (primary + secondary), factura ramane pe primary si SC2 se
+        // vinde separat — comportament actual pentru compatibilitate contabila.
+        const invoicedItems = allItems.filter(it => {
+            const c = it.issuing_company || 'primary';
+            return c === invoiceCompanyKey;
+        });
+        if (!invoicedItems.length) {
+            console.warn('[invoice-print] niciun produs pe societatea', invoiceCompanyKey, '— nu se emite factura');
             return;
         }
+        // Alias pentru compatibilitate cu codul de mai jos (var numit primaryItems).
+        const primaryItems = invoicedItems;
         const total = primaryItems.reduce((s, i) => s + parseFloat(i.line_total || 0), 0);
         const skipped = allItems.length - primaryItems.length;
 
