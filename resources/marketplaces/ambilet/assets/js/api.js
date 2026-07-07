@@ -442,6 +442,7 @@ const AmbiletAPI = {
 
         // Organizer orders
         if (endpoint === '/organizer/orders/export') return 'organizer.orders.export';
+        if (endpoint.match(/\/organizer\/orders\/\d+\/generate-invoice$/)) return 'organizer.orders.generate-invoice';
         if (endpoint === '/organizer/orders' || endpoint.includes('/organizer/orders?')) return 'organizer.orders';
 
         // Organizer finance
@@ -587,6 +588,14 @@ const AmbiletAPI = {
         const confirmMatch = endpoint.match(/\/order-confirmation\/([\w-]+)$/);
         if (confirmMatch) {
             return `id=${encodeURIComponent(confirmMatch[1])}`;
+        }
+
+        // Extract order ID from /organizer/orders/{id}/generate-invoice (POS invoice trigger).
+        // Fara asta, proxy-ul primea action=organizer.orders.generate-invoice fara ID
+        // si returna 404. Rezolva bug-ul "Unknown endpoint" pe SC2 banner.
+        const genInvoiceMatch = endpoint.match(/\/organizer\/orders\/(\d+)\/generate-invoice$/);
+        if (genInvoiceMatch) {
+            return `id=${encodeURIComponent(genInvoiceMatch[1])}`;
         }
 
         // Extract order ID from /customer/orders/{id} (numeric or alphanumeric like MKT-W08ABJWH)

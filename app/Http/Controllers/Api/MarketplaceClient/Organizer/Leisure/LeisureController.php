@@ -1451,6 +1451,33 @@ class LeisureController extends BaseController
                 }
             }
 
+            // Rezervare numar factura secvential — DOAR daca operatorul a bifat
+            // "Genereaza factura fiscala" + a introdus date firma. Se rezerva pe
+            // societatea PRIMARA (secundara se factureaza post-order via banner-ul
+            // "Genereaza factura"). Format din DB: "SZAMEC-000002" (serie + numar
+            // padded). Fara asta, factura tiparita afisa un numar random din
+            // order.order_number. Se salveaza in order.meta.invoice_number pentru
+            // idempotenta si tras in raspunsul JSON pentru pos-printer.
+            if (
+                !empty($validated['generate_invoice'])
+                && (!empty($validated['company']['cui']) || !empty($validated['company']['name']))
+            ) {
+                try {
+                    $invoiceNumber = $organizer->reserveNextInvoiceNumber('primary');
+                    $updatedMeta = is_array($order->meta) ? $order->meta : [];
+                    $updatedMeta['invoice_number'] = $invoiceNumber;
+                    $updatedMeta['invoice_issued_at'] = Carbon::now()->toIso8601String();
+                    $order->meta = $updatedMeta;
+                    $order->save();
+                } catch (\Throwable $e) {
+                    // Nu blocam vanzarea daca reservation fails — factura poate fi
+                    // emisa manual prin generateInvoice endpoint. Log doar.
+                    \Log::warning('[posSale] invoice reserve failed', [
+                        'order_id' => $order->id, 'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -1459,6 +1486,7 @@ class LeisureController extends BaseController
 
         // Datele pentru chitanță 80mm
         $issuer = $organizer->getIssuerData('primary');
+        $issuerSecondary = $organizer->has_secondary_issuer ? $organizer->getIssuerData('secondary') : null;
 
         return $this->success([
             'order' => [
@@ -1480,7 +1508,13 @@ class LeisureController extends BaseController
             ],
             'company_billing' => is_array($order->meta['company_billing'] ?? null) ? $order->meta['company_billing'] : null,
             'invoice_requested' => (bool) ($order->meta['invoice_requested'] ?? false),
+            // invoice_number: pre-populat cand operatorul a bifat 'Genereaza factura fiscala'
+            // + a introdus date firma. Reservat atomic din organizer.primary_last_invoice_number
+            // (crescut cu 1 in tranzactie). Fara asta, numarul afisat pe factura era random
+            // (order.order_number cu random 10 char). Serie PASTREAZA CAPS din DB.
+            'invoice_number' => is_array($order->meta) ? ($order->meta['invoice_number'] ?? null) : null,
             'issuer' => $issuer,
+            'issuer_secondary' => $issuerSecondary ?? null,
             'items' => array_map(function ($it) {
                 $baseName = is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name;
                 $name = $it['variant'] ? ($baseName . ' — ' . $it['variant']['label']) : $baseName;
@@ -1578,19 +1612,30 @@ class LeisureController extends BaseController
             ]);
         }
 
-        // Numar factura secvential per organizator (POS-INV-{NNNN})
-        $lastInvOrder = Order::query()
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->whereRaw("meta->>'invoice_number' IS NOT NULL")
-            ->orderByDesc('id')
-            ->first();
-        $nextNumber = 1;
-        if ($lastInvOrder && !empty($lastInvOrder->meta['invoice_number'])) {
-            $nextNumber = ((int) preg_replace('/\D/', '', $lastInvOrder->meta['invoice_number'])) + 1;
+        // Determinam societatea emitenta pe baza produselor din comanda.
+        // Cand TOATE biletele au issuing_company='secondary' -> emitem pe SC2.
+        // Altfel (mix sau doar primary) -> SC1. Consistent cu logica din
+        // pos-printer.js care filtreaza items primary pentru factura fiscala.
+        $orderModel->loadMissing('tickets.ticketType');
+        $issuerCompany = 'primary';
+        $tickets = $orderModel->tickets ?? collect();
+        if ($tickets->isNotEmpty()) {
+            $allSecondary = $tickets->every(function ($t) {
+                $tt = $t->ticketType;
+                if (!$tt) return false;
+                return ($tt->issuing_company ?? 'primary') === 'secondary';
+            });
+            if ($allSecondary && $organizer->has_secondary_issuer) {
+                $issuerCompany = 'secondary';
+            }
         }
-        $invoiceNumber = 'POS-INV-' . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
 
-        $issuer = $organizer->getIssuerData('primary') ?? [];
+        // Rezervare atomica a numarului facturii pe societatea corecta.
+        // Format: "SZAMEC-000002" (serie + numar padded). Foloseste
+        // reserveNextInvoiceNumber ca sa evite race conditions si duplicate.
+        $invoiceNumber = $organizer->reserveNextInvoiceNumber($issuerCompany);
+
+        $issuer = $organizer->getIssuerData($issuerCompany) ?? [];
 
         $meta['invoice_number'] = $invoiceNumber;
         $meta['invoice_status'] = 'requested';
@@ -3913,7 +3958,15 @@ class LeisureController extends BaseController
 
         foreach ($colMap as $uiField => $dbCol) {
             if (array_key_exists($uiField, $fields)) {
-                $eventOrganizer->{$dbCol} = $fields[$uiField];
+                $value = $fields[$uiField];
+                // Seria facturii se scrie MEREU cu MAJUSCULE (input-ul form-ului are
+                // class="uppercase" doar pentru DISPLAY; valoarea actuala poate fi
+                // lowercase). Fara asta, "SZAMEC" tastat de operator ajungea "szamec"
+                // pe factura tiparita.
+                if ($uiField === 'invoice_series' && is_string($value) && $value !== '') {
+                    $value = mb_strtoupper($value);
+                }
+                $eventOrganizer->{$dbCol} = $value;
             }
         }
 

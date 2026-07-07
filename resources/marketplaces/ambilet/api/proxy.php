@@ -3793,6 +3793,22 @@ switch ($action) {
 
     // ==================== ORGANIZER BILLING / INVOICES ====================
 
+    case 'organizer.orders.generate-invoice':
+        // POST /organizer/orders/{id}/generate-invoice — declanseaza emiterea facturii
+        // pentru o comanda leisure existenta (folosit din banner "Genereaza factura"
+        // pe /organizator/leisure-pos cand comanda a fost emisa cu date firma).
+        $method = 'POST';
+        $orderIdInv = $_GET['id'] ?? '';
+        if (!$orderIdInv) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/orders/' . urlencode($orderIdInv) . '/generate-invoice';
+        $body = file_get_contents('php://input') ?: '{}';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.invoices':
         $method = 'GET';
         $params = [];

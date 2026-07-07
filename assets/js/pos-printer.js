@@ -351,8 +351,11 @@
      *   total, currency
      * }
      */
-    function buildInvoiceCommands(invoice) {
-        const inv = invoice || {};
+    /**
+     * Construieste o SINGURA copie a facturii (un exemplar). Chemata de 2 ori din
+     * buildInvoiceCommands ca sa printam factura in dublu exemplar.
+     */
+    function buildInvoiceSingleCopy(inv) {
         const parts = [INIT, ALIGN_CENTER];
 
         // ===== TITLU =====
@@ -381,33 +384,29 @@
             parts.push(SIZE_NORMAL);
         }
 
-        // ===== EXEMPLAR + COPIE =====
+        // ===== EXEMPLAR =====
+        // Doar mesajul "in doua exemplare" (fara "Copia" — nu mai facem distinctie
+        // originalul vs copia, ambele sunt exemplare identice).
         parts.push(FEED_N(1));
         parts.push(SIZE_SMALL, lineOf('Factura tiparita in doua exemplare'), SIZE_NORMAL);
-        parts.push(SIZE_SMALL, lineOf('Copia'), SIZE_NORMAL);
 
         // ===== SERIA (MARE) =====
+        // Serie pastreaza case-ul asa cum a fost setat de organizator (ex: SZAMEC-000002).
+        // Backend uppercased-o deja la save. Aici o afisam ca atare.
         parts.push(FEED_N(1));
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
         parts.push(SIZE_2X2, BOLD_ON, lineOf('Seria:'), lineOf(series), BOLD_OFF, SIZE_NORMAL);
         parts.push(FEED_N(1));
 
-        // ===== CUMPARATOR =====
+        // ===== CUMPARATOR: doar firma cumparator (daca exista) =====
+        // Vechea logica afisa datele client (POS vanzare on-site + pos@ambilet.ro)
+        // ca antet chiar cand operatorul nu introducea nume real. User a cerut ca
+        // aceste date sa dispara complet; datele reale (daca sunt) ajung sub semnatura Preluat.
         parts.push(ALIGN_LEFT);
-        parts.push(BOLD_ON, SIZE_SMALL, lineOf('CUMPARATOR'), SIZE_NORMAL, BOLD_OFF);
-        parts.push(lineOf('--------------------------------'));
-        const customer = inv.customer || {};
-        if (customer.name) parts.push(lineOf(customer.name));
-        const contactLine = [];
-        if (customer.email) contactLine.push(customer.email);
-        if (customer.phone) contactLine.push(customer.phone);
-        if (contactLine.length) parts.push(SIZE_SMALL, lineOf(contactLine.join(' · ')), SIZE_NORMAL);
-
-        // Firma cumparator (daca exista)
         const buyer = inv.buyer_company || null;
         if (buyer && (buyer.name || buyer.cui)) {
-            parts.push(FEED_N(1));
-            parts.push(BOLD_ON, SIZE_SMALL, lineOf('Firma:'), SIZE_NORMAL, BOLD_OFF);
+            parts.push(BOLD_ON, SIZE_SMALL, lineOf('CUMPARATOR (FIRMA)'), SIZE_NORMAL, BOLD_OFF);
+            parts.push(lineOf('--------------------------------'));
             if (buyer.name) parts.push(lineOf(buyer.name));
             const buyerIds = [];
             if (buyer.cui || buyer.tax_id) buyerIds.push('CUI: ' + (buyer.cui || buyer.tax_id));
@@ -441,29 +440,74 @@
             const qty = parseFloat(it.qty || 1);
             const unitPrice = parseFloat(it.unit_price || 0);
             const total = parseFloat(it.total ?? (qty * unitPrice));
-            // Numele pe primul rand (wrap daca prea lung)
             const nameLines = wrapText(name, 48);
             for (const nl of nameLines) parts.push(lineOf(nl));
-            // Detail line: qty x pret = total (aligned)
             const detail = '  ' + qty + ' x ' + unitPrice.toFixed(2);
             const totalStr = total.toFixed(2) + ' ' + currency;
-            // Pad to align right (~48 chars width Font A)
             const pad = Math.max(1, 48 - detail.length - totalStr.length);
             parts.push(SIZE_SMALL, lineOf(detail + ' '.repeat(pad) + totalStr), SIZE_NORMAL);
         }
 
-        // ===== TOTAL =====
+        // ===== SUBTOTAL + TVA + TOTAL =====
         parts.push(lineOf('--------------------------------'));
         const totalAmount = parseFloat(inv.total ?? items.reduce((s, i) => s + parseFloat(i.total ?? ((i.qty||1) * (i.unit_price||0))), 0));
+        const vatRate = parseFloat(inv.vat_rate || 0);
+        const vatPayer = !!inv.vat_payer;
+        // Suma TVA inclusa (cand vat_payer=true, pretul de vanzare include deja TVA):
+        // total = neta + tva  =>  tva = total * rate / (100 + rate)
+        // Cand vat_payer=false, vatAmount = 0.
+        const vatAmount = (vatPayer && vatRate > 0)
+            ? Math.round((totalAmount * vatRate / (100 + vatRate)) * 100) / 100
+            : 0;
+
+        // Randul TVA e OBLIGATORIU pe factura (chiar 0). Etichetat cu rate-ul setat.
+        const vatLabel = 'TVA (' + (vatRate ? vatRate.toFixed(0) + '%' : '0%') + '):';
+        const vatRight = vatAmount.toFixed(2) + ' ' + currency;
+        const vatPad = Math.max(1, 32 - vatLabel.length - vatRight.length);
+        parts.push(SIZE_SMALL, lineOf(vatLabel + ' '.repeat(vatPad) + vatRight), SIZE_NORMAL);
+
+        // TOTAL bold
         const totalLine = 'TOTAL:';
         const totalRight = totalAmount.toFixed(2) + ' ' + currency;
         const totalPad = Math.max(1, 32 - totalLine.length - totalRight.length);
         parts.push(BOLD_ON, lineOf(totalLine + ' '.repeat(totalPad) + totalRight), BOLD_OFF);
 
+        // ===== SEMNATURI (Emitent / Preluat) =====
+        // 3cm spatiu gol pentru semnaturi + jos labelurile. La imprimante termice
+        // 80mm cu font A ~ 21 dots/linie -> 3cm = ~120 dots -> ~7 linii goale.
+        parts.push(FEED_N(1));
+        parts.push(lineOf('--------------------------------'));
+        // Header rand: "Emitent" stanga, "Preluat" dreapta pe acelasi rand
+        const emitLabel = 'Emitent';
+        const preluatLabel = 'Preluat';
+        const sigPad = Math.max(1, 32 - emitLabel.length - preluatLabel.length);
+        parts.push(BOLD_ON, SIZE_SMALL, lineOf(emitLabel + ' '.repeat(sigPad) + preluatLabel), SIZE_NORMAL, BOLD_OFF);
+        // Spatiu ~3cm pentru semnaturi (7 linii goale)
+        parts.push(FEED_N(7));
+
+        // Numele "Preluat" (sub semnatura din dreapta):
+        //  - daca operatorul a introdus customer.name → afisam numele
+        //  - altfel → fallback "ECOCENTRU" + "info@szentanna-to.ro" (Sf. Ana)
+        const customer = inv.customer || {};
+        const custName = (customer.name || '').trim();
+        // Emailurile default POS ('pos@ambilet.ro') si numele placeholder
+        // 'POS — vânzare on-site' sunt tratate ca EMPTY.
+        const isRealName = custName && !custName.toLowerCase().includes('pos') && !custName.toLowerCase().includes('vanzare');
+        const custEmail = (customer.email || '').trim();
+        const isRealEmail = custEmail && !custEmail.toLowerCase().startsWith('pos@');
+
+        if (isRealName || isRealEmail) {
+            if (isRealName) parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + custName), SIZE_NORMAL);
+            if (isRealEmail && !isRealName) parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + custEmail), SIZE_NORMAL);
+        } else {
+            parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + 'ECOCENTRU'), SIZE_NORMAL);
+            parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + 'info@szentanna-to.ro'), SIZE_NORMAL);
+        }
+
         // ===== FOOTER =====
-        parts.push(FEED_N(2));
+        parts.push(FEED_N(1));
         parts.push(ALIGN_CENTER);
-        parts.push(lineOf('Achitat cu bon fiscal'));
+        parts.push(SIZE_SMALL, lineOf('Achitat cu bon fiscal'), SIZE_NORMAL);
 
         // Footer note opțional (ex: avertisment cand exista produse SC2 nefacturate)
         if (inv.footer_note) {
@@ -474,10 +518,32 @@
             parts.push(SIZE_NORMAL);
         }
 
-        // Cut
+        // Cut la finalul unui exemplar. Imprimanta taie hartia; urmatorul exemplar
+        // porneste cu INIT si e complet independent.
         parts.push(CUT_PARTIAL_FEED(0));
 
-        return concat(parts);
+        return parts;
+    }
+
+    /**
+     * Construieste buffer-ul ESC/POS pentru factura fiscala 80mm - DUBLU EXEMPLAR.
+     * Regulatie fiscala RO: factura tiparita in 2 exemplare (originalul pentru
+     * cumparator, copia pentru emitent). Cut intre cele 2 pentru rupere usoara.
+     *
+     * invoice: {
+     *   issuer (name/tax_id/registration/address/city/county/vat_payer/vat_rate),
+     *   series, customer (nume/email/phone), buyer_company (nume/cui/reg/adresa),
+     *   issued_at (Date or ISO string), items ([{ name, qty, unit_price, total }]),
+     *   total, currency, vat_payer, vat_rate, footer_note
+     * }
+     */
+    function buildInvoiceCommands(invoice) {
+        const inv = invoice || {};
+        // Emitem 2 exemplare identice, cut intre ele. Copy #1 pentru cumparator,
+        // copy #2 pentru arhiva emitentului.
+        const parts1 = buildInvoiceSingleCopy(inv);
+        const parts2 = buildInvoiceSingleCopy(inv);
+        return concat([...parts1, ...parts2]);
     }
 
     // ========================= WebUSB connection management =========================

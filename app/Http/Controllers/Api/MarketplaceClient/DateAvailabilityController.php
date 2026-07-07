@@ -341,11 +341,20 @@ class DateAvailabilityController extends BaseController
                     }
                     $qtyPerPkg = (int) ($row['qty'] ?? 1);
                     $packageSumComponents += $compPrice * $qtyPerPkg;
+                    // Nume component localizat conform $publicLocale. Cascada:
+                    // 1) meta.translations.name[locale] (traducere opt-in setata din leisure Produse)
+                    // 2) root name (array cu ro/hu/en sau string)
+                    // 3) fallback pe RO
+                    $compTranslations = is_array($compTt->meta['translations'] ?? null) ? $compTt->meta['translations'] : [];
+                    $componentName = $this->pickTranslation($compTranslations, 'name', $publicLocale, $compTt->name);
+                    if (is_array($componentName)) {
+                        $componentName = $componentName[$publicLocale] ?? $componentName['ro'] ?? $componentName['en'] ?? reset($componentName);
+                    }
                     $packageOutputs[] = [
                         'ticket_type_id' => (int) $row['ticket_type_id'],
                         'variant_id' => $row['variant_id'] ?? null,
                         'qty' => $qtyPerPkg,
-                        'component_name' => is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name,
+                        'component_name' => $componentName,
                         'component_unit_price' => $compPrice,
                     ];
                 }

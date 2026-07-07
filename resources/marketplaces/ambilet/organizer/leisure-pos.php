@@ -1940,6 +1940,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 })),
                 total: total,
                 currency: order.currency || 'RON',
+                // TVA se propaga din issuer (backend expune vat_payer + vat_rate pe getIssuerData).
+                // Pos-printer.js afiseaza randul 'TVA (X%): valoare' chiar cand 0 (regulatie fiscala).
+                vat_payer: !!(issuer && issuer.vat_payer),
+                vat_rate: parseFloat((issuer && issuer.vat_rate) || 0),
                 // Bottom note cand am sarit produse SC2 (ca operatorul sa stie ca
                 // exista bilete printate care nu apar pe factura)
                 footer_note: skipped > 0
