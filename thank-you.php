@@ -53,19 +53,30 @@ require_once __DIR__ . '/includes/header.php';
             <p id="printingText" class="text-lg text-muted" data-i18n="tickets_printing">Biletele tale se printează...</p>
         </div>
 
-        <!-- Per-event post-purchase message (WYSIWYG, sanitized server-side
-             via HTMLPurifier). Hidden by default; populated by
-             renderOrderData() from order.event.thank_you_message. If the
-             organizer left it empty, the card stays hidden. -->
         <div id="thankYouMessageCard" class="hidden mb-6">
             <div class="p-6 md:p-8 bg-white border shadow-sm rounded-2xl border-border">
-                <div class="flex items-center gap-2 mb-3 text-sm font-bold text-primary uppercase tracking-wide">
+                <div class="flex items-center justify-center gap-2 mb-3 text-sm font-bold text-primary uppercase tracking-wide">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6M12 20l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
                     Mesaj din partea organizatorului
                 </div>
                 <div id="thankYouMessageBody" class="prose prose-slate max-w-none text-secondary"></div>
             </div>
         </div>
+        <style>
+            #thankYouMessageBody p { margin-bottom: 8px; }
+            #thankYouMessageBody p:last-child { margin-bottom: 0; }
+            #thankYouMessageBody a {
+                color: var(--primary, #A51C30);
+                text-decoration: underline;
+                text-decoration-style: dashed;
+                text-underline-offset: 3px;
+                font-weight: 600;
+            }
+            #thankYouMessageBody a:hover {
+                color: var(--primary-dark, #8B1728);
+                text-decoration-style: solid;
+            }
+        </style>
 
         <!-- Printer Section -->
         <div class="printer-section">
