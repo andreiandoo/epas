@@ -36,7 +36,58 @@ class Event extends Model
         $this->attributes['seo'] = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) : $value;
     }
 
-    public array $translatable = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
+    public array $translatable = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms', 'thank_you_message'];
+
+    /**
+     * Sanitize the per-event post-purchase message through HTMLPurifier
+     * before it's persisted. This is the single choke-point for BOTH the
+     * Filament admin and the organizer TinyMCE — either surface writes to
+     * this attribute, so no matter where the HTML came from we know it's
+     * been through the `thank_you_message` HTMLPurifier profile (see
+     * config/purifier.php): whitelisted tags/attrs/CSS, iframe locked to
+     * YouTube + Vimeo, script tags / inline event handlers / data: URIs
+     * dropped silently.
+     *
+     * Input can be either an array `['ro' => '<p>...</p>', 'en' => '...']`
+     * or a JSON-encoded string of that same shape (some callers stringify
+     * before passing).
+     */
+    public function setThankYouMessageAttribute($value): void
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = json_last_error() === JSON_ERROR_NONE ? $decoded : ['ro' => $value];
+        }
+
+        if (!is_array($value)) {
+            $this->attributes['thank_you_message'] = null;
+            return;
+        }
+
+        $clean = [];
+        foreach ($value as $locale => $html) {
+            $html = is_string($html) ? $html : '';
+            $html = trim($html);
+            if ($html === '') {
+                continue;
+            }
+            try {
+                $clean[$locale] = \Mews\Purifier\Facades\Purifier::clean($html, 'thank_you_message');
+            } catch (\Throwable $e) {
+                // Purifier misconfig should not block the whole save.
+                // Fall back to strip_tags with a safe minimal whitelist so
+                // we NEVER persist unsanitized HTML if the library dies.
+                \Log::warning('HTMLPurifier failed on thank_you_message', [
+                    'event_id' => $this->id,
+                    'locale' => $locale,
+                    'error' => $e->getMessage(),
+                ]);
+                $clean[$locale] = strip_tags($html, '<p><br><b><strong><i><em><u><a><ul><ol><li>');
+            }
+        }
+
+        $this->attributes['thank_you_message'] = empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
+    }
 
     protected $fillable = [
         'tenant_id',
@@ -96,7 +147,7 @@ class Event extends Model
         'marketplace_city_id', 'marketplace_event_category_id', 'manifestation_type',
 
         // content
-        'short_description', 'description', 'ticket_terms',
+        'short_description', 'description', 'ticket_terms', 'thank_you_message',
 
         // seo json
         'seo',
@@ -146,6 +197,7 @@ class Event extends Model
         'short_description' => 'array',
         'description'       => 'array',
         'ticket_terms'      => 'array',
+        'thank_you_message' => 'array',
 
         // date-only
         'event_date'           => 'date',

@@ -633,6 +633,19 @@ const ThankYouPage = {
                     <p class="text-sm text-muted">${venue}${event.city ? ', ' + event.city : ''}</p>
                 </div>
             `;
+
+            // Per-event thank-you WYSIWYG. Sanitized server-side on save
+            // (HTMLPurifier profile "thank_you_message"), so innerHTML here
+            // is safe. If missing / empty, the card silently stays hidden.
+            const thankYouMsg = event.thank_you_message;
+            if (thankYouMsg && String(thankYouMsg).trim() !== '') {
+                const card = document.getElementById('thankYouMessageCard');
+                const body = document.getElementById('thankYouMessageBody');
+                if (card && body) {
+                    body.innerHTML = thankYouMsg;
+                    card.classList.remove('hidden');
+                }
+            }
         }
 
         // Tickets

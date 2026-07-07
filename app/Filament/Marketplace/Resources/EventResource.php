@@ -1347,6 +1347,16 @@ class EventResource extends Resource
                                     ->label($t('Termeni bilete', 'Ticket terms'))
                                     ->columnSpanFull()
                                     ->default($marketplace?->ticket_terms ?? null),
+                                Forms\Components\RichEditor::make("thank_you_message.{$marketplaceLanguage}")
+                                    ->label($t('Mesaj post-achiziție (thank-you)', 'Post-purchase message'))
+                                    ->helperText($t(
+                                        'Afișat clientului pe pagina de confirmare a comenzii, imediat după plată. Poate conține text formatat, linkuri, imagini și embed video YouTube/Vimeo. Se sanitizează automat pentru XSS.',
+                                        'Shown to the customer on the order confirmation page right after payment. Supports formatted text, links, images and YouTube/Vimeo video embeds. Automatically sanitized against XSS.'
+                                    ))
+                                    ->columnSpanFull()
+                                    ->fileAttachmentsDisk('public')
+                                    ->fileAttachmentsDirectory('event-thank-you')
+                                    ->fileAttachmentsVisibility('public'),
                                 Forms\Components\TextInput::make('video_url')
                                     ->label($t('Videoclip YouTube', 'YouTube video'))
                                     ->url()

@@ -134,6 +134,7 @@ class EventsController extends BaseController
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:10000',
             'ticket_terms' => 'nullable|string|max:10000',
+            'thank_you_message' => 'nullable|string|max:20000',
             'short_description' => 'nullable|string|max:500',
             'duration_mode' => 'nullable|string|in:single_day,range,multi_day',
             'starts_at' => $isDraft ? 'nullable|date' : 'required|date|after:now',
@@ -216,6 +217,9 @@ class EventsController extends BaseController
                 'slug' => $slug,
                 'description' => ['ro' => $validated['description'] ?? '', 'en' => $validated['description'] ?? ''],
                 'ticket_terms' => ['ro' => $validated['ticket_terms'] ?? '', 'en' => $validated['ticket_terms'] ?? ''],
+                'thank_you_message' => !empty($validated['thank_you_message'])
+                    ? ['ro' => $validated['thank_you_message'], 'en' => $validated['thank_you_message']]
+                    : null,
                 'short_description' => ['ro' => $validated['short_description'] ?? '', 'en' => $validated['short_description'] ?? ''],
                 'duration_mode' => $durationMode,
                 'venue_id' => $validated['venue_id'] ?? null,
@@ -310,6 +314,7 @@ class EventsController extends BaseController
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:10000',
             'ticket_terms' => 'nullable|string|max:10000',
+            'thank_you_message' => 'nullable|string|max:20000',
             'short_description' => 'nullable|string|max:500',
             'duration_mode' => 'nullable|string|in:single_day,range,multi_day',
             'doors_open_at' => 'nullable|date',
@@ -367,6 +372,16 @@ class EventsController extends BaseController
             if (array_key_exists('ticket_terms', $validated)) {
                 $terms = $validated['ticket_terms'] ?? '';
                 $updateData['ticket_terms'] = ['ro' => $terms, 'en' => $terms];
+            }
+            if (array_key_exists('thank_you_message', $validated)) {
+                // Empty string / null clears the field so the thank-you page
+                // renders without the message card. Non-empty gets sanitized
+                // downstream by the Event model's setThankYouMessageAttribute
+                // mutator via HTMLPurifier.
+                $tym = $validated['thank_you_message'] ?? '';
+                $updateData['thank_you_message'] = ($tym !== '' && $tym !== null)
+                    ? ['ro' => $tym, 'en' => $tym]
+                    : null;
             }
             if (array_key_exists('short_description', $validated)) {
                 $short = $validated['short_description'] ?? '';
@@ -4288,6 +4303,7 @@ class EventsController extends BaseController
             'slug' => $event->slug,
             'description' => $this->getLocalizedField($event, 'description'),
             'ticket_terms' => $this->getLocalizedField($event, 'ticket_terms'),
+            'thank_you_message' => $this->getLocalizedField($event, 'thank_you_message'),
             'short_description' => $this->getLocalizedField($event, 'short_description'),
             'starts_at' => $this->getStartsAt($event),
             'ends_at' => $this->getEndsAt($event),

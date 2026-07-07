@@ -700,6 +700,13 @@ class OrdersController extends BaseController
                 }
             }
 
+            // Per-event post-purchase message (WYSIWYG). Already sanitized
+            // via HTMLPurifier on save (see Event::setThankYouMessageAttribute),
+            // so it's safe to render on the thank-you page with innerHTML.
+            // pickLocalized returns null if the field is null / no locale
+            // matches → thank-you.php skips the card entirely.
+            $thankYouMessage = $pickLocalized($order->event->thank_you_message);
+
             $eventData = [
                 'id' => $order->event->id,
                 'name' => $eventTitle,
@@ -710,6 +717,7 @@ class OrdersController extends BaseController
                 'venue' => $pickLocalized($order->event->venue?->name),
                 'city' => $order->event->venue?->city,
                 'image' => $imageUrl,
+                'thank_you_message' => $thankYouMessage,
             ];
         }
 

@@ -52,6 +52,20 @@ require_once __DIR__ . '/includes/header.php';
             <p id="printingText" class="text-lg text-muted">Biletele tale se printează...</p>
         </div>
 
+        <!-- Per-event post-purchase message (WYSIWYG, sanitized server-side
+             via HTMLPurifier). Hidden by default; populated by
+             renderOrderData() from order.event.thank_you_message. If the
+             organizer left it empty, the card stays hidden. -->
+        <div id="thankYouMessageCard" class="hidden mb-6">
+            <div class="p-6 md:p-8 bg-white border shadow-sm rounded-2xl border-border">
+                <div class="flex items-center gap-2 mb-3 text-sm font-bold text-primary uppercase tracking-wide">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6M12 20l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                    Mesaj din partea organizatorului
+                </div>
+                <div id="thankYouMessageBody" class="prose prose-slate max-w-none text-secondary"></div>
+            </div>
+        </div>
+
         <!-- Printer Section -->
         <div class="printer-section">
             <div class="printer-container">
@@ -407,6 +421,20 @@ const ThankYouPage = {
                     <p class="text-sm text-muted">${venue}${event.city ? ', ' + event.city : ''}</p>
                 </div>
             `;
+
+            // Per-event thank-you WYSIWYG message. Already sanitized on save
+            // by HTMLPurifier (server-side), so innerHTML is safe here.
+            // pickLocalized on the backend returns null for empty → the card
+            // silently stays hidden and existing events see no change.
+            const thankYouMsg = event.thank_you_message;
+            if (thankYouMsg && String(thankYouMsg).trim() !== '') {
+                const card = document.getElementById('thankYouMessageCard');
+                const body = document.getElementById('thankYouMessageBody');
+                if (card && body) {
+                    body.innerHTML = thankYouMsg;
+                    card.classList.remove('hidden');
+                }
+            }
         }
 
         // Tickets
