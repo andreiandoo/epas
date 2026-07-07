@@ -216,6 +216,9 @@ class MarketplaceOrganizer extends Authenticatable
                 'last_invoice_number' => (int) ($this->secondary_last_invoice_number ?? 0),
                 'vat_payer' => (bool) $this->secondary_vat_payer,
                 'vat_rate' => $this->secondary_vat_rate !== null ? (float) $this->secondary_vat_rate : null,
+                // Email de contact al organizatorului — folosit pe factura POS in
+                // linia "Emis de {name} - {email}" sub seria facturii.
+                'contact_email' => $this->email,
             ];
         }
 
@@ -239,6 +242,9 @@ class MarketplaceOrganizer extends Authenticatable
             'vat_rate' => $this->primary_vat_rate !== null
                 ? (float) $this->primary_vat_rate
                 : (isset($this->tax_settings['vat_rate']) ? (float) $this->tax_settings['vat_rate'] : null),
+            // Email de contact al organizatorului — folosit pe factura POS in
+            // linia "Emis de {name} - {email}" sub seria facturii.
+            'contact_email' => $this->email,
         ];
     }
 

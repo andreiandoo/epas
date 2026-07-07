@@ -396,6 +396,10 @@
         parts.push(FEED_N(1));
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
         parts.push(SIZE_2X2, BOLD_ON, lineOf('Seria:'), lineOf(series), BOLD_OFF, SIZE_NORMAL);
+        // Sub Seria: linie centrata "Emis de {name} - {email}" (contact organizer).
+        const issuerEmail = issuer.contact_email || issuer.email || '';
+        const emisLine = 'Emis de ' + issuerName + (issuerEmail ? ' - ' + issuerEmail : '');
+        parts.push(SIZE_SMALL, lineOf(emisLine), SIZE_NORMAL);
         parts.push(FEED_N(1));
 
         // ===== CUMPARATOR: doar firma cumparator (daca exista) =====
@@ -473,8 +477,10 @@
         parts.push(BOLD_ON, lineOf(totalLine + ' '.repeat(totalPad) + totalRight), BOLD_OFF);
 
         // ===== SEMNATURI (Emitent / Preluat) =====
-        // 3cm spatiu gol pentru semnaturi + jos labelurile. La imprimante termice
-        // 80mm cu font A ~ 21 dots/linie -> 3cm = ~120 dots -> ~7 linii goale.
+        // Layout nou: labels + nume IMEDIAT dedesubt (rand pe rand), APOI 2cm spatiu
+        // gol pentru semnaturi. Vechea logica lasa 3cm gol ÎNAINTE de nume, ceea ce
+        // nu era corect — semnatura trebuie DEDESUBTUL numelui.
+        // La imprimante termice 80mm cu font A ~ 21 dots/linie -> 2cm = ~80 dots -> 5 linii goale.
         parts.push(FEED_N(1));
         parts.push(lineOf('--------------------------------'));
         // Header rand: "Emitent" stanga, "Preluat" dreapta pe acelasi rand
@@ -482,27 +488,18 @@
         const preluatLabel = 'Preluat';
         const sigPad = Math.max(1, 32 - emitLabel.length - preluatLabel.length);
         parts.push(BOLD_ON, SIZE_SMALL, lineOf(emitLabel + ' '.repeat(sigPad) + preluatLabel), SIZE_NORMAL, BOLD_OFF);
-        // Spatiu ~3cm pentru semnaturi (7 linii goale)
-        parts.push(FEED_N(7));
 
-        // Numele "Preluat" (sub semnatura din dreapta):
-        //  - daca operatorul a introdus customer.name → afisam numele
-        //  - altfel → fallback "ECOCENTRU" + "info@szentanna-to.ro" (Sf. Ana)
+        // Nume IMEDIAT sub labels: issuer.name stanga, customer.name dreapta.
         const customer = inv.customer || {};
         const custName = (customer.name || '').trim();
-        // Emailurile default POS ('pos@ambilet.ro') si numele placeholder
-        // 'POS — vânzare on-site' sunt tratate ca EMPTY.
         const isRealName = custName && !custName.toLowerCase().includes('pos') && !custName.toLowerCase().includes('vanzare');
-        const custEmail = (customer.email || '').trim();
-        const isRealEmail = custEmail && !custEmail.toLowerCase().startsWith('pos@');
+        const emitentName = issuerName.toUpperCase();
+        const preluatName = isRealName ? custName : '';
+        const nameSep = Math.max(1, 32 - emitentName.length - preluatName.length);
+        parts.push(SIZE_SMALL, lineOf(emitentName + ' '.repeat(nameSep) + preluatName), SIZE_NORMAL);
 
-        if (isRealName || isRealEmail) {
-            if (isRealName) parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + custName), SIZE_NORMAL);
-            if (isRealEmail && !isRealName) parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + custEmail), SIZE_NORMAL);
-        } else {
-            parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + 'ECOCENTRU'), SIZE_NORMAL);
-            parts.push(SIZE_SMALL, lineOf('  ' + '  '.repeat(8) + 'info@szentanna-to.ro'), SIZE_NORMAL);
-        }
+        // Spatiu ~2cm pentru semnaturi manuale (5 linii goale)
+        parts.push(FEED_N(5));
 
         // ===== FOOTER =====
         parts.push(FEED_N(1));
@@ -592,6 +589,10 @@
         // ===== SERIA (MARE) =====
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
         out += '<div class="large">Seria:<br>' + esc(series) + '</div>';
+        // Linie centrata sub Seria: "Emis de {name} - {email}"
+        const issuerEmail = issuer.contact_email || issuer.email || '';
+        const emisLine = 'Emis de ' + issuerName + (issuerEmail ? ' - ' + issuerEmail : '');
+        out += '<div class="center small">' + esc(emisLine) + '</div>';
 
         // ===== CUMPARATOR (firma) — doar cand exista date =====
         const buyer = inv.buyer_company || null;
@@ -643,26 +644,21 @@
         out += '<div class="row bold"><span>TOTAL:</span><span>' + totalAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
 
         // ===== SEMNATURI =====
+        // Layout nou: labels + nume IMEDIAT dedesubt, ABIA APOI 2cm blank pentru semnaturi.
         out += '<div style="height: 3mm;"></div>';
         out += sep;
         out += '<div class="row bold small"><span>Emitent</span><span>Preluat</span></div>';
-        // 3cm blank space simulat (60px @ ~5px/mm)
-        out += '<div class="signature-box"></div>';
 
-        // Nume Preluat (fallback ECOCENTRU cand nu are date reale)
+        // Nume IMEDIAT sub labels
         const customer = inv.customer || {};
         const custName = (customer.name || '').trim();
         const isRealName = custName && !custName.toLowerCase().includes('pos') && !custName.toLowerCase().includes('vanzare');
-        const custEmail = (customer.email || '').trim();
-        const isRealEmail = custEmail && !custEmail.toLowerCase().startsWith('pos@');
-        out += '<div class="row small"><span></span><span style="text-align:right;">';
-        if (isRealName || isRealEmail) {
-            if (isRealName) out += esc(custName);
-            if (isRealEmail && !isRealName) out += esc(custEmail);
-        } else {
-            out += 'ECOCENTRU<br>info@szentanna-to.ro';
-        }
-        out += '</span></div>';
+        const emitentName = issuerName.toUpperCase();
+        const preluatName = isRealName ? custName : '';
+        out += '<div class="row small"><span>' + esc(emitentName) + '</span><span style="text-align:right;">' + esc(preluatName) + '</span></div>';
+
+        // ~2cm blank space simulat pentru semnaturi (2cm = ~40px la 5px/mm)
+        out += '<div class="signature-box" style="min-height: 20mm;"></div>';
 
         // ===== FOOTER =====
         out += '<div style="height: 3mm;"></div>';
