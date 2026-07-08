@@ -1390,6 +1390,7 @@ use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as Marketplac
 use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
 use App\Http\Controllers\Api\MarketplaceClient\SearchController as MarketplaceSearchController;
 use App\Http\Controllers\Api\MarketplaceClient\BlogController as MarketplaceBlogController;
+use App\Http\Controllers\Api\MarketplaceClient\SystemUpdatesController as MarketplaceSystemUpdatesController;
 use App\Http\Controllers\Api\MarketplaceClient\VanityUrlController as MarketplaceVanityUrlController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
@@ -1440,6 +1441,12 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.blog-articles.show');
     Route::get('/blog-categories', [MarketplaceBlogController::class, 'categories'])
         ->name('api.marketplace-client.blog-categories');
+
+    // System updates (Noutăți) — marketplace-scoped changelog
+    Route::get('/system-updates', [MarketplaceSystemUpdatesController::class, 'index'])
+        ->name('api.marketplace-client.system-updates');
+    Route::get('/system-updates/{slug}', [MarketplaceSystemUpdatesController::class, 'show'])
+        ->name('api.marketplace-client.system-updates.show');
 
     // Events
     Route::get('/events', [MarketplaceEventsController::class, 'index'])

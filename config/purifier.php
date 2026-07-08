@@ -37,6 +37,34 @@ return [
             "HTML.SafeIframe"      => 'true',
             "URI.SafeIframeRegexp" => "%^(http://|https://|//)(www.youtube.com/embed/|player.vimeo.com/video/)%",
         ],
+        // Custom profile for the marketplace-scoped "SystemUpdate" body
+        // (Noutăți / changelog module). Same guarantees as
+        // `thank_you_message` (YouTube+Vimeo iframe lock, safe target
+        // links, no script/on*/data:URI) but the whitelist is wider:
+        // structural / long-form-article tags (h1-h6, blockquote,
+        // pre/code, hr, figure/figcaption) are allowed because operators
+        // write proper announcement posts here, not tiny messages.
+        "system_update" => [
+            "HTML.Doctype"             => 'HTML 4.01 Transitional',
+            "HTML.Allowed"             => 'p[style],br,b,strong,i,em,u,s,'
+                . 'h1,h2,h3,h4,h5,h6,'
+                . 'ul,ol,li,blockquote,pre,code,hr,'
+                . 'a[href|title|target|rel],'
+                . 'img[src|alt|width|height|style],'
+                . 'iframe[src|width|height|frameborder|allowfullscreen|allow],'
+                . 'span[style],div[style],figure,figcaption,'
+                . 'table,thead,tbody,tr,th[colspan|rowspan|style],td[colspan|rowspan|style]',
+            "CSS.AllowedProperties"    => 'color,background-color,text-align,'
+                . 'font-weight,font-style,text-decoration,'
+                . 'padding-left,margin-left,'
+                . 'width,height,max-width',
+            "HTML.SafeIframe"          => 'true',
+            "URI.SafeIframeRegexp"     => "%^(http://|https://|//)(www\\.youtube(?:-nocookie)?\\.com/embed/|player\\.vimeo\\.com/video/)%",
+            "Attr.AllowedFrameTargets" => '_blank,_self',
+            "HTML.TargetBlank"         => true,
+            "AutoFormat.AutoParagraph" => false,
+            "AutoFormat.RemoveEmpty"   => true,
+        ],
         // Custom profile for per-event post-purchase "thank_you_message":
         //   - full text formatting (b/i/u/s, headings, lists, quotes)
         //   - safe links (target=_blank is normalized to include noopener)

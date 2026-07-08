@@ -259,6 +259,10 @@ const AmbiletAPI = {
         if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
         if (endpoint.includes('/artists')) return 'artists';
 
+        // System updates (Noutăți) — marketplace changelog
+        if (endpoint.match(/\/system-updates\/[a-z0-9-]+$/i)) return 'system-updates.show';
+        if (endpoint === '/system-updates' || endpoint.includes('/system-updates?')) return 'system-updates';
+
         // Locations endpoints
         if (endpoint.includes('/locations/stats')) return 'locations.stats';
         if (endpoint.includes('/locations/cities/featured')) return 'locations.cities.featured';
@@ -676,6 +680,12 @@ const AmbiletAPI = {
         const tourMatch = endpoint.match(/^\/tours\/([a-z0-9-]+)/i);
         if (tourMatch) {
             return `slug=${encodeURIComponent(tourMatch[1])}`;
+        }
+
+        // System update detail: /system-updates/{slug}
+        const sysUpdateMatch = endpoint.match(/^\/system-updates\/([a-z0-9-]+)$/i);
+        if (sysUpdateMatch) {
+            return `slug=${encodeURIComponent(sysUpdateMatch[1])}`;
         }
 
         // Venue category slug extraction
