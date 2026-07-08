@@ -116,13 +116,152 @@ $categoryClass = $categoryColorMap[$update['category']] ?? 'bg-slate-100 text-sl
         <?php endif; ?>
 
         <!-- Body — already sanitized server-side via HTMLPurifier profile
-             "system_update", so echoing raw is safe. -->
-        <div id="noutati-body" class="prose prose-slate max-w-none prose-lg
-             prose-headings:font-extrabold prose-headings:text-slate-800
-             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-             prose-img:rounded-2xl prose-iframe:rounded-2xl">
+             "system_update", so echoing raw is safe.
+             NOTE: Tailwind Typography's `prose` classes aren't part of the
+             ambilet build, so styling is done via the scoped stylesheet
+             right below instead of prose-* utilities. -->
+        <div id="noutati-body">
             <?= $update['body'] ?? '' ?>
         </div>
+        <style>
+            /* Scoped WYSIWYG typography for the changelog body. Kept inline
+               to guarantee it ships with the page — the ambilet Tailwind
+               build has no @tailwindcss/typography plugin, so `prose`
+               classes would be no-ops. */
+            #noutati-body {
+                color: #334155;              /* slate-700 */
+                font-size: 1.0625rem;         /* ~17px */
+                line-height: 1.75;
+            }
+            #noutati-body > * + * { margin-top: 1.25em; }
+            #noutati-body h1,
+            #noutati-body h2,
+            #noutati-body h3,
+            #noutati-body h4,
+            #noutati-body h5,
+            #noutati-body h6 {
+                color: #1e293b;              /* slate-800 */
+                font-weight: 800;
+                line-height: 1.25;
+                margin-top: 2em;
+                margin-bottom: 0.6em;
+                letter-spacing: -0.01em;
+            }
+            #noutati-body h1 { font-size: 2.25rem; }
+            #noutati-body h2 { font-size: 1.875rem; }
+            #noutati-body h3 { font-size: 1.5rem; }
+            #noutati-body h4 { font-size: 1.25rem; }
+            #noutati-body h5 { font-size: 1.125rem; }
+            #noutati-body h6 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+            #noutati-body p { margin: 0 0 1em 0; }
+            #noutati-body a {
+                color: var(--primary, #A51C30);
+                font-weight: 600;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                text-decoration-thickness: 1px;
+            }
+            #noutati-body a:hover {
+                color: var(--primary-dark, #8B1728);
+                text-decoration-thickness: 2px;
+            }
+            #noutati-body strong,
+            #noutati-body b { font-weight: 700; color: #1e293b; }
+            #noutati-body em,
+            #noutati-body i { font-style: italic; }
+            #noutati-body u { text-decoration: underline; }
+            #noutati-body s { text-decoration: line-through; opacity: 0.7; }
+            #noutati-body ul,
+            #noutati-body ol {
+                margin: 1em 0;
+                padding-left: 1.75rem;
+            }
+            #noutati-body ul { list-style: disc; }
+            #noutati-body ol { list-style: decimal; }
+            #noutati-body ul ul { list-style: circle; }
+            #noutati-body ul ul ul { list-style: square; }
+            #noutati-body li { margin-bottom: 0.5em; }
+            #noutati-body li > p { margin-bottom: 0.25em; }
+            #noutati-body blockquote {
+                margin: 1.5em 0;
+                padding: 0.75em 1.25em;
+                border-left: 4px solid var(--primary, #A51C30);
+                background: #f8fafc;         /* slate-50 */
+                color: #475569;              /* slate-600 */
+                font-style: italic;
+                border-radius: 0 0.5rem 0.5rem 0;
+            }
+            #noutati-body blockquote p { margin-bottom: 0.5em; }
+            #noutati-body blockquote p:last-child { margin-bottom: 0; }
+            #noutati-body pre {
+                margin: 1.5em 0;
+                padding: 1rem 1.25rem;
+                background: #0f172a;         /* slate-900 */
+                color: #e2e8f0;              /* slate-200 */
+                border-radius: 0.75rem;
+                overflow-x: auto;
+                font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+                font-size: 0.9em;
+                line-height: 1.6;
+            }
+            #noutati-body pre code { background: none; padding: 0; color: inherit; }
+            #noutati-body code {
+                background: #f1f5f9;         /* slate-100 */
+                color: #dc2626;              /* red-600 */
+                padding: 0.15rem 0.4rem;
+                border-radius: 0.375rem;
+                font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+                font-size: 0.9em;
+            }
+            #noutati-body hr {
+                margin: 2.5em 0;
+                border: 0;
+                border-top: 1px solid #e2e8f0; /* slate-200 */
+            }
+            #noutati-body img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 1rem;
+                margin: 1.5em auto;
+                display: block;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            }
+            #noutati-body iframe {
+                max-width: 100%;
+                border-radius: 1rem;
+                margin: 1.5em auto;
+                display: block;
+                aspect-ratio: 16 / 9;
+                width: 100%;
+                height: auto;
+                border: 0;
+            }
+            #noutati-body figure { margin: 1.5em 0; }
+            #noutati-body figcaption {
+                text-align: center;
+                color: #64748b;              /* slate-500 */
+                font-size: 0.875rem;
+                margin-top: 0.5rem;
+                font-style: italic;
+            }
+            #noutati-body table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 1.5em 0;
+                font-size: 0.9375rem;
+            }
+            #noutati-body th,
+            #noutati-body td {
+                border: 1px solid #e2e8f0;
+                padding: 0.5rem 0.75rem;
+                text-align: left;
+            }
+            #noutati-body th {
+                background: #f1f5f9;
+                font-weight: 700;
+                color: #1e293b;
+            }
+        </style>
 
         <!-- Back link -->
         <div class="mt-12 pt-8 border-t border-slate-100">
