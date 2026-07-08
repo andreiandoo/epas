@@ -780,17 +780,7 @@ class PublicDataController extends Controller
                 'tiktok_url' => $artist->tiktok_url,
                 'youtube_url' => $artist->youtube_url,
                 'spotify_url' => $artist->spotify_url,
-                'twitter_url' => $artist->twitter_url,
-                'wiki_url' => $artist->wiki_url,
-                'lastfm_url' => $artist->lastfm_url,
-                'itunes_url' => $artist->itunes_url,
-                'musicbrainz_url' => $artist->musicbrainz_url,
             ],
-            'platform_ids' => [
-                'youtube_id' => $artist->youtube_id,
-                'spotify_id' => $artist->spotify_id,
-            ],
-            'youtube_videos' => $artist->youtube_videos,
             'followers' => [
                 'facebook' => $artist->followers_facebook,
                 'instagram' => $artist->followers_instagram,
