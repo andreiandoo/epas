@@ -87,8 +87,16 @@ class LocationSelectFields
                     }
                     $locality = GeoLocations::matchLocality($city, $countyId, $countryIso);
                     if ($locality) {
-                        // Keep the county select consistent with the matched
-                        // locality, then pre-select the locality.
+                        // Defensive: never overwrite an already-set
+                        // geo_county_id with a mismatched match. matchLocality
+                        // is now strict when a county is passed (it returns
+                        // null on cross-county fallback), but keep this guard
+                        // as belt-and-suspenders — a future refactor of the
+                        // match logic shouldn't silently reintroduce the
+                        // "Harghita → Argeș" bug.
+                        if ($countyId && (int) $locality->county_id !== (int) $countyId) {
+                            return;
+                        }
                         $set('geo_county_id', $locality->county_id);
                         $set('geo_city_id', $locality->id);
                     }

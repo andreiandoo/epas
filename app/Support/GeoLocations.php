@@ -124,6 +124,15 @@ class GeoLocations
             if ($inCounty) {
                 return $inCounty;
             }
+            // Caller passed an explicit county — refuse to silently return
+            // a match from a DIFFERENT county. Otherwise typing a city
+            // name that only exists in another județ (e.g. "Lăzărești"
+            // which is common to Argeș AND is a sat in Harghita/Cozmeni
+            // that's missing from the dataset) would remap the venue's
+            // whole location to the wrong county on next form hydration.
+            // Return null so the picker leaves the operator's choice
+            // alone, and let them fix the data / pick a real locality.
+            return null;
         }
 
         return GeoLocality::query()

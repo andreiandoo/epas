@@ -145,6 +145,16 @@ class GeoRomaniaSeeder extends Seeder
         'MM' => [
             ['name' => 'Borșa', 'lat' => 47.6553, 'lng' => 24.6664, 'type' => 'oras'],
         ],
+        // Harghita — sate care lipsesc din datasetul static din
+        // resources/data/ro/cities/Harghita.php. Adăugate ca operatorii să
+        // le poată selecta direct în picker (fără sa cadă pe fallback-ul de
+        // country-wide match, care le-ar remapa pe alt județ cu acelasi nume).
+        'HR' => [
+            // Sat aparținând comunei Cozmeni. Există un Lăzărești și în
+            // Argeș — fără intrarea asta, GeoLocations::matchLocality dă
+            // fallback country-wide și remapează venue-ul în Argeș.
+            ['name' => 'Lăzărești', 'lat' => 46.2200, 'lng' => 25.9500, 'type' => 'sat'],
+        ],
     ];
 
     public function run(): void
