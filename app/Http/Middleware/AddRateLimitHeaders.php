@@ -31,6 +31,16 @@ class AddRateLimitHeaders
             return $response;
         }
 
+        // If Laravel's ThrottleRequests middleware already set rate-limit
+        // headers (which happens on routes using `throttle:apikey`,
+        // `throttle:api`, or any other named limiter), those headers
+        // reflect the real Redis counter for the request's bucket and
+        // must NOT be overwritten. This middleware only fills in headers
+        // for routes that don't have a named throttle attached.
+        if ($response->headers->has('X-RateLimit-Limit')) {
+            return $response;
+        }
+
         // Get rate limit info based on authentication method
         $rateLimit = $this->getRateLimitInfo($request);
 
@@ -76,10 +86,13 @@ class AddRateLimitHeaders
         $cacheKey = "api_rate_limit:{$apiKeyId}";
         $requests = Cache::get($cacheKey, 0);
 
-        // Get the API key's rate limit from database
-        $apiKey = \DB::table('tenant_api_keys')
-            ->where('id', $apiKeyId)
-            ->first();
+        // Try the public api_keys table first (used by /v1/public/*),
+        // fall back to tenant_api_keys (used by tenant-scoped routes).
+        // The api_key_id request attribute is set by both VerifyApiKey
+        // and AuthenticateTenantApi middleware, so we can't tell which
+        // family it belongs to without a lookup.
+        $apiKey = \DB::table('api_keys')->where('id', $apiKeyId)->first()
+            ?? \DB::table('tenant_api_keys')->where('id', $apiKeyId)->first();
 
         $limit = $apiKey->rate_limit ?? config('microservices.api.default_rate_limit', 1000);
         $remaining = max(0, $limit - $requests);

@@ -12,6 +12,8 @@ use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -57,7 +59,7 @@ class SystemUpdateResource extends Resource
                                     ->required()
                                     ->maxLength(255)
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get, ?SystemUpdate $record) {
+                                    ->afterStateUpdated(function ($state, Set $set, Get $get, ?SystemUpdate $record) {
                                         // Auto-slug ONLY when creating (record is null)
                                         // or when the slug is still empty. Never
                                         // rewrite an existing slug — that would
@@ -129,7 +131,7 @@ class SystemUpdateResource extends Resource
                                     ->native(false)
                                     ->seconds(false)
                                     ->helperText('Se completează automat când salvezi cu status "Publicat". Poți edita manual pentru a antedata sau programa.')
-                                    ->visible(fn (Forms\Get $get) => $get('status') === 'published'),
+                                    ->visible(fn (Get $get) => $get('status') === 'published'),
                                 Forms\Components\Select::make('category')
                                     ->label('Categorie')
                                     ->options([
