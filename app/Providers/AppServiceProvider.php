@@ -78,18 +78,50 @@ class AppServiceProvider extends ServiceProvider
         // Ensure all upload directories exist on the public disk
         $this->ensureUploadDirectories();
 
-        // Define API rate limiter
-        RateLimiter::for('api', function (Request $request) {
+        // Shared resolver: returns the ApiKey behind this request, or null.
+        // The default `api` group runs BEFORE our `api.key` middleware in
+        // the pipeline, so the attribute set by VerifyApiKey isn't there
+        // yet when RateLimiter::for('api') fires. To fix the mismatch
+        // where `throttle:api` overwrote `throttle:apikey`'s per-key limit
+        // with the legacy 60/min ceiling, both closures below now resolve
+        // the key directly from the X-API-Key header on first sight and
+        // cache the result on the request. Two-hit: first here (indexed
+        // hash lookup), second in VerifyApiKey (same cached instance).
+        $resolveApiKey = function (Request $request): ?\App\Models\ApiKey {
+            $cached = $request->attributes->get('api_key');
+            if ($cached instanceof \App\Models\ApiKey) {
+                return $cached;
+            }
+            $header = $request->header('X-API-Key') ?? $request->query('api_key');
+            if (!$header) {
+                return null;
+            }
+            $apiKey = \App\Models\ApiKey::findByKey($header);
+            if ($apiKey) {
+                $request->attributes->set('api_key', $apiKey);
+            }
+            return $apiKey;
+        };
+
+        // Default API rate limiter — now api-key-aware. When the request
+        // carries a valid X-API-Key, use that key's effective rate_limit
+        // and bucket by key id. Otherwise fall back to the historical
+        // 60/min per user/IP behavior so routes that don't use api.key
+        // auth (session/sanctum/tenant) are unaffected.
+        RateLimiter::for('api', function (Request $request) use ($resolveApiKey) {
+            $apiKey = $resolveApiKey($request);
+            if ($apiKey && method_exists($apiKey, 'effectiveRateLimit')) {
+                $limit = $apiKey->effectiveRateLimit(60) ?? 60;
+                return Limit::perMinute((int) $limit)->by('apikey:' . $apiKey->id);
+            }
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Per-API-key rate limiter — reads the effective limit off the
-        // ApiKey stored in the request attributes by VerifyApiKey, and
-        // buckets by key id so different keys don't share a counter.
-        // Falls back to 60/min for unauthenticated / legacy contexts
-        // that somehow hit this limiter without a resolved key.
-        RateLimiter::for('apikey', function (Request $request) {
-            $apiKey = $request->attributes->get('api_key');
+        // Per-API-key rate limiter, used by routes that opt in with
+        // `throttle:apikey`. Same resolution as the api limiter above so
+        // the two agree and header order in the response doesn't matter.
+        RateLimiter::for('apikey', function (Request $request) use ($resolveApiKey) {
+            $apiKey = $resolveApiKey($request);
             $limit = ($apiKey && method_exists($apiKey, 'effectiveRateLimit'))
                 ? ($apiKey->effectiveRateLimit(60) ?? 60)
                 : 60;
