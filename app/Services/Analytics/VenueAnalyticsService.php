@@ -61,7 +61,14 @@ class VenueAnalyticsService
 
             return [
                 'venue_id' => $venue->id,
-                'venue_name' => $this->decodeJsonName($venue->name),
+                // Venue name is a translatable field — $venue->name returns
+                // an array (['ro'=>'Quantic','en'=>'Quantic']) whereas the
+                // trait's decodeJsonName expects a string, so we resolve
+                // via the translation helper instead. Matches how the
+                // admin analytics page reads the name.
+                'venue_name' => $venue->getTranslation('name', 'en')
+                    ?: $venue->getTranslation('name', 'ro')
+                    ?: '',
                 'city' => $venue->city,
                 'kpis' => $this->computeVenueKpis($eventIds, $orderIds),
                 'health_score' => $this->buildVenueHealthScore($eventIds, $orderIds),
