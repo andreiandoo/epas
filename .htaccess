@@ -746,6 +746,17 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^blog/?$ blog.php [L]
 
+# Noutăți — marketplace-scoped changelog / product announcements.
+# /noutati                → list page
+# /noutati/{slug}         → single update
+# Detail rule must go BEFORE the list rule so /noutati/... matches first.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^noutati/([a-z0-9-]+)/?$ noutati-detail.php?slug=$1 [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^noutati/?$ noutati.php [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^press-kit/?$ press-kit.php [L]

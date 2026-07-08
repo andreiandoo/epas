@@ -88,6 +88,11 @@ class ApiCache {
 
         // Very short cache (2 minutes) - search results
         'search' => 120,
+
+        // Noutăți — changelog is not high-traffic and admin publishes
+        // rarely; 5 min TTL keeps recent posts visible fast enough.
+        'system-updates' => 300,
+        'system-updates.show' => 300,
     ];
 
     public static function init() {
@@ -4388,6 +4393,26 @@ switch ($action) {
             'data' => $responseData,
         ]);
         exit;
+
+    case 'system-updates':
+        // Paginated list of published "Noutăți" for this marketplace.
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int) $_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int) $_GET['per_page'], 50);
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        $endpoint = '/system-updates' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'system-updates.show':
+        // Single update by slug, plus its "related" cards.
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing update slug']);
+            exit;
+        }
+        $endpoint = '/system-updates/' . urlencode($slug);
+        break;
 
     default:
         http_response_code(400);
