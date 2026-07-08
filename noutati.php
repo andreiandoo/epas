@@ -2,10 +2,11 @@
 /**
  * Noutăți (index) — Marketplace-scoped changelog / announcements list.
  *
- * Magazine-style layout: hero → sticky filter tabs → big featured card
- * for the most recent update → 3-col grid for the rest. Hydrated by
- * /assets/js/pages/noutati.js which calls
- * AmbiletAPI.get('/system-updates?...') via the local proxy.
+ * Month-grouped, infinite-scroll layout. The shell is rendered PHP-side
+ * (hero + sticky category tabs + skeleton for LCP); the grouped grid is
+ * hydrated by /assets/js/pages/noutati.js which pulls pages via
+ * AmbiletAPI.get('/system-updates?...') and appends into per-month
+ * sections as the visitor scrolls near the bottom.
  */
 
 $pageCacheTTL = 300; // 5 minutes
@@ -38,10 +39,8 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Hero -->
     <section class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 md:py-28 px-6 md:px-12">
-        <!-- Decorative radial glows -->
         <div class="absolute -top-[300px] -right-[200px] w-[700px] h-[700px] bg-[radial-gradient(circle,rgba(165,28,48,0.2)_0%,transparent_65%)] pointer-events-none"></div>
         <div class="absolute -bottom-[200px] -left-[200px] w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(59,130,246,0.08)_0%,transparent_65%)] pointer-events-none"></div>
-        <!-- Grid pattern overlay -->
         <div class="absolute inset-0 opacity-[0.04] pointer-events-none"
              style="background-image: linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px); background-size: 40px 40px;"></div>
 
@@ -68,7 +67,6 @@ require_once __DIR__ . '/includes/header.php';
                 <?php foreach ($categoryLabels as $key => $label):
                     $isActive = $activeCategory === $key;
                     $href = $key === '' ? '/noutati' : '/noutati?cat=' . urlencode($key);
-                    // Category icons for the pill.
                     $iconSvg = match ($key) {
                         'interfata'   => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>',
                         'organizator' => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>',
@@ -83,7 +81,6 @@ require_once __DIR__ . '/includes/header.php';
                         : 'bg-white border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:shadow-sm' ?>">
                     <?= $iconSvg ?>
                     <span><?= htmlspecialchars($label) ?></span>
-                    <span class="filter-count text-xs opacity-70" data-category-key="<?= htmlspecialchars($key) ?>"></span>
                 </a>
                 <?php endforeach; ?>
             </div>
@@ -91,33 +88,61 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <main class="max-w-6xl mx-auto px-6 md:px-12 py-12 md:py-16">
-        <!-- Featured card (populated by JS with the newest update) -->
-        <div id="noutati-featured" class="mb-12 hidden"></div>
-
-        <!-- "Latest updates" section heading -->
-        <div id="noutati-grid-heading" class="hidden flex items-center justify-between mb-8">
-            <h2 class="text-2xl font-bold text-slate-800">Alte noutăți</h2>
-            <span id="noutati-count" class="text-sm text-slate-500"></span>
-        </div>
-
-        <!-- Grid of remaining cards (populated by JS) -->
-        <div id="noutati-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-8"
-             data-active-category="<?= htmlspecialchars($activeCategory) ?>">
-            <!-- Skeleton cards until JS loads -->
-            <?php for ($i = 0; $i < 6; $i++): ?>
-            <div class="bg-white rounded-2xl overflow-hidden border border-slate-200 animate-pulse">
-                <div class="h-[200px] bg-slate-100"></div>
-                <div class="p-6">
-                    <div class="h-4 w-20 bg-slate-100 rounded mb-3"></div>
-                    <div class="h-6 w-3/4 bg-slate-100 rounded mb-2"></div>
-                    <div class="h-4 w-full bg-slate-100 rounded mb-2"></div>
-                    <div class="h-4 w-2/3 bg-slate-100 rounded"></div>
+        <!-- Month-grouped container (populated by JS) -->
+        <div id="noutati-groups" data-active-category="<?= htmlspecialchars($activeCategory) ?>">
+            <!-- Initial skeleton shown until page 1 arrives; JS clears it. -->
+            <div id="noutati-initial-skeleton">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="h-px bg-slate-200 flex-1"></div>
+                    <div class="h-4 w-32 bg-slate-100 rounded animate-pulse"></div>
+                    <div class="h-px bg-slate-200 flex-1"></div>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    <?php for ($i = 0; $i < 6; $i++): ?>
+                    <div class="bg-white rounded-2xl overflow-hidden border border-slate-200 animate-pulse">
+                        <div class="h-[200px] bg-slate-100"></div>
+                        <div class="p-6">
+                            <div class="h-4 w-20 bg-slate-100 rounded mb-3"></div>
+                            <div class="h-6 w-3/4 bg-slate-100 rounded mb-2"></div>
+                            <div class="h-4 w-full bg-slate-100 rounded mb-2"></div>
+                            <div class="h-4 w-2/3 bg-slate-100 rounded"></div>
+                        </div>
+                    </div>
+                    <?php endfor; ?>
                 </div>
             </div>
-            <?php endfor; ?>
         </div>
 
-        <!-- Empty state (JS toggles visibility) -->
+        <!-- Loading spinner shown while more pages fetch. -->
+        <div id="noutati-loading" class="hidden text-center py-12">
+            <div class="inline-flex items-center gap-3 text-slate-500">
+                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.25"/>
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                <span class="text-sm font-medium">Se încarcă mai multe noutăți...</span>
+            </div>
+        </div>
+
+        <!-- End marker shown when all pages have loaded. -->
+        <div id="noutati-end" class="hidden text-center py-16">
+            <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-slate-100 text-slate-500 text-sm font-medium">
+                <span class="text-lg">✨</span>
+                <span>Ai văzut toate noutățile</span>
+            </div>
+        </div>
+
+        <!-- Error state (shown if a fetch fails). -->
+        <div id="noutati-error" class="hidden text-center py-12">
+            <div class="inline-flex flex-col items-center gap-3 text-slate-500">
+                <p class="text-sm">Nu am putut încărca mai multe noutăți. Verifică conexiunea.</p>
+                <button id="noutati-retry" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-primary transition-colors">
+                    Reîncearcă
+                </button>
+            </div>
+        </div>
+
+        <!-- Empty state — no updates at all in this category. -->
         <div id="noutati-empty" class="hidden text-center py-20">
             <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-100 mb-6">
                 <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,12 +153,13 @@ require_once __DIR__ . '/includes/header.php';
             <p class="text-slate-500 max-w-md mx-auto">Reveniți curând — publicăm updates regulat cu noi funcționalități și îmbunătățiri.</p>
         </div>
 
-        <!-- Pagination (populated by JS) -->
-        <nav id="noutati-pagination" class="flex items-center justify-center gap-2 mt-12"></nav>
+        <!-- Sentinel for IntersectionObserver — triggers next-page load
+             ~400px before it enters the viewport so the spinner appears
+             seamless as the visitor scrolls. -->
+        <div id="noutati-sentinel" aria-hidden="true" class="h-1"></div>
     </main>
 
     <style>
-        /* NEW badge for updates published < 7 days ago (injected via JS). */
         .noutati-new-badge {
             position: absolute;
             top: 12px;
@@ -164,48 +190,10 @@ require_once __DIR__ . '/includes/header.php';
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
-
-        /* Featured hero card polish. */
-        .noutati-featured-card {
-            position: relative;
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 1.75rem;
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        .noutati-featured-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-        }
-        .noutati-featured-image {
-            position: relative;
-            min-height: 340px;
-            overflow: hidden;
-        }
-        .noutati-featured-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.6s;
-        }
-        .noutati-featured-card:hover .noutati-featured-image img {
-            transform: scale(1.05);
-        }
-        .noutati-featured-content {
-            padding: 2.5rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        @media (max-width: 768px) {
-            .noutati-featured-card {
-                grid-template-columns: 1fr;
-            }
-            .noutati-featured-image { min-height: 220px; }
-            .noutati-featured-content { padding: 1.75rem; }
+        /* Month section spacing — extra margin between groups to make the
+           timeline read as distinct chapters. */
+        .noutati-month-section + .noutati-month-section {
+            margin-top: 3.5rem;
         }
     </style>
 
