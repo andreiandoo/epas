@@ -1,23 +1,40 @@
 /**
- * Noutăți (index) — hydrates featured card + grid + pagination.
+ * Noutăți (index) — month-grouped, infinite-scroll changelog.
  *
- * Called by /noutati (public page). Reads active category from the
- * grid container's data attribute (set PHP-side from ?cat=). On the
- * first (unfiltered) page the first item renders as a big featured
- * hero card; the rest go into a 3-col grid. Filter tabs are PHP links
- * (?cat=X) so category switches are full-page navigation — keeps the
- * URL clean and cacheable.
+ * Fetches pages via AmbiletAPI.get('/system-updates?...') and appends
+ * items into per-month sections. IntersectionObserver on a sentinel
+ * ~400px above the page bottom triggers the next page as the visitor
+ * approaches the fold. No pagination — scroll IS the pagination.
+ *
+ * Section-per-month structure lets months split across API pages
+ * merge transparently: the Map cache keyed by "YYYY-MM" ensures a
+ * second batch of the same month appends to the existing grid instead
+ * of creating a duplicate heading.
  */
 (function () {
     'use strict';
 
-    const gridEl = document.getElementById('noutati-grid');
-    const featuredEl = document.getElementById('noutati-featured');
-    const gridHeadingEl = document.getElementById('noutati-grid-heading');
-    const countEl = document.getElementById('noutati-count');
-    const paginationEl = document.getElementById('noutati-pagination');
+    const groupsEl = document.getElementById('noutati-groups');
+    const initialSkeletonEl = document.getElementById('noutati-initial-skeleton');
+    const loadingEl = document.getElementById('noutati-loading');
+    const endEl = document.getElementById('noutati-end');
+    const errorEl = document.getElementById('noutati-error');
+    const retryBtn = document.getElementById('noutati-retry');
     const emptyEl = document.getElementById('noutati-empty');
-    if (!gridEl) return;
+    const sentinel = document.getElementById('noutati-sentinel');
+    if (!groupsEl) return;
+
+    // Romanian month names for section headings.
+    const RO_MONTHS = [
+        'IANUARIE', 'FEBRUARIE', 'MARTIE', 'APRILIE', 'MAI', 'IUNIE',
+        'IULIE', 'AUGUST', 'SEPTEMBRIE', 'OCTOMBRIE', 'NOIEMBRIE', 'DECEMBRIE',
+    ];
+
+    // State — resets when the page (re)loads (e.g. category change).
+    let currentPage = 0;                 // last successfully-loaded page
+    let hasMorePages = true;
+    let isLoading = false;
+    const monthSections = new Map();     // "YYYY-MM" → wrapper element
 
     function escapeHtml(s) {
         return String(s == null ? '' : s)
@@ -28,48 +45,59 @@
             .replace(/'/g, '&#039;');
     }
 
-    // Category → short label shown on cards. Uses "Pentru X" phrasing
-    // matching the detail page — no coloured pills.
+    // Category → short label for cards. Matches the detail page's
+    // editorial phrasing so the whole surface uses one voice.
     function categoryLabel(cat) {
-        return {
+        return ({
             interfata:   'Interfață',
             organizator: 'Pentru Organizatori',
             client:      'Pentru Clienți',
-        }[cat] || cat;
+        })[cat] || cat;
     }
 
     function isRecent(publishedAtIso) {
         if (!publishedAtIso) return false;
         const dt = new Date(publishedAtIso);
         if (isNaN(dt.getTime())) return false;
-        const sevenDays = 7 * 24 * 60 * 60 * 1000;
-        return (Date.now() - dt.getTime()) < sevenDays;
+        return (Date.now() - dt.getTime()) < 7 * 24 * 60 * 60 * 1000;
     }
 
-    function renderFeatured(u) {
-        const img = u.featured_image
-            ? `<img src="${escapeHtml(u.featured_image)}" alt="${escapeHtml(u.title)}" loading="eager" width="800" height="600">`
-            : '<div class="w-full h-full bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 flex items-center justify-center"><svg class="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div>';
-        const newBadge = isRecent(u.published_at) ? '<div class="noutati-new-badge">NOU</div>' : '';
+    function monthKey(iso) {
+        const dt = new Date(iso);
+        if (isNaN(dt.getTime())) return 'unknown';
+        return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    }
 
-        return `
-            <a href="${escapeHtml(u.url)}" class="noutati-featured-card block">
-                <div class="noutati-featured-image">${newBadge}${img}</div>
-                <div class="noutati-featured-content">
-                    <div class="inline-flex items-center gap-2 text-primary mb-3">
-                        <span class="text-xs font-bold uppercase tracking-widest">${escapeHtml(categoryLabel(u.category))}</span>
-                        ${u.published_at_human ? `<span class="text-slate-300">·</span><span class="text-xs text-slate-500 font-medium">${escapeHtml(u.published_at_human)}</span>` : ''}
-                    </div>
-                    <h2 class="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 leading-tight mb-4 tracking-tight">
-                        ${escapeHtml(u.title)}
-                    </h2>
-                    ${u.excerpt ? `<p class="text-base md:text-lg text-slate-600 leading-relaxed mb-5 line-clamp-3">${escapeHtml(u.excerpt)}</p>` : ''}
-                    <div class="inline-flex items-center gap-2 text-primary font-bold">
-                        Citește tot
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                    </div>
-                </div>
-            </a>`;
+    function monthLabelFor(iso) {
+        const dt = new Date(iso);
+        if (isNaN(dt.getTime())) return 'FĂRĂ DATĂ';
+        return `${RO_MONTHS[dt.getMonth()]} ${dt.getFullYear()}`;
+    }
+
+    /**
+     * Return the grid element for a given month, creating the section
+     * on first use. Sections are appended in insertion order, which
+     * matches the API's DESC ordering — no manual sort needed.
+     */
+    function getOrCreateMonthGrid(key, iso) {
+        if (monthSections.has(key)) {
+            return monthSections.get(key).querySelector('.noutati-month-grid');
+        }
+
+        const section = document.createElement('section');
+        section.className = 'noutati-month-section';
+        section.dataset.month = key;
+        section.innerHTML = `
+            <div class="flex items-center gap-4 mb-8">
+                <div class="h-px bg-slate-200 flex-1"></div>
+                <h2 class="text-xs md:text-sm font-black text-slate-400 tracking-[0.2em]">${escapeHtml(monthLabelFor(iso))}</h2>
+                <div class="h-px bg-slate-200 flex-1"></div>
+            </div>
+            <div class="noutati-month-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"></div>
+        `;
+        groupsEl.appendChild(section);
+        monthSections.set(key, section);
+        return section.querySelector('.noutati-month-grid');
     }
 
     function renderCard(u) {
@@ -99,48 +127,16 @@
             </a>`;
     }
 
-    function renderPagination(meta) {
-        if (!meta || meta.last_page <= 1) {
-            paginationEl.innerHTML = '';
-            return;
-        }
-        const current = meta.current_page;
-        const last = meta.last_page;
-        const baseParams = new URLSearchParams(window.location.search);
-        const pageLink = (p) => {
-            baseParams.set('page', p);
-            return '?' + baseParams.toString();
-        };
+    async function loadPage(page) {
+        if (isLoading || !hasMorePages) return;
+        isLoading = true;
+        errorEl.classList.add('hidden');
 
-        const activeCls = 'bg-gradient-to-br from-primary to-red-600 text-white shadow-md';
-        const idleCls = 'bg-white border border-slate-200 text-slate-500 hover:border-primary hover:text-primary';
-        const navCls = 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-primary hover:text-white hover:border-primary';
+        // Show the spinner only for subsequent pages — the initial page
+        // is covered by the PHP-rendered skeleton.
+        if (page > 1) loadingEl.classList.remove('hidden');
 
-        let html = '';
-        if (current > 1) {
-            html += `<a href="${pageLink(current - 1)}" class="w-11 h-11 flex items-center justify-center rounded-xl transition-all ${navCls}">
-                <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-            </a>`;
-        }
-        const start = Math.max(1, current - 2);
-        const end = Math.min(last, start + 4);
-        for (let p = start; p <= end; p++) {
-            const cls = p === current ? activeCls : idleCls;
-            html += `<a href="${pageLink(p)}" class="w-11 h-11 flex items-center justify-center rounded-xl text-sm font-semibold transition-all ${cls}">${p}</a>`;
-        }
-        if (current < last) {
-            html += `<a href="${pageLink(current + 1)}" class="w-11 h-11 flex items-center justify-center rounded-xl transition-all ${navCls}">
-                <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>`;
-        }
-        paginationEl.innerHTML = html;
-    }
-
-    async function load() {
-        const params = new URLSearchParams(window.location.search);
-        const page = parseInt(params.get('page') || '1', 10);
-        const cat = gridEl.dataset.activeCategory || params.get('cat') || '';
-
+        const cat = groupsEl.dataset.activeCategory || '';
         const query = new URLSearchParams();
         query.set('page', String(page));
         query.set('per_page', '12');
@@ -151,55 +147,90 @@
             const items = (response && response.data) || [];
             const meta = (response && response.meta) || {};
 
-            if (items.length === 0) {
-                gridEl.innerHTML = '';
-                featuredEl.classList.add('hidden');
-                gridHeadingEl.classList.add('hidden');
-                emptyEl.classList.remove('hidden');
-                paginationEl.innerHTML = '';
-                return;
-            }
-            emptyEl.classList.add('hidden');
-
-            // First page: promote the newest update to a big featured
-            // card at the top. Subsequent pages just show the grid so
-            // pagination doesn't lose the "featured slot" visually.
-            let gridItems = items;
-            if (page === 1 && items.length > 0) {
-                featuredEl.innerHTML = renderFeatured(items[0]);
-                featuredEl.classList.remove('hidden');
-                gridItems = items.slice(1);
-            } else {
-                featuredEl.classList.add('hidden');
-            }
-
-            if (gridItems.length > 0) {
-                gridEl.innerHTML = gridItems.map(renderCard).join('');
-                gridHeadingEl.classList.remove('hidden');
-                gridHeadingEl.classList.add('flex');
-                if (countEl && meta.total) {
-                    countEl.textContent = meta.total + (meta.total === 1 ? ' noutate în total' : ' noutăți în total');
+            // Page 1 special-casing: clear the initial skeleton the FIRST
+            // time real data lands. If page 1 is empty AND we're at the
+            // start, show the empty state.
+            if (page === 1) {
+                if (initialSkeletonEl) initialSkeletonEl.remove();
+                if (items.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                    endEl.classList.add('hidden');
+                    hasMorePages = false;
+                    return;
                 }
-            } else {
-                gridEl.innerHTML = '';
-                gridHeadingEl.classList.add('hidden');
-                gridHeadingEl.classList.remove('flex');
+                emptyEl.classList.add('hidden');
             }
 
-            renderPagination(meta);
+            // Group + append. `insertAdjacentHTML('beforeend', ...)` is
+            // ~3× faster than `innerHTML +=` because it doesn't reparse
+            // the existing siblings.
+            items.forEach(item => {
+                const key = monthKey(item.published_at);
+                const grid = getOrCreateMonthGrid(key, item.published_at);
+                grid.insertAdjacentHTML('beforeend', renderCard(item));
+            });
+
+            currentPage = meta.current_page || page;
+            hasMorePages = (meta.current_page || page) < (meta.last_page || page);
+
+            if (!hasMorePages) {
+                loadingEl.classList.add('hidden');
+                // Only show "you've seen everything" if we actually
+                // rendered at least one item.
+                if (monthSections.size > 0) endEl.classList.remove('hidden');
+            }
         } catch (e) {
-            console.error('[noutati] failed to load:', e);
-            gridEl.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500">
-                Nu am putut încărca noutățile. Te rugăm reîncearcă mai târziu.
-            </div>`;
-            featuredEl.classList.add('hidden');
-            gridHeadingEl.classList.add('hidden');
+            console.error('[noutati] failed to load page ' + page + ':', e);
+            loadingEl.classList.add('hidden');
+            errorEl.classList.remove('hidden');
+            // Don't hardcode hasMorePages=false — visitor may retry.
+        } finally {
+            isLoading = false;
+            if (!hasMorePages || errorEl.classList.contains('hidden') === false) {
+                loadingEl.classList.add('hidden');
+            }
         }
     }
 
+    // IntersectionObserver on the sentinel — kicks off next page as
+    // the visitor scrolls into a 400px buffer above the end.
+    function initInfiniteScroll() {
+        if (!('IntersectionObserver' in window) || !sentinel) {
+            // Fallback: a scroll listener that checks manually. Rare
+            // (all major browsers support IO since 2018).
+            window.addEventListener('scroll', () => {
+                const nearBottom = (window.innerHeight + window.scrollY)
+                    >= (document.body.offsetHeight - 400);
+                if (nearBottom && !isLoading && hasMorePages) {
+                    loadPage(currentPage + 1);
+                }
+            }, { passive: true });
+            return;
+        }
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !isLoading && hasMorePages) {
+                    loadPage(currentPage + 1);
+                }
+            });
+        }, { rootMargin: '400px 0px' });
+        observer.observe(sentinel);
+    }
+
+    if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+            errorEl.classList.add('hidden');
+            loadPage(currentPage + 1);
+        });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', load);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPage(1);
+            initInfiniteScroll();
+        });
     } else {
-        load();
+        loadPage(1);
+        initInfiniteScroll();
     }
 })();
