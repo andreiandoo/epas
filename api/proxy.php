@@ -4417,6 +4417,20 @@ switch ($action) {
         $endpoint = '/system-updates/' . urlencode($slug);
         break;
 
+    case 'system-updates.react':
+        // POST — toggle a reaction (thumbs_up/heart/rocket/party) for
+        // the caller's anonymous session hash (kept in localStorage).
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing update slug']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/system-updates/' . urlencode($slug) . '/react';
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
