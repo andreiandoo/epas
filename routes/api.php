@@ -153,6 +153,49 @@ Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Public Analytics API — for partner integrations (Etapa B)
+|--------------------------------------------------------------------------
+|
+| Live analytics endpoints for artist + venue dashboards. Behind the
+| existing api.key middleware but with an explicit scope requirement
+| (read.analytics.artist / read.analytics.venue) and the per-key rate
+| limiter registered on 'apikey' (falls back to 60/min).
+|
+| All PII (buyer names/emails/birth dates) is masked in the service
+| layer before it leaves the platform — see App\Support\PiiMask.
+|
+| Legacy /v1/public routes above stay untouched. New keys generated
+| with the analytics scopes only reach this group; legacy keys with
+| NULL scopes column also pass (VerifyApiKey short-circuits scope
+| enforcement when the key predates the scope column).
+|
+*/
+Route::prefix('v1/public/analytics/artists')
+    ->middleware(['api.key:read.analytics.artist', 'throttle:apikey'])
+    ->group(function () {
+        $ctrl = \App\Http\Controllers\Api\PublicAnalytics\ArtistAnalyticsController::class;
+        Route::get('/{artist}/overview', [$ctrl, 'overview'])->name('api.public.analytics.artists.overview');
+        Route::get('/{artist}/audience', [$ctrl, 'audience'])->name('api.public.analytics.artists.audience');
+        Route::get('/{artist}/performance', [$ctrl, 'performance'])->name('api.public.analytics.artists.performance');
+        Route::get('/{artist}/upcoming', [$ctrl, 'upcoming'])->name('api.public.analytics.artists.upcoming');
+    });
+
+Route::prefix('v1/public/analytics/venues')
+    ->middleware(['api.key:read.analytics.venue', 'throttle:apikey'])
+    ->group(function () {
+        $ctrl = \App\Http\Controllers\Api\PublicAnalytics\VenueAnalyticsController::class;
+        Route::get('/{venue}/overview', [$ctrl, 'overview'])->name('api.public.analytics.venues.overview');
+        Route::get('/{venue}/events', [$ctrl, 'events'])->name('api.public.analytics.venues.events');
+        Route::get('/{venue}/revenue', [$ctrl, 'revenue'])->name('api.public.analytics.venues.revenue');
+        Route::get('/{venue}/audience', [$ctrl, 'audience'])->name('api.public.analytics.venues.audience');
+        Route::get('/{venue}/programming', [$ctrl, 'programming'])->name('api.public.analytics.venues.programming');
+        Route::get('/{venue}/actions', [$ctrl, 'actions'])->name('api.public.analytics.venues.actions');
+        Route::get('/{venue}/forecast', [$ctrl, 'forecast'])->name('api.public.analytics.venues.forecast');
+        Route::post('/{venue}/simulate', [$ctrl, 'simulate'])->name('api.public.analytics.venues.simulate');
+    });
+
+/*
+|--------------------------------------------------------------------------
 | Seating API Routes - Public
 |--------------------------------------------------------------------------
 |
