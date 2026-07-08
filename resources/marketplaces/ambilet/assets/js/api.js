@@ -260,6 +260,8 @@ const AmbiletAPI = {
         if (endpoint.includes('/artists')) return 'artists';
 
         // System updates (Noutăți) — marketplace changelog
+        // Order: react must precede show (both start with /system-updates/<slug>).
+        if (endpoint.match(/\/system-updates\/[a-z0-9-]+\/react$/i)) return 'system-updates.react';
         if (endpoint.match(/\/system-updates\/[a-z0-9-]+$/i)) return 'system-updates.show';
         if (endpoint === '/system-updates' || endpoint.includes('/system-updates?')) return 'system-updates';
 
@@ -682,7 +684,11 @@ const AmbiletAPI = {
             return `slug=${encodeURIComponent(tourMatch[1])}`;
         }
 
-        // System update detail: /system-updates/{slug}
+        // System update detail: /system-updates/{slug} and /system-updates/{slug}/react
+        const sysUpdateReactMatch = endpoint.match(/^\/system-updates\/([a-z0-9-]+)\/react$/i);
+        if (sysUpdateReactMatch) {
+            return `slug=${encodeURIComponent(sysUpdateReactMatch[1])}`;
+        }
         const sysUpdateMatch = endpoint.match(/^\/system-updates\/([a-z0-9-]+)$/i);
         if (sysUpdateMatch) {
             return `slug=${encodeURIComponent(sysUpdateMatch[1])}`;

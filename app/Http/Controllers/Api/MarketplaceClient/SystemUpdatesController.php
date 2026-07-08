@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\SystemUpdate;
+use App\Models\SystemUpdateReaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Public API for the marketplace-scoped "Noutăți" (system updates)
@@ -74,9 +76,90 @@ class SystemUpdatesController extends BaseController
             ->limit(3)
             ->get();
 
+        // Prev / next in the same marketplace so the detail page can
+        // offer chronological navigation without a second round-trip.
+        $prev = SystemUpdate::query()
+            ->forMarketplace($client->id)
+            ->published()
+            ->where('published_at', '<', $update->published_at)
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->first();
+        $next = SystemUpdate::query()
+            ->forMarketplace($client->id)
+            ->published()
+            ->where('published_at', '>', $update->published_at)
+            ->orderBy('published_at')
+            ->orderBy('id')
+            ->first();
+
+        // Session-hash comes from a signed cookie the frontend sets on
+        // first reaction. Used ONLY to tell the caller which reactions
+        // they already gave; anonymous browsers never send it.
+        $sessionHash = $request->cookie('noutati_session') ?? $request->header('X-Noutati-Session');
+
         return $this->success([
-            'update'  => $this->transform($update, true),
-            'related' => $related->map(fn ($u) => $this->transform($u, false))->all(),
+            'update'          => $this->transform($update, true),
+            'related'         => $related->map(fn ($u) => $this->transform($u, false))->all(),
+            'prev'            => $prev ? $this->transform($prev, false) : null,
+            'next'            => $next ? $this->transform($next, false) : null,
+            'reaction_counts' => $update->getReactionCounts(),
+            'my_reactions'    => $update->getReactionsForSession($sessionHash),
+        ]);
+    }
+
+    /**
+     * Toggle a reaction (thumbs_up / heart / rocket / party) on an
+     * update for the caller's session. Body params:
+     *   - type          (string, one of SystemUpdateReaction::TYPES)
+     *   - session_hash  (string, 64 chars — the anonymous browser id)
+     *
+     * Returns updated counts + the caller's active reactions so the UI
+     * can re-render without a follow-up GET.
+     */
+    public function react(Request $request, string $slug): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $data = $request->validate([
+            'type'         => 'required|string|in:' . implode(',', SystemUpdateReaction::TYPES),
+            'session_hash' => 'required|string|size:64',
+        ]);
+
+        $update = SystemUpdate::query()
+            ->forMarketplace($client->id)
+            ->published()
+            ->where('slug', $slug)
+            ->first();
+
+        if (!$update) {
+            return $this->error('Noutatea nu a fost găsită.', 404);
+        }
+
+        // Toggle semantics: if the row exists, delete it (un-vote);
+        // otherwise insert. Wrapped in a small transaction so a race
+        // between two clicks can't leave a half-state.
+        DB::transaction(function () use ($update, $data) {
+            $existing = SystemUpdateReaction::query()
+                ->where('system_update_id', $update->id)
+                ->where('session_hash', $data['session_hash'])
+                ->where('reaction_type', $data['type'])
+                ->first();
+
+            if ($existing) {
+                $existing->delete();
+            } else {
+                SystemUpdateReaction::create([
+                    'system_update_id' => $update->id,
+                    'session_hash'     => $data['session_hash'],
+                    'reaction_type'    => $data['type'],
+                ]);
+            }
+        });
+
+        return $this->success([
+            'reaction_counts' => $update->getReactionCounts(),
+            'my_reactions'    => $update->getReactionsForSession($data['session_hash']),
         ]);
     }
 

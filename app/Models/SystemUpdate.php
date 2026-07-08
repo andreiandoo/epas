@@ -128,6 +128,46 @@ class SystemUpdate extends Model
         return $this->belongsTo(MarketplaceClient::class);
     }
 
+    public function reactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SystemUpdateReaction::class);
+    }
+
+    /**
+     * Aggregate reaction counts keyed by type, e.g.
+     * `['thumbs_up' => 3, 'heart' => 12, 'rocket' => 0, 'party' => 0]`.
+     * Zero-fills unknown types so the frontend never has to `?? 0`.
+     */
+    public function getReactionCounts(): array
+    {
+        $rows = $this->reactions()
+            ->selectRaw('reaction_type, COUNT(*) AS c')
+            ->groupBy('reaction_type')
+            ->pluck('c', 'reaction_type')
+            ->all();
+
+        $out = [];
+        foreach (SystemUpdateReaction::TYPES as $t) {
+            $out[$t] = (int) ($rows[$t] ?? 0);
+        }
+        return $out;
+    }
+
+    /**
+     * Return the reaction types the given session_hash already voted
+     * for. Used to render "you already voted" state in the UI.
+     *
+     * @return array<int, string>
+     */
+    public function getReactionsForSession(?string $sessionHash): array
+    {
+        if (!$sessionHash) return [];
+        return $this->reactions()
+            ->where('session_hash', $sessionHash)
+            ->pluck('reaction_type')
+            ->all();
+    }
+
     // Query scopes -----------------------------------------------------
 
     public function scopePublished(Builder $q): Builder

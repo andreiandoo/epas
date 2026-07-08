@@ -1447,6 +1447,9 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.system-updates');
     Route::get('/system-updates/{slug}', [MarketplaceSystemUpdatesController::class, 'show'])
         ->name('api.marketplace-client.system-updates.show');
+    // Anonymous reaction toggle (session-hash-based; no login).
+    Route::post('/system-updates/{slug}/react', [MarketplaceSystemUpdatesController::class, 'react'])
+        ->name('api.marketplace-client.system-updates.react');
 
     // Events
     Route::get('/events', [MarketplaceEventsController::class, 'index'])
