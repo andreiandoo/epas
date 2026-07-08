@@ -89,10 +89,13 @@ class ApiCache {
         // Very short cache (2 minutes) - search results
         'search' => 120,
 
-        // Noutăți — changelog is not high-traffic and admin publishes
-        // rarely; 5 min TTL keeps recent posts visible fast enough.
-        'system-updates' => 300,
-        'system-updates.show' => 300,
+        // Noutăți — DO NOT cache. Low traffic, and any cache TTL means
+        // freshly-published updates stay invisible until the previous
+        // (empty) response ages out. Detail pages hit a separate PHP-side
+        // api_cached() layer in noutati-detail.php with a 5-min TTL, so
+        // even without proxy caching the SSR side stays cheap.
+        'system-updates' => 0,
+        'system-updates.show' => 0,
     ];
 
     public static function init() {
