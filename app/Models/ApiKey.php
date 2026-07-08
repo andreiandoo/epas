@@ -16,6 +16,9 @@ class ApiKey extends Model
         'secret_key',
         'description',
         'permissions',
+        'scopes',
+        'rate_limit',
+        'allowed_ips',
         'is_active',
         'require_signature',
         'last_used_at',
@@ -26,6 +29,9 @@ class ApiKey extends Model
 
     protected $casts = [
         'permissions' => 'array',
+        'scopes' => 'array',
+        'allowed_ips' => 'array',
+        'rate_limit' => 'integer',
         'is_active' => 'boolean',
         'require_signature' => 'boolean',
         'last_used_at' => 'datetime',
@@ -178,6 +184,48 @@ class ApiKey extends Model
     public function scopeForTenant($query, int $tenantId)
     {
         return $query->where('tenant_id', $tenantId);
+    }
+
+    /**
+     * Check whether this key is allowed to hit a scoped route.
+     * NULL scopes = no restriction (legacy behavior, existing keys
+     * created before Etapa A retain full access).
+     */
+    public function hasScope(string $scope): bool
+    {
+        // No scope column populated → legacy key, no restrictions
+        if ($this->scopes === null) {
+            return true;
+        }
+
+        return in_array($scope, $this->scopes, true);
+    }
+
+    /**
+     * Check whether the caller IP is on this key's allowlist.
+     * NULL allowed_ips = accept from any IP (legacy behavior).
+     */
+    public function ipIsAllowed(?string $ip): bool
+    {
+        if ($this->allowed_ips === null) {
+            return true;
+        }
+
+        if (!$ip) {
+            return false;
+        }
+
+        return in_array($ip, $this->allowed_ips, true);
+    }
+
+    /**
+     * Effective per-minute rate limit for this key. NULL rate_limit
+     * on the key means the throttle definition falls back to whatever
+     * the route's throttle group applies by default.
+     */
+    public function effectiveRateLimit(?int $default = null): ?int
+    {
+        return $this->rate_limit ?? $default;
     }
 
     /**

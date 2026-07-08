@@ -83,6 +83,20 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Per-API-key rate limiter — reads the effective limit off the
+        // ApiKey stored in the request attributes by VerifyApiKey, and
+        // buckets by key id so different keys don't share a counter.
+        // Falls back to 60/min for unauthenticated / legacy contexts
+        // that somehow hit this limiter without a resolved key.
+        RateLimiter::for('apikey', function (Request $request) {
+            $apiKey = $request->attributes->get('api_key');
+            $limit = ($apiKey && method_exists($apiKey, 'effectiveRateLimit'))
+                ? ($apiKey->effectiveRateLimit(60) ?? 60)
+                : 60;
+            $bucket = $apiKey?->id ? ('apikey:' . $apiKey->id) : ('ip:' . $request->ip());
+            return Limit::perMinute((int) $limit)->by($bucket);
+        });
+
         // Increase table search debounce to 2s across all panels
         Table::configureUsing(function (Table $table): void {
             $table->searchDebounce('2000ms');
