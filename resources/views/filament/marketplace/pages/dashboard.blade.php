@@ -71,14 +71,14 @@
 
         <!-- Active TODOs (marketplace-internal task list) — visible to all admins -->
         @if(isset($pendingTodos) && $pendingTodos->count() > 0)
-        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-sky-300 dark:border-sky-700">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-sky-50 dark:bg-sky-900/30 border-sky-200 dark:border-sky-800">
+        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-amber-300 dark:border-amber-700">
+            <div class="flex items-center justify-between px-4 py-3 border-b bg-amber-200 dark:bg-amber-500/30 border-amber-300 dark:border-amber-700">
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-sky-500" />
-                    <h3 class="font-semibold text-sky-800 dark:text-sky-200">TODOs active</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-sky-500 rounded-full">{{ $pendingTodosCount }}</span>
+                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-amber-700 dark:text-amber-200" />
+                    <h3 class="font-semibold text-slate-800 dark:text-amber-50">TODOs active</h3>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-600 dark:bg-amber-500 rounded-full">{{ $pendingTodosCount }}</span>
                 </div>
-                <a href="{{ route('filament.marketplace.resources.marketplace-todos.index') }}" class="text-xs text-sky-600 dark:text-sky-400 hover:underline">
+                <a href="{{ route('filament.marketplace.resources.marketplace-todos.index') }}" class="text-xs font-medium text-slate-700 dark:text-amber-100 hover:underline">
                     Vezi toate
                 </a>
             </div>
@@ -141,6 +141,156 @@
                 </div>
                 @endforeach
             </div>
+        </div>
+        @endif
+
+        <!-- Invitation Abuse Detector — events where free-ticket giveaways exceed paid-ticket commission -->
+        @if(isset($invitationAbuse) && ($invitationAbuse['summary']['events_count'] ?? 0) > 0)
+        @php
+            $iaSum = $invitationAbuse['summary'];
+            $iaEvents = $invitationAbuse['events'];
+            $iaOrgs = $invitationAbuse['top_organizers'];
+            $currency = $marketplace->currency ?? 'RON';
+        @endphp
+        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-rose-300 dark:border-rose-800">
+            <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b bg-rose-100 dark:bg-rose-900/40 border-rose-200 dark:border-rose-800">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-rose-700 dark:text-rose-200" />
+                    <h3 class="font-semibold text-slate-800 dark:text-rose-50">Comision pierdut prin invitații gratuite</h3>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-rose-600 rounded-full">{{ number_format($iaSum['events_count']) }} evenimente</span>
+                </div>
+                <a href="{{ request()->fullUrlWithQuery(['refresh_invite_abuse' => 1]) }}" class="text-xs font-medium text-slate-700 dark:text-rose-100 hover:underline">
+                    Actualizează
+                </a>
+            </div>
+
+            {{-- Aggregate KPIs --}}
+            <div class="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 border-b border-rose-100 dark:border-rose-900/40">
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comision pierdut (estimat)</p>
+                    <p class="text-xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($iaSum['total_lost'], 2) }} {{ $currency }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comision efectiv câștigat</p>
+                    <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($iaSum['total_earned'], 2) }} {{ $currency }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Invitații / total bilete</p>
+                    <p class="text-xl font-bold text-gray-900 dark:text-white">
+                        {{ number_format($iaSum['total_invitations']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaSum['total_invitations'] + $iaSum['total_paid_tickets']) }}</span>
+                        <span class="text-xs font-normal text-rose-600 dark:text-rose-400 block">{{ number_format($iaSum['invitation_ratio_pct'], 1) }}%</span>
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori afectați</p>
+                    <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($iaSum['unique_organizers']) }}</p>
+                </div>
+            </div>
+
+            {{-- Explanatory note --}}
+            <div class="px-4 py-2 text-xs italic text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 border-b border-rose-100 dark:border-rose-900/40">
+                Pentru fiecare eveniment se calculează media comisionului pe bilet vândut, apoi se proiectează pe numărul de invitații emise. Sunt afișate DOAR evenimentele unde proiecția de comision pierdut depășește comisionul efectiv câștigat. Include: invitații standalone (fără comandă) + bilete cu valoare 0 emise prin comandă (promo 100%, bulk admin, etc).
+            </div>
+
+            {{-- Events table (top 30 by lost commission) --}}
+            @if(count($iaEvents) > 0)
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Organizator</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Vândute</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Invitații</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">% inv</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Câștigat</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Pierdut (estimat)</th>
+                            <th class="px-3 py-2 text-xs font-medium text-center text-gray-500 dark:text-gray-400">Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($iaEvents as $ev)
+                        @php
+                            $impactColors = [
+                                'high' => 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+                                'medium' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                                'low' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                            ];
+                            $impactLabels = ['high' => 'HIGH', 'medium' => 'MED', 'low' => 'LOW'];
+                        @endphp
+                        <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 {{ $ev['is_past'] ?? false ? 'opacity-70' : '' }}">
+                            <td class="px-3 py-2">
+                                <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $ev['event_id'], 'tab' => 'vanzari']) }}"
+                                   class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+                                    {{ $ev['event_title'] ?? ('Event #' . $ev['event_id']) }}
+                                </a>
+                                <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                    @if($ev['event_date'] ?? null)<span>{{ $ev['event_date'] }}</span>@endif
+                                    @if($ev['venue_name'] ?? null)<span>·</span><span>{{ $ev['venue_name'] }}@if($ev['venue_city'] ?? null), {{ $ev['venue_city'] }}@endif</span>@endif
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
+                                @if($ev['organizer_id'] ?? null)
+                                    <a href="{{ route('filament.marketplace.resources.organizers.edit', ['record' => $ev['organizer_id']]) }}" class="hover:text-indigo-600 dark:hover:text-indigo-400">
+                                        {{ $ev['organizer_name'] ?? 'Organizer #' . $ev['organizer_id'] }}
+                                    </a>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300 tabular-nums">{{ number_format($ev['paid_tickets']) }}</td>
+                            <td class="px-3 py-2 text-right text-rose-600 dark:text-rose-400 font-medium tabular-nums">{{ number_format($ev['invitations']) }}</td>
+                            <td class="px-3 py-2 text-right text-rose-700 dark:text-rose-400 font-semibold tabular-nums">{{ number_format($ev['invitation_ratio_pct'], 1) }}%</td>
+                            <td class="px-3 py-2 text-right text-emerald-700 dark:text-emerald-400 tabular-nums">{{ number_format($ev['commission_earned'], 2) }}</td>
+                            <td class="px-3 py-2 text-right text-rose-700 dark:text-rose-400 font-bold tabular-nums">{{ number_format($ev['lost_commission_estimate'], 2) }}</td>
+                            <td class="px-3 py-2 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded {{ $impactColors[$ev['impact']] ?? 'bg-gray-100 text-gray-700' }}">{{ $impactLabels[$ev['impact']] ?? '—' }}</span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
+
+            {{-- Top organizers leaderboard --}}
+            @if(count($iaOrgs) > 0)
+            <div class="p-4 border-t border-rose-100 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-900/20">
+                <h4 class="mb-3 text-xs font-semibold tracking-wide uppercase text-slate-700 dark:text-rose-100">
+                    Top organizatori cu cel mai mare comision pierdut
+                </h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-rose-200 dark:border-rose-800/50">
+                                <th class="px-3 py-1.5 text-xs font-medium text-left text-gray-600 dark:text-gray-400">Organizator</th>
+                                <th class="px-3 py-1.5 text-xs font-medium text-right text-gray-600 dark:text-gray-400">Evenimente</th>
+                                <th class="px-3 py-1.5 text-xs font-medium text-right text-gray-600 dark:text-gray-400">Bilete vândute</th>
+                                <th class="px-3 py-1.5 text-xs font-medium text-right text-gray-600 dark:text-gray-400">Invitații emise</th>
+                                <th class="px-3 py-1.5 text-xs font-medium text-right text-gray-600 dark:text-gray-400">Câștigat</th>
+                                <th class="px-3 py-1.5 text-xs font-medium text-right text-gray-600 dark:text-gray-400">Pierdut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($iaOrgs as $org)
+                            <tr class="border-b border-rose-100/60 dark:border-rose-900/30">
+                                <td class="px-3 py-1.5">
+                                    <a href="{{ route('filament.marketplace.resources.organizers.edit', ['record' => $org['organizer_id']]) }}" class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+                                        {{ $org['organizer_name'] }}
+                                    </a>
+                                </td>
+                                <td class="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300 tabular-nums">{{ number_format($org['events']) }}</td>
+                                <td class="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300 tabular-nums">{{ number_format($org['total_paid_tickets']) }}</td>
+                                <td class="px-3 py-1.5 text-right text-rose-600 dark:text-rose-400 font-medium tabular-nums">{{ number_format($org['total_invitations']) }}</td>
+                                <td class="px-3 py-1.5 text-right text-emerald-700 dark:text-emerald-400 tabular-nums">{{ number_format($org['total_earned'], 2) }} {{ $currency }}</td>
+                                <td class="px-3 py-1.5 text-right text-rose-700 dark:text-rose-400 font-bold tabular-nums">{{ number_format($org['total_lost'], 2) }} {{ $currency }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
         </div>
         @endif
 

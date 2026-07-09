@@ -345,6 +345,21 @@ class Dashboard extends Page
                 ->count()
         );
 
+        // Invitation abuse detection — events where commission the operator
+        // would have earned had the free tickets / invitations been sold at
+        // the event's own avg commission exceeds the commission actually
+        // earned from paid sales. Heavy query, cached 30 min. Manual bust
+        // via ?refresh_invite_abuse=1.
+        $inviteAbuseKey = "mp_dash_invite_abuse_v1_{$marketplaceId}";
+        if (request()->has('refresh_invite_abuse')) {
+            Cache::forget($inviteAbuseKey);
+        }
+        $invitationAbuse = Cache::remember(
+            $inviteAbuseKey,
+            1800,
+            fn () => $this->computeInvitationAbuseEvents($marketplaceId)
+        );
+
         $isSuperAdmin = Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false;
 
         // Daily event sales report (super-admin only) — events that had
@@ -390,6 +405,7 @@ class Dashboard extends Page
             'pendingArtistAccountsCount' => $pendingArtistAccountsCount,
             'pendingTodos' => $pendingTodos,
             'pendingTodosCount' => $pendingTodosCount,
+            'invitationAbuse' => $invitationAbuse,
             'billing' => $billingData,
             'todayStats' => $todayStats,
             'prevYearChartData' => $prevYearChartData,
@@ -401,6 +417,245 @@ class Dashboard extends Page
             'dailyReportDate' => $dailyReportDate,
             'dailyReportMinDate' => $dailyReportMinDate,
             'dailyReportMaxDate' => $dailyReportMaxDate,
+        ];
+    }
+
+    /**
+     * Detect events where the operator would have earned MORE commission if
+     * the free tickets / invitations had been sold at the event's own avg
+     * commission rate than the commission actually collected from paid
+     * sales. In plain terms: events where the organizer's giveaway habits
+     * cost the marketplace more than the sales generated.
+     *
+     * "Invitation" here means any zero-value ticket in valid/used status:
+     *   - standalone invitations (order_id NULL + meta.is_invitation=true)
+     *   - free tickets emitted via a real order (bulk_admin,
+     *     marketplace_free, promo_100_percent, comp, etc.)
+     *
+     * "Commission earned" uses order.commission_amount (marketplace-billed
+     * commission), summed per event. "Commission lost" is a linear
+     * projection: avg_commission_per_paid_ticket × invitation_count.
+     *
+     * Only events with BOTH paid_tickets > 0 (so we have a rate to
+     * project from) AND invitations > 0 (something to project onto) enter
+     * the filter. Sort DESC by lost commission so worst offenders lead.
+     */
+    private function computeInvitationAbuseEvents(int $marketplaceId): array
+    {
+        $eventIds = Event::where('marketplace_client_id', $marketplaceId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($eventIds)) {
+            return $this->emptyInvitationAbuse();
+        }
+
+        $excludedSources = ['test_order', 'external_import', 'legacy_import'];
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+        // Per-event paid ticket stats: count + revenue + commission earned
+        $paidStats = DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->whereIn(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'), $eventIds)
+            ->whereIn('o.status', $paidStatuses)
+            ->whereNotIn('o.source', $excludedSources)
+            ->whereIn('t.status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereNull('t.refund_status')
+                  ->orWhere('t.refund_status', '<>', 'refunded');
+            })
+            ->where(DB::raw('COALESCE(t.price, 0)'), '>', 0)
+            ->selectRaw("
+                COALESCE(tt.event_id, t.event_id, t.marketplace_event_id) as event_id,
+                COUNT(t.id) as paid_tickets,
+                SUM(COALESCE(t.price, 0)) as paid_revenue,
+                SUM(COALESCE(o.commission_amount, 0)) as commission_earned
+            ")
+            ->groupBy(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'))
+            ->get()
+            ->keyBy('event_id');
+
+        // Per-event invitation counts: standalone invitations + tickets with price=0
+        $invitationStats = DB::table('tickets as t')
+            ->leftJoin('orders as o', 'o.id', '=', 't.order_id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->whereIn(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'), $eventIds)
+            ->whereIn('t.status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereNull('t.refund_status')
+                  ->orWhere('t.refund_status', '<>', 'refunded');
+            })
+            ->where(function ($q) {
+                $q->where(function ($sub) {
+                    // Standalone invitation (no order + is_invitation flag)
+                    $sub->whereNull('t.order_id')
+                        ->whereRaw("(t.meta::jsonb ->> 'is_invitation') = 'true'");
+                })->orWhere(function ($sub) {
+                    // Free ticket via order (any 0-value paid line)
+                    $sub->whereNotNull('t.order_id')
+                        ->where(DB::raw('COALESCE(t.price, 0)'), '=', 0);
+                });
+            })
+            ->selectRaw("
+                COALESCE(tt.event_id, t.event_id, t.marketplace_event_id) as event_id,
+                COUNT(t.id) as invitations
+            ")
+            ->groupBy(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'))
+            ->get()
+            ->keyBy('event_id');
+
+        $eventStats = [];
+        foreach ($eventIds as $eid) {
+            $paid = $paidStats->get($eid);
+            $inv = $invitationStats->get($eid);
+
+            $paidTickets = (int) ($paid?->paid_tickets ?? 0);
+            $invitations = (int) ($inv?->invitations ?? 0);
+
+            // Need both to project — no paid means no avg, no invitations means nothing to lose
+            if ($paidTickets === 0 || $invitations === 0) {
+                continue;
+            }
+
+            $commissionEarned = round((float) ($paid?->commission_earned ?? 0), 2);
+            $paidRevenue = round((float) ($paid?->paid_revenue ?? 0), 2);
+            $avgCommissionPerTicket = $commissionEarned / $paidTickets;
+            $lostCommission = round($avgCommissionPerTicket * $invitations, 2);
+
+            // Filter: only events where projected loss beats actual gain
+            if ($lostCommission <= $commissionEarned) {
+                continue;
+            }
+
+            $totalIssued = $paidTickets + $invitations;
+            $invitationRatioPct = round($invitations / $totalIssued * 100, 1);
+
+            // Impact tier for color-coded UI badge
+            $impact = match (true) {
+                $lostCommission >= 10000 => 'high',
+                $lostCommission >= 2000 => 'medium',
+                default => 'low',
+            };
+
+            $eventStats[] = [
+                'event_id' => (int) $eid,
+                'paid_tickets' => $paidTickets,
+                'invitations' => $invitations,
+                'total_issued' => $totalIssued,
+                'invitation_ratio_pct' => $invitationRatioPct,
+                'paid_revenue' => $paidRevenue,
+                'commission_earned' => $commissionEarned,
+                'lost_commission_estimate' => $lostCommission,
+                'avg_commission_per_ticket' => round($avgCommissionPerTicket, 2),
+                'impact' => $impact,
+            ];
+        }
+
+        // Sort worst-loss first
+        usort($eventStats, fn ($a, $b) => $b['lost_commission_estimate'] <=> $a['lost_commission_estimate']);
+
+        // Cap the list; totals below reflect the full unfiltered set.
+        $topEvents = array_slice($eventStats, 0, 30);
+
+        // Enrich top rows with event / venue / organizer names
+        $topIds = array_column($topEvents, 'event_id');
+        if (!empty($topIds)) {
+            $eventDetails = Event::with(['venue:id,name,city', 'marketplaceOrganizer:id,name'])
+                ->whereIn('id', $topIds)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($topEvents as &$row) {
+                $event = $eventDetails->get($row['event_id']);
+                if (!$event) continue;
+                $row['event_title'] = $event->getTranslation('title', 'ro')
+                    ?: $event->getTranslation('title', 'en')
+                    ?: ('Event #' . $event->id);
+                $row['event_date'] = $event->event_date?->format('Y-m-d');
+                $row['is_past'] = $event->event_date && $event->event_date < now();
+                $venueName = null;
+                if ($event->venue) {
+                    $raw = $event->venue->name;
+                    $venueName = is_array($raw) ? ($raw['ro'] ?? $raw['en'] ?? reset($raw) ?: null) : $raw;
+                }
+                $row['venue_name'] = $venueName;
+                $row['venue_city'] = $event->venue?->city;
+                $row['organizer_id'] = $event->marketplace_organizer_id;
+                $row['organizer_name'] = $event->marketplaceOrganizer?->name;
+            }
+            unset($row);
+        }
+
+        // Aggregate KPIs (from the FULL unfiltered set of problem events)
+        $totalLost = round(array_sum(array_column($eventStats, 'lost_commission_estimate')), 2);
+        $totalEarned = round(array_sum(array_column($eventStats, 'commission_earned')), 2);
+        $totalInvitations = array_sum(array_column($eventStats, 'invitations'));
+        $totalPaidTickets = array_sum(array_column($eventStats, 'paid_tickets'));
+
+        // Group by organizer for the leaderboard below the table
+        $byOrganizer = [];
+        foreach ($topEvents as $row) {
+            $oid = $row['organizer_id'] ?? null;
+            if (!$oid) continue;
+            if (!isset($byOrganizer[$oid])) {
+                $byOrganizer[$oid] = [
+                    'organizer_id' => (int) $oid,
+                    'organizer_name' => $row['organizer_name'] ?? ('Organizer #' . $oid),
+                    'events' => 0,
+                    'total_invitations' => 0,
+                    'total_paid_tickets' => 0,
+                    'total_lost' => 0.0,
+                    'total_earned' => 0.0,
+                ];
+            }
+            $byOrganizer[$oid]['events']++;
+            $byOrganizer[$oid]['total_invitations'] += $row['invitations'];
+            $byOrganizer[$oid]['total_paid_tickets'] += $row['paid_tickets'];
+            $byOrganizer[$oid]['total_lost'] += $row['lost_commission_estimate'];
+            $byOrganizer[$oid]['total_earned'] += $row['commission_earned'];
+        }
+        foreach ($byOrganizer as &$o) {
+            $o['total_lost'] = round($o['total_lost'], 2);
+            $o['total_earned'] = round($o['total_earned'], 2);
+        }
+        unset($o);
+        usort($byOrganizer, fn ($a, $b) => $b['total_lost'] <=> $a['total_lost']);
+        $topOrganizers = array_slice($byOrganizer, 0, 10);
+
+        return [
+            'events' => $topEvents,
+            'top_organizers' => $topOrganizers,
+            'summary' => [
+                'events_count' => count($eventStats),
+                'total_lost' => $totalLost,
+                'total_earned' => $totalEarned,
+                'net_impact' => round($totalLost - $totalEarned, 2),
+                'total_invitations' => $totalInvitations,
+                'total_paid_tickets' => $totalPaidTickets,
+                'invitation_ratio_pct' => ($totalInvitations + $totalPaidTickets) > 0
+                    ? round($totalInvitations / ($totalInvitations + $totalPaidTickets) * 100, 1)
+                    : 0,
+                'unique_organizers' => count($byOrganizer),
+            ],
+        ];
+    }
+
+    private function emptyInvitationAbuse(): array
+    {
+        return [
+            'events' => [],
+            'top_organizers' => [],
+            'summary' => [
+                'events_count' => 0,
+                'total_lost' => 0,
+                'total_earned' => 0,
+                'net_impact' => 0,
+                'total_invitations' => 0,
+                'total_paid_tickets' => 0,
+                'invitation_ratio_pct' => 0,
+                'unique_organizers' => 0,
+            ],
         ];
     }
 
