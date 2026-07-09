@@ -660,6 +660,23 @@ class AccountController extends BaseController
             }
         }
 
+        // Enrich with online-event info via the NATIVE Event model. The
+        // MarketplaceEvent snapshot doesn't carry online fields; native
+        // Event (via ticket->resolveEvent()) does. If it's a physical
+        // event or the resolver returns null, the client-side JS falls
+        // back to the QR/scan flow it already has.
+        $nativeEvent = $ticket->resolveEvent();
+        $onlineJoinable = $nativeEvent?->isOnlineJoinable() ?? false;
+        $onlineData = [
+            'is_online'          => (bool) ($nativeEvent?->is_online ?? false),
+            'provider_label'     => $nativeEvent?->online_provider_label ?? '',
+            'lobby_opens_at'     => $nativeEvent?->online_lobby_opens_at?->toIso8601String(),
+            'is_joinable_now'    => $onlineJoinable,
+            'join_url'           => ($nativeEvent && $nativeEvent->is_online)
+                ? url('/join/' . $ticket->code)
+                : null,
+        ];
+
         return $this->success([
             'ticket' => [
                 'id' => $ticket->id,
@@ -685,6 +702,7 @@ class AccountController extends BaseController
                     'city' => $event->venue_city,
                     'image' => $event->image_url,
                     'is_upcoming' => $event->starts_at >= now(),
+                    'online' => $onlineData,
                 ],
                 'order' => [
                     'id' => $order->id,

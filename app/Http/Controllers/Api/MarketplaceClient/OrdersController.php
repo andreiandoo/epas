@@ -707,6 +707,19 @@ class OrdersController extends BaseController
             // matches → thank-you.php skips the card entirely.
             $thankYouMessage = $pickLocalized($order->event->thank_you_message);
 
+            // Online event badge for the thank-you page. When true,
+            // the frontend swaps the "Your tickets" copy for a big
+            // "Alătură-te online" panel that lists each ticket with its
+            // /join/{code} URL. All fields fall back to safe defaults
+            // for physical events so the panel simply doesn't render.
+            $onlineData = [
+                'is_online'      => (bool) ($order->event->is_online ?? false),
+                'provider_label' => $order->event->is_online
+                    ? ($order->event->online_provider_label ?? 'Online')
+                    : '',
+                'lobby_opens_at' => $order->event->online_lobby_opens_at?->toIso8601String(),
+            ];
+
             $eventData = [
                 'id' => $order->event->id,
                 'name' => $eventTitle,
@@ -718,6 +731,7 @@ class OrdersController extends BaseController
                 'city' => $order->event->venue?->city,
                 'image' => $imageUrl,
                 'thank_you_message' => $thankYouMessage,
+                'online' => $onlineData,
             ];
         }
 
@@ -784,6 +798,14 @@ class OrdersController extends BaseController
                             'seat_number' => $seatDetails['seat_number'] ?? null,
                         ];
                     }
+                    // Per-ticket /join URL when the event is online.
+                    // Physical events get null so the frontend keeps
+                    // rendering the existing QR/PDF flow.
+                    $joinUrl = null;
+                    if ($ticket->order?->event?->is_online ?? false) {
+                        $joinUrl = url('/join/' . $ticket->code);
+                    }
+
                     return [
                         'id' => $ticket->id,
                         'code' => $ticket->code,
@@ -795,6 +817,7 @@ class OrdersController extends BaseController
                         'seat' => $seatData,
                         'has_insurance' => (bool) ($ticket->meta['has_insurance'] ?? false),
                         'ticket_series' => $ticket->meta['ticket_series'] ?? null,
+                        'join_url' => $joinUrl,
                     ];
                 }),
                 'customer_email' => $order->customer_email,

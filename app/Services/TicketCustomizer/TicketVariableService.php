@@ -54,6 +54,27 @@ class TicketVariableService
                         'type' => 'image_url',
                         'example' => 'https://example.com/events/summer-concert-2025.jpg',
                     ],
+                    [
+                        'path' => 'event.is_online',
+                        'label' => 'Is Online',
+                        'description' => 'True when the event is an online / livestream event. Use in conditional blocks to swap in the online-specific instructions.',
+                        'type' => 'boolean',
+                        'example' => 'true',
+                    ],
+                    [
+                        'path' => 'event.online_provider_label',
+                        'label' => 'Online Provider Label',
+                        'description' => 'Human-readable provider name for online events (Zoom, Google Meet, Microsoft Teams, Livestream). Empty for physical events.',
+                        'type' => 'string',
+                        'example' => 'Zoom',
+                    ],
+                    [
+                        'path' => 'event.online_lobby_note',
+                        'label' => 'Online Lobby Note',
+                        'description' => 'Ready-to-use text explaining when the join link becomes active (e.g. "Link-ul devine activ cu 15 min. înainte de start"). Empty for physical events.',
+                        'type' => 'string',
+                        'example' => 'Link-ul devine activ cu 15 min. înainte de start.',
+                    ],
                 ],
             ],
 
@@ -302,6 +323,13 @@ class TicketVariableService
                         'description' => 'Public URL for ticket verification (use as QR code data)',
                         'type' => 'url',
                         'example' => 'https://tickets.example.com/t/WLMVWB2G',
+                    ],
+                    [
+                        'path' => 'ticket.join_url',
+                        'label' => 'Online Join URL',
+                        'description' => 'Access-gate URL for online events (empty for physical events). Points to /join/{code} which validates the ticket before revealing the meeting link.',
+                        'type' => 'url',
+                        'example' => 'https://tickets.example.com/join/WLMVWB2G',
                     ],
                     [
                         'path' => 'ticket.description',
@@ -586,6 +614,9 @@ class TicketVariableService
                 'description' => 'The biggest outdoor music festival of the year',
                 'category' => 'Music Festival',
                 'image' => 'https://placehold.co/800x400/1a1a2e/ffffff?text=Event+Image',
+                'is_online' => 'false',
+                'online_provider_label' => '',
+                'online_lobby_note' => '',
             ],
             'venue' => [
                 'name' => 'Arena Națională',
@@ -624,6 +655,7 @@ class TicketVariableService
                 'price_detail' => 'Preț: 299,00 lei (taxă procesare inclusă: 14,24 lei)',
                 'fees_text' => 'Prețul include 5% Timbru Muzical, 2% Taxa de Monument Istoric',
                 'verify_url' => 'https://tickets.example.com/t/WLMVWB2G',
+                'join_url' => '',
                 'description' => 'Acces VIP cu drink de bun venit și loc rezervat în primele rânduri',
                 'perks' => '• Acces VIP Lounge • Drink de bun venit • Loc rezervat',
                 'includes' => "• Acces toată ziua\n• Hartă tipărită\n• Apă gratuită",
@@ -971,12 +1003,26 @@ class TicketVariableService
             ? $this->buildVisitDateFields($visitDate, $effectiveLocale)
             : ['visit_date' => '', 'visit_date_raw' => '', 'visit_day_name' => ''];
 
+        // Online event fields — safe to compute on any event (returns
+        // empty strings when the event is physical, so mail templates
+        // that reference `event.online_provider_label` on a mixed
+        // marketplace don't leak "Online" on physical events).
+        $isOnline = (bool) ($event?->is_online ?? false);
+        $onlineLobbyNote = '';
+        if ($isOnline && $event) {
+            $mins = (int) ($event->online_lobby_opens_minutes_before ?? 15);
+            $onlineLobbyNote = 'Link-ul de acces devine activ cu ' . $mins . ' min. înainte de start.';
+        }
+
         return [
             'event' => [
                 'name' => $eventTitle,
                 'description' => $eventDescription,
                 'category' => $marketplaceEvent?->category ?? '',
                 'image' => $this->resolveEventImageUrl($event, $marketplaceEvent),
+                'is_online' => $isOnline ? 'true' : 'false',
+                'online_provider_label' => $isOnline ? ($event->online_provider_label ?? 'Online') : '',
+                'online_lobby_note' => $onlineLobbyNote,
             ],
             'venue' => [
                 'name' => $venueName,
@@ -1007,6 +1053,7 @@ class TicketVariableService
                 'price_detail' => $priceDetail,
                 'fees_text' => $feesText,
                 'verify_url' => $ticket->getVerifyUrl(),
+                'join_url' => $isOnline ? url('/join/' . $ticket->code) : '',
                 'description' => $this->resolveTicketDescription($ticketType, $effectiveLocale),
                 'perks' => $this->resolveTicketPerks($ticketType),
                 'includes' => $this->resolveTicketIncludes($ticketType, $effectiveLocale, true),

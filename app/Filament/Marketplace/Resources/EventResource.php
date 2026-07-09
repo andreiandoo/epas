@@ -73,6 +73,28 @@ class EventResource extends Resource
             ->whereNull('parent_id'); // Hide child events from main list
     }
 
+    /**
+     * True when the `zoom-integration` microservice is active for the
+     * given marketplace_client. Used to gate the "Eveniment online"
+     * section in the event form — organizers whose marketplace hasn't
+     * activated the module simply don't see it. Same tri-column-check
+     * (status='active' + not expired) as isFacebookCapiMicroserviceActive.
+     */
+    public static function isZoomMicroserviceActive(?int $marketplaceClientId): bool
+    {
+        if (!$marketplaceClientId) return false;
+
+        return \DB::table('marketplace_client_microservices as mcm')
+            ->join('microservices as m', 'm.id', '=', 'mcm.microservice_id')
+            ->where('mcm.marketplace_client_id', $marketplaceClientId)
+            ->where('m.slug', 'zoom-integration')
+            ->where('mcm.status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('mcm.expires_at')->orWhere('mcm.expires_at', '>', now());
+            })
+            ->exists();
+    }
+
     public static function form(Schema $schema): Schema
     {
         $today = Carbon::today();
@@ -1251,6 +1273,139 @@ class EventResource extends Resource
                                     ->label($t('Website Eveniment', 'Event Website'))
                                     ->url()
                                     ->maxLength(255),
+                            ])->columns(2),
+
+                        // ONLINE EVENT — visible only when the marketplace
+                        // has the `zoom-integration` microservice activated.
+                        // MVP: URL manual + passcode; Phase 2 will add OAuth
+                        // + auto-meeting creation (the "Conectează Zoom"
+                        // button below is a stub advertising the roadmap).
+                        SC\Section::make($t('Eveniment online', 'Online event'))
+                            ->icon('heroicon-o-video-camera')
+                            ->description($t(
+                                'Bilete pentru un webinar sau eveniment livestream (Zoom, Meet, custom). Participanții primesc un link unic de acces pe email + în cont.',
+                                'Tickets for a webinar or livestream event (Zoom, Meet, custom). Attendees receive a unique access link by email + in their account.'
+                            ))
+                            ->collapsed(fn (?Event $record) => !($record?->is_online))
+                            ->visible(fn () => self::isZoomMicroserviceActive($marketplace?->id))
+                            ->schema([
+                                Forms\Components\Toggle::make('is_online')
+                                    ->label($t('Acesta este un eveniment online', 'This is an online event'))
+                                    ->helperText($t(
+                                        'Bifează pentru a marca evenimentul ca desfășurat online. Locația fizică rămâne opțională.',
+                                        'Toggle to mark this event as online. The physical venue stays optional.'
+                                    ))
+                                    ->live()
+                                    ->columnSpanFull(),
+                                Forms\Components\Select::make('online_provider')
+                                    ->label($t('Provider', 'Provider'))
+                                    ->options([
+                                        'zoom'        => 'Zoom',
+                                        'google_meet' => 'Google Meet',
+                                        'teams'       => 'Microsoft Teams',
+                                        'custom'      => $t('Alt livestream (URL custom)', 'Other livestream (custom URL)'),
+                                    ])
+                                    ->default('zoom')
+                                    ->native(false)
+                                    ->required(fn (SGet $get) => (bool) $get('is_online'))
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\TextInput::make('online_meeting_url')
+                                    ->label($t('URL meeting', 'Meeting URL'))
+                                    ->helperText($t(
+                                        'Lipește URL-ul de invitație. Nu îl trimitem direct clientului — link-ul e afișat prin gateway-ul nostru /join/{cod bilet} după validare.',
+                                        'Paste the invitation URL. We do NOT share it directly with the customer — it\'s revealed through our /join/{ticket-code} gateway after validation.'
+                                    ))
+                                    ->url()
+                                    ->maxLength(500)
+                                    ->required(fn (SGet $get) => (bool) $get('is_online'))
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online'))
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('online_passcode')
+                                    ->label($t('Parolă meeting (opțional)', 'Meeting passcode (optional)'))
+                                    ->helperText($t(
+                                        'Parola e criptată în baza de date și afișată clientului DOAR după validarea biletului.',
+                                        'The passcode is encrypted at rest and shown to the customer ONLY after ticket validation.'
+                                    ))
+                                    ->maxLength(64)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\TextInput::make('online_lobby_opens_minutes_before')
+                                    ->label($t('Lobby deschide cu (min. înainte)', 'Lobby opens (minutes before)'))
+                                    ->helperText($t(
+                                        'Câte minute înainte de start devine link-ul de acces activ. Default 15.',
+                                        'How many minutes before start the access link becomes active. Default 15.'
+                                    ))
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(120)
+                                    ->default(15)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\Select::make('online_capacity_hint')
+                                    ->label($t('Capacitate provider (opțional)', 'Provider capacity (optional)'))
+                                    ->options([
+                                        100  => '100 participanți (Zoom Basic / Pro)',
+                                        300  => '300 participanți (Zoom Business)',
+                                        500  => '500 participanți (Zoom Enterprise)',
+                                        1000 => '1000 participanți (Zoom Enterprise Plus)',
+                                    ])
+                                    ->helperText($t(
+                                        'Setează planul tău Zoom ca să te avertizăm dacă vinzi mai multe bilete decât încap în meeting.',
+                                        'Set your Zoom plan cap so we warn you when tickets exceed the meeting capacity.'
+                                    ))
+                                    ->native(false)
+                                    ->nullable()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online') && $get('online_provider') === 'zoom'),
+                                // Soft capacity warning — visible only on Edit
+                                // (needs an existing record to count tickets)
+                                // when the aggregate ticket stock exceeds the
+                                // provider cap declared above.
+                                Forms\Components\Placeholder::make('online_capacity_warning')
+                                    ->label('')
+                                    ->content(function (?Event $record, SGet $get) {
+                                        if (!$record) return null;
+                                        $cap = (int) ($get('online_capacity_hint') ?? 0);
+                                        if ($cap <= 0) return null;
+                                        try {
+                                            $totalCapacity = (int) $record->total_capacity;
+                                        } catch (\Throwable $e) {
+                                            return null;
+                                        }
+                                        if ($totalCapacity <= $cap) return null;
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<div class="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">'
+                                            . '<svg class="h-5 w-5 flex-shrink-0 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
+                                            . '<div class="text-sm text-amber-800">'
+                                            . '<div class="font-semibold text-amber-900">Ai vândut mai multe locuri decât încap în meeting</div>'
+                                            . '<p class="mt-1">Ai declarat o capacitate de <strong>' . $cap . '</strong> participanți în platformă, dar tipurile tale de bilete totalizează <strong>' . $totalCapacity . '</strong> locuri. Verifică-ți planul Zoom sau redu stocul biletelor.</p>'
+                                            . '</div>'
+                                            . '</div>'
+                                        );
+                                    })
+                                    ->visible(fn (?Event $record, SGet $get) => $record && (bool) $get('is_online') && (int) ($get('online_capacity_hint') ?? 0) > 0)
+                                    ->columnSpanFull(),
+                                Forms\Components\RichEditor::make('online_instructions')
+                                    ->label($t('Instrucțiuni de acces (opțional)', 'Access instructions (optional)'))
+                                    ->helperText($t(
+                                        'Afișat clientului pe pagina de acces (dresscode virtual, tips audio, browser recomandat etc.).',
+                                        'Shown to the customer on the access page (virtual dresscode, audio tips, recommended browser, etc.).'
+                                    ))
+                                    ->columnSpanFull()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\Placeholder::make('zoom_oauth_stub')
+                                    ->label('')
+                                    ->content(new \Illuminate\Support\HtmlString(
+                                        '<div class="flex items-start gap-3 rounded-xl border border-dashed border-primary-200 bg-primary-50/50 p-4">'
+                                        . '<svg class="h-6 w-6 flex-shrink-0 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
+                                        . '<div class="flex-1">'
+                                        . '<div class="font-semibold text-primary-800">Conectare directă la contul Zoom</div>'
+                                        . '<p class="mt-1 text-sm text-primary-700/80">În curând vei putea conecta contul tău Zoom pentru ca meeting-urile să fie create automat + fiecare bilet să primească un link unic de registrant (anti-share nativ).</p>'
+                                        . '<button type="button" disabled class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-1.5 text-xs font-semibold text-primary-500 cursor-not-allowed">'
+                                        . 'Conectează cont Zoom (în curând)'
+                                        . '</button>'
+                                        . '</div>'
+                                        . '</div>'
+                                    ))
+                                    ->columnSpanFull()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online') && $get('online_provider') === 'zoom'),
                             ])->columns(2),
 
                         // TAX REGISTRY (linked to venue location)

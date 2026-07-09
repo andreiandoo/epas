@@ -74,8 +74,26 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
             </div>
 
-            <!-- QR Section -->
-            <div class="flex flex-col items-center justify-center p-6 lg:p-8 lg:w-80 bg-surface/50">
+            <!-- Online Join Section (shown only for online events; QR
+                 section hidden alongside via #ticket-card[data-online]) -->
+            <div id="online-join-section" class="hidden flex-col items-center justify-center p-6 lg:p-8 lg:w-80 bg-gradient-to-br from-primary/5 to-red-500/5">
+                <div class="text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary/10 text-primary">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </div>
+                    <p class="text-xs font-bold tracking-widest uppercase text-primary mb-2">Eveniment online</p>
+                    <p id="online-provider-label" class="mb-4 text-sm text-muted">Zoom</p>
+                    <a id="online-join-btn" href="#" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold shadow-lg hover:bg-primary-dark hover:-translate-y-0.5 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        <span>Alătură-te online</span>
+                    </a>
+                    <p id="online-lobby-note" class="mt-3 text-xs text-muted"></p>
+                </div>
+            </div>
+
+            <!-- QR Section (hidden for online events) -->
+            <div id="qr-section" class="flex flex-col items-center justify-center p-6 lg:p-8 lg:w-80 bg-surface/50">
                 <div class="p-4 mb-4 bg-white shadow-lg rounded-xl">
                     <div class="flex items-center justify-center w-48 h-48" id="qr-code">
                         <!-- QR Code will be loaded here -->
@@ -265,6 +283,58 @@ const TicketDetailPage = {
             transferStatus.className = 'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600';
             document.getElementById('transfer-section').querySelector('button').disabled = true;
             document.getElementById('transfer-section').querySelector('button').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Online-event mode: swap the QR sidebar for a big "Alătură-te
+        // online" panel. Enabled ONLY when the backend flags is_online.
+        // For physical events the panel stays hidden + QR stays visible
+        // (regression-safe default).
+        const online = ticket.event && ticket.event.online;
+        if (online && online.is_online) {
+            const joinSection = document.getElementById('online-join-section');
+            const qrSection = document.getElementById('qr-section');
+            const joinBtn = document.getElementById('online-join-btn');
+            const providerLabel = document.getElementById('online-provider-label');
+            const lobbyNote = document.getElementById('online-lobby-note');
+
+            if (joinSection) {
+                joinSection.classList.remove('hidden');
+                joinSection.classList.add('flex');
+            }
+            if (qrSection) qrSection.classList.add('hidden');
+
+            if (providerLabel && online.provider_label) {
+                providerLabel.textContent = online.provider_label;
+            }
+            if (joinBtn && online.join_url) {
+                joinBtn.href = online.join_url;
+                // For events that aren't joinable yet, we still show the
+                // button but change the label — clicking still lands on
+                // /join/{code} which will render the "too early" state
+                // with a countdown.
+                if (!online.is_joinable_now) {
+                    joinBtn.querySelector('span').textContent = 'Deschide pagina de acces';
+                }
+            }
+            if (lobbyNote && online.lobby_opens_at) {
+                const dt = new Date(online.lobby_opens_at);
+                if (!isNaN(dt.getTime())) {
+                    const opts = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
+                    lobbyNote.textContent = online.is_joinable_now
+                        ? 'Poți intra acum'
+                        : 'Se deschide ' + dt.toLocaleDateString('ro-RO', opts);
+                }
+            }
+
+            // Print/download PDF for online events would produce an empty
+            // QR page — swap the CTAs to focus on the join button too.
+            const importantNotice = document.querySelector('.notice-box, [class*="bg-yellow-50"]');
+            if (importantNotice) {
+                const noticeP = importantNotice.querySelector('p');
+                if (noticeP) {
+                    noticeP.innerHTML = '<strong>Important:</strong> Acest bilet e pentru un eveniment online. Link-ul de acces devine activ cu puțin înainte de start și e disponibil doar prin această pagină + email.';
+                }
+            }
         }
     },
 

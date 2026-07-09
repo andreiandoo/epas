@@ -179,6 +179,7 @@ class SystemUpdatesController extends BaseController
                 'interfata'   => 'Interfață',
                 'organizator' => 'Organizator',
                 'client'      => 'Client',
+                'aplicatie-mobila' => 'Aplicație mobilă',
                 default       => ucfirst((string) $u->category),
             },
             'excerpt'           => $u->excerpt,

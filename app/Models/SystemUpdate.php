@@ -40,7 +40,7 @@ class SystemUpdate extends Model
         'published_at' => 'datetime',
     ];
 
-    public const CATEGORIES = ['interfata', 'organizator', 'client'];
+    public const CATEGORIES = ['interfata', 'organizator', 'client', 'aplicatie-mobila'];
     public const STATUSES = ['draft', 'published'];
 
     // Boot: slug auto-generation + set published_at on first publish.

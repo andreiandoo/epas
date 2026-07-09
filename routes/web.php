@@ -573,6 +573,12 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
 Route::get('/t/{code}', [\App\Http\Controllers\Public\TicketVerificationController::class, 'show'])
     ->name('ticket.verify');
 
+// Public Online-Event Join Gate — the QR-scan analog for events that
+// don't have a physical door. Validates the ticket + reveals the
+// Zoom/Meet/custom livestream URL only inside the join window.
+Route::get('/join/{code}', [\App\Http\Controllers\Public\TicketJoinController::class, 'show'])
+    ->name('ticket.join');
+
 // POS Ticket Claim (QR code self-service)
 Route::get('/claim/{token}', [\App\Http\Controllers\PosTicketClaimController::class, 'show'])
     ->name('pos-claim.show');

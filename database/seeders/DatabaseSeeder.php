@@ -28,6 +28,10 @@ class DatabaseSeeder extends Seeder
             FacebookCapiIntegrationMicroserviceSeeder::class,
             CustomerAudienceSegmentsSeeder::class,
             LeisureMicroservicesSeeder::class,
+            // Zoom scaffolded in 2025-12; re-activated 2026-07 as the
+            // foundation for the "Online Events" MVP. Idempotent
+            // updateOrCreate — safe to rerun.
+            ZoomIntegrationMicroserviceSeeder::class,
         ]);
     }
 }

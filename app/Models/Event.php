@@ -89,6 +89,70 @@ class Event extends Model
         $this->attributes['thank_you_message'] = empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
     }
 
+    /**
+     * Encrypt the Zoom / meeting passcode at rest. Keeps a leaked DB
+     * dump inert unless the attacker also has APP_KEY. The mutator is
+     * idempotent (won't double-encrypt an already-encrypted value) and
+     * the accessor falls back to plaintext if the value isn't
+     * decryptable (defensive against partial writes / key rotation).
+     */
+    public function setOnlinePasscodeAttribute($value): void
+    {
+        if ($value === null || $value === '') {
+            $this->attributes['online_passcode'] = null;
+            return;
+        }
+        try {
+            // Try to decrypt first — if it succeeds, the value is already
+            // encrypted (someone re-saved the model without touching the
+            // field) and we don't want to double-wrap it.
+            \Illuminate\Support\Facades\Crypt::decryptString((string) $value);
+            $this->attributes['online_passcode'] = (string) $value;
+        } catch (\Throwable $e) {
+            $this->attributes['online_passcode'] = \Illuminate\Support\Facades\Crypt::encryptString((string) $value);
+        }
+    }
+
+    public function getOnlinePasscodeAttribute($value): ?string
+    {
+        if ($value === null || $value === '') return null;
+        try {
+            return \Illuminate\Support\Facades\Crypt::decryptString((string) $value);
+        } catch (\Throwable $e) {
+            // Value predates the mutator or APP_KEY rotated — return
+            // as-is so at least the operator can see + rewrite it.
+            return (string) $value;
+        }
+    }
+
+    /**
+     * Sanitize the optional online_instructions HTML the organizer
+     * enters (dresscode virtual, tips audio, browser recomandat, etc.)
+     * through the same HTMLPurifier profile as system_update.
+     */
+    public function setOnlineInstructionsAttribute($value): void
+    {
+        if ($value === null || trim((string) $value) === '') {
+            $this->attributes['online_instructions'] = null;
+            return;
+        }
+        try {
+            $this->attributes['online_instructions'] = \Mews\Purifier\Facades\Purifier::clean(
+                (string) $value,
+                'system_update'
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('HTMLPurifier failed on online_instructions', [
+                'event_id' => $this->id,
+                'error'    => $e->getMessage(),
+            ]);
+            $this->attributes['online_instructions'] = strip_tags(
+                (string) $value,
+                '<p><br><b><strong><i><em><u><a><ul><ol><li>'
+            );
+        }
+    }
+
     protected $fillable = [
         'tenant_id',
         'marketplace_client_id',
@@ -149,6 +213,16 @@ class Event extends Model
         // content
         'short_description', 'description', 'ticket_terms', 'thank_you_message',
 
+        // online event (Zoom / custom livestream) — gated by the
+        // 'zoom-integration' microservice on the marketplace_client.
+        'is_online',
+        'online_provider',
+        'online_meeting_url',
+        'online_passcode',
+        'online_instructions',
+        'online_lobby_opens_minutes_before',
+        'online_capacity_hint',
+
         // seo json
         'seo',
 
@@ -198,6 +272,10 @@ class Event extends Model
         'description'       => 'array',
         'ticket_terms'      => 'array',
         'thank_you_message' => 'array',
+        // online event
+        'is_online'                          => 'bool',
+        'online_lobby_opens_minutes_before'  => 'int',
+        'online_capacity_hint'               => 'int',
 
         // date-only
         'event_date'           => 'date',
@@ -1068,6 +1146,89 @@ class Event extends Model
     public function getCurrencyAttribute(): string
     {
         return $this->marketplaceClient?->currency ?? 'RON';
+    }
+
+    /**
+     * Human-readable label for the online provider — used on emails +
+     * the /join gate page. Add new labels here when a new provider is
+     * supported; keep the enum + label list in one place.
+     */
+    public function getOnlineProviderLabelAttribute(): string
+    {
+        return match ((string) $this->online_provider) {
+            'zoom'          => 'Zoom',
+            'google_meet'   => 'Google Meet',
+            'teams'         => 'Microsoft Teams',
+            'custom'        => 'Livestream',
+            default         => 'Online',
+        };
+    }
+
+    /**
+     * Timestamp when the /join gate becomes active for THIS event —
+     * `start_time - online_lobby_opens_minutes_before` minutes. Returns
+     * null if the event doesn't have a resolvable start time yet.
+     */
+    public function getOnlineLobbyOpensAtAttribute(): ?\Carbon\Carbon
+    {
+        $starts = $this->resolveStartsAt();
+        if (! $starts) return null;
+        $mins = (int) ($this->online_lobby_opens_minutes_before ?? 15);
+        return $starts->copy()->subMinutes($mins);
+    }
+
+    /**
+     * True while the visitor can currently open the /join gate:
+     *   lobby_opens_at ≤ now ≤ (end_time OR start_time + 4h)
+     * The 4h tail gives late joiners a chance without keeping the door
+     * open forever (a stale link shouldn't remain valid for weeks).
+     */
+    public function isOnlineJoinable(?\Carbon\Carbon $at = null): bool
+    {
+        if (! $this->is_online) return false;
+
+        $at = $at ?: now();
+        $lobby = $this->online_lobby_opens_at;
+        if (! $lobby) return false;
+
+        $starts = $this->resolveStartsAt();
+        $ends = $this->resolveEndsAt() ?? ($starts ? $starts->copy()->addHours(4) : null);
+        if (! $ends) return false;
+
+        return $at->between($lobby, $ends);
+    }
+
+    /**
+     * Resolve the actual start Carbon for online-join gating.
+     * Tries event_date + start_time first, then range_start_date +
+     * range_start_time, then the multi-slot first entry.
+     */
+    protected function resolveStartsAt(): ?\Carbon\Carbon
+    {
+        if (! empty($this->event_date) && ! empty($this->start_time)) {
+            return \Carbon\Carbon::parse($this->event_date->format('Y-m-d') . ' ' . $this->start_time);
+        }
+        if (! empty($this->range_start_date) && ! empty($this->range_start_time)) {
+            return \Carbon\Carbon::parse($this->range_start_date->format('Y-m-d') . ' ' . $this->range_start_time);
+        }
+        if (! empty($this->multi_slots) && is_array($this->multi_slots)) {
+            $first = $this->multi_slots[0] ?? null;
+            if ($first && !empty($first['date']) && !empty($first['start_time'])) {
+                return \Carbon\Carbon::parse($first['date'] . ' ' . $first['start_time']);
+            }
+        }
+        return null;
+    }
+
+    protected function resolveEndsAt(): ?\Carbon\Carbon
+    {
+        if (! empty($this->event_date) && ! empty($this->end_time)) {
+            return \Carbon\Carbon::parse($this->event_date->format('Y-m-d') . ' ' . $this->end_time);
+        }
+        if (! empty($this->range_end_date) && ! empty($this->range_end_time)) {
+            return \Carbon\Carbon::parse($this->range_end_date->format('Y-m-d') . ' ' . $this->range_end_time);
+        }
+        return null;
     }
 
     /**

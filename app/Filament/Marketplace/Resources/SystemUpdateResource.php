@@ -138,6 +138,7 @@ class SystemUpdateResource extends Resource
                                         'interfata' => 'Interfață',
                                         'organizator' => 'Organizator',
                                         'client' => 'Client',
+                                        'aplicatie-mobila' => 'Aplicație mobilă',
                                     ])
                                     ->required()
                                     ->native(false),
@@ -184,12 +185,14 @@ class SystemUpdateResource extends Resource
                         'interfata' => 'Interfață',
                         'organizator' => 'Organizator',
                         'client' => 'Client',
+                        'aplicatie-mobila' => 'Aplicație mobilă',
                         default => $state,
                     })
                     ->color(fn (string $state) => match ($state) {
                         'interfata' => 'info',
                         'organizator' => 'warning',
                         'client' => 'success',
+                        'aplicatie-mobila' => 'primary',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('status')
@@ -219,6 +222,7 @@ class SystemUpdateResource extends Resource
                         'interfata' => 'Interfață',
                         'organizator' => 'Organizator',
                         'client' => 'Client',
+                        'aplicatie-mobila' => 'Aplicație mobilă',
                     ]),
             ])
             ->recordActions([

@@ -646,6 +646,76 @@ const ThankYouPage = {
                     card.classList.remove('hidden');
                 }
             }
+
+            // Online-event access panel. Backend flags event.online.is_online
+            // when the event is a webinar / livestream. Show a per-ticket
+            // "Alătură-te online" list with a big CTA that lands on our
+            // /join/{code} gateway (validates + reveals the meeting URL).
+            const online = event.online;
+            if (online && online.is_online) {
+                const panel = document.getElementById('onlineAccessPanel');
+                const providerLabel = document.getElementById('onlineProviderLabel');
+                const lobbyText = document.getElementById('onlineLobbyText');
+                const list = document.getElementById('onlineTicketsList');
+
+                if (panel && list) {
+                    // Provider label + lobby text.
+                    if (providerLabel) providerLabel.textContent = online.provider_label ? '· ' + online.provider_label : '';
+                    if (lobbyText) {
+                        if (online.lobby_opens_at) {
+                            const dt = new Date(online.lobby_opens_at);
+                            if (!isNaN(dt.getTime())) {
+                                lobbyText.textContent = 'Link-ul de acces devine activ ' +
+                                    dt.toLocaleDateString('ro-RO', {
+                                        weekday: 'long', day: 'numeric', month: 'long',
+                                        hour: '2-digit', minute: '2-digit'
+                                    }) + '.';
+                            } else {
+                                lobbyText.textContent = 'Vei putea intra în meeting cu puțin înainte de start.';
+                            }
+                        } else {
+                            lobbyText.textContent = 'Vei putea intra în meeting cu puțin înainte de start.';
+                        }
+                    }
+
+                    // Per-ticket rows with individual /join/{code} URLs.
+                    const tickets = order.tickets || [];
+                    const ticketsArr = Array.isArray(tickets) ? tickets : Object.values(tickets);
+                    const rows = ticketsArr
+                        .filter(t => t.join_url)
+                        .map((t, idx) => {
+                            const attendee = t.attendee_name || `Bilet ${idx + 1}`;
+                            const type = t.type || 'Standard';
+                            return `
+                                <div class="flex items-center justify-between gap-3 p-4 bg-white rounded-xl border border-primary/10">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-semibold text-secondary truncate">${escapeHtml(attendee)}</div>
+                                        <div class="text-xs text-muted">${escapeHtml(type)}</div>
+                                    </div>
+                                    <a href="${escapeHtml(t.join_url)}" target="_blank" rel="noopener noreferrer"
+                                       class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-primary-dark rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all whitespace-nowrap">
+                                        Alătură-te
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                    </a>
+                                </div>`;
+                        }).join('');
+
+                    if (rows) {
+                        list.innerHTML = rows;
+                        panel.classList.remove('hidden');
+                    }
+                }
+            }
+        }
+
+        // Local helper for the online panel — plain HTML escape.
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         // Tickets
