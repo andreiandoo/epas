@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Microservice;
-use App\Models\MicroserviceFeature;
 use Illuminate\Database\Seeder;
 
 class ZoomIntegrationMicroserviceSeeder extends Seeder
@@ -31,51 +30,30 @@ class ZoomIntegrationMicroserviceSeeder extends Seeder
             ]
         );
 
+        // Features list — only inserted when the optional
+        // App\Models\MicroserviceFeature model + microservice_features
+        // table exist (feature UI is Phase 2). The main microservice row
+        // above is all that's needed to unlock the "Zoom" toggle in the
+        // marketplace admin, so we no-op the features when the model is
+        // absent instead of crashing the whole seed run.
+        $featureModelClass = 'App\\Models\\MicroserviceFeature';
+        if (! class_exists($featureModelClass)) {
+            return;
+        }
+
         $features = [
-            [
-                'name' => 'OAuth Connection',
-                'slug' => 'oauth-connection',
-                'description' => 'Connect Zoom account via OAuth 2.0',
-            ],
-            [
-                'name' => 'Meeting Creation',
-                'slug' => 'meeting-creation',
-                'description' => 'Create scheduled and instant meetings',
-            ],
-            [
-                'name' => 'Webinar Management',
-                'slug' => 'webinar-management',
-                'description' => 'Create and manage webinars with registration',
-            ],
-            [
-                'name' => 'Event Integration',
-                'slug' => 'event-integration',
-                'description' => 'Auto-create Zoom meetings for virtual events',
-            ],
-            [
-                'name' => 'Registrant Sync',
-                'slug' => 'registrant-sync',
-                'description' => 'Sync ticket holders as meeting registrants',
-            ],
-            [
-                'name' => 'Attendance Tracking',
-                'slug' => 'attendance-tracking',
-                'description' => 'Track who joined and for how long',
-            ],
-            [
-                'name' => 'Recording Management',
-                'slug' => 'recording-management',
-                'description' => 'Access and manage meeting recordings',
-            ],
-            [
-                'name' => 'Webhook Events',
-                'slug' => 'webhook-events',
-                'description' => 'Real-time updates for meeting events',
-            ],
+            ['name' => 'OAuth Connection',       'slug' => 'oauth-connection',      'description' => 'Connect Zoom account via OAuth 2.0'],
+            ['name' => 'Meeting Creation',       'slug' => 'meeting-creation',      'description' => 'Create scheduled and instant meetings'],
+            ['name' => 'Webinar Management',     'slug' => 'webinar-management',    'description' => 'Create and manage webinars with registration'],
+            ['name' => 'Event Integration',      'slug' => 'event-integration',     'description' => 'Auto-create Zoom meetings for virtual events'],
+            ['name' => 'Registrant Sync',        'slug' => 'registrant-sync',       'description' => 'Sync ticket holders as meeting registrants'],
+            ['name' => 'Attendance Tracking',    'slug' => 'attendance-tracking',   'description' => 'Track who joined and for how long'],
+            ['name' => 'Recording Management',   'slug' => 'recording-management',  'description' => 'Access and manage meeting recordings'],
+            ['name' => 'Webhook Events',         'slug' => 'webhook-events',        'description' => 'Real-time updates for meeting events'],
         ];
 
         foreach ($features as $feature) {
-            MicroserviceFeature::updateOrCreate(
+            $featureModelClass::updateOrCreate(
                 ['microservice_id' => $microservice->id, 'slug' => $feature['slug']],
                 [
                     'name' => $feature['name'],
