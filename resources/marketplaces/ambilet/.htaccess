@@ -856,8 +856,10 @@ ErrorDocument 404 /404.php
 ErrorDocument 500 /500.php
 
 
-# Force PHP 8.3
-<IfModule mime_module>
-  AddHandler application/x-httpd-ea-php83 .php
-</IfModule>
+# PHP handler — deliberately NOT forced from .htaccess. The hosting
+# panel (cPanel MultiPHP Manager or equivalent) associates .php with
+# the correct handler at vhost level. Forcing "application/x-httpd-ea-phpXX"
+# here binds the site to a specific EasyApache slot that DOESN'T exist
+# on non-cPanel or differently-versioned hosts, causing Apache to serve
+# .php as 404. Left blank on purpose — do not re-add without a fallback.
 
