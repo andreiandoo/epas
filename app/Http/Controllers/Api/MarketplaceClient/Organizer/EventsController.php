@@ -943,6 +943,32 @@ class EventsController extends BaseController
         $onlineCount = (int) ($bySource['online'] ?? 0);
         $doorCount = (int) ($bySource['door'] ?? 0);
 
+        // Effective capacity for the Capacitate progress card. Prefer the
+        // event's own capacity column; when the organizer left it null
+        // (very common on Ambilet — most old events only carry per-
+        // ticket-type quotas) fall back to Σ(ticket_types.capacity),
+        // treating a -1 sentinel ("unlimited") as unbounded and so
+        // excluding it from the sum. Zero means "no capacity known" and
+        // the frontend hides the card.
+        $effectiveCapacity = (int) ($event->capacity ?? 0);
+        if ($effectiveCapacity <= 0) {
+            $effectiveCapacity = (int) \App\Models\TicketType::query()
+                ->where('event_id', $event->id)
+                ->where(function ($q) {
+                    // Skip -1 sentinels and skip test / invitation types
+                    // which aren't meant to count against total capacity.
+                    $q->where('capacity', '>', 0);
+                })
+                ->where(function ($q) {
+                    $q->whereRaw("(meta->>'is_test')::boolean IS DISTINCT FROM true");
+                })
+                ->where(function ($q) {
+                    $q->whereRaw("(meta->>'is_invitation')::boolean IS DISTINCT FROM true")
+                        ->orWhereNull('meta');
+                })
+                ->sum('capacity');
+        }
+
         // Per-source × per-ticket-type breakdown. Same base scope, joins
         // tickets → ticket_types for name/color rendering. Zero-priced
         // rows (invitations) still show up so the ticket picker on the
@@ -1054,6 +1080,13 @@ class EventsController extends BaseController
                     'online' => $byOnline,
                     'door' => $byDoor,
                 ],
+                // Effective capacity for the Capacitate card. Consumers
+                // MUST prefer this over the raw event.capacity column
+                // because it handles the Ambilet-common "no event-level
+                // capacity, only per-type" case (falls back to
+                // Σ ticket_types.capacity, excluding test / invitation
+                // types and -1 unlimited sentinels).
+                'capacity' => $effectiveCapacity,
             ],
         ]);
     }

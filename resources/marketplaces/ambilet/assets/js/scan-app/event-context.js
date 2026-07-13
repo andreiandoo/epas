@@ -300,7 +300,13 @@
           by_source_and_type: rawStats.by_source_and_type || { online: [], door: [] },
           total_sold:         eventData.tickets_sold   != null ? eventData.tickets_sold   : (rawStats.total || 0),
           revenue:            eventData.revenue        != null ? eventData.revenue        : (rawStats.revenue || 0),
-          capacity:           eventData.capacity       != null ? eventData.capacity       : 0
+          // Prefer the stats-side effective capacity (handles the
+          // event.capacity=null fallback to Σ ticket_types.capacity
+          // computed server-side). Fall through to eventData.capacity
+          // for backwards compat with older backends.
+          capacity:           (rawStats.capacity != null && rawStats.capacity > 0)
+                                ? rawStats.capacity
+                                : (eventData.capacity != null ? eventData.capacity : 0)
         };
 
         // Ticket types + commission (same event payload — no second fetch)
