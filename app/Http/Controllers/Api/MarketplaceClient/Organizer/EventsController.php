@@ -965,19 +965,20 @@ class EventsController extends BaseController
         // Effective capacity for the Capacitate progress card. Prefer the
         // event's own capacity column; when the organizer left it null
         // (very common on Ambilet — most old events only carry per-
-        // ticket-type quotas) fall back to Σ(ticket_types.capacity),
-        // treating a -1 sentinel ("unlimited") as unbounded and so
-        // excluding it from the sum. Zero means "no capacity known" and
-        // the frontend hides the card.
+        // ticket-type quotas) fall back to Σ(ticket_types.quota_total),
+        // treating -1 as "unlimited" and excluding those rows from the
+        // sum. Zero means "no capacity known" and the frontend hides
+        // the card.
+        //
+        // NB: ticket_types.capacity is a Model accessor that maps to
+        // the real `quota_total` column, so the query must target
+        // `quota_total` directly — otherwise Postgres blows up with
+        // 'column "capacity" does not exist'.
         $effectiveCapacity = (int) ($event->capacity ?? 0);
         if ($effectiveCapacity <= 0) {
             $effectiveCapacity = (int) \App\Models\TicketType::query()
                 ->where('event_id', $event->id)
-                ->where(function ($q) {
-                    // Skip -1 sentinels and skip test / invitation types
-                    // which aren't meant to count against total capacity.
-                    $q->where('capacity', '>', 0);
-                })
+                ->where('quota_total', '>', 0)
                 ->where(function ($q) {
                     $q->whereRaw("(meta->>'is_test')::boolean IS DISTINCT FROM true");
                 })
@@ -985,7 +986,7 @@ class EventsController extends BaseController
                     $q->whereRaw("(meta->>'is_invitation')::boolean IS DISTINCT FROM true")
                         ->orWhereNull('meta');
                 })
-                ->sum('capacity');
+                ->sum('quota_total');
         }
 
         // Per-source × per-ticket-type breakdown. Same base scope, joins
