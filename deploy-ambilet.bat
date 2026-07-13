@@ -25,7 +25,7 @@ echo.
 :: Check if we're in the right directory
 if not exist "%SOURCE_DIR%" (
     echo [ERROR] Source directory not found: %~dp0%SOURCE_DIR%
-    echo This script must live in the epas repo root (next to the resources\ folder).
+    echo This script must live in the epas repo root, next to the resources\ folder.
     exit /b 1
 )
 
