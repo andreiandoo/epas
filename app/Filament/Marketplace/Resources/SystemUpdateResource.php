@@ -151,11 +151,10 @@ class SystemUpdateResource extends Resource
                                     ->disk('public')
                                     ->directory('system-updates/featured')
                                     ->visibility('public')
+                                    ->maxSize(5120)
                                     ->imageEditor()
-                                    ->imageCropAspectRatio('16:9')
-                                    ->imageResizeTargetWidth(1200)
-                                    ->imageResizeTargetHeight(675)
-                                    ->helperText('Recomandat: 1200×675 (16:9). Apare ca thumbnail pe /noutati și ca hero pe pagina de detail.'),
+                                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
+                                    ->helperText('Recomandat: 16:9 (ex. 1200×675) — apare ca thumbnail pe /noutati și ca hero pe pagina de detail. Se acceptă orice dimensiune; poți decupa opțional cu creionul (editor).'),
                             ]),
                     ])->columnSpan(1),
                 ]),
