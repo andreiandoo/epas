@@ -654,7 +654,7 @@ class Settings extends Page
                                         // to the browser pixel — so tracking survives adblockers,
                                         // iOS ATT, and cookie deletion. These credentials are
                                         // encrypted at rest (Laravel Crypt + APP_KEY).
-                                        Forms\Components\Section::make('Server-side conversion APIs (fallback for organizers without their own credentials)')
+                                        SC\Section::make('Server-side conversion APIs (fallback for organizers without their own credentials)')
                                             ->description('Optional. Fill only when you want ambilet/bilete.online to send events server-side under YOUR own GA4 property / TikTok pixel when an organizer has not configured their own. Leave empty to disable server-side dispatch for that provider.')
                                             ->collapsible()
                                             ->collapsed()
