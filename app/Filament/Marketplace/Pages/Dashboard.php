@@ -373,7 +373,7 @@ class Dashboard extends Page
             $isToday = $reqDate === $maxDate;
             $ttl = $isToday ? 60 : 900;
             $dailyEventReport = Cache::remember(
-                "mp_dash_daily_evt_v3_{$marketplaceId}_{$reqDate}",
+                "mp_dash_daily_evt_v4_{$marketplaceId}_{$reqDate}",
                 $ttl,
                 fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
             );
@@ -1320,7 +1320,6 @@ class Dashboard extends Page
         $dayStart = Carbon::createFromFormat('Y-m-d', $date, $tz)->startOfDay()->utc();
         $dayEnd = Carbon::createFromFormat('Y-m-d', $date, $tz)->endOfDay()->utc();
         $paidStatuses = ['paid', 'confirmed', 'completed'];
-        $commissionRate = (float) ($this->marketplace->commission_rate ?? 5);
 
         // Step 1 — find every event with at least one paid order on the
         // selected day. Group by effective event id (marketplace_event_id
@@ -1414,6 +1413,18 @@ class Dashboard extends Page
             ->get(['id', 'title', 'event_date', 'range_start_date', 'duration_mode', 'multi_slots', 'venue_id'])
             ->keyBy('id');
 
+        // Revenue + commission must match each event's own Vânzări tab (and
+        // payout math), so derive them from the authoritative
+        // SalesBreakdownService rather than SUM(orders.total) / a flat
+        // marketplace commission rate. The old approach (a) undercounted
+        // revenue for orders linked to the event only through their tickets
+        // (order.event_id / marketplace_event_id NULL — typical for POS /
+        // leisure sales) while still counting those tickets, and (b) fell back
+        // to a flat marketplace rate when orders.commission_amount was 0. That
+        // produced e.g. 863,00 / 8,63 on the dashboard vs 1.303,00 / 71,58 on
+        // the event page for the same 25 tickets.
+        $salesService = app(\App\Services\Marketplace\SalesBreakdownService::class);
+
         $rows = [];
         foreach ($dayRows as $eid => $day) {
             $eid = (int) $eid;
@@ -1422,19 +1433,21 @@ class Dashboard extends Page
                 continue; // Orphan order pointing at a deleted event — skip.
             }
 
-            $dayRevenue = (float) $day->revenue;
-            $dayCommissionDb = (float) $day->commission_db;
-            $dayCommission = $dayCommissionDb > 0
-                ? $dayCommissionDb
-                : round($dayRevenue * $commissionRate / 100, 2);
+            // Day slice: revenue/commission for tickets whose order was created
+            // on the selected day (exact UTC bounds already computed above).
+            $dayBd = $salesService->build($event, $dayStart, $dayEnd, exactBounds: true);
+            $dayKept = (float) ($dayBd['total_commission_kept_from_refunds'] ?? 0);
+            $dayRevenue = (float) $dayBd['total_revenue'] + $dayKept;
+            $dayCommission = (float) $dayBd['total_commission'] + $dayKept;
 
             $total = $totalRows->get((string) $eid) ?? $totalRows->get($eid);
             $totalOrders = $total ? (int) $total->orders_count : 0;
-            $totalRevenue = $total ? (float) $total->revenue : 0.0;
-            $totalCommissionDb = $total ? (float) $total->commission_db : 0.0;
-            $totalCommission = $totalCommissionDb > 0
-                ? $totalCommissionDb
-                : round($totalRevenue * $commissionRate / 100, 2);
+
+            // All-time totals for the same event (no period bounds).
+            $totalBd = $salesService->build($event);
+            $totalKept = (float) ($totalBd['total_commission_kept_from_refunds'] ?? 0);
+            $totalRevenue = (float) $totalBd['total_revenue'] + $totalKept;
+            $totalCommission = (float) $totalBd['total_commission'] + $totalKept;
 
             // Display date — single_day uses event_date, range starts at
             // range_start_date, multi-day slot lists fall back to the
