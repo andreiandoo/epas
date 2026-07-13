@@ -923,7 +923,26 @@ class EventsController extends BaseController
         // All aggregates share the same $eventScope + valid/used filter
         // as $totalTickets so the numbers reconcile exactly with the
         // top-line "Vândute" figure the dashboard already surfaces.
-        $bySource = \App\Models\Ticket::where($eventScope)
+        // The two queries below add a LEFT JOIN to orders — the shared
+        // $eventScope closure references event_id / order_id without a
+        // table qualifier, which becomes ambiguous under the JOIN
+        // ("column reference event_id is ambiguous"). A JOIN-safe copy
+        // of the scope uses tickets.-prefixed columns instead.
+        $joinSafeScope = function ($q) use ($event) {
+            $q->where(function ($paid) use ($event) {
+                $paid->where('tickets.event_id', $event->id)
+                    ->whereHas('order', fn ($oq) => $oq->whereIn('status', ['paid', 'confirmed', 'completed']));
+            })
+            ->orWhere(function ($inv) use ($event) {
+                $inv->whereNull('tickets.order_id')
+                    ->where(function ($ev) use ($event) {
+                        $ev->where('tickets.event_id', $event->id)
+                            ->orWhereHas('ticketType', fn ($ttq) => $ttq->where('event_id', $event->id));
+                    });
+            });
+        };
+
+        $bySource = \App\Models\Ticket::where($joinSafeScope)
             ->whereIn('tickets.status', ['valid', 'used'])
             ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
             ->where(function ($q) {
@@ -973,7 +992,7 @@ class EventsController extends BaseController
         // tickets → ticket_types for name/color rendering. Zero-priced
         // rows (invitations) still show up so the ticket picker on the
         // dashboard is a true reflection of what got scanned.
-        $bySourceAndType = \App\Models\Ticket::where($eventScope)
+        $bySourceAndType = \App\Models\Ticket::where($joinSafeScope)
             ->whereIn('tickets.status', ['valid', 'used'])
             ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
             ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
