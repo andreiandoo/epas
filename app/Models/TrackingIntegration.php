@@ -204,4 +204,59 @@ class TrackingIntegration extends Model
         return filled($this->getProviderId()) && filled($this->getServerSideCredential());
     }
 
+    /**
+     * Resolve the tracking_integrations row that should be used for
+     * server-side dispatch of a specific provider on a specific
+     * (organizer, marketplace_client) tuple. Applies the same per-provider
+     * fallback as ConfigController::organizerTrackingScripts on the
+     * client side:
+     *
+     * 1. Organizer's row wins when it has BOTH provider ID + credential.
+     * 2. If organizer has a provider ID but no credential — return null.
+     *    Falling back to the marketplace row here would push events to
+     *    a DIFFERENT GA4 property / TikTok pixel than the one the
+     *    browser is initializing on that page, splitting reporting
+     *    across two accounts. Silence > wrong-account contamination.
+     * 3. Otherwise fall back to the marketplace-level row when it has
+     *    both id + credential.
+     *
+     * Shared between MarketplaceTrackingController (Layer B) and the
+     * ServerSidePurchase observer + jobs (Layer C) so both layers agree
+     * on which account to hit.
+     */
+    public static function resolveForServerSide(
+        string $provider,
+        ?int $marketplaceOrganizerId,
+        ?int $marketplaceClientId
+    ): ?self {
+        if ($marketplaceOrganizerId) {
+            $organizerRow = static::where('marketplace_organizer_id', $marketplaceOrganizerId)
+                ->where('provider', $provider)
+                ->where('enabled', true)
+                ->first();
+
+            if ($organizerRow && $organizerRow->hasServerSideCredentials()) {
+                return $organizerRow;
+            }
+
+            if ($organizerRow && filled($organizerRow->getProviderId())) {
+                return null;
+            }
+        }
+
+        if ($marketplaceClientId) {
+            $marketplaceRow = static::where('marketplace_client_id', $marketplaceClientId)
+                ->whereNull('marketplace_organizer_id')
+                ->where('provider', $provider)
+                ->where('enabled', true)
+                ->first();
+
+            if ($marketplaceRow && $marketplaceRow->hasServerSideCredentials()) {
+                return $marketplaceRow;
+            }
+        }
+
+        return null;
+    }
+
 }

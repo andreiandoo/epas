@@ -147,6 +147,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
+        \App\Models\Order::observe(\App\Observers\ServerSidePurchaseOrderObserver::class);
         \App\Models\Order::observe(\App\Observers\ActivityBookingOrderObserver::class);
         // PERF P2/8 — invalidate event_stats:v1:{event_id} cache on ticket
         // status / check-in changes so dashboards see fresh numbers within

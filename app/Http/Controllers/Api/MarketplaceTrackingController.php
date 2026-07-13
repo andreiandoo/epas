@@ -352,12 +352,10 @@ class MarketplaceTrackingController extends Controller
 
     /**
      * Resolve the tracking_integrations row that governs server-side
-     * dispatch for a provider on this event. Per-provider fallback
-     * matches the browser overlay logic in ConfigController::organizerTrackingScripts:
-     * organizer's row wins when it has both a provider ID and a stored
-     * server-side credential; otherwise the marketplace-level row (rows
-     * with marketplace_organizer_id = NULL) is used. Returns null when
-     * neither has server-side credentials — dispatch is skipped silently.
+     * dispatch for a provider on this event. Delegates to the shared
+     * TrackingIntegration::resolveForServerSide() so Layer B (this
+     * controller) and Layer C (ServerSidePurchase jobs) agree on which
+     * account to hit for a given (organizer, marketplace) tuple.
      *
      * Cached 60s to avoid a double-hit on every event on high-traffic pages.
      */
@@ -369,46 +367,15 @@ class MarketplaceTrackingController extends Controller
         $cacheKey = "tracking_int_srv:{$provider}:o:" . ((int) $marketplaceOrganizerId)
             . ":c:" . ((int) $marketplaceClientId);
 
-        $resolved = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($provider, $marketplaceOrganizerId, $marketplaceClientId) {
-            if ($marketplaceOrganizerId) {
-                $organizerRow = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $marketplaceOrganizerId)
-                    ->where('provider', $provider)
-                    ->where('enabled', true)
-                    ->first();
-
-                // Organizer wins when it has both ID + credential.
-                if ($organizerRow && $organizerRow->hasServerSideCredentials()) {
-                    return $organizerRow->id;
-                }
-
-                // If the organizer has a provider ID (browser pixel
-                // active) but no server-side credential, we MUST NOT
-                // fall back to marketplace — that would post events to
-                // a DIFFERENT GA4 property / TikTok pixel than the one
-                // the browser is initializing. Better to send nothing
-                // server-side than to split the same funnel across two
-                // reporting accounts.
-                if ($organizerRow && filled($organizerRow->getProviderId())) {
-                    return null;
-                }
-            }
-
-            if ($marketplaceClientId) {
-                $marketplaceRow = \App\Models\TrackingIntegration::where('marketplace_client_id', $marketplaceClientId)
-                    ->whereNull('marketplace_organizer_id')
-                    ->where('provider', $provider)
-                    ->where('enabled', true)
-                    ->first();
-
-                if ($marketplaceRow && $marketplaceRow->hasServerSideCredentials()) {
-                    return $marketplaceRow->id;
-                }
-            }
-
-            return null;
+        $resolvedId = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($provider, $marketplaceOrganizerId, $marketplaceClientId) {
+            return \App\Models\TrackingIntegration::resolveForServerSide(
+                $provider,
+                $marketplaceOrganizerId,
+                $marketplaceClientId,
+            )?->id;
         });
 
-        return $resolved ? \App\Models\TrackingIntegration::find($resolved) : null;
+        return $resolvedId ? \App\Models\TrackingIntegration::find($resolvedId) : null;
     }
 
     /**
