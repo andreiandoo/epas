@@ -105,9 +105,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                  (cart-ul e ascuns in paralel). Arata sesiunile deschise/inchise
                  pe ziua curenta pentru operator. -->
             <div id="lv-cash-timeline-panel" class="hidden bg-white border rounded-2xl border-border flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
-                <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
+                <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2 flex-wrap">
                     <h2 class="font-bold text-secondary">📋 Desfășurător casă</h2>
-                    <button id="lv-cash-timeline-refresh" type="button" class="text-xs text-muted hover:text-secondary" title="Reîmprospătează">🔄</button>
+                    <div class="flex items-center gap-2">
+                        <button id="lv-cash-export-csv" type="button" class="text-xs px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium" title="Exportă toate vânzările zilei">📥 Export CSV</button>
+                        <button id="lv-cash-timeline-refresh" type="button" class="text-xs text-muted hover:text-secondary" title="Reîmprospătează">🔄</button>
+                    </div>
                 </div>
                 <div id="lv-cash-timeline-body" class="flex-1 overflow-y-auto p-4 space-y-3">
                     <p class="text-sm text-muted text-center py-8">Se încarcă...</p>
@@ -861,7 +864,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const isOpen = s.is_open;
         const openTime = fmtTime(s.opened_at);
         const closeTime = s.closed_at ? fmtTime(s.closed_at) : '⏳ în desfășurare';
-        // Data completa cand sesiunea traverseaza miezul noptii sau e din alta zi
         const openDate = s.opened_at ? new Date(s.opened_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
         const closeDate = s.closed_at ? new Date(s.closed_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
         const showDates = openDate && closeDate && openDate !== closeDate;
@@ -869,6 +871,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const t = s.snapshot?.totals || {};
         const byPay = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
         const byPayHtml = byPay.map(p => `<div class="flex justify-between text-xs"><span>${PM_LABELS[p.method] || p.method}</span><strong>${fmtMoney(p.revenue)} RON</strong></div>`).join('');
+        // Breakdown per SOCIETATE (SC1/SC2) cu detaliu per metoda de plata.
+        // by_issuer.primary / secondary → { name, revenue, by_payment: {cash,card,online} }
+        const byIssuer = s.snapshot?.by_issuer || null;
+        const renderIssuerBlock = (iss, badge) => {
+            if (!iss || (!iss.revenue && !iss.orders && !iss.tickets)) return '';
+            const bp = iss.by_payment || {};
+            const bpRows = ['cash','card','online']
+                .filter(k => (bp[k] || 0) > 0)
+                .map(k => `<div class="flex justify-between text-[10px] text-slate-600"><span class="pl-2">${PM_LABELS[k]}</span><span>${fmtMoney(bp[k])} RON</span></div>`)
+                .join('');
+            return `<div class="mt-1 p-1.5 rounded border border-slate-200 bg-slate-50">
+                <div class="flex justify-between items-center gap-2">
+                    <span class="text-[10px] uppercase font-bold ${badge}">${badge.includes('primary') ? 'SC1' : 'SC2'}</span>
+                    <span class="text-[10px] text-slate-500 truncate flex-1">${escapeHtml(iss.name || '')}</span>
+                    <strong class="text-xs">${fmtMoney(iss.revenue || 0)} RON</strong>
+                </div>
+                ${bpRows}
+            </div>`;
+        };
+        const issuerHtml = byIssuer
+            ? (renderIssuerBlock(byIssuer.primary, 'text-primary') + renderIssuerBlock(byIssuer.secondary, 'text-accent'))
+            : '';
         const badge = isOpen
             ? '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
             : '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
@@ -886,6 +910,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             ${!isOpen && t.revenue != null ? `<div class="pt-2 border-t border-slate-100">
                 <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets || 0} bilete · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
                 ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : ''}
+                ${issuerHtml}
             </div>` : ''}
         </div>`;
     }
@@ -1018,11 +1043,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <span class="text-right whitespace-nowrap"><strong>${r.tickets}×</strong> · ${fmtMoney(r.revenue)} RON</span>
             </div>`).join('') : '<p class="text-muted text-xs">Niciun bilet</p>';
 
+        // Breakdown per societate emitenta (SC1/SC2) cu detaliu per metoda plata.
+        const byIssuer = snap.by_issuer || null;
+        const issuerCard = (iss, label, colorClass) => {
+            if (!iss || (!iss.revenue && !iss.orders && !iss.tickets)) return '';
+            const bp = iss.by_payment || {};
+            const bpHtml = ['cash','card','online']
+                .filter(k => (bp[k] || 0) > 0)
+                .map(k => `<div class="flex justify-between text-xs"><span class="text-muted">${PM[k]}</span><strong>${fmtMoney(bp[k])} RON</strong></div>`)
+                .join('');
+            return `<div class="p-3 border-2 ${colorClass} rounded-lg">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <div class="min-w-0">
+                        <p class="text-[10px] uppercase font-bold tracking-wider">${label}</p>
+                        <p class="text-xs text-secondary font-semibold truncate">${escapeHtml(iss.name || '')}</p>
+                    </div>
+                    <p class="text-base font-bold">${fmtMoney(iss.revenue || 0)}<span class="text-xs text-muted ml-1">RON</span></p>
+                </div>
+                <p class="text-[11px] text-muted mb-1">${iss.orders || 0} comenzi · ${iss.tickets || 0} bilete</p>
+                ${bpHtml ? '<div class="space-y-0.5 pt-2 border-t border-slate-100">' + bpHtml + '</div>' : ''}
+            </div>`;
+        };
+        const issuersHtml = byIssuer
+            ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${issuerCard(byIssuer.primary, 'SC1 - Principală', 'border-primary/40 bg-primary/5')}
+                ${issuerCard(byIssuer.secondary, 'SC2 - Secundară', 'border-accent/40 bg-accent/5')}
+               </div>`
+            : '';
+
         $('lv-cash-details-body').innerHTML = `
             <div>
                 <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Pe metodă plată</p>
                 ${payHtml}
             </div>
+            ${issuersHtml ? `<div>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe societate emitentă</p>
+                ${issuersHtml}
+            </div>` : ''}
             <div>
                 <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe tip bilet</p>
                 ${ttHtml}
@@ -1479,6 +1536,44 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-cash-modal-cancel')?.addEventListener('click', hideCloseCashierModal);
         $('lv-cash-modal-confirm')?.addEventListener('click', confirmCloseCashier);
         $('lv-cash-timeline-refresh')?.addEventListener('click', loadCashTimeline);
+        // Export CSV al vanzarilor din ziua curenta. Folosim AmbiletAPI.request cu
+        // rawResponse=true (proxy-ul returneaza CSV binar direct + Content-Type text/csv).
+        // Trebuie sa mearga prin AmbiletAPI ca sa includem Authorization header;
+        // iframe direct fara auth ar returna 401.
+        $('lv-cash-export-csv')?.addEventListener('click', async () => {
+            if (!currentEventId) return;
+            const btn = $('lv-cash-export-csv');
+            const orig = btn.textContent;
+            btn.disabled = true; btn.textContent = '⏳ ...';
+            try {
+                const today = new Date();
+                const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                // AmbiletAPI.get fetches JSON by default; pentru CSV binar folosim fetch direct
+                // cu Authorization header (organizer_token din localStorage).
+                const proxyBase = (window.AMBILET && window.AMBILET.apiUrl) || '/api/proxy.php';
+                const csvUrl = proxyBase + '?action=organizer.event.leisure.cashier.sales-csv&event=' + encodeURIComponent(currentEventId) + '&date=' + encodeURIComponent(dateStr);
+                const token = localStorage.getItem('ambilet_organizer_token') || localStorage.getItem('organizer_token') || '';
+                const resp = await fetch(csvUrl, {
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const blob = await resp.blob();
+                const dlUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = dlUrl;
+                a.download = 'vanzari-' + dateStr + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(dlUrl), 4000);
+                btn.textContent = '✓ Descărcat';
+                setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+            } catch (e) {
+                console.error('[cash-export] failed', e);
+                alert('Eroare la export CSV: ' + (e?.message || 'necunoscut'));
+                btn.textContent = orig; btn.disabled = false;
+            }
+        });
 
         // ============ Panou imprimantă termică (WebUSB) ============
         initPrinterPanel();

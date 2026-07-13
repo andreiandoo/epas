@@ -748,6 +748,155 @@ body.scanapp-body {
 .scanapp-big-action--green  { background: var(--scanapp-green); }
 .scanapp-big-action:active  { filter: brightness(0.92); }
 
+/* ── Capacitate section — sold vs. total_capacity progress bar ───────── */
+.scanapp-capacity-section {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.scanapp-capacity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.scanapp-capacity-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--scanapp-text-primary);
+}
+.scanapp-capacity-pct {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--scanapp-red);
+}
+.scanapp-capacity-bar-lg {
+  height: 10px;
+  background: var(--scanapp-red-bg);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.scanapp-capacity-bar-lg__fill {
+  height: 100%;
+  background: var(--scanapp-red);
+  border-radius: 5px;
+  transition: width 0.25s ease-out;
+}
+.scanapp-capacity-sub {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--scanapp-text-secondary);
+}
+
+/* ── Online vs. la ușă — stacked bar with click-to-expand per type ───── */
+.scanapp-online-door-section {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.scanapp-online-door-bar {
+  display: flex;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  gap: 2px;
+  margin-top: 8px;
+}
+.scanapp-od-seg {
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 12px;
+  min-width: 80px;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  transition: filter 0.15s ease;
+}
+.scanapp-od-seg--online { background: #A51C30; color: #fff; }
+.scanapp-od-seg--door   { background: #F5C7CE; color: #7A1620; }
+.scanapp-od-seg:hover   { filter: brightness(1.05); }
+.scanapp-od-seg.is-active {
+  outline: 2px solid var(--scanapp-text-primary);
+  outline-offset: -2px;
+}
+.scanapp-od-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.scanapp-od-count {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.scanapp-od-expand {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--scanapp-border);
+}
+.scanapp-od-expand-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--scanapp-text-secondary);
+  margin-bottom: 10px;
+}
+.scanapp-od-row {
+  margin-bottom: 12px;
+}
+.scanapp-od-row__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.scanapp-od-row__label {
+  font-size: 13px;
+  color: var(--scanapp-text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+.scanapp-od-row__value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--scanapp-text-primary);
+}
+.scanapp-od-row__bar-bg {
+  height: 6px;
+  background: var(--scanapp-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.scanapp-od-row__bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.25s ease-out;
+}
+.scanapp-od-empty {
+  font-size: 13px;
+  color: var(--scanapp-text-secondary);
+  font-style: italic;
+}
+
+/* ── Pull-to-refresh hint ────────────────────────────────────────────── */
+.scanapp-pull-hint {
+  margin-top: 20px;
+  padding: 4px 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--scanapp-text-secondary);
+  opacity: 0.6;
+}
+
 /* ── Close shift button ──────────────────────────────────────────────── */
 .scanapp-close-shift {
   display: inline-flex;

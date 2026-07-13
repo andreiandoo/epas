@@ -53,6 +53,20 @@ require_once __DIR__ . '/includes/header.php';
             <p id="printingText" class="text-lg text-muted" data-i18n="tickets_printing">Biletele tale se printează...</p>
         </div>
 
+        <!-- Online-event access panel — populated by thank-you.js when
+             the order is for an online event. Hidden by default; shows
+             the join button per ticket + lobby info. -->
+        <div id="onlineAccessPanel" class="hidden mb-6">
+            <div class="p-6 md:p-8 bg-gradient-to-br from-primary/5 to-red-500/5 border-2 border-primary/20 rounded-2xl">
+                <div class="flex items-center justify-center gap-2 mb-2 text-sm font-bold text-primary uppercase tracking-widest">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    Eveniment online <span id="onlineProviderLabel" class="opacity-70"></span>
+                </div>
+                <p id="onlineLobbyText" class="text-center text-sm text-slate-600 mb-5"></p>
+                <div id="onlineTicketsList" class="space-y-3"></div>
+            </div>
+        </div>
+
         <div id="thankYouMessageCard" class="hidden mb-6">
             <div class="p-6 md:p-8 bg-white border shadow-sm rounded-2xl border-border">
                 <div class="flex items-center justify-center gap-2 mb-3 text-sm font-bold text-primary uppercase tracking-wide">
