@@ -1012,7 +1012,7 @@ class MarketplaceEventsController extends BaseController
                 'secondary_company_name' => $organizer->secondary_company_name ?? null,
                 'secondary_company_tax_id' => $organizer->secondary_company_tax_id ?? null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -1241,7 +1241,7 @@ class MarketplaceEventsController extends BaseController
                 $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
             })
             ->get()
-            ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false))
+            ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))
             ->map(function ($tt) {
                 $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
@@ -1832,7 +1832,7 @@ class MarketplaceEventsController extends BaseController
         $minPrice = null;
         if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
             // Exclude invitation ticket types from price calculations
-            $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+            $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false));
             $allPrices = $publicTickets->map(function ($ticket) {
                 if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
                     return $ticket->sale_price_cents;
@@ -1868,7 +1868,7 @@ class MarketplaceEventsController extends BaseController
                     $matchedPerf = $performances->first(fn ($p) => $p->starts_at->format('Y-m-d') === $childDate
                             && (!$childTime || $p->starts_at->format('H:i') === $childTime));
                 }
-                $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+                $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false));
                 $parentPrices = $parentPublicTts->map(function ($tt) use ($matchedPerf) {
                     if ($matchedPerf) {
                         $override = $matchedPerf->getEffectivePrice($tt);
@@ -1887,7 +1887,7 @@ class MarketplaceEventsController extends BaseController
                 ->whereNotNull('ticket_overrides')
                 ->get();
             if ($performances->isNotEmpty()) {
-                $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+                $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false));
                 foreach ($performances as $perf) {
                     foreach ($publicTickets as $tt) {
                         $overrideCents = $perf->getEffectivePrice($tt);
@@ -1931,7 +1931,7 @@ class MarketplaceEventsController extends BaseController
             'postponed_date' => $event->is_postponed && $event->postponed_date ? $event->postponed_date->format('Y-m-d') : null,
             'price_from' => $minPrice,
             'ticket_types_count' => $event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()
-                ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false))->count()
+                ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))->count()
                 : ($event->parent_id ? ($event->parent?->ticketTypes()->where('status', 'active')->count() ?? 0) : null),
             'commission_mode' => $commissionMode,
             'commission_rate' => $commissionRate,

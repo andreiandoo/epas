@@ -556,6 +556,15 @@ class PaymentController extends BaseController
      */
     public function sendOrderConfirmationEmail(Order $order): void
     {
+        // Test POS smoke-test sales skip customer + admin email entirely.
+        // The organizer is standing at their POS trying to exercise the
+        // sell + print flow; emailing pos@ambilet.ro or bilete@ambilet.ro
+        // every 10 lei test sale is noise (and admin_new_order to
+        // bilete@ambilet.ro would trigger the operator's real inbox).
+        if (($order->source ?? null) === 'pos_test') {
+            return;
+        }
+
         $marketplace = $order->marketplaceClient;
         $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType', 'tickets.ticketType', 'marketplaceEvent']);
 

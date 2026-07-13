@@ -82,7 +82,13 @@ class SalesBreakdownService
                 // Normal flow: ticket tied to a paid/confirmed/completed order
                 $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
                     $q->whereIn('status', ['paid', 'confirmed', 'completed'])
-                        ->where('source', '!=', 'external_import');
+                        // Test POS smoke-test sales never touch the payout
+                        // pipeline, Vânzări totals, or POS-billed slices
+                        // — they're strictly for the mobile app to
+                        // exercise sell+print+scan without polluting
+                        // the organizer's revenue. Excluded unconditionally
+                        // alongside external_import.
+                        ->whereNotIn('source', ['external_import', 'pos_test']);
                     if ($onlyPos) {
                         // POS-only slice: just the organizer's mobile cash POS
                         // app sales. Used to bill POS commission separately
@@ -600,7 +606,7 @@ class SalesBreakdownService
             ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                 $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                     $q->whereIn('status', ['paid', 'confirmed', 'completed'])
-                        ->where('source', '!=', 'external_import');
+                        ->whereNotIn('source', ['external_import', 'pos_test']);
                     if ($excludePos) {
                         $q->where('source', '!=', 'pos_app')
                           ->where('source', '!=', 'test_order');

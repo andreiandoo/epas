@@ -1331,4 +1331,66 @@ class Event extends Model
         }
         return 'On Sale';
     }
+
+    /**
+     * Find-or-create the auto-provisioned POS test ticket type.
+     *
+     * Purpose: every non-leisure event carries a single, capped test-only
+     * ticket type so organizers can smoke-test the Tixello mobile POS
+     * (sell, print, scan) before their real event. Priced at 10 lei, a
+     * fixed quota of 10 tickets, hidden from the public site + all
+     * revenue reports via meta.is_test = true.
+     *
+     * Orders that ring these up sit on source = 'pos_test' — the same
+     * filter chain that already excludes 'external_import' / 'pos_app'
+     * from decont math extends to cover them (see SalesBreakdownService).
+     *
+     * Leisure events opt out by convention: their POS/POS-ticket model
+     * is a completely separate flow (slots, per-society issuers) and
+     * doesn't share this ticket_types table shape.
+     */
+    public function ensureTestTicketType(): ?TicketType
+    {
+        if (($this->display_template ?? null) === 'leisure_venue') {
+            return null;
+        }
+
+        return $this->ticketTypes()
+            ->where(function ($q) {
+                $q->whereRaw("(meta->>'is_test')::boolean = true")
+                    ->orWhere('name', 'Test POS');
+            })
+            ->first()
+            ?? $this->ticketTypes()->create([
+                'name' => 'Test POS',
+                'currency' => $this->currency ?? 'RON',
+                // Virtual mutator on TicketType converts `price` to
+                // price_cents, so 10 lei writes 1000 cents.
+                'price' => 10,
+                // Fixed pool of 10 — enough for a full smoke test of
+                // sell + print + scan without polluting the event's
+                // quota planning.
+                'capacity' => 10,
+                'quota_sold' => 0,
+                'is_active' => true,
+                'is_entry_ticket' => true,
+                'is_refundable' => false,
+                'is_declarable' => false,
+                'is_subscription' => false,
+                'min_per_order' => 1,
+                'max_per_order' => 10,
+                // Commission stays at 0/inherit — test sales don't
+                // feed the payout pipeline anyway; whatever is written
+                // here never gets read by the exclusion path.
+                'commission_type' => null,
+                'meta' => [
+                    'is_test' => true,
+                    'hide_from_public' => true,
+                    'auto_provisioned' => true,
+                    'auto_provisioned_at' => now()->toIso8601String(),
+                ],
+                'sort_order' => 9999,
+                'color' => '#8B5CF6',
+            ]);
+    }
 }

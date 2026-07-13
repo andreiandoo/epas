@@ -17,6 +17,34 @@ class EventObserver
     public function created(Event $event): void
     {
         $this->notifyVenueOwnerIfHosted($event);
+        $this->provisionTestTicketType($event);
+    }
+
+    /**
+     * Auto-create the Tixello POS test ticket type on every non-leisure
+     * event so organizers can smoke-test the mobile app before their
+     * event goes live. Guarded by ensureTestTicketType() which no-ops
+     * when the ticket already exists (idempotent — the observer can
+     * fire multiple times, or on a duplicate save, and we never end
+     * up with two "Test POS" rows on the same event).
+     *
+     * Leisure events skip — they have their own POS + slot flow that
+     * doesn't share the standard ticket_types table shape.
+     *
+     * Wrapped in a try/catch so a ticket_type create failure never
+     * derails the actual Event save. Any error is logged; no user
+     * flow is blocked by an auto-provision issue.
+     */
+    protected function provisionTestTicketType(Event $event): void
+    {
+        try {
+            $event->ensureTestTicketType();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to auto-provision Test POS ticket type', [
+                'event_id' => $event->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
