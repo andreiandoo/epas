@@ -3285,16 +3285,66 @@ class LeisureController extends BaseController
         $closedAt = Carbon::now();
         $openedAt = $session->opened_at ?? Carbon::now()->subHours(12);
 
-        // Incasari pe interval — comenzi platite intre opened_at si closed_at
+        // Incasari pe interval — comenzi platite intre opened_at si closed_at.
+        // Include si issuing_company + meta pentru breakdown per societate (SC1/SC2).
         $orders = Order::query()
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['paid', 'completed'])
             ->whereBetween('paid_at', [$openedAt, $closedAt])
-            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category'])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category,issuing_company,meta'])
             ->get(['id', 'total', 'currency', 'source', 'meta']);
+
+        // Preload component issuer map pentru Mix packages — la fel ca in raport()
+        $componentIssuerMap = [];
+        $mixComponentIds = [];
+        foreach ($orders as $o) {
+            foreach ($o->tickets as $t) {
+                $tt = $t->ticketType ?? null;
+                if (!$tt || $tt->service_category !== 'package') continue;
+                if (($tt->issuing_company ?? 'primary') !== 'mix') continue;
+                $outs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+                foreach ($outs as $out) {
+                    if (!empty($out['ticket_type_id'])) $mixComponentIds[(int) $out['ticket_type_id']] = true;
+                }
+            }
+        }
+        if (!empty($mixComponentIds)) {
+            \App\Models\TicketType::query()
+                ->whereIn('id', array_keys($mixComponentIds))
+                ->get(['id', 'issuing_company'])
+                ->each(function ($tt) use (&$componentIssuerMap) {
+                    $componentIssuerMap[$tt->id] = ($tt->issuing_company === 'secondary') ? 'secondary' : 'primary';
+                });
+        }
+
+        // Nume societati emitente pentru afisare pe carduri
+        $issuerNames = [
+            'primary' => $organizer->company_name ?: 'Societatea principală',
+            'secondary' => $organizer->has_secondary_issuer
+                ? ($organizer->secondary_company_name ?: 'Societatea secundară')
+                : null,
+        ];
 
         $byPayment = [];
         $byTicketType = [];
+        $byIssuer = [
+            'primary' => [
+                'issuer' => 'primary',
+                'name' => $issuerNames['primary'],
+                'orders' => 0,
+                'tickets' => 0,
+                'revenue' => 0.0,
+                'by_payment' => ['cash' => 0.0, 'card' => 0.0, 'online' => 0.0],
+            ],
+            'secondary' => [
+                'issuer' => 'secondary',
+                'name' => $issuerNames['secondary'],
+                'orders' => 0,
+                'tickets' => 0,
+                'revenue' => 0.0,
+                'by_payment' => ['cash' => 0.0, 'card' => 0.0, 'online' => 0.0],
+            ],
+        ];
         $totalOrders = $orders->count();
         $totalTickets = 0;
         $totalRevenue = 0.0;
@@ -3312,30 +3362,92 @@ class LeisureController extends BaseController
             $byPayment[$pm]['orders']++;
             $byPayment[$pm]['revenue'] += $rev;
 
+            // Track daca comanda a inclus vreun bilet pe SC1/SC2 (pentru orders count per societate)
+            $orderTouchedIssuers = ['primary' => false, 'secondary' => false];
+
             foreach ($o->tickets as $t) {
                 if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+
+                $isFromPackage = is_array($t->meta ?? null) && !empty($t->meta['from_package']);
+                $tp = (float) ($t->price ?? 0);
+                $tt = $t->ticketType;
+                $svcCat = $tt->service_category ?? 'access';
+                $isPackageParent = ($svcCat === 'package');
+
                 $totalTickets++;
                 $byPayment[$pm]['tickets']++;
+
                 $ttId = $t->ticket_type_id;
-                $ttName = $t->ticketType->name ?? "Tip #{$ttId}";
+                $ttName = $tt->name ?? "Tip #{$ttId}";
                 if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
                 // Guide bonus -> label_override
                 if (is_array($t->meta ?? null) && !empty($t->meta['label_override'])) {
                     $ttName = $t->meta['label_override'];
                     $key = 'lbl_' . $ttName;
                 } else {
-                    $key = 'tt_' . $ttId;
+                    $key = ($isPackageParent ? 'pkg_' : 'tt_') . $ttId;
                 }
                 if (!isset($byTicketType[$key])) {
                     $byTicketType[$key] = ['ticket_type_id' => $ttId, 'name' => $ttName, 'tickets' => 0, 'revenue' => 0.0];
                 }
                 $byTicketType[$key]['tickets']++;
-                $byTicketType[$key]['revenue'] += (float) ($t->price ?? 0);
+                $byTicketType[$key]['revenue'] += $tp;
+
+                // by_issuer: componentele pachet (from_package) NU se contorizeaza aici —
+                // pachetul parent poarta pretul si issuer-ul. Skip pentru a evita double-count.
+                if ($isFromPackage) continue;
+                if ($tp <= 0) continue;
+
+                $issuer = $tt->issuing_company ?? 'primary';
+
+                // Pentru Mix packages: distribuim ratio-ul intre societatile componentelor
+                $splits = [];
+                if ($isPackageParent && $issuer === 'mix') {
+                    $outs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+                    $allocSum = 0.0;
+                    foreach ($outs as $out) {
+                        if (isset($out['price']) && is_numeric($out['price']) && (float) $out['price'] >= 0) {
+                            $allocSum += (float) $out['price'];
+                        }
+                    }
+                    if ($allocSum > 0) {
+                        foreach ($outs as $out) {
+                            $cid = (int) ($out['ticket_type_id'] ?? 0);
+                            $cIssuer = $componentIssuerMap[$cid] ?? 'primary';
+                            $portion = isset($out['price']) ? (float) $out['price'] : 0.0;
+                            if ($portion <= 0) continue;
+                            $splits[] = ['issuer' => $cIssuer, 'amount' => $portion];
+                        }
+                    }
+                }
+                if (empty($splits)) {
+                    $issuerKey = $issuer === 'secondary' ? 'secondary' : 'primary';
+                    $splits[] = ['issuer' => $issuerKey, 'amount' => $tp > 0 ? $tp : 1];
+                }
+
+                $splitTotal = array_sum(array_column($splits, 'amount'));
+                $biggest = null; $biggestAmt = -1;
+                foreach ($splits as $s) {
+                    if ($s['amount'] > $biggestAmt) { $biggestAmt = $s['amount']; $biggest = $s['issuer']; }
+                    $ratio = $splitTotal > 0 ? $s['amount'] / $splitTotal : 0;
+                    $portionRev = $tp * $ratio;
+                    $byIssuer[$s['issuer']]['revenue'] += $portionRev;
+                    $byIssuer[$s['issuer']]['by_payment'][$pm] = ($byIssuer[$s['issuer']]['by_payment'][$pm] ?? 0) + $portionRev;
+                    if (!$orderTouchedIssuers[$s['issuer']]) {
+                        $byIssuer[$s['issuer']]['orders']++;
+                        $orderTouchedIssuers[$s['issuer']] = true;
+                    }
+                }
+                if ($biggest) $byIssuer[$biggest]['tickets']++;
             }
         }
 
         foreach ($byPayment as &$row) $row['revenue'] = round($row['revenue'], 2);
         foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byIssuer as &$row) {
+            $row['revenue'] = round($row['revenue'], 2);
+            foreach ($row['by_payment'] as $k => $v) $row['by_payment'][$k] = round($v, 2);
+        }
         unset($row);
         usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
 
@@ -3348,6 +3460,12 @@ class LeisureController extends BaseController
             ],
             'by_payment' => array_values($byPayment),
             'by_ticket_type' => array_values($byTicketType),
+            // Breakdown per societate emitenta (SC1/SC2), fiecare cu by_payment nested.
+            // Secondary null cand organizatorul nu are has_secondary_issuer setat.
+            'by_issuer' => [
+                'primary' => $byIssuer['primary'],
+                'secondary' => $issuerNames['secondary'] ? $byIssuer['secondary'] : null,
+            ],
         ];
 
         $session->update([
@@ -3705,6 +3823,167 @@ class LeisureController extends BaseController
             'date' => $dayRo->toDateString(),
             'sessions' => $sessions->map(fn ($s) => $mapSession($s, false))->values(),
             'last_closed_reference' => $lastClosedRef ? $mapSession($lastClosedRef, true) : null,
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/cashier/sales-csv?date=YYYY-MM-DD
+     *
+     * Streamuieste CSV cu toate vanzarile din ziua ceruta (RO tz). O linie per
+     * BILET emis, cu toate detaliile: comanda, timp platire, sesiune casa, metoda,
+     * societate, tip bilet, pret, casier, plus firma cumparator cand e cazul.
+     *
+     * Folosit din butonul Export CSV in Desfasurator Casa (leisure-pos.php).
+     */
+    public function cashierDaySalesCsv(Request $request, int $event): mixed
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $dateInput = $request->query('date');
+        $dayRo = $dateInput ? Carbon::parse($dateInput, 'Europe/Bucharest') : Carbon::now('Europe/Bucharest');
+        // Bounds UTC pentru whereBetween (aceeasi logica ca la scans/cashierSessions).
+        $dayStart = $dayRo->copy()->startOfDay()->setTimezone('UTC');
+        $dayEnd = $dayRo->copy()->endOfDay()->setTimezone('UTC');
+
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        // Preload team members pentru nume operatori POS.
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$dayStart, $dayEnd])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta,code,barcode,attendee_name,attendee_email', 'tickets.ticketType:id,name,service_category,issuing_company'])
+            ->orderBy('paid_at')
+            ->get(['id', 'order_number', 'customer_name', 'customer_email', 'customer_phone', 'total', 'currency', 'source', 'paid_at', 'meta']);
+
+        $tmIds = [];
+        foreach ($orders as $o) {
+            $tmId = $o->meta['cashier_team_member_id'] ?? null;
+            if ($tmId) $tmIds[(int) $tmId] = true;
+        }
+        $tmNames = [];
+        if (!empty($tmIds)) {
+            \App\Models\MarketplaceOrganizerTeamMember::query()
+                ->whereIn('id', array_keys($tmIds))
+                ->get(['id', 'name'])
+                ->each(function ($tm) use (&$tmNames) { $tmNames[$tm->id] = $tm->name; });
+        }
+
+        // Preload cashier sessions din zi pentru mapare order → sesiune
+        $sessions = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->where(function ($q) use ($dayStart, $dayEnd) {
+                $q->whereBetween('opened_at', [$dayStart, $dayEnd])
+                  ->orWhereBetween('closed_at', [$dayStart, $dayEnd]);
+            })
+            ->get(['id', 'opened_at', 'closed_at', 'opened_label']);
+        $sessionLabelById = [];
+        foreach ($sessions as $s) {
+            $sessionLabelById[$s->id] = ($s->opened_label ?: 'Sesiune #' . $s->id)
+                . ' (' . $s->opened_at?->copy()->setTimezone('Europe/Bucharest')->format('H:i')
+                . ($s->closed_at ? '–' . $s->closed_at->copy()->setTimezone('Europe/Bucharest')->format('H:i') : '–deschis')
+                . ')';
+        }
+
+        $issuerNames = [
+            'primary' => $organizer->company_name ?: 'SC1',
+            'secondary' => $organizer->secondary_company_name ?: 'SC2',
+            'mix' => 'Mix',
+        ];
+
+        $filename = 'vanzari-' . $dayRo->format('Y-m-d') . '-event-' . $eventModel->id . '.csv';
+        $columns = [
+            'Data', 'Ora', 'Nr. comanda', 'Sursa', 'Metoda plata',
+            'Sesiune casa', 'Casier',
+            'Tip bilet', 'Societate emitenta', 'Cod bilet', 'Pret bilet (RON)',
+            'Categorie serviciu', 'Componenta pachet (from_package)', 'Bonus ghid',
+            'Nume client', 'Email client', 'Telefon client',
+            'Firma nume', 'Firma CUI', 'Firma Reg.Com', 'Firma adresa',
+            'Total comanda (RON)', 'Comanda cu factura', 'Numar factura',
+        ];
+
+        return response()->streamDownload(function () use ($orders, $sessionLabelById, $tmNames, $issuerNames, $columns) {
+            $out = fopen('php://output', 'w');
+            // UTF-8 BOM pentru Excel (afiseaza diacritice corect)
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, $columns, ';');
+
+            foreach ($orders as $o) {
+                $paidAtRo = $o->paid_at?->copy()->setTimezone('Europe/Bucharest');
+                $dataStr = $paidAtRo ? $paidAtRo->format('d.m.Y') : '';
+                $oraStr = $paidAtRo ? $paidAtRo->format('H:i:s') : '';
+                $isPos = $o->source === 'pos';
+                $pmRaw = $o->meta['payment_method'] ?? null;
+                if ($isPos && $pmRaw === 'cash') $pmLabel = 'Cash (POS)';
+                elseif ($isPos && $pmRaw === 'card') $pmLabel = 'Card (POS)';
+                elseif ($isPos && $pmRaw === 'invoice') $pmLabel = 'Link email (POS)';
+                else $pmLabel = 'Online';
+                $sourceLabel = $isPos ? 'POS' : 'Online';
+                $sessionId = $o->meta['cashier_session_id'] ?? null;
+                $sessionLabel = $sessionId ? ($sessionLabelById[(int) $sessionId] ?? ('Sesiune #' . $sessionId)) : '';
+                $tmId = $o->meta['cashier_team_member_id'] ?? null;
+                $casierLabel = $tmId ? ($tmNames[(int) $tmId] ?? ('Angajat #' . $tmId)) : ($isPos ? 'InfoPoint' : '—');
+
+                $company = is_array($o->meta['company_billing'] ?? null) ? $o->meta['company_billing'] : [];
+                $companyName = $company['name'] ?? '';
+                $companyCui = $company['cui'] ?? '';
+                $companyReg = $company['reg_no'] ?? '';
+                $companyAddr = $company['address'] ?? '';
+                $invoiceNumber = is_array($o->meta) ? ($o->meta['invoice_number'] ?? '') : '';
+                $withInvoice = !empty($invoiceNumber) ? 'DA' : (!empty($o->meta['invoice_requested']) ? 'CERUT' : '');
+                $total = (float) ($o->total ?? 0);
+
+                if ($o->tickets->isEmpty()) {
+                    // Comanda fara bilete — o linie summar, pentru completitudine
+                    fputcsv($out, [
+                        $dataStr, $oraStr, $o->order_number, $sourceLabel, $pmLabel,
+                        $sessionLabel, $casierLabel,
+                        '(fara bilete)', '', '', '',
+                        '', '', '',
+                        $o->customer_name, $o->customer_email, $o->customer_phone,
+                        $companyName, $companyCui, $companyReg, $companyAddr,
+                        number_format($total, 2, '.', ''), $withInvoice, $invoiceNumber,
+                    ], ';');
+                    continue;
+                }
+
+                foreach ($o->tickets as $t) {
+                    if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                    $tt = $t->ticketType;
+                    $ttName = $tt->name ?? 'Bilet';
+                    if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+                    if (is_array($t->meta ?? null) && !empty($t->meta['label_override'])) {
+                        $ttName = $t->meta['label_override'];
+                    }
+                    $issuer = $tt->issuing_company ?? 'primary';
+                    $issuerName = $issuerNames[$issuer] ?? $issuer;
+                    $svcCat = $tt->service_category ?? 'access';
+                    $isFromPackage = is_array($t->meta ?? null) && !empty($t->meta['from_package']);
+                    $isGuideBonus = is_array($t->meta ?? null) && !empty($t->meta['guide_bonus']);
+
+                    fputcsv($out, [
+                        $dataStr, $oraStr, $o->order_number, $sourceLabel, $pmLabel,
+                        $sessionLabel, $casierLabel,
+                        $ttName, $issuerName, $t->code ?: $t->barcode, number_format((float) ($t->price ?? 0), 2, '.', ''),
+                        $svcCat, $isFromPackage ? 'DA' : 'NU', $isGuideBonus ? 'DA' : 'NU',
+                        $t->attendee_name ?: $o->customer_name, $t->attendee_email ?: $o->customer_email, $o->customer_phone,
+                        $companyName, $companyCui, $companyReg, $companyAddr,
+                        number_format($total, 2, '.', ''), $withInvoice, $invoiceNumber,
+                    ], ';');
+                }
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store',
         ]);
     }
 

@@ -1925,6 +1925,9 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/leisure/cashier/sessions', [OrganizerLeisureController::class, 'cashierSessions'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.cashier.sessions');
+        Route::get('/events/{event}/leisure/cashier/sales-csv', [OrganizerLeisureController::class, 'cashierDaySalesCsv'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.cashier.sales-csv');
         // Scanari — chart per zi + detalii pe zi
         Route::get('/events/{event}/leisure/scans', [OrganizerLeisureController::class, 'scansOverview'])
             ->whereNumber('event')

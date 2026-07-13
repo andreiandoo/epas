@@ -1882,6 +1882,17 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.cashier.sales-csv':
+        // GET /organizer/events/{id}/leisure/cashier/sales-csv?date=YYYY-MM-DD → CSV download
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        if (isset($_GET['date'])) $q['date'] = $_GET['date'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/cashier/sales-csv' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // download binar — nu json parse
+        break;
+
     case 'organizer.event.leisure.scans':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
