@@ -287,13 +287,20 @@
                     || {};
         var eventData = unwrapEvent(eventResp) || {};
         state.eventStats = {
-          total:           rawStats.total           != null ? rawStats.total           : 0,
-          checked_in:      rawStats.checked_in      != null ? rawStats.checked_in      : 0,
-          not_checked_in:  rawStats.not_checked_in  != null ? rawStats.not_checked_in  : 0,
-          check_in_rate:   rawStats.check_in_rate   != null ? rawStats.check_in_rate   : 0,
-          total_sold:      eventData.tickets_sold   != null ? eventData.tickets_sold   : (rawStats.total || 0),
-          revenue:         eventData.revenue        != null ? eventData.revenue        : (rawStats.revenue || 0),
-          capacity:        eventData.capacity       != null ? eventData.capacity       : 0
+          total:              rawStats.total           != null ? rawStats.total           : 0,
+          checked_in:         rawStats.checked_in      != null ? rawStats.checked_in      : 0,
+          not_checked_in:     rawStats.not_checked_in  != null ? rawStats.not_checked_in  : 0,
+          check_in_rate:      rawStats.check_in_rate   != null ? rawStats.check_in_rate   : 0,
+          // Online vs. la ușă split — computed by
+          // EventsController::participants off orders.source with
+          // pos_test already excluded, so the numbers reconcile with
+          // rawStats.total. Consumed by panou.js renderOnlineDoor.
+          online_count:       rawStats.online_count    != null ? rawStats.online_count    : 0,
+          door_count:         rawStats.door_count      != null ? rawStats.door_count      : 0,
+          by_source_and_type: rawStats.by_source_and_type || { online: [], door: [] },
+          total_sold:         eventData.tickets_sold   != null ? eventData.tickets_sold   : (rawStats.total || 0),
+          revenue:            eventData.revenue        != null ? eventData.revenue        : (rawStats.revenue || 0),
+          capacity:           eventData.capacity       != null ? eventData.capacity       : 0
         };
 
         // Ticket types + commission (same event payload — no second fetch)
@@ -315,7 +322,15 @@
           });
         };
         state.allTicketTypes = allTypes.map(enrich);
-        state.ticketTypes    = allTypes.filter(function (t) { return t.is_entry_ticket; }).map(enrich);
+        // POS shows entry_ticket types + the auto-provisioned test
+        // ticket (meta.is_test = true). Marker used by vanzare.js to
+        // paint a "TEST" badge, refuse mixing test + real in the same
+        // cart, and route the sale to source = 'pos_test' on submit.
+        state.ticketTypes    = allTypes.filter(function (t) {
+          if (t.is_entry_ticket) return true;
+          if (t.meta && t.meta.is_test === true) return true;
+          return false;
+        }).map(enrich);
 
         emit('stats-updated',         { stats: state.eventStats });
         emit('ticket-types-updated',  { ticketTypes: state.ticketTypes, allTicketTypes: state.allTicketTypes, commission: state.eventCommission });

@@ -100,6 +100,44 @@ require __DIR__ . '/_layout.php';
       </div>
       </div><!-- /.scanapp-stats-section -->
 
+      <!-- Capacitate — sold / total_capacity progress bar (semantic
+           differs from the check-in bar above: this shows how full the
+           event is regardless of who's already entered). -->
+      <div class="scanapp-capacity-section" id="scanapp-capacity-section" hidden>
+        <div class="scanapp-capacity-header">
+          <span class="scanapp-capacity-title">Capacitate</span>
+          <span class="scanapp-capacity-pct" id="scanapp-cap-pct">0%</span>
+        </div>
+        <div class="scanapp-capacity-bar-lg">
+          <div class="scanapp-capacity-bar-lg__fill" id="scanapp-cap-fill" style="width: 0%"></div>
+        </div>
+        <div class="scanapp-capacity-sub">
+          <span id="scanapp-cap-sold">0</span> / <span id="scanapp-cap-total">0</span> locuri
+        </div>
+      </div>
+
+      <!-- Online vs. la ușă — stacked bar, click a segment to expand
+           the per-ticket-type breakdown UNDER the bar. Second click on
+           the same segment collapses. Populated by panou.js from
+           stats.online_count / .door_count / .by_source_and_type. -->
+      <div class="scanapp-online-door-section" id="scanapp-online-door-section" hidden>
+        <div class="scanapp-section-title">Online vs. la ușă</div>
+        <div class="scanapp-online-door-bar" id="scanapp-od-bar">
+          <button type="button" class="scanapp-od-seg scanapp-od-seg--online" id="scanapp-od-online" style="flex-grow: 0;" hidden>
+            <span class="scanapp-od-label">Online</span>
+            <span class="scanapp-od-count"><span id="scanapp-online-cnt">0</span> (<span id="scanapp-online-pct">0</span>%)</span>
+          </button>
+          <button type="button" class="scanapp-od-seg scanapp-od-seg--door" id="scanapp-od-door" style="flex-grow: 0;" hidden>
+            <span class="scanapp-od-label">La ușă</span>
+            <span class="scanapp-od-count"><span id="scanapp-door-cnt">0</span> (<span id="scanapp-door-pct">0</span>%)</span>
+          </button>
+        </div>
+        <div class="scanapp-od-expand" id="scanapp-od-expand" hidden>
+          <div class="scanapp-od-expand-title" id="scanapp-od-expand-title">Tipuri de bilete</div>
+          <div id="scanapp-od-expand-list"></div>
+        </div>
+      </div>
+
       <!-- Quick actions (4 column) -->
       <div class="scanapp-quick-actions-section">
       <div class="scanapp-section-title">Acțiuni Rapide</div>
@@ -139,6 +177,13 @@ require __DIR__ . '/_layout.php';
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--scanapp-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         Închide Tura
       </button>
+
+      <!-- Pull-to-refresh hint. Data already refreshes on a 30s poll
+           and via Reverb when connected, so this is purely a visual
+           reminder that the user CAN also pull down for an on-demand
+           refresh. Kept low-contrast so it doesn't compete with the
+           real stats above. -->
+      <div class="scanapp-pull-hint">↓ Trage în jos pentru refresh</div>
     </div>
   </div>
 

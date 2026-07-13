@@ -128,13 +128,26 @@
       else if (seated) hint = avail.toLocaleString('ro-RO') + ' locuri disponibile';
       else hint = avail.toLocaleString('ro-RO') + ' disponibile';
 
+      // Test POS ticket — auto-provisioned per event, purple TEST
+      // badge, hint tells the operator it doesn't affect any real
+      // report. See EventContext filter that lets it into ticketTypes.
+      var isTest = !!(t.meta && t.meta.is_test);
+      var testBadge = isTest
+        ? ' <span style="display:inline-block; background:#8B5CF6; color:#fff; font-size:10px; font-weight:700; letter-spacing:0.4px; padding:2px 6px; border-radius:4px; margin-left:6px;">TEST</span>'
+        : '';
+      var testHint = isTest ? ' · nu se contorizează' : '';
+      var testFrame = isTest
+        ? ' style="border:1px solid #8B5CF6;"'
+        : '';
+      var effectiveColor = isTest ? '#8B5CF6' : color;
+
       return '' +
-        '<div class="scanapp-ticket" data-id="' + escapeHtml(t.id) + '">' +
-          '<div class="scanapp-ticket__color" style="background:' + escapeHtml(color) + ';"></div>' +
+        '<div class="scanapp-ticket" data-id="' + escapeHtml(t.id) + '"' + testFrame + '>' +
+          '<div class="scanapp-ticket__color" style="background:' + escapeHtml(effectiveColor) + ';"></div>' +
           '<div class="scanapp-ticket__body">' +
-            '<div class="scanapp-ticket__name">' + escapeHtml(t.name) + (seated ? ' <span style="font-size:10px; color:var(--scanapp-warning);">📍 cu loc</span>' : '') + '</div>' +
+            '<div class="scanapp-ticket__name">' + escapeHtml(t.name) + testBadge + (seated ? ' <span style="font-size:10px; color:var(--scanapp-warning);">📍 cu loc</span>' : '') + '</div>' +
             '<div class="scanapp-ticket__price">' + escapeHtml(formatLei(price)) + '</div>' +
-            '<div class="scanapp-ticket__hint">' + hint + '</div>' +
+            '<div class="scanapp-ticket__hint">' + hint + escapeHtml(testHint) + '</div>' +
           '</div>' +
           actionBlock +
         '</div>';
@@ -153,8 +166,29 @@
           }
           var idx = cart.findIndex(function (i) { return Number(i.id) === Number(id); });
           if (action === 'inc') {
+            // Refuse to mix test + real POS tickets in the same cart —
+            // downstream vanzare payload flips source between pos_app
+            // and pos_test based on cart contents, and any mixed cart
+            // would land on one side or the other in a confusing way.
+            var typeIsTest = !!(type.meta && type.meta.is_test);
+            var cartHasTest = cart.length > 0 && cart.some(function (i) {
+              return i && i.meta && i.meta.is_test === true;
+            });
+            var cartHasReal = cart.length > 0 && cart.some(function (i) {
+              return !(i && i.meta && i.meta.is_test === true);
+            });
+            if ((typeIsTest && cartHasReal) || (!typeIsTest && cartHasTest)) {
+              if (window.ScanApp && ScanApp.toast) {
+                ScanApp.toast('Biletele TEST se vând separat. Golește coșul înainte.', 'warning');
+              } else {
+                alert('Biletele TEST se vând separat. Golește coșul înainte.');
+              }
+              return;
+            }
             if (idx === -1) {
-              cart.push({ id: type.id, name: type.name, price: Number(type.price || 0), color: type.color, quantity: 1 });
+              // Preserve meta so processPayment can flip source based
+              // on cart contents (see the isTestCart derivation there).
+              cart.push({ id: type.id, name: type.name, price: Number(type.price || 0), color: type.color, quantity: 1, meta: type.meta });
             } else {
               cart[idx].quantity += 1;
             }
@@ -441,15 +475,24 @@
     var total    = cartTotal();
     var commission = EventContext.getState().eventCommission || {};
 
+    // A test-only cart routes to source = 'pos_test' so the backend's
+    // exclusion path drops it from Vânzări, decont, admin_new_order
+    // email, and every downstream report. Mixing test + real is
+    // prevented in the addToCart flow further up; here we just derive
+    // the source from what's actually in the cart.
+    var isTestCart = cart.length > 0 && cart.every(function (i) {
+      return i && i.meta && i.meta.is_test === true;
+    });
+
     var payload = {
       event_id: event.id,
       payment_method: method,
-      source: 'pos_app',
+      source: isTestCart ? 'pos_test' : 'pos_app',
       sold_by: (ScanAuth.getTeamMember() && ScanAuth.getTeamMember().name) ||
                (ScanAuth.getOrganizer() && ScanAuth.getOrganizer().name) || 'POS',
       customer: {
-        email: 'pos@ambilet.ro',
-        first_name: 'POS',
+        email: isTestCart ? 'test-pos@ambilet.ro' : 'pos@ambilet.ro',
+        first_name: isTestCart ? 'TEST' : 'POS',
         last_name: method === 'cash' ? 'Numerar' : 'Card'
       },
       tickets: cart.map(function (i) {

@@ -127,6 +127,135 @@
     $('scanapp-ro-checked').textContent  = entered.toLocaleString('ro-RO');
     $('scanapp-ro-revenue').textContent  = formatLei(revenue);
     $('scanapp-ro-rate').textContent     = rate.toFixed(1) + '%';
+
+    // Capacitate section — visible only when the event carries a
+    // capacity value (unlimited events keep it hidden entirely so we
+    // don't render a 0/0 progress bar).
+    var capSection = $('scanapp-capacity-section');
+    if (capSection) {
+      if (capacity > 0) {
+        capSection.hidden = false;
+        var capPct = Math.min(100, capacityPct);
+        $('scanapp-cap-pct').textContent   = Math.round(capPct) + '%';
+        $('scanapp-cap-fill').style.width  = capPct.toFixed(1) + '%';
+        $('scanapp-cap-sold').textContent  = sold.toLocaleString('ro-RO');
+        $('scanapp-cap-total').textContent = capacity.toLocaleString('ro-RO');
+      } else {
+        capSection.hidden = true;
+      }
+    }
+
+    // Online vs. la ușă — hidden until we have at least one sale from
+    // one of the two channels; keeps the dashboard tight on brand-new
+    // events before the first ticket goes through.
+    renderOnlineDoor(stats);
+  }
+
+  // ── Online vs. la ușă split + click-to-expand per ticket type ────────────
+  //
+  // State kept on a module local so a re-render (e.g. Reverb push) doesn't
+  // collapse the expansion the user was just looking at. Toggles on click:
+  //   click 'online' → shows online-only ticket types
+  //   click 'door'   → shows door-only ticket types
+  //   click same segment again → collapses
+  var _odExpanded = null; // 'online' | 'door' | null
+  var _odSourceData = { online: [], door: [] };
+
+  function renderOnlineDoor(stats) {
+    var section = $('scanapp-online-door-section');
+    if (!section) return;
+    var online = Number(stats.online_count) || 0;
+    var door   = Number(stats.door_count)   || 0;
+    var sum    = online + door;
+    if (sum === 0) {
+      section.hidden = true;
+      _odExpanded = null;
+      $('scanapp-od-expand').hidden = true;
+      return;
+    }
+    section.hidden = false;
+    _odSourceData = (stats.by_source_and_type && typeof stats.by_source_and_type === 'object')
+      ? stats.by_source_and_type
+      : { online: [], door: [] };
+    if (!Array.isArray(_odSourceData.online)) _odSourceData.online = [];
+    if (!Array.isArray(_odSourceData.door))   _odSourceData.door   = [];
+
+    var onlinePct = Math.round((online / sum) * 100);
+    var doorPct   = Math.round((door   / sum) * 100);
+
+    var onSeg = $('scanapp-od-online');
+    var drSeg = $('scanapp-od-door');
+    onSeg.hidden = online === 0;
+    drSeg.hidden = door === 0;
+    // flex-grow proportional to raw counts so a 90/10 split reads
+    // visually as 90/10 without needing extra math on the min-widths.
+    onSeg.style.flexGrow = String(online);
+    drSeg.style.flexGrow = String(door);
+    $('scanapp-online-cnt').textContent = online.toLocaleString('ro-RO');
+    $('scanapp-online-pct').textContent = onlinePct;
+    $('scanapp-door-cnt').textContent   = door.toLocaleString('ro-RO');
+    $('scanapp-door-pct').textContent   = doorPct;
+
+    renderOdExpansion();
+  }
+
+  function renderOdExpansion() {
+    var box    = $('scanapp-od-expand');
+    var title  = $('scanapp-od-expand-title');
+    var list   = $('scanapp-od-expand-list');
+    var onSeg  = $('scanapp-od-online');
+    var drSeg  = $('scanapp-od-door');
+    if (onSeg) onSeg.classList.toggle('is-active', _odExpanded === 'online');
+    if (drSeg) drSeg.classList.toggle('is-active', _odExpanded === 'door');
+
+    if (!_odExpanded) { box.hidden = true; return; }
+    box.hidden = false;
+    title.textContent = 'Tipuri de bilete — ' + (_odExpanded === 'online' ? 'online' : 'la ușă');
+
+    var rows = _odSourceData[_odExpanded] || [];
+    if (!rows.length) {
+      list.innerHTML = '<div class="scanapp-od-empty">Niciun bilet încă pe acest canal.</div>';
+      return;
+    }
+    var maxSold = rows.reduce(function (m, r) { return Math.max(m, Number(r.sold_count) || 0); }, 0);
+    var defaultColor = _odExpanded === 'online' ? '#A51C30' : '#F5C7CE';
+    list.innerHTML = rows.map(function (r) {
+      var sold = Number(r.sold_count) || 0;
+      var w = maxSold > 0 ? Math.max(4, (sold / maxSold) * 100) : 0;
+      var color = r.color || defaultColor;
+      var name = String(r.name || '').replace(/[<>&"]/g, function (ch) {
+        return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[ch];
+      });
+      return ''
+        + '<div class="scanapp-od-row">'
+        +   '<div class="scanapp-od-row__head">'
+        +     '<span class="scanapp-od-row__label">' + name + '</span>'
+        +     '<span class="scanapp-od-row__value">' + sold.toLocaleString('ro-RO') + '</span>'
+        +   '</div>'
+        +   '<div class="scanapp-od-row__bar-bg">'
+        +     '<div class="scanapp-od-row__bar-fill" style="width:' + w.toFixed(1) + '%; background:' + color + ';"></div>'
+        +   '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function bindOnlineDoorToggles() {
+    var onSeg = $('scanapp-od-online');
+    var drSeg = $('scanapp-od-door');
+    if (onSeg && !onSeg._boundOd) {
+      onSeg.addEventListener('click', function () {
+        _odExpanded = _odExpanded === 'online' ? null : 'online';
+        renderOdExpansion();
+      });
+      onSeg._boundOd = true;
+    }
+    if (drSeg && !drSeg._boundOd) {
+      drSeg.addEventListener('click', function () {
+        _odExpanded = _odExpanded === 'door' ? null : 'door';
+        renderOdExpansion();
+      });
+      drSeg._boundOd = true;
+    }
   }
 
   // ── Reports-only mode toggle ─────────────────────────────────────────────
@@ -347,6 +476,7 @@
     if (!$('scanapp-event-header')) return;
     reflectMode();
     bindActions();
+    bindOnlineDoorToggles();
 
     if (window.EventContext) {
       EventContext.subscribe('event-selected', function (e) {

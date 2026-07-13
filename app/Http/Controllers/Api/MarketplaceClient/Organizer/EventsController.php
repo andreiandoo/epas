@@ -913,6 +913,75 @@ class EventsController extends BaseController
         $totalTickets = $statsBase()->whereIn('status', ['valid', 'used'])->count();
         $checkedInCount = $statsBase()->whereNotNull('checked_in_at')->count();
 
+        // Online vs. la ușă split + per-source ticket-type breakdown.
+        // Consumed by the mobile Tixello + PWA scanapp dashboards to
+        // render the "Online vs. la ușă" stacked bar with click-to-
+        // expand ticket-type detail underneath. Source semantics:
+        //   'pos_app'  → sold at the door (mobile POS)
+        //   'pos_test' → smoke-test tickets, excluded from every count
+        //   anything else → online (site checkout, retail, etc.)
+        // All aggregates share the same $eventScope + valid/used filter
+        // as $totalTickets so the numbers reconcile exactly with the
+        // top-line "Vândute" figure the dashboard already surfaces.
+        $bySource = \App\Models\Ticket::where($eventScope)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
+            ->where(function ($q) {
+                $q->whereNull('orders.source')
+                    ->orWhere('orders.source', '!=', 'pos_test');
+            })
+            ->selectRaw("
+                CASE
+                    WHEN orders.source = 'pos_app' THEN 'door'
+                    ELSE 'online'
+                END AS bucket,
+                COUNT(*) AS c
+            ")
+            ->groupBy('bucket')
+            ->pluck('c', 'bucket');
+
+        $onlineCount = (int) ($bySource['online'] ?? 0);
+        $doorCount = (int) ($bySource['door'] ?? 0);
+
+        // Per-source × per-ticket-type breakdown. Same base scope, joins
+        // tickets → ticket_types for name/color rendering. Zero-priced
+        // rows (invitations) still show up so the ticket picker on the
+        // dashboard is a true reflection of what got scanned.
+        $bySourceAndType = \App\Models\Ticket::where($eventScope)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->where(function ($q) {
+                $q->whereNull('orders.source')
+                    ->orWhere('orders.source', '!=', 'pos_test');
+            })
+            ->selectRaw("
+                CASE WHEN orders.source = 'pos_app' THEN 'door' ELSE 'online' END AS bucket,
+                ticket_types.id AS ticket_type_id,
+                ticket_types.name AS name,
+                ticket_types.color AS color,
+                COUNT(*) AS sold_count
+            ")
+            ->groupBy('bucket', 'ticket_types.id', 'ticket_types.name', 'ticket_types.color')
+            ->orderByDesc('sold_count')
+            ->get();
+
+        $byOnline = [];
+        $byDoor = [];
+        foreach ($bySourceAndType as $row) {
+            $entry = [
+                'ticket_type_id' => (int) $row->ticket_type_id,
+                'name' => (string) $row->name,
+                'color' => $row->color ?? null,
+                'sold_count' => (int) $row->sold_count,
+            ];
+            if ($row->bucket === 'door') {
+                $byDoor[] = $entry;
+            } else {
+                $byOnline[] = $entry;
+            }
+        }
+
         return $this->paginated($tickets, function ($ticket) {
             $ticketType = $ticket->ticketType;
             $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
@@ -979,6 +1048,12 @@ class EventsController extends BaseController
                 'checked_in' => $checkedInCount,
                 'not_checked_in' => $totalTickets - $checkedInCount,
                 'check_in_rate' => $totalTickets > 0 ? round(($checkedInCount / $totalTickets) * 100, 1) : 0,
+                'online_count' => $onlineCount,
+                'door_count' => $doorCount,
+                'by_source_and_type' => [
+                    'online' => $byOnline,
+                    'door' => $byDoor,
+                ],
             ],
         ]);
     }
