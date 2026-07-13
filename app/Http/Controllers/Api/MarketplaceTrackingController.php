@@ -203,6 +203,32 @@ class MarketplaceTrackingController extends Controller
             ]);
         }
 
+        // Etapa 5 — server-side dispatch to GA4 Measurement Protocol
+        // and TikTok Events API. Both use tracking_integrations rows
+        // with encrypted credentials (api_secret / access_token) and
+        // apply per-provider organizer→marketplace fallback so a
+        // marketplace-level config still fires on organizer pages
+        // when the organizer left that provider blank.
+        try {
+            $this->dispatchToGa4Mp($event, $request);
+        } catch (\Throwable $e) {
+            \Log::warning('GA4 MP bridge dispatch failed', [
+                'core_event_id' => $event->id,
+                'event_type' => $event->event_type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            $this->dispatchToTiktokEventsApi($event, $request);
+        } catch (\Throwable $e) {
+            \Log::warning('TikTok EAPI bridge dispatch failed', [
+                'core_event_id' => $event->id,
+                'event_type' => $event->event_type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'event_id' => $event->id,
@@ -322,6 +348,297 @@ class MarketplaceTrackingController extends Controller
             'tracking_event',
             (string) $event->id,
         );
+    }
+
+    /**
+     * Resolve the tracking_integrations row that governs server-side
+     * dispatch for a provider on this event. Per-provider fallback
+     * matches the browser overlay logic in ConfigController::organizerTrackingScripts:
+     * organizer's row wins when it has both a provider ID and a stored
+     * server-side credential; otherwise the marketplace-level row (rows
+     * with marketplace_organizer_id = NULL) is used. Returns null when
+     * neither has server-side credentials — dispatch is skipped silently.
+     *
+     * Cached 60s to avoid a double-hit on every event on high-traffic pages.
+     */
+    protected function resolveTrackingIntegration(
+        string $provider,
+        ?int $marketplaceOrganizerId,
+        ?int $marketplaceClientId
+    ): ?\App\Models\TrackingIntegration {
+        $cacheKey = "tracking_int_srv:{$provider}:o:" . ((int) $marketplaceOrganizerId)
+            . ":c:" . ((int) $marketplaceClientId);
+
+        $resolved = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($provider, $marketplaceOrganizerId, $marketplaceClientId) {
+            if ($marketplaceOrganizerId) {
+                $organizerRow = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $marketplaceOrganizerId)
+                    ->where('provider', $provider)
+                    ->where('enabled', true)
+                    ->first();
+
+                // Organizer wins when it has both ID + credential.
+                if ($organizerRow && $organizerRow->hasServerSideCredentials()) {
+                    return $organizerRow->id;
+                }
+
+                // If the organizer has a provider ID (browser pixel
+                // active) but no server-side credential, we MUST NOT
+                // fall back to marketplace — that would post events to
+                // a DIFFERENT GA4 property / TikTok pixel than the one
+                // the browser is initializing. Better to send nothing
+                // server-side than to split the same funnel across two
+                // reporting accounts.
+                if ($organizerRow && filled($organizerRow->getProviderId())) {
+                    return null;
+                }
+            }
+
+            if ($marketplaceClientId) {
+                $marketplaceRow = \App\Models\TrackingIntegration::where('marketplace_client_id', $marketplaceClientId)
+                    ->whereNull('marketplace_organizer_id')
+                    ->where('provider', $provider)
+                    ->where('enabled', true)
+                    ->first();
+
+                if ($marketplaceRow && $marketplaceRow->hasServerSideCredentials()) {
+                    return $marketplaceRow->id;
+                }
+            }
+
+            return null;
+        });
+
+        return $resolved ? \App\Models\TrackingIntegration::find($resolved) : null;
+    }
+
+    /**
+     * Look up the marketplace client id for a marketplace_event_id.
+     * Cached 5min because it never changes for a given event id.
+     * Returns null on global pages that don't carry an event id (home,
+     * listing, search).
+     */
+    protected function resolveMarketplaceClientId(Request $request, ?int $marketplaceEventId): ?int
+    {
+        $fromRequest = $request->input('marketplace_client_id');
+        if (filled($fromRequest)) {
+            return (int) $fromRequest;
+        }
+
+        if ($client = $request->attributes->get('marketplace_client')) {
+            return (int) $client->id;
+        }
+
+        if ($marketplaceEventId) {
+            return \Illuminate\Support\Facades\Cache::remember(
+                "mkt_client_of_event:{$marketplaceEventId}",
+                300,
+                function () use ($marketplaceEventId) {
+                    return \DB::table('events')->where('id', $marketplaceEventId)->value('marketplace_client_id')
+                        ?? \DB::table('marketplace_events')->where('id', $marketplaceEventId)->value('marketplace_client_id');
+                }
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve the organizer id for a marketplace_event_id. Same table
+     * probe pattern as dispatchToFacebookCapi() — kept as a helper so
+     * the two other dispatchers reuse it.
+     */
+    protected function resolveMarketplaceOrganizerId(?int $marketplaceEventId): ?int
+    {
+        if (!$marketplaceEventId) {
+            return null;
+        }
+        return \Illuminate\Support\Facades\Cache::remember(
+            "mkt_org_of_event:{$marketplaceEventId}",
+            300,
+            function () use ($marketplaceEventId) {
+                return \DB::table('events')->where('id', $marketplaceEventId)->value('marketplace_organizer_id')
+                    ?? \DB::table('marketplace_events')->where('id', $marketplaceEventId)->value('marketplace_organizer_id');
+            }
+        );
+    }
+
+    /**
+     * Server-side GA4 Measurement Protocol bridge. Unlike Meta CAPI,
+     * this ALSO fires on global marketplace pages (home, listing) when
+     * the marketplace has a GA4 property + api_secret configured —
+     * because those pages are legitimate content for the marketplace's
+     * own analytics account.
+     */
+    protected function dispatchToGa4Mp(CoreCustomerEvent $event, Request $request): void
+    {
+        $marketplaceEventId = $event->marketplace_event_id ?? $request->input('marketplace_event_id');
+        $organizerId = $this->resolveMarketplaceOrganizerId((int) $marketplaceEventId ?: null);
+        $clientId = $this->resolveMarketplaceClientId($request, (int) $marketplaceEventId ?: null);
+
+        $integration = $this->resolveTrackingIntegration('ga4', $organizerId, $clientId);
+        if (!$integration) {
+            return;
+        }
+
+        $params = $this->buildGa4Params($event);
+        $userProperties = $this->buildGa4UserProperties($event, $request);
+
+        // client_id for GA4 = stable per-user identifier; visitor_id is
+        // our internal fingerprint (sha256 of ip+ua+lang). GA4 accepts
+        // any string; keeping it aligned with our fingerprint means
+        // reports match our internal analytics.
+        $ga4ClientId = $event->visitor_id ?: (string) Str::uuid();
+
+        \App\Jobs\SendGa4MpEventJob::dispatch(
+            $integration->id,
+            $ga4ClientId,
+            (string) $event->event_type,
+            $params,
+            $userProperties,
+        );
+    }
+
+    /**
+     * Server-side TikTok Events API bridge. Deduplicates against the
+     * browser ttq.track() call via `client_event_id` when the browser
+     * supplied one — otherwise falls back to a stable server-generated
+     * id so retries never fire twice.
+     */
+    protected function dispatchToTiktokEventsApi(CoreCustomerEvent $event, Request $request): void
+    {
+        $marketplaceEventId = $event->marketplace_event_id ?? $request->input('marketplace_event_id');
+        $organizerId = $this->resolveMarketplaceOrganizerId((int) $marketplaceEventId ?: null);
+        $clientId = $this->resolveMarketplaceClientId($request, (int) $marketplaceEventId ?: null);
+
+        $integration = $this->resolveTrackingIntegration('tiktok', $organizerId, $clientId);
+        if (!$integration) {
+            return;
+        }
+
+        $clientEventId = $request->input('client_event_id');
+        $finalEventId = $clientEventId
+            ? (string) $clientEventId
+            : 'srv_tt_' . $event->id;
+
+        $userData = $this->buildTiktokUserData($event, $request);
+        $properties = $this->buildTiktokProperties($event);
+        $page = array_filter([
+            'url' => $event->page_url ?: null,
+            'referrer' => $event->referrer ?: null,
+        ]);
+
+        \App\Jobs\SendTiktokEventsApiJob::dispatch(
+            $integration->id,
+            (string) $event->event_type,
+            $finalEventId,
+            $userData,
+            $properties,
+            $page,
+            null,
+        );
+    }
+
+    /**
+     * Build GA4 MP `params` object from our core event fields.
+     * Reference: GA4 recommended event schema.
+     */
+    protected function buildGa4Params(CoreCustomerEvent $event): array
+    {
+        $params = [];
+
+        if ($event->page_url) {
+            $params['page_location'] = $event->page_url;
+        }
+        if ($event->page_title) {
+            $params['page_title'] = $event->page_title;
+        }
+
+        if ($event->event_value !== null) {
+            $params['value'] = (float) $event->event_value;
+        }
+        if ($event->currency) {
+            $params['currency'] = $event->currency;
+        }
+
+        if ($event->content_id) {
+            $params['items'] = [array_filter([
+                'item_id' => (string) $event->content_id,
+                'item_name' => $event->content_name ?: null,
+                'item_category' => $event->content_type ?: null,
+                'quantity' => $event->quantity ? (int) $event->quantity : 1,
+                'price' => $event->event_value !== null ? (float) $event->event_value : null,
+            ])];
+        }
+
+        // purchase-specific: transaction_id is required by GA4 to dedupe
+        // and to power ecommerce reports. Use the order_id when present.
+        if ($event->event_type === 'purchase' && $event->order_id) {
+            $params['transaction_id'] = (string) $event->order_id;
+        }
+
+        return $params;
+    }
+
+    /**
+     * User properties in GA4 are user-scoped attributes (not event-scoped).
+     * Only email-hash goes here — sensitive PII must NOT be sent as-is
+     * to MP; GA4 enhanced conversions handle hashing on their side but
+     * for the generic MP call we send only the visitor id / language.
+     */
+    protected function buildGa4UserProperties(CoreCustomerEvent $event, Request $request): array
+    {
+        return array_filter([
+            'visitor_id' => $event->visitor_id ?: null,
+            'session_id' => $event->session_id ?: null,
+            'locale' => $request->header('Accept-Language') ? substr((string) $request->header('Accept-Language'), 0, 5) : null,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * Build TikTok Events API `user` object. Email, phone, external_id
+     * will be SHA-256 hashed inside the client before send (TikTok
+     * requirement). Non-PII identifiers (ttclid, ttp, ip, user_agent)
+     * pass through unhashed.
+     */
+    protected function buildTiktokUserData(CoreCustomerEvent $event, Request $request): array
+    {
+        return array_filter([
+            'email' => $request->input('email') ?? $request->input('customer_email') ?: null,
+            'phone' => $request->input('phone') ?? $request->input('customer_phone') ?: null,
+            'external_id' => $event->visitor_id ?: null,
+            'ttclid' => $event->ttclid ?? null,
+            'ttp' => $request->input('ttp') ?: null,
+            'ip' => $event->ip_address ?: $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * TikTok event properties: value, currency, contents, content_ids.
+     * Purchase adds `content_type: product_group` per TikTok's spec.
+     */
+    protected function buildTiktokProperties(CoreCustomerEvent $event): array
+    {
+        $props = [];
+
+        if ($event->event_value !== null) {
+            $props['value'] = (float) $event->event_value;
+        }
+        if ($event->currency) {
+            $props['currency'] = $event->currency;
+        }
+        if ($event->content_id) {
+            $props['content_id'] = (string) $event->content_id;
+            $props['content_type'] = $event->content_type ?: 'product';
+            if ($event->content_name) {
+                $props['content_name'] = $event->content_name;
+            }
+        }
+        if ($event->quantity) {
+            $props['quantity'] = (int) $event->quantity;
+        }
+
+        return $props;
     }
 
     protected function buildCapiUserData(CoreCustomerEvent $event, Request $request): array

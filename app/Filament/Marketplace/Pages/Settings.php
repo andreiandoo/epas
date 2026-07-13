@@ -217,6 +217,12 @@ class Settings extends Page
      * Persist the marketplace-level tracking rows. Called from save().
      * Uses the exact same updateOrCreate composite key as
      * TrackingSettings::save() so both screens stay in sync.
+     *
+     * Server-side credentials (GA4 api_secret, TikTok access_token) are
+     * encrypted via TrackingIntegration::setCredential(). We only write
+     * them when the admin actually typed a new value — the password
+     * inputs use dehydrated(fn ($state) => filled($state)) so an
+     * unchanged field never reaches this method.
      */
     private function saveTrackingRows(array $data, $marketplace): void
     {
@@ -224,29 +230,47 @@ class Settings extends Page
             $toggleEnabled = (bool) ($data["tracking_{$provider}_enabled"] ?? false);
             $providerId = trim((string) ($data["tracking_{$provider}_id"] ?? ''));
 
-            $settings = [
+            // Load the existing row FIRST so we can preserve encrypted
+            // credentials the admin didn't retype. Rewriting the entire
+            // settings blob without this would wipe api_secret /
+            // access_token on every save.
+            $row = TrackingIntegration::firstOrNew([
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => null,
+                'provider' => $provider,
+            ]);
+
+            $existingSettings = $row->settings ?? [];
+
+            $settings = array_merge($existingSettings, [
                 $config['id_field'] => $providerId,
                 'inject_at' => 'head',
                 'page_scope' => 'public',
                 'toggle_enabled' => $toggleEnabled,
-            ];
+            ]);
 
             if ($provider === 'ga4' && !empty($data['tracking_ga4_linker_domains'])) {
                 $settings['linker_domains'] = trim((string) $data['tracking_ga4_linker_domains']);
+            } elseif ($provider === 'ga4') {
+                unset($settings['linker_domains']);
             }
 
-            TrackingIntegration::updateOrCreate(
-                [
-                    'marketplace_client_id' => $marketplace->id,
-                    'marketplace_organizer_id' => null,
-                    'provider' => $provider,
-                ],
-                [
-                    'enabled' => $toggleEnabled && $providerId !== '',
-                    'consent_category' => $config['consent'],
-                    'settings' => $settings,
-                ]
-            );
+            $row->consent_category = $config['consent'];
+            $row->enabled = $toggleEnabled && $providerId !== '';
+            $row->settings = $settings;
+            $row->save();
+
+            // Now write the server-side credential — setCredential does
+            // the encryption + persists the settings JSON. Done after
+            // the initial save() so the row has an id.
+            if ($provider === 'ga4' && isset($data['tracking_ga4_api_secret']) && filled($data['tracking_ga4_api_secret'])) {
+                $row->setCredential('api_secret', (string) $data['tracking_ga4_api_secret']);
+                $row->save();
+            }
+            if ($provider === 'tiktok' && isset($data['tracking_tiktok_access_token']) && filled($data['tracking_tiktok_access_token'])) {
+                $row->setCredential('access_token', (string) $data['tracking_tiktok_access_token']);
+                $row->save();
+            }
         }
     }
 
@@ -600,7 +624,8 @@ class Settings extends Page
 
                                             Forms\Components\Toggle::make('tracking_tiktok_enabled')
                                                 ->label('TikTok Pixel')
-                                                ->helperText('Enable TikTok Pixel'),
+                                                ->helperText('Enable TikTok Pixel')
+                                                ->live(),
                                             Forms\Components\TextInput::make('tracking_tiktok_id')
                                                 ->label('TikTok Pixel ID')
                                                 ->placeholder('CXXXXXXXXXXXXXXXXX')
@@ -622,6 +647,38 @@ class Settings extends Page
                                             ->placeholder('domain-a.com, subdomain.domain-b.ro')
                                             ->helperText('Optional CSV of domains for GA4 cross-domain measurement. Leave empty if you only have one domain.')
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_ga4_enabled')),
+
+                                        // Server-side conversion credentials. When these are set,
+                                        // the marketplace tracking bridge posts events to GA4
+                                        // Measurement Protocol / TikTok Events API in addition
+                                        // to the browser pixel — so tracking survives adblockers,
+                                        // iOS ATT, and cookie deletion. These credentials are
+                                        // encrypted at rest (Laravel Crypt + APP_KEY).
+                                        Forms\Components\Section::make('Server-side conversion APIs (fallback for organizers without their own credentials)')
+                                            ->description('Optional. Fill only when you want ambilet/bilete.online to send events server-side under YOUR own GA4 property / TikTok pixel when an organizer has not configured their own. Leave empty to disable server-side dispatch for that provider.')
+                                            ->collapsible()
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\TextInput::make('tracking_ga4_api_secret')
+                                                    ->label('GA4 Measurement Protocol API Secret')
+                                                    ->password()
+                                                    ->revealable()
+                                                    ->autocomplete('new-password')
+                                                    ->placeholder('••••••••')
+                                                    ->helperText('GA4 Admin → Data Streams → your web stream → Measurement Protocol API secrets. Leave empty to keep existing.')
+                                                    ->dehydrated(fn ($state) => filled($state))
+                                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_ga4_enabled')),
+
+                                                Forms\Components\TextInput::make('tracking_tiktok_access_token')
+                                                    ->label('TikTok Events API Access Token')
+                                                    ->password()
+                                                    ->revealable()
+                                                    ->autocomplete('new-password')
+                                                    ->placeholder('••••••••')
+                                                    ->helperText('Events Manager → Settings → Events API → Generate access token. Leave empty to keep existing.')
+                                                    ->dehydrated(fn ($state) => filled($state))
+                                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_tiktok_enabled')),
+                                            ]),
                                     ]),
 
                                 // Country geo importer — one-click bootstrap for a

@@ -251,23 +251,38 @@ class EditOrganizer extends EditRecord
             $enabled = (bool) ($this->trackingFormState["{$provider}_enabled"] ?? false);
             $providerId = trim((string) ($this->trackingFormState["{$provider}_id"] ?? ''));
 
-            \App\Models\TrackingIntegration::updateOrCreate(
-                [
-                    'marketplace_organizer_id' => $this->record->id,
-                    'provider' => $provider,
-                ],
-                [
-                    'marketplace_client_id' => $marketplaceClientId,
-                    'enabled' => $enabled && $providerId !== '',
-                    'consent_category' => $cfg['consent_category'],
-                    'settings' => [
-                        $cfg['id_field'] => $providerId,
-                        'inject_at' => 'head',
-                        'page_scope' => 'public',
-                        'toggle_enabled' => $enabled,
-                    ],
-                ]
-            );
+            // firstOrNew (not updateOrCreate) so existing encrypted
+            // credentials (api_secret / access_token) survive the save.
+            // Rewriting settings from scratch on every save would wipe
+            // them silently.
+            $row = \App\Models\TrackingIntegration::firstOrNew([
+                'marketplace_organizer_id' => $this->record->id,
+                'provider' => $provider,
+            ]);
+
+            $existingSettings = $row->settings ?? [];
+
+            $row->marketplace_client_id = $marketplaceClientId;
+            $row->consent_category = $cfg['consent_category'];
+            $row->enabled = $enabled && $providerId !== '';
+            $row->settings = array_merge($existingSettings, [
+                $cfg['id_field'] => $providerId,
+                'inject_at' => 'head',
+                'page_scope' => 'public',
+                'toggle_enabled' => $enabled,
+            ]);
+            $row->save();
+
+            // Server-side credentials — only touched when the admin
+            // typed a new value (dehydrated fields drop empty state).
+            if ($provider === 'ga4' && filled($this->trackingFormState['ga4_api_secret'] ?? null)) {
+                $row->setCredential('api_secret', (string) $this->trackingFormState['ga4_api_secret']);
+                $row->save();
+            }
+            if ($provider === 'tiktok' && filled($this->trackingFormState['tiktok_access_token'] ?? null)) {
+                $row->setCredential('access_token', (string) $this->trackingFormState['tiktok_access_token']);
+                $row->save();
+            }
         }
     }
 

@@ -779,6 +779,41 @@ class OrganizerResource extends Resource
                                     ]),
                                 ]),
 
+                            // Server-side Conversion APIs (GA4 MP + TikTok EAPI) —
+                            // optional per-organizer credentials. When set, the
+                            // marketplace tracking bridge forwards events to
+                            // Google Analytics and TikTok directly from Laravel,
+                            // bypassing adblockers / iOS ATT / cookie deletion.
+                            // Meta CAPI has its own dedicated section below with
+                            // its own connection table (facebook_capi_connections).
+                            Section::make('Conversions API GA4 + TikTok (Server-Side, opțional)')
+                                ->icon('heroicon-o-bolt')
+                                ->description('Trimite evenimente către GA4 Measurement Protocol și TikTok Events API server-side, pe lângă pixelul din browser. Recomandat pentru capturarea evenimentelor blocate de adblockers. Credentialele se salvează criptate în DB. Când sunt goale aici, fallback-ul folosește credentialele setate la nivel de marketplace (Setări → Personalization → Tracking & Pixels).')
+                                ->collapsible()
+                                ->collapsed()
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
+                                ->schema([
+                                    Forms\Components\TextInput::make('tracking_integrations.ga4_api_secret')
+                                        ->label('GA4 Measurement Protocol API Secret')
+                                        ->password()
+                                        ->revealable()
+                                        ->autocomplete('new-password')
+                                        ->placeholder('••••••••')
+                                        ->helperText('GA4 Admin → Data Streams → your web stream → Measurement Protocol API secrets. Lasă gol pentru a păstra valoarea existentă. Necesar doar dacă vrei GA4 server-side pentru acest organizator; altfel se folosește tokenul marketplace-ului (dacă e setat).')
+                                        ->dehydrated(fn ($state) => filled($state))
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.ga4_enabled')),
+
+                                    Forms\Components\TextInput::make('tracking_integrations.tiktok_access_token')
+                                        ->label('TikTok Events API Access Token')
+                                        ->password()
+                                        ->revealable()
+                                        ->autocomplete('new-password')
+                                        ->placeholder('••••••••')
+                                        ->helperText('Events Manager → Settings → Events API → Generate access token. Lasă gol pentru a păstra valoarea existentă. Necesar doar dacă vrei TikTok server-side pentru acest organizator; altfel se folosește tokenul marketplace-ului (dacă e setat).')
+                                        ->dehydrated(fn ($state) => filled($state))
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.tiktok_enabled')),
+                                ]),
+
                             Section::make('Facebook Conversions API (Server-Side)')
                                 ->icon('heroicon-o-bolt')
                                 ->description('Tracking server-side direct către Meta Graph API. Trece de adblockere și restricțiile iOS 14.5+ ATT pentru capturarea aproape 100% a conversiilor. Funcționează independent de Meta Pixel browser-side. Pentru deduplicare optimă, folosește același Pixel ID ca la Meta Pixel.')
