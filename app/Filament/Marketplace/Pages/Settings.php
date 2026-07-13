@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Pages;
 
+use App\Models\TrackingIntegration;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -40,7 +41,9 @@ class Settings extends Page
             $smtp = $marketplace->smtp_settings ?? [];
             $txSmtp = $marketplace->transactional_smtp_settings ?? [];
 
-            $this->form->fill([
+            $trackingFill = $this->loadTrackingFill($marketplace);
+
+            $this->form->fill(array_merge($trackingFill, [
                 // Business Details
                 'company_name' => $marketplace->company_name,
                 'cui' => $marketplace->cui,
@@ -152,7 +155,98 @@ class Settings extends Page
                     ])
                     ->values()
                     ->all(),
-            ]);
+            ]));
+        }
+    }
+
+    /**
+     * Marketplace-level pixel provider list. Keep in sync with
+     * ConfigController::generateTrackingScript() and the "Pixeli organizator"
+     * section on OrganizerResource (form key names differ across the two
+     * screens but the provider slugs + id_field values must match).
+     */
+    private function getTrackingProviders(): array
+    {
+        return [
+            'ga4'        => ['consent' => 'analytics',  'id_field' => 'measurement_id'],
+            'gtm'        => ['consent' => 'analytics',  'id_field' => 'container_id'],
+            'meta'       => ['consent' => 'marketing',  'id_field' => 'pixel_id'],
+            'tiktok'     => ['consent' => 'marketing',  'id_field' => 'pixel_id'],
+            'google_ads' => ['consent' => 'marketing',  'id_field' => 'conversion_id'],
+        ];
+    }
+
+    /**
+     * Build the mount() fill values for the marketplace-level tracking
+     * fields by reading the shared tracking_integrations rows. Rows are
+     * scoped to (marketplace_client_id = X, marketplace_organizer_id = NULL)
+     * — the same scope Filament\Marketplace\Pages\TrackingSettings writes to,
+     * so both screens edit the same data.
+     */
+    private function loadTrackingFill($marketplace): array
+    {
+        $rows = TrackingIntegration::where('marketplace_client_id', $marketplace->id)
+            ->whereNull('marketplace_organizer_id')
+            ->get()
+            ->keyBy('provider');
+
+        $fill = [];
+
+        foreach ($this->getTrackingProviders() as $provider => $config) {
+            $row = $rows->get($provider);
+            $settings = $row?->getSettings() ?? [];
+
+            // toggle_enabled in settings JSON is the persisted UI toggle
+            // state. `enabled` on the row is TRUE only when toggle is on
+            // AND the provider ID is filled — so we can't rely on it as
+            // the source of truth for whether the user WANTED it enabled
+            // (they might have toggled on but not typed an ID yet).
+            $fill["tracking_{$provider}_enabled"] = (bool) ($settings['toggle_enabled'] ?? $row?->enabled ?? false);
+            $fill["tracking_{$provider}_id"] = $row?->getProviderId() ?? '';
+
+            if ($provider === 'ga4') {
+                $linker = $settings['linker_domains'] ?? '';
+                $fill['tracking_ga4_linker_domains'] = is_array($linker) ? implode(', ', $linker) : (string) $linker;
+            }
+        }
+
+        return $fill;
+    }
+
+    /**
+     * Persist the marketplace-level tracking rows. Called from save().
+     * Uses the exact same updateOrCreate composite key as
+     * TrackingSettings::save() so both screens stay in sync.
+     */
+    private function saveTrackingRows(array $data, $marketplace): void
+    {
+        foreach ($this->getTrackingProviders() as $provider => $config) {
+            $toggleEnabled = (bool) ($data["tracking_{$provider}_enabled"] ?? false);
+            $providerId = trim((string) ($data["tracking_{$provider}_id"] ?? ''));
+
+            $settings = [
+                $config['id_field'] => $providerId,
+                'inject_at' => 'head',
+                'page_scope' => 'public',
+                'toggle_enabled' => $toggleEnabled,
+            ];
+
+            if ($provider === 'ga4' && !empty($data['tracking_ga4_linker_domains'])) {
+                $settings['linker_domains'] = trim((string) $data['tracking_ga4_linker_domains']);
+            }
+
+            TrackingIntegration::updateOrCreate(
+                [
+                    'marketplace_client_id' => $marketplace->id,
+                    'marketplace_organizer_id' => null,
+                    'provider' => $provider,
+                ],
+                [
+                    'enabled' => $toggleEnabled && $providerId !== '',
+                    'consent_category' => $config['consent'],
+                    'settings' => $settings,
+                ]
+            );
         }
     }
 
@@ -458,6 +552,77 @@ class Settings extends Page
                                             ])
                                             ->default('default'),
                                     ])->columns(3),
+
+                                // Marketplace-level tracking pixels. When an organizer
+                                // has its own pixel of the same provider configured
+                                // (Marketplace → Organizatori → edit → Bilete & Termeni
+                                // → Pixeli organizator), the organizer's ID takes
+                                // precedence and the marketplace one is skipped for
+                                // that provider. For providers the organizer has NOT
+                                // configured, these marketplace-level pixels fill in
+                                // — so page_view / purchase never stops being tracked
+                                // just because a specific organizer forgot to set
+                                // their TikTok/GA4 up.
+                                SC\Section::make('Tracking & Pixels marketplace (fallback)')
+                                    ->description('Aceste pixeluri se declanșează pe toate paginile marketplace-ului. Dacă un organizator are propriul ID setat pentru un provider (GA4, GTM etc.), pixelul organizatorului îl înlocuiește pe cel marketplace pentru paginile lui. Pe paginile fără context de organizator (home, listare, etc.) tot pixelul marketplace se folosește.')
+                                    ->icon('heroicon-o-chart-bar')
+                                    ->collapsible()
+                                    ->collapsed()
+                                    ->schema([
+                                        SC\Grid::make(2)->schema([
+                                            Forms\Components\Toggle::make('tracking_ga4_enabled')
+                                                ->label('Google Analytics 4')
+                                                ->helperText('Enable GA4 tracking')
+                                                ->live(),
+                                            Forms\Components\TextInput::make('tracking_ga4_id')
+                                                ->label('GA4 Measurement ID')
+                                                ->placeholder('G-XXXXXXXXXX')
+                                                ->maxLength(20)
+                                                ->helperText('Format: G-XXXXXXXXXX'),
+
+                                            Forms\Components\Toggle::make('tracking_gtm_enabled')
+                                                ->label('Google Tag Manager')
+                                                ->helperText('Enable GTM container'),
+                                            Forms\Components\TextInput::make('tracking_gtm_id')
+                                                ->label('GTM Container ID')
+                                                ->placeholder('GTM-XXXXXX')
+                                                ->maxLength(15)
+                                                ->helperText('Format: GTM-XXXXXX'),
+
+                                            Forms\Components\Toggle::make('tracking_meta_enabled')
+                                                ->label('Meta Pixel (Facebook)')
+                                                ->helperText('Enable Meta Pixel'),
+                                            Forms\Components\TextInput::make('tracking_meta_id')
+                                                ->label('Meta Pixel ID')
+                                                ->placeholder('1234567890123456')
+                                                ->maxLength(20)
+                                                ->helperText('Format: 15-16 digit Pixel ID'),
+
+                                            Forms\Components\Toggle::make('tracking_tiktok_enabled')
+                                                ->label('TikTok Pixel')
+                                                ->helperText('Enable TikTok Pixel'),
+                                            Forms\Components\TextInput::make('tracking_tiktok_id')
+                                                ->label('TikTok Pixel ID')
+                                                ->placeholder('CXXXXXXXXXXXXXXXXX')
+                                                ->maxLength(25)
+                                                ->helperText('Format: C followed by 17 characters'),
+
+                                            Forms\Components\Toggle::make('tracking_google_ads_enabled')
+                                                ->label('Google Ads')
+                                                ->helperText('Enable Google Ads conversion tracking'),
+                                            Forms\Components\TextInput::make('tracking_google_ads_id')
+                                                ->label('Google Ads Conversion ID')
+                                                ->placeholder('AW-XXXXXXXXX')
+                                                ->maxLength(25)
+                                                ->helperText('Format: AW-XXXXXXXXX'),
+                                        ]),
+
+                                        Forms\Components\TextInput::make('tracking_ga4_linker_domains')
+                                            ->label('GA4 cross-domain linker (optional)')
+                                            ->placeholder('domain-a.com, subdomain.domain-b.ro')
+                                            ->helperText('Optional CSV of domains for GA4 cross-domain measurement. Leave empty if you only have one domain.')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_ga4_enabled')),
+                                    ]),
 
                                 // Country geo importer — one-click bootstrap for a
                                 // marketplace's region/county/city catalogue from the
@@ -1113,6 +1278,8 @@ class Settings extends Page
         }
 
         $marketplace->update($update);
+
+        $this->saveTrackingRows($data, $marketplace);
 
         \Log::info('[Settings::save] done', [
             'marketplace_id' => $marketplace->id,

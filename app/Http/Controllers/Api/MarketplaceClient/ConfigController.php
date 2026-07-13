@@ -224,17 +224,50 @@ class ConfigController extends BaseController
     }
 
     /**
-     * Get tracking scripts for a specific organizer's event pages
+     * Get tracking scripts for a specific organizer's event pages.
+     *
+     * Fallback semantics: for each provider (ga4/gtm/meta/tiktok/google_ads)
+     * we prefer the organizer's own integration when it has a non-empty
+     * provider ID; otherwise we fall back to the marketplace-level
+     * integration (marketplace_client_id = X, marketplace_organizer_id
+     * = NULL). This means an organizer that only set up GA4 will still
+     * inherit the marketplace's TikTok / Meta / Google Ads pixels — so
+     * tracking never silently stops just because one dropdown was skipped.
+     *
+     * If the same provider is enabled on BOTH levels, only the organizer's
+     * fires. Otherwise the browser would end up with two `gtag('config')` /
+     * `fbq('init')` calls with different IDs, splitting reporting across two
+     * accounts, which is basically never what an organizer wants.
      */
     public function organizerTrackingScripts(Request $request, int $organizerId): JsonResponse
     {
         $client = $this->requireClient($request);
 
-        $integrations = TrackingIntegration::where('marketplace_organizer_id', $organizerId)
+        $organizerRows = TrackingIntegration::where('marketplace_organizer_id', $organizerId)
             ->where('enabled', true)
-            ->get();
+            ->get()
+            ->keyBy('provider');
 
-        return $this->success($this->buildScriptResponse($integrations, $client));
+        $marketplaceRows = TrackingIntegration::where('marketplace_client_id', $client->id)
+            ->whereNull('marketplace_organizer_id')
+            ->where('enabled', true)
+            ->get()
+            ->keyBy('provider');
+
+        $merged = collect();
+        foreach (['ga4', 'gtm', 'meta', 'tiktok', 'google_ads'] as $provider) {
+            $organizerRow = $organizerRows->get($provider);
+            if ($organizerRow && !empty($organizerRow->getProviderId())) {
+                $merged->push($organizerRow);
+                continue;
+            }
+            $marketplaceRow = $marketplaceRows->get($provider);
+            if ($marketplaceRow && !empty($marketplaceRow->getProviderId())) {
+                $merged->push($marketplaceRow);
+            }
+        }
+
+        return $this->success($this->buildScriptResponse($merged, $client));
     }
 
     /**
@@ -292,8 +325,24 @@ class ConfigController extends BaseController
             'gtm' => $this->generateGTMScript($providerId),
             'meta' => $this->generateMetaPixelScript($providerId, $consentKey),
             'tiktok' => $this->generateTikTokPixelScript($providerId, $consentKey),
+            'google_ads' => $this->generateGoogleAdsScript($providerId),
             default => '',
         };
+    }
+
+    protected function generateGoogleAdsScript(string $conversionId): string
+    {
+        $id = htmlspecialchars($conversionId, ENT_QUOTES, 'UTF-8');
+
+        return <<<HTML
+<!-- Google Ads -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={$id}"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','{$id}');
+</script>
+<!-- End Google Ads -->
+HTML;
     }
 
     protected function generateGA4Script(string $measurementId, array $settings = []): string
