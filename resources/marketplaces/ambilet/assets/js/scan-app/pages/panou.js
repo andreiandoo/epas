@@ -112,13 +112,36 @@
     var capacityPct= capacity > 0 ? (sold / capacity) * 100 : 0;
     var barWidth   = Math.min(rate, 100);
 
+    // Mockup grid — 4 tappable cards. The 4 primary IDs (entered,
+    // sold, revenue, available) drive the visible values; the legacy
+    // total / remaining / capacity / checkedin-pct IDs are kept as
+    // hidden no-op targets in panou.php so this write path stays
+    // null-safe even if renderStats runs before layout mounts (Reverb
+    // push race with the first paint).
     $('scanapp-stat-entered').textContent     = entered.toLocaleString('ro-RO');
-    $('scanapp-stat-total').textContent       = sold.toLocaleString('ro-RO');
-    $('scanapp-checkedin-pct').textContent    = rate.toFixed(1) + '%';
-    $('scanapp-entered-bar').style.width      = barWidth.toFixed(1) + '%';
-
     $('scanapp-stat-sold').textContent        = sold.toLocaleString('ro-RO');
     $('scanapp-stat-revenue').textContent     = formatLei(revenue);
+
+    // Disponibile derives from event capacity minus sold. When there
+    // IS no known capacity (event.capacity null AND all ticket_types
+    // capped at -1 unlimited) we show a dash instead of a misleading
+    // "0 bilete disponibile". Falls back to remaining=sold-entered
+    // as a last-resort so pre-fix backends still show *something*.
+    var availableEl = $('scanapp-stat-available');
+    if (availableEl) {
+      if (capacity > 0) {
+        availableEl.textContent = Math.max(0, capacity - sold).toLocaleString('ro-RO');
+      } else {
+        availableEl.textContent = '—';
+      }
+    }
+
+    // Hidden legacy fields — kept alive for backwards compat with any
+    // consumer that still reads them; visible layout no longer uses.
+    $('scanapp-stat-total').textContent       = sold.toLocaleString('ro-RO');
+    $('scanapp-checkedin-pct').textContent    = rate.toFixed(1) + '%';
+    var enteredBar = $('scanapp-entered-bar');
+    if (enteredBar && enteredBar.style) enteredBar.style.width = barWidth.toFixed(1) + '%';
     $('scanapp-stat-remaining').textContent   = remaining.toLocaleString('ro-RO');
     $('scanapp-stat-capacity').textContent    = capacityPct.toFixed(1) + '%';
 
@@ -455,10 +478,16 @@
     document.querySelectorAll('[data-modal]').forEach(function (el) {
       el.addEventListener('click', function () {
         var m = el.getAttribute('data-modal');
+        // The new mockup grid exposes "scanned" (Scanați) alongside
+        // the legacy modal keys. Reuse the entered modal for scanned
+        // — same underlying data (checked_in per ticket type), the
+        // label difference is purely UX-facing.
+        if (m === 'scanned')   openTicketTypesModal('entered');
         if (m === 'entered')   openTicketTypesModal('entered');
         if (m === 'sold')      openTicketTypesModal('sold');
         if (m === 'revenue')   openTicketTypesModal('revenue');
         if (m === 'remaining') openTicketTypesModal('remaining');
+        if (m === 'available') openTicketTypesModal('remaining');
       });
     });
     $('scanapp-sheet-close').addEventListener('click', closeSheet);
