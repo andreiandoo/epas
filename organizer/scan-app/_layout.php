@@ -78,7 +78,7 @@ $tabs = [
         apiEnv: <?= json_encode(API_ENV) ?>,
         coreUrl: <?= json_encode(CORE_URL) ?>,
         storageUrl: <?= json_encode(STORAGE_URL) ?>,
-        version: '0.1.0'
+        version: '0.2.0'
       };
     </script>
 </head>
