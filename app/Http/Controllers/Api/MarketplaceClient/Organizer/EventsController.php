@@ -951,7 +951,7 @@ class EventsController extends BaseController
             })
             ->selectRaw("
                 CASE
-                    WHEN orders.source = 'pos_app' THEN 'door'
+                    WHEN orders.source IN ('pos_app','venue_owner_pos','pos') THEN 'door'
                     ELSE 'online'
                 END AS bucket,
                 COUNT(*) AS c
@@ -1002,7 +1002,7 @@ class EventsController extends BaseController
                     ->orWhere('orders.source', '!=', 'pos_test');
             })
             ->selectRaw("
-                CASE WHEN orders.source = 'pos_app' THEN 'door' ELSE 'online' END AS bucket,
+                CASE WHEN orders.source IN ('pos_app','venue_owner_pos','pos') THEN 'door' ELSE 'online' END AS bucket,
                 ticket_types.id AS ticket_type_id,
                 ticket_types.name AS name,
                 ticket_types.color AS color,
@@ -2976,7 +2976,7 @@ class EventsController extends BaseController
             //   - everything else (marketplace / null) → public website sale
             //     paid via Netopia (counted as online, regardless of which
             //     card the customer used).
-            $isPos = in_array($source, ['pos_app', 'venue_owner_pos'], true);
+            $isPos = in_array($source, ['pos_app', 'venue_owner_pos', 'pos'], true);
 
             // Payment method bucket for the staff report:
             //   - Online (public marketplace orders): always 'online'.

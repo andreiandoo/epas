@@ -1415,7 +1415,7 @@ class ListPayouts extends ListRecords
                 $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
             ->where('status', 'refunded')
-            ->where('source', '!=', 'pos_app')
+            ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
 
         // Net = breakdown net only. Refunds excluded from balance math but

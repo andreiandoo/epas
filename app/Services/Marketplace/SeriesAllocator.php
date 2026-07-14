@@ -175,7 +175,7 @@ class SeriesAllocator
             ->whereIn('tickets.status', ['valid', 'used'])
             ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
             ->where('orders.source', '!=', 'external_import')
-            ->where('orders.source', '!=', 'pos_app')
+            ->whereNotIn('orders.source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
             ->where('orders.source', '!=', 'test_order')
             ->select(
                 'tickets.ticket_type_id',

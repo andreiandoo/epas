@@ -196,7 +196,7 @@ class SalesReportService
                     $q->where(fn ($q2) => $q2->where('event_id', $event->id)
                                               ->orWhere('marketplace_event_id', $event->id))
                       ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                      ->where('source', '!=', 'pos_app');
+                      ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 })
                 ->exists();
 

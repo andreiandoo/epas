@@ -284,7 +284,7 @@ class BillingBreakdown extends Page
         // Order-level totals (order.total). Used for the "valoarea totală
         // a încasărilor" line on the Vânzări cards. Excludes refunded so
         // the number reflects cash-in.
-        $posSources = ['pos_app', 'venue_owner_pos'];
+        $posSources = ['pos_app', 'venue_owner_pos', 'pos'];
         $paidStatuses = ['paid', 'confirmed', 'completed'];
 
         $revenueSplit = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
@@ -297,10 +297,10 @@ class BillingBreakdown extends Page
             ->whereIn('status', $paidStatuses)
             ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw("SUM(CASE WHEN source IN ('pos_app','venue_owner_pos') THEN total ELSE 0 END) as pos_revenue")
-            ->selectRaw("SUM(CASE WHEN source NOT IN ('pos_app','venue_owner_pos') THEN total ELSE 0 END) as online_revenue")
-            ->selectRaw("COUNT(CASE WHEN source IN ('pos_app','venue_owner_pos') THEN 1 END) as pos_orders")
-            ->selectRaw("COUNT(CASE WHEN source NOT IN ('pos_app','venue_owner_pos') THEN 1 END) as online_orders")
+            ->selectRaw("SUM(CASE WHEN source IN ('pos_app','venue_owner_pos','pos') THEN total ELSE 0 END) as pos_revenue")
+            ->selectRaw("SUM(CASE WHEN source NOT IN ('pos_app','venue_owner_pos','pos') THEN total ELSE 0 END) as online_revenue")
+            ->selectRaw("COUNT(CASE WHEN source IN ('pos_app','venue_owner_pos','pos') THEN 1 END) as pos_orders")
+            ->selectRaw("COUNT(CASE WHEN source NOT IN ('pos_app','venue_owner_pos','pos') THEN 1 END) as online_orders")
             ->first();
 
         $onlineRevenue = (float) ($revenueSplit->online_revenue ?? 0);

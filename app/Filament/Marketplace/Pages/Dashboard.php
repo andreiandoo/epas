@@ -373,7 +373,7 @@ class Dashboard extends Page
             $isToday = $reqDate === $maxDate;
             $ttl = $isToday ? 60 : 900;
             $dailyEventReport = Cache::remember(
-                "mp_dash_daily_evt_v4_{$marketplaceId}_{$reqDate}",
+                "mp_dash_daily_evt_v5_{$marketplaceId}_{$reqDate}",
                 $ttl,
                 fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
             );

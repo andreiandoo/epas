@@ -289,7 +289,7 @@ class PayoutsRecomputeDiscounts extends Command
             ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
-                    ->where('source', '!=', 'pos_app');
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 if ($cutoff) {
                     $qq->where('created_at', '<=', $cutoff);
                 }

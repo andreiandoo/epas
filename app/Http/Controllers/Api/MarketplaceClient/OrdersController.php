@@ -1248,7 +1248,7 @@ class OrdersController extends BaseController
         // owner POS sales. They show up as distinct rows in `by_user` via the
         // meta.sold_by label ("Venue: {tenant}" for venue-owner sales) so the
         // organizer can see how much each scanner/venue collected.
-        $posSources = ['pos_app', 'venue_owner_pos'];
+        $posSources = ['pos_app', 'venue_owner_pos', 'pos'];
         $online = $orders->whereNotIn('source', $posSources);
         $pos = $orders->whereIn('source', $posSources);
 
