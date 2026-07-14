@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.2';
+const APP_VERSION = '2.0.3';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -178,7 +178,10 @@ function MainTabs() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onNotificationPress={() => setShowNotifications(true)} />
+      <Header
+        onNotificationPress={() => setShowNotifications(true)}
+        pageTitle={activeTab === 'Reports' ? 'Rapoarte' : (activeTab === 'Settings' ? 'Setări' : null)}
+      />
       {activeTab === 'Dashboard' && (
         <EventSelector onPress={() => setShowEventsModal(true)} />
       )}

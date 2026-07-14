@@ -8,18 +8,20 @@ function StatusBadge({ timeCategory }) {
   const isLive = timeCategory === 'live';
   const isPast = timeCategory === 'past';
 
+  // On the red brand strip the badge sits on a red surface — high-contrast
+  // white-tinted pills read better than the light-mode green/gray variants.
   let label = 'Viitor';
-  let dotColor = colors.textTertiary;
-  let bgColor = colors.surface;
-  let borderColor = colors.border;
-  let textColor = colors.textTertiary;
+  let dotColor = 'rgba(255,255,255,0.7)';
+  let bgColor = 'rgba(255,255,255,0.16)';
+  let borderColor = 'rgba(255,255,255,0.28)';
+  let textColor = colors.white;
 
   if (isLive) {
     label = 'LIVE';
-    dotColor = colors.green;
-    bgColor = colors.greenLight;
-    borderColor = colors.greenBorder;
-    textColor = colors.green;
+    dotColor = '#7CF29A';
+    bgColor = 'rgba(255,255,255,0.16)';
+    borderColor = 'rgba(255,255,255,0.32)';
+    textColor = colors.white;
   } else if (isPast) {
     label = 'Încheiat';
   }
@@ -70,7 +72,7 @@ function ChevronRight() {
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
       <Path
         d="M9 18l6-6-6-6"
-        stroke={colors.textTertiary}
+        stroke="rgba(255,255,255,0.75)"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -155,9 +157,9 @@ export default function EventSelector({ onPress }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.purpleBg,
+    backgroundColor: colors.purple,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.purpleSecondary,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -179,22 +181,22 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: colors.white,
     flexShrink: 1,
   },
   eventDatePrefix: {
-    color: colors.purple,
-    fontWeight: '700',
+    color: colors.white,
+    fontWeight: '800',
   },
   noEventText: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.white,
     marginBottom: 2,
   },
   metaText: {
     fontSize: 12,
-    color: colors.textTertiary,
+    color: 'rgba(255,255,255,0.75)',
     lineHeight: 16,
   },
   statusBadge: {

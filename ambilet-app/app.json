@@ -2,7 +2,7 @@
   "expo": {
     "name": "AmBilet Scan",
     "slug": "ambilet-scan",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -35,7 +35,7 @@
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "pan",
       "package": "com.ambilet.scan",
-      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE", "CAMERA"]
+      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE", "CAMERA", "CALL_PHONE"]
     },
     "web": {
       "favicon": "./assets/favicon.png"

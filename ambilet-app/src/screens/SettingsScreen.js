@@ -247,10 +247,9 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Setări</Text>
-      </View>
+      {/* Header title moved into the shared app header. Small top gap
+          keeps the first section card visually separated from the header. */}
+      <View style={styles.topSpacer} />
 
       {/* Account Section */}
       <SectionHeader title="Cont" />
@@ -440,7 +439,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.2'}</Text>
+      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.3'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -461,6 +460,9 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 16,
     paddingBottom: 20,
+  },
+  topSpacer: {
+    height: 12,
   },
   headerTitle: {
     fontSize: 28,

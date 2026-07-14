@@ -9,10 +9,23 @@ import {
   Dimensions,
   Linking,
   Alert,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useApp } from '../../context/AppContext';
+
+// Direct-dial helper — bypasses the Android intent chooser so an emergency
+// button places the call in one tap. iOS falls through to Linking(tel:)
+// because Apple always confirms the call with the user (no bypass).
+let IntentLauncher = null;
+try {
+  IntentLauncher = require('expo-intent-launcher');
+} catch (e) {
+  IntentLauncher = null;
+}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -107,8 +120,10 @@ function EmergencyButton({ label, phone, bg, border, color, iconPath, onPressCal
 export default function NotificationsPanel({ visible, onClose, notifications = [], onMarkAllRead }) {
   const unreadCount = notifications.filter(n => n.unread).length;
   const { emergencyContacts } = useApp();
+  const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(insets.bottom, 8) + 64 + 12;
 
-  const callEmergency = (label, phone) => {
+  const callEmergency = async (label, phone) => {
     if (!phone) {
       Alert.alert(
         'Număr nesetat',
@@ -121,6 +136,32 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
       Alert.alert('Număr invalid', `„${phone}" nu poate fi apelat.`);
       return;
     }
+
+    // Android: request CALL_PHONE and fire ACTION_CALL so the call starts
+    // instantly with no app chooser and no dialer confirmation.
+    if (Platform.OS === 'android' && IntentLauncher) {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+          {
+            title: 'Apel de urgență',
+            message: `AmBilet Scan trebuie să apeleze direct ${label} în caz de urgență.`,
+            buttonPositive: 'Permite',
+            buttonNegative: 'Refuză',
+          }
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          await IntentLauncher.startActivityAsync('android.intent.action.CALL', {
+            data: `tel:${cleaned}`,
+          });
+          return;
+        }
+      } catch (e) {
+        // fall through to Linking dialer
+      }
+    }
+
+    // Fallback: opens dialer pre-filled (iOS always, Android when perm denied)
     Linking.openURL(`tel:${cleaned}`).catch(() => {
       Alert.alert('Eroare', 'Nu am putut porni apelul telefonic.');
     });
@@ -132,13 +173,14 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <TouchableOpacity
         style={styles.overlay}
         onPress={onClose}
         activeOpacity={1}
       >
-        <View style={styles.panel}>
+        <View style={[styles.panel, { bottom: bottomOffset }]}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -251,7 +293,6 @@ const styles = StyleSheet.create({
     right: 12,
     width: SCREEN_WIDTH * 0.9,
     maxWidth: 400,
-    maxHeight: 620,
     backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
@@ -307,8 +348,7 @@ const styles = StyleSheet.create({
     color: colors.purple,
   },
   scrollView: {
-    flexGrow: 0,
-    maxHeight: 340,
+    flex: 1,
   },
   scrollContent: {
     paddingVertical: 4,

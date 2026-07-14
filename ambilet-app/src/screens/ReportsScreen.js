@@ -127,9 +127,11 @@ function RevenueRow({ name, color, amount, maxAmount }) {
       <View style={styles.revenueHeader}>
         <View style={styles.revenueNameRow}>
           <View style={[styles.revenueDot, { backgroundColor: color }]} />
-          <Text style={styles.revenueName}>{name}</Text>
+          <Text style={styles.revenueName} numberOfLines={1} ellipsizeMode="tail">
+            {name}
+          </Text>
         </View>
-        <Text style={styles.revenueAmount}>{formatCurrency(amount)}</Text>
+        <Text style={styles.revenueAmount} numberOfLines={1}>{formatCurrency(amount)}</Text>
       </View>
       <View style={styles.revenueBarTrack}>
         <Animated.View
@@ -144,6 +146,13 @@ function RevenueRow({ name, color, amount, maxAmount }) {
 }
 
 function HourlyChart({ data }) {
+  if (!data || data.length === 0) {
+    return (
+      <View style={styles.hourlyChart}>
+        <Text style={styles.emptyText}>Nu există check-in-uri încă</Text>
+      </View>
+    );
+  }
   const maxValue = Math.max(...data.map(d => d.value));
   const BAR_MAX_HEIGHT = 120;
   const barColors = [
@@ -430,7 +439,7 @@ export default function ReportsScreen() {
   const checkinRate = eventStats?.check_in_rate != null
     ? Math.round(eventStats.check_in_rate)
     : (totalParticipants > 0 ? Math.round((totalCheckedIn / totalParticipants) * 100) : 0);
-  const peakHour = eventStats?.peak_hour || '—';
+  const peakHour = eventStats?.peak_hour || null;
 
   // Revenue from real ticket type sold counts
   const revenueData = ticketTypes.map((tt, i) => ({
@@ -453,20 +462,42 @@ export default function ReportsScreen() {
     };
   });
 
-  // Hourly data placeholder based on real check-in count
-  const hourlyData = [
-    { hour: '16:00', value: Math.round(totalCheckedIn * 0.05) },
-    { hour: '17:00', value: Math.round(totalCheckedIn * 0.10) },
-    { hour: '18:00', value: Math.round(totalCheckedIn * 0.20) },
-    { hour: '19:00', value: Math.round(totalCheckedIn * 0.30) },
-    { hour: '20:00', value: Math.round(totalCheckedIn * 0.20) },
-    { hour: '21:00', value: Math.round(totalCheckedIn * 0.10) },
-    { hour: '22:00', value: Math.round(totalCheckedIn * 0.05) },
-  ];
+  // Real hourly check-in distribution (Europe/Bucharest local hours).
+  // API returns an array of { hour: 'HH:00', value: count } — one entry per
+  // hour that actually saw scans. We keep it as-is when populated; when the
+  // event has zero scans, fall back to an empty [] so the chart renders as
+  // "Nu există date" instead of a fake bell curve.
+  const rawHourly = Array.isArray(eventStats?.hourly_distribution)
+    ? eventStats.hourly_distribution
+    : [];
+  const hourlyData = rawHourly.map(h => ({
+    hour: h.hour,
+    value: Number(h.value) || 0,
+  }));
 
-  // Sparkline - flat line at check-in rate level (no real hourly data available)
-  const sparkY = checkinRate > 0 ? Math.round(36 - (checkinRate / 100) * 32) : 28;
-  const sparkPoints = `0,${sparkY} 20,${sparkY} 40,${sparkY} 60,${sparkY} 80,${sparkY} 100,${sparkY} 120,${sparkY} 140,${sparkY}`;
+  // Sparkline over the hourly buckets. Chart width = 140, split into
+  // (n-1) segments. When only one hour has data we plot a mid-height dot;
+  // when there is no data at all the sparkline collapses to the y=28 baseline.
+  const buildSparkPoints = () => {
+    const w = 140;
+    const h = 36;
+    if (hourlyData.length === 0) {
+      return `0,28 ${w},28`;
+    }
+    const maxV = Math.max(...hourlyData.map(d => d.value), 1);
+    if (hourlyData.length === 1) {
+      const y = Math.round(h - 4 - (hourlyData[0].value / maxV) * (h - 8));
+      return `0,${y} ${w},${y}`;
+    }
+    return hourlyData
+      .map((d, i) => {
+        const x = Math.round((i / (hourlyData.length - 1)) * w);
+        const y = Math.round(h - 4 - (d.value / maxV) * (h - 8));
+        return `${x},${y}`;
+      })
+      .join(' ');
+  };
+  const sparkPoints = buildSparkPoints();
 
   return (
     <ScrollView
@@ -474,13 +505,11 @@ export default function ReportsScreen() {
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Rapoarte</Text>
-        <View style={styles.headerSubRow}>
-          <PulsingDot />
-          <Text style={styles.headerSubText}>Actualizat acum</Text>
-        </View>
+      {/* Header row — the H1 "Rapoarte" now lives in the app header
+          (next to the logo) so we only surface the live-update badge here. */}
+      <View style={styles.headerSubBar}>
+        <PulsingDot />
+        <Text style={styles.headerSubText}>Actualizat acum</Text>
       </View>
 
       {/* Past Event Selector */}
@@ -522,7 +551,7 @@ export default function ReportsScreen() {
         {/* Sales Rate + Peak Hour side by side */}
         <View style={styles.metricsRow}>
           <MetricCard label="Total Vândute" value={totalSold} />
-          <MetricCard label="Ora de Vârf" value={peakHour} />
+          <MetricCard label="Ora de Vârf" value={peakHour || '—'} />
         </View>
       </View>
 
@@ -608,6 +637,13 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 16,
     paddingBottom: 20,
+  },
+  headerSubBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   headerTitle: {
     fontSize: 28,
@@ -763,21 +799,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   revenueNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    maxWidth: '70%',
+    flexShrink: 1,
   },
   revenueDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
+    flexShrink: 0,
   },
   revenueName: {
     fontSize: 14,
     fontWeight: '500',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   revenueAmount: {
     fontSize: 14,

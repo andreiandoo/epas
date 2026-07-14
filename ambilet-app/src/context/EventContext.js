@@ -97,6 +97,8 @@ export function EventProvider({ children }) {
         online_count: rawStats.online_count ?? 0,
         door_count: rawStats.door_count ?? 0,
         by_source_and_type: rawStats.by_source_and_type ?? { online: [], door: [] },
+        hourly_distribution: rawStats.hourly_distribution ?? [],
+        peak_hour: rawStats.peak_hour ?? null,
         // Event-level stats
         total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,
         revenue: eventData.revenue ?? rawStats.revenue ?? 0,

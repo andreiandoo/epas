@@ -38,7 +38,7 @@ function PulsingDot({ color }) {
   );
 }
 
-export default function Header({ onNotificationPress, onOrganizerSwitched }) {
+export default function Header({ onNotificationPress, onOrganizerSwitched, pageTitle }) {
   const { isOnline, notifications } = useApp();
   const { user, hasMultipleOrganizers } = useAuth();
   const unreadCount = notifications.filter(n => n.unread).length;
@@ -47,7 +47,9 @@ export default function Header({ onNotificationPress, onOrganizerSwitched }) {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        {/* Left: Logo + (optional) organizer switcher */}
+        {/* Left: Logo + (optional) page title / organizer switcher.
+            Rapoarte / Setări surface their title inline next to the logo
+            so those screens don't waste vertical space on a duplicate H1. */}
         <View style={styles.left}>
           <Image
             source={require('../../assets/logo-header.png')}
@@ -55,7 +57,9 @@ export default function Header({ onNotificationPress, onOrganizerSwitched }) {
             resizeMode="contain"
           />
 
-          {hasMultipleOrganizers && user ? (
+          {pageTitle ? (
+            <Text style={styles.pageTitle} numberOfLines={1}>{pageTitle}</Text>
+          ) : hasMultipleOrganizers && user ? (
             <TouchableOpacity
               style={styles.orgSwitcher}
               onPress={() => setSwitcherOpen(true)}
@@ -165,6 +169,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
+    flexShrink: 1,
+  },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: 0.2,
     flexShrink: 1,
   },
   right: {
