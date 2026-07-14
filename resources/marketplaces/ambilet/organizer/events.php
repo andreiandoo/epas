@@ -1430,14 +1430,16 @@ async function loadEventForEdit(eventId) {
             bottomDraftBtns.forEach(btn => {
                 if (btn !== saveDraftBtn) btn.style.display = 'none';
             });
-            // Organizers with "modificări live" publish changes directly, so the
-            // submit buttons become "Salvează & Publică" and skip approval.
-            // Everyone else keeps the neutral "Salvează modificările".
+            // Organizers with "modificări live" publish changes directly
+            // ("Salvează & Publică"). Everyone else sends the changes for admin
+            // approval ("Trimite spre aprobare") — the live event is untouched
+            // until approved.
             const liveEdit = currentEventStatus.allow_live_edits;
-            const mainLabel = liveEdit ? 'Salvează & Publică' : 'Salvează modificările';
-            if (submitReviewBtn) submitReviewBtn.innerHTML = checkIconSvg + mainLabel;
-            if (headerSubmitBtn) headerSubmitBtn.innerHTML = checkIconSvg + '<span class="mobile:hidden">' + mainLabel + '</span>';
-            if (mobileSubmitBtn) mobileSubmitBtn.innerHTML = checkIconSvg + (liveEdit ? 'Publică' : 'Salvează');
+            const mainLabel = liveEdit ? 'Salvează & Publică' : 'Trimite spre aprobare';
+            const mainIcon = liveEdit ? checkIconSvg : approveIconSvg;
+            if (submitReviewBtn) submitReviewBtn.innerHTML = mainIcon + mainLabel;
+            if (headerSubmitBtn) headerSubmitBtn.innerHTML = mainIcon + '<span class="mobile:hidden">' + mainLabel + '</span>';
+            if (mobileSubmitBtn) mobileSubmitBtn.innerHTML = mainIcon + (liveEdit ? 'Publică' : 'Trimite');
         } else {
             // Show buttons for draft events (restore default approval labels)
             if (saveDraftBtn) saveDraftBtn.style.display = '';
@@ -2688,12 +2690,17 @@ async function saveAndSubmitEvent() {
         }
 
         if (eventId) {
-            // Live-edit organizers editing an already-published event publish
-            // their changes directly — the updateEvent() above already saved
-            // them, so we skip the submit-for-approval step entirely.
-            const liveEditMode = currentEventStatus && currentEventStatus.is_published && currentEventStatus.allow_live_edits;
-            if (liveEditMode) {
-                AmbiletNotifications.success('Modificările au fost publicate!');
+            const isPublished = currentEventStatus && currentEventStatus.is_published;
+            if (isPublished) {
+                // For a live event, updateEvent() above already did the right
+                // thing on the backend: applied directly for allow_live_edits
+                // organizers, or parked the changes as pending for admin
+                // approval otherwise. No submit-for-approval call (it would be
+                // rejected — the event is already published).
+                const liveEdit = currentEventStatus.allow_live_edits;
+                AmbiletNotifications.success(liveEdit
+                    ? 'Modificările au fost publicate!'
+                    : 'Modificările au fost trimise spre aprobare!');
                 setTimeout(() => hideCreateForm(), 1500);
             } else {
                 const submitResult = await AmbiletAPI.organizer.submitEvent(eventId);
