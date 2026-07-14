@@ -115,6 +115,25 @@ class BrevoWebhookController extends Controller
 
         $log->update($updates);
 
+        // Mirror bounces onto the linked newsletter recipient so (a) the
+        // open/click tracking suppresses false opens on a bounced send and
+        // (b) the address can be excluded from future sends. Newsletter logs
+        // carry metadata->recipient_id; other logs skip this.
+        $bounceEvents = ['hard_bounce', 'soft_bounce', 'spam', 'complaint', 'blocked', 'invalid_email'];
+        if (in_array($event, $bounceEvents, true)) {
+            $recipientId = is_array($log->metadata) ? ($log->metadata['recipient_id'] ?? null) : null;
+            if ($recipientId) {
+                $recipient = \App\Models\MarketplaceNewsletterRecipient::find($recipientId);
+                if ($recipient && $recipient->status !== 'bounced') {
+                    $recipient->update([
+                        'status' => 'bounced',
+                        'bounced_at' => $eventTime,
+                        'error_message' => 'brevo:' . $event . ($request->input('reason') ? ':' . $request->input('reason') : ''),
+                    ]);
+                }
+            }
+        }
+
         Log::channel('marketplace')->info('Brevo webhook processed', [
             'event' => $event,
             'message_id' => $messageId,

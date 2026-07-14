@@ -35,6 +35,14 @@ class NewsletterTrackingController extends Controller
             return $this->transparentPixel();
         }
 
+        // Guard against false opens: if the send bounced, an "open" is almost
+        // always the recipient's mail server / a security scanner fetching the
+        // tracking pixel of an undelivered message — not a human. Recording it
+        // would flip a bounced recipient to "opened".
+        if ($recipient->status === 'bounced' || $recipient->bounced_at !== null) {
+            return $this->transparentPixel();
+        }
+
         // Mark as opened
         $recipient->markOpened();
 
@@ -66,6 +74,12 @@ class NewsletterTrackingController extends Controller
         // Verify token
         $expectedToken = hash('sha256', $recipient->id . 'click' . config('app.key'));
         if (!hash_equals($expectedToken, $token)) {
+            return redirect($url);
+        }
+
+        // Guard against false clicks on a bounced send (link scanners) — same
+        // reasoning as trackOpen. Still redirect so a real user isn't blocked.
+        if ($recipient->status === 'bounced' || $recipient->bounced_at !== null) {
             return redirect($url);
         }
 
@@ -236,12 +250,19 @@ class NewsletterTrackingController extends Controller
     protected function updateEmailLog(MarketplaceNewsletterRecipient $recipient, string $action): void
     {
         try {
+            // metadata->recipient_id is a scalar JSON value, so match it with a
+            // JSON-path equality (where), NOT whereJsonContains — the latter uses
+            // array-containment semantics and never matches a scalar on Postgres,
+            // which is why newsletter logs used to stay at status=sent.
             $log = MarketplaceEmailLog::where('to_email', $recipient->email)
                 ->where('template_slug', 'newsletter')
-                ->whereJsonContains('metadata->recipient_id', $recipient->id)
+                ->where('metadata->recipient_id', $recipient->id)
                 ->first();
 
             if (!$log) return;
+
+            // Never resurrect a bounced log into opened/clicked.
+            if ($log->bounced_at !== null) return;
 
             if ($action === 'opened') {
                 $log->markOpened();
