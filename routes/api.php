@@ -651,6 +651,14 @@ Route::get('/sms/delivery-report/{smsLogId}', [\App\Http\Controllers\Api\SmsWebh
 */
 
 Route::prefix('webhooks')->middleware(['throttle:api'])->group(function () {
+    // Brevo email-event webhook. MUST be declared BEFORE the /{tenantId}
+    // wildcard routes below — otherwise {tenantId} matches "brevo" first and
+    // the request is misrouted to WebhookController@store (which 302-redirects
+    // to home because there's no tenant "brevo"). See BrevoWebhookController.
+    Route::post('/brevo', [\App\Http\Controllers\Api\BrevoWebhookController::class, 'handle'])
+        ->name('api.webhooks.brevo')
+        ->withoutMiddleware(['throttle:api']);
+
     Route::get('/{tenantId}', [WebhookController::class, 'index'])
         ->name('api.webhooks.index');
     
@@ -3698,14 +3706,8 @@ Route::prefix('web-templates')->middleware('throttle:120,1')->group(function () 
         ->name('api.web-template.data');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Email Tracking Webhooks (Brevo / Sendinblue)
-|--------------------------------------------------------------------------
-*/
-Route::post('/webhooks/brevo', [\App\Http\Controllers\Api\BrevoWebhookController::class, 'handle'])
-    ->name('api.webhooks.brevo')
-    ->withoutMiddleware(['throttle:api']);
+/* Brevo email webhook moved into the `webhooks` prefix group above, so it is
+   declared before the /{tenantId} wildcard that was swallowing it. */
 
 /*
 |--------------------------------------------------------------------------
