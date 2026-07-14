@@ -305,8 +305,12 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Prevent editing of published events completely
-        if ($event->is_published) {
+        // Published/live events are normally locked — the organizer must
+        // contact support to change them. Organizers granted "Permite
+        // modificări live" (allow_live_edits) are the exception: they may edit
+        // their live events directly and the changes publish immediately,
+        // without going through approval.
+        if ($event->is_published && !$organizer->allow_live_edits) {
             return $this->error('Nu poți modifica un eveniment care este deja publicat și live. Contactează suportul pentru modificări.', 403);
         }
 

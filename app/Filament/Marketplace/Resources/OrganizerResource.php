@@ -669,6 +669,11 @@ class OrganizerResource extends Resource
                                         ->label('Invitations Enabled')
                                         ->default(true)
                                         ->helperText('Allow this organizer to create and manage event invitations'),
+
+                                    Forms\Components\Toggle::make('allow_live_edits')
+                                        ->label('Permite modificări live')
+                                        ->default(false)
+                                        ->helperText('Când e bifat, organizatorul poate modifica evenimentele deja publicate (live) direct din contul lui, iar modificările se publică imediat — fără să mai treacă prin aprobare.'),
                                 ])
                                 ->columns(2),
 
@@ -1171,7 +1176,7 @@ class OrganizerResource extends Resource
                             // dar POS on_top pastreaza invariantul istoric max()).
                             Forms\Components\Toggle::make('commission_use_floor')
                                 ->label('Calculează cu floor (minim per bilet)')
-                                ->helperText('Când e bifat: comisionul per bilet nu poate fi mai mic decât „Fixed Commission" de mai sus. Aplicat în: POS, customer checkout, pagina de vânzări din admin, raport organizator.')
+                                ->hintIcon('heroicon-m-information-circle', tooltip: 'Când e bifat: comisionul per bilet nu poate fi mai mic decât „Fixed Commission" de mai sus. Aplicat în: POS, customer checkout, pagina de vânzări din admin, raport organizator.')
                                 ->default(false)
                                 ->inline(false),
 
@@ -1183,7 +1188,7 @@ class OrganizerResource extends Resource
                             // rapoarte prin meta.is_test). Vezi Event::ensureTestTicketType().
                             Forms\Components\Toggle::make('test_pos_enabled')
                                 ->label('Bilete Test POS')
-                                ->helperText('Când e bifat: fiecare eveniment (non-leisure) al acestui organizator primește automat un bilet „Test POS" de 10 lei pentru testarea aplicației mobile POS (vânzare + print + scanare). Când NU e bifat: biletul nu se mai creează, iar cele deja existente se pot șterge global cu „php artisan test-tickets:prune-disabled".')
+                                ->hintIcon('heroicon-m-information-circle', tooltip: 'Când e bifat: fiecare eveniment (non-leisure) al acestui organizator primește automat un bilet „Test POS" de 10 lei pentru testarea aplicației mobile POS (vânzare + print + scanare). Când NU e bifat: biletul nu se mai creează, iar cele deja existente se pot șterge global cu „php artisan test-tickets:prune-disabled".')
                                 ->default(false)
                                 ->inline(false),
 
