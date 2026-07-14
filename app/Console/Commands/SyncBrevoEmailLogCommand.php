@@ -58,7 +58,12 @@ class SyncBrevoEmailLogCommand extends Command
 
         $anchor = $log->sent_at ? Carbon::parse($log->sent_at) : now();
         $start = $anchor->copy()->subDay()->toDateString();
-        $end = $anchor->copy()->addDays((int) $this->option('days'))->toDateString();
+        // Brevo rejects an endDate in the future, so clamp to today.
+        $endCarbon = $anchor->copy()->addDays((int) $this->option('days'));
+        if ($endCarbon->gt(now())) {
+            $endCarbon = now();
+        }
+        $end = $endCarbon->toDateString();
 
         $this->info("Log #{$log->id} → {$email} | sent_at={$log->sent_at} | scanning Brevo {$start} … {$end}");
 
