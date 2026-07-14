@@ -200,8 +200,16 @@ class SendNewsletterJob implements ShouldQueue
             $email->text($this->replaceVariables($newsletter->body_text, $variables));
         }
 
-        // Send
-        $transport->send($email);
+        // Send. Capture the SMTP Message-ID so the Brevo webhook (which matches
+        // events by message-id) can later attach delivered/opened/clicked/
+        // bounced to this log. Without it, newsletter logs stay status=sent
+        // forever regardless of what actually happened at Brevo.
+        $sentMessage = $transport->send($email);
+        $messageId = null;
+        if ($sentMessage && method_exists($sentMessage, 'getMessageId')) {
+            $raw = $sentMessage->getMessageId();
+            $messageId = $raw ? trim((string) $raw, '<>') : null;
+        }
 
         // Mark as sent
         $recipient->markSent();
@@ -218,6 +226,7 @@ class SendNewsletterJob implements ShouldQueue
             'subject' => $subject,
             'body_html' => $bodyHtml,
             'status' => 'sent',
+            'message_id' => $messageId,
             'sent_at' => now(),
             'metadata' => [
                 'newsletter_id' => $newsletter->id,
