@@ -1248,7 +1248,7 @@ class Dashboard extends Page
         };
 
         $orderStats = Order::where($orderScope)
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$todayStart, $todayEnd])
             ->selectRaw('COUNT(*) as total_orders')
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid_orders")
@@ -1265,6 +1265,9 @@ class Dashboard extends Page
             ->join('events', 'ticket_types.event_id', '=', 'events.id')
             ->where('events.marketplace_client_id', $marketplaceId)
             ->whereIn('tickets.status', ['valid', 'used'])
+            // Exclude Test POS smoke-test tickets so the "today" card matches
+            // the daily report (which excludes them via SalesBreakdownService).
+            ->whereRaw("COALESCE((ticket_types.meta->>'is_test')::boolean, false) = false")
             ->whereBetween('tickets.created_at', [$todayStart, $todayEnd])
             ->count();
 

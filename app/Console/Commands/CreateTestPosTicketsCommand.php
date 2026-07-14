@@ -41,10 +41,15 @@ class CreateTestPosTicketsCommand extends Command
                 $q->where('display_template', '!=', 'leisure_venue')
                     ->orWhereNull('display_template');
             })
+            // Opt-in per organizer — only backfill events whose marketplace
+            // organizer explicitly enabled Test POS tickets. Matches the same
+            // gate ensureTestTicketType() enforces, so the counts below are
+            // accurate and the scan stays cheap.
+            ->whereHas('marketplaceOrganizer', fn ($q) => $q->where('test_pos_enabled', true))
             ->orderBy('id')
             ->get();
 
-        $this->info("Scanning {$events->count()} candidate events (future, non-leisure)...");
+        $this->info("Scanning {$events->count()} candidate events (future, non-leisure, Test POS enabled)...");
 
         $created = 0;
         $skipped = 0;

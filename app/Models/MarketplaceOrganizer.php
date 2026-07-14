@@ -76,6 +76,7 @@ class MarketplaceOrganizer extends Authenticatable
         'fixed_commission_default',
         'default_commission_mode',
         'commission_use_floor',
+        'test_pos_enabled',
         // Override for marketplace.payment_fees.pass_to_customer flag.
         // NULL = inherit. Values: 'pass_to_customer' | 'absorbed_by_commission'.
         'payment_fee_mode',
@@ -177,6 +178,7 @@ class MarketplaceOrganizer extends Authenticatable
         'commission_rate' => 'decimal:2',
         'fixed_commission_default' => 'decimal:2',
         'commission_use_floor' => 'boolean',
+        'test_pos_enabled' => 'boolean',
         'total_revenue' => 'decimal:2',
         'available_balance' => 'decimal:2',
         'pending_balance' => 'decimal:2',

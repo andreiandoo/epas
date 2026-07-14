@@ -1175,6 +1175,18 @@ class OrganizerResource extends Resource
                                 ->default(false)
                                 ->inline(false),
 
+                            // Opt-in pentru biletul auto-provizionat "Test POS"
+                            // (10 lei, meta.is_test) folosit la smoke-test-ul
+                            // aplicatiei mobile POS. Default OFF: fara bifa,
+                            // evenimentele acestui organizator NU primesc biletul
+                            // Test POS (exclus din interfata publica, carduri si
+                            // rapoarte prin meta.is_test). Vezi Event::ensureTestTicketType().
+                            Forms\Components\Toggle::make('test_pos_enabled')
+                                ->label('Bilete Test POS')
+                                ->helperText('Când e bifat: fiecare eveniment (non-leisure) al acestui organizator primește automat un bilet „Test POS" de 10 lei pentru testarea aplicației mobile POS (vânzare + print + scanare). Când NU e bifat: biletul nu se mai creează, iar cele deja existente se pot șterge global cu „php artisan test-tickets:prune-disabled".')
+                                ->default(false)
+                                ->inline(false),
+
                             // Per-organizer override of marketplace.payment_fees.pass_to_customer.
                             // Visible only when the marketplace has the feature enabled (otherwise
                             // it's a config that goes nowhere). For ambilet/tics this section

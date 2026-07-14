@@ -118,6 +118,9 @@ class WatchlistController extends BaseController
                 $minPriceResult = DB::table('ticket_types')
                     ->where('event_id', $event->id)
                     ->where('status', 'active')
+                    // Exclude invitation + Test POS ticket types from "de la".
+                    ->whereRaw("COALESCE((meta->>'is_test')::boolean, false) = false")
+                    ->whereRaw("COALESCE((meta->>'is_invitation')::boolean, false) = false")
                     ->selectRaw('MIN(COALESCE(sale_price_cents, price_cents)) as min_price_cents')
                     ->first();
                 $minPrice = $minPriceResult && $minPriceResult->min_price_cents

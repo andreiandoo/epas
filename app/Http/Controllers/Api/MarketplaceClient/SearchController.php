@@ -181,13 +181,17 @@ class SearchController extends BaseController
                 ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
                 : $event->category;
 
-            // Calculate min price (skip free/0-price tickets when paid tickets exist)
-            $allPrices = $event->ticketTypes->map(function ($tt) {
-                if ($tt->sale_price_cents !== null && $tt->sale_price_cents > 0) {
-                    return $tt->sale_price_cents;
-                }
-                return $tt->price_cents ?? 0;
-            });
+            // Calculate min price (skip free/0-price tickets when paid tickets exist).
+            // Exclude invitation + Test POS ticket types so "de la" never shows
+            // the hidden 10-lei smoke-test ticket as the starting price.
+            $allPrices = $event->ticketTypes
+                ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))
+                ->map(function ($tt) {
+                    if ($tt->sale_price_cents !== null && $tt->sale_price_cents > 0) {
+                        return $tt->sale_price_cents;
+                    }
+                    return $tt->price_cents ?? 0;
+                });
             $paidPrices = $allPrices->filter(fn ($p) => $p > 0);
             $minPriceCents = $paidPrices->isNotEmpty() ? $paidPrices->min() : $allPrices->min();
             $minPrice = ($minPriceCents !== null && $minPriceCents > 0) ? $minPriceCents / 100 : null;

@@ -1355,6 +1355,14 @@ class Event extends Model
             return null;
         }
 
+        // Opt-in per organizer. Default off: an event only carries the Test
+        // POS ticket when its marketplace organizer explicitly enabled it
+        // (Status & Commission → "Bilete Test POS"). Without an organizer we
+        // can't resolve the flag, so we also opt out.
+        if (!($this->marketplaceOrganizer?->test_pos_enabled)) {
+            return null;
+        }
+
         return $this->ticketTypes()
             ->where(function ($q) {
                 $q->whereRaw("(meta->>'is_test')::boolean = true")
