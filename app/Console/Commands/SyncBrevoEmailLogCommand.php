@@ -192,6 +192,49 @@ class SyncBrevoEmailLogCommand extends Command
         $log->update($updates);
         $this->info("Updated email log #{$log->id}.");
 
+        // Backfill deliverability state (same rules as the Brevo webhook) so the
+        // address is excluded from future sends and the recipient reflects the
+        // bounce.
+        $success = $deliveredAt || $openedAt || $clickedAt;
+        $hardEvents = ['hardbounces', 'hard_bounce', 'blocked', 'invalid', 'spam', 'complaint'];
+        $hasHard = false;
+        $hasSoft = false;
+        $hardName = 'hard_bounce';
+        foreach ($events as $e) {
+            $ev = strtolower((string) ($e['event'] ?? ''));
+            if (in_array($ev, $hardEvents, true)) { $hasHard = true; $hardName = $ev; }
+            elseif (in_array($ev, ['softbounces', 'soft_bounce'], true)) { $hasSoft = true; }
+        }
+
+        $customer = null;
+        if ($log->marketplace_customer_id) {
+            $customer = \App\Models\MarketplaceCustomer::find($log->marketplace_customer_id);
+        } elseif ($log->marketplace_client_id && $log->to_email) {
+            $customer = \App\Models\MarketplaceCustomer::where('marketplace_client_id', $log->marketplace_client_id)
+                ->whereRaw('lower(email) = ?', [strtolower($log->to_email)])
+                ->first();
+        }
+        if ($customer) {
+            if ($hasHard) {
+                $customer->markHardSuppressed('brevo_' . $hardName, $bouncedAt);
+                $this->line("Customer #{$customer->id} → hard-suppressed (brevo_{$hardName}).");
+            } elseif ($hasSoft && !$success) {
+                $customer->markSoftBounce($bouncedAt);
+                $this->line("Customer #{$customer->id} → soft-bounced.");
+            } elseif ($success) {
+                $customer->clearSoftBounce();
+            }
+        }
+
+        $recipientId = is_array($log->metadata) ? ($log->metadata['recipient_id'] ?? null) : null;
+        if ($recipientId && ($hasHard || $hasSoft) && !$success) {
+            $r = \App\Models\MarketplaceNewsletterRecipient::find($recipientId);
+            if ($r && $r->status !== 'bounced') {
+                $r->update(['status' => 'bounced', 'bounced_at' => $bouncedAt, 'error_message' => 'brevo:backfill']);
+                $this->line("Recipient #{$r->id} → bounced.");
+            }
+        }
+
         return self::SUCCESS;
     }
 }

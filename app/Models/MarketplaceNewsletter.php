@@ -1140,6 +1140,47 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
+     * Classify the resolved audience by deliverability so the UI can show how
+     * many of the matched addresses won't actually be mailed:
+     *   - hard: email_suppressed (hard bounce / complaint / block / unsub)
+     *   - soft: soft-bounced (temporary) and not hard-suppressed
+     *   - sendable: total - hard - soft
+     *
+     * Emails with no customer row (guest/orphan buyers) count as sendable.
+     *
+     * @return array{total:int, hard:int, soft:int, sendable:int}
+     */
+    public function getBounceBreakdown(): array
+    {
+        $emails = $this->collectRecipientEmails();
+        $total = $emails->count();
+        if ($total === 0) {
+            return ['total' => 0, 'hard' => 0, 'soft' => 0, 'sendable' => 0];
+        }
+
+        $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
+
+        $hard = 0;
+        $soft = 0;
+        foreach ($emails->chunk(5000) as $chunk) {
+            $row = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                ->whereIn(\Illuminate\Support\Facades\DB::raw('lower(email)'), $chunk->all())
+                ->selectRaw('SUM(CASE WHEN email_suppressed = true THEN 1 ELSE 0 END) as hard')
+                ->selectRaw('SUM(CASE WHEN (email_suppressed = false OR email_suppressed IS NULL) AND email_soft_bounced_at IS NOT NULL THEN 1 ELSE 0 END) as soft')
+                ->first();
+            $hard += (int) ($row->hard ?? 0);
+            $soft += (int) ($row->soft ?? 0);
+        }
+
+        return [
+            'total' => $total,
+            'hard' => $hard,
+            'soft' => $soft,
+            'sendable' => max(0, $total - $hard - $soft),
+        ];
+    }
+
+    /**
      * Read-only emails for the resolved audience (lowercased, deduped).
      * Uses the same intersect-when-both semantics as buildRecipientList
      * via resolveRecipientCustomerIds(materializeOrganizers: false), so

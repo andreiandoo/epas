@@ -121,6 +121,13 @@ class SendNewsletterJob implements ShouldQueue
                 $recipient->markFailed('skipped:email_suppressed:' . ($customer->email_suppression_reason ?? 'unknown'));
                 continue;
             }
+            // Soft-bounced addresses are excluded too (temporary failures that
+            // haven't healed). A later delivery clears the mark (see
+            // MarketplaceCustomer::clearSoftBounce), so this self-corrects.
+            if ($customer && $customer->email_soft_bounced_at) {
+                $recipient->markFailed('skipped:soft_bounce');
+                continue;
+            }
             try {
                 $this->sendToRecipient($newsletter, $recipient, $transport, $marketplace);
             } catch (\Exception $e) {

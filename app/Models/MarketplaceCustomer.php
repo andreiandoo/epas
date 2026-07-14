@@ -41,6 +41,8 @@ class MarketplaceCustomer extends Authenticatable
         'email_suppressed',
         'email_suppression_reason',
         'email_suppressed_at',
+        'email_soft_bounced_at',
+        'email_soft_bounce_count',
         'settings',
         'total_orders',
         'total_spent',
@@ -68,12 +70,68 @@ class MarketplaceCustomer extends Authenticatable
         'accepts_marketing' => 'boolean',
         'email_suppressed' => 'boolean',
         'email_suppressed_at' => 'datetime',
+        'email_soft_bounced_at' => 'datetime',
+        'email_soft_bounce_count' => 'integer',
         'settings' => 'array',
         'total_spent' => 'decimal:2',
         'two_factor_secret' => 'encrypted',
         'two_factor_recovery_codes' => 'encrypted:array',
         'two_factor_confirmed_at' => 'datetime',
     ];
+
+    // =========================================
+    // Email deliverability
+    // =========================================
+
+    /**
+     * Record a soft bounce (temporary failure). Not a suppression — the
+     * address is merely excluded from sends until a later delivery heals it
+     * (see clearSoftBounce). Idempotent-ish: increments a counter each time.
+     */
+    public function markSoftBounce(?\DateTimeInterface $at = null): void
+    {
+        $this->forceFill([
+            'email_soft_bounced_at' => $at ?? now(),
+            'email_soft_bounce_count' => (int) $this->email_soft_bounce_count + 1,
+        ])->saveQuietly();
+    }
+
+    /**
+     * A successful delivery/open proves the address works again — clear any
+     * soft-bounce mark so it re-enters future audiences.
+     */
+    public function clearSoftBounce(): void
+    {
+        if ($this->email_soft_bounced_at !== null || (int) $this->email_soft_bounce_count !== 0) {
+            $this->forceFill([
+                'email_soft_bounced_at' => null,
+                'email_soft_bounce_count' => 0,
+            ])->saveQuietly();
+        }
+    }
+
+    /**
+     * Hard suppression (hard bounce / complaint / spam-trap / block /
+     * unsubscribe) — permanently excluded until manually cleared. Never
+     * downgrades an existing suppression.
+     */
+    public function markHardSuppressed(string $reason, ?\DateTimeInterface $at = null): void
+    {
+        if ($this->email_suppressed) {
+            return;
+        }
+        $this->forceFill([
+            'email_suppressed' => true,
+            'email_suppression_reason' => $reason,
+            'email_suppressed_at' => $at ?? now(),
+        ])->saveQuietly();
+    }
+
+    /** True when the address is soft-bounced but not hard-suppressed. */
+    public function isSoftBounced(): bool
+    {
+        return $this->email_soft_bounced_at !== null && !$this->email_suppressed;
+    }
 
     // =========================================
     // Relationships

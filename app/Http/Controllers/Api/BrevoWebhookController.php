@@ -134,6 +134,20 @@ class BrevoWebhookController extends Controller
             }
         }
 
+        // Keep the customer's deliverability state in sync so audience filters
+        // exclude bad addresses and heal soft bounces on the next success.
+        $customer = $this->resolveCustomer($log);
+        if ($customer) {
+            if (in_array($event, ['hard_bounce', 'blocked', 'invalid_email', 'spam', 'complaint'], true)) {
+                $customer->markHardSuppressed('brevo_' . $event, $eventTime);
+            } elseif ($event === 'soft_bounce') {
+                $customer->markSoftBounce($eventTime);
+            } elseif (in_array($event, ['delivered', 'opened', 'unique_opened', 'click'], true)) {
+                // A later success proves a soft-bounced address works again.
+                $customer->clearSoftBounce();
+            }
+        }
+
         Log::channel('marketplace')->info('Brevo webhook processed', [
             'event' => $event,
             'message_id' => $messageId,
@@ -142,5 +156,22 @@ class BrevoWebhookController extends Controller
         ]);
 
         return response()->json(['status' => 'ok'], 200);
+    }
+
+    /**
+     * Resolve the MarketplaceCustomer behind an email log — by FK when present,
+     * otherwise by (marketplace, lowercased email).
+     */
+    protected function resolveCustomer(MarketplaceEmailLog $log): ?\App\Models\MarketplaceCustomer
+    {
+        if ($log->marketplace_customer_id) {
+            return \App\Models\MarketplaceCustomer::find($log->marketplace_customer_id);
+        }
+        if ($log->to_email && $log->marketplace_client_id) {
+            return \App\Models\MarketplaceCustomer::where('marketplace_client_id', $log->marketplace_client_id)
+                ->whereRaw('lower(email) = ?', [strtolower($log->to_email)])
+                ->first();
+        }
+        return null;
     }
 }

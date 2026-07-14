@@ -994,6 +994,26 @@ class NewsletterResource extends Resource
                             if (!empty($rows)) {
                                 $html .= '<div class="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1.5 space-y-1 text-xs">' . implode('', $rows) . '</div>';
                             }
+
+                            // Bounce exclusions — how many matched addresses
+                            // won't actually be mailed (excluded at send time).
+                            try {
+                                $bb = $instance->getBounceBreakdown();
+                            } catch (\Throwable $e) {
+                                $bb = null;
+                            }
+                            if ($bb && ($bb['hard'] > 0 || $bb['soft'] > 0)) {
+                                $excl = [];
+                                if ($bb['soft'] > 0) {
+                                    $excl[] = '<div class="flex items-center justify-between"><span class="text-amber-600">Excluse (soft-bounce)</span><span class="font-semibold text-amber-600">−' . number_format($bb['soft']) . '</span></div>';
+                                }
+                                if ($bb['hard'] > 0) {
+                                    $excl[] = '<div class="flex items-center justify-between"><span class="text-rose-600">Excluse (hard-bounce / suprimate)</span><span class="font-semibold text-rose-600">−' . number_format($bb['hard']) . '</span></div>';
+                                }
+                                $excl[] = '<div class="flex items-center justify-between pt-1 mt-1 border-t border-gray-200 dark:border-gray-700"><span class="text-emerald-700 dark:text-emerald-400 font-semibold">Vor fi trimise</span><span class="font-bold text-emerald-700 dark:text-emerald-400">' . number_format($bb['sendable']) . '</span></div>';
+                                $html .= '<div class="mt-1.5 space-y-1 text-xs">' . implode('', $excl) . '</div>';
+                            }
+
                             $html .= '</div>';
 
                             return new HtmlString($html);
