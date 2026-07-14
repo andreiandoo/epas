@@ -15,6 +15,7 @@ RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
 # Android app download redirect
 RewriteRule ^android/?$ https://core.tixello.com/android [R=302,L,QSA]
 RewriteRule ^android-sfana/?$ https://core.tixello.com/android-sfana [R=302,L,QSA]
+RewriteRule ^android-nou/?$ https://core.tixello.com/android-nou [R=302,L,QSA]
 
 # Force HTTPS (uncomment in production)
 # RewriteCond %{HTTPS} off
