@@ -5309,8 +5309,41 @@ class EventResource extends Resource
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
                     ->label('Organizer')
                     ->relationship('marketplaceOrganizer', 'name'),
+                Tables\Filters\Filter::make('has_pending_changes')
+                    ->label('Modificări în așteptare')
+                    ->query(fn ($query) => $query->where('pending_changes_status', 'pending'))
+                    ->toggle(),
             ])
             ->actions([
+                // Organizer live edits that landed as pending (organizer without
+                // allow_live_edits). Approving applies them to the live event;
+                // rejecting discards them. Only shown when something is pending.
+                Action::make('approvePendingChanges')
+                    ->label('Aprobă modificări')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
+                    ->requiresConfirmation()
+                    ->modalHeading('Aprobă modificările în așteptare')
+                    ->modalDescription(fn (Event $record) => new \Illuminate\Support\HtmlString(
+                        'Se vor aplica pe evenimentul LIVE câmpurile modificate de organizator:<br><br><code style="white-space:pre-wrap;font-size:11px;">'
+                        . e(json_encode($record->pending_changes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                        . '</code>'
+                    ))
+                    ->action(function (Event $record) {
+                        app(\App\Services\Marketplace\EventLiveEditService::class)->approvePending($record);
+                        \Filament\Notifications\Notification::make()->success()->title('Modificările au fost publicate.')->send();
+                    }),
+                Action::make('rejectPendingChanges')
+                    ->label('Respinge modificări')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
+                    ->requiresConfirmation()
+                    ->action(function (Event $record) {
+                        app(\App\Services\Marketplace\EventLiveEditService::class)->rejectPending($record);
+                        \Filament\Notifications\Notification::make()->title('Modificările au fost respinse.')->send();
+                    }),
                 Action::make('view_on_site')
                     ->label('')
                     ->icon('heroicon-o-arrow-top-right-on-square')
