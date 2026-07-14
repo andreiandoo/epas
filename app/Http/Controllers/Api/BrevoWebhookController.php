@@ -71,6 +71,7 @@ class BrevoWebhookController extends Controller
 
             case 'opened':
             case 'unique_opened':
+            case 'first_opening':
                 if (!$log->opened_at) {
                     $updates['opened_at'] = $eventTime;
                     $updates['status'] = 'opened';
@@ -108,9 +109,14 @@ class BrevoWebhookController extends Controller
 
             case 'blocked':
             case 'invalid_email':
+            case 'error':
                 $updates['status'] = 'failed';
                 $updates['bounced_at'] = $eventTime;
                 break;
+
+            // Deferred (temporary retry) and loaded_by_proxy (Apple MPP / bot
+            // prefetch — a false open) are intentionally NOT mapped to any
+            // status change; we only keep them in the metadata trail above.
         }
 
         $log->update($updates);
@@ -119,7 +125,7 @@ class BrevoWebhookController extends Controller
         // open/click tracking suppresses false opens on a bounced send and
         // (b) the address can be excluded from future sends. Newsletter logs
         // carry metadata->recipient_id; other logs skip this.
-        $bounceEvents = ['hard_bounce', 'soft_bounce', 'spam', 'complaint', 'blocked', 'invalid_email'];
+        $bounceEvents = ['hard_bounce', 'soft_bounce', 'spam', 'complaint', 'blocked', 'invalid_email', 'error'];
         if (in_array($event, $bounceEvents, true)) {
             $recipientId = is_array($log->metadata) ? ($log->metadata['recipient_id'] ?? null) : null;
             if ($recipientId) {
@@ -138,7 +144,7 @@ class BrevoWebhookController extends Controller
         // exclude bad addresses and heal soft bounces on the next success.
         $customer = $this->resolveCustomer($log);
         if ($customer) {
-            if (in_array($event, ['hard_bounce', 'blocked', 'invalid_email', 'spam', 'complaint'], true)) {
+            if (in_array($event, ['hard_bounce', 'blocked', 'invalid_email', 'spam', 'complaint', 'error'], true)) {
                 $customer->markHardSuppressed('brevo_' . $event, $eventTime);
             } elseif ($event === 'soft_bounce') {
                 $customer->markSoftBounce($eventTime);
