@@ -1032,6 +1032,60 @@ class EventsController extends BaseController
             }
         }
 
+        // Hourly check-in distribution for the Reports screen. `checked_in_at`
+        // is stored in UTC but organizers think in local time — convert to
+        // Europe/Bucharest so a 19:30 concert peak lands at hour 19, not 17.
+        // Only tickets that were actually scanned contribute (checked_in_at
+        // IS NOT NULL); source-based exclusions match the totals above so
+        // the sum of hourly buckets ≈ checked-in count.
+        $hourlyDistribution = [];
+        $peakHourLabel = null;
+        try {
+            $driver = \DB::getDriverName();
+            $hourExpr = match ($driver) {
+                'pgsql' => "EXTRACT(HOUR FROM (tickets.checked_in_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Bucharest'))::int",
+                'mysql', 'mariadb' => "HOUR(CONVERT_TZ(tickets.checked_in_at, '+00:00', '+03:00'))",
+                default => "CAST(strftime('%H', tickets.checked_in_at) AS INTEGER)",
+            };
+
+            $hourlyRows = \App\Models\Ticket::where($joinSafeScope)
+                ->whereIn('tickets.status', ['valid', 'used'])
+                ->whereNotNull('tickets.checked_in_at')
+                ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
+                ->where(function ($q) {
+                    $q->whereNull('orders.source')
+                        ->orWhere('orders.source', '!=', 'pos_test');
+                })
+                ->selectRaw("{$hourExpr} AS h, COUNT(*) AS c")
+                ->groupBy('h')
+                ->orderBy('h')
+                ->get();
+
+            $peakHour = null;
+            $peakCount = 0;
+            foreach ($hourlyRows as $row) {
+                $h = (int) $row->h;
+                $c = (int) $row->c;
+                $hourlyDistribution[] = [
+                    'hour' => str_pad((string) $h, 2, '0', STR_PAD_LEFT) . ':00',
+                    'value' => $c,
+                ];
+                if ($c > $peakCount) {
+                    $peakCount = $c;
+                    $peakHour = $h;
+                }
+            }
+            if ($peakHour !== null) {
+                $peakHourLabel = str_pad((string) $peakHour, 2, '0', STR_PAD_LEFT) . ':00';
+            }
+        } catch (\Throwable $e) {
+            // Timezone conversion can fail on older DB servers — degrade
+            // gracefully to an empty distribution rather than 500ing the
+            // whole participants endpoint.
+            $hourlyDistribution = [];
+            $peakHourLabel = null;
+        }
+
         return $this->paginated($tickets, function ($ticket) {
             $ticketType = $ticket->ticketType;
             $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
@@ -1111,6 +1165,11 @@ class EventsController extends BaseController
                 // Σ ticket_types.capacity, excluding test / invitation
                 // types and -1 unlimited sentinels).
                 'capacity' => $effectiveCapacity,
+                // Reports → Distribuție Orară + Ora de Vârf. Values are
+                // check-in counts per local (Europe/Bucharest) hour; empty
+                // array when no scans have been recorded yet.
+                'hourly_distribution' => $hourlyDistribution,
+                'peak_hour' => $peakHourLabel,
             ],
         ]);
     }
