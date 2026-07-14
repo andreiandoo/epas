@@ -4469,6 +4469,10 @@ class EventsController extends BaseController
             'gallery' => null,
             'status' => $this->getEventStatus($event),
             'is_public' => $event->is_published,
+            // When the organizer is allowed to edit live events, the frontend
+            // turns "Trimite spre aprobare" into "Salvează & Publică" and skips
+            // the submit-for-approval step (changes publish immediately).
+            'allow_live_edits' => (bool) ($event->marketplaceOrganizer?->allow_live_edits ?? false),
             'is_featured' => $event->is_featured,
             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
             'door_sales_only' => (bool) ($event->door_sales_only ?? false),
