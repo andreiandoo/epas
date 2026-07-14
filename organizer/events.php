@@ -1408,6 +1408,7 @@ async function loadEventForEdit(eventId) {
             is_postponed: event.is_postponed || false,
             is_cancelled: event.is_cancelled || false,
             is_published: event.is_public || event.status === 'published',
+            allow_live_edits: event.allow_live_edits || false,
             slug: event.slug
         };
         updateStatusIndicators();
@@ -1418,23 +1419,32 @@ async function loadEventForEdit(eventId) {
         const bottomDraftBtns = document.querySelectorAll('button[onclick="saveEventDraft()"]');
         const submitReviewBtn = document.getElementById('submit-review-btn');
 
+        const checkIconSvg = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+        const approveIconSvg = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        const headerSubmitBtn = document.getElementById('header-submit-btn');
+        const mobileSubmitBtn = document.getElementById('mobile-submit-btn');
+
         if (isPublished) {
             // Hide "Salvează ciorna" buttons for published events
             if (saveDraftBtn) saveDraftBtn.style.display = 'none';
             bottomDraftBtns.forEach(btn => {
                 if (btn !== saveDraftBtn) btn.style.display = 'none';
             });
-            // Change submit button text to "Salvează modificările"
-            if (submitReviewBtn) {
-                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Salvează modificările';
-            }
+            // Organizers with "modificări live" publish changes directly, so the
+            // submit buttons become "Salvează & Publică" and skip approval.
+            // Everyone else keeps the neutral "Salvează modificările".
+            const liveEdit = currentEventStatus.allow_live_edits;
+            const mainLabel = liveEdit ? 'Salvează & Publică' : 'Salvează modificările';
+            if (submitReviewBtn) submitReviewBtn.innerHTML = checkIconSvg + mainLabel;
+            if (headerSubmitBtn) headerSubmitBtn.innerHTML = checkIconSvg + '<span class="mobile:hidden">' + mainLabel + '</span>';
+            if (mobileSubmitBtn) mobileSubmitBtn.innerHTML = checkIconSvg + (liveEdit ? 'Publică' : 'Salvează');
         } else {
-            // Show buttons for draft events
+            // Show buttons for draft events (restore default approval labels)
             if (saveDraftBtn) saveDraftBtn.style.display = '';
             bottomDraftBtns.forEach(btn => btn.style.display = '');
-            if (submitReviewBtn) {
-                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Salvează și trimite spre aprobare';
-            }
+            if (submitReviewBtn) submitReviewBtn.innerHTML = approveIconSvg + 'Salvează și trimite spre aprobare';
+            if (headerSubmitBtn) headerSubmitBtn.innerHTML = approveIconSvg + '<span class="mobile:hidden">Trimite spre aprobare</span>';
+            if (mobileSubmitBtn) mobileSubmitBtn.innerHTML = approveIconSvg + 'Trimite';
         }
 
         const form = document.getElementById('create-event-form');
@@ -2678,12 +2688,21 @@ async function saveAndSubmitEvent() {
         }
 
         if (eventId) {
-            const submitResult = await AmbiletAPI.organizer.submitEvent(eventId);
-            if (submitResult.success !== false) {
-                AmbiletNotifications.success('Evenimentul a fost trimis spre aprobare!');
+            // Live-edit organizers editing an already-published event publish
+            // their changes directly — the updateEvent() above already saved
+            // them, so we skip the submit-for-approval step entirely.
+            const liveEditMode = currentEventStatus && currentEventStatus.is_published && currentEventStatus.allow_live_edits;
+            if (liveEditMode) {
+                AmbiletNotifications.success('Modificările au fost publicate!');
                 setTimeout(() => hideCreateForm(), 1500);
             } else {
-                AmbiletNotifications.error(submitResult.message || 'Eroare la trimiterea spre aprobare.');
+                const submitResult = await AmbiletAPI.organizer.submitEvent(eventId);
+                if (submitResult.success !== false) {
+                    AmbiletNotifications.success('Evenimentul a fost trimis spre aprobare!');
+                    setTimeout(() => hideCreateForm(), 1500);
+                } else {
+                    AmbiletNotifications.error(submitResult.message || 'Eroare la trimiterea spre aprobare.');
+                }
             }
         } else {
             AmbiletNotifications.error('Nu s-a putut identifica evenimentul creat.');
