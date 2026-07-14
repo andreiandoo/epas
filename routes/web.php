@@ -637,6 +637,24 @@ Route::get('/android-sfana', function () {
     return redirect()->route('download.android.sfana');
 });
 
+// AmBilet v2 (rebrand) APK Download — test-only distribution pentru
+// telefoane separate; bundle ID identic cu v1 (com.ambilet.scan) deci
+// instaland-o inlocuieste v1. Cand v2 e stabil, se face merge in
+// tixello-app + serveste tot pe /android.
+Route::get('/download-android-nou', function () {
+    $path = public_path('downloads/ambilet-android-nou.apk');
+    if (!file_exists($path)) {
+        abort(404, 'APK not available yet');
+    }
+    return response()->download($path, 'ambilet-android-nou.apk', [
+        'Content-Type' => 'application/vnd.android.package-archive',
+    ]);
+})->name('download.android.nou');
+
+Route::get('/android-nou', function () {
+    return redirect()->route('download.android.nou');
+});
+
 // App version check (used by mobile app to detect updates)
 Route::get('/api/app-version', function () {
     return response()->json([
