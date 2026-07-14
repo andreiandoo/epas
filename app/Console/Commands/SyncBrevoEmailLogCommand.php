@@ -103,6 +103,27 @@ class SyncBrevoEmailLogCommand extends Command
             }
         }
 
+        // Multiple emails can hit the same recipient inside the window, each
+        // with its own message-id. Anchor on the message-id whose send
+        // (`requests`) is closest to THIS log's sent_at, then keep only that
+        // message's events — otherwise a different email's bounce/open would be
+        // attributed to this log.
+        $anchoredMsgId = null;
+        $reqPool = array_filter($events, fn ($e) => strtolower((string) ($e['event'] ?? '')) === 'requests' && !empty($e['messageId']) && !empty($e['date']));
+        $pool = !empty($reqPool) ? $reqPool : array_filter($events, fn ($e) => !empty($e['messageId']) && !empty($e['date']));
+        $bestDiff = null;
+        foreach ($pool as $e) {
+            $diff = abs(Carbon::parse($e['date'])->diffInSeconds($anchor));
+            if ($bestDiff === null || $diff < $bestDiff) {
+                $bestDiff = $diff;
+                $anchoredMsgId = trim((string) $e['messageId'], '<>');
+            }
+        }
+        if ($anchoredMsgId !== null) {
+            $this->line("Matched message-id (send closest to sent_at): {$anchoredMsgId}");
+            $events = array_values(array_filter($events, fn ($e) => trim((string) ($e['messageId'] ?? ''), '<>') === $anchoredMsgId));
+        }
+
         // Earliest timestamp per mapped event bucket.
         $first = function (array $names) use ($events) {
             $best = null;
