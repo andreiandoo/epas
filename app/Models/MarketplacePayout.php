@@ -296,7 +296,7 @@ class MarketplacePayout extends Model
                 $q->whereHas('order', function ($q2) use ($cutoffEnd) {
                     $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
                         ->where('source', '!=', 'external_import')
-                        ->where('source', '!=', 'pos_app')
+                        ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
                         ->where('source', '!=', 'test_order');
                     if ($cutoffEnd) {
                         $q2->where('created_at', '<=', $cutoffEnd);
@@ -768,7 +768,7 @@ class MarketplacePayout extends Model
             ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
-                    ->where('source', '!=', 'pos_app');
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 if ($cutoff) {
                     $qq->where('created_at', '<=', $cutoff);
                 }
@@ -1560,7 +1560,7 @@ class MarketplacePayout extends Model
                             ->orWhere('marketplace_event_id', $this->event_id);
                     })
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where('source', '!=', 'pos_app');
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 })
                 ->exists();
 
@@ -1575,7 +1575,7 @@ class MarketplacePayout extends Model
                             ->orWhere('marketplace_event_id', $this->event_id);
                     })
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where('source', 'pos_app');
+                    ->whereIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 })
                 ->exists();
 
