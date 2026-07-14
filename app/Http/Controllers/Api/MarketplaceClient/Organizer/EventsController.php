@@ -305,15 +305,6 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Published/live events are normally locked — the organizer must
-        // contact support to change them. Organizers granted "Permite
-        // modificări live" (allow_live_edits) are the exception: they may edit
-        // their live events directly and the changes publish immediately,
-        // without going through approval.
-        if ($event->is_published && !$organizer->allow_live_edits) {
-            return $this->error('Nu poți modifica un eveniment care este deja publicat și live. Contactează suportul pentru modificări.', 403);
-        }
-
         $rules = [
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:10000',
@@ -356,6 +347,14 @@ class EventsController extends BaseController
         ]);
 
         $validated = $request->validate($rules);
+
+        // Published/live events take the live-edit path: only safe fields, and
+        // either applied directly (allow_live_edits) or parked as pending
+        // changes for a marketplace admin to approve. Ticket-type restructuring
+        // is never done on a live event — it would destroy sold tickets.
+        if ($event->is_published) {
+            return $this->handleLiveEdit($event, $organizer, $validated);
+        }
 
         try {
             DB::beginTransaction();
@@ -524,6 +523,35 @@ class EventsController extends BaseController
             DB::rollBack();
             return $this->error('Failed to update event: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Live (published) event edit — SAFE fields only (no ticket-type
+     * restructuring, which would destroy sold tickets). Organizers with
+     * allow_live_edits publish immediately; everyone else parks the changes as
+     * pending for a marketplace admin to approve — the live event stays
+     * untouched (published with its current data) meanwhile.
+     */
+    protected function handleLiveEdit(Event $event, \App\Models\MarketplaceOrganizer $organizer, array $validated): JsonResponse
+    {
+        $svc = app(\App\Services\Marketplace\EventLiveEditService::class);
+
+        if (!$organizer->allow_live_edits) {
+            $svc->storePending($event, $validated);
+            return $this->success([
+                'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
+            ], 'Modificările au fost trimise spre aprobare');
+        }
+
+        try {
+            $svc->applyFields($event, $validated);
+        } catch (\Exception $e) {
+            return $this->error('Failed to update event: ' . $e->getMessage(), 500);
+        }
+
+        return $this->success([
+            'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
+        ], 'Modificările au fost publicate');
     }
 
     /**
@@ -4532,6 +4560,7 @@ class EventsController extends BaseController
             // turns "Trimite spre aprobare" into "Salvează & Publică" and skips
             // the submit-for-approval step (changes publish immediately).
             'allow_live_edits' => (bool) ($event->marketplaceOrganizer?->allow_live_edits ?? false),
+            'has_pending_changes' => $event->pending_changes_status === 'pending',
             'is_featured' => $event->is_featured,
             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
             'door_sales_only' => (bool) ($event->door_sales_only ?? false),
