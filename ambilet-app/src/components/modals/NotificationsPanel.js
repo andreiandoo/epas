@@ -7,9 +7,12 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Linking,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
+import { useApp } from '../../context/AppContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -78,8 +81,50 @@ function NotificationItem({ notification }) {
   );
 }
 
+function EmergencyButton({ label, phone, bg, border, color, iconPath, onPressCall }) {
+  const disabled = !phone;
+  return (
+    <TouchableOpacity
+      style={[
+        styles.emergencyBtn,
+        { backgroundColor: bg, borderColor: border },
+        disabled && styles.emergencyBtnDisabled,
+      ]}
+      onPress={() => onPressCall(label, phone)}
+      activeOpacity={0.7}
+    >
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+        <Path d={iconPath} stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+      <Text style={[styles.emergencyBtnLabel, { color }]} numberOfLines={2}>{label}</Text>
+      <Text style={styles.emergencyBtnPhone} numberOfLines={1}>
+        {phone || 'Nesetat'}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function NotificationsPanel({ visible, onClose, notifications = [], onMarkAllRead }) {
   const unreadCount = notifications.filter(n => n.unread).length;
+  const { emergencyContacts } = useApp();
+
+  const callEmergency = (label, phone) => {
+    if (!phone) {
+      Alert.alert(
+        'Număr nesetat',
+        `Adaugă un număr pentru „${label}" din Setări → Contact Urgențe.`
+      );
+      return;
+    }
+    const cleaned = String(phone).replace(/[^0-9+]/g, '');
+    if (!cleaned) {
+      Alert.alert('Număr invalid', `„${phone}" nu poate fi apelat.`);
+      return;
+    }
+    Linking.openURL(`tel:${cleaned}`).catch(() => {
+      Alert.alert('Eroare', 'Nu am putut porni apelul telefonic.');
+    });
+  };
 
   return (
     <Modal
@@ -143,6 +188,52 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
               ))
             )}
           </ScrollView>
+
+          {/* Raportează Problemă — one-tap dial for the three configured contacts.
+              Numbers live in Settings → Contact Urgențe (stored locally). */}
+          <View style={styles.emergencySection}>
+            <View style={styles.emergencyHeader}>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"
+                  stroke={colors.danger}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.emergencyHeaderText}>Raportează Problemă</Text>
+            </View>
+            <View style={styles.emergencyGrid}>
+              <EmergencyButton
+                label="Urgență Medicală"
+                phone={emergencyContacts?.medical}
+                bg={colors.dangerBg}
+                border={colors.dangerBorder}
+                color={colors.danger}
+                iconPath="M12 8v4m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z"
+                onPressCall={callEmergency}
+              />
+              <EmergencyButton
+                label="Problemă Tehnică"
+                phone={emergencyContacts?.tehnica}
+                bg={colors.amberBg}
+                border={colors.amberBorder}
+                color={colors.amber}
+                iconPath="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"
+                onPressCall={callEmergency}
+              />
+              <EmergencyButton
+                label="Alertă Pază"
+                phone={emergencyContacts?.paza}
+                bg={colors.cyanBg}
+                border={colors.cyanBorder}
+                color={colors.cyan}
+                iconPath="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                onPressCall={callEmergency}
+              />
+            </View>
+          </View>
         </View>
       </TouchableOpacity>
     </Modal>
@@ -152,25 +243,25 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(20,10,10,0.15)',
   },
   panel: {
     position: 'absolute',
     top: 100,
     right: 12,
-    width: SCREEN_WIDTH * 0.85,
-    maxWidth: 380,
-    maxHeight: 460,
-    backgroundColor: '#FFFFFF',
+    width: SCREEN_WIDTH * 0.9,
+    maxWidth: 400,
+    maxHeight: 620,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.borderMedium,
+    borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#140A0A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 20,
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
@@ -193,7 +284,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   unreadBadge: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.redAccent,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -217,6 +308,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flexGrow: 0,
+    maxHeight: 340,
   },
   scrollContent: {
     paddingVertical: 4,
@@ -289,5 +381,53 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 13,
     color: colors.textTertiary,
+  },
+
+  // Raportează Problemă
+  emergencySection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  emergencyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emergencyHeaderText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  emergencyGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  emergencyBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: 84,
+  },
+  emergencyBtnDisabled: {
+    opacity: 0.55,
+  },
+  emergencyBtnLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  emergencyBtnPhone: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
 });

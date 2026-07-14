@@ -1475,20 +1475,23 @@ const styles = StyleSheet.create({
   },
   quickActionsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   quickActionBtn: {
-    flex: 1,
+    width: '48%',
     borderWidth: 1,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
   },
   quickActionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
 
   // Recent activity

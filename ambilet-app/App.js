@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.0.2';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -58,7 +58,7 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function TabIcon({ name, focused, disabled }) {
-  const color = disabled ? 'rgba(255,255,255,0.15)' : (focused ? colors.purple : 'rgba(255,255,255,0.4)');
+  const color = disabled ? colors.textQuaternary : (focused ? colors.purple : colors.textTertiary);
   const size = 22;
 
   switch (name) {
@@ -202,10 +202,10 @@ function MainTabs() {
             headerShown: false,
             tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} disabled={isDisabledTab} />,
             tabBarActiveTintColor: colors.purple,
-            tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
+            tabBarInactiveTintColor: colors.textTertiary,
             tabBarStyle: {
-              backgroundColor: colors.background,
-              borderTopColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
               borderTopWidth: 1,
               paddingBottom: Math.max(insets.bottom, 8),
               paddingTop: 8,
@@ -214,7 +214,7 @@ function MainTabs() {
             tabBarLabelStyle: {
               fontSize: 11,
               fontWeight: '500',
-              ...(isDisabledTab ? { color: 'rgba(255,255,255,0.15)' } : {}),
+              ...(isDisabledTab ? { color: colors.textQuaternary } : {}),
             },
           };
         }}
@@ -486,10 +486,10 @@ function VenueOwnerTabs() {
           headerShown: false,
           tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
           tabBarActiveTintColor: colors.purple,
-          tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
+          tabBarInactiveTintColor: colors.textTertiary,
           tabBarStyle: {
-            backgroundColor: colors.background,
-            borderTopColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
             borderTopWidth: 1,
             paddingBottom: Math.max(insets.bottom, 8),
             paddingTop: 8,

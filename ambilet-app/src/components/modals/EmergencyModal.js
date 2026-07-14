@@ -277,17 +277,22 @@ export default function EmergencyModal({ visible, onClose }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(20,10,10,0.35)',
     justifyContent: 'flex-end',
   },
   overlayTouchable: {
     flex: 1,
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 34,
+    shadowColor: '#140A0A',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 12,
   },
   header: {
     alignItems: 'center',
@@ -360,7 +365,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(20,10,10,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },

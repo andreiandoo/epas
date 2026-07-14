@@ -126,7 +126,7 @@ export default function Header({ onNotificationPress, onOrganizerSwitched }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(10, 10, 15, 0.95)',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingTop: 48,
@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoImage: {
-    width: 120,
-    height: 54,
+    width: 90,
+    height: 36,
   },
   orgSwitcher: {
     flexDirection: 'row',

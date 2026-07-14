@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  TextInput,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -62,6 +63,27 @@ function SettingRow({ label, description, right }) {
 
 function SectionHeader({ title }) {
   return <Text style={styles.sectionTitle}>{title}</Text>;
+}
+
+function EmergencyContactRow({ label, placeholder, value, onChangeText, accentColor }) {
+  return (
+    <View style={styles.emergencyRow}>
+      <View style={styles.emergencyRowLabelWrap}>
+        <View style={[styles.emergencyDot, { backgroundColor: accentColor }]} />
+        <Text style={styles.emergencyRowLabel}>{label}</Text>
+      </View>
+      <TextInput
+        style={styles.emergencyInput}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        keyboardType="phone-pad"
+        autoCorrect={false}
+        maxLength={20}
+      />
+    </View>
+  );
 }
 
 function InfoRow({ label, value }) {
@@ -145,6 +167,8 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     cachedTickets,
     isDownloadingOffline,
     ensureOfflineData,
+    emergencyContacts,
+    updateEmergencyContact,
   } = useApp();
 
   // Auto-download offline data when event is selected and offline mode is already on
@@ -334,6 +358,34 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         </>
       )}
 
+      {/* Contact Urgențe — numere apelate de butoanele din panoul de Notificări. */}
+      <SectionHeader title="Contact Urgențe" />
+      <View style={styles.sectionCard}>
+        <EmergencyContactRow
+          label="Urgență Medicală"
+          placeholder="ex. 0722 000 000"
+          value={emergencyContacts?.medical || ''}
+          onChangeText={(v) => updateEmergencyContact('medical', v)}
+          accentColor={colors.danger}
+        />
+        <View style={styles.divider} />
+        <EmergencyContactRow
+          label="Problemă Tehnică"
+          placeholder="ex. 0733 000 000"
+          value={emergencyContacts?.tehnica || ''}
+          onChangeText={(v) => updateEmergencyContact('tehnica', v)}
+          accentColor={colors.amber}
+        />
+        <View style={styles.divider} />
+        <EmergencyContactRow
+          label="Alertă Pază"
+          placeholder="ex. 0744 000 000"
+          value={emergencyContacts?.paza || ''}
+          onChangeText={(v) => updateEmergencyContact('paza', v)}
+          accentColor={colors.cyan}
+        />
+      </View>
+
       {/* Admin Controls (only for admin/owner organizer role — never venue owner) */}
       {isAdmin && (
         <>
@@ -388,7 +440,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.0'}</Text>
+      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.2'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -407,7 +459,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingTop: 56,
+    paddingTop: 16,
     paddingBottom: 20,
   },
   headerTitle: {
@@ -476,6 +528,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textTertiary,
     marginTop: 2,
+  },
+
+  // Emergency contact row
+  emergencyRow: {
+    gap: 8,
+  },
+  emergencyRowLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emergencyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  emergencyRowLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  emergencyInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
   },
 
   // Toggle

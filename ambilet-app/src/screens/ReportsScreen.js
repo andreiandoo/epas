@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingTop: 56,
+    paddingTop: 16,
     paddingBottom: 20,
   },
   headerTitle: {

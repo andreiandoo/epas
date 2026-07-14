@@ -32,9 +32,18 @@ export function AppProvider({ children }) {
   // Cached tickets count
   const [cachedTickets, setCachedTickets] = useState(0);
 
+  // Emergency contacts (phone numbers dialed from the notifications panel).
+  // Kept local to the device — each operator/venue configures their own.
+  const [emergencyContacts, setEmergencyContacts] = useState({
+    medical: '',
+    tehnica: '',
+    paza: '',
+  });
+
   // Load settings from storage
   useEffect(() => {
     loadSettings();
+    loadEmergencyContacts();
   }, []);
 
   const loadSettings = async () => {
@@ -51,6 +60,30 @@ export function AppProvider({ children }) {
       // Use defaults
     }
   };
+
+  const loadEmergencyContacts = async () => {
+    try {
+      const raw = await AsyncStorage.getItem('emergency_contacts');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setEmergencyContacts({
+          medical: parsed.medical || '',
+          tehnica: parsed.tehnica || '',
+          paza: parsed.paza || '',
+        });
+      }
+    } catch (e) {
+      // Ignore — keep defaults
+    }
+  };
+
+  const updateEmergencyContact = useCallback((key, value) => {
+    setEmergencyContacts(prev => {
+      const next = { ...prev, [key]: value };
+      AsyncStorage.setItem('emergency_contacts', JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
 
   const saveSettings = async (updates) => {
     try {
@@ -326,6 +359,10 @@ export function AppProvider({ children }) {
       downloadParticipantsForOffline,
       offlineCheckIn,
       ensureOfflineData,
+
+      // Emergency contacts
+      emergencyContacts,
+      updateEmergencyContact,
     }}>
       {children}
     </AppContext.Provider>
