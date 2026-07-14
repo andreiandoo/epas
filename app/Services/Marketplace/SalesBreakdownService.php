@@ -30,6 +30,21 @@ use Carbon\Carbon;
 class SalesBreakdownService
 {
     /**
+     * Order sources that count as physical POS (sold at the door / on-site),
+     * NOT online marketplace checkout. These are excluded by excludePos and
+     * are the only ones matched by onlyPos.
+     *
+     * - 'pos_app'          → Tixello mobile POS/scanner app
+     * - 'pos'              → leisure POS (LeisureController — Sf. Ana etc.)
+     *
+     * Kept as a single list so the online/POS split stays consistent between
+     * the Vânzări card and the payout builds. ('venue_owner_pos' is treated as
+     * POS elsewhere in the app but historically was NOT excluded here; left out
+     * to avoid retroactively changing existing payout math for it.)
+     */
+    public const POS_SOURCES = ['pos_app', 'pos'];
+
+    /**
      * Build the sales breakdown for an event, optionally scoped to a date
      * range on order.created_at.
      *
@@ -90,13 +105,12 @@ class SalesBreakdownService
                         // alongside external_import.
                         ->whereNotIn('source', ['external_import', 'pos_test']);
                     if ($onlyPos) {
-                        // POS-only slice: just the organizer's mobile cash POS
-                        // app sales. Used to bill POS commission separately
+                        // POS-only slice: physical POS sales (mobile POS app +
+                        // leisure POS). Used to bill POS commission separately
                         // (these never flow through a marketplace decont).
-                        $q->where('source', 'pos_app');
+                        $q->whereIn('source', self::POS_SOURCES);
                     } elseif ($excludePos) {
-                        $q->where('source', '!=', 'pos_app')
-                          ->where('source', '!=', 'test_order');
+                        $q->whereNotIn('source', array_merge(self::POS_SOURCES, ['test_order']));
                     }
                     if ($periodStart) {
                         // exactBounds uses '>' so the new payout doesn't
@@ -550,7 +564,7 @@ class SalesBreakdownService
 
     /**
      * POS-only per-ticket-type breakdown for the payout period — the mirror
-     * of buildForPayout() but restricted to source=pos_app sales. Used to bill
+     * of buildForPayout() but restricted to POS sales (self::POS_SOURCES). Used to bill
      * the organizer's POS commission on a separate invoice, since POS sales
      * never flow through a marketplace decont (and are therefore excluded from
      * buildForPayout / ticket_breakdown). Same row shape as buildForPayout.
@@ -608,8 +622,7 @@ class SalesBreakdownService
                     $q->whereIn('status', ['paid', 'confirmed', 'completed'])
                         ->whereNotIn('source', ['external_import', 'pos_test']);
                     if ($excludePos) {
-                        $q->where('source', '!=', 'pos_app')
-                          ->where('source', '!=', 'test_order');
+                        $q->whereNotIn('source', array_merge(self::POS_SOURCES, ['test_order']));
                     }
                     if ($periodStart) {
                         $operator = $exactBounds ? '>' : '>=';
