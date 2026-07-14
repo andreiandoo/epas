@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "AmBilet Scan",
+    "slug": "ambilet-scan",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite accesul la cameră pentru scanarea codurilor QR ale biletelor."
+        }
+      ]
+    ],
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F2F2"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ambilet.scan",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permite accesul la cameră pentru scanarea codurilor QR ale biletelor."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F6F2F2"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.ambilet.scan",
+      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE", "CAMERA"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

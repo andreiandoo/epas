@@ -1,0 +1,251 @@
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { getEvents, getEvent } from '../api/events';
+import { getParticipants } from '../api/participants';
+import { categorizeEvent, groupEventsByCategory } from '../utils/eventCategories';
+import { createReverbConnection } from '../api/reverb';
+import { useAuth } from './AuthContext';
+
+const EventContext = createContext(null);
+
+export function EventProvider({ children }) {
+  const { user } = useAuth();
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventStats, setEventStats] = useState(null);
+  const [ticketTypes, setTicketTypes] = useState([]);
+  const [allTicketTypes, setAllTicketTypes] = useState([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [eventCommission, setEventCommission] = useState(null);
+
+  // When the active organizer changes (switch-organizer), clear all cached
+  // event data so the next fetch loads the new organizer's events.
+  const previousOrganizerId = useRef(null);
+  useEffect(() => {
+    if (!user?.id) {
+      previousOrganizerId.current = null;
+      return;
+    }
+    if (previousOrganizerId.current && previousOrganizerId.current !== user.id) {
+      setEvents([]);
+      setSelectedEvent(null);
+      setEventStats(null);
+      setTicketTypes([]);
+      setAllTicketTypes([]);
+      setEventCommission(null);
+    }
+    previousOrganizerId.current = user.id;
+  }, [user?.id]);
+
+  const isReportsOnlyMode = selectedEvent?.timeCategory === 'past';
+
+  const fetchEvents = useCallback(async () => {
+    setIsLoadingEvents(true);
+    try {
+      const data = await getEvents({ per_page: 100 });
+      if (data.success && data.data) {
+        // Organizer endpoint returns paginated `data: [...]`; venue-owner
+        // endpoint returns `data: { events: [...] }`. Accept either.
+        const list = Array.isArray(data.data)
+          ? data.data
+          : (data.data.events || data.events || []);
+        const enriched = list.map(e => ({
+          ...e,
+          timeCategory: categorizeEvent(e),
+        }));
+        setEvents(enriched);
+
+        // Auto-select: live > today > future > past > first
+        if (!selectedEvent) {
+          const live = enriched.find(e => e.timeCategory === 'live');
+          const today = enriched.find(e => e.timeCategory === 'today');
+          const future = enriched.find(e => e.timeCategory === 'future');
+          const past = enriched.find(e => e.timeCategory === 'past');
+          selectEvent(live || today || future || past || enriched[0]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch events:', e);
+    }
+    setIsLoadingEvents(false);
+  }, []);
+
+  const selectEvent = useCallback(async (event) => {
+    if (!event) return;
+    setSelectedEvent(event);
+    fetchEventStats(event.id);
+    fetchTicketTypes(event.id);
+  }, []);
+
+  const fetchEventStats = useCallback(async (eventId) => {
+    setIsLoadingStats(true);
+    try {
+      const data = await getParticipants(eventId, { per_page: 1 });
+      // API returns { data: { participants: [], stats: { total, checked_in, not_checked_in, check_in_rate } } }
+      const rawStats = data.data?.stats || data.stats || data.meta?.stats || data.meta || {};
+      // Also get event-level data for revenue/capacity/tickets_sold
+      const eventResponse = await getEvent(eventId);
+      const eventData = eventResponse.data?.event || eventResponse.data || {};
+      setEventStats({
+        total: rawStats.total ?? 0,
+        checked_in: rawStats.checked_in ?? 0,
+        not_checked_in: rawStats.not_checked_in ?? 0,
+        check_in_rate: rawStats.check_in_rate ?? 0,
+        // Online vs. la ușă split + per-source ticket-type breakdown
+        // (backend-side computed off orders.source with pos_test
+        // already excluded, so the numbers reconcile with `total`).
+        online_count: rawStats.online_count ?? 0,
+        door_count: rawStats.door_count ?? 0,
+        by_source_and_type: rawStats.by_source_and_type ?? { online: [], door: [] },
+        // Event-level stats
+        total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,
+        revenue: eventData.revenue ?? rawStats.revenue ?? 0,
+        // Prefer the stats-side effective capacity (handles the
+        // event.capacity=null fallback to Σ ticket_types.capacity
+        // computed server-side). Fall through to eventData.capacity
+        // for backwards compat with older backends.
+        capacity: rawStats.capacity ?? eventData.capacity ?? 0,
+      });
+    } catch (e) {
+      console.error('Failed to fetch event stats:', e);
+    }
+    setIsLoadingStats(false);
+  }, []);
+
+  const fetchTicketTypes = useCallback(async (eventId) => {
+    try {
+      const response = await getEvent(eventId);
+      // Handle { data: { event: { ticket_types: [] } } } and { data: { ticket_types: [] } }
+      const event = response.data?.event || response.data || response;
+      setEventCommission({
+        rate: event.effective_commission_rate || event.commission_rate || 0,
+        mode: event.commission_mode || 'included',
+        useFixed: event.use_fixed_commission || false,
+      });
+      const allTypes = event.ticket_types || [];
+      const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
+      const enrichType = (t, i) => ({
+        ...t,
+        color: t.color || colorPalette[i % colorPalette.length],
+        available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
+        checked_in: t.checked_in ?? 0,
+      });
+      // Store ALL ticket types for dashboard breakdowns
+      setAllTicketTypes(allTypes.map(enrichType));
+      // POS shows entry tickets by default. Test POS tickets
+      // (meta.is_test = true, auto-provisioned by the backend per event)
+      // are also shown so the organizer can smoke-test sell + print +
+      // scan without polluting quotas. Downstream code branches on
+      // t?.meta?.is_test to skip receipt printing and route the sale
+      // to source = 'pos_test' on the API.
+      const isTestType = (t) => t?.meta?.is_test === true;
+      const types = allTypes.filter(t => t.is_entry_ticket || isTestType(t));
+      if (types.length > 0) {
+        setTicketTypes(types.map(enrichType));
+      } else {
+        setTicketTypes([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch ticket types:', e);
+      setTicketTypes([]);
+    }
+  }, []);
+
+  const incrementCheckedIn = useCallback(() => {
+    setEventStats(prev => {
+      if (!prev) return prev;
+      const newCheckedIn = (prev.checked_in || 0) + 1;
+      const total = prev.total || 0;
+      return {
+        ...prev,
+        checked_in: newCheckedIn,
+        not_checked_in: Math.max(0, total - newCheckedIn),
+        check_in_rate: total > 0 ? (newCheckedIn / total) * 100 : 0,
+      };
+    });
+  }, []);
+
+  const refreshStats = useCallback(() => {
+    if (selectedEvent) {
+      fetchEventStats(selectedEvent.id);
+    }
+  }, [selectedEvent]);
+
+  const refreshTicketTypes = useCallback(() => {
+    if (selectedEvent) {
+      fetchTicketTypes(selectedEvent.id);
+    }
+  }, [selectedEvent]);
+
+  // ── Real-time push: Reverb subscription per selected event ────────
+  // One WebSocket per AuthProvider lifetime; we attach / detach a
+  // listener as selectedEvent changes. When backend dispatches
+  // OrderConfirmed on event.{id}.sales, we refresh stats + ticket
+  // types immediately — no 30 s polling lag.
+  const reverbRef = useRef(null);
+
+  useEffect(() => {
+    const realtime = user?.realtime;
+    if (!realtime?.enabled) return;
+    if (!reverbRef.current) {
+      reverbRef.current = createReverbConnection(realtime);
+    }
+    return () => {
+      // We keep the connection across event switches — only close on
+      // user change (handled by the cleanup of the outer effect that
+      // recreates this when user.id changes).
+    };
+  }, [user?.realtime?.enabled, user?.realtime?.app_key, user?.realtime?.host]);
+
+  // Tear down on logout / account switch.
+  useEffect(() => {
+    return () => {
+      if (reverbRef.current) {
+        reverbRef.current.close();
+        reverbRef.current = null;
+      }
+    };
+  }, [user?.id]);
+
+  // Per-event subscription.
+  useEffect(() => {
+    if (!selectedEvent?.id || !reverbRef.current) return;
+    const channel = `event.${selectedEvent.id}.sales`;
+    const unsub = reverbRef.current.subscribe(channel, 'order.confirmed', () => {
+      // A sale landed somewhere — pull fresh numbers right now.
+      fetchEventStats(selectedEvent.id);
+      fetchTicketTypes(selectedEvent.id);
+    });
+    return () => { try { unsub(); } catch {} };
+  }, [selectedEvent?.id]);
+
+  const groupedEvents = groupEventsByCategory(events);
+
+  return (
+    <EventContext.Provider value={{
+      events,
+      groupedEvents,
+      selectedEvent,
+      eventStats,
+      ticketTypes,
+      allTicketTypes,
+      isLoadingEvents,
+      isLoadingStats,
+      isReportsOnlyMode,
+      eventCommission,
+      fetchEvents,
+      selectEvent,
+      refreshStats,
+      refreshTicketTypes,
+      incrementCheckedIn,
+    }}>
+      {children}
+    </EventContext.Provider>
+  );
+}
+
+export function useEvent() {
+  const context = useContext(EventContext);
+  if (!context) throw new Error('useEvent must be used within EventProvider');
+  return context;
+}
