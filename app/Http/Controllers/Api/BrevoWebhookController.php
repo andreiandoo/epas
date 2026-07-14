@@ -20,6 +20,18 @@ class BrevoWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        // Shared-secret gate. When BREVO_WEBHOOK_SECRET is configured, the
+        // caller must present it as ?token=... or an X-Webhook-Token header —
+        // the endpoint is otherwise unauthenticated and anyone could POST fake
+        // bounce/open events. No secret set → open (backwards compatible).
+        $secret = config('services.brevo.webhook_secret');
+        if (!empty($secret)) {
+            $provided = (string) ($request->query('token') ?? $request->header('X-Webhook-Token', ''));
+            if (!hash_equals((string) $secret, $provided)) {
+                return response()->json(['status' => 'unauthorized'], 401);
+            }
+        }
+
         $event = $request->input('event');
         $messageId = $request->input('message-id') ?? $request->input('messageId');
         $email = $request->input('email');

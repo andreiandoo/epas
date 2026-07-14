@@ -73,6 +73,11 @@ return [
 
     'brevo' => [
         'api_key' => env('BREVO_API_KEY'),
+        // Shared secret for the inbound event webhook (/api/webhooks/brevo).
+        // When set, the request must present ?token=... (or X-Webhook-Token
+        // header) matching this value. Leave empty to accept unauthenticated
+        // calls (not recommended).
+        'webhook_secret' => env('BREVO_WEBHOOK_SECRET'),
     ],
 
     'esignature' => [
