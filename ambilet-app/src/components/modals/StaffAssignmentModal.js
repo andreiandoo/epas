@@ -17,7 +17,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
-import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember, activateTeamMember } from '../../api/team';
+import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember, activateTeamMember, resetTeamMemberPassword } from '../../api/team';
 import { getVenueGates } from '../../api/gates';
 import { getEvents } from '../../api/events';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
@@ -160,10 +160,16 @@ function MemberCard({
   onToggleEditingEvent,
   onSaveEventEditor,
   onCancelEventEditor,
+  onChangeRole,
+  onResetPassword,
+  savingRole,
+  savingPassword,
 }) {
   const isOwner = member.role === 'owner';
   const isAdmin = member.role === 'admin';
   const assignedGate = gates.find(g => g.id === member.gate_id);
+  const [newPassword, setNewPassword] = useState('');
+  useEffect(() => { if (!isExpanded) setNewPassword(''); }, [isExpanded]);
   const eventIds = Array.isArray(member.event_ids) ? member.event_ids : [];
   const accessLabel = isOwner || isAdmin
     ? 'Toate evenimentele'
@@ -402,6 +408,75 @@ function MemberCard({
           <Text style={styles.gatePickerLabel}>Nu există porți configurate. Adaugă porți din Administrare Porți.</Text>
         </View>
       )}
+
+      {/* Rol + parolă — active membership only (owner + still-pending are
+          out of scope for this panel). Same-tap role change vs the invite
+          form so an admin can demote a staff to viewer without going
+          through the full add-remove flow. */}
+      {isExpanded && !isOwner && member.status === 'active' && (
+        <View style={styles.gatePickerSection}>
+          <Text style={styles.gatePickerLabel}>Schimbă rol:</Text>
+          <View style={styles.gatePickerRow}>
+            {['admin', 'manager', 'staff'].map(r => {
+              const isSelected = member.role === r;
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={[
+                    styles.gatePickerItem,
+                    isSelected && styles.gatePickerItemSelected,
+                    savingRole && !isSelected && { opacity: 0.5 },
+                  ]}
+                  onPress={() => !isSelected && !savingRole && onChangeRole(member.id, r)}
+                  activeOpacity={0.7}
+                  disabled={savingRole}
+                >
+                  <Text style={[
+                    styles.gatePickerItemText,
+                    isSelected && { color: colors.purple },
+                  ]}>
+                    {r === 'admin' ? 'Admin' : r === 'manager' ? 'Manager' : 'Staff'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.gatePickerLabel, { marginTop: 12 }]}>Resetează parola:</Text>
+          <View style={styles.passwordResetRow}>
+            <TextInput
+              style={styles.passwordResetInput}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="Parolă nouă (min 6 caractere)"
+              placeholderTextColor={colors.textTertiary}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!savingPassword}
+            />
+            <TouchableOpacity
+              style={[
+                styles.passwordResetBtn,
+                (newPassword.length < 6 || savingPassword) && styles.passwordResetBtnDisabled,
+              ]}
+              onPress={() => {
+                if (newPassword.length >= 6 && !savingPassword) {
+                  onResetPassword(member.id, newPassword, () => setNewPassword(''));
+                }
+              }}
+              activeOpacity={0.8}
+              disabled={newPassword.length < 6 || savingPassword}
+            >
+              {savingPassword ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.passwordResetBtnText}>Salvează</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -436,6 +511,12 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   // Activation password state
   const [activatingMemberId, setActivatingMemberId] = useState(null);
   const [activatePassword, setActivatePassword] = useState('');
+
+  // Per-member "saving..." flags for the inline role change + password reset
+  // panels inside each expanded card. Keyed by member.id so multiple cards
+  // could theoretically save in parallel without one spinner blocking the rest.
+  const [rolesSaving, setRolesSaving] = useState({});
+  const [passwordsSaving, setPasswordsSaving] = useState({});
 
   const venueId = selectedEvent?.venue_id;
 
@@ -614,6 +695,37 @@ export default function StaffAssignmentModal({ visible, onClose }) {
     setActivatePassword('');
   };
 
+  const handleChangeRole = async (memberId, newRole) => {
+    if (rolesSaving[memberId]) return;
+    setRolesSaving(prev => ({ ...prev, [memberId]: true }));
+    const previous = members.find(m => m.id === memberId)?.role;
+    // Optimistic update
+    setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+    try {
+      await updateTeamMember({ member_id: memberId, role: newRole });
+    } catch (e) {
+      // Rollback on error
+      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: previous } : m));
+      Alert.alert('Eroare', e.message || 'Nu s-a putut schimba rolul.');
+    } finally {
+      setRolesSaving(prev => ({ ...prev, [memberId]: false }));
+    }
+  };
+
+  const handleResetPassword = async (memberId, newPassword, clearInput) => {
+    if (passwordsSaving[memberId]) return;
+    setPasswordsSaving(prev => ({ ...prev, [memberId]: true }));
+    try {
+      await resetTeamMemberPassword(memberId, newPassword);
+      if (typeof clearInput === 'function') clearInput();
+      Alert.alert('Parolă resetată', 'Membrul se poate autentifica acum cu noua parolă.');
+    } catch (e) {
+      Alert.alert('Eroare', e.message || 'Nu s-a putut reseta parola.');
+    } finally {
+      setPasswordsSaving(prev => ({ ...prev, [memberId]: false }));
+    }
+  };
+
   const confirmActivate = async () => {
     if (!activatePassword || activatePassword.length < 6) {
       Alert.alert('Eroare', 'Parola trebuie sa aiba cel putin 6 caractere.');
@@ -756,6 +868,10 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                       onToggleEditingEvent={toggleEditingEvent}
                       onSaveEventEditor={saveEventEditor}
                       onCancelEventEditor={() => { setEditingEventsForMember(null); setEditingEventIds([]); }}
+                      onChangeRole={handleChangeRole}
+                      onResetPassword={handleResetPassword}
+                      savingRole={!!rolesSaving[member.id]}
+                      savingPassword={!!passwordsSaving[member.id]}
                     />
                   ))
                 )}
@@ -1257,6 +1373,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textTertiary,
+  },
+  // Password reset row (inline in expanded card)
+  passwordResetRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  passwordResetInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+  },
+  passwordResetBtn: {
+    backgroundColor: colors.purple,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 88,
+  },
+  passwordResetBtnDisabled: {
+    opacity: 0.4,
+  },
+  passwordResetBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   // Event whitelist
   eventAccessRow: {

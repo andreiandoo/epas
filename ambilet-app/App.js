@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.8';
+const APP_VERSION = '2.0.9';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -268,9 +268,13 @@ function MainTabs() {
               backgroundColor: colors.surface,
               borderTopColor: colors.border,
               borderTopWidth: 1,
-              paddingBottom: Math.max(insets.bottom, 8),
+              // Immersive mode kills insets.bottom (0), so the 8px fallback
+              // used to squash tab labels against the screen edge. Bump the
+              // min padding to 20 so icons/labels get real breathing room
+              // regardless of whether the system nav is visible or hidden.
+              paddingBottom: Math.max(insets.bottom, 20),
               paddingTop: 8,
-              height: 56 + Math.max(insets.bottom, 8),
+              height: 56 + Math.max(insets.bottom, 20),
             },
             tabBarLabelStyle: {
               fontSize: 11,

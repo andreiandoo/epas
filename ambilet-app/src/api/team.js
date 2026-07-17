@@ -19,3 +19,7 @@ export function removeTeamMember(memberId) {
 export function activateTeamMember(memberId, password) {
   return apiPost('/organizer/team/activate', { member_id: memberId, password });
 }
+
+export function resetTeamMemberPassword(memberId, password) {
+  return apiPost('/organizer/team/reset-password', { member_id: memberId, password });
+}
