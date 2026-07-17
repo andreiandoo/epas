@@ -184,32 +184,14 @@ class Dashboard extends Page
             // sales come in → keep the existing 10-min TTL.
             $chartCacheTtl = $chartMonthMode === 'past' ? 86400 : 600;
 
-            if ($isSuperAdmin) {
-                // Drive the sales & tickets bars from the SAME per-day figures as
-                // the "Raport vânzări pe zi" table (SalesBreakdownService per
-                // event), so the chart bar for a day equals that day's report
-                // total. Reuses the per-day report cache (shared with the table).
-                // The month-level cache avoids re-summing 30 days each render.
-                // Current month re-sums every 60s so today's bar tracks the
-                // report table (past days are read from their 24h per-day cache,
-                // so the re-sum is cheap). Past months are immutable → 24h.
-                $reportSeries = Cache::remember(
-                    "mp_dash_chart_rep_v1_{$marketplaceId}_month_{$monthRef}",
-                    $chartMonthMode === 'past' ? 86400 : 60,
-                    fn () => $this->getDailyReportChartSeries($marketplaceId, $chartMonthDate)
-                );
-                $chartData = $reportSeries['sales'];
-                $ticketChartData = $reportSeries['tickets'];
-            } else {
-                // Non-super-admins don't see the chart; keep the light SUM(total)
-                // path so we never run the heavy per-day report for them.
-                $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
-                    return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
-                });
-                $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
-                    return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
-                });
-            }
+            // "Vânzări" bars = money collected per day (SUM order.total), the
+            // same basis as the "Total vânzări" card and billing-breakdown.
+            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+                return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
+            });
+            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+                return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
+            });
 
             // Previous year same month — always immutable, cache 24h.
             $prevYearMonthDate = $chartMonthDate->copy()->subYear();
@@ -1050,15 +1032,21 @@ class Dashboard extends Page
                 ->orWhereIn('orders.event_id', $eventSubquery);
         };
 
-        // Revenue + commission from the authoritative daily-report totals
-        // (SalesBreakdownService per event — floor/leisure/per-type aware, same
-        // source as the report table, chart and today cards). Replaces the old
-        // SUM(orders.total) + flat calculateMarketplaceCommission, which
-        // undercounted both on POS/leisure (commission_amount=0, unreliable
-        // order.total). Reuses the shared per-day report cache.
-        $reportTotals = $this->dailyReportMonthTotals($marketplaceId, $monthDate);
-        $totalSales = $reportTotals['sales'];
-        $totalCommission = $reportTotals['commission'];
+        // "Total vânzări" = money actually collected from sales this month =
+        // SUM(order.total). A package counts at the price paid for it (not the
+        // sum of its component products), which is exactly what order.total is.
+        // Matches billing-breakdown's "Încasări totale".
+        $totalSales = (float) Order::where($orderScope)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->sum('total');
+
+        // "Venituri brute" = commission AmBilet actually earned this month, via
+        // the authoritative SalesBreakdownService (floor/leisure/per-type aware
+        // — the raw commission_amount is 0 for POS/leisure). Summed from the
+        // shared per-day report cache.
+        $totalCommission = $this->dailyReportMonthTotals($marketplaceId, $monthDate)['commission'];
 
         // Tickets sold this month — efficient join instead of nested whereHas
         $ticketsSold = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
@@ -1395,47 +1383,6 @@ class Dashboard extends Page
         return ['sales' => $sales, 'commission' => $commission, 'tickets' => $tickets];
     }
 
-    /**
-     * Build the month's sales & tickets chart series from the daily report
-     * totals (Σ sales_day / Σ tickets_day per day). Future days are 0; each
-     * past/today day reuses the shared per-day report cache, so days with no
-     * sales stay cheap (empty report short-circuits) and warm days are free.
-     *
-     * @return array{sales: array{labels: array, data: array}, tickets: array{labels: array, data: array}}
-     */
-    private function getDailyReportChartSeries(int $marketplaceId, Carbon $monthDate): array
-    {
-        $tz = 'Europe/Bucharest';
-        $today = Carbon::now($tz)->format('Y-m-d');
-        $daysInMonth = (int) $monthDate->daysInMonth;
-
-        $labels = [];
-        $sales = [];
-        $tickets = [];
-
-        $cur = $monthDate->copy()->startOfMonth();
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dateStr = $cur->format('Y-m-d');
-            $labels[] = $cur->format('d');
-
-            if ($dateStr > $today) {
-                $sales[] = 0.0;
-                $tickets[] = 0;
-            } else {
-                $rows = $this->dailyReportRowsCached($marketplaceId, $dateStr);
-                $sales[] = (float) collect($rows)->sum('sales_day');
-                $tickets[] = (int) collect($rows)->sum('tickets_day');
-            }
-
-            $cur->addDay();
-        }
-
-        return [
-            'sales' => ['labels' => $labels, 'data' => $sales],
-            'tickets' => ['labels' => $labels, 'data' => $tickets],
-        ];
-    }
-
     private function computeDailyEventReport(int $marketplaceId, string $date): array
     {
         $tz = 'Europe/Bucharest';
@@ -1561,11 +1508,15 @@ class Dashboard extends Page
                 continue; // Orphan order pointing at a deleted event — skip.
             }
 
-            // Day slice: revenue/commission for tickets whose order was created
-            // on the selected day (exact UTC bounds already computed above).
+            // Revenue = money collected (SUM order.total), so the report agrees
+            // with the "Total vânzări" card, the chart and billing's "Încasări
+            // totale". A package counts at the price paid, not the sum of its
+            // components. Commission = AmBilet's actual cut via
+            // SalesBreakdownService (floor/leisure/per-type aware — the raw
+            // orders.commission_amount is 0 for POS/leisure).
             $dayBd = $salesService->build($event, $dayStart, $dayEnd, exactBounds: true);
             $dayKept = (float) ($dayBd['total_commission_kept_from_refunds'] ?? 0);
-            $dayRevenue = (float) $dayBd['total_revenue'] + $dayKept;
+            $dayRevenue = (float) $day->revenue;
             $dayCommission = (float) $dayBd['total_commission'] + $dayKept;
 
             $total = $totalRows->get((string) $eid) ?? $totalRows->get($eid);
@@ -1574,7 +1525,7 @@ class Dashboard extends Page
             // All-time totals for the same event (no period bounds).
             $totalBd = $salesService->build($event);
             $totalKept = (float) ($totalBd['total_commission_kept_from_refunds'] ?? 0);
-            $totalRevenue = (float) $totalBd['total_revenue'] + $totalKept;
+            $totalRevenue = $total ? (float) $total->revenue : 0.0;
             $totalCommission = (float) $totalBd['total_commission'] + $totalKept;
 
             // Display date — single_day uses event_date, range starts at
