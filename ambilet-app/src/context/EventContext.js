@@ -55,13 +55,22 @@ export function EventProvider({ children }) {
         }));
         setEvents(enriched);
 
-        // Auto-select: live > today > future > past > first
+        // Auto-select: live > today > future > past > first.
+        // Also warm the cache for the SECOND most-likely event so
+        // switching from the picker is instant on the common case
+        // ("live event + one soon after"), before that switch happens.
         if (!selectedEvent) {
           const live = enriched.find(e => e.timeCategory === 'live');
           const today = enriched.find(e => e.timeCategory === 'today');
           const future = enriched.find(e => e.timeCategory === 'future');
           const past = enriched.find(e => e.timeCategory === 'past');
-          selectEvent(live || today || future || past || enriched[0]);
+          const primary = live || today || future || past || enriched[0];
+          selectEvent(primary);
+          const runnersUp = [live, today, future].filter(Boolean).filter(e => e.id !== primary?.id);
+          if (runnersUp[0]) {
+            // Fire-and-forget — no await, no state changes, just fills the cache.
+            setTimeout(() => { try { fetchEventData(runnersUp[0].id); } catch {} }, 800);
+          }
         }
       }
     } catch (e) {
@@ -70,88 +79,114 @@ export function EventProvider({ children }) {
     setIsLoadingEvents(false);
   }, []);
 
+  // Per-event cache — dedupe fetches within a 30s window. Reverb push
+  // events (order.confirmed) call `invalidateEventCache` to force fresh
+  // reads immediately after a real state change. `refreshStats` also
+  // bypasses the cache so pull-to-refresh always hits the API.
+  const eventCacheRef = useRef(new Map()); // eventId → { lastFetchedAt, inflight }
+  const CACHE_TTL_MS = 30_000;
+
+  const invalidateEventCache = useCallback((eventId) => {
+    if (eventId === undefined) {
+      eventCacheRef.current.clear();
+    } else {
+      eventCacheRef.current.delete(eventId);
+    }
+  }, []);
+
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+
+  const COLOR_PALETTE = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
+  const enrichTicketType = (t, i) => ({
+    ...t,
+    color: t.color || COLOR_PALETTE[i % COLOR_PALETTE.length],
+    available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
+    checked_in: t.checked_in ?? 0,
+  });
+
+  const applyEventPayload = useCallback((participantsData, eventResponse) => {
+    const rawStats = participantsData?.data?.stats
+      || participantsData?.stats
+      || participantsData?.meta?.stats
+      || participantsData?.meta
+      || {};
+    const eventData = eventResponse?.data?.event || eventResponse?.data || {};
+
+    setEventStats({
+      total: rawStats.total ?? 0,
+      checked_in: rawStats.checked_in ?? 0,
+      not_checked_in: rawStats.not_checked_in ?? 0,
+      check_in_rate: rawStats.check_in_rate ?? 0,
+      online_count: rawStats.online_count ?? 0,
+      door_count: rawStats.door_count ?? 0,
+      by_source_and_type: rawStats.by_source_and_type ?? { online: [], door: [] },
+      hourly_distribution: rawStats.hourly_distribution ?? [],
+      peak_hour: rawStats.peak_hour ?? null,
+      total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,
+      revenue: eventData.revenue ?? rawStats.revenue ?? 0,
+      capacity: rawStats.capacity ?? eventData.capacity ?? 0,
+    });
+
+    setEventCommission({
+      rate: eventData.effective_commission_rate || eventData.commission_rate || 0,
+      mode: eventData.commission_mode || 'included',
+      useFixed: eventData.use_fixed_commission || false,
+    });
+
+    const allTypes = eventData.ticket_types || [];
+    setAllTicketTypes(allTypes.map(enrichTicketType));
+    const isTestType = (t) => t?.meta?.is_test === true;
+    const posTypes = allTypes.filter(t => t.is_entry_ticket || isTestType(t));
+    setTicketTypes(posTypes.length > 0 ? posTypes.map(enrichTicketType) : []);
+
+    setLastSyncAt(Date.now());
+  }, []);
+
+  // Single load path: parallel fetch of participants + event details,
+  // with 30s cache dedupe and in-flight coalescing (rapid tab switches
+  // do NOT trigger duplicate requests).
+  const fetchEventData = useCallback(async (eventId, { force = false } = {}) => {
+    if (!eventId) return;
+    const cache = eventCacheRef.current.get(eventId);
+    const now = Date.now();
+
+    if (!force && cache?.lastFetchedAt && now - cache.lastFetchedAt < CACHE_TTL_MS) {
+      return; // fresh in cache, skip
+    }
+    if (cache?.inflight) {
+      return cache.inflight; // dedupe: one operator switching fast fires 1 request
+    }
+
+    setIsLoadingStats(true);
+    const inflight = (async () => {
+      try {
+        const [participants, eventResponse] = await Promise.all([
+          getParticipants(eventId, { per_page: 1 }),
+          getEvent(eventId),
+        ]);
+        applyEventPayload(participants, eventResponse);
+        eventCacheRef.current.set(eventId, { lastFetchedAt: Date.now(), inflight: null });
+      } catch (e) {
+        console.error('Failed to fetch event data:', e);
+        eventCacheRef.current.set(eventId, { lastFetchedAt: cache?.lastFetchedAt || 0, inflight: null });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    })();
+
+    eventCacheRef.current.set(eventId, { lastFetchedAt: cache?.lastFetchedAt || 0, inflight });
+    return inflight;
+  }, [applyEventPayload]);
+
   const selectEvent = useCallback(async (event) => {
     if (!event) return;
     setSelectedEvent(event);
-    fetchEventStats(event.id);
-    fetchTicketTypes(event.id);
-  }, []);
+    fetchEventData(event.id);
+  }, [fetchEventData]);
 
-  const fetchEventStats = useCallback(async (eventId) => {
-    setIsLoadingStats(true);
-    try {
-      const data = await getParticipants(eventId, { per_page: 1 });
-      // API returns { data: { participants: [], stats: { total, checked_in, not_checked_in, check_in_rate } } }
-      const rawStats = data.data?.stats || data.stats || data.meta?.stats || data.meta || {};
-      // Also get event-level data for revenue/capacity/tickets_sold
-      const eventResponse = await getEvent(eventId);
-      const eventData = eventResponse.data?.event || eventResponse.data || {};
-      setEventStats({
-        total: rawStats.total ?? 0,
-        checked_in: rawStats.checked_in ?? 0,
-        not_checked_in: rawStats.not_checked_in ?? 0,
-        check_in_rate: rawStats.check_in_rate ?? 0,
-        // Online vs. la ușă split + per-source ticket-type breakdown
-        // (backend-side computed off orders.source with pos_test
-        // already excluded, so the numbers reconcile with `total`).
-        online_count: rawStats.online_count ?? 0,
-        door_count: rawStats.door_count ?? 0,
-        by_source_and_type: rawStats.by_source_and_type ?? { online: [], door: [] },
-        hourly_distribution: rawStats.hourly_distribution ?? [],
-        peak_hour: rawStats.peak_hour ?? null,
-        // Event-level stats
-        total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,
-        revenue: eventData.revenue ?? rawStats.revenue ?? 0,
-        // Prefer the stats-side effective capacity (handles the
-        // event.capacity=null fallback to Σ ticket_types.capacity
-        // computed server-side). Fall through to eventData.capacity
-        // for backwards compat with older backends.
-        capacity: rawStats.capacity ?? eventData.capacity ?? 0,
-      });
-    } catch (e) {
-      console.error('Failed to fetch event stats:', e);
-    }
-    setIsLoadingStats(false);
-  }, []);
-
-  const fetchTicketTypes = useCallback(async (eventId) => {
-    try {
-      const response = await getEvent(eventId);
-      // Handle { data: { event: { ticket_types: [] } } } and { data: { ticket_types: [] } }
-      const event = response.data?.event || response.data || response;
-      setEventCommission({
-        rate: event.effective_commission_rate || event.commission_rate || 0,
-        mode: event.commission_mode || 'included',
-        useFixed: event.use_fixed_commission || false,
-      });
-      const allTypes = event.ticket_types || [];
-      const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
-      const enrichType = (t, i) => ({
-        ...t,
-        color: t.color || colorPalette[i % colorPalette.length],
-        available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
-        checked_in: t.checked_in ?? 0,
-      });
-      // Store ALL ticket types for dashboard breakdowns
-      setAllTicketTypes(allTypes.map(enrichType));
-      // POS shows entry tickets by default. Test POS tickets
-      // (meta.is_test = true, auto-provisioned by the backend per event)
-      // are also shown so the organizer can smoke-test sell + print +
-      // scan without polluting quotas. Downstream code branches on
-      // t?.meta?.is_test to skip receipt printing and route the sale
-      // to source = 'pos_test' on the API.
-      const isTestType = (t) => t?.meta?.is_test === true;
-      const types = allTypes.filter(t => t.is_entry_ticket || isTestType(t));
-      if (types.length > 0) {
-        setTicketTypes(types.map(enrichType));
-      } else {
-        setTicketTypes([]);
-      }
-    } catch (e) {
-      console.error('Failed to fetch ticket types:', e);
-      setTicketTypes([]);
-    }
-  }, []);
+  // Backwards-compat wrappers — a few call sites still reference these.
+  const fetchEventStats = useCallback((eventId) => fetchEventData(eventId, { force: true }), [fetchEventData]);
+  const fetchTicketTypes = useCallback((eventId) => fetchEventData(eventId, { force: true }), [fetchEventData]);
 
   const incrementCheckedIn = useCallback(() => {
     setEventStats(prev => {
@@ -167,17 +202,24 @@ export function EventProvider({ children }) {
     });
   }, []);
 
-  const refreshStats = useCallback(() => {
-    if (selectedEvent) {
-      fetchEventStats(selectedEvent.id);
-    }
-  }, [selectedEvent]);
+  // Pull-to-refresh entry point. Debounced to 500ms so a compulsive
+  // operator can't hammer the API on a laggy connection.
+  const lastRefreshAtRef = useRef(0);
+  const refreshStats = useCallback(async () => {
+    if (!selectedEvent) return;
+    const now = Date.now();
+    if (now - lastRefreshAtRef.current < 500) return;
+    lastRefreshAtRef.current = now;
+    invalidateEventCache(selectedEvent.id);
+    return fetchEventData(selectedEvent.id, { force: true });
+  }, [selectedEvent, fetchEventData, invalidateEventCache]);
 
+  // Reverb push handler needs to bust cache before refetching.
   const refreshTicketTypes = useCallback(() => {
-    if (selectedEvent) {
-      fetchTicketTypes(selectedEvent.id);
-    }
-  }, [selectedEvent]);
+    if (!selectedEvent) return;
+    invalidateEventCache(selectedEvent.id);
+    return fetchEventData(selectedEvent.id, { force: true });
+  }, [selectedEvent, fetchEventData, invalidateEventCache]);
 
   // ── Real-time push: Reverb subscription per selected event ────────
   // One WebSocket per AuthProvider lifetime; we attach / detach a
@@ -214,9 +256,10 @@ export function EventProvider({ children }) {
     if (!selectedEvent?.id || !reverbRef.current) return;
     const channel = `event.${selectedEvent.id}.sales`;
     const unsub = reverbRef.current.subscribe(channel, 'order.confirmed', () => {
-      // A sale landed somewhere — pull fresh numbers right now.
-      fetchEventStats(selectedEvent.id);
-      fetchTicketTypes(selectedEvent.id);
+      // A sale landed somewhere — bust the 30s cache and pull fresh
+      // numbers right now (single request via fetchEventData).
+      invalidateEventCache(selectedEvent.id);
+      fetchEventData(selectedEvent.id, { force: true });
     });
     return () => { try { unsub(); } catch {} };
   }, [selectedEvent?.id]);
@@ -235,6 +278,7 @@ export function EventProvider({ children }) {
       isLoadingStats,
       isReportsOnlyMode,
       eventCommission,
+      lastSyncAt,
       fetchEvents,
       selectEvent,
       refreshStats,

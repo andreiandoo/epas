@@ -17,6 +17,8 @@ import { useApp } from '../context/AppContext';
 import { apiGet } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
 import { colors } from '../theme/colors';
+import Skeleton from '../components/Skeleton';
+import { copyToClipboard } from '../utils/copyToClipboard';
 
 // ---------------------------------------------------------------------------
 // SVG Icon component (replaces Ionicons)
@@ -230,7 +232,11 @@ function ReportsStatsGrid({ stats }) {
   );
 }
 
-function AdminLiveStats({ stats, onShowSales, onShowTicketSales, onShowRemaining, onShowGuestList }) {
+function AdminLiveStats({ stats, loading, onShowSales, onShowTicketSales, onShowRemaining, onShowGuestList }) {
+  // "loading" is only meaningful on the FIRST load (no stats cached yet).
+  // On refresh we keep the previous values on screen — flipping them to
+  // skeletons would flicker and mask that we already have real data.
+  const firstLoad = loading && !stats;
   const totalSold = stats?.total_sold ?? 0;
   const checkedIn = stats?.checked_in ?? 0;
   const revenue = stats?.revenue ?? 0;
@@ -272,7 +278,11 @@ function AdminLiveStats({ stats, onShowSales, onShowTicketSales, onShowRemaining
                 </View>
                 <Text style={styles.mockCardLabel}>{c.label}</Text>
               </View>
-              <Text style={styles.mockCardValue}>{c.value}</Text>
+              {firstLoad ? (
+                <Skeleton width={80} height={26} radius={6} style={{ marginTop: 4, marginBottom: 4 }} />
+              ) : (
+                <Text style={styles.mockCardValue}>{c.value}</Text>
+              )}
               <Text style={styles.mockCardUnit}>{c.unit}</Text>
             </Wrap>
           );
@@ -363,38 +373,46 @@ function RecentActivity({ recentScans }) {
   return (
     <View style={styles.recentSection}>
       <Text style={styles.sectionTitle}>Activitate Recentă</Text>
-      {recentScans.slice(0, 10).map((scan, index) => (
-        <View
-          key={scan.id ?? `scan-${index}`}
-          style={[
-            styles.activityItem,
-            index < recentScans.length - 1 && styles.activityItemBorder,
-          ]}
-        >
-          <View
+      {recentScans.slice(0, 10).map((scan, index) => {
+        // Long-press the whole row to copy the ticket code — most requested
+        // "quick action" from cashiers verifying by phone with the box office.
+        const code = scan.barcode || scan.ticket_code || scan.code || scan.id;
+        return (
+          <TouchableOpacity
+            key={scan.id ?? `scan-${index}`}
             style={[
-              styles.activityDot,
-              {
-                backgroundColor:
-                  scan.status === 'valid' ? colors.green : colors.red,
-              },
+              styles.activityItem,
+              index < recentScans.length - 1 && styles.activityItemBorder,
             ]}
-          />
-          <View style={styles.activityContent}>
-            <Text style={styles.activityName} numberOfLines={1}>
-              {scan.name || scan.ticket_holder || 'Unknown'}
-            </Text>
-            <Text style={styles.activityMeta}>
-              {scan.ticket_type || 'Ticket'} - {scan.time || 'Just now'}
-            </Text>
-          </View>
-          <Icon
-            name={scan.status === 'valid' ? 'check-circle' : 'x-circle'}
-            size={18}
-            color={scan.status === 'valid' ? colors.green : colors.red}
-          />
-        </View>
-      ))}
+            activeOpacity={0.7}
+            onLongPress={() => code && copyToClipboard(code, 'Cod bilet')}
+            delayLongPress={300}
+          >
+            <View
+              style={[
+                styles.activityDot,
+                {
+                  backgroundColor:
+                    scan.status === 'valid' ? colors.green : colors.red,
+                },
+              ]}
+            />
+            <View style={styles.activityContent}>
+              <Text style={styles.activityName} numberOfLines={1}>
+                {scan.name || scan.ticket_holder || 'Unknown'}
+              </Text>
+              <Text style={styles.activityMeta}>
+                {scan.ticket_type || 'Ticket'} - {scan.time || 'Just now'}
+              </Text>
+            </View>
+            <Icon
+              name={scan.status === 'valid' ? 'check-circle' : 'x-circle'}
+              size={18}
+              color={scan.status === 'valid' ? colors.green : colors.red}
+            />
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -542,6 +560,7 @@ function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans
         <>
           <AdminLiveStats
             stats={eventStats}
+            loading={isLoadingStats}
             onShowSales={onShowSales}
             onShowTicketSales={onShowTicketSales}
             onShowRemaining={onShowRemaining}

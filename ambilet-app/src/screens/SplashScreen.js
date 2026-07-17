@@ -1,227 +1,265 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Dimensions,
-} from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
-import { colors } from '../theme/colors';
+// ============================================================================
+// AmBilet Scan — animated splash (QR-scan reveal → logo lockup)
+//
+// Drop-in replacement for src/screens/SplashScreen.js. Same contract:
+//   <SplashScreen onFinish={() => ...} />  is called once when the sequence ends.
+//
+// Sequence (~2.6s, runs ONCE):
+//   1. maroon radial background + pulsing glow fade in
+//   2. scan-frame corner brackets draw in
+//   3. a refined glowing beam sweeps top→bottom and "lights up" the QR as it passes
+//   4. a soft white completion pulse (no green)
+//   5. the whole scan zone collapses upward and morphs into the AmBilet mark
+//   6. "AmBilet Scan" wordmark + tagline rise; loading bar fills
+//
+// Dependencies: only react-native + react-native-svg (both already installed).
+// No new packages, no expo-linear-gradient, no Lottie.
+// ============================================================================
+import React, { useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, Dimensions, Platform } from 'react-native';
+import Svg, { Rect, Defs, RadialGradient, LinearGradient, Stop, G } from 'react-native-svg';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const LOADING_BAR_WIDTH = SCREEN_WIDTH * 0.6;
+const { width: SCREEN_W } = Dimensions.get('window');
+
+// Brand palette (self-contained so this file works before theme is re-skinned)
+const C = {
+  glow: 'rgba(226,58,69,0.55)',
+  beam: '#FFFFFF',
+  red: '#9A1B22',
+  redBright: '#E23A45',
+};
+
+const ZONE = 210;   // scan-zone box
+const QR = 168;     // qr size within the zone
+const N = 21;       // qr modules per side
+const DURATION = 2600;
+
+// ── deterministic QR-like matrix (finder patterns + timing + pseudo-random data)
+function buildMatrix() {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const m = Array.from({ length: N }, () => Array(N).fill(0));
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) m[r][c] = rnd() > 0.52 ? 1 : 0;
+  const finder = (r0, c0) => {
+    for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++) {
+      const r = r0 + i, c = c0 + j;
+      if (r < 0 || c < 0 || r >= N || c >= N) continue;
+      const ring = i >= 0 && i <= 6 && j >= 0 && j <= 6 && (i === 0 || i === 6 || j === 0 || j === 6);
+      const core = i >= 2 && i <= 4 && j >= 2 && j <= 4;
+      m[r][c] = ring || core ? 1 : 0;
+    }
+  };
+  finder(0, 0); finder(0, 14); finder(14, 0);
+  for (let i = 8; i < 13; i++) { m[6][i] = i % 2; m[i][6] = i % 2; }
+  return m;
+}
+
+function QrLayer({ lit }) {
+  const matrix = useMemo(buildMatrix, []);
+  const cells = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    if (!matrix[r][c]) continue;
+    const accent = lit && (r + c) % 6 === 0;
+    cells.push(
+      <Rect
+        key={`${r}-${c}`}
+        x={c + 0.06} y={r + 0.06} width={0.88} height={0.88} rx={0.12}
+        fill={lit ? (accent ? C.redBright : '#FFFFFF') : '#FFFFFF'}
+        fillOpacity={lit ? 1 : 0.14}
+      />
+    );
+  }
+  return (
+    <Svg width={QR} height={QR} viewBox={`0 0 ${N} ${N}`}>
+      <G>{cells}</G>
+    </Svg>
+  );
+}
 
 export default function SplashScreen({ onFinish }) {
-  const loadingProgress = useRef(new Animated.Value(0)).current;
-  const glowOpacity = useRef(new Animated.Value(0.4)).current;
-  const logoScale = useRef(new Animated.Value(0.8)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
+  // Two master clocks: `t` drives transforms/opacity (native driver),
+  // `tJS` drives layout props that the native driver can't (height, width).
+  const t = useRef(new Animated.Value(0)).current;
+  const tJS = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo entrance animation
+    const cfg = { duration: DURATION, easing: Easing.linear, useNativeDriver: true };
     Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Text fade in after logo
-    Animated.timing(textOpacity, {
-      toValue: 1,
-      duration: 500,
-      delay: 400,
-      useNativeDriver: true,
-    }).start();
-
-    // Loading bar fill over 2 seconds
-    Animated.timing(loadingProgress, {
-      toValue: 1,
-      duration: 2000,
-      delay: 300,
-      useNativeDriver: false,
-    }).start();
-
-    // Glow pulse loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowOpacity, {
-          toValue: 0.8,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowOpacity, {
-          toValue: 0.3,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Call onFinish after 2.5s
-    const timer = setTimeout(() => {
-      if (onFinish) onFinish();
-    }, 2500);
-
+      Animated.timing(t, { toValue: 1, ...cfg }),
+      Animated.timing(tJS, { toValue: 1, duration: DURATION, easing: Easing.linear, useNativeDriver: false }),
+    ]).start(({ finished }) => { if (finished && onFinish) onFinish(); });
+    // safety net in case the animation is interrupted
+    const timer = setTimeout(() => { onFinish && onFinish(); }, DURATION + 400);
     return () => clearTimeout(timer);
-  }, []);
+  }, [t, tJS, onFinish]);
 
-  const loadingBarWidth = loadingProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, LOADING_BAR_WIDTH],
-  });
+  // ── interpolations (fractions mirror the CSS keyframes) ──────────────────
+  const glowOpacity = t.interpolate({ inputRange: [0, 0.18, 0.45, 0.6, 1], outputRange: [0, 0.5, 0.9, 0.7, 0.6] });
+
+  const bracketOpacity = t.interpolate({ inputRange: [0, 0.04, 0.12, 0.52, 0.62], outputRange: [0, 0, 1, 1, 0] });
+  const bracketScale = t.interpolate({ inputRange: [0, 0.12, 1], outputRange: [0.7, 1, 1] });
+
+  const qrDimOpacity = t.interpolate({ inputRange: [0, 0.08, 0.16, 0.54, 0.62], outputRange: [0, 0, 1, 1, 0] });
+  const revealHeight = tJS.interpolate({ inputRange: [0, 0.13, 0.49, 1], outputRange: [0, 0, QR, QR] });
+  const litOpacity = t.interpolate({ inputRange: [0, 0.13, 0.54, 0.62], outputRange: [0, 1, 1, 0] });
+
+  const beamOpacity = t.interpolate({ inputRange: [0, 0.13, 0.17, 0.47, 0.52], outputRange: [0, 0, 1, 1, 0] });
+  const beamY = t.interpolate({ inputRange: [0, 0.17, 0.47, 1], outputRange: [4, 4, QR + 16, QR + 16] });
+
+  // completion pulse — soft WHITE ring bloom (no green)
+  const ringOpacity = t.interpolate({ inputRange: [0, 0.47, 0.51, 0.58, 0.64], outputRange: [0, 0, 0.85, 0.5, 0] });
+  const ringScale = t.interpolate({ inputRange: [0, 0.47, 0.51, 0.58, 0.64], outputRange: [0.5, 0.5, 0.8, 1.12, 1.32] });
+
+  const zoneScale = t.interpolate({ inputRange: [0, 0.52, 0.66], outputRange: [1, 1, 0.42] });
+  const zoneY = t.interpolate({ inputRange: [0, 0.52, 0.66], outputRange: [0, 0, -170] });
+  const zoneOpacity = t.interpolate({ inputRange: [0, 0.58, 0.66], outputRange: [1, 1, 0] });
+
+  const lockOpacity = t.interpolate({ inputRange: [0, 0.6, 0.7, 1], outputRange: [0, 0, 1, 1] });
+  const lockY = t.interpolate({ inputRange: [0, 0.6, 0.7], outputRange: [24, 24, 0] });
+
+  const loadWidth = tJS.interpolate({ inputRange: [0, 0.06, 0.9, 1], outputRange: [0, 0, 150, 150] });
+  const poweredOpacity = t.interpolate({ inputRange: [0, 0.08, 0.2, 1], outputRange: [0, 0, 0.85, 0.85] });
+
+  const bracketStyle = { opacity: bracketOpacity, transform: [{ scale: bracketScale }] };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        {/* Logo with glow effect */}
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            {
-              opacity: logoOpacity,
-              transform: [{ scale: logoScale }],
-            },
-          ]}
-        >
-          {/* Glow behind icon */}
-          <Animated.View
-            style={[
-              styles.glow,
-              { opacity: glowOpacity },
-            ]}
-          />
-          <View style={styles.iconWrap}>
-            <Svg width={64} height={64} viewBox="0 0 48 48" fill="none">
-              <Defs>
-                <LinearGradient id="splashGrad" x1="6" y1="10" x2="42" y2="38">
-                  <Stop stopColor="#9A1B22" />
-                  <Stop offset="1" stopColor="#9A1B22" />
-                </LinearGradient>
-              </Defs>
-              <Path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#splashGrad)" />
-              <Line x1="17" y1="15" x2="31" y2="15" stroke="white" strokeOpacity="0.25" strokeWidth="1.5" strokeLinecap="round" />
-              <Line x1="15" y1="19" x2="33" y2="19" stroke="white" strokeOpacity="0.35" strokeWidth="1.5" strokeLinecap="round" />
-              <Rect x="20" y="27" width="8" height="8" rx="1.5" fill="white" />
-            </Svg>
-          </View>
+    <View style={styles.root}>
+      {/* radial maroon background */}
+      <Svg style={StyleSheet.absoluteFill}>
+        <Defs>
+          <RadialGradient id="bg" cx="50%" cy="22%" rx="95%" ry="80%">
+            <Stop offset="0" stopColor="#8c1520" />
+            <Stop offset="0.42" stopColor="#5c0d13" />
+            <Stop offset="0.78" stopColor="#3a070c" />
+            <Stop offset="1" stopColor="#2a050a" />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#bg)" />
+      </Svg>
+
+      {/* pulsing glow */}
+      <Animated.View style={[styles.glow, { opacity: glowOpacity }]} pointerEvents="none">
+        <Svg width={SCREEN_W} height={SCREEN_W}>
+          <Defs>
+            <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={C.redBright} stopOpacity="0.55" />
+              <Stop offset="1" stopColor={C.redBright} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#glow)" />
+        </Svg>
+      </Animated.View>
+
+      {/* ── scan zone (collapses into the logo) ── */}
+      <Animated.View
+        style={[styles.zone, { opacity: zoneOpacity, transform: [{ translateY: zoneY }, { scale: zoneScale }] }]}
+      >
+        {/* brackets */}
+        <Animated.View style={[styles.bracket, styles.b1, bracketStyle]} />
+        <Animated.View style={[styles.bracket, styles.b2, bracketStyle]} />
+        <Animated.View style={[styles.bracket, styles.b3, bracketStyle]} />
+        <Animated.View style={[styles.bracket, styles.b4, bracketStyle]} />
+
+        {/* dim QR base */}
+        <Animated.View style={[styles.qrAbs, { opacity: qrDimOpacity }]}>
+          <QrLayer lit={false} />
         </Animated.View>
 
-        {/* Brand text */}
-        <Animated.View style={[styles.brandRow, { opacity: textOpacity }]}>
-          <Text style={styles.brandTextAm}>Am</Text>
-          <Text style={styles.brandTextBilet}>Bilet</Text>
-        </Animated.View>
-        <Animated.View style={{ opacity: textOpacity }}>
-          <Text style={styles.tagline}>Scanare & Vânzare Bilete</Text>
+        {/* lit QR, revealed top→down by the beam (animated height clip) */}
+        <Animated.View style={[styles.qrAbs, { opacity: litOpacity }]}>
+          <Animated.View style={{ height: revealHeight, width: QR, overflow: 'hidden' }}>
+            <QrLayer lit />
+          </Animated.View>
         </Animated.View>
 
-        {/* Loading bar */}
-        <View style={styles.loaderContainer}>
-          <View style={styles.loaderTrack}>
-            <Animated.View
-              style={[
-                styles.loaderBar,
-                { width: loadingBarWidth },
-              ]}
-            />
-          </View>
+        {/* refined beam: hairline core (tapered white gradient) + soft trailing wash + red halo */}
+        <Animated.View style={[styles.beamWrap, { opacity: beamOpacity, transform: [{ translateY: beamY }] }]}>
+          <View style={styles.beamHalo} />
+          <Svg width={ZONE + 28} height={64} style={{ position: 'absolute', left: 0, top: 0 }}>
+            <Defs>
+              <LinearGradient id="beamCore" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#fff" stopOpacity="0" />
+                <Stop offset="0.12" stopColor="#fff" stopOpacity="0.15" />
+                <Stop offset="0.5" stopColor="#fff" stopOpacity="1" />
+                <Stop offset="0.88" stopColor="#fff" stopOpacity="0.15" />
+                <Stop offset="1" stopColor="#fff" stopOpacity="0" />
+              </LinearGradient>
+              <LinearGradient id="beamWash" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#fff" stopOpacity="0.22" />
+                <Stop offset="0.4" stopColor={C.redBright} stopOpacity="0.14" />
+                <Stop offset="1" stopColor={C.redBright} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={10} y={2} width={ZONE + 8} height={58} rx={20} fill="url(#beamWash)" />
+            <Rect x={0} y={0} width={ZONE + 28} height={2.4} rx={1.2} fill="url(#beamCore)" />
+          </Svg>
+        </Animated.View>
+
+        {/* completion pulse — soft white ring bloom (no green) */}
+        <Animated.View style={[styles.ring, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
+      </Animated.View>
+
+      {/* ── logo lockup ── */}
+      <Animated.View style={[styles.lockup, { opacity: lockOpacity, transform: [{ translateY: lockY }] }]}>
+        <View style={styles.mark}>
+          <View style={styles.ticket} />
+          <View style={styles.ticketDash} />
         </View>
-      </View>
+        <Text style={styles.word}>
+          <Text style={{ color: '#fff' }}>Am</Text>
+          <Text style={{ color: '#F7B9BC' }}>Bilet</Text>
+          <Text style={{ color: '#fff' }}> Scan</Text>
+        </Text>
+        <Text style={styles.tag}>Scanare &amp; Vânzare Bilete</Text>
+      </Animated.View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Powered by AmBilet</Text>
+      {/* ── loading bar + footer ── */}
+      <View style={styles.foot}>
+        <View style={styles.loadTrack}>
+          <Animated.View style={[styles.loadFill, { width: loadWidth }]} />
+        </View>
+        <Animated.Text style={[styles.powered, { opacity: poweredOpacity }]}>Powered by AmBilet</Animated.Text>
       </View>
     </View>
   );
 }
 
+const BRK = 44, BW = 4;
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+  root: { flex: 1, backgroundColor: '#5c0d13', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  glow: { position: 'absolute', top: '10%', alignSelf: 'center' },
+
+  zone: { width: ZONE, height: ZONE, alignItems: 'center', justifyContent: 'center' },
+  bracket: { position: 'absolute', width: BRK, height: BRK, borderColor: '#fff' },
+  b1: { top: 0, left: 0, borderTopWidth: BW, borderLeftWidth: BW, borderTopLeftRadius: 12 },
+  b2: { top: 0, right: 0, borderTopWidth: BW, borderRightWidth: BW, borderTopRightRadius: 12 },
+  b3: { bottom: 0, left: 0, borderBottomWidth: BW, borderLeftWidth: BW, borderBottomLeftRadius: 12 },
+  b4: { bottom: 0, right: 0, borderBottomWidth: BW, borderRightWidth: BW, borderBottomRightRadius: 12 },
+
+  qrAbs: { position: 'absolute', width: QR, height: QR, alignItems: 'center', justifyContent: 'flex-start' },
+
+  beamWrap: { position: 'absolute', top: (ZONE - QR) / 2 - 8, left: -14, width: ZONE + 28, height: 64 },
+  // thin white line carrying the red halo (shadow) — sits under the svg core
+  beamHalo: {
+    position: 'absolute', top: 0, left: 24, right: 24, height: 2, borderRadius: 2, backgroundColor: C.beam,
+    shadowColor: C.redBright, shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+    ...(Platform.OS === 'android' ? { elevation: 8 } : null),
   },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  ring: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
+
+  lockup: { position: 'absolute', alignItems: 'center' },
+  mark: {
+    width: 84, height: 84, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8,
   },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  glow: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(154,27,34,0.4)',
-  },
-  iconWrap: {
-    width: 80,
-    height: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  brandTextAm: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: 'rgba(20,10,10,0.85)',
-    textAlign: 'center',
-  },
-  brandTextBilet: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#9A1B22',
-    textAlign: 'center',
-  },
-  tagline: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 48,
-  },
-  loaderContainer: {
-    width: LOADING_BAR_WIDTH,
-    alignItems: 'center',
-  },
-  loaderTrack: {
-    width: LOADING_BAR_WIDTH,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(20,10,10,0.08)',
-    overflow: 'hidden',
-  },
-  loaderBar: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#9A1B22',
-  },
-  footer: {
-    paddingBottom: 48,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 13,
-    color: colors.textQuaternary,
-  },
+  ticket: { width: 50, height: 38, borderWidth: 4, borderColor: C.red, borderRadius: 8 },
+  ticketDash: { position: 'absolute', width: 0, height: 46, borderLeftWidth: 3, borderStyle: 'dashed', borderColor: C.red },
+  word: { fontSize: 30, fontWeight: '800', letterSpacing: -1 },
+  tag: { color: '#f2cccc', fontSize: 13, marginTop: 6 },
+
+  foot: { position: 'absolute', bottom: 60, alignItems: 'center' },
+  loadTrack: { width: 150, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.16)', overflow: 'hidden' },
+  loadFill: { height: 5, borderRadius: 3, backgroundColor: '#fff' },
+  powered: { color: '#e0aeae', fontSize: 12, letterSpacing: 0.4, marginTop: 16 },
 });

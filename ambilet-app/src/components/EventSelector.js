@@ -1,12 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
+import { formatRelativeTime } from '../utils/formatRelativeTime';
 
-function StatusBadge({ timeCategory }) {
+function StatusBadge({ timeCategory, status }) {
   const isLive = timeCategory === 'live';
   const isPast = timeCategory === 'past';
+  const isUnpublished = timeCategory === 'unpublished' || ['draft', 'pending_review', 'rejected'].includes(status);
 
   // On the red brand strip the badge sits on a red surface — high-contrast
   // white-tinted pills read better than the light-mode green/gray variants.
@@ -22,6 +24,20 @@ function StatusBadge({ timeCategory }) {
     bgColor = 'rgba(255,255,255,0.16)';
     borderColor = 'rgba(255,255,255,0.32)';
     textColor = colors.white;
+  } else if (isUnpublished) {
+    // Backend status refines the label — draft vs waiting-for-approval vs
+    // rejected all read as "not sellable" but the operator needs to know
+    // which flow to unblock next.
+    label =
+      status === 'pending_review' ? 'În revizuire' :
+      status === 'rejected' ? 'Respins' :
+      'Nepublicat';
+    // Warm amber tint on the red strip — reads as attention without
+    // stealing focus from LIVE.
+    dotColor = '#FCD34D';
+    bgColor = 'rgba(252,211,77,0.22)';
+    borderColor = 'rgba(252,211,77,0.5)';
+    textColor = '#FEF3C7';
   } else if (isPast) {
     label = 'Încheiat';
   }
@@ -107,7 +123,13 @@ function getVenueAndCity(event) {
 }
 
 export default function EventSelector({ onPress }) {
-  const { selectedEvent } = useEvent();
+  const { selectedEvent, lastSyncAt } = useEvent();
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    // Re-render the "acum Xs" label every 15s so it doesn't decay to stale.
+    const id = setInterval(() => setTick(t => t + 1), 15_000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!selectedEvent) {
     return (
@@ -143,10 +165,14 @@ export default function EventSelector({ onPress }) {
                 eventTitle
               )}
             </Text>
-            <StatusBadge timeCategory={timeCategory} />
+            <StatusBadge timeCategory={timeCategory} status={selectedEvent.status} />
           </View>
-          {venueCity ? (
-            <Text style={styles.metaText} numberOfLines={1}>{venueCity}</Text>
+          {(venueCity || lastSyncAt) ? (
+            <Text style={styles.metaText} numberOfLines={1}>
+              {venueCity}
+              {venueCity && lastSyncAt ? '  ·  ' : ''}
+              {lastSyncAt ? `Sinc. ${formatRelativeTime(lastSyncAt)}` : ''}
+            </Text>
           ) : null}
         </View>
         <ChevronRight />

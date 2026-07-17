@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getParticipants } from '../api/participants';
+import { getParticipants, checkinByBarcode } from '../api/participants';
 
 const AppContext = createContext(null);
 
@@ -31,6 +31,24 @@ export function AppProvider({ children }) {
 
   // Cached tickets count
   const [cachedTickets, setCachedTickets] = useState(0);
+
+  // Offline-scanned tickets still waiting for server sync. Persisted in
+  // AsyncStorage under `offline_checkin_queue`; we mirror the count in
+  // state so the header badge re-renders when the queue changes without
+  // having to poll AsyncStorage.
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
+
+  const refreshPendingOfflineCount = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem('offline_checkin_queue');
+      const queue = raw ? JSON.parse(raw) : [];
+      setPendingOfflineCount(Array.isArray(queue) ? queue.length : 0);
+    } catch (e) {
+      setPendingOfflineCount(0);
+    }
+  }, []);
+
+  useEffect(() => { refreshPendingOfflineCount(); }, [refreshPendingOfflineCount]);
 
   // Emergency contacts (phone numbers dialed from the notifications panel).
   // Kept local to the device — each operator/venue configures their own.
@@ -281,6 +299,54 @@ export function AppProvider({ children }) {
     }
   }, [offlineMode, downloadParticipantsForOffline]);
 
+  // Best-effort replay of everything queued while offline. Called manually
+  // (Settings → sync button) or automatically when isOnline flips true.
+  // We tolerate duplicates and unknown barcodes — anything that comes back
+  // is considered "processed" and drops out of the queue so the badge
+  // doesn't stay stuck forever.
+  const syncingRef = useRef(false);
+  const flushOfflineQueue = useCallback(async () => {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    try {
+      const raw = await AsyncStorage.getItem('offline_checkin_queue');
+      const queue = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(queue) || queue.length === 0) {
+        setPendingOfflineCount(0);
+        return;
+      }
+      const remaining = [];
+      for (const item of queue) {
+        try {
+          await checkinByBarcode(item.eventId, item.ticketCode);
+        } catch (e) {
+          // Backend already knew about this scan (409 duplicate) or the ticket
+          // was deleted — both are "done from our side". Only a real network
+          // failure would keep the item in the queue for the next attempt.
+          const status = e?.status || e?.response?.status;
+          if (!status || status >= 500) {
+            remaining.push(item);
+          }
+        }
+      }
+      await AsyncStorage.setItem('offline_checkin_queue', JSON.stringify(remaining));
+      setPendingOfflineCount(remaining.length);
+    } catch (e) {
+      // fall through — will retry on next online transition
+    } finally {
+      syncingRef.current = false;
+    }
+  }, []);
+
+  // Trigger a flush whenever the app comes back online (see setIsOnline
+  // caller). Also runs once on boot in case the previous session died
+  // mid-sync with items still queued.
+  useEffect(() => {
+    if (isOnline) {
+      flushOfflineQueue();
+    }
+  }, [isOnline, flushOfflineQueue]);
+
   // Offline: check in a ticket from cached data
   const offlineCheckIn = useCallback(async (eventId, ticketCode) => {
     try {
@@ -304,6 +370,7 @@ export function AppProvider({ children }) {
       queue.push({ eventId, ticketCode, timestamp: Date.now() });
       await AsyncStorage.setItem("offline_checkin_queue", JSON.stringify(queue));
       setCachedTickets(updated.length);
+      setPendingOfflineCount(queue.length);
       return { success: true, data: match };
     } catch (e) {
       return { success: false, message: "Eroare la scanarea offline" };
@@ -359,6 +426,8 @@ export function AppProvider({ children }) {
       downloadParticipantsForOffline,
       offlineCheckIn,
       ensureOfflineData,
+      pendingOfflineCount,
+      flushOfflineQueue,
 
       // Emergency contacts
       emergencyContacts,

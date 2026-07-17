@@ -1,3 +1,11 @@
+// Backend `status` values (see EventsController::getEventStatus):
+//   'published' | 'draft' | 'pending_review' | 'rejected' | 'cancelled' | 'postponed'
+export const UNPUBLISHED_STATUSES = ['draft', 'pending_review', 'rejected'];
+
+export function isUnpublished(event) {
+  return event && UNPUBLISHED_STATUSES.includes(event.status);
+}
+
 export function categorizeEvent(event) {
   const now = new Date();
   const eventDate = new Date(event.event_date || event.starts_at);
@@ -6,6 +14,14 @@ export function categorizeEvent(event) {
 
   if (event.status === 'ended' || event.status === 'cancelled') {
     return 'past';
+  }
+
+  // Drafts / pending / rejected → own bucket so they surface at the top of
+  // the selector with a "Nepublicat" chip. Ordered by date within the bucket
+  // by the modal itself. Cancelled stays in 'past' (organizers can't operate
+  // on it anyway).
+  if (isUnpublished(event)) {
+    return 'unpublished';
   }
 
   const diffMs = eventDay.getTime() - today.getTime();
@@ -31,8 +47,9 @@ export function groupEventsByCategory(events) {
   const groups = {
     live: [],
     today: [],
-    past: [],
+    unpublished: [],
     future: [],
+    past: [],
   };
 
   events.forEach(event => {
@@ -51,6 +68,7 @@ export function getCategoryLabel(category) {
     case 'today': return 'AZI';
     case 'past': return 'EVENIMENTE TRECUTE';
     case 'future': return 'VIITOARE';
+    case 'unpublished': return 'NEPUBLICATE';
     default: return category.toUpperCase();
   }
 }

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  RefreshControl,
+  TextInput,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
@@ -45,12 +47,30 @@ function PulsingDot() {
   );
 }
 
-function StatusBadge({ category }) {
+function StatusBadge({ category, event }) {
+  // Backend status trumps the date-based category — a draft with a future
+  // event_date still needs the "Nepublicat" chip so the organizer knows
+  // ticket sales won't happen until they hit Publish.
+  const status = event?.status;
+  const label =
+    status === 'draft' ? 'Draft' :
+    status === 'pending_review' ? 'În revizuire' :
+    status === 'rejected' ? 'Respins' :
+    null;
+  if (label) {
+    return (
+      <View style={[styles.statusBadge, { backgroundColor: colors.amberLight, borderColor: colors.amberBorder }]}>
+        <Text style={[styles.statusBadgeText, { color: colors.amber }]}>{label}</Text>
+      </View>
+    );
+  }
+
   const configs = {
     live: { label: 'LIVE', color: colors.green, bg: colors.greenLight, border: colors.greenBorder, pulse: true },
     today: { label: 'Azi', color: colors.amber, bg: colors.amberLight, border: colors.amberBorder, pulse: false },
     past: { label: 'Încheiat', color: colors.textTertiary, bg: 'rgba(20,10,10,0.05)', border: 'rgba(20,10,10,0.08)', pulse: false },
     future: { label: 'Viitor', color: colors.purple, bg: colors.purpleLight, border: colors.purpleBorder, pulse: false },
+    unpublished: { label: 'Nepublicat', color: colors.amber, bg: colors.amberLight, border: colors.amberBorder, pulse: false },
   };
   const config = configs[category] || configs.future;
 
@@ -82,6 +102,7 @@ function SectionHeader({ category }) {
     today: colors.amber,
     past: colors.textTertiary,
     future: colors.purple,
+    unpublished: colors.amber,
   };
   const sectionColor = colorMap[category] || colors.textSecondary;
 
@@ -151,7 +172,7 @@ function EventItem({ event, category, onPress }) {
           ) : null}
         </View>
         <View style={styles.eventItemRight}>
-          <StatusBadge category={category} />
+          <StatusBadge category={category} event={event} />
           <ChevronRight />
         </View>
       </View>
@@ -184,9 +205,42 @@ function eventSortKey(event) {
   }
 }
 
-export default function EventsModal({ visible, onClose, events, onSelectEvent }) {
+export default function EventsModal({ visible, onClose, events, onSelectEvent, onRefresh }) {
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
-  const categories = ['live', 'today', 'future'];
+  const categories = ['live', 'today', 'unpublished', 'future'];
+  const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState('');
+  useEffect(() => { if (!visible) setQuery(''); }, [visible]);
+  const matchesQuery = (event) => {
+    if (!query.trim()) return true;
+    const needle = query.trim().toLowerCase();
+    const haystack = [
+      event.name, event.title,
+      event.venue_name, event.venue?.name,
+      event.venue_city, event.venue?.city,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(needle);
+  };
+
+  // Auto-refresh whenever the sheet opens — covers the "just published a new
+  // event on the web admin" case: mobile picker shows the fresh list without
+  // the operator having to close/reopen the app.
+  useEffect(() => {
+    if (!visible || !onRefresh) return;
+    let cancelled = false;
+    (async () => {
+      try { await onRefresh(); } catch {}
+      if (!cancelled) setRefreshing(false);
+    })();
+    return () => { cancelled = true; };
+  }, [visible]);
+
+  const handleManualRefresh = async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try { await onRefresh(); } catch {}
+    setRefreshing(false);
+  };
 
   const handleSelectEvent = (event) => {
     if (onSelectEvent) {
@@ -226,6 +280,33 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
                 </Svg>
               </TouchableOpacity>
             </View>
+            {/* Search — free-text over name + venue + city. Cleared on close. */}
+            <View style={styles.searchWrap}>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35"
+                  stroke={colors.textTertiary} strokeWidth={2}
+                  strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Caută după nume, venue, oraș"
+                placeholderTextColor={colors.textTertiary}
+                style={styles.searchInput}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <TouchableOpacity onPress={() => setQuery('')} activeOpacity={0.7}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path d="M18 6L6 18M6 6l12 12"
+                      stroke={colors.textTertiary} strokeWidth={2}
+                      strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Event List */}
@@ -233,6 +314,14 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleManualRefresh}
+                tintColor={colors.purple}
+                colors={[colors.purple]}
+              />
+            ) : undefined}
           >
             {!hasEvents ? (
               <View style={styles.emptyState}>
@@ -248,31 +337,36 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
                 <Text style={styles.emptyText}>Niciun eveniment disponibil</Text>
               </View>
             ) : (
-              categories.map(category => {
-                const categoryEvents = events[category];
-                if (!categoryEvents || categoryEvents.length === 0) return null;
-
-                // Upcoming groups: closest date first, ascending. Past would
-                // also be sorted ascending here but it's not in the rendered
-                // categories so the order is moot.
-                const sortedEvents = [...categoryEvents].sort(
-                  (a, b) => eventSortKey(a) - eventSortKey(b)
-                );
-
-                return (
-                  <View key={category} style={styles.section}>
-                    <SectionHeader category={category} />
-                    {sortedEvents.map((event, index) => (
-                      <EventItem
-                        key={event.id || `${category}-${index}`}
-                        event={event}
-                        category={category}
-                        onPress={() => handleSelectEvent(event)}
-                      />
-                    ))}
-                  </View>
-                );
-              })
+              (() => {
+                const rendered = categories.map(category => {
+                  const categoryEvents = (events[category] || []).filter(matchesQuery);
+                  if (categoryEvents.length === 0) return null;
+                  const sortedEvents = category === 'unpublished'
+                    ? [...categoryEvents].sort((a, b) => (b.id || 0) - (a.id || 0))
+                    : [...categoryEvents].sort((a, b) => eventSortKey(a) - eventSortKey(b));
+                  return (
+                    <View key={category} style={styles.section}>
+                      <SectionHeader category={category} />
+                      {sortedEvents.map((event, index) => (
+                        <EventItem
+                          key={event.id || `${category}-${index}`}
+                          event={event}
+                          category={category}
+                          onPress={() => handleSelectEvent(event)}
+                        />
+                      ))}
+                    </View>
+                  );
+                }).filter(Boolean);
+                if (rendered.length === 0 && query.trim()) {
+                  return (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyText}>Nimic pentru „{query.trim()}"</Text>
+                    </View>
+                  );
+                }
+                return rendered;
+              })()
             )}
           </ScrollView>
         </Animated.View>
@@ -333,6 +427,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    padding: 0,
   },
   scrollView: {
     flexGrow: 0,

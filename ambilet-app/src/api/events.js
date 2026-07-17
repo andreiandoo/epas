@@ -2,12 +2,12 @@ import { apiGet } from './client';
 
 export async function getEvents(params = {}) {
   return apiGet('/organizer/events', {
-    per_page: 50,
+    per_page: 100,
     sort: 'event_date',
     order: 'desc',
-    // Hide drafts / pending_review / rejected / cancelled — the mobile app
-    // can only operate on approved live events.
-    published_only: true,
+    // Do NOT set published_only — we want drafts / pending_review / rejected
+    // to show up in the selector with a "Nepublicat" badge so the organizer
+    // can see what's in-flight from the mobile app without switching to web.
     ...params,
   });
 }

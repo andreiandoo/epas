@@ -39,7 +39,7 @@ function PulsingDot({ color }) {
 }
 
 export default function Header({ onNotificationPress, onOrganizerSwitched, pageTitle }) {
-  const { isOnline, notifications } = useApp();
+  const { isOnline, notifications, pendingOfflineCount, flushOfflineQueue } = useApp();
   const { user, hasMultipleOrganizers } = useAuth();
   const unreadCount = notifications.filter(n => n.unread).length;
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -81,6 +81,26 @@ export default function Header({ onNotificationPress, onOrganizerSwitched, pageT
 
         {/* Right: Connection Status + Notifications */}
         <View style={styles.right}>
+          {/* Queue-length pill — shown only when there are offline scans
+              still waiting to sync. Tap = manual retry. Amber to signal
+              "attention needed" without competing with the red bell dot. */}
+          {pendingOfflineCount > 0 ? (
+            <TouchableOpacity
+              style={styles.pendingPill}
+              onPress={flushOfflineQueue}
+              activeOpacity={0.7}
+            >
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                <Path d="M12 8v4l3 3M3 12a9 9 0 1018 0 9 9 0 00-18 0z"
+                  stroke={colors.amber} strokeWidth={2}
+                  strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.pendingPillText}>
+                {pendingOfflineCount} în așteptare
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
           {/* Connection status pill */}
           <View
             style={[
@@ -195,6 +215,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenLight,
     borderWidth: 1,
     borderColor: colors.greenBorder,
+  },
+  pendingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 5,
+    backgroundColor: colors.amberLight,
+    borderWidth: 1,
+    borderColor: colors.amberBorder,
+  },
+  pendingPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.amber,
+    letterSpacing: 0.2,
   },
   statusPillOffline: {
     backgroundColor: colors.redLight,

@@ -7,7 +7,10 @@ import {
   StyleSheet,
   Animated,
   TextInput,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persistThemeMode } from '../theme/bootstrapTheme';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
@@ -63,6 +66,61 @@ function SettingRow({ label, description, right }) {
 
 function SectionHeader({ title }) {
   return <Text style={styles.sectionTitle}>{title}</Text>;
+}
+
+function ThemePicker() {
+  const [mode, setMode] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('theme_mode');
+        setMode(raw && ['light', 'dark', 'lowLight'].includes(raw) ? raw : 'light');
+      } catch { setMode('light'); }
+    })();
+  }, []);
+
+  const options = [
+    { key: 'light', label: 'Standard', description: 'Alb + roșu AmBilet — ideal ziua' },
+    { key: 'lowLight', label: 'Contrast Mărit', description: 'Text și borduri mai închise — lumină slabă' },
+    { key: 'dark', label: 'Noapte', description: 'Fundal întunecat — festivaluri de seară' },
+  ];
+
+  const handleSelect = async (key) => {
+    if (key === mode) return;
+    setMode(key);
+    await persistThemeMode(key);
+    Alert.alert(
+      'Aspect salvat',
+      'Repornește complet aplicația pentru a aplica noua temă.',
+    );
+  };
+
+  if (mode === null) return null;
+
+  return (
+    <View style={{ gap: 8 }}>
+      {options.map((opt, idx) => (
+        <TouchableOpacity
+          key={opt.key}
+          activeOpacity={0.7}
+          onPress={() => handleSelect(opt.key)}
+          style={[
+            styles.themeOption,
+            mode === opt.key && styles.themeOptionActive,
+            idx === options.length - 1 && { marginBottom: 0 },
+          ]}
+        >
+          <View style={styles.themeRadio}>
+            {mode === opt.key ? <View style={styles.themeRadioDot} /> : null}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.themeOptionLabel}>{opt.label}</Text>
+            <Text style={styles.themeOptionDescription}>{opt.description}</Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 }
 
 function EmergencyContactRow({ label, placeholder, value, onChangeText, accentColor }) {
@@ -357,6 +415,14 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         </>
       )}
 
+      {/* Aspect — theme picker. Currently persists preference and applies on
+          next cold restart (StyleSheets are frozen at module load time).
+          Alert nudges the operator to reopen the app to see the change. */}
+      <SectionHeader title="Aspect" />
+      <View style={styles.sectionCard}>
+        <ThemePicker />
+      </View>
+
       {/* Contact Urgențe — numere apelate de butoanele din panoul de Notificări. */}
       <SectionHeader title="Contact Urgențe" />
       <View style={styles.sectionCard}>
@@ -439,7 +505,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.3'}</Text>
+      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.5'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -528,6 +594,48 @@ const styles = StyleSheet.create({
   },
   settingDescription: {
     fontSize: 12,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+
+  // Theme picker
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  themeOptionActive: {
+    borderColor: colors.purple,
+    backgroundColor: colors.purpleBg,
+  },
+  themeRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: colors.purple,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.purple,
+  },
+  themeOptionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  themeOptionDescription: {
+    fontSize: 11,
     color: colors.textTertiary,
     marginTop: 2,
   },

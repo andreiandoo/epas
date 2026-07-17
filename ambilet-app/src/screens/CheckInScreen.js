@@ -258,6 +258,26 @@ export default function CheckInScreen({ navigation }) {
   const scanTimestamps = useRef([]);
   const scannedCodes = useRef(new Map());
 
+  // Full-screen flash overlay — makes scan feedback readable in daylight
+  // and gives the operator a clear "I got it" beat even without looking at
+  // the result card. Fires 0 → peak → 0 over ~450ms via native driver so
+  // it's cheap and non-blocking.
+  const flashOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!scanResult?.type) return;
+    flashOpacity.setValue(0);
+    Animated.sequence([
+      Animated.timing(flashOpacity, { toValue: 0.55, duration: 120, useNativeDriver: true }),
+      Animated.timing(flashOpacity, { toValue: 0, duration: 330, useNativeDriver: true }),
+    ]).start();
+  }, [scanResult?.type, scanResult?.data]);
+
+  const flashColor =
+    scanResult?.type === 'valid' ? colors.green :
+    scanResult?.type === 'duplicate' ? colors.amber :
+    scanResult?.type === 'invalid' ? colors.red :
+    'transparent';
+
   // ── Sound effects ──
   const successSound = useRef(null);
   const warningSound = useRef(null);
@@ -850,6 +870,17 @@ export default function CheckInScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {renderPausedOverlay()}
+
+      {/* Full-screen flash overlay — pointerEvents="none" so it never
+          swallows taps, and rendered ABOVE ScrollView so it works over
+          the camera preview + result card at once. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: flashColor, opacity: flashOpacity, zIndex: 999 },
+        ]}
+      />
 
       <ScrollView
         style={styles.scrollView}

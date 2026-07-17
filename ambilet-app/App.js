@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, StatusBar, Platform, Modal, TouchableOpacity, Linking } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, StatusBar, Platform, Modal, TouchableOpacity, Linking, AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.0.5';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -24,8 +24,11 @@ import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import CheckInScreen from './src/screens/CheckInScreen';
 import SalesScreen from './src/screens/SalesScreen';
-import ReportsScreen from './src/screens/ReportsScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
+// Reports + Settings are less frequently opened during a shift — lazy-load
+// them so the initial JS bundle parses ~100-200ms faster on cold start.
+// Wrapped screens are rendered via <React.Suspense> below.
+const ReportsScreen = React.lazy(() => import('./src/screens/ReportsScreen'));
+const SettingsScreen = React.lazy(() => import('./src/screens/SettingsScreen'));
 import VenueEventsScreen from './src/screens/VenueEventsScreen';
 import VenueEventDetailScreen from './src/screens/VenueEventDetailScreen';
 import VenueTicketDetailScreen from './src/screens/VenueTicketDetailScreen';
@@ -43,6 +46,7 @@ import GateManagerModal from './src/components/modals/GateManagerModal';
 import StaffAssignmentModal from './src/components/modals/StaffAssignmentModal';
 
 import { colors } from './src/theme/colors';
+import { loadPersistedTheme } from './src/theme/bootstrapTheme';
 
 // Global error handler — prevents native crash on unhandled JS errors
 const originalHandler = ErrorUtils.getGlobalHandler();
@@ -56,6 +60,14 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+function LazyScreenFallback() {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: colors.textTertiary, fontSize: 13 }}>Se încarcă…</Text>
+    </View>
+  );
+}
 
 function TabIcon({ name, focused, disabled }) {
   const color = disabled ? colors.textQuaternary : (focused ? colors.purple : colors.textTertiary);
@@ -149,6 +161,21 @@ function MainTabs() {
     }
   }, [user?.id]);
 
+  // Refetch events when the app comes back to the foreground — covers the
+  // case where the organizer published/updated an event in the web admin
+  // while the app was in background. Otherwise the picker stays stale until
+  // the next app cold-start.
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (appStateRef.current.match(/inactive|background/) && next === 'active' && user?.id) {
+        fetchEvents();
+      }
+      appStateRef.current = next;
+    });
+    return () => sub.remove();
+  }, [user?.id]);
+
   useEffect(() => {
     // Check for app updates
     (async () => {
@@ -236,16 +263,24 @@ function MainTabs() {
         <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
         <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
         {isAdmin && hasPermission('reports') && (
-          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Rapoarte' }} />
+          <Tab.Screen name="Reports" options={{ tabBarLabel: 'Rapoarte' }}>
+            {(props) => (
+              <React.Suspense fallback={<LazyScreenFallback />}>
+                <ReportsScreen {...props} />
+              </React.Suspense>
+            )}
+          </Tab.Screen>
         )}
         <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
           {(props) => (
-            <SettingsScreen
-              {...props}
-              appVersion={APP_VERSION}
-              onShowGateManager={() => setShowGateManager(true)}
-              onShowStaffAssignment={isAdmin ? () => setShowStaffAssignment(true) : null}
-            />
+            <React.Suspense fallback={<LazyScreenFallback />}>
+              <SettingsScreen
+                {...props}
+                appVersion={APP_VERSION}
+                onShowGateManager={() => setShowGateManager(true)}
+                onShowStaffAssignment={isAdmin ? () => setShowStaffAssignment(true) : null}
+              />
+            </React.Suspense>
           )}
         </Tab.Screen>
       </Tab.Navigator>
@@ -257,6 +292,7 @@ function MainTabs() {
           onClose={() => setShowEventsModal(false)}
           events={groupedEvents}
           onSelectEvent={(event) => { selectEvent(event); setShowEventsModal(false); }}
+          onRefresh={fetchEvents}
         />
       )}
       {showNotifications && (
@@ -549,6 +585,11 @@ function AuthNavigator() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    // Load the persisted theme on boot. Runs BEFORE we hide the splash so
+    // there's some chance the palette mutation lands before ScreenA mounts
+    // (though StyleSheet.create has already frozen for statically-imported
+    // screens — theme changes still need a cold restart to fully apply).
+    loadPersistedTheme().catch(() => {});
     checkAuth();
   }, []);
 
