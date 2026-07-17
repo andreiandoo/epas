@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.9';
+const APP_VERSION = '2.0.10';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -170,6 +170,10 @@ function MainTabs() {
   const [showGuestList, setShowGuestList] = useState(false);
   const [showGateManager, setShowGateManager] = useState(false);
   const [showStaffAssignment, setShowStaffAssignment] = useState(false);
+  // Callbacks fired when the respective modal closes — used by Settings to
+  // refresh its counter badges without waiting for a tab switch.
+  const gateManagerOnCloseRef = useRef(null);
+  const staffAssignmentOnCloseRef = useRef(null);
   const [updateAvailable, setUpdateAvailable] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
 
@@ -326,8 +330,14 @@ function MainTabs() {
               <SettingsScreen
                 {...props}
                 appVersion={APP_VERSION}
-                onShowGateManager={() => setShowGateManager(true)}
-                onShowStaffAssignment={isAdmin ? () => setShowStaffAssignment(true) : null}
+                onShowGateManager={(refetchCounter) => {
+                  gateManagerOnCloseRef.current = refetchCounter || null;
+                  setShowGateManager(true);
+                }}
+                onShowStaffAssignment={isAdmin ? (refetchCounter) => {
+                  staffAssignmentOnCloseRef.current = refetchCounter || null;
+                  setShowStaffAssignment(true);
+                } : null}
               />
             </React.Suspense>
           )}
@@ -362,10 +372,28 @@ function MainTabs() {
         <GuestListModal visible={showGuestList} onClose={() => setShowGuestList(false)} />
       )}
       {showGateManager && (
-        <GateManagerModal visible={showGateManager} onClose={() => setShowGateManager(false)} />
+        <GateManagerModal
+          visible={showGateManager}
+          onClose={() => {
+            setShowGateManager(false);
+            if (gateManagerOnCloseRef.current) {
+              try { gateManagerOnCloseRef.current(); } catch {}
+              gateManagerOnCloseRef.current = null;
+            }
+          }}
+        />
       )}
       {showStaffAssignment && (
-        <StaffAssignmentModal visible={showStaffAssignment} onClose={() => setShowStaffAssignment(false)} />
+        <StaffAssignmentModal
+          visible={showStaffAssignment}
+          onClose={() => {
+            setShowStaffAssignment(false);
+            if (staffAssignmentOnCloseRef.current) {
+              try { staffAssignmentOnCloseRef.current(); } catch {}
+              staffAssignmentOnCloseRef.current = null;
+            }
+          }}
+        />
       )}
 
       {/* Update available banner */}

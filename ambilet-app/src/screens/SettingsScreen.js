@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 import { getVenueGates } from '../api/gates';
+import { getTeamMembers } from '../api/team';
 import { apiPut } from '../api/client';
 
 function Toggle({ value, onPress }) {
@@ -236,8 +237,13 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     }
   }, [selectedEvent?.id, offlineMode]);
 
-  // Live gate count for the "Administrare Porți" badge
+  // Live counters for the "Administrare Porți" + "Asignare Personal" rows.
+  // `countRefreshTick` is bumped whenever one of those modals closes so the
+  // counter reflects add/remove immediately, not on next Settings mount.
   const [gateCount, setGateCount] = useState(null);
+  const [teamCount, setTeamCount] = useState(null);
+  const [countRefreshTick, setCountRefreshTick] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     const venueId = selectedEvent?.venue_id;
@@ -248,14 +254,49 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     (async () => {
       try {
         const response = await getVenueGates(venueId);
-        const gates = response?.data?.gates || response?.gates || [];
+        // Backend wraps under { data: { gates: [...] } }; older shape used to be
+        // { gates: [...] } at top level — accept both to stay resilient.
+        const gates = response?.data?.gates
+          || response?.gates
+          || (Array.isArray(response?.data) ? response.data : null)
+          || [];
         if (!cancelled) setGateCount(Array.isArray(gates) ? gates.length : 0);
       } catch (e) {
         if (!cancelled) setGateCount(null);
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedEvent?.venue_id]);
+  }, [selectedEvent?.venue_id, countRefreshTick]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await getTeamMembers();
+        // GET /organizer/team returns { data: { members: [...], stats: {...} } }.
+        const members = response?.data?.members
+          || response?.members
+          || (Array.isArray(response?.data) ? response.data : null)
+          || [];
+        if (!cancelled) setTeamCount(Array.isArray(members) ? members.length : 0);
+      } catch (e) {
+        if (!cancelled) setTeamCount(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [countRefreshTick]);
+
+  // Wrap the Show handlers so the Settings row counter refreshes after the
+  // operator closes the modal — otherwise adding a gate / staff wouldn't
+  // reflect in the badge until they left+returned to the Settings tab.
+  const openGateManager = () => {
+    if (onShowGateManager) onShowGateManager(() => setCountRefreshTick(t => t + 1));
+    else setCountRefreshTick(t => t + 1);
+  };
+  const openStaffAssignment = () => {
+    if (onShowStaffAssignment) onShowStaffAssignment(() => setCountRefreshTick(t => t + 1));
+    else setCountRefreshTick(t => t + 1);
+  };
 
   // POS Card prin NFC — local mirror so the toggle UI is responsive.
   // Backend lives at PUT /organizer/mobile-settings; the value is read
@@ -473,12 +514,13 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             <AdminRow
               label="Administrare Porți"
               badgeCount={gateCount}
-              onPress={() => onShowGateManager?.()}
+              onPress={openGateManager}
             />
             <View style={styles.divider} />
             <AdminRow
               label="Asignare Personal"
-              onPress={() => onShowStaffAssignment?.()}
+              badgeCount={teamCount}
+              onPress={openStaffAssignment}
             />
           </View>
         </>
@@ -505,7 +547,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.9'}</Text>
+      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.10'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>

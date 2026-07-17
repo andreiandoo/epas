@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  Alert,
 } from 'react-native';
 import Svg, { Polyline, Rect, Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -16,6 +17,15 @@ import { useEvent } from '../context/EventContext';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getDashboard } from '../api/dashboard';
 import { getParticipants } from '../api/participants';
+import { apiGetRaw } from '../api/client';
+
+// Optional: expo-file-system + expo-sharing. Silent no-op fallback when the
+// modules aren't linked (dev without prebuild). The export button shows a
+// clear error instead of crashing.
+let FileSystem = null;
+let Sharing = null;
+try { FileSystem = require('expo-file-system'); } catch {}
+try { Sharing = require('expo-sharing'); } catch {}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -449,6 +459,66 @@ export default function ReportsScreen() {
     setIsLoading(false);
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = async () => {
+    if (isExporting) return;
+    if (!selectedEvent?.id) {
+      Alert.alert('Selectează eveniment', 'Nu există un eveniment selectat pentru export.');
+      return;
+    }
+    if (!FileSystem || !Sharing) {
+      Alert.alert('Modul lipsă', 'Modulul de fișiere nu este instalat. Rebuild-uiește app-ul cu ultimele dependințe.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      // Hit the auth'd CSV endpoint — backend streams a full participants
+      // export (each ticket = one row, with net price, customer, check-in
+      // timestamp). Read as text so we can write it to a real file the
+      // native share sheet can hand off to Drive / email / WhatsApp / etc.
+      const response = await apiGetRaw(`/organizer/events/${selectedEvent.id}/participants/export`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const csvText = await response.text();
+
+      const eventName = (selectedEvent.name || selectedEvent.title || 'raport')
+        .toString().toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'raport';
+      const today = new Date();
+      const dateSuffix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+      const fileName = `raport-${eventName}-${dateSuffix}.csv`;
+
+      // expo-file-system SDK 54 exposes `File` class in the default export.
+      // Fall back to legacy `writeAsStringAsync` if we're on an older version.
+      const dir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+      const fileUri = `${dir}${fileName}`;
+      if (typeof FileSystem.writeAsStringAsync === 'function') {
+        await FileSystem.writeAsStringAsync(fileUri, csvText, { encoding: 'utf8' });
+      } else if (FileSystem.File) {
+        const f = new FileSystem.File(fileUri);
+        await f.write(csvText);
+      } else {
+        throw new Error('FileSystem API not available');
+      }
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Export salvat', `CSV salvat local, dar share-ul nu e disponibil pe acest dispozitiv.\n${fileUri}`);
+        return;
+      }
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/csv',
+        dialogTitle: 'Exportă raport CSV',
+        UTI: 'public.comma-separated-values-text',
+      });
+    } catch (e) {
+      Alert.alert('Eroare export', e?.message || 'Nu s-a putut genera raportul.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Derive metrics from real data
   const totalCheckedIn = eventStats?.checked_in || eventStats?.total_checked_in || 0;
   const totalParticipants = eventStats?.total || eventStats?.total_participants || 0;
@@ -621,18 +691,29 @@ export default function ReportsScreen() {
         </View>
       </View>
 
-      {/* Export Button */}
-      <TouchableOpacity style={styles.exportButton} activeOpacity={0.7}>
-        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
-            stroke={colors.purple}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-        <Text style={styles.exportButtonText}>Exportă Raport</Text>
+      {/* Export Button — CSV export of all tickets on the current event. */}
+      <TouchableOpacity
+        style={[styles.exportButton, isExporting && { opacity: 0.6 }]}
+        activeOpacity={0.7}
+        onPress={handleExport}
+        disabled={isExporting}
+      >
+        {isExporting ? (
+          <ActivityIndicator size="small" color={colors.purple} />
+        ) : (
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
+              stroke={colors.purple}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        )}
+        <Text style={styles.exportButtonText}>
+          {isExporting ? 'Se generează…' : 'Exportă Raport (CSV)'}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.bottomSpacer} />

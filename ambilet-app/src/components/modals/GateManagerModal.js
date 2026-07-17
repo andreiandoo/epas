@@ -156,8 +156,35 @@ function TypePicker({ selected, onSelect }) {
   );
 }
 
-function GateCard({ gate, onToggle, onDelete, onAssignSelf }) {
+function GateCard({ gate, onToggle, onDelete, onAssignSelf, onSaveEdit, savingEdit }) {
   const displayType = getDisplayType(gate.type);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(gate.name || '');
+  const [editType, setEditType] = useState(getDisplayType(gate.type));
+  const [editLocation, setEditLocation] = useState(gate.location || '');
+
+  const beginEdit = () => {
+    setEditName(gate.name || '');
+    setEditType(getDisplayType(gate.type));
+    setEditLocation(gate.location || '');
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => setIsEditing(false);
+
+  const submitEdit = async () => {
+    if (!editName.trim()) {
+      Alert.alert('Eroare', 'Numele porții este obligatoriu.');
+      return;
+    }
+    await onSaveEdit(gate.id, {
+      name: editName.trim(),
+      type: getApiType(editType),
+      location: editLocation.trim() || null,
+    });
+    setIsEditing(false);
+  };
+
   return (
     <View style={styles.gateCard}>
       <View style={styles.gateCardTop}>
@@ -166,15 +193,62 @@ function GateCard({ gate, onToggle, onDelete, onAssignSelf }) {
           <GateTypeIcon type={gate.type} />
         </View>
 
-        {/* Info */}
-        <View style={styles.gateInfo}>
+        {/* Info — tapping opens inline editor */}
+        <TouchableOpacity style={styles.gateInfo} onPress={beginEdit} activeOpacity={0.7} disabled={isEditing}>
           <Text style={styles.gateName}>{gate.name}</Text>
           <Text style={styles.gateLocation}>{gate.location || 'Nespecificat'}</Text>
-        </View>
+        </TouchableOpacity>
 
         {/* Type badge */}
         <TypeBadge type={gate.type} />
       </View>
+
+      {isEditing && (
+        <View style={styles.gateEditBox}>
+          <TextInput
+            style={styles.gateEditInput}
+            value={editName}
+            onChangeText={setEditName}
+            placeholder="Nume poartă"
+            placeholderTextColor={colors.textTertiary}
+            editable={!savingEdit}
+          />
+          <View style={{ marginTop: 8 }}>
+            <Text style={styles.gateEditLabel}>Tip:</Text>
+            <TypePicker selected={editType} onSelect={setEditType} />
+          </View>
+          <TextInput
+            style={[styles.gateEditInput, { marginTop: 8 }]}
+            value={editLocation}
+            onChangeText={setEditLocation}
+            placeholder="Locație (opțional)"
+            placeholderTextColor={colors.textTertiary}
+            editable={!savingEdit}
+          />
+          <View style={styles.gateEditActions}>
+            <TouchableOpacity
+              style={styles.gateEditCancelBtn}
+              onPress={cancelEdit}
+              activeOpacity={0.7}
+              disabled={savingEdit}
+            >
+              <Text style={styles.gateEditCancelText}>Anulează</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.gateEditSaveBtn, savingEdit && { opacity: 0.5 }]}
+              onPress={submitEdit}
+              activeOpacity={0.8}
+              disabled={savingEdit}
+            >
+              {savingEdit ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.gateEditSaveText}>Salvează</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View style={styles.gateCardBottom}>
         {/* Active toggle */}
@@ -311,6 +385,27 @@ export default function GateManagerModal({ visible, onClose }) {
         prev.map(g => g.id === gateId ? { ...g, is_active: !newActive } : g)
       );
       Alert.alert('Eroare', 'Nu s-a putut actualiza starea porții.');
+    }
+  };
+
+  const [savingEditId, setSavingEditId] = useState(null);
+  const handleSaveEdit = async (gateId, patch) => {
+    if (!venueId) return;
+    setSavingEditId(gateId);
+    const previous = gates.find(g => g.id === gateId);
+    // Optimistic update
+    setGates(prev => prev.map(g => g.id === gateId ? { ...g, ...patch } : g));
+    try {
+      const response = await updateVenueGate(venueId, gateId, patch);
+      const saved = response.data?.gate || response.data || null;
+      if (saved) {
+        setGates(prev => prev.map(g => g.id === gateId ? { ...g, ...saved } : g));
+      }
+    } catch (e) {
+      setGates(prev => prev.map(g => g.id === gateId ? previous : g));
+      Alert.alert('Eroare', 'Nu s-a putut salva poarta.');
+    } finally {
+      setSavingEditId(null);
     }
   };
 
@@ -526,6 +621,8 @@ export default function GateManagerModal({ visible, onClose }) {
                           onToggle={handleToggle}
                           onDelete={handleDelete}
                           onAssignSelf={handleAssignSelf}
+                          onSaveEdit={handleSaveEdit}
+                          savingEdit={savingEditId === gate.id}
                         />
                       ))
                     )}
@@ -827,6 +924,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  // Inline gate editor
+  gateEditBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 4,
+  },
+  gateEditInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+  },
+  gateEditLabel: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  gateEditActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  gateEditCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+  },
+  gateEditCancelText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  gateEditSaveBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.purple,
+  },
+  gateEditSaveText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '700',
   },
   toggleLabel: {
     fontSize: 12,

@@ -127,6 +127,21 @@ export function apiGet(path, params = {}) {
   return request(url, { method: 'GET' });
 }
 
+// Bypasses the JSON-parsing `request()` and returns the raw fetch response.
+// Used by the CSV export flow (server sets Content-Type: text/csv, not JSON,
+// so response.json() would blow up). Callers get to decide how to read the
+// body (.text() for CSV, .blob() for binary if we ever add PDF, etc.).
+export async function apiGetRaw(path, params = {}) {
+  const rewritten = rewritePath(path);
+  const query = new URLSearchParams(params).toString();
+  const url = `${BASE_URL}${rewritten}${query ? '?' + query : ''}`;
+  const headers = { Accept: '*/*' };
+  if (_token) headers['Authorization'] = `Bearer ${_token}`;
+  if (_apiKey) headers['X-API-Key'] = _apiKey;
+  const response = await fetch(url, { method: 'GET', headers });
+  return response;
+}
+
 export function apiPost(path, body = {}) {
   return request(`${BASE_URL}${rewritePath(path)}`, {
     method: 'POST',
