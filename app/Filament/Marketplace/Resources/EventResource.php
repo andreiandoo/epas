@@ -95,6 +95,58 @@ class EventResource extends Resource
             ->exists();
     }
 
+    /**
+     * In-request memo for organizer lookups done by resolveInheritedCommission,
+     * so re-rendering many ticket-type placeholders doesn't re-query the DB.
+     *
+     * @var array<int, \App\Models\MarketplaceOrganizer|null>
+     */
+    protected static array $orgCommissionCache = [];
+
+    /**
+     * Resolve the commission defaults a ticket type INHERITS when its
+     * commission_type is "inherit" (stored as null). This is a pure DISPLAY
+     * helper for the ticket-type form: it mirrors the exact resolution order
+     * used by the real calculation engines (CheckoutController +
+     * SalesBreakdownService) — organizer overrides first, then the marketplace
+     * client — plus whether the organizer floor (commission_use_floor +
+     * fixed_commission_default) is active. NO money is computed here; the
+     * actual commission is still computed by those services at sale/report
+     * time. This only lets the admin SEE what "Moștenește" resolves to.
+     *
+     * @return array{rate: float, mode: string, floor_active: bool, fixed: float, source: string}
+     */
+    protected static function resolveInheritedCommission(mixed $organizerId, $marketplace): array
+    {
+        $mpRate = (float) ($marketplace?->commission_rate ?? 5);
+        $mpMode = $marketplace?->commission_mode ?? 'included';
+
+        $organizerId = is_numeric($organizerId) ? (int) $organizerId : null;
+
+        if (!$organizerId) {
+            return ['rate' => $mpRate, 'mode' => $mpMode, 'floor_active' => false, 'fixed' => 0.0, 'source' => 'marketplace'];
+        }
+
+        if (!array_key_exists($organizerId, static::$orgCommissionCache)) {
+            static::$orgCommissionCache[$organizerId] = MarketplaceOrganizer::find($organizerId);
+        }
+        $org = static::$orgCommissionCache[$organizerId];
+
+        if (!$org) {
+            return ['rate' => $mpRate, 'mode' => $mpMode, 'floor_active' => false, 'fixed' => 0.0, 'source' => 'marketplace'];
+        }
+
+        $rate = $org->commission_rate !== null ? (float) $org->commission_rate : $mpRate;
+        $mode = $org->default_commission_mode ?? $mpMode;
+        $floorActive = (bool) ($org->commission_use_floor);
+        $fixed = (float) ($org->fixed_commission_default ?? 0);
+        $source = ($org->commission_rate !== null || $org->default_commission_mode !== null || $floorActive)
+            ? 'organizer'
+            : 'marketplace';
+
+        return ['rate' => $rate, 'mode' => $mode, 'floor_active' => $floorActive, 'fixed' => $fixed, 'source' => $source];
+    }
+
     public static function form(Schema $schema): Schema
     {
         $today = Carbon::today();
@@ -3258,15 +3310,17 @@ class EventResource extends Resource
                                                     ->formatStateUsing(fn ($state) => $state ?: 'inherit')
                                                     ->dehydrateStateUsing(fn ($state) => $state === 'inherit' ? null : $state)
                                                     ->live(onBlur: true)
-                                                    ->afterStateUpdated(function ($state, SSet $set, $component) use ($marketplace) {
-                                                        $defaultRate = $marketplace?->commission_rate ?? 5;
-                                                        $defaultMode = $marketplace?->commission_mode ?? 'included';
+                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get, $component) use ($marketplace) {
+                                                        // Pre-fill with the ORGANIZER's inherited defaults (not the
+                                                        // marketplace default) so switching away from "Moștenește"
+                                                        // starts from what was actually being applied.
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
                                                         if ($state === 'percentage' || $state === 'both') {
-                                                            $set('commission_rate', $defaultRate);
-                                                            $set('commission_mode', $defaultMode);
+                                                            $set('commission_rate', $inh['rate']);
+                                                            $set('commission_mode', $inh['mode']);
                                                         }
                                                         if ($state === 'fixed' || $state === 'both') {
-                                                            $set('commission_mode', $defaultMode);
+                                                            $set('commission_mode', $inh['mode']);
                                                         }
                                                     })
                                                     ->columnSpan(3),
@@ -3277,7 +3331,10 @@ class EventResource extends Resource
                                                     ->minValue(0)
                                                     ->maxValue(100)
                                                     ->step(0.01)
-                                                    ->placeholder(($marketplace?->commission_rate ?? 5) . '%')
+                                                    ->placeholder(function (SGet $get) use ($marketplace) {
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                        return rtrim(rtrim(number_format($inh['rate'], 2), '0'), '.') . '%';
+                                                    })
                                                     ->visible(fn (SGet $get) => in_array($get('commission_type'), ['percentage', 'both']))
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('commission_fixed')
@@ -3297,9 +3354,49 @@ class EventResource extends Resource
                                                         'included' => $t('Inclus în preț', 'Included in price'),
                                                         'added_on_top' => $t('Adăugat la preț', 'Added on top'),
                                                     ])
-                                                    ->placeholder($marketplace?->commission_mode === 'added_on_top' ? $t('Adăugat', 'Added') : $t('Inclus', 'Included'))
+                                                    ->placeholder(function (SGet $get) use ($marketplace, $t) {
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                        return in_array($inh['mode'], ['added_on_top', 'on_top'], true) ? $t('Adăugat', 'Added') : $t('Inclus', 'Included');
+                                                    })
                                                     ->visible(fn (SGet $get) => !empty($get('commission_type')))
                                                     ->columnSpan(3),
+
+                                                // Read-only transparency line: shows exactly what a
+                                                // "Moștenește" ticket type resolves to (organizer → marketplace)
+                                                // and whether the organizer commission floor is active. Purely
+                                                // informational — the real computation lives in the services.
+                                                Forms\Components\Placeholder::make('commission_inherit_info')
+                                                    ->hiddenLabel()
+                                                    ->content(function (SGet $get) use ($marketplace, $t) {
+                                                        $type = $get('commission_type');
+                                                        $isInherit = empty($type) || $type === 'inherit';
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                        $modeLabel = in_array($inh['mode'], ['added_on_top', 'on_top'], true)
+                                                            ? $t('Adăugat la preț', 'Added on top')
+                                                            : $t('Inclus în preț', 'Included in price');
+                                                        $rateStr = rtrim(rtrim(number_format($inh['rate'], 2), '0'), '.');
+                                                        $cur = $marketplace?->currency ?? 'RON';
+                                                        $lines = [];
+                                                        if ($isInherit) {
+                                                            $src = $inh['source'] === 'organizer' ? $t('organizator', 'organizer') : $t('marketplace', 'marketplace');
+                                                            $lines[] = $t("Moștenit de la $src: $rateStr% · $modeLabel", "Inherited from $src: $rateStr% · $modeLabel");
+                                                        }
+                                                        if ($inh['floor_active'] && $inh['fixed'] > 0) {
+                                                            $fixedStr = number_format($inh['fixed'], 2);
+                                                            $lines[] = $t("Floor comision activ: minim $fixedStr $cur/bilet", "Commission floor active: min $fixedStr $cur/ticket");
+                                                        }
+                                                        if (empty($lines)) {
+                                                            return null;
+                                                        }
+                                                        return new HtmlString('<span style="color:#6b7280;font-size:0.78rem;line-height:1.4;">' . implode('<br>', array_map('e', $lines)) . '</span>');
+                                                    })
+                                                    ->visible(function (SGet $get) use ($marketplace) {
+                                                        $type = $get('commission_type');
+                                                        $isInherit = empty($type) || $type === 'inherit';
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                        return $isInherit || ($inh['floor_active'] && $inh['fixed'] > 0);
+                                                    })
+                                                    ->columnSpan(12),
                                             ])
                                             ->collapsible()
                                             ->collapsed()
