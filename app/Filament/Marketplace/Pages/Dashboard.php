@@ -131,6 +131,15 @@ class Dashboard extends Page
         $marketplaceId = $marketplace->id;
         $days = $this->chartPeriod === 'month' ? 30 : (int) $this->chartPeriod;
 
+        // Resolved early: the sales/tickets month chart is super-admin-only and,
+        // when shown, is driven by the SAME per-day figures as the daily report
+        // table (so the chart bar for a day equals that day's report total).
+        $marketplaceAdminUser = Auth::guard('marketplace_admin')->user();
+        $isSuperAdmin = $marketplaceAdminUser?->isSuperAdmin() ?? false;
+        // "Marketplace admins" = Administrator + Super Administrator roles
+        // (excludes Moderator). Gates the invitation-abuse financial report.
+        $isMarketplaceAdmin = in_array($marketplaceAdminUser?->role, ['super_admin', 'admin'], true);
+
         // Cache stats for 30 minutes (heavy queries on large tables)
         $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 1800, function () use ($marketplaceId) {
             return $this->computeStats($marketplaceId);
@@ -173,12 +182,32 @@ class Dashboard extends Page
             // sales come in → keep the existing 10-min TTL.
             $chartCacheTtl = $chartMonthMode === 'past' ? 86400 : 600;
 
-            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
-                return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
-            });
-            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
-                return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
-            });
+            if ($isSuperAdmin) {
+                // Drive the sales & tickets bars from the SAME per-day figures as
+                // the "Raport vânzări pe zi" table (SalesBreakdownService per
+                // event), so the chart bar for a day equals that day's report
+                // total. Reuses the per-day report cache (shared with the table).
+                // The month-level cache avoids re-summing 30 days each render.
+                // Current month re-sums every 60s so today's bar tracks the
+                // report table (past days are read from their 24h per-day cache,
+                // so the re-sum is cheap). Past months are immutable → 24h.
+                $reportSeries = Cache::remember(
+                    "mp_dash_chart_rep_v1_{$marketplaceId}_month_{$monthRef}",
+                    $chartMonthMode === 'past' ? 86400 : 60,
+                    fn () => $this->getDailyReportChartSeries($marketplaceId, $chartMonthDate)
+                );
+                $chartData = $reportSeries['sales'];
+                $ticketChartData = $reportSeries['tickets'];
+            } else {
+                // Non-super-admins don't see the chart; keep the light SUM(total)
+                // path so we never run the heavy per-day report for them.
+                $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+                    return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
+                });
+                $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+                    return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
+                });
+            }
 
             // Previous year same month — always immutable, cache 24h.
             $prevYearMonthDate = $chartMonthDate->copy()->subYear();
@@ -351,12 +380,6 @@ class Dashboard extends Page
         $invitationAbuse = app(\App\Services\Analytics\InvitationAbuseAnalyzer::class)
             ->analyze($marketplaceId, request()->has('refresh_invite_abuse'));
 
-        $marketplaceAdminUser = Auth::guard('marketplace_admin')->user();
-        $isSuperAdmin = $marketplaceAdminUser?->isSuperAdmin() ?? false;
-        // "Marketplace admins" = Administrator + Super Administrator roles
-        // (excludes Moderator). Gates the invitation-abuse financial report.
-        $isMarketplaceAdmin = in_array($marketplaceAdminUser?->role, ['super_admin', 'admin'], true);
-
         // Daily event sales report (super-admin only) — events that had
         // sales on the selected day, with same-day + all-time aggregates.
         // Date is clamped to [today-30d, today] in Romania time. Today
@@ -374,13 +397,9 @@ class Dashboard extends Page
             $dailyReportDate = $reqDate;
             $dailyReportMinDate = $minDate;
             $dailyReportMaxDate = $maxDate;
-            $isToday = $reqDate === $maxDate;
-            $ttl = $isToday ? 60 : 900;
-            $dailyEventReport = Cache::remember(
-                "mp_dash_daily_evt_v8_{$marketplaceId}_{$reqDate}",
-                $ttl,
-                fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
-            );
+            // Shared per-day cache — same key the month chart reads, so the
+            // chart bar and this table never diverge for the same day.
+            $dailyEventReport = $this->dailyReportRowsCached($marketplaceId, $reqDate);
         }
 
         return [
@@ -1330,6 +1349,65 @@ class Dashboard extends Page
      * Caller is responsible for super-admin gating and date clamping
      * (the date arrives validated from getViewData()).
      */
+    /**
+     * Per-day report rows, cached under the SAME key used by the daily report
+     * table so the month chart and the table share one computation and can
+     * never disagree for a given day. Today keeps a short TTL (still moving);
+     * past days are immutable → cache 24h.
+     */
+    private function dailyReportRowsCached(int $marketplaceId, string $date): array
+    {
+        $today = Carbon::now('Europe/Bucharest')->format('Y-m-d');
+        $ttl = ($date >= $today) ? 60 : 86400;
+
+        return Cache::remember(
+            "mp_dash_daily_evt_v8_{$marketplaceId}_{$date}",
+            $ttl,
+            fn () => $this->computeDailyEventReport($marketplaceId, $date)
+        );
+    }
+
+    /**
+     * Build the month's sales & tickets chart series from the daily report
+     * totals (Σ sales_day / Σ tickets_day per day). Future days are 0; each
+     * past/today day reuses the shared per-day report cache, so days with no
+     * sales stay cheap (empty report short-circuits) and warm days are free.
+     *
+     * @return array{sales: array{labels: array, data: array}, tickets: array{labels: array, data: array}}
+     */
+    private function getDailyReportChartSeries(int $marketplaceId, Carbon $monthDate): array
+    {
+        $tz = 'Europe/Bucharest';
+        $today = Carbon::now($tz)->format('Y-m-d');
+        $daysInMonth = (int) $monthDate->daysInMonth;
+
+        $labels = [];
+        $sales = [];
+        $tickets = [];
+
+        $cur = $monthDate->copy()->startOfMonth();
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = $cur->format('Y-m-d');
+            $labels[] = $cur->format('d');
+
+            if ($dateStr > $today) {
+                $sales[] = 0.0;
+                $tickets[] = 0;
+            } else {
+                $rows = $this->dailyReportRowsCached($marketplaceId, $dateStr);
+                $sales[] = (float) collect($rows)->sum('sales_day');
+                $tickets[] = (int) collect($rows)->sum('tickets_day');
+            }
+
+            $cur->addDay();
+        }
+
+        return [
+            'sales' => ['labels' => $labels, 'data' => $sales],
+            'tickets' => ['labels' => $labels, 'data' => $tickets],
+        ];
+    }
+
     private function computeDailyEventReport(int $marketplaceId, string $date): array
     {
         $tz = 'Europe/Bucharest';
