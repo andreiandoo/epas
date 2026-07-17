@@ -2185,6 +2185,9 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         // Billing & Invoices
         Route::get('/invoices', [OrganizerBillingController::class, 'invoices'])
             ->name('api.marketplace-client.organizer.invoices');
+        // NOTE: must precede /invoices/{invoice} so "export" isn't captured as an id.
+        Route::get('/invoices/export', [OrganizerBillingController::class, 'exportInvoices'])
+            ->name('api.marketplace-client.organizer.invoices.export');
         Route::get('/invoices/{invoice}', [OrganizerBillingController::class, 'showInvoice'])
             ->name('api.marketplace-client.organizer.invoices.show');
         Route::get('/billing-info', [OrganizerBillingController::class, 'billingInfo'])

@@ -39,6 +39,64 @@ class BillingController extends BaseController
     }
 
     /**
+     * Export the organizer's invoices as a CSV download.
+     *
+     * Returns a real text/csv attachment (UTF-8 BOM for Excel) instead of the
+     * previous behaviour where the route didn't exist and the proxy forwarded
+     * a 404 HTML page. The ambilet proxy detects the CSV via the
+     * Content-Disposition header + BOM and streams it as a download.
+     */
+    public function exportInvoices(Request $request): \Illuminate\Http\Response
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $status = $request->input('status', 'all');
+
+        // Pull all matching invoices (reuse the same source as the list view).
+        $result = $this->getOrganizerInvoices($organizer, $status, 100000, 1);
+        $invoices = $result['data'] ?? [];
+
+        $currency = $organizer->marketplaceClient?->currency ?? 'RON';
+
+        $statusLabels = [
+            'paid' => 'Plătită',
+            'pending' => 'În așteptare',
+            'outstanding' => 'În așteptare',
+            'cancelled' => 'Anulată',
+            'refunded' => 'Stornată',
+        ];
+
+        $fh = fopen('php://temp', 'r+');
+        fputcsv($fh, ['Număr', 'Data', 'Descriere', 'Sumă', 'Monedă', 'Status']);
+
+        foreach ($invoices as $inv) {
+            fputcsv($fh, [
+                $inv['number'] ?? '',
+                $inv['date'] ?? '',
+                $inv['description'] ?? '',
+                number_format((float) ($inv['amount'] ?? 0), 2, '.', ''),
+                $currency,
+                $statusLabels[$inv['status'] ?? ''] ?? ($inv['status'] ?? ''),
+            ]);
+        }
+
+        rewind($fh);
+        $csv = stream_get_contents($fh);
+        fclose($fh);
+
+        // UTF-8 BOM so Excel renders diacritics correctly (and the ambilet
+        // proxy recognises the payload as CSV).
+        $csv = "\xEF\xBB\xBF" . $csv;
+
+        $filename = 'facturi-' . $organizer->id . '-' . Carbon::now()->format('Y-m-d') . '.csv';
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
      * Get single invoice detail
      */
     public function showInvoice(Request $request, int $invoiceId): JsonResponse
