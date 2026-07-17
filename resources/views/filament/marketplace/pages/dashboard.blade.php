@@ -481,11 +481,12 @@
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($dailyEventReport as $row)
+                    <tbody x-data="{ showAll: false }">
+                        @forelse($dailyEventReport as $i => $row)
                             {{-- No hover bg change — Filament's panel hover styles produce
-                                 a white-on-white row in dark mode. Plain row stays readable. --}}
-                            <tr class="text-gray-700 dark:text-gray-300">
+                                 a white-on-white row in dark mode. Plain row stays readable.
+                                 Rows past the 10th stay hidden until "Vezi toate datele". --}}
+                            <tr class="text-gray-700 dark:text-gray-300" @if($i >= 10) x-show="showAll" x-cloak @endif>
                                 <td style="max-width: 300px;" class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 overflow-hidden">
                                     <a href="{{ $row['event_edit_url'] }}" target="_blank"
                                        class="block text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
@@ -517,6 +518,19 @@
                                 </td>
                             </tr>
                         @endforelse
+
+                        {{-- Show-all toggle: collapse to the first 10 rows; button
+                             (full width, right before the totals) reveals the rest. --}}
+                        @if(count($dailyEventReport) > 10)
+                            <tr x-show="!showAll">
+                                <td colspan="10" class="p-0 border-b border-gray-100 dark:border-gray-700">
+                                    <button type="button" x-on:click="showAll = true"
+                                            class="w-full px-3 py-2.5 text-sm font-semibold text-indigo-600 transition-colors dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                                        Vezi toate datele ({{ count($dailyEventReport) }} evenimente)
+                                    </button>
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                     @if(count($dailyEventReport) > 0)
                         @php

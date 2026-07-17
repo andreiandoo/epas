@@ -274,7 +274,7 @@ class Dashboard extends Page
         });
 
         // Today stats (Romania timezone)
-        $todayStats = Cache::remember("mp_dash_today_{$marketplaceId}", 30, function () use ($marketplaceId) {
+        $todayStats = Cache::remember("mp_dash_today_v2_{$marketplaceId}", 30, function () use ($marketplaceId) {
             return $this->computeTodayStats($marketplaceId);
         });
 
@@ -1283,23 +1283,31 @@ class Dashboard extends Page
             ->whereBetween('created_at', [$todayStart, $todayEnd])
             ->count();
 
-        // Commission: use DB commission_amount if available, otherwise calculate from rate
-        $revenue = (float) ($orderStats->revenue ?? 0);
-        $commissionFromDb = (float) ($orderStats->commission_from_db ?? 0);
-        $commissionRate = (float) ($this->marketplace->commission_rate ?? 5);
-        $commission = $commissionFromDb > 0 ? $commissionFromDb : round($revenue * $commissionRate / 100, 2);
+        // Money/ticket cards must MATCH the "Raport vânzări pe zi" totals — both
+        // reflect the authoritative SalesBreakdownService (floor-aware, leisure-
+        // aware) rather than SUM(orders.total) + a flat rate. Reuse the (cached)
+        // per-event daily report for today and sum its "Azi" columns so the two
+        // panels can never disagree. The status breakdown (pending/failed/...)
+        // below stays from the raw query — it's informational and not part of
+        // the paid-sales report.
+        $todayDate = Carbon::now($tz)->toDateString();
+        $dailyRows = $this->computeDailyEventReport($marketplaceId, $todayDate);
+        $reportOrders = (int) array_sum(array_column($dailyRows, 'orders_day'));
+        $reportTickets = (int) array_sum(array_column($dailyRows, 'tickets_day'));
+        $reportRevenue = (float) array_sum(array_column($dailyRows, 'sales_day'));
+        $reportCommission = (float) array_sum(array_column($dailyRows, 'commission_day'));
 
         return [
-            'total_orders' => (int) ($orderStats->total_orders ?? 0),
-            'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
+            'total_orders' => $reportOrders,
+            'paid_orders' => $reportOrders,
             'pending_orders' => (int) ($orderStats->pending_orders ?? 0),
             'failed_orders' => (int) ($orderStats->failed_orders ?? 0),
             'cancelled_orders' => (int) ($orderStats->cancelled_orders ?? 0),
             'expired_orders' => (int) ($orderStats->expired_orders ?? 0),
             'refunded_orders' => (int) ($orderStats->refunded_orders ?? 0),
-            'revenue' => $revenue,
-            'commission' => $commission,
-            'tickets_sold' => $ticketsSold,
+            'revenue' => $reportRevenue,
+            'commission' => $reportCommission,
+            'tickets_sold' => $reportTickets,
             'new_customers' => (int) ($customerStats->total ?? 0),
             'registered_customers' => (int) ($customerStats->registered ?? 0),
             'guest_customers' => (int) ($customerStats->guests ?? 0),
