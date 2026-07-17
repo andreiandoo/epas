@@ -151,6 +151,13 @@ class AuthController extends BaseController
             ]);
         }
 
+        // Generate the organizer contract from the marketplace's
+        // organizer_contract tax template so it's immediately available under
+        // /organizator/setari#contract. Self-contained (own try/catch) — a
+        // failure here never breaks registration; the admin-verify path
+        // (MarketplaceOrganizerObserver) regenerates it later if needed.
+        app(\App\Services\OrganizerContractService::class)->generate($organizer);
+
         // Send verification email via marketplace transport
         $verificationToken = $organizer->generateEmailVerificationToken();
         try {
