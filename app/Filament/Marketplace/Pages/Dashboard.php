@@ -486,14 +486,6 @@ class Dashboard extends Page
         $orderRevenue = (float) $orderStats->revenue;
         $commissions = (float) $orderStats->commissions;
 
-        // Authoritative all-time revenue + commission, precomputed by
-        // `dashboard:warm-alltime-stats` (SalesBreakdownService — floor/leisure/
-        // per-type aware — for modern sales + migrated legacy history). Falls
-        // back to the raw SUM(total)/commission_amount above until first warm.
-        $alltimeAuth = Cache::get("mp_dash_alltime_auth_{$marketplaceId}");
-        $authRevenue = isset($alltimeAuth['revenue']) ? (float) $alltimeAuth['revenue'] : $orderRevenue;
-        $authCommission = isset($alltimeAuth['commission']) ? (float) $alltimeAuth['commission'] : null;
-
         // 4. Service orders - single query
         $serviceStats = ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['active', 'completed'])
@@ -615,14 +607,12 @@ class Dashboard extends Page
                 'today_orders' => (int) $orderStats->today,
                 'paid_orders' => $paidOrdersCount,
                 'other_orders' => $totalOrders - $paidOrdersCount,
-                'total_incasari' => $authRevenue + $serviceOrdersTotal,
-                'order_revenue' => $authRevenue,
+                'total_incasari' => $orderRevenue + $serviceOrdersTotal,
+                'order_revenue' => $orderRevenue,
                 'service_revenue' => $serviceOrdersTotal,
-                'commissions' => $authCommission ?? $commissions,
-                // All-time marketplace commissions — authoritative value from
-                // dashboard:warm-alltime-stats; falls back to the flat estimate
-                // (calculateMarketplaceCommission) until the cache is warmed.
-                'all_time_commissions' => $authCommission ?? Cache::remember("mp_alltime_comm_{$marketplaceId}", 3600, fn () =>
+                'commissions' => $commissions,
+                // All-time marketplace commissions — cached separately (very expensive query)
+                'all_time_commissions' => Cache::remember("mp_alltime_comm_{$marketplaceId}", 3600, fn () =>
                     BillingBreakdown::calculateMarketplaceCommission(
                         $marketplaceId, null, null, (float) ($this->marketplace->commission_rate ?? 5)
                     )
