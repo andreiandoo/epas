@@ -3358,7 +3358,11 @@ class EventResource extends Resource
                                                         $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
                                                         return in_array($inh['mode'], ['added_on_top', 'on_top'], true) ? $t('Adăugat', 'Added') : $t('Inclus', 'Included');
                                                     })
-                                                    ->visible(fn (SGet $get) => !empty($get('commission_type')))
+                                                    // Only a real override (percentage/fixed/both) exposes the mode
+                                                    // selector. On "Moștenește" the mode is inherited from the
+                                                    // organizer and any value here would be ignored at calc time,
+                                                    // so we hide it and show the read-only inherited line instead.
+                                                    ->visible(fn (SGet $get) => in_array($get('commission_type'), ['percentage', 'fixed', 'both']))
                                                     ->columnSpan(3),
 
                                                 // Read-only transparency line: shows exactly what a
