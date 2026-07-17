@@ -77,34 +77,32 @@ h1.t{color:#f4dede;font-size:15px;font-weight:700;letter-spacing:.5px}
   62%{clip-path:inset(0 0 0% 0);opacity:0}
   100%{clip-path:inset(0 0 0% 0);opacity:0}}
 
-/* scan beam */
-.beam{position:absolute;left:-6px;right:-6px;height:3px;top:0;border-radius:3px;
-  background:linear-gradient(90deg,transparent,#fff 20%,#fff 80%,transparent);
-  box-shadow:0 0 14px 4px var(--red-glow),0 0 30px 8px var(--red-glow);opacity:0;
-  animation:beam var(--cycle) cubic-bezier(.5,0,.5,1) infinite}
-.beam::after{content:"";position:absolute;left:0;right:0;top:2px;height:52px;
-  background:linear-gradient(#ffffff55,transparent);filter:blur(2px)}
+/* scan beam — refined: hairline core + tight bloom + soft trailing wash */
+.beam{position:absolute;left:-14px;right:-14px;height:2px;top:0;border-radius:2px;opacity:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.15) 8%,#fff 50%,rgba(255,255,255,.15) 92%,transparent);
+  box-shadow:0 0 8px 1px rgba(255,255,255,.55),0 0 22px 6px var(--red-glow);
+  animation:beam var(--cycle) cubic-bezier(.45,0,.55,1) infinite}
+/* bright travelling core dot */
+.beam::before{content:"";position:absolute;left:22%;right:22%;top:-1.5px;height:5px;border-radius:5px;
+  background:linear-gradient(90deg,transparent,#fff,transparent);filter:blur(2.5px);opacity:.95}
+/* soft trailing wash beneath the line */
+.beam::after{content:"";position:absolute;left:4%;right:4%;top:2px;height:60px;border-radius:0 0 30px 30px;
+  background:linear-gradient(rgba(255,255,255,.22),rgba(226,58,69,.14) 40%,transparent);filter:blur(2px)}
 @keyframes beam{
   0%,13%{opacity:0;transform:translateY(4px)}
-  16%{opacity:1;transform:translateY(4px)}
-  49%{opacity:1;transform:translateY(200px)}
-  53%{opacity:0;transform:translateY(200px)}
-  100%{opacity:0;transform:translateY(200px)}}
+  17%{opacity:1;transform:translateY(4px)}
+  47%{opacity:1;transform:translateY(198px)}
+  52%{opacity:0;transform:translateY(204px)}
+  100%{opacity:0;transform:translateY(204px)}}
 
-/* success ring + check */
-.success{position:absolute;width:132px;height:132px;display:flex;align-items:center;justify-content:center}
-.ring{position:absolute;inset:0;border-radius:50%;border:4px solid var(--green);
-  opacity:0;animation:ring var(--cycle) ease-out infinite}
-@keyframes ring{0%,50%{opacity:0;transform:scale(.55)}
-  54%{opacity:1;transform:scale(.85)}
-  60%{opacity:.9;transform:scale(1.12)}
-  66%{opacity:0;transform:scale(1.3)}100%{opacity:0}}
-.check{width:120px;height:120px;opacity:0;animation:chk var(--cycle) ease-out infinite}
-.check path{stroke:var(--green);stroke-width:9;fill:none;stroke-linecap:round;stroke-linejoin:round;
-  stroke-dasharray:60;stroke-dashoffset:60;filter:drop-shadow(0 0 8px rgba(37,208,122,.6))}
-@keyframes chk{0%,51%{opacity:0}54%{opacity:1}64%{opacity:1}70%{opacity:0}100%{opacity:0}}
-.check.go path{animation:draw var(--cycle) ease-out infinite}
-@keyframes draw{0%,52%{stroke-dashoffset:60}60%{stroke-dashoffset:0}70%{stroke-dashoffset:0}100%{stroke-dashoffset:0}}
+/* completion bloom — a soft WHITE ring pulse (no green) */
+.success{position:absolute;width:150px;height:150px;display:flex;align-items:center;justify-content:center}
+.ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.9);
+  box-shadow:0 0 20px var(--red-glow);opacity:0;animation:ring var(--cycle) ease-out infinite}
+@keyframes ring{0%,47%{opacity:0;transform:scale(.5)}
+  51%{opacity:.85;transform:scale(.8)}
+  58%{opacity:.5;transform:scale(1.12)}
+  64%{opacity:0;transform:scale(1.32)}100%{opacity:0}}
 
 /* ---- logo lockup ---- */
 .lockup{position:absolute;display:flex;flex-direction:column;align-items:center;gap:14px;
@@ -156,7 +154,6 @@ h1.t{color:#f4dede;font-size:15px;font-weight:700;letter-spacing:.5px}
         <div class="beam"></div>
         <div class="success">
           <div class="ring"></div>
-          <svg class="check go" viewBox="0 0 120 120"><path d="M32 62 L52 82 L90 40"/></svg>
         </div>
       </div>
 
@@ -175,7 +172,7 @@ h1.t{color:#f4dede;font-size:15px;font-weight:700;letter-spacing:.5px}
 
   <div style="display:flex;flex-direction:column;gap:16px;max-width:340px;align-self:center">
     <p class="hint">Secvența (bucla ~5s): cadrul de scanare se desenează → fasciculul luminos coboară și
-    „aprinde" codul QR pe măsură ce trece → inel verde + bifă de succes → codul se strânge în logo-ul
+    „aprinde" codul QR pe măsură ce trece → un puls alb subtil de finalizare → codul se strânge în logo-ul
     AmBilet Scan → wordmark + bară de încărcare. În aplicație rulează o singură dată (~2.6s), apoi intră în app.</p>
     <button class="replay" onclick="replay()">↻ Redă din nou</button>
     <p class="hint">Implementare React Native gata de folosit: <b style="color:#e9b7b7">SplashScreen.animated.js</b>

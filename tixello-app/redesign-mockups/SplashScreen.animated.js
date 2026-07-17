@@ -7,8 +7,8 @@
 // Sequence (~2.6s, runs ONCE):
 //   1. maroon radial background + pulsing glow fade in
 //   2. scan-frame corner brackets draw in
-//   3. a glowing beam sweeps top→bottom and "lights up" the QR as it passes
-//   4. green success ring + check pop
+//   3. a refined glowing beam sweeps top→bottom and "lights up" the QR as it passes
+//   4. a soft white completion pulse (no green)
 //   5. the whole scan zone collapses upward and morphs into the AmBilet mark
 //   6. "AmBilet Scan" wordmark + tagline rise; loading bar fills
 //
@@ -17,7 +17,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions, Platform } from 'react-native';
-import Svg, { Rect, Defs, RadialGradient, Stop, Path, G } from 'react-native-svg';
+import Svg, { Rect, Defs, RadialGradient, LinearGradient, Stop, G } from 'react-native-svg';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -25,7 +25,6 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const C = {
   glow: 'rgba(226,58,69,0.55)',
   beam: '#FFFFFF',
-  green: '#25D07A',
   red: '#9A1B22',
   redBright: '#E23A45',
 };
@@ -104,13 +103,12 @@ export default function SplashScreen({ onFinish }) {
   const revealHeight = tJS.interpolate({ inputRange: [0, 0.13, 0.49, 1], outputRange: [0, 0, QR, QR] });
   const litOpacity = t.interpolate({ inputRange: [0, 0.13, 0.54, 0.62], outputRange: [0, 1, 1, 0] });
 
-  const beamOpacity = t.interpolate({ inputRange: [0, 0.13, 0.16, 0.49, 0.53], outputRange: [0, 0, 1, 1, 0] });
-  const beamY = t.interpolate({ inputRange: [0, 0.16, 0.49, 1], outputRange: [4, 4, QR + 18, QR + 18] });
+  const beamOpacity = t.interpolate({ inputRange: [0, 0.13, 0.17, 0.47, 0.52], outputRange: [0, 0, 1, 1, 0] });
+  const beamY = t.interpolate({ inputRange: [0, 0.17, 0.47, 1], outputRange: [4, 4, QR + 16, QR + 16] });
 
-  const ringOpacity = t.interpolate({ inputRange: [0, 0.5, 0.54, 0.6, 0.66], outputRange: [0, 0, 1, 0.9, 0] });
-  const ringScale = t.interpolate({ inputRange: [0, 0.5, 0.54, 0.6, 0.66], outputRange: [0.55, 0.55, 0.85, 1.12, 1.3] });
-  const checkOpacity = t.interpolate({ inputRange: [0, 0.51, 0.54, 0.66, 0.7], outputRange: [0, 0, 1, 1, 0] });
-  const checkScale = t.interpolate({ inputRange: [0, 0.52, 0.6, 0.7], outputRange: [0.5, 0.5, 1.05, 1] });
+  // completion pulse — soft WHITE ring bloom (no green)
+  const ringOpacity = t.interpolate({ inputRange: [0, 0.47, 0.51, 0.58, 0.64], outputRange: [0, 0, 0.85, 0.5, 0] });
+  const ringScale = t.interpolate({ inputRange: [0, 0.47, 0.51, 0.58, 0.64], outputRange: [0.5, 0.5, 0.8, 1.12, 1.32] });
 
   const zoneScale = t.interpolate({ inputRange: [0, 0.52, 0.66], outputRange: [1, 1, 0.42] });
   const zoneY = t.interpolate({ inputRange: [0, 0.52, 0.66], outputRange: [0, 0, -170] });
@@ -174,20 +172,31 @@ export default function SplashScreen({ onFinish }) {
           </Animated.View>
         </Animated.View>
 
-        {/* beam */}
+        {/* refined beam: hairline core (tapered white gradient) + soft trailing wash + red halo */}
         <Animated.View style={[styles.beamWrap, { opacity: beamOpacity, transform: [{ translateY: beamY }] }]}>
-          <View style={styles.beamGlow} />
-          <View style={styles.beamLine} />
-        </Animated.View>
-
-        {/* success ring + check */}
-        <Animated.View style={[styles.ring, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
-        <Animated.View style={[styles.checkWrap, { opacity: checkOpacity, transform: [{ scale: checkScale }] }]}>
-          <Svg width={120} height={120} viewBox="0 0 120 120">
-            <Path d="M32 62 L52 82 L90 40" stroke={C.green} strokeWidth={9} fill="none"
-              strokeLinecap="round" strokeLinejoin="round" />
+          <View style={styles.beamHalo} />
+          <Svg width={ZONE + 28} height={64} style={{ position: 'absolute', left: 0, top: 0 }}>
+            <Defs>
+              <LinearGradient id="beamCore" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#fff" stopOpacity="0" />
+                <Stop offset="0.12" stopColor="#fff" stopOpacity="0.15" />
+                <Stop offset="0.5" stopColor="#fff" stopOpacity="1" />
+                <Stop offset="0.88" stopColor="#fff" stopOpacity="0.15" />
+                <Stop offset="1" stopColor="#fff" stopOpacity="0" />
+              </LinearGradient>
+              <LinearGradient id="beamWash" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#fff" stopOpacity="0.22" />
+                <Stop offset="0.4" stopColor={C.redBright} stopOpacity="0.14" />
+                <Stop offset="1" stopColor={C.redBright} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={10} y={2} width={ZONE + 8} height={58} rx={20} fill="url(#beamWash)" />
+            <Rect x={0} y={0} width={ZONE + 28} height={2.4} rx={1.2} fill="url(#beamCore)" />
           </Svg>
         </Animated.View>
+
+        {/* completion pulse — soft white ring bloom (no green) */}
+        <Animated.View style={[styles.ring, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
       </Animated.View>
 
       {/* ── logo lockup ── */}
@@ -229,16 +238,15 @@ const styles = StyleSheet.create({
 
   qrAbs: { position: 'absolute', width: QR, height: QR, alignItems: 'center', justifyContent: 'flex-start' },
 
-  beamWrap: { position: 'absolute', top: (ZONE - QR) / 2 - 9, left: -6, right: -6, height: 40, alignItems: 'stretch' },
-  beamLine: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderRadius: 3, backgroundColor: C.beam,
-    shadowColor: C.redBright, shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+  beamWrap: { position: 'absolute', top: (ZONE - QR) / 2 - 8, left: -14, width: ZONE + 28, height: 64 },
+  // thin white line carrying the red halo (shadow) — sits under the svg core
+  beamHalo: {
+    position: 'absolute', top: 0, left: 24, right: 24, height: 2, borderRadius: 2, backgroundColor: C.beam,
+    shadowColor: C.redBright, shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
     ...(Platform.OS === 'android' ? { elevation: 8 } : null),
   },
-  beamGlow: { position: 'absolute', top: 2, left: 8, right: 8, height: 46, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20 },
 
-  ring: { position: 'absolute', width: 132, height: 132, borderRadius: 66, borderWidth: 4, borderColor: C.green },
-  checkWrap: { position: 'absolute', width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
+  ring: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
 
   lockup: { position: 'absolute', alignItems: 'center' },
   mark: {
