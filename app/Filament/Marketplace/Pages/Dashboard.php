@@ -624,9 +624,18 @@ class Dashboard extends Page
         // because last year's data is mostly migrated (legacy_import); drop
         // it and there's nothing left to compare against.
         $excludedSources = $excludeLegacy
-            ? ['test_order', 'external_import', 'legacy_import']
-            : ['test_order', 'external_import'];
-        $dailySales = Order::where('marketplace_client_id', $marketplaceId)
+            ? ['test_order', 'pos_test', 'external_import', 'legacy_import']
+            : ['test_order', 'pos_test', 'external_import'];
+        // Event-linked scope (same as the daily report table): only orders tied
+        // to a marketplace event count, so the chart's daily "Vânzări" bar
+        // equals that day's report total. Orders with no event link can't be
+        // attributed to a report row, so they're excluded here too.
+        $eventSub = function ($sub) use ($marketplaceId) {
+            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+        };
+        $dailySales = Order::where(function ($q) use ($eventSub) {
+                $q->whereIn('marketplace_event_id', $eventSub)->orWhereIn('event_id', $eventSub);
+            })
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$startDate, $endDate])
@@ -942,10 +951,19 @@ class Dashboard extends Page
     private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false): array
     {
         $tz = 'Europe/Bucharest';
-        $dailyTickets = Ticket::where('marketplace_client_id', $marketplaceId)
-            ->whereIn('tickets.status', ['valid', 'used'])
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, COUNT(*) as count")
+        // Count via ticket_types→events→orders (same as the daily report), not
+        // the unreliable tickets.marketplace_client_id column, so the chart's
+        // ticket bars match the report's tickets_day.
+        $dailyTickets = DB::table('tickets as t')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where('e.marketplace_client_id', $marketplaceId)
+            ->whereIn('t.status', ['valid', 'used'])
+            ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+            ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereBetween('t.created_at', [$startDate, $endDate])
+            ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, COUNT(*) as count")
             ->groupBy('date')
             ->pluck('count', 'date')
             ->toArray();
@@ -1044,9 +1062,15 @@ class Dashboard extends Page
 
         // "Venituri brute" = commission AmBilet actually earned this month, via
         // the authoritative SalesBreakdownService (floor/leisure/per-type aware
-        // — the raw commission_amount is 0 for POS/leisure). Summed from the
-        // shared per-day report cache.
-        $totalCommission = $this->dailyReportMonthTotals($marketplaceId, $monthDate)['commission'];
+        // — the raw commission_amount is 0 for POS/leisure). One month-scoped
+        // build per event (not per event × per day), cached on its own key so
+        // the expensive part isn't recomputed on every dashboard load.
+        $isPastMonth = $monthDate->copy()->endOfMonth()->lt(Carbon::now($tz)->startOfMonth());
+        $totalCommission = Cache::remember(
+            "mp_month_comm_svc_{$marketplaceId}_{$monthDate->format('Y-m')}",
+            $isPastMonth ? 86400 : 900,
+            fn () => $this->monthCommissionViaService($marketplaceId, $monthStart, $monthEnd)
+        );
 
         // Tickets sold this month — efficient join instead of nested whereHas
         $ticketsSold = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
@@ -1075,7 +1099,7 @@ class Dashboard extends Page
         // Orders this month (paid + confirmed + completed + refunded, excl cancelled)
         $monthOrders = Order::where($orderScope)
             ->whereIn('orders.status', ['paid', 'confirmed', 'completed', 'refunded'])
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->count();
 
@@ -1157,7 +1181,7 @@ class Dashboard extends Page
         // above the billing card; it's not the commission base anymore.
         $orderRevenue = (float) Order::where($billingScope)
             ->whereIn('status', $validStatuses)
-            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->sum('total');
 
@@ -1172,7 +1196,7 @@ class Dashboard extends Page
                     ->orWhereIn('o.marketplace_event_id', $eventSub)
                     ->orWhereIn('o.event_id', $eventSub);
             })
-            ->whereNotIn('o.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereBetween('t.created_at', [$monthStart, $monthEnd])
             ->where(function ($q) {
                 $q->where(function ($q2) {
@@ -1351,36 +1375,41 @@ class Dashboard extends Page
     }
 
     /**
-     * Month totals (sales, commission, tickets) from the authoritative daily
-     * report — Σ over the month's days (up to today) of sales_day /
-     * commission_day / tickets_day. Reuses the shared per-day report cache, so
-     * this is the same source as the report table, chart and today cards.
-     *
-     * @return array{sales: float, commission: float, tickets: int}
+     * Authoritative marketplace commission for a month — one month-scoped
+     * SalesBreakdownService build per event that had a paid sale in the window
+     * (floor/leisure/per-type aware). Cached by the caller. Much cheaper than
+     * summing per-day reports (one build per event, not per event × per day).
      */
-    private function dailyReportMonthTotals(int $marketplaceId, Carbon $monthDate): array
+    private function monthCommissionViaService(int $marketplaceId, Carbon $monthStart, Carbon $monthEnd): float
     {
-        $tz = 'Europe/Bucharest';
-        $today = Carbon::now($tz)->format('Y-m-d');
-        $daysInMonth = (int) $monthDate->daysInMonth;
+        $eventSub = function ($sub) use ($marketplaceId) {
+            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+        };
+        $eventIds = Order::where(function ($q) use ($eventSub) {
+                $q->whereIn('marketplace_event_id', $eventSub)->orWhereIn('event_id', $eventSub);
+            })
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->where(function ($q) {
+                $q->whereNotNull('marketplace_event_id')->orWhereNotNull('event_id');
+            })
+            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
+            ->groupBy('eid')
+            ->pluck('eid');
 
-        $sales = 0.0;
-        $commission = 0.0;
-        $tickets = 0;
-
-        $cur = $monthDate->copy()->startOfMonth();
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dateStr = $cur->format('Y-m-d');
-            if ($dateStr <= $today) {
-                $rows = collect($this->dailyReportRowsCached($marketplaceId, $dateStr));
-                $sales += (float) $rows->sum('sales_day');
-                $commission += (float) $rows->sum('commission_day');
-                $tickets += (int) $rows->sum('tickets_day');
+        $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $sum = 0.0;
+        foreach ($eventIds as $eid) {
+            $event = Event::find((int) $eid);
+            if (!$event) {
+                continue;
             }
-            $cur->addDay();
+            $bd = $svc->build($event, $monthStart, $monthEnd, exactBounds: true);
+            $sum += (float) $bd['total_commission'] + (float) ($bd['total_commission_kept_from_refunds'] ?? 0);
         }
 
-        return ['sales' => $sales, 'commission' => $commission, 'tickets' => $tickets];
+        return round($sum, 2);
     }
 
     private function computeDailyEventReport(int $marketplaceId, string $date): array
@@ -1405,7 +1434,7 @@ class Dashboard extends Page
 
         $dayRows = Order::where($orderScope)
             ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$dayStart, $dayEnd])
             ->where(function ($q) {
                 // Skip orders that aren't linked to any event — they
@@ -1439,7 +1468,7 @@ class Dashboard extends Page
             ->whereIn('events.id', $eventIds)
             ->whereIn('tickets.status', ['valid', 'used'])
             ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereBetween('tickets.created_at', [$dayStart, $dayEnd])
             ->selectRaw('events.id as eid, COUNT(*) as cnt')
             ->groupBy('events.id')
@@ -1453,7 +1482,7 @@ class Dashboard extends Page
         $eventIdsList = implode(',', $eventIdsInt);
         $totalRows = Order::where($orderScope)
             ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->whereRaw("COALESCE(marketplace_event_id, event_id) IN ({$eventIdsList})")
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
             ->selectRaw('COUNT(*) as orders_count')
@@ -1470,7 +1499,7 @@ class Dashboard extends Page
             ->whereIn('events.id', $eventIds)
             ->whereIn('tickets.status', ['valid', 'used'])
             ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
             ->selectRaw('events.id as eid, COUNT(*) as cnt')
             ->groupBy('events.id')
             ->pluck('cnt', 'eid');
