@@ -207,7 +207,11 @@ function eventSortKey(event) {
 
 export default function EventsModal({ visible, onClose, events, onSelectEvent, onRefresh }) {
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
-  const categories = ['live', 'today', 'unpublished', 'future'];
+  // Past is intentionally listed LAST so the picker leads with actionable
+  // groups (live / today / drafts / future) and lets the operator scroll to
+  // history if they need it. Past sorted DESC (most recent first) so a two-
+  // day-old event is easier to reach than one from last year.
+  const categories = ['live', 'today', 'unpublished', 'future', 'past'];
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
   useEffect(() => { if (!visible) setQuery(''); }, [visible]);
@@ -343,7 +347,9 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent, o
                   if (categoryEvents.length === 0) return null;
                   const sortedEvents = category === 'unpublished'
                     ? [...categoryEvents].sort((a, b) => (b.id || 0) - (a.id || 0))
-                    : [...categoryEvents].sort((a, b) => eventSortKey(a) - eventSortKey(b));
+                    : category === 'past'
+                      ? [...categoryEvents].sort((a, b) => eventSortKey(b) - eventSortKey(a))
+                      : [...categoryEvents].sort((a, b) => eventSortKey(a) - eventSortKey(b));
                   return (
                     <View key={category} style={styles.section}>
                       <SectionHeader category={category} />

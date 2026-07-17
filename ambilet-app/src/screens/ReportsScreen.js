@@ -199,6 +199,18 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
 
   if (!pastEvents || pastEvents.length === 0) return null;
 
+  // Sort descending by date so the most recent event is at the top —
+  // operators reach for "yesterday's show" far more often than "last year's".
+  // Backend also returns null-date rows first (Postgres NULLS FIRST on DESC),
+  // this normalizes ordering so those sink to the bottom.
+  const sortedPast = [...pastEvents].sort((a, b) => {
+    const aRaw = a.starts_at || a.event_date || a.start_date;
+    const bRaw = b.starts_at || b.event_date || b.start_date;
+    const at = aRaw ? new Date(aRaw).getTime() : 0;
+    const bt = bRaw ? new Date(bRaw).getTime() : 0;
+    return bt - at;
+  });
+
   const handleSelect = (event) => {
     onSelect(event);
     setShowModal(false);
@@ -257,15 +269,20 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
               <Text style={pastEventStyles.sheetTitle}>Evenimente Trecute</Text>
             </View>
             <ScrollView style={pastEventStyles.sheetScroll} showsVerticalScrollIndicator={false}>
-              {pastEvents.map((event, index) => {
+              {sortedPast.map((event, index) => {
                 const isSelected = selectedEvent?.id === event.id;
                 let formattedDate = '';
-                const eventDate = event.event_date || event.date || event.start_date || '';
+                // API returns `starts_at` (ISO) for most events, `event_date`
+                // is only populated by the mobile-live-range accessor. Try
+                // starts_at first, then legacy fields as fallback.
+                const eventDate = event.starts_at || event.event_date || event.date || event.start_date || '';
                 if (eventDate) {
                   try {
                     const d = new Date(eventDate);
-                    formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-                  } catch { formattedDate = eventDate; }
+                    if (!isNaN(d.getTime())) {
+                      formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+                    }
+                  } catch { formattedDate = ''; }
                 }
                 return (
                   <TouchableOpacity

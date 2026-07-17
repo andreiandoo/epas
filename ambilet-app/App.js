@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.6';
+const APP_VERSION = '2.0.7';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -47,6 +47,23 @@ import StaffAssignmentModal from './src/components/modals/StaffAssignmentModal';
 
 import { colors } from './src/theme/colors';
 import { loadPersistedTheme } from './src/theme/bootstrapTheme';
+
+// Immersive mode: hide the Android system nav bar so the app's own tab bar
+// isn't overlapped by the phone's back/home/recents buttons. Sticky-immersive
+// lets a swipe from the edge temporarily bring the nav back if the operator
+// needs it. Optional dep — silent no-op if the module isn't linked yet.
+let NavigationBar = null;
+try {
+  NavigationBar = require('expo-navigation-bar');
+} catch (e) {
+  NavigationBar = null;
+}
+if (NavigationBar && Platform.OS === 'android') {
+  try {
+    NavigationBar.setVisibilityAsync('hidden');
+    NavigationBar.setBehaviorAsync('overlay-swipe');
+  } catch (e) {}
+}
 
 // Global error handler — prevents native crash on unhandled JS errors
 const originalHandler = ErrorUtils.getGlobalHandler();
@@ -168,8 +185,14 @@ function MainTabs() {
   const appStateRef = useRef(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
-      if (appStateRef.current.match(/inactive|background/) && next === 'active' && user?.id) {
-        fetchEvents();
+      if (appStateRef.current.match(/inactive|background/) && next === 'active') {
+        if (user?.id) fetchEvents();
+        // Re-hide the system nav bar — Android can restore it on some
+        // interactions (dialogs, permission prompts) and we want it back
+        // out of the way once the operator is back in the app.
+        if (NavigationBar && Platform.OS === 'android') {
+          try { NavigationBar.setVisibilityAsync('hidden'); } catch (e) {}
+        }
       }
       appStateRef.current = next;
     });

@@ -115,7 +115,7 @@ export default function Header({ onNotificationPress, onOrganizerSwitched, pageT
                 { color: isOnline ? colors.green : colors.red },
               ]}
             >
-              {isOnline ? 'Live' : 'Offline'}
+              {isOnline ? 'Online' : 'Offline'}
             </Text>
           </View>
 

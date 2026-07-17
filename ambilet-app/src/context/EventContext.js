@@ -42,13 +42,30 @@ export function EventProvider({ children }) {
   const fetchEvents = useCallback(async () => {
     setIsLoadingEvents(true);
     try {
-      const data = await getEvents({ per_page: 100 });
-      if (data.success && data.data) {
-        // Organizer endpoint returns paginated `data: [...]`; venue-owner
-        // endpoint returns `data: { events: [...] }`. Accept either.
-        const list = Array.isArray(data.data)
-          ? data.data
-          : (data.data.events || data.events || []);
+      // Two parallel calls so drafts NEVER crowd out real events from the
+      // 100-row page. Postgres sorts `event_date DESC NULLS FIRST` by default,
+      // so a single unfiltered fetch can return only drafts (which usually
+      // have no date) when the organizer has 100+ drafts. Fetching published
+      // and drafts on separate paginators guarantees we have a slice of each.
+      const [publishedRes, draftsRes] = await Promise.all([
+        getEvents({ published_only: true, per_page: 100 }),
+        getEvents({ status: 'draft', per_page: 50 }).catch(() => null),
+      ]);
+      const unwrap = (res) => {
+        if (!res || !res.success || !res.data) return [];
+        return Array.isArray(res.data) ? res.data : (res.data.events || res.events || []);
+      };
+      const merged = [...unwrap(publishedRes), ...unwrap(draftsRes)];
+      // Dedupe by id in case an event appears in both slices (shouldn't
+      // happen — published_only vs status=draft are mutually exclusive —
+      // but cheap safety net).
+      const seen = new Set();
+      const list = merged.filter(e => {
+        if (seen.has(e.id)) return false;
+        seen.add(e.id);
+        return true;
+      });
+      if (list.length > 0 || publishedRes?.success || draftsRes?.success) {
         const enriched = list.map(e => ({
           ...e,
           timeCategory: categorizeEvent(e),
