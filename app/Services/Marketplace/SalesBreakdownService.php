@@ -189,6 +189,14 @@ class SalesBreakdownService
             ? (float) ($event->marketplaceOrganizer?->fixed_commission_default ?? 0)
             : 0.0;
 
+        // Leisure events (Sf. Ana etc.) sell packages whose components carry
+        // price 0 (value is in the parent) plus free/comp tickets. Value those
+        // per-ticket via getEffectivePrice() so the parent counts as X and the
+        // components/free tickets count as 0 — see the leisure branch in the
+        // slice loop. Scoped strictly to leisure_venue so no other marketplace
+        // is affected (fully revertable).
+        $isLeisure = ($event->display_template ?? null) === 'leisure_venue';
+
         $perType = [];
         $sumValidGross = 0.0;
         $sumOnTop = 0.0;
@@ -254,29 +262,60 @@ class SalesBreakdownService
 
                 $validCount = $group->count();
 
-                $firstTicketPrice = (float) ($group->first()->price ?? 0);
-                if ($firstTicketPrice > 0) {
-                    $unitPrice = $firstTicketPrice;
-                } else {
-                    $orderItem = $order->items->first(fn ($it) => (int) $it->ticket_type_id === (int) $ttId);
-                    if ($orderItem && (float) $orderItem->unit_price > 0) {
-                        $unitPrice = (float) $orderItem->unit_price;
-                    } else {
-                        $unitPrice = ((int) ($tt->sale_price_cents ?? 0) > 0
-                            ? $tt->sale_price_cents
-                            : (int) ($tt->price_cents ?? 0)) / 100;
-                    }
-                }
-
-                $gross = $unitPrice * $validCount;
-                $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
                 $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-                // Aplica floor per bilet daca organizator > 0 si biletul are pret > 0
-                if ($organizerFloor > 0 && $unitPrice > 0 && $commPerTicket < $organizerFloor) {
-                    $commPerTicket = $organizerFloor;
-                }
-                $commission = $commPerTicket * $validCount;
                 $mode = $effective['mode'];
+
+                if ($isLeisure) {
+                    // LEISURE: value each ticket by its EFFECTIVE price. Package
+                    // components (price 0 — value carried by the parent) and
+                    // free/comp tickets count as 0; never fall back to catalog.
+                    // Commission is per-ticket (floor-aware) on tickets with
+                    // price > 0. Aligns with Ticket::getEffectivePrice() and the
+                    // leisure reports (matches order.total). Scoped to leisure —
+                    // the else branch below is the unchanged legacy behaviour.
+                    $gross = 0.0;
+                    $commission = 0.0;
+                    foreach ($group as $lt) {
+                        if (!$lt->relationLoaded('order')) {
+                            $lt->setRelation('order', $order);
+                        }
+                        $eff = (float) $lt->getEffectivePrice();
+                        $gross += $eff;
+                        if ($eff > 0) {
+                            $cpt = (float) $tt->calculateCommission($eff, $defaultRate, $defaultMode);
+                            if ($organizerFloor > 0 && $cpt < $organizerFloor) {
+                                $cpt = $organizerFloor;
+                            }
+                            $commission += $cpt;
+                        }
+                    }
+                    $gross = round($gross, 2);
+                    $commission = round($commission, 2);
+                    $unitPrice = $validCount > 0 ? round($gross / $validCount, 2) : 0.0;
+                    $commPerTicket = $validCount > 0 ? round($commission / $validCount, 2) : 0.0;
+                } else {
+                    $firstTicketPrice = (float) ($group->first()->price ?? 0);
+                    if ($firstTicketPrice > 0) {
+                        $unitPrice = $firstTicketPrice;
+                    } else {
+                        $orderItem = $order->items->first(fn ($it) => (int) $it->ticket_type_id === (int) $ttId);
+                        if ($orderItem && (float) $orderItem->unit_price > 0) {
+                            $unitPrice = (float) $orderItem->unit_price;
+                        } else {
+                            $unitPrice = ((int) ($tt->sale_price_cents ?? 0) > 0
+                                ? $tt->sale_price_cents
+                                : (int) ($tt->price_cents ?? 0)) / 100;
+                        }
+                    }
+
+                    $gross = $unitPrice * $validCount;
+                    $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
+                    // Aplica floor per bilet daca organizator > 0 si biletul are pret > 0
+                    if ($organizerFloor > 0 && $unitPrice > 0 && $commPerTicket < $organizerFloor) {
+                        $commPerTicket = $organizerFloor;
+                    }
+                    $commission = $commPerTicket * $validCount;
+                }
 
                 // Composite accumulator key — same as $sliceKey when splitByPrice,
                 // otherwise just the ttId (legacy shape).
