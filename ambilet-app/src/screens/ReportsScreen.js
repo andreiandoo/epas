@@ -489,15 +489,22 @@ export default function ReportsScreen() {
       const dateSuffix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
       const fileName = `raport-${eventName}-${dateSuffix}.csv`;
 
-      // expo-file-system SDK 54 exposes `File` class in the default export.
-      // Fall back to legacy `writeAsStringAsync` if we're on an older version.
-      const dir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
-      const fileUri = `${dir}${fileName}`;
-      if (typeof FileSystem.writeAsStringAsync === 'function') {
+      // expo-file-system SDK 54 deprecated the legacy `writeAsStringAsync`
+      // and moved everything onto the sync `File` / `Directory` / `Paths`
+      // classes. Prefer the new API; fall back to the legacy call only if
+      // the module is from an older SDK. Older SDK legacy path stays wrapped
+      // in await even though it's already a promise — no-op if sync.
+      let fileUri = null;
+      if (FileSystem.File && FileSystem.Paths) {
+        const dir = FileSystem.Paths.cache || FileSystem.Paths.document;
+        const file = new FileSystem.File(dir, fileName);
+        try { file.create(); } catch {}
+        file.write(csvText);
+        fileUri = file.uri;
+      } else if (typeof FileSystem.writeAsStringAsync === 'function') {
+        const dir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+        fileUri = `${dir}${fileName}`;
         await FileSystem.writeAsStringAsync(fileUri, csvText, { encoding: 'utf8' });
-      } else if (FileSystem.File) {
-        const f = new FileSystem.File(fileUri);
-        await f.write(csvText);
       } else {
         throw new Error('FileSystem API not available');
       }
