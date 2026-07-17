@@ -205,33 +205,47 @@ class EventActivityLog extends Page
                     });
                 }
             })
-            ->with('causer')
+            // NB: causer is loaded lazily per-activity via safeCauser() rather
+            // than eager ->with('causer'), because a stale/removed morph class
+            // makes eager morphTo loading throw during ->get() (before we can
+            // catch it). Lazy access keeps each failure isolated.
             ->orderByDesc('created_at')
             ->get();
 
         return $activities->map(function (Activity $activity) {
-            $isTicketType = $this->isTicketTypeActivity($activity);
-            $changes = $this->formatChanges($activity, $isTicketType);
-            $subjectLabel = $isTicketType ? $this->ticketTypeName($activity) : null;
+            // Never let a single malformed activity (e.g. a causer whose model
+            // class no longer resolves, or odd properties) 500 the whole page.
+            try {
+                $isTicketType = $this->isTicketTypeActivity($activity);
+                $changes = $this->formatChanges($activity, $isTicketType);
+                $subjectLabel = $isTicketType ? $this->ticketTypeName($activity) : null;
 
-            return [
-                'id' => $activity->id,
-                'event' => $activity->event,
-                'subject_kind' => $isTicketType ? 'ticket_type' : 'event',
-                'subject_label' => $subjectLabel,
-                'summary' => $this->buildSummary($activity, $isTicketType, $changes, $subjectLabel),
-                'causer_name' => $this->getCauserName($activity),
-                'causer_type' => $this->getCauserType($activity),
-                'causer_type_label' => $this->getCauserTypeLabel($activity),
-                'causer_email' => $this->getCauserEmail($activity),
-                'causer_url' => $this->getCauserUrl($activity),
-                'changes' => $changes,
-                'created_at' => $activity->created_at,
-                'formatted_date' => $activity->created_at->timezone('Europe/Bucharest')->format('d M Y'),
-                'formatted_time' => $activity->created_at->timezone('Europe/Bucharest')->format('H:i'),
-                'relative_time' => $activity->created_at->timezone('Europe/Bucharest')->diffForHumans(),
-            ];
+                return [
+                    'id' => $activity->id,
+                    'event' => $activity->event,
+                    'subject_kind' => $isTicketType ? 'ticket_type' : 'event',
+                    'subject_label' => $subjectLabel,
+                    'summary' => $this->buildSummary($activity, $isTicketType, $changes, $subjectLabel),
+                    'causer_name' => $this->getCauserName($activity),
+                    'causer_type' => $this->getCauserType($activity),
+                    'causer_type_label' => $this->getCauserTypeLabel($activity),
+                    'causer_email' => $this->getCauserEmail($activity),
+                    'causer_url' => $this->getCauserUrl($activity),
+                    'changes' => $changes,
+                    'created_at' => $activity->created_at,
+                    'formatted_date' => $activity->created_at?->timezone('Europe/Bucharest')->format('d M Y') ?? '',
+                    'formatted_time' => $activity->created_at?->timezone('Europe/Bucharest')->format('H:i') ?? '',
+                    'relative_time' => $activity->created_at?->timezone('Europe/Bucharest')->diffForHumans() ?? '',
+                ];
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('EventActivityLog: skipped a malformed activity', [
+                    'activity_id' => $activity->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+                return null;
+            }
         })
+        ->filter()
         // Drop entries that ended up with nothing meaningful to show
         // (e.g. an "updated" event where every changed column was noise).
         ->filter(fn ($log) => $log['event'] === 'created' || $log['event'] === 'deleted' || !empty($log['changes']))
@@ -319,9 +333,21 @@ class EventActivityLog extends Page
      * Any resolvable causer yields name / first+last / email; only a truly
      * missing causer is "Sistem".
      */
+    /**
+     * Resolve the causer without letting a stale/removed morph class throw.
+     */
+    protected function safeCauser(Activity $activity)
+    {
+        try {
+            return $activity->causer;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     protected function getCauserName(Activity $activity): string
     {
-        $causer = $activity->causer;
+        $causer = $this->safeCauser($activity);
         if (!$causer) {
             return 'Sistem';
         }
@@ -342,7 +368,7 @@ class EventActivityLog extends Page
      */
     protected function getCauserType(Activity $activity): string
     {
-        $causer = $activity->causer;
+        $causer = $this->safeCauser($activity);
         if (!$causer) {
             return 'system';
         }
@@ -371,7 +397,7 @@ class EventActivityLog extends Page
 
     protected function getCauserEmail(Activity $activity): ?string
     {
-        $causer = $activity->causer;
+        $causer = $this->safeCauser($activity);
         if (!$causer) {
             return null;
         }
@@ -385,7 +411,7 @@ class EventActivityLog extends Page
      */
     protected function getCauserUrl(Activity $activity): ?string
     {
-        $causer = $activity->causer;
+        $causer = $this->safeCauser($activity);
         if (!$causer || !isset($causer->id)) {
             return null;
         }

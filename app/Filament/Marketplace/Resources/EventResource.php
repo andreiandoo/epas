@@ -5889,6 +5889,11 @@ class EventResource extends Resource
             'import-external-tickets' => Pages\ImportExternalTickets::route('/{record}/external-tickets'),
             'import' => Pages\ImportEvents::route('/import'),
             'daily-capacities' => Pages\DailyCapacities::route('/{record}/daily-capacities'),
+            // Registered LAST so the static routes above win; a bare
+            // /events/{record} now redirects to /edit instead of 404-ing.
+            // Keyed 'redirect' (not 'view') so Filament doesn't treat it as the
+            // canonical view page and change table row-click behaviour.
+            'redirect' => Pages\RedirectEventToEdit::route('/{record}'),
         ];
     }
 
