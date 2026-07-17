@@ -32,36 +32,36 @@
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Istoricul modificărilor va apărea aici pe măsură ce evenimentul este editat.</p>
             </div>
         @else
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                 <div class="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Cronologie activitate</h2>
                 </div>
 
                 <ul role="list" class="divide-y divide-gray-100 dark:divide-gray-700/70">
                     @foreach($logs as $log)
-                        <li class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                        <li class="px-4 py-2.5">
                             <div class="flex items-start gap-2.5">
-                                {{-- Small action icon --}}
+                                {{-- Small action icon (solid, high-contrast) --}}
                                 <div class="flex-shrink-0 mt-0.5">
                                     <div class="w-6 h-6 rounded-full flex items-center justify-center
                                         @switch($log['event'])
-                                            @case('created') bg-green-100 dark:bg-green-900/40 @break
-                                            @case('deleted') bg-red-100 dark:bg-red-900/40 @break
-                                            @default bg-blue-100 dark:bg-blue-900/40
+                                            @case('created') bg-green-600 @break
+                                            @case('deleted') bg-red-600 @break
+                                            @default bg-blue-600
                                         @endswitch
                                     ">
                                         @if($log['subject_kind'] === 'ticket_type')
-                                            <x-heroicon-o-ticket class="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+                                            <x-heroicon-s-ticket class="w-3.5 h-3.5 text-white" />
                                         @else
                                             @switch($log['event'])
                                                 @case('created')
-                                                    <x-heroicon-o-plus class="w-3.5 h-3.5 text-green-600 dark:text-green-300" />
+                                                    <x-heroicon-s-plus class="w-4 h-4 text-white" />
                                                     @break
                                                 @case('deleted')
-                                                    <x-heroicon-o-trash class="w-3.5 h-3.5 text-red-600 dark:text-red-300" />
+                                                    <x-heroicon-s-trash class="w-3.5 h-3.5 text-white" />
                                                     @break
                                                 @default
-                                                    <x-heroicon-o-pencil class="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+                                                    <x-heroicon-s-pencil class="w-3 h-3 text-white" />
                                             @endswitch
                                         @endif
                                     </div>
@@ -75,16 +75,35 @@
                                             {{ $log['summary'] }}
                                         </span>
                                         <span class="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap"
-                                              title="{{ $log['formatted_date'] }} {{ $log['formatted_time'] }}">
+                                              title="{{ $log['relative_time'] }}">
                                             {{ $log['formatted_date'] }}, {{ $log['formatted_time'] }}
                                         </span>
                                     </div>
 
-                                    {{-- Line 2: who --}}
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                        {{ $log['causer_name'] }}
-                                        <span class="text-gray-400 dark:text-gray-500">· {{ $log['causer_type_label'] }}</span>
-                                        <span class="text-gray-300 dark:text-gray-600">· {{ $log['relative_time'] }}</span>
+                                    {{-- Line 2: who + role badge --}}
+                                    <div class="flex items-center flex-wrap gap-1.5 mt-0.5">
+                                        @if($log['causer_url'])
+                                            <a href="{{ $log['causer_url'] }}"
+                                               class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline truncate">
+                                                {{ $log['causer_name'] }}
+                                            </a>
+                                        @else
+                                            <span class="text-xs font-medium text-gray-600 dark:text-gray-300 truncate">
+                                                {{ $log['causer_name'] }}
+                                            </span>
+                                        @endif
+
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium leading-none
+                                            @switch($log['causer_type'])
+                                                @case('admin') bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 @break
+                                                @case('organizer') bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 @break
+                                                @case('customer') bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 @break
+                                                @case('staff') bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 @break
+                                                @default bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300
+                                            @endswitch
+                                        ">
+                                            {{ $log['causer_type_label'] }}
+                                        </span>
                                     </div>
 
                                     {{-- Line 3+: inline change diff (events + created ticket types) --}}
@@ -95,7 +114,7 @@
                                                     <span class="text-gray-500 dark:text-gray-400">{{ $change['field'] }}:</span>
                                                     @if($change['old'] !== '(empty)')
                                                         <span class="text-gray-400 dark:text-gray-500 line-through break-words">{{ $change['old'] }}</span>
-                                                        <span class="text-gray-300 dark:text-gray-600">→</span>
+                                                        <span class="text-gray-400 dark:text-gray-500">→</span>
                                                     @endif
                                                     @if($change['new'] !== '(empty)')
                                                         <span class="text-gray-700 dark:text-gray-200 font-medium break-words">{{ $change['new'] }}</span>

@@ -224,6 +224,7 @@ class EventActivityLog extends Page
                 'causer_type' => $this->getCauserType($activity),
                 'causer_type_label' => $this->getCauserTypeLabel($activity),
                 'causer_email' => $this->getCauserEmail($activity),
+                'causer_url' => $this->getCauserUrl($activity),
                 'changes' => $changes,
                 'created_at' => $activity->created_at,
                 'formatted_date' => $activity->created_at->timezone('Europe/Bucharest')->format('d M Y'),
@@ -376,6 +377,29 @@ class EventActivityLog extends Page
         }
 
         return $causer->email ?? null;
+    }
+
+    /**
+     * Deep-link to the causer's profile in the marketplace panel, when one
+     * exists (organizer / staff / admin). Null for system or missing causer.
+     */
+    protected function getCauserUrl(Activity $activity): ?string
+    {
+        $causer = $activity->causer;
+        if (!$causer || !isset($causer->id)) {
+            return null;
+        }
+
+        try {
+            return match ($this->getCauserType($activity)) {
+                'organizer' => \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $causer->id]),
+                'staff' => \App\Filament\Marketplace\Resources\MarketplaceAdminResource::getUrl('edit', ['record' => $causer->id]),
+                'admin' => \App\Filament\Marketplace\Resources\UserResource::getUrl('edit', ['record' => $causer->id]),
+                default => null,
+            };
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
