@@ -351,7 +351,11 @@ class Dashboard extends Page
         $invitationAbuse = app(\App\Services\Analytics\InvitationAbuseAnalyzer::class)
             ->analyze($marketplaceId, request()->has('refresh_invite_abuse'));
 
-        $isSuperAdmin = Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false;
+        $marketplaceAdminUser = Auth::guard('marketplace_admin')->user();
+        $isSuperAdmin = $marketplaceAdminUser?->isSuperAdmin() ?? false;
+        // "Marketplace admins" = Administrator + Super Administrator roles
+        // (excludes Moderator). Gates the invitation-abuse financial report.
+        $isMarketplaceAdmin = in_array($marketplaceAdminUser?->role, ['super_admin', 'admin'], true);
 
         // Daily event sales report (super-admin only) — events that had
         // sales on the selected day, with same-day + all-time aggregates.
@@ -382,6 +386,7 @@ class Dashboard extends Page
         return [
             'marketplace' => $marketplace,
             'isSuperAdmin' => $isSuperAdmin,
+            'isMarketplaceAdmin' => $isMarketplaceAdmin,
             'stats' => $stats['cards'],
             'monthStats' => $monthStats,
             'chartData' => $chartData,

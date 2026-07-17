@@ -11,9 +11,10 @@
 
         <!-- Pending support tickets — visible to all admins -->
         @if(isset($pendingSupportTickets) && $pendingSupportTickets->count() > 0)
-        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-orange-300 dark:border-orange-700">
+        <div x-data="{ open: false }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-orange-300 dark:border-orange-700">
             <div class="flex items-center justify-between px-4 py-3 border-b bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
+                    <x-heroicon-o-chevron-right class="w-4 h-4 text-orange-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-lifebuoy class="w-5 h-5 text-orange-500" />
                     <h3 class="font-semibold text-orange-800 dark:text-orange-200">Tichete suport active</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-orange-500 rounded-full">{{ $pendingSupportTicketsCount }}</span>
@@ -22,7 +23,7 @@
                     Vezi toate
                 </a>
             </div>
-            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <div class="divide-y divide-gray-100 dark:divide-gray-700" x-show="open" x-collapse x-cloak>
                 @foreach($pendingSupportTickets as $supportTicket)
                 @php
                     $statusLabel = match ($supportTicket->status) {
@@ -71,9 +72,10 @@
 
         <!-- Active TODOs (marketplace-internal task list) — visible to all admins -->
         @if(isset($pendingTodos) && $pendingTodos->count() > 0)
-        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-blue-300 dark:border-blue-800">
+        <div x-data="{ open: false }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-blue-300 dark:border-blue-800">
             <div class="flex items-center justify-between px-4 py-3 border-b bg-blue-800 dark:bg-blue-900 border-blue-800 dark:border-blue-800">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
+                    <x-heroicon-o-chevron-right class="w-4 h-4 text-blue-100 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-blue-100" />
                     <h3 class="font-semibold text-white">TODOs active</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-900 bg-amber-300 rounded-full">{{ $pendingTodosCount }}</span>
@@ -82,7 +84,7 @@
                     Vezi toate
                 </a>
             </div>
-            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <div class="divide-y divide-gray-100 dark:divide-gray-700" x-show="open" x-collapse x-cloak>
                 @foreach($pendingTodos as $todo)
                 @php
                     $statusLabel = match ($todo->status) {
@@ -145,7 +147,9 @@
         @endif
 
         <!-- Invitation Abuse Detector — events where free-ticket giveaways exceed paid-ticket commission -->
-        @if(isset($invitationAbuse) && ($invitationAbuse['all_time']['summary']['events_count'] ?? 0) > 0)
+        {{-- Financial report — restricted to marketplace admins (Administrator +
+             Super Administrator roles); hidden from Moderators. --}}
+        @if(($isMarketplaceAdmin ?? false) && isset($invitationAbuse) && ($invitationAbuse['all_time']['summary']['events_count'] ?? 0) > 0)
         @php
             $iaAllSum = $invitationAbuse['all_time']['summary'];
             $iaMonthSum = $invitationAbuse['current_month']['summary'];
@@ -153,9 +157,10 @@
             $iaMonthLabel = $invitationAbuse['current_month']['label'] ?? '';
             $currency = $marketplace->currency ?? 'RON';
         @endphp
-        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-blue-300 dark:border-blue-800">
+        <div x-data="{ open: false }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-blue-300 dark:border-blue-800">
             <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b bg-blue-800 dark:bg-blue-900 border-blue-800 dark:border-blue-800">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
+                    <x-heroicon-o-chevron-right class="w-4 h-4 text-blue-100 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-blue-100" />
                     <h3 class="font-semibold text-white">Comision pierdut prin invitații gratuite</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-900 bg-amber-300 rounded-full">{{ number_format($iaAllSum['events_count']) }} evenimente</span>
@@ -171,6 +176,7 @@
                 </div>
             </div>
 
+            <div x-show="open" x-collapse x-cloak>
             {{-- All-time aggregate KPIs --}}
             <div class="p-4 border-b border-blue-100 dark:border-blue-900/40">
                 <p class="mb-2 text-[11px] font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">Total istoric</p>
@@ -292,6 +298,7 @@
                 </table>
             </div>
             @endif
+            </div>{{-- /x-show collapse --}}
         </div>
         @endif
 
@@ -342,9 +349,10 @@
 
         <!-- Pending Review Events — visible to all admins -->
         @if(isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0)
-        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-amber-300 dark:border-amber-700">
+        <div x-data="{ open: false }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-amber-300 dark:border-amber-700">
             <div class="flex items-center justify-between px-4 py-3 border-b bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
+                    <x-heroicon-o-chevron-right class="w-4 h-4 text-amber-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-amber-500" />
                     <h3 class="font-semibold text-amber-800 dark:text-amber-200">Evenimente de revizuit</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">{{ $pendingReviewEvents->count() }}</span>
@@ -353,7 +361,7 @@
                     Vezi toate
                 </a>
             </div>
-            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <div class="divide-y divide-gray-100 dark:divide-gray-700" x-show="open" x-collapse x-cloak>
                 @foreach($pendingReviewEvents->take(10) as $event)
                 <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div class="flex-1 min-w-0">
