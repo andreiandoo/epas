@@ -1377,21 +1377,19 @@ class Dashboard extends Page
      */
     private function monthCommissionViaService(int $marketplaceId, Carbon $monthStart, Carbon $monthEnd): float
     {
-        $eventSub = function ($sub) use ($marketplaceId) {
-            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
-        };
-        $eventIds = Order::where(function ($q) use ($eventSub) {
-                $q->whereIn('marketplace_event_id', $eventSub)->orWhereIn('event_id', $eventSub);
-            })
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->where(function ($q) {
-                $q->whereNotNull('marketplace_event_id')->orWhereNotNull('event_id');
-            })
-            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
-            ->groupBy('eid')
-            ->pluck('eid');
+        // Discover events through their tickets (same as the daily report) so
+        // events that appear only in multi-event carts are included.
+        $eventIds = DB::table('tickets as t')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where('e.marketplace_client_id', $marketplaceId)
+            ->whereIn('t.status', ['valid', 'used'])
+            ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+            ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereBetween('o.created_at', [$monthStart, $monthEnd])
+            ->distinct()
+            ->pluck('e.id');
 
         $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
         $sum = 0.0;
@@ -1407,6 +1405,59 @@ class Dashboard extends Page
         return round($sum, 2);
     }
 
+    /**
+     * Distribute each paid order's total across the events it contains,
+     * proportional to the FACE value (ticket.price) of that event's tickets in
+     * the order. Single-event orders keep 100% of their total (fees/discounts
+     * included); multi-event carts are split by real ticket value — never a
+     * blind total ÷ count. Σ over events = Σ order.total = money collected.
+     * Scoped by order created_at, valid/used tickets, paid non-excluded orders.
+     *
+     * @return array<int, array{revenue: float, tickets: int, orders: int}>
+     */
+    private function allocateDayRevenue(int $marketplaceId, Carbon $start, Carbon $end): array
+    {
+        $rows = DB::table('tickets as t')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where('e.marketplace_client_id', $marketplaceId)
+            ->whereIn('t.status', ['valid', 'used'])
+            ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+            ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereBetween('o.created_at', [$start, $end])
+            ->select('t.order_id', 't.price', 'e.id as eid', 'o.total as order_total')
+            ->get();
+
+        $out = [];
+        foreach ($rows->groupBy('order_id') as $orderId => $tks) {
+            $orderTotal = (float) $tks->first()->order_total;
+            $sumFace = (float) $tks->sum('price');
+            $count = $tks->count();
+            foreach ($tks->groupBy('eid') as $eid => $group) {
+                $eid = (int) $eid;
+                // Split by ticket face value; fall back to ticket count only if
+                // the whole order is zero-value (all comp/free tickets).
+                $share = $sumFace > 0
+                    ? ((float) $group->sum('price') / $sumFace)
+                    : ($count > 0 ? $group->count() / $count : 0);
+                if (!isset($out[$eid])) {
+                    $out[$eid] = ['revenue' => 0.0, 'tickets' => 0, 'orders' => []];
+                }
+                $out[$eid]['revenue'] += $orderTotal * $share;
+                $out[$eid]['tickets'] += $group->count();
+                $out[$eid]['orders'][$orderId] = true;
+            }
+        }
+        foreach ($out as &$d) {
+            $d['revenue'] = round($d['revenue'], 2);
+            $d['orders'] = count($d['orders']);
+        }
+        unset($d);
+
+        return $out;
+    }
+
     private function computeDailyEventReport(int $marketplaceId, string $date): array
     {
         $tz = 'Europe/Bucharest';
@@ -1414,10 +1465,11 @@ class Dashboard extends Page
         $dayEnd = Carbon::createFromFormat('Y-m-d', $date, $tz)->endOfDay()->utc();
         $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Step 1 — find every event with at least one paid order on the
-        // selected day. Group by effective event id (marketplace_event_id
-        // falls back to event_id for legacy single-tenant orders), so
-        // both linkage paths fold into one row.
+        // Step 1 — per-event day figures via per-ticket allocation: each order's
+        // total is distributed across its events by the face value of that
+        // event's tickets (see allocateDayRevenue). Discovers events through
+        // their tickets, so multi-event carts (no single event_id on the order)
+        // are attributed per event and Σ = money collected. No separate bucket.
         $eventSub = function ($sub) use ($marketplaceId) {
             $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
         };
@@ -1427,47 +1479,11 @@ class Dashboard extends Page
                 ->orWhereIn('orders.event_id', $eventSub);
         };
 
-        $dayRows = Order::where($orderScope)
-            ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-            ->whereBetween('orders.created_at', [$dayStart, $dayEnd])
-            ->where(function ($q) {
-                // Skip orders that aren't linked to any event — they
-                // can't appear as a row in this per-event report.
-                $q->whereNotNull('marketplace_event_id')
-                  ->orWhereNotNull('event_id');
-            })
-            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
-            ->selectRaw('COUNT(*) as orders_count')
-            ->selectRaw('SUM(total) as revenue')
-            ->selectRaw('SUM(COALESCE(commission_amount, 0)) as commission_db')
-            ->groupBy('eid')
-            ->get()
-            ->keyBy('eid');
-
-        if ($dayRows->isEmpty()) {
+        $dayAlloc = $this->allocateDayRevenue($marketplaceId, $dayStart, $dayEnd);
+        if (empty($dayAlloc)) {
             return [];
         }
-
-        $eventIds = $dayRows->keys()->map(fn ($v) => (int) $v)->all();
-
-        // Step 2 — same-day ticket counts per event. Join through
-        // ticket_types to land on the event id, and join through orders
-        // so the parent order's status / source filters apply too. This
-        // protects against tickets that are still marked 'valid' on the
-        // ticket row but whose order was cancelled/refunded/imported.
-        $dayTicketCounts = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
-            ->join('events', 'ticket_types.event_id', '=', 'events.id')
-            ->join('orders', 'tickets.order_id', '=', 'orders.id')
-            ->where('events.marketplace_client_id', $marketplaceId)
-            ->whereIn('events.id', $eventIds)
-            ->whereIn('tickets.status', ['valid', 'used'])
-            ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-            ->whereBetween('tickets.created_at', [$dayStart, $dayEnd])
-            ->selectRaw('events.id as eid, COUNT(*) as cnt')
-            ->groupBy('events.id')
-            ->pluck('cnt', 'eid');
+        $eventIds = array_keys($dayAlloc);
 
         // Step 3 — all-time per-event aggregates for the same scope, so
         // both the day cell and the running total live on the same row.
@@ -1525,31 +1541,34 @@ class Dashboard extends Page
         $salesService = app(\App\Services\Marketplace\SalesBreakdownService::class);
 
         $rows = [];
-        foreach ($dayRows as $eid => $day) {
+        foreach ($eventIds as $eid) {
             $eid = (int) $eid;
             $event = $events->get($eid);
             if (!$event) {
-                continue; // Orphan order pointing at a deleted event — skip.
+                continue; // Ticket pointing at a deleted event — skip.
             }
+            $alloc = $dayAlloc[$eid];
 
-            // Revenue = money collected (SUM order.total), so the report agrees
-            // with the "Total vânzări" card, the chart and billing's "Încasări
-            // totale". A package counts at the price paid, not the sum of its
-            // components. Commission = AmBilet's actual cut via
-            // SalesBreakdownService (floor/leisure/per-type aware — the raw
-            // orders.commission_amount is 0 for POS/leisure).
+            // sales_day = money collected, attributed to this event by ticket
+            // face value (see allocateDayRevenue) — a package counts at the
+            // price paid, and multi-event carts are split by real ticket value.
+            // commission_day = AmBilet's actual cut via SalesBreakdownService
+            // (floor/leisure/per-type aware — orders.commission_amount is 0 for
+            // POS/leisure).
             $dayBd = $salesService->build($event, $dayStart, $dayEnd, exactBounds: true);
             $dayKept = (float) ($dayBd['total_commission_kept_from_refunds'] ?? 0);
-            $dayRevenue = (float) $day->revenue;
+            $dayRevenue = (float) $alloc['revenue'];
             $dayCommission = (float) $dayBd['total_commission'] + $dayKept;
 
             $total = $totalRows->get((string) $eid) ?? $totalRows->get($eid);
             $totalOrders = $total ? (int) $total->orders_count : 0;
 
-            // All-time totals for the same event (no period bounds).
+            // All-time totals (no period bounds). Lifetime revenue uses the
+            // service's per-event ticket valuation (an all-time order.total
+            // allocation would have to scan the whole history).
             $totalBd = $salesService->build($event);
             $totalKept = (float) ($totalBd['total_commission_kept_from_refunds'] ?? 0);
-            $totalRevenue = $total ? (float) $total->revenue : 0.0;
+            $totalRevenue = (float) $totalBd['total_revenue'] + $totalKept;
             $totalCommission = (float) $totalBd['total_commission'] + $totalKept;
 
             // Display date — single_day uses event_date, range starts at
@@ -1589,8 +1608,8 @@ class Dashboard extends Page
                 'event_date_label' => $displayDate?->translatedFormat('d M Y') ?? '-',
                 'venue_name' => $venueName,
                 'venue_city' => $venueCity,
-                'orders_day' => (int) $day->orders_count,
-                'tickets_day' => (int) ($dayTicketCounts[$eid] ?? 0),
+                'orders_day' => (int) $alloc['orders'],
+                'tickets_day' => (int) $alloc['tickets'],
                 'sales_day' => $dayRevenue,
                 'commission_day' => $dayCommission,
                 'orders_total' => $totalOrders,
@@ -1603,46 +1622,6 @@ class Dashboard extends Page
         // Highest same-day revenue first — operators usually scan from
         // top for "what moved today".
         usort($rows, fn ($a, $b) => $b['sales_day'] <=> $a['sales_day']);
-
-        // Multi-event orders (one cart → tickets for several events) can't be
-        // attributed to a single event, so they never appear in the per-event
-        // rows above. Add ONE reconciliation line for them so the report total
-        // equals the "Total vânzări" card / chart (all money collected). Their
-        // tickets & commission are already distributed onto the events above
-        // (attributed per ticket), so only revenue + order count show here.
-        $eventlessAgg = function ($start, $end) use ($marketplaceId, $paidStatuses) {
-            return Order::where('marketplace_client_id', $marketplaceId)
-                ->whereIn('status', $paidStatuses)
-                ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-                ->whereNull('marketplace_event_id')
-                ->whereNull('event_id')
-                ->when($start !== null, fn ($q) => $q->whereBetween('created_at', [$start, $end]))
-                ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(total), 0) as revenue')
-                ->first();
-        };
-        $elDay = $eventlessAgg($dayStart, $dayEnd);
-        $elTotal = $eventlessAgg(null, null);
-
-        if ((float) $elDay->revenue > 0 || (float) $elTotal->revenue > 0) {
-            $rows[] = [
-                'event_id' => 0,
-                'is_multi_event' => true,
-                'event_name' => 'Comenzi multi-eveniment',
-                'event_edit_url' => null,
-                'event_date' => null,
-                'event_date_label' => 'bilete la mai multe evenimente / comandă',
-                'venue_name' => '—',
-                'venue_city' => '',
-                'orders_day' => (int) $elDay->cnt,
-                'tickets_day' => 0,
-                'sales_day' => (float) $elDay->revenue,
-                'commission_day' => 0.0,
-                'orders_total' => (int) $elTotal->cnt,
-                'tickets_total' => 0,
-                'sales_total' => (float) $elTotal->revenue,
-                'commission_total' => 0.0,
-            ];
-        }
 
         return $rows;
     }
