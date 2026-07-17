@@ -549,7 +549,7 @@ function PullHint() {
   );
 }
 
-function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff, onShowSales, onShowTicketSales, onShowRemaining, onCloseShift }) {
+function AdminDashboard({ navigation, eventStats, isLoadingStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff, onShowSales, onShowTicketSales, onShowRemaining, onCloseShift }) {
   return (
     <>
       {isReportsOnlyMode && <ReportsOnlyBanner />}
@@ -1229,6 +1229,7 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
           <AdminDashboard
             navigation={navigation}
             eventStats={eventStats}
+            isLoadingStats={isLoadingStats}
             isReportsOnlyMode={isReportsOnlyMode}
             recentScans={recentScans}
             onShowGuestList={onShowGuestList}
