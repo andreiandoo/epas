@@ -8,19 +8,19 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-primary-600">{{ $logs->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Total Changes</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Total modificări</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-green-600">{{ $logs->where('event', 'created')->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Created</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Create</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-blue-600">{{ $logs->where('event', 'updated')->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Updated</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Actualizări</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div class="text-2xl font-bold text-purple-600">{{ $logs->unique('causer_email')->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Contributors</div>
+                <div class="text-2xl font-bold text-purple-600">{{ $logs->pluck('causer_email')->filter()->unique()->count() }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Contribuitori</div>
             </div>
         </div>
 
@@ -28,13 +28,13 @@
         @if($logs->isEmpty())
             <div class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <x-heroicon-o-clock class="mx-auto h-12 w-12 text-gray-400" />
-                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No activity recorded</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Activity logs will appear here as changes are made to this event.</p>
+                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Nicio activitate înregistrată</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Istoricul modificărilor va apărea aici pe măsură ce evenimentul este editat.</p>
             </div>
         @else
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Activity Timeline</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Cronologie activitate</h2>
                 </div>
 
                 <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -54,6 +54,9 @@
                                             @case('customer')
                                                 bg-green-100 dark:bg-green-900/30
                                                 @break
+                                            @case('staff')
+                                                bg-amber-100 dark:bg-amber-900/30
+                                                @break
                                             @default
                                                 bg-gray-100 dark:bg-gray-700
                                         @endswitch
@@ -68,6 +71,9 @@
                                             @case('customer')
                                                 <x-heroicon-o-user class="w-6 h-6 text-green-600 dark:text-green-400" />
                                                 @break
+                                            @case('staff')
+                                                <x-heroicon-o-briefcase class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                                                @break
                                             @default
                                                 <x-heroicon-o-cog-6-tooth class="w-6 h-6 text-gray-500" />
                                         @endswitch
@@ -76,7 +82,7 @@
 
                                 {{-- Content --}}
                                 <div class="flex-1 min-w-0">
-                                    {{-- User Info & Action --}}
+                                    {{-- User Info --}}
                                     <div class="flex flex-wrap items-center gap-2 mb-2">
                                         <span class="font-semibold text-gray-900 dark:text-white">
                                             {{ $log['causer_name'] }}
@@ -99,55 +105,55 @@
                                                 @case('customer')
                                                     bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300
                                                     @break
+                                                @case('staff')
+                                                    bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300
+                                                    @break
                                                 @default
                                                     bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
                                             @endswitch
                                         ">
-                                            {{ ucfirst($log['causer_type']) }}
+                                            {{ $log['causer_type_label'] }}
                                         </span>
                                     </div>
 
-                                    {{-- Action Description --}}
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium
+                                    {{-- Human summary of the action --}}
+                                    <div class="flex items-start gap-2 mb-1">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium
                                             @switch($log['event'])
                                                 @case('created')
                                                     bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300
-                                                    @break
-                                                @case('updated')
-                                                    bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300
                                                     @break
                                                 @case('deleted')
                                                     bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300
                                                     @break
                                                 @default
-                                                    bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
+                                                    bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300
                                             @endswitch
                                         ">
-                                            @switch($log['event'])
-                                                @case('created')
-                                                    <x-heroicon-o-plus-circle class="w-4 h-4 mr-1" />
-                                                    Created Event
-                                                    @break
-                                                @case('updated')
-                                                    <x-heroicon-o-pencil-square class="w-4 h-4 mr-1" />
-                                                    Updated Event
-                                                    @break
-                                                @case('deleted')
-                                                    <x-heroicon-o-trash class="w-4 h-4 mr-1" />
-                                                    Deleted Event
-                                                    @break
-                                                @default
-                                                    {{ ucfirst($log['event']) }}
-                                            @endswitch
+                                            @if($log['subject_kind'] === 'ticket_type')
+                                                <x-heroicon-o-ticket class="w-4 h-4" />
+                                            @else
+                                                @switch($log['event'])
+                                                    @case('created')
+                                                        <x-heroicon-o-plus-circle class="w-4 h-4" />
+                                                        @break
+                                                    @case('deleted')
+                                                        <x-heroicon-o-trash class="w-4 h-4" />
+                                                        @break
+                                                    @default
+                                                        <x-heroicon-o-pencil-square class="w-4 h-4" />
+                                                @endswitch
+                                            @endif
+                                            <span>{{ $log['summary'] }}</span>
                                         </span>
                                     </div>
 
-                                    {{-- Changes Details --}}
-                                    @if(count($log['changes']) > 0)
+                                    {{-- Detailed old → new (events + created ticket types; ticket updates
+                                         already carry their diff inside the summary) --}}
+                                    @if(count($log['changes']) > 0 && !($log['subject_kind'] === 'ticket_type' && $log['event'] === 'updated'))
                                         <div class="mt-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                                             <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                                                Changes Made
+                                                Detalii modificări
                                             </h4>
                                             <div class="space-y-3">
                                                 @foreach($log['changes'] as $change)
@@ -161,18 +167,19 @@
                                                                     <span class="flex-shrink-0 w-4 h-4 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center mr-1.5">
                                                                         <x-heroicon-o-minus class="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
                                                                     </span>
-                                                                    <span class="text-gray-500 dark:text-gray-400 line-through break-all">
-                                                                        {{ Str::limit($change['old'], 80) }}
+                                                                    <span class="text-gray-500 dark:text-gray-400 line-through break-words">
+                                                                        {{ $change['old'] }}
                                                                     </span>
                                                                 </span>
+                                                                <x-heroicon-o-arrow-right class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                                                             @endif
                                                             @if($change['new'] !== '(empty)')
                                                                 <span class="inline-flex items-center max-w-full">
                                                                     <span class="flex-shrink-0 w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center mr-1.5">
                                                                         <x-heroicon-o-plus class="w-2.5 h-2.5 text-green-600 dark:text-green-400" />
                                                                     </span>
-                                                                    <span class="text-gray-900 dark:text-white font-medium break-all">
-                                                                        {{ Str::limit($change['new'], 80) }}
+                                                                    <span class="text-gray-900 dark:text-white font-medium break-words">
+                                                                        {{ $change['new'] }}
                                                                     </span>
                                                                 </span>
                                                             @endif
