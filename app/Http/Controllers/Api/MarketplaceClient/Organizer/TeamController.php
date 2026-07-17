@@ -350,6 +350,60 @@ class TeamController extends BaseController
     /**
      * Activate a pending team member manually
      */
+    /**
+     * Reset an existing team member's password. Complements `activate` which
+     * only works for still-pending members — this one is for active members
+     * (e.g. staff forgot their password, or organizer wants to rotate it
+     * from the mobile app without going through the email invite flow).
+     *
+     * Applies the same cross-organizer sync as `invite`: if the same email
+     * exists on other active team memberships within the marketplace, the
+     * new password is propagated so one login still works everywhere.
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'member_id' => 'required|string',
+            'password' => 'required|string|min:6|max:100',
+        ]);
+
+        if (str_starts_with($validated['member_id'], 'owner_')) {
+            return $this->error('Nu poti reseta parola proprietarului', 422);
+        }
+
+        $member = $organizer->teamMembers()->find($validated['member_id']);
+
+        if (!$member) {
+            return $this->error('Membrul nu a fost gasit', 404);
+        }
+
+        $hashedPassword = bcrypt($validated['password']);
+        $member->update(['password' => $hashedPassword]);
+
+        // Cross-organizer sync — same email, other organizers, this marketplace
+        MarketplaceOrganizerTeamMember::query()
+            ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $organizer->marketplace_client_id))
+            ->where('email', $member->email)
+            ->where('status', 'active')
+            ->where('id', '!=', $member->id)
+            ->get()
+            ->each(fn (MarketplaceOrganizerTeamMember $other) => $other->updateQuietly(['password' => $hashedPassword]));
+
+        return $this->success([
+            'member' => [
+                'id' => (string) $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+            ],
+        ], 'Parola a fost resetata');
+    }
+
     public function activate(Request $request): JsonResponse
     {
         $organizer = $request->user();
