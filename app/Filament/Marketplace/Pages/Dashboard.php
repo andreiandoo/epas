@@ -373,7 +373,7 @@ class Dashboard extends Page
             $isToday = $reqDate === $maxDate;
             $ttl = $isToday ? 60 : 900;
             $dailyEventReport = Cache::remember(
-                "mp_dash_daily_evt_v7_{$marketplaceId}_{$reqDate}",
+                "mp_dash_daily_evt_v8_{$marketplaceId}_{$reqDate}",
                 $ttl,
                 fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
             );
@@ -1411,9 +1411,15 @@ class Dashboard extends Page
 
         // Step 4 — pull the event records (with venue) so we can render
         // name/date/venue in the UI. Done in one query and indexed by id.
-        $events = Event::with(['venue:id,name,city'])
+        $events = Event::with(['venue:id,name,city', 'marketplaceOrganizer'])
             ->whereIn('id', $eventIds)
-            ->get(['id', 'title', 'event_date', 'range_start_date', 'duration_mode', 'multi_slots', 'venue_id', 'display_template'])
+            ->get([
+                'id', 'title', 'event_date', 'range_start_date', 'duration_mode', 'multi_slots', 'venue_id',
+                // Needed by SalesBreakdownService for leisure valuation + commission
+                // (rate/floor/mode). Without these it re-fetches per event or falls
+                // back to the wrong rate.
+                'display_template', 'marketplace_organizer_id', 'marketplace_client_id', 'tenant_id', 'commission_rate', 'commission_mode',
+            ])
             ->keyBy('id');
 
         // Revenue + commission must match each event's own Vânzări tab (and

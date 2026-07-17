@@ -75,6 +75,19 @@ class SalesBreakdownService
      */
     public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false, bool $onlyPos = false): array
     {
+        // Some callers (e.g. the dashboard daily report) pass an Event loaded
+        // with a lean column projection. This breakdown needs several fields —
+        // display_template (leisure valuation), the commission settings and the
+        // organizer/tenant/client FKs (rate + floor). If any are missing, load
+        // the full row once so no caller can silently skew revenue OR commission.
+        $requiredCols = ['display_template', 'marketplace_organizer_id', 'marketplace_client_id', 'tenant_id', 'commission_rate', 'commission_mode'];
+        if (array_diff($requiredCols, array_keys($event->getAttributes()))) {
+            $full = Event::find($event->getKey());
+            if ($full) {
+                $event = $full;
+            }
+        }
+
         $eventId = $event->id;
 
         // dateColumn is the order column the period bounds apply to.
@@ -194,17 +207,9 @@ class SalesBreakdownService
         // per-ticket via getEffectivePrice() so the parent counts as X and the
         // components/free tickets count as 0 — see the leisure branch in the
         // slice loop. Scoped strictly to leisure_venue so no other marketplace
-        // is affected (fully revertable).
-        //
-        // Resolve display_template ROBUSTLY: some callers (e.g. the dashboard
-        // daily report) load the Event with a partial column set that omits
-        // display_template. Reading it off such a model returns null and would
-        // silently drop leisure events back to the non-leisure valuation. Query
-        // the single column only when it wasn't selected.
-        $displayTemplate = array_key_exists('display_template', $event->getAttributes())
-            ? $event->display_template
-            : Event::whereKey($event->getKey())->value('display_template');
-        $isLeisure = $displayTemplate === 'leisure_venue';
+        // is affected. ($event is guaranteed to have display_template loaded by
+        // the lean-projection guard at the top of build().)
+        $isLeisure = ($event->display_template ?? null) === 'leisure_venue';
 
         $perType = [];
         $sumValidGross = 0.0;
