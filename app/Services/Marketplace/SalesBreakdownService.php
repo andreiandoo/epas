@@ -195,7 +195,16 @@ class SalesBreakdownService
         // components/free tickets count as 0 — see the leisure branch in the
         // slice loop. Scoped strictly to leisure_venue so no other marketplace
         // is affected (fully revertable).
-        $isLeisure = ($event->display_template ?? null) === 'leisure_venue';
+        //
+        // Resolve display_template ROBUSTLY: some callers (e.g. the dashboard
+        // daily report) load the Event with a partial column set that omits
+        // display_template. Reading it off such a model returns null and would
+        // silently drop leisure events back to the non-leisure valuation. Query
+        // the single column only when it wasn't selected.
+        $displayTemplate = array_key_exists('display_template', $event->getAttributes())
+            ? $event->display_template
+            : Event::whereKey($event->getKey())->value('display_template');
+        $isLeisure = $displayTemplate === 'leisure_venue';
 
         $perType = [];
         $sumValidGross = 0.0;
