@@ -12,6 +12,15 @@ redesign can be implemented screen by screen.
 - **`design-system.css`** — the design tokens as CSS variables, with inline
   comments mapping each token to the corresponding token in
   `src/theme/colors.js`. This is the single source of truth for the new palette.
+- **`splash-animated.html`** — animated splash concept (loops for preview): the
+  scan frame draws in, a glowing beam sweeps down and lights up a QR code, a
+  green success ring + check pops, then it morphs into the AmBilet Scan logo.
+- **`SplashScreen.animated.js`** — **drop-in React Native implementation** of
+  that splash. Same contract as `src/screens/SplashScreen.js`
+  (`<SplashScreen onFinish={…} />`, runs once ~2.6s). Uses only
+  `react-native` + `react-native-svg` (already installed) — no new deps. To
+  use it: replace `src/screens/SplashScreen.js` with this file (or import it in
+  its place in `App.js`).
 
 ## ⚠️ Golden rule: redesign only, remove nothing
 

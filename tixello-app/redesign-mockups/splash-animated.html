@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AmBilet Scan — Splash animat</title>
+<style>
+:root{
+  --red:#9A1B22; --red-bright:#E23A45; --red-glow:rgba(226,58,69,.55);
+  --green:#25D07A; --cycle:5000ms;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#160a0b;display:flex;flex-direction:column;align-items:center;
+  gap:20px;padding:40px 20px 70px;min-height:100vh}
+h1.t{color:#f4dede;font-size:15px;font-weight:700;letter-spacing:.5px}
+.row{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+/* ---- phone ---- */
+.phone{width:360px;height:780px;border-radius:44px;border:10px solid #0d0708;position:relative;
+  overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 0 0 2px #2a1c1d}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:140px;height:28px;background:#0d0708;
+  border-bottom-left-radius:16px;border-bottom-right-radius:16px;z-index:60}
+/* ---- stage ---- */
+.stage{position:absolute;inset:0;background:
+  radial-gradient(120% 90% at 50% 22%, #8c1520 0%, #5c0d13 42%, #3a070c 78%, #2a050a 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.stage::before{content:"";position:absolute;inset:0;background:
+  radial-gradient(closest-side at 50% 40%, var(--red-glow), transparent 70%);
+  opacity:.0;animation:glow var(--cycle) ease-in-out infinite}
+@keyframes glow{0%{opacity:0}18%{opacity:.5}45%{opacity:.9}56%{opacity:.55}94%{opacity:.4}100%{opacity:0}}
+
+/* floating particles */
+.particles{position:absolute;inset:0;pointer-events:none}
+.particles i{position:absolute;bottom:-10px;width:4px;height:4px;border-radius:50%;
+  background:rgba(255,220,220,.7);opacity:0;animation:rise var(--cycle) linear infinite}
+@keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}
+  15%{opacity:.8}70%{opacity:.5}100%{transform:translateY(-420px) scale(1);opacity:0}}
+
+/* ---- scan zone ---- */
+.zone{position:relative;width:210px;height:210px;display:flex;align-items:center;justify-content:center;
+  animation:zoneOut var(--cycle) ease-in-out infinite}
+@keyframes zoneOut{0%,52%{transform:scale(1);opacity:1}
+  60%{transform:scale(.9);opacity:1}
+  66%{transform:scale(.42) translateY(-186px);opacity:0}
+  100%{transform:scale(.42) translateY(-186px);opacity:0}}
+
+/* corner brackets */
+.bracket{position:absolute;width:44px;height:44px;border:4px solid #fff;filter:drop-shadow(0 0 6px var(--red-glow))}
+.b1{top:0;left:0;border-right:0;border-bottom:0;border-radius:12px 0 0 0}
+.b2{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 12px 0 0}
+.b3{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 12px}
+.b4{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 12px 0}
+.bracket{opacity:0;animation:brk var(--cycle) ease-out infinite}
+@keyframes brk{0%{opacity:0;transform:scale(.7)}
+  4%{opacity:0;transform:scale(.7)}
+  12%{opacity:1;transform:scale(1)}
+  50%{opacity:1;transform:scale(1)}
+  58%{opacity:.9;transform:scale(1.04)}
+  62%{opacity:0}100%{opacity:0}}
+
+/* ---- QR ---- */
+.qr{position:absolute;width:168px;height:168px;display:grid;
+  grid-template-columns:repeat(21,1fr);grid-template-rows:repeat(21,1fr);gap:1px}
+.qr .m{border-radius:1px}
+/* dim base layer */
+.qr.dim .m.on{background:rgba(255,255,255,.14)}
+.qr.dim{opacity:0;animation:qrDim var(--cycle) ease-out infinite}
+@keyframes qrDim{0%,8%{opacity:0}16%{opacity:1}54%{opacity:1}62%{opacity:0}100%{opacity:0}}
+/* lit layer, revealed top->bottom by the beam via clip-path */
+.qr.lit{clip-path:inset(0 0 100% 0);animation:qrReveal var(--cycle) linear infinite}
+.qr.lit .m.on{background:#fff;box-shadow:0 0 5px rgba(255,255,255,.75)}
+.qr.lit .m.on.acc{background:var(--red-bright);box-shadow:0 0 7px var(--red-glow)}
+@keyframes qrReveal{
+  0%,13%{clip-path:inset(0 0 100% 0)}
+  49%{clip-path:inset(0 0 0% 0)}
+  54%{clip-path:inset(0 0 0% 0)}
+  62%{clip-path:inset(0 0 0% 0);opacity:0}
+  100%{clip-path:inset(0 0 0% 0);opacity:0}}
+
+/* scan beam */
+.beam{position:absolute;left:-6px;right:-6px;height:3px;top:0;border-radius:3px;
+  background:linear-gradient(90deg,transparent,#fff 20%,#fff 80%,transparent);
+  box-shadow:0 0 14px 4px var(--red-glow),0 0 30px 8px var(--red-glow);opacity:0;
+  animation:beam var(--cycle) cubic-bezier(.5,0,.5,1) infinite}
+.beam::after{content:"";position:absolute;left:0;right:0;top:2px;height:52px;
+  background:linear-gradient(#ffffff55,transparent);filter:blur(2px)}
+@keyframes beam{
+  0%,13%{opacity:0;transform:translateY(4px)}
+  16%{opacity:1;transform:translateY(4px)}
+  49%{opacity:1;transform:translateY(200px)}
+  53%{opacity:0;transform:translateY(200px)}
+  100%{opacity:0;transform:translateY(200px)}}
+
+/* success ring + check */
+.success{position:absolute;width:132px;height:132px;display:flex;align-items:center;justify-content:center}
+.ring{position:absolute;inset:0;border-radius:50%;border:4px solid var(--green);
+  opacity:0;animation:ring var(--cycle) ease-out infinite}
+@keyframes ring{0%,50%{opacity:0;transform:scale(.55)}
+  54%{opacity:1;transform:scale(.85)}
+  60%{opacity:.9;transform:scale(1.12)}
+  66%{opacity:0;transform:scale(1.3)}100%{opacity:0}}
+.check{width:120px;height:120px;opacity:0;animation:chk var(--cycle) ease-out infinite}
+.check path{stroke:var(--green);stroke-width:9;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:60;stroke-dashoffset:60;filter:drop-shadow(0 0 8px rgba(37,208,122,.6))}
+@keyframes chk{0%,51%{opacity:0}54%{opacity:1}64%{opacity:1}70%{opacity:0}100%{opacity:0}}
+.check.go path{animation:draw var(--cycle) ease-out infinite}
+@keyframes draw{0%,52%{stroke-dashoffset:60}60%{stroke-dashoffset:0}70%{stroke-dashoffset:0}100%{stroke-dashoffset:0}}
+
+/* ---- logo lockup ---- */
+.lockup{position:absolute;display:flex;flex-direction:column;align-items:center;gap:14px;
+  opacity:0;animation:lock var(--cycle) ease-out infinite}
+@keyframes lock{0%,60%{opacity:0;transform:translateY(24px)}
+  70%{opacity:1;transform:translateY(0)}
+  90%{opacity:1;transform:translateY(0)}
+  98%{opacity:0;transform:translateY(-8px)}100%{opacity:0}}
+.mark{width:84px;height:84px;border-radius:22px;background:#fff;display:flex;align-items:center;
+  justify-content:center;box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.mark .tkt{width:50px;height:38px;border:4px solid var(--red);border-radius:8px;position:relative}
+.mark .tkt::before{content:"";position:absolute;top:-4px;bottom:-4px;left:50%;border-left:3px dashed var(--red)}
+.word{font-size:30px;font-weight:800;letter-spacing:-1px}
+.word .a{color:#fff}.word .b{color:#F7B9BC}.word .s{color:#fff;font-weight:700}
+.tag{color:#f2cccc;font-size:13px;letter-spacing:.3px;margin-top:-4px}
+
+/* loading bar + footer (persist) */
+.foot{position:absolute;bottom:54px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:16px}
+.load{width:150px;height:5px;border-radius:3px;background:rgba(255,255,255,.16);overflow:hidden}
+.load i{display:block;height:100%;width:0;border-radius:3px;
+  background:linear-gradient(90deg,var(--red-bright),#fff);box-shadow:0 0 10px var(--red-glow);
+  animation:load var(--cycle) ease-in-out infinite}
+@keyframes load{0%,6%{width:0}49%{width:74%}90%{width:100%}94%{width:100%;opacity:1}100%{width:100%;opacity:0}}
+.pb{color:#e0aeae;font-size:12px;letter-spacing:.4px;opacity:0;animation:pb var(--cycle) ease-out infinite}
+@keyframes pb{0%,8%{opacity:0}20%{opacity:.85}90%{opacity:.85}100%{opacity:0}}
+
+.statusbar{position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 26px;color:#fff;font-size:13px;font-weight:600;z-index:55}
+.hint{color:#c98f8f;font-size:12.5px;max-width:320px;text-align:center;line-height:1.5}
+.replay{background:#9A1B22;color:#fff;border:none;border-radius:12px;padding:11px 20px;font-weight:700;
+  font-family:var(--font);cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+<h1 class="t">AmBilet Scan — Splash animat (scanare QR → logo)</h1>
+
+<div class="row">
+  <div class="phone" id="phone">
+    <div class="notch"></div>
+    <div class="statusbar"><span>9:41</span><span>▄▆█ 5G ▮</span></div>
+    <div class="stage">
+      <div class="particles" id="particles"></div>
+
+      <div class="zone">
+        <div class="bracket b1"></div><div class="bracket b2"></div>
+        <div class="bracket b3"></div><div class="bracket b4"></div>
+        <div class="qr dim" id="qrDim"></div>
+        <div class="qr lit" id="qrLit"></div>
+        <div class="beam"></div>
+        <div class="success">
+          <div class="ring"></div>
+          <svg class="check go" viewBox="0 0 120 120"><path d="M32 62 L52 82 L90 40"/></svg>
+        </div>
+      </div>
+
+      <div class="lockup">
+        <div class="mark"><div class="tkt"></div></div>
+        <div class="word"><span class="a">Am</span><span class="b">Bilet</span> <span class="s">Scan</span></div>
+        <div class="tag">Scanare &amp; Vânzare Bilete</div>
+      </div>
+
+      <div class="foot">
+        <div class="load"><i></i></div>
+        <div class="pb">Powered by AmBilet</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:340px;align-self:center">
+    <p class="hint">Secvența (bucla ~5s): cadrul de scanare se desenează → fasciculul luminos coboară și
+    „aprinde" codul QR pe măsură ce trece → inel verde + bifă de succes → codul se strânge în logo-ul
+    AmBilet Scan → wordmark + bară de încărcare. În aplicație rulează o singură dată (~2.6s), apoi intră în app.</p>
+    <button class="replay" onclick="replay()">↻ Redă din nou</button>
+    <p class="hint">Implementare React Native gata de folosit: <b style="color:#e9b7b7">SplashScreen.animated.js</b>
+    (Animated API + react-native-svg, fără dependențe noi).</p>
+  </div>
+</div>
+
+<script>
+// deterministic QR-like matrix (21x21) with 3 finder patterns
+const N = 21;
+function finder(m, r, c){
+  for(let i=-1;i<=7;i++)for(let j=-1;j<=7;j++){
+    const rr=r+i, cc=c+j; if(rr<0||cc<0||rr>=N||cc>=N) continue;
+    const ring = (i>=0&&i<=6&&j>=0&&j<=6) && (i===0||i===6||j===0||j===6);
+    const core = (i>=2&&i<=4&&j>=2&&j<=4);
+    m[rr][cc] = (ring||core)?1:0;
+  }
+}
+let seed=7;
+function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+const m = Array.from({length:N},()=>Array(N).fill(0));
+for(let r=0;r<N;r++)for(let c=0;c<N;c++) m[r][c] = rnd()>0.52?1:0;
+finder(m,0,0); finder(m,0,14); finder(m,14,0);
+// timing pattern
+for(let i=8;i<13;i++){ m[6][i]=i%2; m[i][6]=i%2; }
+
+function build(el, lit){
+  el.innerHTML='';
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const d=document.createElement('div');
+    d.className='m'+(m[r][c]?' on':'');
+    if(lit && m[r][c] && (r+c)%6===0) d.classList.add('acc');
+    el.appendChild(d);
+  }
+}
+build(document.getElementById('qrDim'), false);
+build(document.getElementById('qrLit'), true);
+
+// particles
+const pc=document.getElementById('particles');
+for(let i=0;i<14;i++){
+  const s=document.createElement('i');
+  s.style.left=(6+Math.random()*88)+'%';
+  s.style.animationDelay=(Math.random()*3.5)+'s';
+  s.style.opacity=1;
+  const sz=3+Math.random()*3; s.style.width=s.style.height=sz+'px';
+  pc.appendChild(s);
+}
+
+function replay(){
+  const p=document.getElementById('phone');
+  const clone=p.cloneNode(true);
+  p.parentNode.replaceChild(clone, p);
+  clone.id='phone';
+}
+</script>
+</body>
+</html>
