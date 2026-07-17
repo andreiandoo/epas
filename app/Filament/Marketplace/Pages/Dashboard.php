@@ -626,16 +626,11 @@ class Dashboard extends Page
         $excludedSources = $excludeLegacy
             ? ['test_order', 'pos_test', 'external_import', 'legacy_import']
             : ['test_order', 'pos_test', 'external_import'];
-        // Event-linked scope (same as the daily report table): only orders tied
-        // to a marketplace event count, so the chart's daily "Vânzări" bar
-        // equals that day's report total. Orders with no event link can't be
-        // attributed to a report row, so they're excluded here too.
-        $eventSub = function ($sub) use ($marketplaceId) {
-            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
-        };
-        $dailySales = Order::where(function ($q) use ($eventSub) {
-                $q->whereIn('marketplace_event_id', $eventSub)->orWhereIn('event_id', $eventSub);
-            })
+        // "Vânzări" bar = all money collected per day (SUM order.total), same
+        // basis as the "Total vânzări" card. Includes multi-event orders (one
+        // cart, tickets for several events) which the per-event report shows on
+        // its own "Comenzi multi-eveniment" line so the totals still agree.
+        $dailySales = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$startDate, $endDate])
@@ -1608,6 +1603,46 @@ class Dashboard extends Page
         // Highest same-day revenue first — operators usually scan from
         // top for "what moved today".
         usort($rows, fn ($a, $b) => $b['sales_day'] <=> $a['sales_day']);
+
+        // Multi-event orders (one cart → tickets for several events) can't be
+        // attributed to a single event, so they never appear in the per-event
+        // rows above. Add ONE reconciliation line for them so the report total
+        // equals the "Total vânzări" card / chart (all money collected). Their
+        // tickets & commission are already distributed onto the events above
+        // (attributed per ticket), so only revenue + order count show here.
+        $eventlessAgg = function ($start, $end) use ($marketplaceId, $paidStatuses) {
+            return Order::where('marketplace_client_id', $marketplaceId)
+                ->whereIn('status', $paidStatuses)
+                ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+                ->whereNull('marketplace_event_id')
+                ->whereNull('event_id')
+                ->when($start !== null, fn ($q) => $q->whereBetween('created_at', [$start, $end]))
+                ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(total), 0) as revenue')
+                ->first();
+        };
+        $elDay = $eventlessAgg($dayStart, $dayEnd);
+        $elTotal = $eventlessAgg(null, null);
+
+        if ((float) $elDay->revenue > 0 || (float) $elTotal->revenue > 0) {
+            $rows[] = [
+                'event_id' => 0,
+                'is_multi_event' => true,
+                'event_name' => 'Comenzi multi-eveniment',
+                'event_edit_url' => null,
+                'event_date' => null,
+                'event_date_label' => 'bilete la mai multe evenimente / comandă',
+                'venue_name' => '—',
+                'venue_city' => '',
+                'orders_day' => (int) $elDay->cnt,
+                'tickets_day' => 0,
+                'sales_day' => (float) $elDay->revenue,
+                'commission_day' => 0.0,
+                'orders_total' => (int) $elTotal->cnt,
+                'tickets_total' => 0,
+                'sales_total' => (float) $elTotal->revenue,
+                'commission_total' => 0.0,
+            ];
+        }
 
         return $rows;
     }

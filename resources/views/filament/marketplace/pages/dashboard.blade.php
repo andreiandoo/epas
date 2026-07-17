@@ -494,15 +494,23 @@
                             {{-- No hover bg change — Filament's panel hover styles produce
                                  a white-on-white row in dark mode. Plain row stays readable.
                                  Rows past the 10th stay hidden until "Vezi toate datele". --}}
-                            <tr class="text-gray-700 dark:text-gray-300" @if($i >= 10) x-show="showAll" x-cloak @endif>
+                            @php $isMulti = $row['is_multi_event'] ?? false; @endphp
+                            <tr class="text-gray-700 dark:text-gray-300 @if($isMulti) bg-amber-50/60 dark:bg-amber-900/10 @endif" @if($i >= 10 && !$isMulti) x-show="showAll" x-cloak @endif>
                                 <td style="max-width: 300px;" class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 overflow-hidden">
-                                    <a href="{{ $row['event_edit_url'] }}" target="_blank"
-                                       class="block text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
-                                       title="{{ $row['event_name'] }} ({{ $row['event_date_label'] }})"
-                                       style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <span class="font-medium">{{ $row['event_name'] }}</span>
-                                        <span class="font-normal text-gray-400 dark:text-gray-500 text-[11px]">({{ $row['event_date_label'] }})</span>
-                                    </a>
+                                    @if($isMulti)
+                                        <div title="{{ $row['event_date_label'] }}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <span class="font-medium text-amber-700 dark:text-amber-300">{{ $row['event_name'] }}</span>
+                                            <span class="font-normal text-gray-400 dark:text-gray-500 text-[11px]">({{ $row['event_date_label'] }})</span>
+                                        </div>
+                                    @else
+                                        <a href="{{ $row['event_edit_url'] }}" target="_blank"
+                                           class="block text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
+                                           title="{{ $row['event_name'] }} ({{ $row['event_date_label'] }})"
+                                           style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <span class="font-medium">{{ $row['event_name'] }}</span>
+                                            <span class="font-normal text-gray-400 dark:text-gray-500 text-[11px]">({{ $row['event_date_label'] }})</span>
+                                        </a>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 overflow-hidden">
                                     <div class="text-gray-900 dark:text-gray-100 truncate" title="{{ $row['venue_name'] }}{{ $row['venue_city'] ? ' — ' . $row['venue_city'] : '' }}">{{ $row['venue_name'] }}</div>
