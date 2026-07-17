@@ -1498,7 +1498,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   manualEntryModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     marginHorizontal: 24,
@@ -1624,7 +1624,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   scanDetailsModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     marginHorizontal: 24,

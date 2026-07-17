@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.7';
+const APP_VERSION = '2.0.8';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -21,17 +21,19 @@ import { AppProvider, useApp } from './src/context/AppContext';
 
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import CheckInScreen from './src/screens/CheckInScreen';
-import SalesScreen from './src/screens/SalesScreen';
-// Reports + Settings are less frequently opened during a shift — lazy-load
-// them so the initial JS bundle parses ~100-200ms faster on cold start.
-// Wrapped screens are rendered via <React.Suspense> below.
+// ALL post-splash screens are lazy-loaded. Beyond the ~100-200ms boot-time
+// win, this ALSO makes the persisted theme apply to their StyleSheets on
+// the first cold start after a theme change — StyleSheet.create captures
+// palette values at call time, and lazy defers those calls until AFTER
+// loadPersistedTheme() has finished mutating the colors object.
+const DashboardScreen = React.lazy(() => import('./src/screens/DashboardScreen'));
+const CheckInScreen = React.lazy(() => import('./src/screens/CheckInScreen'));
+const SalesScreen = React.lazy(() => import('./src/screens/SalesScreen'));
 const ReportsScreen = React.lazy(() => import('./src/screens/ReportsScreen'));
 const SettingsScreen = React.lazy(() => import('./src/screens/SettingsScreen'));
-import VenueEventsScreen from './src/screens/VenueEventsScreen';
-import VenueEventDetailScreen from './src/screens/VenueEventDetailScreen';
-import VenueTicketDetailScreen from './src/screens/VenueTicketDetailScreen';
+const VenueEventsScreen = React.lazy(() => import('./src/screens/VenueEventsScreen'));
+const VenueEventDetailScreen = React.lazy(() => import('./src/screens/VenueEventDetailScreen'));
+const VenueTicketDetailScreen = React.lazy(() => import('./src/screens/VenueTicketDetailScreen'));
 
 import Header from './src/components/Header';
 import EventSelector from './src/components/EventSelector';
@@ -230,7 +232,13 @@ function MainTabs() {
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <Header
         onNotificationPress={() => setShowNotifications(true)}
-        pageTitle={activeTab === 'Reports' ? 'Rapoarte' : (activeTab === 'Settings' ? 'Setări' : null)}
+        pageTitle={
+          activeTab === 'Reports' ? 'Rapoarte' :
+          activeTab === 'Settings' ? 'Setări' :
+          activeTab === 'CheckIn' ? 'Scanare' :
+          activeTab === 'Sales' ? 'Vânzare' :
+          null
+        }
       />
       {activeTab === 'Dashboard' && (
         <EventSelector onPress={() => setShowEventsModal(true)} />
@@ -275,16 +283,30 @@ function MainTabs() {
         {(!isStaff || hasPermission('orders')) && (
           <Tab.Screen name="Dashboard" options={{ tabBarLabel: 'Panou' }}>
             {(props) => (
-              <DashboardScreen
-                {...props}
-                onShowStaff={() => setShowStaff(true)}
-                onShowGuestList={() => setShowGuestList(true)}
-              />
+              <React.Suspense fallback={<LazyScreenFallback />}>
+                <DashboardScreen
+                  {...props}
+                  onShowStaff={() => setShowStaff(true)}
+                  onShowGuestList={() => setShowGuestList(true)}
+                />
+              </React.Suspense>
             )}
           </Tab.Screen>
         )}
-        <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
-        <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
+        <Tab.Screen name="CheckIn" options={{ tabBarLabel: 'Scanare' }}>
+          {(props) => (
+            <React.Suspense fallback={<LazyScreenFallback />}>
+              <CheckInScreen {...props} />
+            </React.Suspense>
+          )}
+        </Tab.Screen>
+        <Tab.Screen name="Sales" options={{ tabBarLabel: 'Vânzare' }}>
+          {(props) => (
+            <React.Suspense fallback={<LazyScreenFallback />}>
+              <SalesScreen {...props} />
+            </React.Suspense>
+          )}
+        </Tab.Screen>
         {isAdmin && hasPermission('reports') && (
           <Tab.Screen name="Reports" options={{ tabBarLabel: 'Rapoarte' }}>
             {(props) => (
@@ -380,12 +402,20 @@ function MainTabs() {
 // the path rewriter in api/client.js transparently routes their API calls
 // onto the /venue-owner namespace. The event is pre-selected by tapping
 // the "Scanare" / "Vânzare" buttons inside VenueEventDetailScreen.
+function withSuspense(LazyComp) {
+  return (props) => (
+    <React.Suspense fallback={<LazyScreenFallback />}>
+      <LazyComp {...props} />
+    </React.Suspense>
+  );
+}
+
 function VenueOwnerEventsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="VenueEventsList" component={VenueEventsScreen} />
-      <Stack.Screen name="VenueEventDetail" component={VenueEventDetailScreen} />
-      <Stack.Screen name="VenueTicketDetail" component={VenueTicketDetailScreen} />
+      <Stack.Screen name="VenueEventsList" component={withSuspense(VenueEventsScreen)} />
+      <Stack.Screen name="VenueEventDetail" component={withSuspense(VenueEventDetailScreen)} />
+      <Stack.Screen name="VenueTicketDetail" component={withSuspense(VenueTicketDetailScreen)} />
     </Stack.Navigator>
   );
 }
@@ -463,7 +493,9 @@ function VenueOwnerCheckInTab(props) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <VenueOwnerEventHeader />
-      <CheckInScreen {...props} />
+      <React.Suspense fallback={<LazyScreenFallback />}>
+        <CheckInScreen {...props} />
+      </React.Suspense>
     </View>
   );
 }
@@ -472,7 +504,9 @@ function VenueOwnerSalesTab(props) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <VenueOwnerEventHeader />
-      <SalesScreen {...props} />
+      <React.Suspense fallback={<LazyScreenFallback />}>
+        <SalesScreen {...props} />
+      </React.Suspense>
     </View>
   );
 }

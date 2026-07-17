@@ -1904,7 +1904,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   cardConfirmCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -2056,7 +2056,7 @@ const styles = StyleSheet.create({
   },
   qrCodeWhiteBg: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
   },
   qrCodeDescription: {
@@ -2076,7 +2076,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emailModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     marginHorizontal: 24,

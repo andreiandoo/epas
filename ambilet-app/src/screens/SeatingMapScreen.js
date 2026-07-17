@@ -170,14 +170,14 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F2F2' },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(20,10,10,0.08)',
   },

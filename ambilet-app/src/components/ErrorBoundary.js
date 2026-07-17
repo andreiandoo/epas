@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { colors } from '../theme/colors';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -69,7 +70,7 @@ export default class ErrorBoundary extends React.Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F2F2',
+    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,

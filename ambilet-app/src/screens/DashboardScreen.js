@@ -1885,7 +1885,7 @@ const styles = StyleSheet.create({
 
   // Shift Summary Modal
   shiftModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 24,
     marginHorizontal: 20,
@@ -1986,7 +1986,7 @@ const styles = StyleSheet.create({
 
   // Sales Breakdown Modal
   salesModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 24,
     marginHorizontal: 20,
