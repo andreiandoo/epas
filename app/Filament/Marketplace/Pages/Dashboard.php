@@ -89,7 +89,9 @@ class Dashboard extends Page
             $id = $this->marketplace->id;
             Cache::forget("mp_dash_month_{$id}_{$this->selectedMonth}");
             Cache::forget("mp_dash_billing_{$id}_{$this->selectedMonth}");
-            Cache::forget("mp_month_comm_{$id}_{$this->selectedMonth}");
+            // Month sales/commission now come from the daily-report cache; the
+            // report-based chart series cache is keyed by month too.
+            Cache::forget("mp_dash_chart_rep_v1_{$id}_month_{$this->selectedMonth}");
         }
     }
 
@@ -484,6 +486,14 @@ class Dashboard extends Page
         $orderRevenue = (float) $orderStats->revenue;
         $commissions = (float) $orderStats->commissions;
 
+        // Authoritative all-time revenue + commission, precomputed by
+        // `dashboard:warm-alltime-stats` (SalesBreakdownService — floor/leisure/
+        // per-type aware — for modern sales + migrated legacy history). Falls
+        // back to the raw SUM(total)/commission_amount above until first warm.
+        $alltimeAuth = Cache::get("mp_dash_alltime_auth_{$marketplaceId}");
+        $authRevenue = isset($alltimeAuth['revenue']) ? (float) $alltimeAuth['revenue'] : $orderRevenue;
+        $authCommission = isset($alltimeAuth['commission']) ? (float) $alltimeAuth['commission'] : null;
+
         // 4. Service orders - single query
         $serviceStats = ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['active', 'completed'])
@@ -605,12 +615,14 @@ class Dashboard extends Page
                 'today_orders' => (int) $orderStats->today,
                 'paid_orders' => $paidOrdersCount,
                 'other_orders' => $totalOrders - $paidOrdersCount,
-                'total_incasari' => $orderRevenue + $serviceOrdersTotal,
-                'order_revenue' => $orderRevenue,
+                'total_incasari' => $authRevenue + $serviceOrdersTotal,
+                'order_revenue' => $authRevenue,
                 'service_revenue' => $serviceOrdersTotal,
-                'commissions' => $commissions,
-                // All-time marketplace commissions — cached separately (very expensive query)
-                'all_time_commissions' => Cache::remember("mp_alltime_comm_{$marketplaceId}", 3600, fn () =>
+                'commissions' => $authCommission ?? $commissions,
+                // All-time marketplace commissions — authoritative value from
+                // dashboard:warm-alltime-stats; falls back to the flat estimate
+                // (calculateMarketplaceCommission) until the cache is warmed.
+                'all_time_commissions' => $authCommission ?? Cache::remember("mp_alltime_comm_{$marketplaceId}", 3600, fn () =>
                     BillingBreakdown::calculateMarketplaceCommission(
                         $marketplaceId, null, null, (float) ($this->marketplace->commission_rate ?? 5)
                     )
@@ -1037,8 +1049,7 @@ class Dashboard extends Page
             })
             ->count();
 
-        // Sales this month — use subquery instead of loading IDs into memory
-        $allStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
+        // Order scope for the month counts below (subquery avoids loading IDs).
         $eventSubquery = function ($sub) use ($marketplaceId) {
             $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
         };
@@ -1049,21 +1060,15 @@ class Dashboard extends Page
                 ->orWhereIn('orders.event_id', $eventSubquery);
         };
 
-        // Revenue (excl refunded)
-        $totalSales = (float) Order::where($orderScope)
-            ->whereIn('orders.status', $allStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
-            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
-            ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
-            ->value('revenue') ?? 0;
-
-        // Marketplace commission — cached per month (expensive per-event calculation)
-        $monthKey = $monthDate->format('Y-m');
-        $totalCommission = Cache::remember("mp_month_comm_{$marketplaceId}_{$monthKey}", 600, fn () =>
-            BillingBreakdown::calculateMarketplaceCommission(
-                $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
-            )
-        );
+        // Revenue + commission from the authoritative daily-report totals
+        // (SalesBreakdownService per event — floor/leisure/per-type aware, same
+        // source as the report table, chart and today cards). Replaces the old
+        // SUM(orders.total) + flat calculateMarketplaceCommission, which
+        // undercounted both on POS/leisure (commission_amount=0, unreliable
+        // order.total). Reuses the shared per-day report cache.
+        $reportTotals = $this->dailyReportMonthTotals($marketplaceId, $monthDate);
+        $totalSales = $reportTotals['sales'];
+        $totalCommission = $reportTotals['commission'];
 
         // Tickets sold this month — efficient join instead of nested whereHas
         $ticketsSold = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
@@ -1365,6 +1370,39 @@ class Dashboard extends Page
             $ttl,
             fn () => $this->computeDailyEventReport($marketplaceId, $date)
         );
+    }
+
+    /**
+     * Month totals (sales, commission, tickets) from the authoritative daily
+     * report — Σ over the month's days (up to today) of sales_day /
+     * commission_day / tickets_day. Reuses the shared per-day report cache, so
+     * this is the same source as the report table, chart and today cards.
+     *
+     * @return array{sales: float, commission: float, tickets: int}
+     */
+    private function dailyReportMonthTotals(int $marketplaceId, Carbon $monthDate): array
+    {
+        $tz = 'Europe/Bucharest';
+        $today = Carbon::now($tz)->format('Y-m-d');
+        $daysInMonth = (int) $monthDate->daysInMonth;
+
+        $sales = 0.0;
+        $commission = 0.0;
+        $tickets = 0;
+
+        $cur = $monthDate->copy()->startOfMonth();
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = $cur->format('Y-m-d');
+            if ($dateStr <= $today) {
+                $rows = collect($this->dailyReportRowsCached($marketplaceId, $dateStr));
+                $sales += (float) $rows->sum('sales_day');
+                $commission += (float) $rows->sum('commission_day');
+                $tickets += (int) $rows->sum('tickets_day');
+            }
+            $cur->addDay();
+        }
+
+        return ['sales' => $sales, 'commission' => $commission, 'tickets' => $tickets];
     }
 
     /**

@@ -128,6 +128,16 @@ Schedule::command('invoices:transition-new --grace-days=3')
         \Log::error('Failed to transition invoice statuses');
     });
 
+// Precompute authoritative all-time dashboard revenue + commission per
+// marketplace (SalesBreakdownService — expensive, builds every event with
+// sales) into cache, so the dashboard all-time cards read a correct value
+// without blocking a web request. All-time moves slowly → every 3 hours.
+Schedule::command('dashboard:warm-alltime-stats')
+    ->everyThreeHours()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->timezone('Europe/Bucharest');
+
 /*
 |--------------------------------------------------------------------------
 | Changelog Auto-Update
