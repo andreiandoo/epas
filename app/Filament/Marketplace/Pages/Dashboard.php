@@ -1062,7 +1062,7 @@ class Dashboard extends Page
         // the expensive part isn't recomputed on every dashboard load.
         $isPastMonth = $monthDate->copy()->endOfMonth()->lt(Carbon::now($tz)->startOfMonth());
         $totalCommission = Cache::remember(
-            "mp_month_comm_svc_{$marketplaceId}_{$monthDate->format('Y-m')}",
+            "mp_month_comm_svc_v2_{$marketplaceId}_{$monthDate->format('Y-m')}",
             $isPastMonth ? 86400 : 900,
             fn () => $this->monthCommissionViaService($marketplaceId, $monthStart, $monthEnd)
         );
@@ -1363,7 +1363,7 @@ class Dashboard extends Page
         $ttl = ($date >= $today) ? 60 : 86400;
 
         return Cache::remember(
-            "mp_dash_daily_evt_v8_{$marketplaceId}_{$date}",
+            "mp_dash_daily_evt_v9_{$marketplaceId}_{$date}",
             $ttl,
             fn () => $this->computeDailyEventReport($marketplaceId, $date)
         );
