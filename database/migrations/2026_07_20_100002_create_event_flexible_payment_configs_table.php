@@ -27,6 +27,10 @@ return new class extends Migration
             $table->boolean('enable_bnpl')->default(false);
             $table->boolean('enable_delegated_pay')->default(false);
 
+            // Which ticket types are eligible for flexible payment. NULL/empty
+            // means ALL ticket types of the event are eligible (backward compat).
+            $table->json('eligible_ticket_type_ids')->nullable();
+
             // Down payment for installments on this event.
             $table->enum('down_payment_type', ['none', 'percent', 'fixed'])->default('percent');
             $table->integer('down_payment_value')->default(2000); // percent*100 → 20% default

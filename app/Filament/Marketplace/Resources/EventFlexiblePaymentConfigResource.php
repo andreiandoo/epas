@@ -80,6 +80,26 @@ class EventFlexiblePaymentConfigResource extends Resource
                 Forms\Components\Toggle::make('enable_delegated_pay')->label('Plată delegată')->default(false),
             ])->columns(3),
 
+            SC\Section::make('Bilete eligibile')
+                ->description('Alege care tipuri de bilete pot fi cumpărate în rate/BNPL. Gol = toate biletele evenimentului.')
+                ->schema([
+                    Forms\Components\Select::make('eligible_ticket_type_ids')
+                        ->label('Tipuri de bilete eligibile (gol = toate)')
+                        ->multiple()
+                        ->options(function (Get $get) {
+                            $eventId = $get('event_id');
+                            if (! $eventId) {
+                                return [];
+                            }
+                            return \App\Models\TicketType::where('event_id', $eventId)
+                                ->get()
+                                ->mapWithKeys(fn ($t) => [$t->id => ($t->name ?? "Bilet #{$t->id}")
+                                    . ($t->price ? ' — ' . number_format($t->price, 2) . ' ' . ($t->currency ?? 'RON') : '')])
+                                ->all();
+                        })
+                        ->helperText('Doar comenzile în care TOATE biletele sunt din tipurile alese vor putea folosi rate/BNPL.'),
+                ]),
+
             SC\Section::make('Avans (pentru rate)')->schema([
                 Forms\Components\Select::make('down_payment_type')
                     ->label('Tip avans')

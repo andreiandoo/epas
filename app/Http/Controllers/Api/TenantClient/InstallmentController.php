@@ -33,9 +33,15 @@ class InstallmentController extends Controller
         $client = $this->resolveClient($request);
         $provider = $request->input('provider', $client?->getDefaultPaymentMethod()?->slug ?? '');
         $eventIds = (array) $request->input('event_ids', array_filter([$request->input('event_id')]));
+        $ticketTypeIds = array_map('intval', (array) $request->input('ticket_type_ids', []));
 
         return response()->json(
-            $this->eligibility->availability($client, $this->normalizeProvider($provider), array_map('intval', $eventIds))
+            $this->eligibility->availability(
+                $client,
+                $this->normalizeProvider($provider),
+                array_map('intval', $eventIds),
+                $ticketTypeIds
+            )
         );
     }
 
@@ -70,6 +76,50 @@ class InstallmentController extends Controller
         }));
 
         return response()->json(['plans' => $plans]);
+    }
+
+    /**
+     * Per-ticket-type flexible-payment summary for an event page: which ticket
+     * types can be bought in installments/BNPL and the "from X /rată" amount.
+     */
+    public function ticketTypes(Request $request): JsonResponse
+    {
+        $eventId = (int) $request->input('event_id');
+        $event = \App\Models\Event::with('ticketTypes')->find($eventId);
+        if (! $event) {
+            return response()->json(['ticket_types' => []]);
+        }
+
+        $client = $event->marketplace_client_id ? MarketplaceClient::find($event->marketplace_client_id) : null;
+        $provider = $this->normalizeProvider($client?->getDefaultPaymentMethod()?->slug ?? '');
+        $eventStart = $event->start_date;
+
+        $rows = [];
+        foreach ($event->ticketTypes as $tt) {
+            $avail = $this->eligibility->availability($client, $provider, [$eventId], [$tt->id]);
+            $priceCents = (int) round(((float) ($tt->price ?? 0)) * 100);
+
+            $fromCents = null;
+            if (($avail['methods']['installments'] ?? false) || ($avail['methods']['bnpl'] ?? false)) {
+                $fromCents = $this->eligibility->startingFromCents($eventId, $priceCents, $eventStart);
+            }
+
+            $rows[] = [
+                'ticket_type_id' => $tt->id,
+                'name' => $tt->name,
+                'price' => $tt->price,
+                'currency' => $tt->currency ?? 'RON',
+                'installments_available' => $avail['methods']['installments'] ?? false,
+                'bnpl_available' => $avail['methods']['bnpl'] ?? false,
+                'delegated_available' => $avail['methods']['delegated_pay'] ?? false,
+                'from_amount' => $fromCents !== null ? round($fromCents / 100, 2) : null,
+                'from_label' => $fromCents !== null
+                    ? 'de la ' . number_format($fromCents / 100, 2, ',', '.') . ' ' . ($tt->currency ?? 'RON') . '/rată'
+                    : null,
+            ];
+        }
+
+        return response()->json(['ticket_types' => $rows]);
     }
 
     /**
@@ -118,6 +168,12 @@ class InstallmentController extends Controller
             ->exists();
         if (! $config || ! $methodEnabled || ! $planAttached) {
             return response()->json(['error' => 'Plan not available for this event'], 422);
+        }
+
+        // Every ticket in the order must be an eligible ticket type.
+        $orderTicketTypeIds = $order->tickets()->pluck('ticket_type_id')->filter()->unique()->all();
+        if (! $config->allTicketTypesEligible($orderTicketTypeIds)) {
+            return response()->json(['error' => 'Order contains tickets not eligible for installments'], 422);
         }
 
         // total is decimal (major units); fall back to total_cents when null.

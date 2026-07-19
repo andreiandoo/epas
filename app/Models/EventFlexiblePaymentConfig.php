@@ -17,6 +17,7 @@ class EventFlexiblePaymentConfig extends Model
         'enable_installments',
         'enable_bnpl',
         'enable_delegated_pay',
+        'eligible_ticket_type_ids',
         'down_payment_type',
         'down_payment_value',
         'bnpl_max_horizon_days',
@@ -29,6 +30,7 @@ class EventFlexiblePaymentConfig extends Model
         'enable_installments' => 'boolean',
         'enable_bnpl' => 'boolean',
         'enable_delegated_pay' => 'boolean',
+        'eligible_ticket_type_ids' => 'array',
         'down_payment_value' => 'integer',
         'bnpl_max_horizon_days' => 'integer',
         'delegated_hold_hours' => 'integer',
@@ -53,5 +55,32 @@ class EventFlexiblePaymentConfig extends Model
     public function anyMethodEnabled(): bool
     {
         return $this->enable_installments || $this->enable_bnpl || $this->enable_delegated_pay;
+    }
+
+    /**
+     * Is a given ticket type eligible for flexible payment on this event?
+     * Empty/null list = all ticket types eligible.
+     */
+    public function ticketTypeEligible($ticketTypeId): bool
+    {
+        $ids = $this->eligible_ticket_type_ids;
+        if (empty($ids) || ! is_array($ids)) {
+            return true;
+        }
+        return in_array((int) $ticketTypeId, array_map('intval', $ids), true);
+    }
+
+    /**
+     * Are ALL of the given ticket type ids eligible? (checkout gate — the whole
+     * order must consist of eligible ticket types).
+     */
+    public function allTicketTypesEligible(array $ticketTypeIds): bool
+    {
+        foreach ($ticketTypeIds as $id) {
+            if (! $this->ticketTypeEligible($id)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

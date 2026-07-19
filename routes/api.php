@@ -71,6 +71,8 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->name('api.tenant-client-public.installments.availability');
     Route::get('/installments/plans', [\App\Http\Controllers\Api\TenantClient\InstallmentController::class, 'plans'])
         ->name('api.tenant-client-public.installments.plans');
+    Route::get('/installments/ticket-types', [\App\Http\Controllers\Api\TenantClient\InstallmentController::class, 'ticketTypes'])
+        ->name('api.tenant-client-public.installments.ticket-types');
     Route::post('/installments/start', [\App\Http\Controllers\Api\TenantClient\InstallmentController::class, 'start'])
         ->name('api.tenant-client-public.installments.start');
 

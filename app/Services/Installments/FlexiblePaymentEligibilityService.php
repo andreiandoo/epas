@@ -40,7 +40,7 @@ class FlexiblePaymentEligibilityService
      *   event_id: int|null
      * }
      */
-    public function availability(?MarketplaceClient $client, string $provider, array $eventIds): array
+    public function availability(?MarketplaceClient $client, string $provider, array $eventIds, array $ticketTypeIds = []): array
     {
         $out = [
             'available' => false,
@@ -77,10 +77,18 @@ class FlexiblePaymentEligibilityService
             return $out;
         }
 
-        $out['methods']['installments'] = $subModules['installments'] && $tokenizable && $config->enable_installments;
-        $out['methods']['bnpl'] = $subModules['bnpl'] && $tokenizable && $config->enable_bnpl;
-        // Delegated pay is not credit → no tokenization requirement.
+        // Rule 5 — ticket-type eligibility: the whole order must consist of
+        // ticket types the operator marked eligible (installments/BNPL only).
+        $ticketsEligible = empty($ticketTypeIds) || $config->allTicketTypesEligible($ticketTypeIds);
+
+        $out['methods']['installments'] = $subModules['installments'] && $tokenizable && $config->enable_installments && $ticketsEligible;
+        $out['methods']['bnpl'] = $subModules['bnpl'] && $tokenizable && $config->enable_bnpl && $ticketsEligible;
+        // Delegated pay is not credit → no tokenization / ticket-eligibility rule.
         $out['methods']['delegated_pay'] = $subModules['delegated_pay'] && $config->enable_delegated_pay;
+
+        if (! $ticketsEligible && ($config->enable_installments || $config->enable_bnpl)) {
+            $out['message'] = __('Plata în rate este disponibilă doar pentru anumite bilete din acest eveniment.');
+        }
 
         $out['available'] = in_array(true, $out['methods'], true);
         return $out;
@@ -131,6 +139,25 @@ class FlexiblePaymentEligibilityService
             ->filter(fn ($q) => $q['eligible'])
             ->values()
             ->all();
+    }
+
+    /**
+     * The smallest single-installment amount (in cents) across all eligible
+     * plans for an event + base price — powers the "de la X lei/rată" label.
+     * Returns null if no plan is eligible.
+     */
+    public function startingFromCents(int $eventId, int $baseCents, $eventStart = null): ?int
+    {
+        $plans = $this->plansForEvent($eventId, $baseCents, ['event_start_date' => $eventStart]);
+        $min = null;
+        foreach ($plans as $q) {
+            foreach ($q['schedule'] as $row) {
+                if ($row['sequence'] > 0) {
+                    $min = $min === null ? $row['amount_cents'] : min($min, $row['amount_cents']);
+                }
+            }
+        }
+        return $min;
     }
 
     /**
