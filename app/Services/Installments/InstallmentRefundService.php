@@ -5,6 +5,8 @@ namespace App\Services\Installments;
 use App\Models\InstallmentAgreement;
 use App\Models\InstallmentPayment;
 use App\Models\MarketplaceClient;
+use App\Models\MarketplaceTransaction;
+use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -76,8 +78,13 @@ class InstallmentRefundService
             $agreement->log('refunded', "Refund ({$reason})", ['reason' => $reason]);
         });
 
-        // Best-effort money-back per paid installment.
+        // Best-effort money-back per paid installment (each Netopia/Stripe
+        // transaction credited individually via its stored reference).
         $this->attemptProcessorRefunds($agreement, $refundableCents);
+
+        // Reverse the organizer's incrementally-credited balance for the amount
+        // being clawed back (mirror of InstallmentPayoutService::creditInstallment).
+        $this->reverseOrganizerPayout($agreement, $refundableCents);
 
         // Tickets are no longer valid.
         $this->tickets->invalidateForAgreement($agreement);
@@ -123,6 +130,51 @@ class InstallmentRefundService
 
         if ($remaining > 0) {
             Log::warning("Installment refund partial for agreement {$agreement->id}: {$remaining} bani still to refund manually.");
+        }
+    }
+
+    /**
+     * Debit back the organizer's balance for the base-price portion of the
+     * refunded amount (and credit the commission back), reversing the
+     * incremental payout. Best-effort — a refund must never fail on ledger issues.
+     */
+    protected function reverseOrganizerPayout(InstallmentAgreement $agreement, int $refundableCents): void
+    {
+        try {
+            if ($refundableCents <= 0 || ! $agreement->marketplace_client_id) {
+                return;
+            }
+            $order = Order::find($agreement->order_id);
+            $organizerId = $order?->marketplace_organizer_id;
+            if (! $organizerId) {
+                return;
+            }
+
+            // The organizer only earned on the base (ticket) price, so reverse the
+            // base share of what is being refunded.
+            $customerTotal = max(1, (int) $agreement->customer_total_cents);
+            $baseRefundCents = (int) round($refundableCents * $agreement->base_total_cents / $customerTotal);
+            if ($baseRefundCents <= 0) {
+                return;
+            }
+            $commissionRate = (float) ($order->commission_rate ?? 0);
+            $commissionRefundCents = (int) round($baseRefundCents * $commissionRate / 100);
+
+            MarketplaceTransaction::recordRefund(
+                (int) $agreement->marketplace_client_id,
+                (int) $organizerId,
+                $baseRefundCents / 100,
+                $commissionRefundCents / 100,
+                (int) $agreement->order_id,
+                $agreement->currency
+            );
+
+            $agreement->log('payout_reversed', 'Organizer balance reversed for refund', [
+                'base_refund_cents' => $baseRefundCents,
+                'commission_refund_cents' => $commissionRefundCents,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("Installments payout reversal failed for agreement {$agreement->id}: {$e->getMessage()}");
         }
     }
 }
