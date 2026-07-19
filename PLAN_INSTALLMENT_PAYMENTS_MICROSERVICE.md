@@ -467,7 +467,7 @@ Config global platformă în `config/installments.php`:
 | **1** | Migrări + modele + `InstallmentPlanCalculator` + înregistrare microserviciu | calculator cu teste de rounding & garanție total>direct |
 | **2** | Modulul de planuri (`InstallmentPlanResource`) + secțiunea din `EventResource` (enable + planuri + avans) + settings | marketplace definește planuri și le activează pe eveniment |
 | **3** | Checkout: eligibilitate, quote, creare agreement, plată avans + tokenizare + bilet emis invalid | client alege plan și plătește avansul |
-| **4** | Scheduler + Jobs + emailuri + **reminder-e programate** (debitare automată + chitanțe) + **3DS fallback** (§16.1) | ratele se debitează automat, reminder-e trimise |
+| **4** | Scheduler + Jobs + emailuri (**`InstallmentEmailTemplatesSeeder`** §17) + **reminder-e programate** + **3DS fallback** (§16.1) | ratele se debitează automat, reminder-e trimise |
 | **5** | Dunning/default + retur + **expirare card** (§16.2) + **anulare/reprogramare eveniment** (§16.3) | scenarii neplată/retur/eveniment acoperite |
 | **6** | Portal client (plată anticipată, update card) + `InstallmentAgreementResource` + **payout incremental** (§16.4) + webhook-uri/raportare (§16.8) | vizibilitate + control + decontare corectă |
 | **7** | Integrare facturare/e-Factura (§16.5) + reminder-e multi-canal (§16.7) + review juridic (§16.6) | conformitate fiscală & legală |
@@ -503,6 +503,19 @@ Config global platformă în `config/installments.php`:
    și `tenant_id` (nullable), serviciile sunt agnostice de owner, iar resursele Filament se
    replică ieftin pe `/tenant` (copie a celor de pe `/marketplace`). Efort suplimentar minim,
    deci le acoperim pe ambele. Config platformă (1%/2%) e global, se aplică identic.
+6. **Avans** → setat **per eveniment** în panoul de eveniment; planurile trăiesc într-un modul
+   separat, reutilizabile. (Secțiunile 4.5, 4.1)
+7. **Payout organizator** → **incremental**, pe măsură ce se încasează fiecare rată. (§16.4)
+8. **Expirare card** → cerem la checkout un card valabil până la finalul planului; fără
+   update-card mid-plan în v1. (§16.2)
+
+### Puncte încă deschise (recomandări în §16, aștept confirmarea ta)
+- **16.1** SCA/MIT: pas 1 mereu SCA (+ verificare card când avans=0), fallback 3DS pe rate.
+- **16.3** Anulare/reprogramare eveniment de organizator: refund integral incl. taxe la anulare;
+  auto-comprimare + opțiune refund la reprogramare.
+- **16.5** Facturare: v1 doar chitanțe; factură unică la finalizare când se adaugă facturarea.
+- **16.6** Legal: planuri ≤3 luni, marketplace = creditor / Tixello = tech, sign-off juridic gating.
+- **16.9** Early payoff: sold integral, fără discount de surcharge în v1.
 
 ---
 
@@ -511,41 +524,73 @@ Config global platformă în `config/installments.php`:
 Acestea sunt lucruri fără de care sistemul "merge la demo, dar cade la producție". Le-am
 ordonat după criticitate.
 
-### 16.1 3-D Secure / SCA pe debitările automate (CRITIC pentru RO/UE)
+### 16.1 3-D Secure / SCA pe debitările automate (CRITIC pentru RO/UE) — recomandare
 Sub PSD2, o debitare off-session poate cere autentificare (3DS) chiar și cu token salvat.
-Dacă procesatorul întoarce `authentication_required`, NU marcăm eșec direct → trimitem
-clientului un link on-session pentru acea rată (endpoint `pay/{sequence}`) + email. La avans
-salvăm mandatul cu flag "off-session agreed" ca să minimizăm challenge-urile ulterioare.
+**Model recomandat (MIT — Merchant Initiated Transaction):**
+- **Avansul (pasul 1) e mereu on-session cu SCA** și stabilește mandatul + salvează
+  network transaction id / token. Dacă avansul e 0 → tot facem un pas de **verificare card
+  cu SCA** la checkout (Stripe SetupIntent / autorizare 1 RON + void la Netopia) ca să avem mandat valid.
+- **Ratele următoare = MIT/off-session**, în general scutite de SCA (sunt recurente, sumă/comerciant fix).
+- Dacă totuși issuer-ul cere autentificare (`authentication_required`) → rata devine
+  `action_required`, NU eșec direct: trimitem email cu link on-session (`pay/{sequence}`),
+  fereastră de grație (ex. 3–5 zile) + reminder; dacă expiră → `failed` → dunning.
+- **Întrebare deschisă:** accepți ca (a) pasul 1 la checkout să fie mereu SCA (inclusiv un pas
+  de verificare card când avansul e 0) și (b) ocazional o rată să ceară clientului autentificare
+  cu fallback pe email?
 
-### 16.2 Expirarea cardului în timpul planului (CRITIC)
-Un card poate expira înainte de ultima rată. La checkout verificăm `exp_month/exp_year` vs.
-data ultimei scadențe; dacă expiră înainte → avertizăm și, ideal, cerem alt card. Pe parcurs:
-job care detectează carduri ce expiră curând → email "actualizează cardul" + link în portal.
+### 16.2 Expirarea cardului în timpul planului — DECIS
+**Decizie (stakeholder):** la checkout **cerem un card care NU expiră în perioada planului.**
+Verificăm `exp_month/exp_year` vs. data ultimei scadențe; dacă expiră înainte → blocăm cardul
+cu mesaj clar ("folosește un card valabil până la {ultima_rată}"). **Fără** flux de update-card
+mid-plan în v1 (rămâne ca îmbunătățire viitoare). Simplu și robust.
 
-### 16.3 Anulare/reprogramare eveniment de către organizator (mid-plan)
-Dacă organizatorul **anulează** evenimentul cu planuri active → oprim debitările, returnăm
-ratele plătite (flux `event-cancelled` existent), anulăm mandatul, marcăm agreement `cancelled`.
-Dacă **reprogramează** mai devreme și graficul nu mai încape înainte de noua dată → recalcul
-grafic (comprimare) sau notificare + trecere la plată integrală imediată. Integrare cu
-`event-cancelled.php` / `event-rescheduled.php` deja existente.
+### 16.3 Anulare/reprogramare eveniment de către organizator (mid-plan) — recomandare
+Cheia: **cine e "de vină" decide cât se returnează** (spre deosebire de returul cerut de client,
+unde taxele sunt reținute).
+- **Anulare eveniment:** oprim debitările, anulăm mandatul, agreement → `cancelled`, iar
+  clientul primește **100% din ce a plătit, INCLUSIV surcharge** (nu e vina lui). Tixello
+  **stornează / nu percepe** platform fee-ul; marketplace suportă stornarea surcharge-ului.
+  (Flux `event-cancelled` existent.)
+- **Reprogramare mai târziu:** planul încape (mai mult timp) → continuă; recalculăm doar deadline-ul.
+- **Reprogramare mai devreme și graficul nu mai încape:** auto-**comprimare** a ratelor rămase
+  ca să se termine înainte de noua dată; dacă e imposibil (dată prea apropiată) → notificăm
+  clientul cu alegere: **plată integrală acum SAU refund**.
+- **Drept de refund la orice reprogramare** (schimbare materială) — oferim mereu opțiunea de refund.
+- **Întrebare deschisă:** confirmi (a) anulare = refund integral incl. taxe + Tixello își
+  stornează fee-ul, și (b) reprogramare-mai-devreme = auto-comprimare + opțiune de refund?
 
-### 16.4 Momentul plății către organizator (payout timing)
-Azi `MarketplaceTransaction` creditează balanța organizatorului la vânzare. La rate, banii
-intră în timp. **Recomandare:** credităm balanța organizatorului **incremental, pe măsură ce
-se încasează fiecare rată** (nu tot avansul upfront), ca să nu plătim organizatorul pentru
-bani care încă nu au fost colectați. Trebuie decis explicit — afectează payout-urile și riscul.
+### 16.4 Momentul plății către organizator (payout timing) — DECIS
+**Decizie (stakeholder): payout INCREMENTAL.** Creditam balanța organizatorului **pe măsură
+ce se încasează fiecare rată** (nu tot upfront), prin `MarketplaceTransaction`. Nu plătim
+organizatorul pentru bani neîncă colectați → risc zero de sold negativ la default.
+La default → nu se mai creditează ratele viitoare; la refund pe anulare → storno proporțional.
 
-### 16.5 Facturare / e-Factura & TVA (integrare EFACTURA existentă)
-De decis: factura se emite integral la comandă sau pe fiecare rată? Când se raportează TVA-ul?
-Pentru RO/ANAF, cel mai curat e factură la finalizarea plății (sau factură + chitanțe per
-rată). Integrare cu modulul EFACTURA/`InvoiceGeneratorService` existent. **Necesită input contabil.**
+### 16.5 Facturare / e-Factura & TVA — recomandare
+**Context:** azi NU există facturare la checkout. Nu construim un motor fiscal complet acum.
+- **v1:** doar **chitanțe/confirmări de plată** (non-fiscale) per rată + confirmare plan. Aliniat
+  cu starea curentă (fără facturi).
+- **Când se adaugă facturarea** (integrare EFACTURA/`InvoiceGeneratorService`): modelul cel mai
+  curat pentru RO/TVA e **o singură factură pe întreaga comandă la finalizarea plății** (când
+  biletul devine valid), cu **surcharge-ul ca linie separată**; ratele intermediare rămân
+  chitanțe de avans. Alternativa (facturi de avans per rată + factură finală) e mai grea și doar
+  dacă e nevoie de recunoaștere de venit per rată.
+- Proiectăm datele (înregistrări per plată + linia de surcharge) astfel încât factura unică la
+  final să fie trivială ulterior. **Necesită confirmare contabil când se implementează facturarea.**
+- **Întrebare deschisă:** OK cu v1 = doar chitanțe, iar factura unică la finalizare când adăugați facturarea?
 
-### 16.6 Conformitate legală — credit de consum (FLAG pentru juridic)
-Plata în rate cu surcharge (cost al creditării) poate intra sub reguli de **credit de consum**
-(informații precontractuale, DAE/APR, drept de retragere). De obicei se structurează ca să
-NU fie "credit" (termen scurt, puține rate), dar decizia e juridică. Construim suprafața de
-**termeni & informare precontractuală** (`terms_url`, ecran de disclosure în checkout);
-validarea legală rămâne la client. **Recomand review juridic înainte de go-live.**
+### 16.6 Conformitate legală — credit de consum (RO: OUG 50/2010) — recomandare
+Plata în rate cu surcharge = un "cost al creditării", deci scutirea "fără dobândă și fără costuri"
+NU se aplică. **Însă** legea scutește creditul **rambursat în ≤3 luni cu costuri nesemnificative**
+și cel sub anumite praguri. Cum biletele trebuie plătite înainte de eveniment, aproape toate
+planurile sunt scurte (≤3 luni) → probabil în zona scutită.
+- **Recomandare structurare:** (a) încurajăm/limităm planurile la **termen scurt (≤3 luni)**,
+  (b) surcharge modest, (c) **marketplace-ul e "creditorul"** (extinde termenul de plată, poartă
+  creanța) — **Tixello e doar furnizor de tehnologie** + încasează 2%; asta contează pentru licențiere,
+  (d) ecran de **informare precontractuală** în checkout (cost total, grafic, diferența vs plata directă)
+  + checkbox de acceptare termeni, cu **log de consimțământ**.
+- Nu sunt jurist — **sign-off legal rămâne gating item la client înainte de go-live.**
+- **Întrebare deschisă:** ești OK cu (a) planuri ≤3 luni, (b) marketplace = creditor / Tixello = tech,
+  (c) sign-off juridic ca item obligatoriu înainte de lansare?
 
 ### 16.7 Reminder-e multi-canal (SMS / WhatsApp) — refolosire servicii existente
 Repo-ul are deja servicii SMS și WhatsApp. Aceleași trigger-e de reminder/eșec pot merge și
@@ -557,17 +602,94 @@ Emitem evenimente (`installment.paid`, `installment.failed`, `agreement.defaulte
 reacționeze. Plus un dashboard cu: rată de colectare, rată default, sold de încasat (DSO),
 expunere per eveniment.
 
-### 16.9 Plată anticipată (early payoff) — self-service
+### 16.9 Plată anticipată (early payoff) — self-service — recomandare
 Clientul poate achita restul mai devreme din portal → agreement `completed`, biletul devine
 valid imediat, ratele viitoare `cancelled`. Simplu și crește satisfacția.
+- **Recomandare v1:** debităm **restul integral** (fără reducere de surcharge) — simplu, corect
+  în zona "scutit" de la §16.6. (Dacă juridic ne clasează totuși ca credit de consum, apare
+  dreptul la reducerea costului la rambursare anticipată → tratăm atunci.)
+- **Întrebare deschisă:** OK cu early payoff la sold integral, fără discount de surcharge în v1?
 
 ### 16.10 Limite de risc / expunere (opțional, per marketplace)
 Config opțional: valoare max per plan, număr max de planuri active simultan per client,
-prag minim de comandă. Reduce frauda și restanțele.
+prag minim de comandă, **blocarea clienților cu default anterior**. Reduce frauda și restanțele.
 
 ---
 
-## 17. Următorul pas
+## 17. Seed de emailuri (cerință explicită)
 
-Planul e complet și aliniat la deciziile de mai sus. Implementarea începe cu **Faza 0**
-(tokenizare Stripe + Netopia), fiind dependența critică pentru tot restul.
+Refolosim infrastructura existentă: `MarketplaceEmailTemplate` (slug/subject/body_html/
+variables/category), `MarketplaceEmailTemplate::TEMPLATE_SLUGS`, seedere per-marketplace cu
+trait-ul `Database\Seeders\Concerns\BrandedEmailWrapper` (vezi `PayoutEmailTemplatesSeeder`).
+
+**De făcut:**
+1. **Înregistrăm slug-urile noi** în `MarketplaceEmailTemplate::TEMPLATE_SLUGS`.
+2. **`InstallmentEmailTemplatesSeeder`** (per fiecare `MarketplaceClient`, branded, i18n),
+   idempotent (fallback la body hardcodat dacă rândul lipsește — ca la payout).
+3. Echivalent tenant prin `TenantMailService` (scope-ul acoperă și tenanții).
+4. Adăugat în `DatabaseSeeder` + rulabil standalone (`--class=InstallmentEmailTemplatesSeeder`).
+
+**Slug-uri client (variabile `{{...}}`: `plan_name`, `schedule_table`, `down_payment`,
+`installment_amount`, `due_date`, `remaining_balance`, `customer_total`, `direct_price`,
+`event_name`, `event_date`, `pay_link`, `portal_link`):**
+
+| Slug | Trigger |
+|------|---------|
+| `installment_plan_confirmation` | La checkout — avans plătit + grafic complet + diferența vs plata directă |
+| `installment_payment_upcoming` | Reminder înainte de scadență (cadență `reminder_days_before`) |
+| `installment_payment_due_today` | În ziua scadenței ("azi debităm rata X") |
+| `installment_payment_receipt` | După fiecare debitare reușită |
+| `installment_action_required` | 3DS / autentificare necesară (link on-session) |
+| `installment_payment_failed` | Debitare eșuată + retry programat + link plată |
+| `installment_overdue` | Restanță / dunning escaladat (stage 1..N) |
+| `installment_default_warning` | Ultima șansă înainte de anulare (corelat cu deadline eveniment) |
+| `installment_defaulted` | Plan anulat, bilet invalidat, loc eliberat |
+| `installment_plan_completed` | Plată integrală — biletul a devenit valid |
+| `installment_early_payoff_receipt` | Confirmare plată anticipată |
+| `installment_refund` | Retur/anulare inițiat de client (taxe reținute) |
+| `installment_event_cancelled_refund` | Eveniment anulat de organizator — refund integral incl. taxe |
+| `installment_event_rescheduled` | Eveniment reprogramat — grafic nou / alegere plată-acum-sau-refund |
+
+**Slug-uri organizator/admin:**
+
+| Slug | Trigger |
+|------|---------|
+| `organizer_installment_defaulted` | Notificare organizator când un plan pe evenimentul lui intră în default |
+| `admin_installment_defaulted` | (opțional) Alertă admin marketplace pentru restanțe |
+
+---
+
+## 18. Îmbunătățiri suplimentare propuse (research nou)
+
+Peste cerințe, lucruri care cresc conversia, colectarea și robustețea:
+
+1. **Simulator de rate pe pagina evenimentului** ("de la X lei/lună") înainte de checkout →
+   crește conversia; refolosește `InstallmentPlanCalculator`.
+2. **Auto-revânzare la default:** când un plan intră în default și locul se eliberează, îl
+   întoarcem în inventar / **waitlist** (module existente `Waitlist`/`SeatHold`) → recuperare venit.
+3. **Card de rezervă (backup):** clientul poate adăuga un al doilea card; la eșecul primului,
+   încercăm backup-ul înainte de dunning → mai puține default-uri. (post-v1)
+4. **Job de reconciliere nocturnă:** compară `installment_payments` cu înregistrările
+   procesatorului → prinde webhook-uri pierdute / debitări neînregistrate. Robustețe.
+5. **Reguli de eligibilitate client (risk):** doar clienți cu o comandă finalizată anterior,
+   blocarea celor cu default în trecut (leagă §16.10) → risc mai mic.
+6. **Notificare organizator la default** pe evenimentul lui (afectează venitul) — prin
+   notificările organizator existente.
+7. **Fereastră de "cooling-off"** scurtă după avans (ex. 24h): clientul se poate răzgândi și
+   primește refund integral **înainte** de orice rată → UX bun + potențial drept de retragere.
+8. **Dashboard KPI rate:** collection rate, default rate, sold de încasat (DSO), calendar debitări
+   viitoare, expunere per eveniment.
+9. **Taxă de întârziere opțională (late fee)** — implicit OPRITĂ (atenție la suprafața legală
+   §16.6); doar dacă marketplace-ul o activează conștient.
+10. **Localizare corectă** (RON, dată RO) în emailuri + portal + checkout — încredere.
+11. **Deadline pe cart mixt:** dacă coșul are evenimente diferite, deadline-ul de plată = cel
+    mai apropiat eveniment. Motorul îl ia pe cel mai restrictiv.
+12. **Mod test/preview** pentru marketplace: previzualizarea planurilor fără debitare reală.
+
+---
+
+## 19. Următorul pas
+
+Planul e complet și aliniat la deciziile de mai sus. După ce închidem punctele deschise din
+§16 (16.1, 16.3, 16.5, 16.6, 16.9), implementarea începe cu **Faza 0** (tokenizare Stripe +
+Netopia + mandat MIT), fiind dependența critică pentru tot restul.
