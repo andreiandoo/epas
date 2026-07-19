@@ -12,7 +12,7 @@ Exemplu de referință: **ambilet.ro** (MarketplaceClient) lucrează cu **Netopi
 
 | # | Cerință | Cum o rezolvăm |
 |---|---------|----------------|
-| 1 | Valoare inițială de plată (avans) | `down_payment_type` (percent/fix/none) + `down_payment_value` la nivel de plan |
+| 1 | Valoare inițială de plată (avans) | Setat **per eveniment** în panoul de eveniment (`event_installment_configs`), percent/fix, pe `customer_total` |
 | 2 | Timp între rate ȘI/SAU dată fixă + procent | `schedule_type` = `interval` \| `fixed_dates`; distribuție `equal` \| `custom_percent` |
 | 3 | Total în rate > plata directă | `surcharge` marketplace obligatoriu > 0 (validare hard); garantat de `InstallmentPlanCalculator` |
 | 4 | Tixello 2% (vs 1%) și surcharge marketplace (procentual/fix) | `platform_fee_percent` global = 2% la rate, colectat **de la marketplace**; `surcharge_percent`/`surcharge_fixed_cents` per plan, încasat de marketplace |
@@ -97,7 +97,18 @@ require: last_due_date <= event_date − days_before_event_fully_paid
 
 ## 4. Schema bazei de date
 
-### 4.1 `installment_plans` (șabloane definite în admin)
+### Unde se configurează ce (decizie stakeholder)
+
+- **Modulul de Planuri de rate** (fereastră/resursă separată) — aici marketplace-ul
+  **creează și întreține șabloanele de plan** (număr de rate, grafic, surcharge,
+  eligibilitate, politici). Reutilizabile pe mai multe evenimente.
+- **Panoul de administrare al evenimentului** (secțiune nouă în `EventResource`) — aici,
+  per eveniment, marketplace-ul: **(a)** activează plata în rate, **(b)** alege care
+  plan(uri) din modul se aplică acelui eveniment, **(c)** setează **avansul** pentru
+  acel eveniment. Avansul stă pe eveniment tocmai ca același plan să poată avea avansuri
+  diferite pe evenimente diferite.
+
+### 4.1 `installment_plans` (șabloane definite în modulul de planuri)
 
 ```
 id (uuid, PK)
@@ -110,9 +121,11 @@ is_active (bool)
 sort_order (int)
 currency (string)
 
--- Avans
-down_payment_type (enum: none, percent, fixed)
-down_payment_value (int)               // percent*100 sau cents
+-- NB: AVANSUL nu se ține pe plan. Se setează per eveniment (vezi 4.5), pentru că
+-- același plan se poate refolosi pe evenimente cu avansuri diferite.
+-- Opțional: down_payment_default_* ca sugestie pre-completată în panoul de eveniment.
+down_payment_default_type (enum: none, percent, fixed, nullable)
+down_payment_default_value (int, nullable)
 
 -- Programare rate
 number_of_installments (int)           // fără avans
@@ -226,6 +239,39 @@ type (created|charged|failed|retried|reminder_sent|defaulted|cancelled|refunded|
 message, payload (json), created_at
 ```
 
+### 4.5 `event_installment_configs` (configul per eveniment — setat în panoul de eveniment)
+
+```
+id (uuid, PK)
+event_id (FK → events, nullable)              // sau marketplace_event_id
+marketplace_event_id (FK, nullable)
+enabled (bool, default false)                 // (a) activează rate pt. acest eveniment
+down_payment_type (enum: none, percent, fixed)// (c) avansul pt. acest eveniment
+down_payment_value (int)
+notes (string, nullable)
+created_at, updated_at
+Unique: (event_id) / (marketplace_event_id)
+```
+
+```
+-- (b) care planuri se aplică evenimentului
+event_installment_plan (pivot)
+  event_installment_config_id (FK)
+  installment_plan_id (FK)
+  sort_order (int)
+  is_active (bool)
+```
+
+La checkout, planurile eligibile = planurile atașate evenimentului (via pivot) **∩**
+regulile de eligibilitate ale planului (min/max, fit-before-event). Avansul aplicat vine
+din `event_installment_configs.down_payment_*`, calculat pe `customer_total_cents`.
+
+### 4.6 Câmpuri adăugate pe modele existente
+
+- `orders`: `installment_agreement_id` (nullable), `payment_status` capătă `partially_paid`.
+- `tickets`: status nou `pending_installments` (emis dar invalid) → flip la `valid`/`invalidated`.
+- Reminder-ele și dunning-ul refolosesc `MarketplaceEmailTemplate` (i18n, editabil per marketplace).
+
 > Decontarea financiară refolosește `MarketplaceTransaction` existent
 > (SALE / COMMISSION / REFUND) — nu reinventăm ledger-ul.
 
@@ -282,13 +328,11 @@ Flux:
 2. Pentru fiecare → dispatch `ChargeInstallmentJob` (queue, idempotent, lock pe payment id).
 3. **Mod token:** `InstallmentChargeService->charge()` → `chargeWithToken()`.
    - Succes → `paid`, incrementează `paid_installments_count`, `MarketplaceTransaction`,
-     email chitanță; dacă e ultima → `agreement.status = completed` → emite biletele (dacă
-     politica era `on_full_payment`).
+     email chitanță; dacă e ultima → `agreement.status = completed` → biletul devine `valid`.
    - Eșec → `attempts++`, reprogramează retry (backoff configurabil: ex. +1z, +3z, +5z);
      după `max_retries` → `failed` → `InstallmentDunningService`.
-4. **Mod pay-link:** trimite email cu link; la scadență fără plată → reminder/escaladare.
-
-**Reminders:** `installments:send-reminders` (zilnic) → email cu X zile înainte de scadență.
+4. **3-D Secure / SCA:** dacă debitarea off-session cere autentificare (vezi §16.1) →
+   trimite clientului link on-session pentru acea rată; nu se marchează eșec direct.
 
 **Jobs:** `ChargeInstallmentJob`, `SendInstallmentReminderJob`, `HandleInstallmentDefaultJob`.
 
@@ -296,18 +340,31 @@ Toate idempotente (guard pe status + `attempts`) ca să reziste la retrigger/web
 
 ---
 
-## 8. Emailuri / notificări
+## 8. Emailuri / reminder-e / notificări
 
 Prin `MarketplaceEmailService` / `TenantMailService` + `MarketplaceEmailTemplate`
-(șabloane editabile per marketplace, i18n RO/EN):
+(șabloane editabile per marketplace, i18n RO/EN). Toate au token de deep-link către portalul
+clientului (grafic, update card, plată manuală).
 
-1. **Confirmare plan + grafic complet** (la checkout: avans plătit, următoarele N rate cu date/sume, total, diferența vs plata directă).
-2. **Reminder rată** (X zile înainte).
-3. **Chitanță rată plătită**.
-4. **Rată eșuată + retry programat** (cu link de update card / plată manuală).
-5. **Avertisment default** (ultima șansă înainte de anulare — relevant pentru deadline eveniment).
-6. **Plan finalizat** (bilete emise/valide).
-7. **Retur / anulare** (sumă returnată, fee-uri reținute).
+### Ciclul de emailuri per agreement
+1. **Confirmare plan + grafic complet** (la checkout: avans plătit, următoarele N rate cu date/sume, `customer_total`, diferența vs plata directă).
+2. **Chitanță rată plătită** (după fiecare debitare reușită).
+3. **Rată eșuată + retry programat** (cu link update card / plată manuală / autentificare 3DS).
+4. **Avertisment default** (ultima șansă înainte de anulare — corelat cu deadline-ul evenimentului).
+5. **Plan finalizat** (biletul a devenit valid).
+6. **Retur / anulare** (sumă returnată, taxe reținute).
+7. **Update card necesar** (card expiră înainte de o rată — vezi §16.2).
+
+### Reminder-e programate (cerință explicită) — `installments:send-reminders` (zilnic)
+- **Cadență configurabilă** per plan/marketplace: ex. `reminder_days_before = [7, 3, 1]` →
+  câte un email înainte de fiecare scadență.
+- **Reminder în ziua scadenței** (mai ales pentru fluxul cu debitare automată: "azi îți
+  debităm rata X").
+- **Reminder post-eșec / restanță** escaladat (dunning): la +1, +3, +5 zile după rată ratată,
+  cu ton crescător și menționarea deadline-ului față de eveniment.
+- Anti-spam: `reminder_sent_at` per `installment_payment` previne dublurile la re-rulare.
+- **Multi-canal opțional** (§16.7): aceleași trigger-e pot merge și pe SMS/WhatsApp prin
+  serviciile existente, dacă marketplace-ul le are activate.
 
 ---
 
@@ -349,29 +406,33 @@ Prin `MarketplaceEmailService` / `TenantMailService` + `MarketplaceEmailTemplate
   - Apar doar planurile **eligibile** (sumă în interval + grafic care încape înainte de eveniment).
   - Fiecare plan afișează preview: *avans acum X lei, apoi N rate de Y lei pe datele …, total Z lei
     (cu +W lei față de plata directă)* — transparent, conform cerinței 3.
+  Avansul afișat vine din `event_installment_configs` (per eveniment), aplicat pe `customer_total`.
 - Client alege plan → `InstallmentAgreementService` creează agreement `pending` + grafic →
   plătește avansul (`createPaymentWithMandate`) → la callback: token salvat, agreement `active`,
-  bilete rezervate, scheduler preia ratele.
+  biletul emis cu status `pending_installments` (invalid), scheduler preia ratele.
 
 **API (App\Http\Controllers\Api\TenantClient):**
-- `GET  /api/installments/plans?event=&amount=` → planuri eligibile + preview
+- `GET  /api/installments/plans?event=&amount=` → planuri eligibile + preview (avans din event config)
 - `POST /api/installments/quote` → grafic detaliat pentru un plan ales
 - checkout submit acceptă `installment_plan_id`
-- `GET  /api/installments/agreements/{id}` → portal client (status, grafic, sume)
-- `POST /api/installments/agreements/{id}/pay/{sequence}` → plată manuală (mod pay-link)
+- `GET  /api/installments/agreements/{id}` → portal client (status, grafic, sume, update card, plată anticipată)
+- `POST /api/installments/agreements/{id}/pay/{sequence}` → plată/autentificare on-session a unei rate (retry manual, 3DS)
 - extindere `TenantPaymentWebhookController` pentru rezultatele debitărilor recurente
 
 ---
 
 ## 11. Admin (Filament)
 
-**Marketplace panel (`/marketplace`)** — și replicat pe `/tenant` dacă e cazul:
-- `InstallmentPlanResource` — CRUD șabloane (avans, grafic, surcharge, comision marketplace,
-  eligibilitate, politici, termeni). Preview live al unui grafic exemplu.
+**Marketplace panel (`/marketplace`)** — replicat și pe `/tenant` (scope-ul acoperă ambele):
+- **Modulul de planuri** — `InstallmentPlanResource`: CRUD șabloane (grafic, surcharge,
+  eligibilitate, politici, termeni, avans-default opțional). Preview live al unui grafic exemplu.
+- **Panoul de eveniment** — secțiune nouă în `EventResource` "Plată în rate": toggle `enabled`,
+  multi-select planuri aplicabile, **setare avans** pentru acel eveniment. (§4.5)
 - `InstallmentAgreementResource` — listă/detaliu agreements: grafic, status rate, acțiuni
-  manuale (charge acum, waive rată, anulează plan, inițiază retur).
-- `InstallmentSettings` page — activare microserviciu, config dunning/reminder, status
-  tokenizare per procesator, vizualizare `platform_fee_percent` (1%, read-only pentru marketplace).
+  manuale (charge acum, reprogramează scadență, waive rată, anulează plan, inițiază retur).
+- `InstallmentSettings` page — activare microserviciu, config dunning/reminder (cadență
+  `reminder_days_before`), status tokenizare per procesator, vizualizare `platform_fee_percent`
+  (read-only pentru marketplace).
 
 **Admin/platform panel (`/admin`):**
 - Înregistrare `Microservice` (`installments`), `platform_fee_percent` global editabil,
@@ -393,7 +454,8 @@ Microservice::create([
 ]);
 ```
 Activare per marketplace prin pivot `marketplace_client_microservices.settings`.
-Config global platformă în `config/installments.php` (`platform_fee_percent = 1.0`).
+Config global platformă în `config/installments.php`:
+`platform_fee_percent_default = 1.0`, `platform_fee_percent_installments = 2.0`.
 
 ---
 
@@ -403,22 +465,25 @@ Config global platformă în `config/installments.php` (`platform_fee_percent = 
 |------|----------|----------------------|
 | **0** | Tokenizare procesoare (interface + Netopia + Stripe; flag fallback pentru restul) | debitare off-session funcțională în sandbox |
 | **1** | Migrări + modele + `InstallmentPlanCalculator` + înregistrare microserviciu | calculator cu teste de rounding & garanție total>direct |
-| **2** | Admin `InstallmentPlanResource` + settings | marketplace poate defini planuri |
-| **3** | Checkout: eligibilitate, quote, creare agreement, plată avans + tokenizare | client alege plan și plătește avansul |
-| **4** | Scheduler + Jobs + emailuri (debitare automată + reminder + chitanțe) | ratele se debitează automat, mailuri trimise |
-| **5** | Dunning/default + retur (integrare refund + revocare bilete) | scenarii neplată & retur acoperite |
-| **6** | Portal client + raportare + `InstallmentAgreementResource` acțiuni manuale | vizibilitate completă + control admin |
+| **2** | Modulul de planuri (`InstallmentPlanResource`) + secțiunea din `EventResource` (enable + planuri + avans) + settings | marketplace definește planuri și le activează pe eveniment |
+| **3** | Checkout: eligibilitate, quote, creare agreement, plată avans + tokenizare + bilet emis invalid | client alege plan și plătește avansul |
+| **4** | Scheduler + Jobs + emailuri + **reminder-e programate** (debitare automată + chitanțe) + **3DS fallback** (§16.1) | ratele se debitează automat, reminder-e trimise |
+| **5** | Dunning/default + retur + **expirare card** (§16.2) + **anulare/reprogramare eveniment** (§16.3) | scenarii neplată/retur/eveniment acoperite |
+| **6** | Portal client (plată anticipată, update card) + `InstallmentAgreementResource` + **payout incremental** (§16.4) + webhook-uri/raportare (§16.8) | vizibilitate + control + decontare corectă |
+| **7** | Integrare facturare/e-Factura (§16.5) + reminder-e multi-canal (§16.7) + review juridic (§16.6) | conformitate fiscală & legală |
 
 ---
 
 ## 14. Edge cases & teste
 
 - Rounding: Σ rate == financed_cents (restul pe ultima rată).
-- `total_cents > base_total_cents` mereu (validare + test).
+- `customer_total_cents > base_total_cents` mereu (validare + test).
 - Eveniment prea aproape → plan ascuns / grafic comprimat.
-- Card expirat / mandat invalid → retry + email update card + eventual default.
+- Card expiră înainte de ultima scadență → avertisment la checkout + email update card (§16.2).
+- Debitare off-session → 3DS `authentication_required` → link on-session, nu eșec direct (§16.1).
+- Organizator anulează/reprogramează evenimentul mid-plan → stop debitări + refund/re-plan (§16.3).
 - Webhook dublu / retrigger scheduler → idempotență pe `installment_payment.id`.
-- Retur după 2 din 4 rate plătite → sumă corectă, fee-uri reținute, rate viitoare anulate.
+- Retur după 2 din 4 rate plătite → sumă corectă, taxe reținute, rate viitoare anulate.
 - Schimbarea configului planului după emitere → agreement folosește `plan_snapshot`, nu configul live.
 - Multi-currency: agreement îngheață `currency`; fără conversie mid-plan.
 
@@ -441,7 +506,68 @@ Config global platformă în `config/installments.php` (`platform_fee_percent = 
 
 ---
 
-## 16. Următorul pas
+## 16. Aspecte suplimentare identificate (nu erau în brief, dar trebuie gestionate)
+
+Acestea sunt lucruri fără de care sistemul "merge la demo, dar cade la producție". Le-am
+ordonat după criticitate.
+
+### 16.1 3-D Secure / SCA pe debitările automate (CRITIC pentru RO/UE)
+Sub PSD2, o debitare off-session poate cere autentificare (3DS) chiar și cu token salvat.
+Dacă procesatorul întoarce `authentication_required`, NU marcăm eșec direct → trimitem
+clientului un link on-session pentru acea rată (endpoint `pay/{sequence}`) + email. La avans
+salvăm mandatul cu flag "off-session agreed" ca să minimizăm challenge-urile ulterioare.
+
+### 16.2 Expirarea cardului în timpul planului (CRITIC)
+Un card poate expira înainte de ultima rată. La checkout verificăm `exp_month/exp_year` vs.
+data ultimei scadențe; dacă expiră înainte → avertizăm și, ideal, cerem alt card. Pe parcurs:
+job care detectează carduri ce expiră curând → email "actualizează cardul" + link în portal.
+
+### 16.3 Anulare/reprogramare eveniment de către organizator (mid-plan)
+Dacă organizatorul **anulează** evenimentul cu planuri active → oprim debitările, returnăm
+ratele plătite (flux `event-cancelled` existent), anulăm mandatul, marcăm agreement `cancelled`.
+Dacă **reprogramează** mai devreme și graficul nu mai încape înainte de noua dată → recalcul
+grafic (comprimare) sau notificare + trecere la plată integrală imediată. Integrare cu
+`event-cancelled.php` / `event-rescheduled.php` deja existente.
+
+### 16.4 Momentul plății către organizator (payout timing)
+Azi `MarketplaceTransaction` creditează balanța organizatorului la vânzare. La rate, banii
+intră în timp. **Recomandare:** credităm balanța organizatorului **incremental, pe măsură ce
+se încasează fiecare rată** (nu tot avansul upfront), ca să nu plătim organizatorul pentru
+bani care încă nu au fost colectați. Trebuie decis explicit — afectează payout-urile și riscul.
+
+### 16.5 Facturare / e-Factura & TVA (integrare EFACTURA existentă)
+De decis: factura se emite integral la comandă sau pe fiecare rată? Când se raportează TVA-ul?
+Pentru RO/ANAF, cel mai curat e factură la finalizarea plății (sau factură + chitanțe per
+rată). Integrare cu modulul EFACTURA/`InvoiceGeneratorService` existent. **Necesită input contabil.**
+
+### 16.6 Conformitate legală — credit de consum (FLAG pentru juridic)
+Plata în rate cu surcharge (cost al creditării) poate intra sub reguli de **credit de consum**
+(informații precontractuale, DAE/APR, drept de retragere). De obicei se structurează ca să
+NU fie "credit" (termen scurt, puține rate), dar decizia e juridică. Construim suprafața de
+**termeni & informare precontractuală** (`terms_url`, ecran de disclosure în checkout);
+validarea legală rămâne la client. **Recomand review juridic înainte de go-live.**
+
+### 16.7 Reminder-e multi-canal (SMS / WhatsApp) — refolosire servicii existente
+Repo-ul are deja servicii SMS și WhatsApp. Aceleași trigger-e de reminder/eșec pot merge și
+pe aceste canale, opțional, per preferință marketplace. Extensie ieftină, valoare mare la colectare.
+
+### 16.8 Webhook-uri către marketplace + raportare receivables
+Emitem evenimente (`installment.paid`, `installment.failed`, `agreement.defaulted`,
+`agreement.completed`) prin `MarketplaceWebhookService` existent, ca sistemele marketplace să
+reacționeze. Plus un dashboard cu: rată de colectare, rată default, sold de încasat (DSO),
+expunere per eveniment.
+
+### 16.9 Plată anticipată (early payoff) — self-service
+Clientul poate achita restul mai devreme din portal → agreement `completed`, biletul devine
+valid imediat, ratele viitoare `cancelled`. Simplu și crește satisfacția.
+
+### 16.10 Limite de risc / expunere (opțional, per marketplace)
+Config opțional: valoare max per plan, număr max de planuri active simultan per client,
+prag minim de comandă. Reduce frauda și restanțele.
+
+---
+
+## 17. Următorul pas
 
 Planul e complet și aliniat la deciziile de mai sus. Implementarea începe cu **Faza 0**
 (tokenizare Stripe + Netopia), fiind dependența critică pentru tot restul.
