@@ -127,7 +127,7 @@ class InstallmentController extends Controller
             'order_id' => (string) $order->id,
             'customer_email' => $order->customer_email,
             'customer_name' => $order->customer_name,
-            'success_url' => url("/installments/agreements/{$agreement->id}"),
+            'success_url' => url("/installments/agreements/{$agreement->portal_token}"),
             'cancel_url' => url('/checkout'),
             'metadata' => ['agreement_id' => $agreement->id],
         ]);

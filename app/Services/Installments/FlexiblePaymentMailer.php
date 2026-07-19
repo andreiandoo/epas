@@ -95,6 +95,6 @@ class FlexiblePaymentMailer
 
     protected function portalLink(InstallmentAgreement $agreement): string
     {
-        return url("/installments/agreements/{$agreement->id}");
+        return url("/installments/agreements/{$agreement->portal_token}");
     }
 }

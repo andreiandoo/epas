@@ -115,6 +115,11 @@ class InstallmentAgreementService
                 'mandate' => (bool) ($result['mandate_reference'] ?? false),
             ], $down?->id);
 
+            // Incremental payout: credit the organizer for the down-payment share too.
+            if ($down && $down->amount_cents > 0) {
+                app(InstallmentPayoutService::class)->creditInstallment($agreement, $down);
+            }
+
             $this->syncOrder($agreement);
 
             return $agreement->fresh('payments');

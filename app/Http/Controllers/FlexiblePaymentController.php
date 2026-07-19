@@ -27,10 +27,10 @@ class FlexiblePaymentController extends Controller
         protected DelegatedPaymentService $delegated,
     ) {}
 
-    /** Customer portal: agreement summary + schedule. */
-    public function portal(int $agreement): JsonResponse
+    /** Customer portal: agreement summary + schedule. Token-gated. */
+    public function portal(string $token): JsonResponse
     {
-        $a = InstallmentAgreement::with('payments')->findOrFail($agreement);
+        $a = InstallmentAgreement::with('payments')->where('portal_token', $token)->firstOrFail();
 
         return response()->json([
             'id' => $a->id,
@@ -56,10 +56,10 @@ class FlexiblePaymentController extends Controller
         ]);
     }
 
-    /** Early payoff: charge the remaining balance now. */
-    public function earlyPayoff(int $agreement): JsonResponse
+    /** Early payoff: charge the remaining balance now. Token-gated. */
+    public function earlyPayoff(string $token): JsonResponse
     {
-        $a = InstallmentAgreement::findOrFail($agreement);
+        $a = InstallmentAgreement::where('portal_token', $token)->firstOrFail();
         $result = $this->charger->chargeRemaining($a);
 
         return response()->json([
@@ -109,10 +109,17 @@ class FlexiblePaymentController extends Controller
             'metadata' => ['payment_link_id' => $link->id],
         ]);
 
+        // Remember the processor payment id so the return handler can VERIFY it
+        // before settling (never trust a bare GET to /confirm).
+        $link->update(['metadata' => array_merge($link->metadata ?? [], [
+            'processor_payment_id' => $payment['payment_id'] ?? null,
+            'provider' => $resolved['type'],
+        ])]);
+
         return response()->json(['redirect_url' => $payment['redirect_url'] ?? null]);
     }
 
-    /** Return handler after the hosted page: verify and settle. */
+    /** Return handler after the hosted page: verify with the processor, then settle. */
     public function confirmLink(string $token): JsonResponse
     {
         $link = PaymentLink::where('token', $token)->firstOrFail();
@@ -120,8 +127,24 @@ class FlexiblePaymentController extends Controller
             return response()->json(['ok' => true, 'already' => true]);
         }
 
-        // Mark paid (webhook is the source of truth; this is the UX return).
-        $link->markPaid();
+        // Verify the payment actually succeeded before settling anything.
+        $paymentId = $link->metadata['processor_payment_id'] ?? null;
+        $client = $link->marketplace_client_id ? MarketplaceClient::find($link->marketplace_client_id) : null;
+        $resolved = $client ? $this->resolver->forMarketplaceClient($client) : null;
+
+        if (! $paymentId || ! $resolved) {
+            return response()->json(['ok' => false, 'error' => 'Cannot verify payment yet'], 202);
+        }
+        try {
+            $status = $resolved['processor']->getPaymentStatus($paymentId);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'error' => 'Verification failed'], 202);
+        }
+        if (($status['status'] ?? null) !== 'success') {
+            return response()->json(['ok' => false, 'status' => $status['status'] ?? 'pending'], 202);
+        }
+
+        $link->markPaid($paymentId);
 
         if ($link->purpose === PaymentLink::PURPOSE_DELEGATED) {
             $this->delegated->confirm($link);

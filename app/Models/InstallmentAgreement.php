@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * A concrete flexible-payment agreement bound to an order.
@@ -48,9 +49,12 @@ class InstallmentAgreement extends Model
         'payment_method_id',
         'mandate_reference',
         'auto_debit_enabled',
+        'portal_token',
         'plan_snapshot',
         'metadata',
     ];
+
+    protected $hidden = ['mandate_reference', 'portal_token'];
 
     protected $casts = [
         'event_start_date' => 'datetime',
@@ -68,6 +72,15 @@ class InstallmentAgreement extends Model
         'plan_snapshot' => 'array',
         'metadata' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $a) {
+            if (empty($a->portal_token)) {
+                $a->portal_token = Str::random(48);
+            }
+        });
+    }
 
     public function order(): BelongsTo
     {

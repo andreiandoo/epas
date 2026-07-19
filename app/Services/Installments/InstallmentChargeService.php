@@ -239,7 +239,8 @@ class InstallmentChargeService
             return ['status' => $result['status'] ?? 'failed', 'message' => $result['error'] ?? 'declined'];
         }
 
-        DB::transaction(function () use ($agreement, $result) {
+        $settled = DB::transaction(function () use ($agreement, $result) {
+            $settled = [];
             foreach ($agreement->payments()->where('sequence', '>', 0)->whereNotIn('status', ['paid', 'waived'])->get() as $p) {
                 $p->update([
                     'status' => InstallmentPayment::STATUS_PAID,
@@ -247,12 +248,19 @@ class InstallmentChargeService
                     'paid_amount_cents' => $p->amount_cents,
                     'payment_reference' => $result['payment_id'] ?? null,
                 ]);
+                $settled[] = $p;
             }
             $agreement->update([
                 'paid_installments_count' => $agreement->payments()->where('status', 'paid')->count(),
             ]);
             $agreement->log('early_payoff', 'Remaining balance paid early', ['reference' => $result['payment_id'] ?? null]);
+            return $settled;
         });
+
+        // Incremental payout for each installment settled by the early payoff.
+        foreach ($settled as $p) {
+            app(InstallmentPayoutService::class)->creditInstallment($agreement, $p);
+        }
 
         $this->agreements->complete($agreement->fresh());
         app(TicketStateService::class)->markValidForAgreement($agreement);

@@ -51,10 +51,12 @@ Route::prefix('pay')->group(function () {
 Route::get('/plati-flexibile', fn () => view('public.flexible-payments'))->name('flex.info');
 
 Route::prefix('installments')->group(function () {
-    Route::get('/agreements/{agreement}', [\App\Http\Controllers\FlexiblePaymentController::class, 'portal'])
-        ->name('flex.portal')->whereNumber('agreement');
-    Route::post('/agreements/{agreement}/payoff', [\App\Http\Controllers\FlexiblePaymentController::class, 'earlyPayoff'])
-        ->name('flex.payoff')->whereNumber('agreement');
+    // Token-gated (unguessable per-agreement token) so portal/payoff can't be
+    // reached by iterating sequential ids.
+    Route::get('/agreements/{token}', [\App\Http\Controllers\FlexiblePaymentController::class, 'portal'])
+        ->name('flex.portal')->where('token', '[A-Za-z0-9]+');
+    Route::post('/agreements/{token}/payoff', [\App\Http\Controllers\FlexiblePaymentController::class, 'earlyPayoff'])
+        ->name('flex.payoff')->where('token', '[A-Za-z0-9]+');
     Route::post('/orders/{order}/delegated', [\App\Http\Controllers\FlexiblePaymentController::class, 'createDelegated'])
         ->name('flex.delegated.create')->whereNumber('order');
 });
