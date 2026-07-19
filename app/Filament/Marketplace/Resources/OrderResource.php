@@ -78,6 +78,16 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderRefundDetails($record)),
                         ]),
 
+                    // Flexible payment schedule (desfășurător de plăți)
+                    SC\Section::make('Plată în rate / BNPL')
+                        ->icon('heroicon-o-calendar-days')
+                        ->visible(fn ($record) => ! empty($record->installment_agreement_id))
+                        ->schema([
+                            Forms\Components\Placeholder::make('installment_schedule')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderInstallmentSchedule($record)),
+                        ]),
+
                     // Customer Section
                     SC\Section::make('Client')
                         ->icon('heroicon-o-user')
@@ -417,6 +427,24 @@ class OrderResource extends Resource
                     ->label('Total')
                     ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON'))
                     ->sortable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('payment_method_kind')
+                    ->label('Metodă plată')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'installments' => 'Rate',
+                        'bnpl' => 'BNPL',
+                        'delegated_pay' => 'Plată delegată',
+                        default => 'Integral',
+                    })
+                    ->color(fn ($state) => in_array($state, ['installments', 'bnpl', 'delegated_pay']) ? 'warning' : 'gray')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('outstanding_cents')
+                    ->label('Sold de achitat')
+                    ->formatStateUsing(fn ($state, $record) => ((int) $state) > 0
+                        ? number_format($state / 100, 2) . ' ' . ($record->currency ?? 'RON')
+                        : '—')
+                    ->color(fn ($state) => ((int) $state) > 0 ? 'warning' : 'gray')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('promo_code')
                     ->label('Cod discount')
@@ -887,6 +915,65 @@ class OrderResource extends Resource
                     <span>Înregistrată prin <strong>aplicația mobilă Tixello</strong> &nbsp;·&nbsp; Plată în <strong>numerar</strong></span>
                 </div>
                 " : "") . "
+            </div>
+        ");
+    }
+
+    protected static function renderInstallmentSchedule(Order $record): HtmlString
+    {
+        $agreement = \App\Models\InstallmentAgreement::with('payments')->find($record->installment_agreement_id);
+        if (! $agreement) {
+            return new HtmlString("<div style='color:#6b7280;'>Plan indisponibil.</div>");
+        }
+
+        $cur = $agreement->currency ?? 'RON';
+        $fmt = fn ($cents) => number_format(((int) $cents) / 100, 2, ',', '.') . ' ' . $cur;
+
+        $statusColors = [
+            'paid' => '#16a34a', 'failed' => '#dc2626', 'cancelled' => '#dc2626',
+            'action_required' => '#d97706', 'retrying' => '#d97706', 'refunded' => '#6b7280',
+        ];
+        $statusLabels = [
+            'scheduled' => 'Programat', 'due' => 'Scadent', 'processing' => 'În procesare',
+            'paid' => 'Plătit', 'failed' => 'Eșuat', 'retrying' => 'Reîncercare',
+            'action_required' => 'Autentificare', 'waived' => 'Anulat', 'refunded' => 'Refundat',
+            'cancelled' => 'Anulat',
+        ];
+
+        $rows = $agreement->payments->map(function ($p) use ($fmt, $statusColors, $statusLabels) {
+            $label = $p->sequence === 0 ? 'Avans' : "Rata {$p->sequence}";
+            $color = $statusColors[$p->status] ?? '#6b7280';
+            $st = $statusLabels[$p->status] ?? $p->status;
+            $paid = $p->paid_at ? $p->paid_at->format('d.m.Y') : '—';
+            return "<tr style='border-bottom:1px solid #f3f4f6;'>
+                <td style='padding:8px 6px;font-weight:600;'>{$label}</td>
+                <td style='padding:8px 6px;'>{$p->due_date->format('d.m.Y')}</td>
+                <td style='padding:8px 6px;text-align:right;'>{$fmt($p->amount_cents)}</td>
+                <td style='padding:8px 6px;'><span style='color:{$color};font-weight:600;'>{$st}</span></td>
+                <td style='padding:8px 6px;color:#6b7280;'>{$paid}</td>
+            </tr>";
+        })->implode('');
+
+        $method = $agreement->plan_type === 'bnpl_single' ? 'BNPL' : 'Rate';
+        $outstanding = $fmt($agreement->outstandingCents());
+        $total = $fmt($agreement->customer_total_cents);
+        $direct = $fmt($agreement->base_total_cents);
+
+        return new HtmlString("
+            <div style='font-size:13px;'>
+                <div style='display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;'>
+                    <div><span style='color:#6b7280;'>Metodă:</span> <strong>{$method}</strong></div>
+                    <div><span style='color:#6b7280;'>Status:</span> <strong>{$agreement->status}</strong></div>
+                    <div><span style='color:#6b7280;'>Total în rate:</span> <strong>{$total}</strong> <span style='color:#9ca3af;'>(direct {$direct})</span></div>
+                    <div><span style='color:#6b7280;'>Sold rămas:</span> <strong style='color:#d97706;'>{$outstanding}</strong></div>
+                </div>
+                <table style='width:100%;border-collapse:collapse;'>
+                    <thead><tr style='text-align:left;color:#6b7280;border-bottom:2px solid #e5e7eb;'>
+                        <th style='padding:6px;'>Plată</th><th style='padding:6px;'>Scadență</th>
+                        <th style='padding:6px;text-align:right;'>Sumă</th><th style='padding:6px;'>Status</th><th style='padding:6px;'>Plătit la</th>
+                    </tr></thead>
+                    <tbody>{$rows}</tbody>
+                </table>
             </div>
         ");
     }
