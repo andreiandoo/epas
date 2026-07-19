@@ -1,5 +1,14 @@
 # Flexible Payments Microservice — Implementation Plan
 
+> **STARE IMPLEMENTARE (branch `claude/installment-payment-microservice-khnntb`):**
+> Toate cele 9 faze au fost implementate. Nucleul (calculator, motor de debitare,
+> agreements, refund) e verificat: 7 teste unitare verzi + un test end-to-end pe SQLite
+> (creare plan → quote → agreement cu grafic care se însumează exact → activare avans →
+> sold/next-due corecte). Ce a rămas ca dependență externă: **spike-ul de sandbox Netopia**
+> pentru a confirma numele exacte de câmpuri la tokenul recurent (marcat în `NetopiaProcessor`),
+> și **sign-off-ul juridic** (§16.6). Fișiere livrate — vezi §21.
+
+
 Microserviciu-**umbrelă „Plăți flexibile"** cu 3 sub-module pentru orice marketplace și orice
 procesator de plată deja integrat (v1: Stripe + Netopia):
 
@@ -900,3 +909,46 @@ plătitorul B (ex. copil cumpără, părinte plătește). NU e credit/rate — d
 Planul e complet și aliniat la deciziile confirmate. Rămân de închis doar întrebările de produs
 de la §19 (BNPL & plată delegată). După aceea, implementarea începe cu **Faza 0** (tokenizare
 Stripe + Netopia + mandat MIT) + primitivul `payment_links`, fiind dependențele critice.
+
+---
+
+## 21. Fișiere livrate (implementare)
+
+**Migrări** (`database/migrations/2026_07_20_*`): payment_links, installment_plans,
+event_flexible_payment_configs (+ pivot event_installment_plan), installment_agreements,
+installment_payments, installment_events, add_installment_agreement_to_orders.
+
+**Modele** (`app/Models/`): PaymentLink, InstallmentPlan, InstallmentAgreement,
+InstallmentPayment, InstallmentEvent, EventFlexiblePaymentConfig (+ slug-uri în MarketplaceEmailTemplate).
+
+**Procesoare** (`app/Services/PaymentProcessors/`): SupportsTokenizedPayments (interfață
+opt-in) implementată în StripeProcessor (SetupIntent + off_session MIT + 3DS) și
+NetopiaProcessor (token recurent v2 + 3DS).
+
+**Servicii** (`app/Services/Installments/`): InstallmentPlanCalculator (pur, testat),
+FlexiblePaymentEligibilityService, InstallmentAgreementService, InstallmentChargeService
+(+ early payoff), InstallmentDunningService, InstallmentRefundService, InstallmentPayoutService
+(incremental), TicketStateService, DelegatedPaymentService, ProcessorResolver, FlexiblePaymentMailer.
+
+**Comenzi + Jobs** (`app/Console/Commands`, `app/Jobs`): installments:process-due,
+installments:send-reminders, installments:expire-links, ChargeInstallmentJob (+ scheduling în
+`routes/console.php`).
+
+**HTTP**: `Api\TenantClient\InstallmentController` (availability/plans/start),
+`FlexiblePaymentController` (portal, early payoff, pay-link, delegated) + rute în
+`routes/api.php` și `routes/web.php` (`/pay/{token}`, `/installments/*`, `/plati-flexibile`).
+
+**Filament (Marketplace)**: InstallmentPlanResource (modul planuri),
+EventFlexiblePaymentConfigResource (config per eveniment), InstallmentAgreementResource
+(comenzi + desfășurător plăți), FlexiblePaymentStatsWidget (KPI dashboard).
+
+**Config + Seedere**: `config/installments.php`, FlexiblePaymentsMicroserviceSeeder,
+InstallmentEmailTemplatesSeeder (19 șabloane branded), înregistrate în DatabaseSeeder.
+
+**Teste**: `tests/Unit/InstallmentPlanCalculatorTest.php` (7 teste, 26 aserțiuni).
+
+### Rămâne ca polish (neblocant pentru testare)
+- Pagină dedicată de analytics avansat (§18bis.B) — momentan acoperită de widget-ul de KPI.
+- Reminder-e multi-canal SMS/WhatsApp (§16.7), card de rezervă, retry inteligent (amânate explicit).
+- Afișarea metodei + sold pe paginile Order/Ticket din admin (§18bis.C) — datele există pe
+  `orders.payment_method_kind`/`outstanding_cents`; rămâne doar coloana/eticheta în UI.
