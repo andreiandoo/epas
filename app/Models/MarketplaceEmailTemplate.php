@@ -72,6 +72,25 @@ class MarketplaceEmailTemplate extends Model
         'gift_card_purchase_confirmation' => 'Gift Card Purchase Confirmation',
         'gift_card_expiry_reminder' => 'Gift Card Expiry Reminder',
         'gift_card_claimed' => 'Gift Card Claimed Notification',
+        // Flexible Payments (installments / BNPL / delegated pay)
+        'installment_plan_confirmation' => 'Plan de rate — confirmare + grafic',
+        'installment_payment_upcoming' => 'Rate — reminder înainte de scadență',
+        'installment_payment_due_today' => 'Rate — scadență azi',
+        'installment_payment_receipt' => 'Rate — chitanță plată',
+        'installment_action_required' => 'Rate — autentificare necesară (3DS)',
+        'installment_payment_failed' => 'Rate — plată eșuată + reîncercare',
+        'installment_overdue' => 'Rate — restanță',
+        'installment_default_warning' => 'Rate — avertisment anulare',
+        'installment_defaulted' => 'Rate — plan anulat',
+        'installment_plan_completed' => 'Rate — plan finalizat, bilet valid',
+        'installment_early_payoff_receipt' => 'Rate — plată anticipată',
+        'installment_refund' => 'Rate — retur/anulare',
+        'installment_event_cancelled_refund' => 'Rate — eveniment anulat, refund',
+        'installment_event_rescheduled' => 'Rate — eveniment reprogramat',
+        'delegated_pay_request' => 'Plată delegată — cerere de plată',
+        'delegated_pay_confirmed' => 'Plată delegată — confirmare',
+        'delegated_pay_expired' => 'Plată delegată — link expirat',
+        'organizer_installment_defaulted' => 'Organizator — plan de rate anulat',
     ];
 
     public function marketplaceClient(): BelongsTo

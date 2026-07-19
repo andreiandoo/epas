@@ -51,6 +51,22 @@ Schedule::command('orders:expire-pending')
     ->everyTwoMinutes()
     ->timezone('Europe/Bucharest');
 
+// Flexible Payments — charge due installments + sweep defaults (hourly).
+Schedule::command('installments:process-due')
+    ->hourly()
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Flexible Payments — send installment reminders ahead of due dates (daily 09:00).
+Schedule::command('installments:send-reminders')
+    ->dailyAt('09:00')
+    ->timezone('Europe/Bucharest');
+
+// Flexible Payments — expire stale payment links / delegated holds (every 15 min).
+Schedule::command('installments:expire-links')
+    ->everyFifteenMinutes()
+    ->timezone('Europe/Bucharest');
+
 // Daily sweep for expired Ad Tracking service orders. Marks them
 // completed and tears down organizer pixel toggles no longer covered by
 // another active order. Idempotent and side-effect-free against orders
