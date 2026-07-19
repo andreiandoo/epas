@@ -3,6 +3,7 @@
 namespace App\Services\Installments;
 
 use App\Models\MarketplaceClient;
+use App\Services\PaymentProcessors\MockTokenizableProcessor;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use App\Services\PaymentProcessors\PaymentProcessorInterface;
 use App\Services\PaymentProcessors\SupportsTokenizedPayments;
@@ -19,6 +20,11 @@ class ProcessorResolver
      */
     public function forMarketplaceClient(MarketplaceClient $client): ?array
     {
+        // Test mode: bypass the real gateway entirely (staging E2E).
+        if (config('installments.fake_processor', false)) {
+            return ['processor' => new MockTokenizableProcessor(), 'type' => 'mock'];
+        }
+
         $method = $client->getDefaultPaymentMethod();
         if (! $method) {
             return null;

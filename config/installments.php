@@ -69,4 +69,14 @@ return [
     | flexible-payment methods in checkout.
     */
     'tokenizable_providers' => ['stripe', 'netopia'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fake processor (E2E testing ONLY)
+    |--------------------------------------------------------------------------
+    | When true, ProcessorResolver returns MockTokenizableProcessor instead of the
+    | marketplace's real gateway — no real Netopia/Stripe transactions. Use on
+    | staging to test the full lifecycle. MUST be false in production.
+    */
+    'fake_processor' => (bool) env('FLEX_FAKE_PROCESSOR', false),
 ];
