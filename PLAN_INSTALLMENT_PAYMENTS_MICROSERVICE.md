@@ -88,11 +88,14 @@ Marketplace-ul își acoperă acest cost din `surcharge`-ul pe care îl încasea
 La generarea preview-ului planului:
 
 ```
-last_due_date = data ultimei rate calculate
-require: last_due_date <= event_date − days_before_event_fully_paid
+last_due_date = data ultimei rate/plăți calculate
+event_start_date = data de START a evenimentului (nu ora — la nivel de zi, în timezone-ul evenimentului)
+require: last_due_date <= event_start_date − 1 zi        // CONFIRMAT: MINIM cu o zi înainte
 ```
 
-- `days_before_event_fully_paid` e configurabil per plan (default 0 = fix înainte de eveniment).
+- **Regulă fermă (CONFIRMAT):** ultima rată/plată trebuie să fie **cu minimum o zi înainte** de
+  data de start a evenimentului — **niciodată în ziua evenimentului**. Ne raportăm la `event_start_date`.
+- `days_before_event_fully_paid` e configurabil per plan, dar **minimul impus e 1** (default 1).
 - Dacă planul NU încape (eveniment prea aproape pentru N rate la intervalul dat) → planul
   este **eligibil = false** și nu apare în checkout pentru acel eveniment.
 - Opțional `compress_schedule = true`: dacă nu încape la intervalul standard, motorul
@@ -244,32 +247,49 @@ type (created|charged|failed|retried|reminder_sent|defaulted|cancelled|refunded|
 message, payload (json), created_at
 ```
 
-### 4.5 `event_installment_configs` (configul per eveniment — setat în panoul de eveniment)
+### 4.5 `event_flexible_payment_configs` (configul per eveniment — setat în panoul de eveniment)
+
+Operatorul decide **per eveniment** care dintre cele 3 metode sunt disponibile.
 
 ```
 id (uuid, PK)
 event_id (FK → events, nullable)              // sau marketplace_event_id
 marketplace_event_id (FK, nullable)
-enabled (bool, default false)                 // (a) activează rate pt. acest eveniment
-down_payment_type (enum: none, percent, fixed)// (c) avansul pt. acest eveniment
+
+-- Toggle-uri per metodă (CONFIRMAT: decizie per eveniment)
+enable_installments (bool, default false)
+enable_bnpl (bool, default false)
+enable_delegated_pay (bool, default false)
+
+-- Avansul pt. rate (pe acest eveniment)
+down_payment_type (enum: none, percent, fixed)
 down_payment_value (int)
+
+-- BNPL pe acest eveniment
+bnpl_max_horizon_days (int, default 30)       // ≤30
+
+-- Plată delegată pe acest eveniment
+delegated_hold_hours (int, default 24)        // ≤24
+delegated_max_locked_tickets (int, nullable)  // cap opțional anti-blocare inventar
+
 notes (string, nullable)
 created_at, updated_at
 Unique: (event_id) / (marketplace_event_id)
 ```
 
 ```
--- (b) care planuri se aplică evenimentului
+-- care planuri de rate se aplică evenimentului
 event_installment_plan (pivot)
-  event_installment_config_id (FK)
-  installment_plan_id (FK)
+  event_flexible_payment_config_id (FK)
+  installment_plan_id (FK)                     // include și plan_type=bnpl_single
   sort_order (int)
   is_active (bool)
 ```
 
 La checkout, planurile eligibile = planurile atașate evenimentului (via pivot) **∩**
-regulile de eligibilitate ale planului (min/max, fit-before-event). Avansul aplicat vine
-din `event_installment_configs.down_payment_*`, calculat pe `customer_total_cents`.
+regulile de eligibilitate ale planului (min/max, fit-before-event − 1 zi). Avansul vine din
+`down_payment_*`, calculat pe `customer_total_cents`. Metodele apar **doar dacă** toggle-ul
+respectiv e activ pe eveniment (vezi regulile de checkout §10).
 
 ### 4.6 Câmpuri adăugate pe modele existente
 
@@ -384,6 +404,10 @@ clientului (grafic, update card, plată manuală).
 - Implementare: biletul primește un status dedicat (ex. `pending_installments`) în loc de
   `valid`; `Order.payment_status = partially_paid`. La `completed` → flip la `valid`.
   La `defaulted` → flip la `invalidated`/`cancelled` + eliberare loc.
+- **Mesaje explicite (CONFIRMAT — A4):** pe bilet (PDF/wallet/cont), în emailuri și în portal
+  afișăm clar: *"Bilet REZERVAT — devine valid după achitarea integrală (sold rămas: X lei,
+  următoarea plată: {due_date})."* Un banner vizibil + status colorat, ca să nu existe confuzia
+  „am biletul, de ce nu pot intra". La eveniment, biletul invalid NU trece de scanare.
 
 ### 9.2 Default (neplată)
 
@@ -407,14 +431,34 @@ clientului (grafic, update card, plată manuală).
 
 ## 10. Integrare checkout (client)
 
-- Secțiune nouă în checkout: **"Plătește în rate"**.
-  - Apar doar planurile **eligibile** (sumă în interval + grafic care încape înainte de eveniment).
-  - Fiecare plan afișează preview: *avans acum X lei, apoi N rate de Y lei pe datele …, total Z lei
-    (cu +W lei față de plata directă)* — transparent, conform cerinței 3.
-  Avansul afișat vine din `event_installment_configs` (per eveniment), aplicat pe `customer_total`.
+### 10.1 Reguli de disponibilitate a metodelor (CONFIRMAT — critice)
+
+Un serviciu `FlexiblePaymentEligibilityService` decide ce metode apar, în această ordine:
+
+1. **Microserviciu activ** pe marketplace + sub-modulul activ (installments/bnpl/delegated).
+2. **Toggle per eveniment:** o metodă apare doar dacă e activă pe evenimentul biletului
+   (`event_flexible_payment_configs.enable_*`).
+3. **REGULA COȘ MONO-EVENIMENT (fermă):** dacă în coș sunt bilete de la **mai multe evenimente**,
+   **NICIUNA** dintre cele 3 metode noi nu e permisă — **chiar dacă toate evenimentele au rate
+   activate** — pentru că graficul și valorile diferă de la un eveniment la altul.
+   → Afișăm mesaj în checkout: *"Pentru plata în rate și BNPL este necesar să plasezi comenzi
+   separate, câte una per eveniment."* Metodele redevin disponibile când coșul conține bilete
+   de la **un singur eveniment**.
+   (Plata directă normală rămâne mereu disponibilă. Plata delegată pentru coș multi-eveniment
+   poate fi relaxată în viitor — nu are termeni variabili — dar în v1 respectă aceeași regulă.)
+4. **Eligibilitate plan** (sumă min/max, grafic care încape ≤ event_start − 1 zi).
+
+### 10.2 Fluxul
+
+- Secțiune nouă în checkout: **"Plăți flexibile"** (rate / BNPL / plată delegată), afișată doar
+  conform 10.1.
+- **Rate/BNPL:** apar doar planurile eligibile, fiecare cu preview: *avans acum X lei, apoi N rate
+  de Y lei pe datele …, total Z lei (cu +W lei față de plata directă)* — transparent (cerința 3).
+  Avansul vine din `event_flexible_payment_configs`, aplicat pe `customer_total`.
 - Client alege plan → `InstallmentAgreementService` creează agreement `pending` + grafic →
-  plătește avansul (`createPaymentWithMandate`) → la callback: token salvat, agreement `active`,
-  biletul emis cu status `pending_installments` (invalid), scheduler preia ratele.
+  plătește avansul, sau **1 leu la BNPL** (`createPaymentWithMandate`) → la callback: token salvat,
+  agreement `active`, biletul emis `pending_installments` (invalid), scheduler preia ratele.
+- **Plată delegată:** vezi §19.2.
 
 **API (App\Http\Controllers\Api\TenantClient):**
 - `GET  /api/installments/plans?event=&amount=` → planuri eligibile + preview (avans din event config)
@@ -435,7 +479,12 @@ clientului (grafic, update card, plată manuală).
   multi-select planuri aplicabile, **setare avans** pentru acel eveniment. (§4.5)
 - `InstallmentAgreementResource` — listă/detaliu agreements: grafic, status rate, acțiuni
   manuale (charge acum, reprogramează scadență, waive rată, anulează plan, inițiază retur).
-- `InstallmentSettings` page — activare microserviciu, config dunning/reminder (cadență
+- **Pagină „Comenzi cu plăți flexibile"** (§18bis.D) — doar comenzile cu rate/BNPL/delegat + progres.
+- **Pagină „Analytics Plăți flexibile"** (§18bis.B) — GMV per metodă, collection/default rate, DSO, expunere.
+- **Pe `OrderResource` și `TicketResource`** (§18bis.C) — metoda de plată + sold rămas; pe comandă,
+  **desfășurătorul de plăți**.
+- **Widget-uri pe Dashboard** (§18bis.A) — venit rate/BNPL/delegat + sold de încasat.
+- `InstallmentSettings` page — activare microserviciu + sub-module, config dunning/reminder (cadență
   `reminder_days_before`), status tokenizare per procesator, vizualizare `platform_fee_percent`
   (read-only pentru marketplace).
 
@@ -484,8 +533,10 @@ Config global platformă în `config/installments.php`:
 | **3** | Checkout: eligibilitate, quote, creare agreement, plată avans + tokenizare + bilet emis invalid | client alege plan și plătește avansul |
 | **4** | Scheduler + Jobs + emailuri (**`InstallmentEmailTemplatesSeeder`** §17) + **reminder-e programate** + **3DS fallback** (§16.1) | ratele se debitează automat, reminder-e trimise |
 | **5** | Dunning/default + retur + **expirare card** (§16.2) + **anulare/reprogramare eveniment** (§16.3) | scenarii neplată/retur/eveniment acoperite |
-| **6** | Portal client (plată anticipată, update card) + `InstallmentAgreementResource` + **payout incremental** (§16.4) + webhook-uri/raportare (§16.8) | vizibilitate + control + decontare corectă |
-| **7** | Integrare facturare/e-Factura (§16.5) + reminder-e multi-canal (§16.7) + review juridic (§16.6) | conformitate fiscală & legală |
+| **6** | Portal client (plată anticipată) + `InstallmentAgreementResource` + **payout incremental** (§16.4) + webhook-uri (§16.8) | vizibilitate + control + decontare corectă |
+| **7** | **BNPL** (plan_type, captare 1 leu, auto-charge+link) + **plată delegată** (`payment_links`, hold 24h) — §19 | cele 3 metode funcționale end-to-end |
+| **8** | **Suprafețe admin & raportare** (§18bis): dashboard stats, pagină analytics, afișare metodă+sold pe comandă/bilet, desfășurător plăți, listă comenzi flexibile | operatorul vede totul |
+| **9** | **Pagină publică de prezentare** (§18bis.E) + facturare/e-Factura (§16.5) + reminder-e multi-canal (§16.7) + review juridic (§16.6) | conformitate + comunicare |
 
 ---
 
@@ -493,9 +544,13 @@ Config global platformă în `config/installments.php`:
 
 - Rounding: Σ rate == financed_cents (restul pe ultima rată).
 - `customer_total_cents > base_total_cents` mereu (validare + test).
+- **Deadline: ultima plată ≤ event_start − 1 zi** (niciodată în ziua evenimentului) — test dedicat.
+- **Coș multi-eveniment → toate metodele noi ascunse** + mesaj (§10.1) — test dedicat.
 - Eveniment prea aproape → plan ascuns / grafic comprimat.
-- Card expiră înainte de ultima scadență → avertisment la checkout + email update card (§16.2).
+- Card care ar expira înainte de ultima scadență → blocat la checkout (§16.2).
 - Debitare off-session → 3DS `authentication_required` → link on-session, nu eșec direct (§16.1).
+- **BNPL: dublă plată** (auto-charge vs. link) → cine plătește primul câștigă, celălalt no-op (lock + idempotency).
+- **Plată delegată: expirare hold 24h** → eliberare loc + „plătește tu acum" pentru inițiator înainte de release.
 - Organizator anulează/reprogramează evenimentul mid-plan → stop debitări + refund/re-plan (§16.3).
 - Webhook dublu / retrigger scheduler → idempotență pe `installment_payment.id`.
 - Retur după 2 din 4 rate plătite → sumă corectă, taxe reținute, rate viitoare anulate.
@@ -616,6 +671,17 @@ planurile sunt scurte (≤3 luni) → probabil în zona scutită.
   + checkbox de acceptare termeni, cu **log de consimțământ**.
 - Nu sunt jurist — **sign-off legal rămâne gating item la client înainte de go-live.**
 
+**Ce se întâmplă dacă depășim 3 luni (întrebare stakeholder A5):** DA, apar implicații legale
+serioase. Peste pragul scutit (creditare cu costuri, > 3 luni), activitatea devine **credit de
+consum** în sensul deplin al OUG 50/2010, iar acordarea de credite cu titlu profesional în RO
+necesită, de regulă, statut de **Instituție Financiară Nebancară (IFN)** înscrisă la **BNR**
+(Legea 93/2009) — cu cerințe de capital, raportare, guvernanță, conformitate ANPC etc. Practic,
+ambilet.ro ar trebui să se autorizeze/înregistreze ca IFN (sau să lucreze printr-un partener
+IFN/bancar licențiat). **De aceea recomandarea fermă e să rămânem ≤ 3 luni** (zona probabil
+scutită) și să lăsăm creditarea „grea" pe un partener licențiat dacă vreodată se dorește termen
+mai lung. **Confirmarea finală o dă avocatul** — dar direcția e clară: >3 luni = povară de
+autorizare, ≤3 luni = evităm.
+
 ### 16.7 Reminder-e multi-canal (SMS / WhatsApp) — refolosire servicii existente
 Repo-ul are deja servicii SMS și WhatsApp. Aceleași trigger-e de reminder/eșec pot merge și
 pe aceste canale, opțional, per preferință marketplace. Extensie ieftină, valoare mare la colectare.
@@ -689,8 +755,8 @@ Peste cerințe, lucruri care cresc conversia, colectarea și robustețea:
 
 1. **Simulator de rate pe pagina evenimentului** ("de la X lei/lună") înainte de checkout →
    crește conversia; refolosește `InstallmentPlanCalculator`.
-2. **Auto-revânzare la default:** când un plan intră în default și locul se eliberează, îl
-   întoarcem în inventar / **waitlist** (module existente `Waitlist`/`SeatHold`) → recuperare venit.
+2. **Retry inteligent temporal (AMÂNAT — „încă nu"):** reîncercare în jurul zilelor de salariu.
+   Rămâne în backlog, nu în v1.
 3. **Card de rezervă (backup):** clientul poate adăuga un al doilea card; la eșecul primului,
    încercăm backup-ul înainte de dunning → mai puține default-uri. (post-v1)
 4. **Job de reconciliere nocturnă:** compară `installment_payments` cu înregistrările
@@ -706,9 +772,48 @@ Peste cerințe, lucruri care cresc conversia, colectarea și robustețea:
 9. **Taxă de întârziere opțională (late fee)** — implicit OPRITĂ (atenție la suprafața legală
    §16.6); doar dacă marketplace-ul o activează conștient.
 10. **Localizare corectă** (RON, dată RO) în emailuri + portal + checkout — încredere.
-11. **Deadline pe cart mixt:** dacă coșul are evenimente diferite, deadline-ul de plată = cel
-    mai apropiat eveniment. Motorul îl ia pe cel mai restrictiv.
+11. **Deadline pe cart mixt:** N/A pentru metodele noi (regula mono-eveniment §10.1 le blochează);
+    rămâne relevant doar pentru validări defensive.
 12. **Mod test/preview** pentru marketplace: previzualizarea planurilor fără debitare reală.
+
+**Acceptate suplimentar (rundă C):**
+13. **Buton „achită tot acum" în fiecare reminder** — one-click early payoff → accelerează cash, scade default.
+14. **View „at-risk" în dashboard** — agreements cu risc mare (rată ratată, card care expiră, declinuri) → outreach proactiv.
+15. **„Plătește tu acum" ca rescue** — la eșec BNPL/auto-charge sau expirare link delegat, oferim inițiatorului să achite el → recuperăm vânzarea.
+16. **Mesaj de cadou la plata delegată** — personalizare pentru scenariul copil→părinte.
+17. **Analytics de canibalizare** — cât din rate/BNPL sunt vânzări NOI vs. mutare de la plata integrală → ROI-ul celor 2%.
+18. **„De la X lei/lună" pe cardurile de listing** (nu doar pagina evenimentului) → lift de conversie.
+19. **Semnale de fraudă** — velocity (același card pe multe planuri), email disposable la plătitorul B.
+
+---
+
+## 18bis. Suprafețe de admin, raportare & site public (rundă stakeholder)
+
+Cerințe confirmate — unde apar aceste plăți în interfețe.
+
+### A. Statistici pe Dashboard-ul marketplace
+Includem aceste tipuri de venit în statisticile de pe dashboard-ul principal:
+**venit din rate**, **venit BNPL**, **venit din plăți delegate**, plus **sold de încasat** (outstanding).
+Separate de vânzările cu plată integrală, ca operatorul să vadă mixul.
+
+### B. Pagină dedicată de Analytics „Plăți flexibile"
+Pagină separată (Filament) cu: GMV per metodă (rate/BNPL/delegat), collection rate, default rate,
+DSO (sold mediu de încasat), calendar debitări viitoare, expunere per eveniment, evoluție în timp.
+(Se leagă de §16.8.)
+
+### C. Afișare pe pagina de Comandă și Bilet (admin marketplace)
+- Pe **comandă** și pe **bilet**: **prin ce metodă** a fost cumpărat (integral / rate / BNPL /
+  delegat) + **dacă mai există sold de achitat** și cât.
+- Pe pagina **unei comenzi**: **desfășurătorul de plăți** complet (graficul: fiecare rată, scadență,
+  status, cât s-a plătit, cât rămâne, next due).
+
+### D. Pagină „Comenzi cu plăți flexibile"
+Resursă/listă separată care arată **doar** comenzile cu rate / BNPL / delegat și **progresul** lor
+(status agreement, rate plătite/total, next due, sold rămas), cu filtre pe metodă/status.
+
+### E. Pagină publică de prezentare (ambilet.ro)
+Pagină pe site-ul public care prezintă frumos metodele: ce înseamnă rate/BNPL/plată delegată,
+cum funcționează, exemple, întrebări frecvente. (Template de pagină în sistemul de pagini existent.)
 
 ---
 
