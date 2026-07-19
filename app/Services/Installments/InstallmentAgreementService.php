@@ -187,12 +187,25 @@ class InstallmentAgreementService
         $kind = $agreement->plan_type === InstallmentPlan::TYPE_BNPL ? 'bnpl' : 'installments';
         $outstanding = $agreement->outstandingCents();
 
-        $order->forceFill([
+        $fields = [
             'installment_agreement_id' => $agreement->id,
             'payment_method_kind' => $kind,
             'outstanding_cents' => $outstanding,
-            'payment_status' => $outstanding > 0 ? 'partially_paid' : ($order->payment_status ?? 'paid'),
-        ])->save();
+        ];
+
+        // Only once the agreement is ACTIVE (down payment actually cleared) do we
+        // mark the order partially_paid and take it out of the expire-pending
+        // sweep. A still-PENDING agreement (avans not paid) leaves the order
+        // expirable, so an abandoned checkout releases its seats normally.
+        if (in_array($agreement->status, [
+            InstallmentAgreement::STATUS_ACTIVE,
+            InstallmentAgreement::STATUS_COMPLETED,
+        ], true)) {
+            $fields['payment_status'] = $outstanding > 0 ? 'partially_paid' : 'paid';
+            $fields['expires_at'] = null;
+        }
+
+        $order->forceFill($fields)->save();
     }
 
     protected function snapshot(InstallmentPlan $plan, array $quote): array

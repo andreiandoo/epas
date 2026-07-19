@@ -16,6 +16,13 @@ class ExpirePendingOrdersCommand extends Command
         $expired = Order::where('status', 'pending')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
+            // Never expire a flexible-payment order whose down payment cleared:
+            // it stays 'pending' but is not an abandoned cart. Active agreements
+            // set payment_status='partially_paid' and clear expires_at; this is
+            // belt-and-suspenders. Abandoned PENDING agreements keep expiring.
+            ->where(function ($q) {
+                $q->whereNull('payment_status')->orWhere('payment_status', '!=', 'partially_paid');
+            })
             ->get();
 
         if ($expired->isEmpty()) {
