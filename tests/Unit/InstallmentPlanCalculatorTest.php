@@ -166,6 +166,24 @@ class InstallmentPlanCalculatorTest extends TestCase
         $this->assertSame($near['financed_cents'], array_sum(array_column($nearInst, 'amount_cents')));
     }
 
+    public function test_fit_to_event_caps_far_events_at_three_months(): void
+    {
+        // Event 6 months out: the plan must NOT stretch installments to 6 months
+        // (that would breach the 3-month cap) — it spreads over ~3 months instead.
+        $plan = $this->plan(['schedule_type' => 'fit_to_event', 'number_of_installments' => 3]);
+        $q = $this->calc()->quote($plan, 30000, [
+            'down_payment_type' => 'none',
+            'start_date' => '2026-08-01', 'event_start_date' => '2027-02-01', // ~6 months
+            'platform_fee_percent' => 2.0,
+        ]);
+
+        $this->assertTrue($q['eligible'], $q['reason'] ?? '');
+        $last = end($q['schedule']);
+        // Last installment within ~3 months of purchase, not near the event.
+        $this->assertTrue(Carbon::parse($last['due_date'])->lte(Carbon::parse('2026-08-01')->addDays(93)));
+        $this->assertTrue(Carbon::parse($last['due_date'])->lt(Carbon::parse('2026-12-01')));
+    }
+
     public function test_fit_to_event_rejected_when_event_is_immediate(): void
     {
         $plan = $this->plan(['schedule_type' => 'fit_to_event', 'number_of_installments' => 4]);

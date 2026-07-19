@@ -71,6 +71,7 @@ class EventFlexiblePaymentConfigResource extends Resource
                         ->all())
                     ->searchable()
                     ->required()
+                    ->live() // so the eligible-ticket-types list refreshes for the chosen event
                     ->unique(ignoreRecord: true),
             ]),
 

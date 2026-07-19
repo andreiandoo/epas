@@ -94,24 +94,31 @@ class InstallmentController extends Controller
         $provider = $this->normalizeProvider($client?->getDefaultPaymentMethod()?->slug ?? '');
         $eventStart = $event->start_date;
 
+        // Resolve the event-level availability ONCE (same for every ticket type);
+        // per-ticket only differs by ticket-eligibility + price.
+        $baseAvail = $this->eligibility->availability($client, $provider, [$eventId], []);
+        $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $eventId)
+            ->orWhere('marketplace_event_id', $eventId)->first();
+
         $rows = [];
         foreach ($event->ticketTypes as $tt) {
-            $avail = $this->eligibility->availability($client, $provider, [$eventId], [$tt->id]);
+            $ticketEligible = $config ? $config->ticketTypeEligible($tt->id) : false;
+            $instAvail = ($baseAvail['methods']['installments'] ?? false) && $ticketEligible;
+            $bnplAvail = ($baseAvail['methods']['bnpl'] ?? false) && $ticketEligible;
             $priceCents = (int) round(((float) ($tt->price ?? 0)) * 100);
 
-            $fromCents = null;
-            if (($avail['methods']['installments'] ?? false) || ($avail['methods']['bnpl'] ?? false)) {
-                $fromCents = $this->eligibility->startingFromCents($eventId, $priceCents, $eventStart);
-            }
+            $fromCents = ($instAvail || $bnplAvail)
+                ? $this->eligibility->startingFromCents($eventId, $priceCents, $eventStart)
+                : null;
 
             $rows[] = [
                 'ticket_type_id' => $tt->id,
                 'name' => $tt->name,
                 'price' => $tt->price,
                 'currency' => $tt->currency ?? 'RON',
-                'installments_available' => $avail['methods']['installments'] ?? false,
-                'bnpl_available' => $avail['methods']['bnpl'] ?? false,
-                'delegated_available' => $avail['methods']['delegated_pay'] ?? false,
+                'installments_available' => $instAvail,
+                'bnpl_available' => $bnplAvail,
+                'delegated_available' => $baseAvail['methods']['delegated_pay'] ?? false,
                 'from_amount' => $fromCents !== null ? round($fromCents / 100, 2) : null,
                 'from_label' => $fromCents !== null
                     ? 'de la ' . number_format($fromCents / 100, 2, ',', '.') . ' ' . ($tt->currency ?? 'RON') . '/rată'

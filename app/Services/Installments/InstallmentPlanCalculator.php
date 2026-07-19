@@ -130,6 +130,14 @@ class InstallmentPlanCalculator
         // --- Amounts (deterministic; remainder on last) ----------------------
         $amounts = $this->splitAmounts($financed, $n, $plan);
 
+        // Guard misconfigured custom percentages (e.g. summing to >100 → negative
+        // last installment). A plan must never produce a negative amount.
+        foreach ($amounts as $amt) {
+            if ($amt < 0) {
+                return $this->ineligible($result, 'invalid_distribution');
+            }
+        }
+
         $schedule = [];
         // sequence 0 = down payment (charged at checkout)
         if ($downPayment > 0) {
@@ -166,15 +174,15 @@ class InstallmentPlanCalculator
         // *when the customer buys*, so the same plan works whether they buy 3
         // months or 2 weeks before the event — it always finishes in time.
         if ($plan->schedule_type === 'fit_to_event') {
-            if (! $deadline) {
-                // No event date → fall back to monthly spacing.
-                $dueDates = [];
-                for ($i = 1; $i <= $n; $i++) {
-                    $dueDates[] = $start->copy()->addMonthsNoOverflow($i);
-                }
-                return $dueDates;
+            // Spread across the window, but NEVER beyond the 3-month cap — for a
+            // far-off event the plan finishes ~3 months after purchase, well
+            // before the event (and within the legal exemption window).
+            $maxDur = (int) ($plan->max_duration_days ?: config('installments.max_installment_duration_days', 93));
+            $spreadEnd = $start->copy()->addDays($maxDur);
+            if ($deadline && $deadline->lt($spreadEnd)) {
+                $spreadEnd = $deadline->copy();
             }
-            $daysAvailable = $start->diffInDays($deadline);
+            $daysAvailable = $start->diffInDays($spreadEnd);
             $step = intdiv($daysAvailable, $n);
             if ($step < 1) {
                 // Window too small for N distinct installments before the event.
@@ -185,7 +193,7 @@ class InstallmentPlanCalculator
             for ($i = 1; $i <= $n; $i++) {
                 $dueDates[] = $start->copy()->addDays($step * $i);
             }
-            return $dueDates; // last = start + step*N <= deadline
+            return $dueDates; // last = start + step*N <= min(deadline, start+maxDur)
         }
 
         // Custom per-installment offsets: each step's offset_days counts from the
