@@ -52,7 +52,7 @@ return new class extends Migration
             $table->unsignedBigInteger('max_order_cents')->nullable();
             $table->integer('days_before_event_fully_paid')->default(1); // min 1 (never on event day)
             $table->boolean('compress_schedule')->default(false);
-            $table->integer('max_duration_days')->default(90);          // hard cap ≤ 3 months
+            $table->integer('max_duration_days')->default(93);          // hard cap ≤ 3 months
             $table->json('eligibility')->nullable();
 
             // Policies

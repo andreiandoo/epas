@@ -22,7 +22,7 @@ return [
     | charge capped at 30 days. The last payment must always fall at least
     | `min_days_before_event` before the event start (never on event day).
     */
-    'max_installment_duration_days' => (int) env('FLEX_MAX_DURATION_DAYS', 90),
+    'max_installment_duration_days' => (int) env('FLEX_MAX_DURATION_DAYS', 93),
     'bnpl_max_horizon_days' => (int) env('FLEX_BNPL_MAX_DAYS', 30),
     'min_days_before_event' => (int) env('FLEX_MIN_DAYS_BEFORE_EVENT', 1),
 

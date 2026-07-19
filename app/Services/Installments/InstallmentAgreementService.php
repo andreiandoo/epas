@@ -54,7 +54,7 @@ class InstallmentAgreementService
                 'financed_cents' => $quote['financed_cents'],
                 'number_of_installments' => $quote['number_of_installments'],
                 'status' => InstallmentAgreement::STATUS_PENDING,
-                'ticket_issuance_policy' => $plan->ticket_issuance_policy,
+                'ticket_issuance_policy' => $plan->ticket_issuance_policy ?: 'issue_invalid_until_paid',
                 'provider' => $ctx['provider'] ?? null,
                 'auto_debit_enabled' => true,
                 'plan_snapshot' => $this->snapshot($plan, $quote),

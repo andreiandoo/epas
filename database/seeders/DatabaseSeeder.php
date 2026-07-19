@@ -32,6 +32,11 @@ class DatabaseSeeder extends Seeder
             // foundation for the "Online Events" MVP. Idempotent
             // updateOrCreate — safe to rerun.
             ZoomIntegrationMicroserviceSeeder::class,
+            // Flexible Payments (installments / BNPL / delegated pay). Idempotent
+            // updateOrCreate — safe to rerun; the email seeder skips marketplaces
+            // that already have branded rows.
+            FlexiblePaymentsMicroserviceSeeder::class,
+            InstallmentEmailTemplatesSeeder::class,
         ]);
     }
 }

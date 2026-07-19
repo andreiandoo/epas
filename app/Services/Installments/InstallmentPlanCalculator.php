@@ -117,7 +117,8 @@ class InstallmentPlanCalculator
 
         // --- Max duration cap (≤ 3 months) -----------------------------------
         $lastDue = end($dueDates);
-        if ($start->diffInDays($lastDue) > (int) $plan->max_duration_days) {
+        $maxDuration = (int) ($plan->max_duration_days ?: config('installments.max_installment_duration_days', 93));
+        if ($start->diffInDays($lastDue) > $maxDuration) {
             return $this->ineligible($result, 'exceeds_max_duration');
         }
 
