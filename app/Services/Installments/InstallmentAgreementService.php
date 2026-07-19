@@ -205,6 +205,16 @@ class InstallmentAgreementService
             $fields['expires_at'] = null;
         }
 
+        // When the plan completes (fully paid), move the order out of 'pending'
+        // to 'completed'. Sale/payout was already recorded incrementally per
+        // installment, and the normal full-paid recordSale path is bypassed for
+        // installment orders — so this triggers only the observer's conversion +
+        // notify hooks (no double payout).
+        if ($agreement->status === InstallmentAgreement::STATUS_COMPLETED && $outstanding === 0) {
+            $fields['status'] = 'completed';
+            $fields['paid_at'] = $order->paid_at ?? now();
+        }
+
         $order->forceFill($fields)->save();
     }
 
