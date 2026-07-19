@@ -47,6 +47,9 @@ Route::prefix('pay')->group(function () {
     Route::get('/{token}/confirm', [\App\Http\Controllers\FlexiblePaymentController::class, 'confirmLink'])
         ->name('flex.pay.confirm')->where('token', '[A-Za-z0-9]+');
 });
+// Public marketing page presenting the flexible-payment methods.
+Route::get('/plati-flexibile', fn () => view('public.flexible-payments'))->name('flex.info');
+
 Route::prefix('installments')->group(function () {
     Route::get('/agreements/{agreement}', [\App\Http\Controllers\FlexiblePaymentController::class, 'portal'])
         ->name('flex.portal')->whereNumber('agreement');
