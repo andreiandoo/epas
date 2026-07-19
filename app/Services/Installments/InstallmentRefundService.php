@@ -38,15 +38,20 @@ class InstallmentRefundService
         $policy = $agreement->plan?->refundPolicy() ?? ['surcharge_refundable' => false, 'platform_fee_refundable' => false];
 
         $paid = $agreement->paidCents();
+        $customerTotal = max(1, (int) $agreement->customer_total_cents);
+        // Base-price portion actually collected (what the organizer earned).
+        $baseCollected = (int) round($paid * $agreement->base_total_cents / $customerTotal);
         // Non-refundable surcharge portion actually collected so far.
-        $surchargeCollected = (int) round($paid * $agreement->surcharge_cents / max(1, $agreement->customer_total_cents));
+        $surchargeCollected = (int) round($paid * $agreement->surcharge_cents / $customerTotal);
+
         $refundable = $paid;
+        $organizerClawback = $baseCollected;
         if (empty($policy['surcharge_refundable'])) {
-            $refundable -= $surchargeCollected;
+            $refundable -= $surchargeCollected; // withhold surcharge → refund ≈ base portion
         }
         $refundable = max(0, $refundable);
 
-        return $this->finalize($agreement, $refundable, 'installment_refund', $reason ?? 'customer_return');
+        return $this->finalize($agreement, $refundable, $organizerClawback, 'installment_refund', $reason ?? 'customer_return');
     }
 
     /**
@@ -54,12 +59,24 @@ class InstallmentRefundService
      */
     public function eventCancelled(InstallmentAgreement $agreement, ?string $reason = null): int
     {
-        $refundable = $agreement->paidCents(); // everything the customer paid
-        return $this->finalize($agreement, $refundable, 'installment_event_cancelled_refund', $reason ?? 'event_cancelled', true);
+        $paid = $agreement->paidCents(); // everything the customer paid (customer-total scale)
+        $customerTotal = max(1, (int) $agreement->customer_total_cents);
+        $organizerClawback = (int) round($paid * $agreement->base_total_cents / $customerTotal);
+
+        return $this->finalize($agreement, $paid, $organizerClawback, 'installment_event_cancelled_refund', $reason ?? 'event_cancelled');
     }
 
-    protected function finalize(InstallmentAgreement $agreement, int $refundableCents, string $emailSlug, string $reason, bool $fullFault = false): int
+    /**
+     * @param int $refundableCents      what is refunded to the CUSTOMER (best-effort at gateway)
+     * @param int $organizerClawbackCents base-price portion to debit from the organizer's balance
+     */
+    protected function finalize(InstallmentAgreement $agreement, int $refundableCents, int $organizerClawbackCents, string $emailSlug, string $reason): int
     {
+        // Idempotency: never refund an already-refunded agreement twice.
+        if ($agreement->status === InstallmentAgreement::STATUS_REFUNDED) {
+            return 0;
+        }
+
         DB::transaction(function () use ($agreement, $reason) {
             // Cancel every not-yet-paid installment and void the mandate.
             $agreement->payments()
@@ -82,18 +99,40 @@ class InstallmentRefundService
         // transaction credited individually via its stored reference).
         $this->attemptProcessorRefunds($agreement, $refundableCents);
 
-        // Reverse the organizer's incrementally-credited balance for the amount
-        // being clawed back (mirror of InstallmentPayoutService::creditInstallment).
-        $this->reverseOrganizerPayout($agreement, $refundableCents);
+        // Reverse the organizer's incrementally-credited balance (base-price
+        // portion clawed back). Amount already at base scale — no re-ratio.
+        $this->reverseOrganizerPayout($agreement, $organizerClawbackCents);
 
         // Tickets are no longer valid.
         $this->tickets->invalidateForAgreement($agreement);
+
+        // Keep the Order in sync so it doesn't still read as fully paid.
+        $this->syncRefundedOrder($agreement, $refundableCents);
 
         $this->mailer->send($agreement->fresh(), $emailSlug, [
             'refund_amount' => number_format($refundableCents / 100, 2, ',', '.') . ' ' . $agreement->currency,
         ]);
 
         return $refundableCents;
+    }
+
+    protected function syncRefundedOrder(InstallmentAgreement $agreement, int $refundedCents): void
+    {
+        if (! $agreement->order_id) {
+            return;
+        }
+        $order = Order::find($agreement->order_id);
+        if (! $order) {
+            return;
+        }
+        $order->forceFill([
+            'status' => 'refunded',
+            'payment_status' => 'refunded',
+            'refund_status' => 'full',
+            'refunded_amount' => $refundedCents / 100,
+            'refunded_at' => now(),
+            'outstanding_cents' => 0,
+        ])->save();
     }
 
     protected function attemptProcessorRefunds(InstallmentAgreement $agreement, int $refundableCents): void
@@ -138,10 +177,10 @@ class InstallmentRefundService
      * refunded amount (and credit the commission back), reversing the
      * incremental payout. Best-effort — a refund must never fail on ledger issues.
      */
-    protected function reverseOrganizerPayout(InstallmentAgreement $agreement, int $refundableCents): void
+    protected function reverseOrganizerPayout(InstallmentAgreement $agreement, int $baseRefundCents): void
     {
         try {
-            if ($refundableCents <= 0 || ! $agreement->marketplace_client_id) {
+            if ($baseRefundCents <= 0 || ! $agreement->marketplace_client_id) {
                 return;
             }
             $order = Order::find($agreement->order_id);
@@ -150,13 +189,7 @@ class InstallmentRefundService
                 return;
             }
 
-            // The organizer only earned on the base (ticket) price, so reverse the
-            // base share of what is being refunded.
-            $customerTotal = max(1, (int) $agreement->customer_total_cents);
-            $baseRefundCents = (int) round($refundableCents * $agreement->base_total_cents / $customerTotal);
-            if ($baseRefundCents <= 0) {
-                return;
-            }
+            // $baseRefundCents is already the base-price portion to claw back.
             $commissionRate = (float) ($order->commission_rate ?? 0);
             $commissionRefundCents = (int) round($baseRefundCents * $commissionRate / 100);
 

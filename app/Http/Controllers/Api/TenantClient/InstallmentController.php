@@ -138,20 +138,22 @@ class InstallmentController extends Controller
         $data = $request->validate([
             'order_id' => 'required',
             'plan_id' => 'required|integer',
+            // Ownership proof: the random order_number the buyer received at
+            // checkout. Prevents attaching a plan to a guessed order id (IDOR),
+            // since these public routes have no auth guard.
+            'order_number' => 'required|string',
         ]);
 
         $order = Order::find($data['order_id']);
         if (! $order) {
             return response()->json(['error' => 'Order not found'], 404);
         }
+        if (! $order->order_number || ! hash_equals((string) $order->order_number, (string) $data['order_number'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
         // Only a fresh, unpaid order without an existing plan can start one.
         if ($order->status !== 'pending' || $order->installment_agreement_id) {
             return response()->json(['error' => 'Order is not eligible for a payment plan'], 422);
-        }
-        // Ownership: a logged-in customer may only act on their own order.
-        $authId = optional($request->user())->id;
-        if ($order->marketplace_customer_id && $authId && (int) $order->marketplace_customer_id !== (int) $authId) {
-            return response()->json(['error' => 'Forbidden'], 403);
         }
         $plan = InstallmentPlan::find($data['plan_id']);
         if (! $plan || ! $plan->is_active) {

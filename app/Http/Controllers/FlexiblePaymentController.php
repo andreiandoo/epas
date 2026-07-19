@@ -176,15 +176,17 @@ class FlexiblePaymentController extends Controller
     {
         $orderModel = Order::findOrFail($order);
 
+        // Ownership proof (public route, no auth): the random order_number the
+        // buyer received at checkout — prevents minting a link for a guessed order.
+        $orderNumber = (string) $request->input('order_number', '');
+        if (! $orderModel->order_number || ! hash_equals((string) $orderModel->order_number, $orderNumber)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
         // Only a fresh, unpaid order may generate a delegated-payment link, and
         // only if the method is enabled for its event.
         if ($orderModel->status !== 'pending') {
             return response()->json(['error' => 'Order is not eligible for delegated payment'], 422);
-        }
-        // Ownership: a logged-in customer may only act on their own order.
-        $authId = optional($request->user())->id;
-        if ($orderModel->marketplace_customer_id && $authId && (int) $orderModel->marketplace_customer_id !== (int) $authId) {
-            return response()->json(['error' => 'Forbidden'], 403);
         }
         $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $orderModel->event_id)
             ->orWhere('marketplace_event_id', $orderModel->marketplace_event_id)

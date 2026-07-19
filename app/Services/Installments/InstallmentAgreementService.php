@@ -92,8 +92,11 @@ class InstallmentAgreementService
      */
     public function activate(InstallmentAgreement $agreement, array $result): InstallmentAgreement
     {
-        return DB::transaction(function () use ($agreement, $result) {
-            $down = $agreement->payments()->where('sequence', 0)->first();
+        $downFreshlyPaid = DB::transaction(function () use ($agreement, $result) {
+            // Lock the down-payment row so two racing callbacks can't both settle
+            // + credit it (webhook + return-url arriving together).
+            $down = $agreement->payments()->where('sequence', 0)->lockForUpdate()->first();
+            $fresh = false;
             if ($down && $down->status !== InstallmentPayment::STATUS_PAID) {
                 $down->update([
                     'status' => InstallmentPayment::STATUS_PAID,
@@ -102,6 +105,7 @@ class InstallmentAgreementService
                     'payment_reference' => $result['payment_id'] ?? null,
                 ]);
                 $agreement->increment('paid_installments_count');
+                $fresh = true;
             }
 
             $agreement->update([
@@ -111,19 +115,24 @@ class InstallmentAgreementService
             ]);
 
             $agreement->recomputeNextDue();
-            $agreement->log('activated', 'Down payment settled, agreement active', [
-                'mandate' => (bool) ($result['mandate_reference'] ?? false),
-            ], $down?->id);
-
-            // Incremental payout: credit the organizer for the down-payment share too.
-            if ($down && $down->amount_cents > 0) {
-                app(InstallmentPayoutService::class)->creditInstallment($agreement, $down);
+            if ($fresh) {
+                $agreement->log('activated', 'Down payment settled, agreement active', [
+                    'mandate' => (bool) ($result['mandate_reference'] ?? false),
+                ], $down?->id);
             }
 
             $this->syncOrder($agreement);
 
-            return $agreement->fresh('payments');
+            return $fresh ? ($down?->amount_cents > 0 ? $down : null) : null;
         });
+
+        // Credit the organizer ONLY when this call actually settled the down
+        // payment (outside the txn; idempotent against replayed/racing callbacks).
+        if ($downFreshlyPaid) {
+            app(InstallmentPayoutService::class)->creditInstallment($agreement, $downFreshlyPaid);
+        }
+
+        return $agreement->fresh('payments');
     }
 
     /**
