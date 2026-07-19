@@ -39,6 +39,8 @@ Route::get('/newsletter/open/{token}.gif', [NewsletterTrackingController::class,
 
 // Flexible Payments — public surface (pay-links + customer portal). JSON-first;
 // the processor's hosted page handles card entry via the returned redirect_url.
+// Throttled: these are unauthenticated, token-gated endpoints.
+Route::middleware('throttle:30,1')->group(function () {
 Route::prefix('pay')->group(function () {
     Route::get('/{token}', [\App\Http\Controllers\FlexiblePaymentController::class, 'showLink'])
         ->name('flex.pay.show')->where('token', '[A-Za-z0-9]+');
@@ -60,6 +62,7 @@ Route::prefix('installments')->group(function () {
     Route::post('/orders/{order}/delegated', [\App\Http\Controllers\FlexiblePaymentController::class, 'createDelegated'])
         ->name('flex.delegated.create')->whereNumber('order');
 });
+}); // end throttle group
 
 // Define login route that redirects to Filament admin login
 Route::get('/login', function () {

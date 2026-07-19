@@ -67,6 +67,10 @@ class InstallmentController extends Controller
         if (! $order) {
             return response()->json(['error' => 'Order not found'], 404);
         }
+        // Only a fresh, unpaid order without an existing plan can start one.
+        if ($order->status !== 'pending' || $order->installment_agreement_id) {
+            return response()->json(['error' => 'Order is not eligible for a payment plan'], 422);
+        }
         $plan = InstallmentPlan::find($data['plan_id']);
         if (! $plan || ! $plan->is_active) {
             return response()->json(['error' => 'Plan not found'], 404);
@@ -80,6 +84,16 @@ class InstallmentController extends Controller
         $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $order->event_id)
             ->orWhere('marketplace_event_id', $order->marketplace_event_id)
             ->first();
+
+        // The plan must be attached to THIS event and the matching method enabled.
+        $methodEnabled = $plan->isBnpl() ? ($config?->enable_bnpl) : ($config?->enable_installments);
+        $planAttached = $config && $config->plans()
+            ->where('installment_plans.id', $plan->id)
+            ->wherePivot('is_active', true)
+            ->exists();
+        if (! $config || ! $methodEnabled || ! $planAttached) {
+            return response()->json(['error' => 'Plan not available for this event'], 422);
+        }
 
         $baseCents = (int) round(((float) $order->total) * 100);
         $quote = $this->calculator->quote($plan, $baseCents, [

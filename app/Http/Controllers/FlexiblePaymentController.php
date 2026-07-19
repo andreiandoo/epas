@@ -169,6 +169,31 @@ class FlexiblePaymentController extends Controller
     public function createDelegated(Request $request, int $order): JsonResponse
     {
         $orderModel = Order::findOrFail($order);
+
+        // Only a fresh, unpaid order may generate a delegated-payment link, and
+        // only if the method is enabled for its event.
+        if ($orderModel->status !== 'pending') {
+            return response()->json(['error' => 'Order is not eligible for delegated payment'], 422);
+        }
+        $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $orderModel->event_id)
+            ->orWhere('marketplace_event_id', $orderModel->marketplace_event_id)
+            ->first();
+        if (! $config || ! $config->enable_delegated_pay) {
+            return response()->json(['error' => 'Delegated payment not enabled for this event'], 422);
+        }
+
+        // Don't mint a second active link for the same order.
+        $existing = PaymentLink::where('order_id', $orderModel->id)
+            ->where('purpose', PaymentLink::PURPOSE_DELEGATED)
+            ->where('status', PaymentLink::STATUS_ACTIVE)->first();
+        if ($existing && $existing->isActive()) {
+            return response()->json([
+                'token' => $existing->token,
+                'pay_url' => url("/pay/{$existing->token}"),
+                'expires_at' => $existing->expires_at,
+            ]);
+        }
+
         $link = $this->delegated->createLink($orderModel, [
             'payer_email' => $request->input('payer_email'),
             'payer_name' => $request->input('payer_name'),
