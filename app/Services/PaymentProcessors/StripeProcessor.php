@@ -10,7 +10,7 @@ use Stripe\Refund;
 use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
 
-class StripeProcessor implements PaymentProcessorInterface
+class StripeProcessor implements PaymentProcessorInterface, SupportsTokenizedPayments
 {
     /** Tenant context — null when this processor is built from a marketplace pivot. */
     protected ?TenantPaymentConfig $config = null;
@@ -337,6 +337,165 @@ class StripeProcessor implements PaymentProcessorInterface
     public function getName(): string
     {
         return 'Stripe';
+    }
+
+    // =========================================================================
+    // SupportsTokenizedPayments — installments / BNPL auto-debit (MIT)
+    // =========================================================================
+
+    public function supportsTokenization(): bool
+    {
+        return $this->isConfigured();
+    }
+
+    /**
+     * On-session payment (down payment or BNPL 1-RON capture) that also stores
+     * the card for off-session reuse. Uses a Checkout Session in `payment` mode
+     * with `setup_future_usage=off_session`, which performs SCA now and saves
+     * the PaymentMethod to a Customer for later MIT charges.
+     */
+    public function createPaymentWithMandate(array $data): array
+    {
+        if (!$this->isConfigured()) {
+            throw new \Exception('Stripe is not properly configured');
+        }
+
+        $amountInCents = (int) round(($data['amount'] ?? 0) * 100);
+
+        // Ensure a Customer exists so the saved PaymentMethod is reusable.
+        $customerId = $data['customer_reference'] ?? null;
+        if (!$customerId) {
+            $customer = \Stripe\Customer::create(array_filter([
+                'email' => $data['customer_email'] ?? null,
+                'name'  => $data['customer_name'] ?? null,
+            ]));
+            $customerId = $customer->id;
+        }
+
+        $session = Session::create([
+            'payment_method_types' => ['card'],
+            'mode' => 'payment',
+            'customer' => $customerId,
+            'line_items' => [[
+                'price_data' => [
+                    'currency' => strtolower($data['currency'] ?? 'ron'),
+                    'product_data' => ['name' => $data['description'] ?? 'Payment'],
+                    'unit_amount' => $amountInCents,
+                ],
+                'quantity' => 1,
+            ]],
+            // Save the card for future off-session (MIT) installment charges.
+            'payment_intent_data' => [
+                'setup_future_usage' => 'off_session',
+                'metadata' => array_merge(
+                    ['order_id' => $data['order_id'] ?? null],
+                    $data['metadata'] ?? []
+                ),
+            ],
+            'success_url' => $data['success_url'],
+            'cancel_url' => $data['cancel_url'],
+            'client_reference_id' => $data['order_id'] ?? null,
+            'metadata' => array_merge(
+                ['order_id' => $data['order_id'] ?? null],
+                $data['metadata'] ?? []
+            ),
+        ]);
+
+        return [
+            'payment_id' => $session->id,
+            'redirect_url' => $session->url,
+            // The mandate (PaymentMethod) is confirmed at the callback; we return
+            // the customer here and resolve the payment_method in processCallback.
+            'mandate_reference' => $customerId,
+            'additional_data' => [
+                'customer' => $customerId,
+                'payment_intent' => $session->payment_intent,
+            ],
+        ];
+    }
+
+    /**
+     * Off-session MIT charge against a saved card.
+     *
+     * `$mandateReference` is "customer_id|payment_method_id" (or just the
+     * customer id, in which case we use the customer's default PM).
+     */
+    public function chargeWithToken(string $mandateReference, array $data): array
+    {
+        if (!$this->isConfigured()) {
+            throw new \Exception('Stripe is not properly configured');
+        }
+
+        [$customerId, $paymentMethodId] = array_pad(explode('|', $mandateReference, 2), 2, null);
+
+        $amountInCents = (int) round(($data['amount'] ?? 0) * 100);
+
+        try {
+            $intentData = [
+                'amount' => $amountInCents,
+                'currency' => strtolower($data['currency'] ?? 'ron'),
+                'customer' => $customerId,
+                'confirm' => true,
+                'off_session' => true,
+                'description' => $data['description'] ?? 'Installment payment',
+                'metadata' => array_merge(
+                    ['order_id' => $data['order_id'] ?? null],
+                    $data['metadata'] ?? []
+                ),
+            ];
+            if ($paymentMethodId) {
+                $intentData['payment_method'] = $paymentMethodId;
+            }
+
+            $opts = [];
+            if (!empty($data['idempotency_key'])) {
+                $opts['idempotency_key'] = 'inst_' . $data['idempotency_key'];
+            }
+
+            $intent = PaymentIntent::create($intentData, $opts);
+
+            return [
+                'status' => $intent->status === 'succeeded' ? 'success' : 'pending',
+                'payment_id' => $intent->id,
+                'amount' => $intent->amount / 100,
+                'currency' => strtoupper($intent->currency),
+                'action_url' => null,
+                'decline_code' => null,
+                'hard_decline' => false,
+                'error' => null,
+            ];
+        } catch (\Stripe\Exception\CardException $e) {
+            // Off-session charge needs authentication (SCA) or was declined.
+            $err = $e->getError();
+            $code = $err->code ?? null;
+            $declineCode = $err->decline_code ?? null;
+            $needsAuth = ($code === 'authentication_required');
+
+            // Do-not-retry decline codes.
+            $hardDeclines = ['stolen_card', 'lost_card', 'pickup_card', 'card_velocity_exceeded'];
+
+            return [
+                'status' => $needsAuth ? 'action_required' : 'failed',
+                'payment_id' => $err->payment_intent->id ?? null,
+                'amount' => $data['amount'] ?? 0,
+                'currency' => strtoupper($data['currency'] ?? 'RON'),
+                'action_url' => null, // resolved by portal via /pay/{token} on the PaymentIntent
+                'decline_code' => $declineCode ?? $code,
+                'hard_decline' => in_array($declineCode, $hardDeclines, true),
+                'error' => $e->getMessage(),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'payment_id' => null,
+                'amount' => $data['amount'] ?? 0,
+                'currency' => strtoupper($data['currency'] ?? 'RON'),
+                'action_url' => null,
+                'decline_code' => null,
+                'hard_decline' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 
     /**

@@ -5,7 +5,7 @@ namespace App\Services\PaymentProcessors;
 use App\Models\TenantPaymentConfig;
 use Illuminate\Support\Facades\Log;
 
-class NetopiaProcessor implements PaymentProcessorInterface
+class NetopiaProcessor implements PaymentProcessorInterface, SupportsTokenizedPayments
 {
     protected ?TenantPaymentConfig $config = null;
     protected array $keys;
@@ -376,6 +376,168 @@ class NetopiaProcessor implements PaymentProcessorInterface
     public function getName(): string
     {
         return 'Netopia';
+    }
+
+    // =========================================================================
+    // SupportsTokenizedPayments — installments / BNPL auto-debit (MIT)
+    //
+    // Uses the Netopia v2 REST API (Authorization: api_key). The first payment
+    // requests a reusable token (recurring binding); later installments charge
+    // that token off-session via the recurring endpoint.
+    //
+    // NB (Phase 0 spike): exact v2 field names for the token binding must be
+    // confirmed against the Netopia sandbox before go-live. The flow and
+    // endpoints below follow the documented v2 recurring contract; if the
+    // sandbox differs, only this section changes — the engine above is agnostic.
+    // =========================================================================
+
+    public function supportsTokenization(): bool
+    {
+        // Off-session recurring requires the v2 REST api_key. Without it we
+        // cannot charge without the customer present, so tokenization is off.
+        return $this->isConfigured() && !empty($this->keys['api_key'] ?? null);
+    }
+
+    protected function v2ApiBaseUrl(): string
+    {
+        return str_contains($this->baseUrl, 'sandbox')
+            ? 'https://secure.sandbox.netopia-payments.com'
+            : 'https://secure.mobilpay.ro/pay';
+    }
+
+    /**
+     * Start an on-session payment that requests a recurring token binding.
+     * The customer completes SCA on Netopia's hosted page; the token arrives
+     * in the IPN/callback (read `mandate_reference` from processCallback()).
+     */
+    public function createPaymentWithMandate(array $data): array
+    {
+        $apiKey = $this->keys['api_key'] ?? null;
+        if (!$apiKey) {
+            throw new \Exception('Netopia tokenization requires the v2 API key');
+        }
+
+        $body = [
+            'config' => [
+                'notifyUrl'    => $data['notify_url'] ?? ($data['metadata']['notify_url'] ?? null),
+                'redirectUrl'  => $data['success_url'] ?? null,
+                'cancelUrl'    => $data['cancel_url'] ?? null,
+                // Request a reusable token for later MIT installment charges.
+                'recurrence'   => ['type' => 'installment'],
+            ],
+            'payment' => [
+                'options'  => ['installments' => 1, 'bonus' => 0],
+                'instrument' => ['type' => 'card'],
+                'data'     => ['tokenize' => 'true'],
+            ],
+            'order' => [
+                'orderID'  => (string) ($data['order_id'] ?? ''),
+                'amount'   => round($data['amount'] ?? 0, 2),
+                'currency' => strtoupper($data['currency'] ?? 'RON'),
+                'description' => $data['description'] ?? 'Payment',
+                'billing'  => array_filter([
+                    'email'     => $data['customer_email'] ?? null,
+                    'firstName' => $data['customer_name'] ?? null,
+                ]),
+            ],
+        ];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => $apiKey,
+                'Content-Type'  => 'application/json',
+            ])->timeout(30)->post($this->v2ApiBaseUrl() . '/payment/card/start', $body);
+
+            $json = $response->json() ?? [];
+            Log::channel('marketplace')->info('Netopia v2 tokenized start', [
+                'order_id' => $data['order_id'] ?? null, 'status' => $response->status(),
+            ]);
+
+            $redirect = $json['payment']['paymentURL']
+                ?? $json['customerAction']['url']
+                ?? $this->baseUrl;
+            $token = $json['payment']['token'] ?? $json['payment']['binding']['token'] ?? null;
+
+            return [
+                'payment_id' => $json['payment']['ntpID'] ?? ($data['order_id'] ?? null),
+                'redirect_url' => $redirect,
+                'mandate_reference' => $token, // often null here → resolved in callback
+                'additional_data' => $json,
+            ];
+        } catch (\Throwable $e) {
+            throw new \Exception('Netopia tokenized start failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Off-session MIT charge against a stored Netopia recurring token.
+     */
+    public function chargeWithToken(string $mandateReference, array $data): array
+    {
+        $apiKey = $this->keys['api_key'] ?? null;
+        $fail = fn (string $msg, bool $hard = false) => [
+            'status' => 'failed', 'payment_id' => null,
+            'amount' => $data['amount'] ?? 0, 'currency' => strtoupper($data['currency'] ?? 'RON'),
+            'action_url' => null, 'decline_code' => null, 'hard_decline' => $hard, 'error' => $msg,
+        ];
+
+        if (!$apiKey) {
+            return $fail('Netopia v2 API key missing');
+        }
+
+        $body = [
+            'payment' => ['token' => $mandateReference],
+            'order' => [
+                'orderID'  => (string) ($data['order_id'] ?? ''),
+                'amount'   => round($data['amount'] ?? 0, 2),
+                'currency' => strtoupper($data['currency'] ?? 'RON'),
+                'description' => $data['description'] ?? 'Installment payment',
+            ],
+        ];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => $apiKey,
+                'Content-Type'  => 'application/json',
+            ])->timeout(30)->post($this->v2ApiBaseUrl() . '/payment/card/recurring', $body);
+
+            $json = $response->json() ?? [];
+            $errorCode = $json['error']['code'] ?? null;
+            $status = strtolower((string) ($json['payment']['status'] ?? ''));
+
+            // Netopia status: 3/5 = confirmed/paid; 15 = 3DS auth needed.
+            $needsAuth = in_array((string) ($json['payment']['status'] ?? ''), ['15'], true)
+                || !empty($json['customerAction']);
+
+            if ($needsAuth) {
+                return [
+                    'status' => 'action_required',
+                    'payment_id' => $json['payment']['ntpID'] ?? null,
+                    'amount' => $data['amount'] ?? 0,
+                    'currency' => strtoupper($data['currency'] ?? 'RON'),
+                    'action_url' => $json['customerAction']['url'] ?? null,
+                    'decline_code' => null, 'hard_decline' => false, 'error' => null,
+                ];
+            }
+
+            $paid = $response->successful()
+                && ($errorCode === null || $errorCode === '0' || $errorCode === 0)
+                && in_array((string) ($json['payment']['status'] ?? ''), ['3', '5', 'confirmed', 'paid'], true);
+
+            if ($paid) {
+                return [
+                    'status' => 'success',
+                    'payment_id' => $json['payment']['ntpID'] ?? null,
+                    'amount' => $data['amount'] ?? 0,
+                    'currency' => strtoupper($data['currency'] ?? 'RON'),
+                    'action_url' => null, 'decline_code' => null, 'hard_decline' => false, 'error' => null,
+                ];
+            }
+
+            return $fail('Netopia recurring declined: ' . ($json['error']['message'] ?? $status ?: 'unknown'));
+        } catch (\Throwable $e) {
+            return $fail('Netopia recurring error: ' . $e->getMessage());
+        }
     }
 
     /**
