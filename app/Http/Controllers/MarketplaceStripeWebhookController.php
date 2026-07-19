@@ -202,6 +202,26 @@ class MarketplaceStripeWebhookController extends Controller
             return;
         }
 
+        // Flexible payments: this PI is only the down payment / BNPL capture.
+        // Activate the agreement (capturing the saved-card mandate) and keep the
+        // order partially_paid; do NOT mark it fully paid or validate tickets.
+        if ($order->installment_agreement_id) {
+            $mandate = $paymentIntent->customer
+                ? ($paymentIntent->customer . ($paymentIntent->payment_method ? '|' . $paymentIntent->payment_method : ''))
+                : null;
+            app(\App\Services\Installments\InstallmentAgreementService::class)
+                ->handleDownPaymentCallback($order, [
+                    'mandate_reference' => $mandate,
+                    'transaction_id' => $paymentIntent->id,
+                ]);
+            Log::info('Marketplace Stripe webhook: installment down payment confirmed', [
+                'order_id' => $order->id,
+                'agreement_id' => $order->installment_agreement_id,
+                'has_mandate' => (bool) $mandate,
+            ]);
+            return;
+        }
+
         DB::transaction(function () use ($order, $paymentIntent) {
             $order->update([
                 'status'             => 'completed',

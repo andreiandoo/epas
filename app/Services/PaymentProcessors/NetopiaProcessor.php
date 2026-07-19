@@ -198,6 +198,16 @@ class NetopiaProcessor implements PaymentProcessorInterface, SupportsTokenizedPa
             $status = 'failed';
         }
 
+        // Recurring token for installment/BNPL auto-debit (present when the
+        // payment was started with a recurrence binding). Field name varies by
+        // Netopia API version — pick the first that appears.
+        $token = (string) (
+            $xmlData->mobilpay->token_id
+            ?? $xmlData->token_id
+            ?? $xmlData->mobilpay->token->id
+            ?? ''
+        );
+
         return [
             'status' => $status,
             'payment_id' => (string) $xmlData->attributes()->id,
@@ -206,6 +216,7 @@ class NetopiaProcessor implements PaymentProcessorInterface, SupportsTokenizedPa
             'currency' => (string) ($xmlData->invoice['currency'] ?? $xmlData->currency ?? 'RON'),
             'transaction_id' => (string) $xmlData->attributes()->id,
             'paid_at' => $status === 'success' ? date('c') : null,
+            'mandate_reference' => $token !== '' ? $token : null,
             'metadata' => [
                 'error_code' => $errorCode,
                 'error_message' => $errorMessage,

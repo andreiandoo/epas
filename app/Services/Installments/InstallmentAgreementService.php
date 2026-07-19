@@ -127,6 +127,40 @@ class InstallmentAgreementService
     }
 
     /**
+     * Handle a successful down-payment / BNPL-capture callback for an order.
+     * Activates the pending agreement, captures the mandate, and marks the
+     * order's tickets reserved-invalid. Returns true if this was a flexible-
+     * payment order (so the caller skips the normal full-paid flow).
+     *
+     * Idempotent: a replayed callback on an already-active agreement is a no-op.
+     */
+    public function handleDownPaymentCallback(Order $order, array $result): bool
+    {
+        if (! $order->installment_agreement_id) {
+            return false;
+        }
+        $agreement = InstallmentAgreement::find($order->installment_agreement_id);
+        if (! $agreement) {
+            return false;
+        }
+        if ($agreement->status !== InstallmentAgreement::STATUS_PENDING) {
+            return true; // already handled; still a flexible-payment order
+        }
+
+        $mandate = $result['mandate_reference']
+            ?? ($result['metadata']['mandate_reference'] ?? null)
+            ?? $agreement->mandate_reference;
+
+        $this->activate($agreement, [
+            'mandate_reference' => $mandate,
+            'payment_id' => $result['transaction_id'] ?? $result['payment_id'] ?? null,
+        ]);
+        app(TicketStateService::class)->markPendingForAgreement($agreement->fresh());
+
+        return true;
+    }
+
+    /**
      * Mark the whole agreement completed when the final installment is paid.
      * Ticket becomes valid (handled by the caller / ticket service).
      */

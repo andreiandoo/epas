@@ -160,6 +160,9 @@ class StripeProcessor implements PaymentProcessorInterface, SupportsTokenizedPay
                     'currency' => strtoupper($session->currency),
                     'transaction_id' => $session->payment_intent,
                     'paid_at' => date('c', $session->created),
+                    // Surface the reusable mandate (customer id) for installment/BNPL
+                    // auto-debit. The saved card is resolved at charge time.
+                    'mandate_reference' => $session->customer ?? null,
                     'metadata' => (array) ($session->metadata ?? []),
                 ];
                 break;
@@ -431,6 +434,21 @@ class StripeProcessor implements PaymentProcessorInterface, SupportsTokenizedPay
         $amountInCents = (int) round(($data['amount'] ?? 0) * 100);
 
         try {
+            // The mandate may be just the customer id (resolved from checkout).
+            // Off-session PaymentIntents need an explicit payment_method, so pick
+            // the customer's saved card if one wasn't encoded in the mandate.
+            if (! $paymentMethodId && $customerId) {
+                $pms = \Stripe\PaymentMethod::all(['customer' => $customerId, 'type' => 'card', 'limit' => 1]);
+                $paymentMethodId = $pms->data[0]->id ?? null;
+            }
+            if (! $paymentMethodId) {
+                return [
+                    'status' => 'failed', 'payment_id' => null,
+                    'amount' => $data['amount'] ?? 0, 'currency' => strtoupper($data['currency'] ?? 'RON'),
+                    'action_url' => null, 'decline_code' => 'no_payment_method',
+                    'hard_decline' => true, 'error' => 'No saved card on file for this customer',
+                ];
+            }
             $intentData = [
                 'amount' => $amountInCents,
                 'currency' => strtolower($data['currency'] ?? 'ron'),

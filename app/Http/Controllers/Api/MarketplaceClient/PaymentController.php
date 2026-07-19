@@ -290,6 +290,21 @@ class PaymentController extends BaseController
                 'callback_status' => $result['status'],
             ]);
 
+            // Flexible payments: a successful "payment" here is only the DOWN
+            // PAYMENT (or BNPL card capture). Activate the agreement + capture the
+            // mandate, keep the order partially_paid and the tickets invalid —
+            // do NOT run the full-paid path below.
+            if ($result['status'] === 'success' && $order->installment_agreement_id) {
+                app(\App\Services\Installments\InstallmentAgreementService::class)
+                    ->handleDownPaymentCallback($order, $result);
+                Log::channel('marketplace')->info('Installment down payment confirmed', [
+                    'order_id' => $order->id,
+                    'agreement_id' => $order->installment_agreement_id,
+                ]);
+                // Acknowledge the processor; the standard full-paid flow is skipped.
+                return $this->netopiaResponse(0);
+            }
+
             if ($result['status'] === 'success') {
                 // SECURITY FIX: Idempotency check - prevent double-spending via webhook replay.
                 //

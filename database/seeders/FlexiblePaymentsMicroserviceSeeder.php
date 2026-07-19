@@ -32,7 +32,9 @@ class FlexiblePaymentsMicroserviceSeeder extends Seeder
                 'currency' => 'EUR',
                 'billing_cycle' => 'monthly',
                 'pricing_model' => 'recurring',
-                'category' => 'payments',
+                // Deliberately NOT 'payment' — that category is reserved for actual
+                // payment gateways (getDefaultPaymentMethod filters category='payment').
+                'category' => 'finance',
                 'features' => [
                     'en' => [
                         'Configurable installment plans',
