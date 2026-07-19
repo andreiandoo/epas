@@ -79,11 +79,13 @@ class InstallmentPlanResource extends Resource
                     Forms\Components\Select::make('schedule_type')
                         ->label('Tip programare')
                         ->options([
+                            'fit_to_event' => 'Auto (N rate împărțite automat până la eveniment) — recomandat',
                             'interval' => 'Interval fix (ex: la fiecare 2 săptămâni)',
                             'fixed_dates' => 'Date calendaristice fixe',
                             'custom' => 'Personalizat (fiecare rată cu decalaj + procent propriu)',
                         ])
-                        ->default('interval')->live(),
+                        ->default('fit_to_event')->live()
+                        ->helperText('„Auto" calculează intervalul în funcție de data cumpărării și a evenimentului, deci încape mereu la timp.'),
                     Forms\Components\TextInput::make('number_of_installments')
                         ->label('Număr de rate')
                         ->numeric()->default(3)->minValue(1)

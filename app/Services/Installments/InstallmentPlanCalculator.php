@@ -161,6 +161,33 @@ class InstallmentPlanCalculator
      */
     protected function installmentDueDates(InstallmentPlan $plan, Carbon $start, ?Carbon $deadline, int $n, array &$result): ?array
     {
+        // Auto-fit: N installments spread EVENLY across the window between the
+        // purchase date and the event deadline. The interval is computed from
+        // *when the customer buys*, so the same plan works whether they buy 3
+        // months or 2 weeks before the event — it always finishes in time.
+        if ($plan->schedule_type === 'fit_to_event') {
+            if (! $deadline) {
+                // No event date → fall back to monthly spacing.
+                $dueDates = [];
+                for ($i = 1; $i <= $n; $i++) {
+                    $dueDates[] = $start->copy()->addMonthsNoOverflow($i);
+                }
+                return $dueDates;
+            }
+            $daysAvailable = $start->diffInDays($deadline);
+            $step = intdiv($daysAvailable, $n);
+            if ($step < 1) {
+                // Window too small for N distinct installments before the event.
+                $result['reason'] = 'event_too_soon';
+                return null;
+            }
+            $dueDates = [];
+            for ($i = 1; $i <= $n; $i++) {
+                $dueDates[] = $start->copy()->addDays($step * $i);
+            }
+            return $dueDates; // last = start + step*N <= deadline
+        }
+
         // Custom per-installment offsets: each step's offset_days counts from the
         // previous installment (offset_from='previous', default) or from the
         // down-payment/start date (offset_from='start'). Enables schedules like

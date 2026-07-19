@@ -137,6 +137,46 @@ class InstallmentPlanCalculatorTest extends TestCase
         $this->assertSame($q['financed_cents'], array_sum(array_column($instalments, 'amount_cents')));
     }
 
+    public function test_fit_to_event_spreads_installments_to_the_window(): void
+    {
+        $plan = $this->plan(['schedule_type' => 'fit_to_event', 'number_of_installments' => 4]);
+
+        // Event 3 months out → installments spread across ~3 months.
+        $far = $this->calc()->quote($plan, 40000, [
+            'down_payment_type' => 'percent', 'down_payment_value' => 2000,
+            'start_date' => '2026-08-01', 'event_start_date' => '2026-11-01',
+            'platform_fee_percent' => 2.0,
+        ]);
+        $this->assertTrue($far['eligible'], $far['reason'] ?? '');
+        $lastFar = end($far['schedule']);
+        $this->assertTrue(Carbon::parse($lastFar['due_date'])->lte(Carbon::parse('2026-10-31')));
+
+        // Same plan, event only ~3 weeks out → still 4 installments, just closer
+        // together, and still finishing before the event.
+        $near = $this->calc()->quote($plan, 40000, [
+            'down_payment_type' => 'percent', 'down_payment_value' => 2000,
+            'start_date' => '2026-08-01', 'event_start_date' => '2026-08-22',
+            'platform_fee_percent' => 2.0,
+        ]);
+        $this->assertTrue($near['eligible'], $near['reason'] ?? '');
+        $nearInst = array_values(array_filter($near['schedule'], fn ($r) => $r['sequence'] > 0));
+        $this->assertCount(4, $nearInst);
+        $this->assertTrue(Carbon::parse(end($nearInst)['due_date'])->lte(Carbon::parse('2026-08-21')));
+        // amounts still sum to financed exactly
+        $this->assertSame($near['financed_cents'], array_sum(array_column($nearInst, 'amount_cents')));
+    }
+
+    public function test_fit_to_event_rejected_when_event_is_immediate(): void
+    {
+        $plan = $this->plan(['schedule_type' => 'fit_to_event', 'number_of_installments' => 4]);
+        $q = $this->calc()->quote($plan, 40000, [
+            'start_date' => '2026-08-01', 'event_start_date' => '2026-08-03', // 2 days, 4 rates impossible
+            'platform_fee_percent' => 2.0,
+        ]);
+        $this->assertFalse($q['eligible']);
+        $this->assertSame('event_too_soon', $q['reason']);
+    }
+
     public function test_custom_schedule_offsets_and_percentages(): void
     {
         // "After the down payment, 60% at +30 days from the down payment, then

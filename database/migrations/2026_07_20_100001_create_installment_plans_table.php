@@ -36,7 +36,10 @@ return new class extends Migration
 
             // Schedule
             $table->integer('number_of_installments')->default(1);
-            $table->enum('schedule_type', ['interval', 'fixed_dates', 'custom'])->default('interval');
+            // fit_to_event = N installments auto-spread between purchase and event
+            // (recommended); interval = fixed spacing; fixed_dates = calendar dates;
+            // custom = per-installment offset + percent.
+            $table->enum('schedule_type', ['fit_to_event', 'interval', 'fixed_dates', 'custom'])->default('fit_to_event');
             $table->enum('interval_unit', ['day', 'week', 'month'])->default('month');
             $table->integer('interval_count')->default(1);
             $table->json('fixed_dates')->nullable();
