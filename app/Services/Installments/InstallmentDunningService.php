@@ -87,6 +87,7 @@ class InstallmentDunningService
             ->update(['status' => InstallmentPayment::STATUS_CANCELLED]);
 
         $this->tickets->invalidateForAgreement($agreement);
+        $this->syncTerminalOrder($agreement, 'cancelled');
         $agreement->log('cancelled', "Agreement cancelled ({$reason})");
     }
 
@@ -102,8 +103,32 @@ class InstallmentDunningService
             ->update(['status' => InstallmentPayment::STATUS_CANCELLED]);
 
         $this->tickets->invalidateForAgreement($agreement);
+        $this->syncTerminalOrder($agreement, 'cancelled');
         $agreement->log('defaulted', "Agreement defaulted ({$reason})");
         $this->mailer->send($agreement->fresh(), 'installment_defaulted');
+    }
+
+    /**
+     * Reflect a terminal agreement (defaulted/cancelled) on its order so it
+     * doesn't linger as a zombie (still 'pending'/'partially_paid' with a
+     * non-zero outstanding balance). Inventory is released separately by the
+     * ticket service; here we only settle the order's own bookkeeping fields.
+     */
+    protected function syncTerminalOrder(InstallmentAgreement $agreement, string $status): void
+    {
+        if (! $agreement->order_id) {
+            return;
+        }
+        $order = \App\Models\Order::find($agreement->order_id);
+        if (! $order || in_array($order->status, ['completed', 'paid', 'refunded'], true)) {
+            return;
+        }
+        $order->forceFill([
+            'status' => $status,
+            'payment_status' => 'cancelled',
+            'outstanding_cents' => 0,
+            'cancelled_at' => $order->cancelled_at ?? now(),
+        ])->save();
     }
 
     protected function deadlineReached(InstallmentAgreement $agreement): bool

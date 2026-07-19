@@ -351,6 +351,11 @@ class StripeProcessor implements PaymentProcessorInterface, SupportsTokenizedPay
         return $this->isConfigured();
     }
 
+    public function supportsZeroAmountMandate(): bool
+    {
+        return true; // Stripe SetupIntent captures a mandate with no charge.
+    }
+
     /**
      * On-session payment (down payment or BNPL 1-RON capture) that also stores
      * the card for off-session reuse. Uses a Checkout Session in `payment` mode
@@ -373,6 +378,38 @@ class StripeProcessor implements PaymentProcessorInterface, SupportsTokenizedPay
                 'name'  => $data['customer_name'] ?? null,
             ]));
             $customerId = $customer->id;
+        }
+
+        // No down payment to collect (e.g. "0 avans") → capture the mandate with
+        // a zero-amount SetupIntent instead of a token charge. A `payment`-mode
+        // session with a sub-minimum amount (a few bani) would be rejected by
+        // Stripe; setup mode saves the card for the later off-session debits.
+        if ($amountInCents <= 0) {
+            $setupSession = Session::create([
+                'payment_method_types' => ['card'],
+                'mode' => 'setup',
+                'customer' => $customerId,
+                'setup_intent_data' => [
+                    'metadata' => array_merge(
+                        ['order_id' => $data['order_id'] ?? null],
+                        $data['metadata'] ?? []
+                    ),
+                ],
+                'success_url' => $data['success_url'],
+                'cancel_url' => $data['cancel_url'],
+                'client_reference_id' => $data['order_id'] ?? null,
+                'metadata' => array_merge(
+                    ['order_id' => $data['order_id'] ?? null],
+                    $data['metadata'] ?? []
+                ),
+            ]);
+
+            return [
+                'payment_id' => $setupSession->id,
+                'redirect_url' => $setupSession->url,
+                'mandate_reference' => $customerId,
+                'additional_data' => ['customer' => $customerId, 'setup_intent' => $setupSession->setup_intent],
+            ];
         }
 
         $session = Session::create([

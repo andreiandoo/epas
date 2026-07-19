@@ -334,6 +334,24 @@ class MarketplaceStripeWebhookController extends Controller
         $refundedCents = (int) ($charge->amount_refunded ?? 0);
         $isFullRefund  = $totalCents > 0 && $refundedCents >= $totalCents;
 
+        // Flexible-payment order: a refund on the down-payment charge must unwind
+        // the whole plan (stop auto-debit, cancel schedule, invalidate tickets)
+        // rather than just flag the order — otherwise the plan keeps debiting a
+        // customer whose down payment was refunded. Idempotent + skips re-refund.
+        if ($order->installment_agreement_id) {
+            $agreement = \App\Models\InstallmentAgreement::find($order->installment_agreement_id);
+            if ($agreement) {
+                app(\App\Services\Installments\InstallmentRefundService::class)
+                    ->externalRefund($agreement, $refundedCents, 'stripe_dashboard_refund');
+                Log::info('Marketplace Stripe webhook: installment plan unwound by external refund', [
+                    'order_id' => $order->id,
+                    'agreement_id' => $agreement->id,
+                    'refunded_cents' => $refundedCents,
+                ]);
+                return;
+            }
+        }
+
         $order->update([
             'payment_status'   => $isFullRefund ? 'refunded' : 'partially_refunded',
             'refunded_at'      => now(),

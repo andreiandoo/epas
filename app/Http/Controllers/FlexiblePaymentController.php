@@ -153,6 +153,16 @@ class FlexiblePaymentController extends Controller
             return response()->json(['ok' => false, 'status' => $status['status'] ?? 'pending'], 202);
         }
 
+        // Defence-in-depth: if the processor reports the captured amount, ensure
+        // it covers what the link asked for (never settle an underpaid link).
+        if (isset($status['amount']) && is_numeric($status['amount'])) {
+            $paidCents = (int) round(((float) $status['amount']) * 100);
+            $expectedCents = (int) $link->amount_cents;
+            if ($paidCents + 1 < $expectedCents) { // 1-bani tolerance for rounding
+                return response()->json(['ok' => false, 'error' => 'Amount mismatch'], 422);
+            }
+        }
+
         $link->markPaid($paymentId);
 
         if ($link->purpose === PaymentLink::PURPOSE_DELEGATED) {
@@ -188,9 +198,10 @@ class FlexiblePaymentController extends Controller
         if ($orderModel->status !== 'pending') {
             return response()->json(['error' => 'Order is not eligible for delegated payment'], 422);
         }
-        $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $orderModel->event_id)
-            ->orWhere('marketplace_event_id', $orderModel->marketplace_event_id)
-            ->first();
+        $config = \App\Models\EventFlexiblePaymentConfig::resolveFor(
+            $orderModel->event_id,
+            $orderModel->marketplace_event_id
+        );
         if (! $config || ! $config->enable_delegated_pay) {
             return response()->json(['error' => 'Delegated payment not enabled for this event'], 422);
         }

@@ -124,9 +124,18 @@ class InstallmentAgreement extends Model
         return (int) $this->payments()->where('status', 'paid')->sum('paid_amount_cents');
     }
 
+    /** Amount deliberately written off (waived) — settled, but no money collected. */
+    public function waivedCents(): int
+    {
+        return (int) $this->payments()->where('status', InstallmentPayment::STATUS_WAIVED)->sum('amount_cents');
+    }
+
     public function outstandingCents(): int
     {
-        return max(0, (int) $this->customer_total_cents - $this->paidCents());
+        // Waived installments are settled (written off) even though no money was
+        // collected, so they must reduce the outstanding balance — otherwise the
+        // plan can never reach a zero balance and complete.
+        return max(0, (int) $this->customer_total_cents - $this->paidCents() - $this->waivedCents());
     }
 
     public function isActive(): bool

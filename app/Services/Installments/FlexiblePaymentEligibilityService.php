@@ -197,8 +197,6 @@ class FlexiblePaymentEligibilityService
 
     protected function eventConfig(int $eventId): ?EventFlexiblePaymentConfig
     {
-        return EventFlexiblePaymentConfig::where('event_id', $eventId)
-            ->orWhere('marketplace_event_id', $eventId)
-            ->first();
+        return EventFlexiblePaymentConfig::resolveFor($eventId, $eventId);
     }
 }

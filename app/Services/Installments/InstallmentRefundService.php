@@ -67,18 +67,55 @@ class InstallmentRefundService
     }
 
     /**
+     * A refund was initiated OUTSIDE the app (e.g. straight in the Stripe/Netopia
+     * dashboard on the down-payment charge). The money already moved at the
+     * gateway, so we must NOT re-issue processor refunds — we only unwind the
+     * plan: stop auto-debit, cancel the remaining schedule, claw back the
+     * organizer's base-portion payout, and invalidate the tickets. Any half-paid
+     * plan whose down payment was refunded must not keep debiting the customer.
+     *
+     * @param int $gatewayRefundedCents amount the gateway reported as refunded (customer-total scale)
+     */
+    public function externalRefund(InstallmentAgreement $agreement, int $gatewayRefundedCents, ?string $reason = null): int
+    {
+        $customerTotal = max(1, (int) $agreement->customer_total_cents);
+        $organizerClawback = (int) round($gatewayRefundedCents * $agreement->base_total_cents / $customerTotal);
+
+        return $this->finalize(
+            $agreement,
+            $gatewayRefundedCents,
+            $organizerClawback,
+            'installment_refund',
+            $reason ?? 'gateway_refund',
+            attemptGatewayRefund: false,
+        );
+    }
+
+    /**
      * @param int $refundableCents      what is refunded to the CUSTOMER (best-effort at gateway)
      * @param int $organizerClawbackCents base-price portion to debit from the organizer's balance
      */
-    protected function finalize(InstallmentAgreement $agreement, int $refundableCents, int $organizerClawbackCents, string $emailSlug, string $reason): int
+    protected function finalize(InstallmentAgreement $agreement, int $refundableCents, int $organizerClawbackCents, string $emailSlug, string $reason, bool $attemptGatewayRefund = true): int
     {
-        // Idempotency: never refund an already-refunded agreement twice.
-        if ($agreement->status === InstallmentAgreement::STATUS_REFUNDED) {
+        // Idempotency: atomically claim the agreement by flipping it to REFUNDED
+        // only if it is not already REFUNDED. A conditional UPDATE returning 0
+        // affected rows means a concurrent/replayed refund already won the race,
+        // so we bail before running any side effect (money-back, clawback).
+        $claimed = InstallmentAgreement::query()
+            ->where('id', $agreement->id)
+            ->where('status', '!=', InstallmentAgreement::STATUS_REFUNDED)
+            ->update([
+                'status' => InstallmentAgreement::STATUS_REFUNDED,
+                'auto_debit_enabled' => false,
+                'next_due_at' => null,
+            ]);
+        if ($claimed === 0) {
             return 0;
         }
+        $agreement->refresh();
 
         DB::transaction(function () use ($agreement, $reason) {
-            // Cancel every not-yet-paid installment and void the mandate.
+            // Cancel every not-yet-paid installment (status already flipped above).
             $agreement->payments()
                 ->whereIn('status', [
                     InstallmentPayment::STATUS_SCHEDULED, InstallmentPayment::STATUS_DUE,
@@ -87,17 +124,19 @@ class InstallmentRefundService
                 ])
                 ->update(['status' => InstallmentPayment::STATUS_CANCELLED]);
 
-            $agreement->update([
-                'status' => InstallmentAgreement::STATUS_REFUNDED,
-                'auto_debit_enabled' => false,
-                'next_due_at' => null,
-            ]);
             $agreement->log('refunded', "Refund ({$reason})", ['reason' => $reason]);
         });
 
         // Best-effort money-back per paid installment (each Netopia/Stripe
-        // transaction credited individually via its stored reference).
-        $this->attemptProcessorRefunds($agreement, $refundableCents);
+        // transaction credited individually via its stored reference). Skipped
+        // when the refund already happened at the gateway (externalRefund).
+        if ($attemptGatewayRefund) {
+            $this->attemptProcessorRefunds($agreement, $refundableCents);
+        } else {
+            // Mark paid rows refunded for bookkeeping without calling the gateway.
+            $agreement->payments()->where('status', 'paid')
+                ->update(['status' => InstallmentPayment::STATUS_REFUNDED]);
+        }
 
         // Reverse the organizer's incrementally-credited balance (base-price
         // portion clawed back). Amount already at base scale — no re-ratio.

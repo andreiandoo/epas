@@ -966,5 +966,49 @@ InstallmentEmailTemplatesSeeder (19 șabloane branded), înregistrate în Databa
 - **BNPL:** captarea de 1 leu e modelată ca avans (sequence 0) → se **scade din sold**.
 - **Reminder due-today** activat.
 
+### Rundă de verificări totale (audit adversarial pe cod)
+
+**Inventar bilete/locuri (HIGH):**
+- **Oversell:** locurile ținute (`held`) nu erau confirmate la plata avansului → sweep-ul de
+  eliberare le putea elibera de sub o plată activă. Acum `TicketStateService::confirmSeatsForOrder`
+  e apelat din `handleDownPaymentCallback` și din `DelegatedPaymentService::confirm` (`held → sold`).
+- **Stoc fantomă:** la default/anulare/expirare link, locurile + cota nu se eliberau. Acum
+  `releaseInventoryForOrder` (via `invalidateForAgreement`) + comanda e trecută în `cancelled`
+  (`syncTerminalOrder`), închizând și comanda-zombie (A#2).
+
+**Coliziune id-space (MED):** `where(event_id)->orWhere(marketplace_event_id)` putea potrivi
+config-ul altui eveniment. Introdus `EventFlexiblePaymentConfig::resolveFor()` care potrivește
+fiecare id în spațiul lui; toate căutările din microserviciu trecute prin el.
+
+**Check-in (MED):** biletele `pending_installments` erau deja blocate de gate-ul pe statusul
+comenzii; adăugat mesaj explicit dedicat la scanare (VenueOwner + Organizer).
+
+**Refund extern Stripe (MED):** `charge.refunded` din dashboard pe avans nu oprea planul (auto-debit
+continua!). Adăugat `InstallmentRefundService::externalRefund` (idempotent, fără re-refund la
+procesator) rutat din webhook.
+
+**Idempotență refund (MED):** înlocuit guard-ul ne-atomic `status===REFUNDED` cu un claim atomic
+prin `UPDATE ... WHERE status != refunded` (0 rânduri afectate → bail).
+
+**Batch LOW:**
+- `waived` bloca finalizarea (`outstandingCents` nu-l scădea) → adăugat `waivedCents()`.
+- **Drift la payout:** rotunjirea independentă a cotei de bază per rată deriva față de
+  `base_total`; acum **telescoping** pe secvență (sumă exactă, independentă de ordine).
+- `fail()` hard-decline nu recalcula `next_due_at` → adăugat `recomputeNextDue()`.
+- **Avans 0 ("0 avans"):** captura de 1 ban era respinsă de Stripe; acum **SetupIntent** (0 lei)
+  via `supportsZeroAmountMandate()`; Netopia (nu poate 0) e blocat cu mesaj clar.
+- **Cheie de idempotență** per-rată acum *attempt-scoped* (`id-aN`): un retry real primește cheie
+  nouă, dar re-rularea aceleiași încercări (callback pierdut) rămâne idempotentă → fără dublă taxare.
+- `confirmLink` verifică și **suma** raportată de procesator înainte de settle.
+
+**GAP-uri închise:**
+- **§16.2 expirare card:** `checkCardExpiry` la activare (dormant până când procesorul livrează
+  `card_exp_*`; flag + email la nevoie).
+- **§16.3 reprogramare eveniment:** `reconcileEventStartDate` (rulat din `process-due`) recomprimă
+  ratele rămase ca planul să se încheie înainte de noul deadline; email `installment_event_rescheduled`.
+- **§16.6(d) consimțământ:** log `consent_recorded` la creare (breakdown + grafic + `terms_url` +
+  timestamp) pe lângă `plan_snapshot` imutabil.
+
 ### Amânat explicit (backlog, neblocant)
 - Reminder-e multi-canal SMS/WhatsApp (§16.7), card de rezervă, retry inteligent temporal.
+- Populare efectivă `card_exp_*` din procesor (necesită expand payment_method la Stripe / câmp Netopia).

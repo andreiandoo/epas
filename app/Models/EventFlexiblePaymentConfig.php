@@ -58,6 +58,29 @@ class EventFlexiblePaymentConfig extends Model
     }
 
     /**
+     * Resolve the config for an event, matching each id in its OWN id-space.
+     *
+     * `event_id` (tenant Event table) and `marketplace_event_id` (marketplace
+     * event table) are distinct id-spaces, so a blanket
+     * `where(event_id)->orWhere(marketplace_event_id)` can cross-match a config
+     * belonging to a different event whose id happens to collide. We instead
+     * match marketplace_event_id when given, then event_id — never mixing them.
+     */
+    public static function resolveFor(?int $eventId, ?int $marketplaceEventId): ?self
+    {
+        if ($marketplaceEventId) {
+            $byMarketplace = static::where('marketplace_event_id', $marketplaceEventId)->first();
+            if ($byMarketplace) {
+                return $byMarketplace;
+            }
+        }
+        if ($eventId) {
+            return static::where('event_id', $eventId)->first();
+        }
+        return null;
+    }
+
+    /**
      * Is a given ticket type eligible for flexible payment on this event?
      * Empty/null list = all ticket types eligible.
      */

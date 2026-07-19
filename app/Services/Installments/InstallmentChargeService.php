@@ -73,7 +73,11 @@ class InstallmentChargeService
                 // Unique per installment: gateways that dedupe by order id would
                 // otherwise reject installments 2..N of the same order.
                 'order_id' => $agreement->order_id . '-i' . $payment->id,
-                'idempotency_key' => (string) $payment->id,
+                // Attempt-scoped so a genuine RETRY gets a fresh key (a constant
+                // key would make the gateway replay the cached decline), while a
+                // lost-callback re-run of the SAME attempt (attempts unchanged on
+                // success) keeps its key and settles idempotently.
+                'idempotency_key' => $payment->id . '-a' . $payment->attempts,
                 'metadata' => ['agreement_id' => $agreement->id, 'order_id' => $agreement->order_id, 'sequence' => $payment->sequence],
             ]);
         } catch (\Throwable $e) {
@@ -199,6 +203,10 @@ class InstallmentChargeService
 
             $link = $this->ensurePayLink($payment, $agreement);
             $payment->update(['pay_link_token' => $link->token]);
+            // The now-FAILED row is excluded from next-due; recompute so the
+            // agreement's next_due_at no longer points at a permanently-failed
+            // installment (dunning may still default it below).
+            $agreement->recomputeNextDue();
             app(InstallmentDunningService::class)->onPaymentFailed($agreement->fresh(), $payment->fresh());
 
             return ['status' => 'failed', 'message' => $error];
@@ -258,33 +266,63 @@ class InstallmentChargeService
             return ['status' => 'skipped', 'message' => 'Not active or no mandate'];
         }
 
-        $outstanding = $agreement->outstandingCents();
-        if ($outstanding <= 0) {
-            return ['status' => 'skipped', 'message' => 'Nothing outstanding'];
-        }
-
         $client = $agreement->marketplace_client_id ? MarketplaceClient::find($agreement->marketplace_client_id) : null;
         $processor = $client ? $this->resolver->tokenizableForMarketplaceClient($client) : null;
         if (! $processor) {
             return ['status' => 'skipped', 'message' => 'No tokenizable processor'];
         }
 
+        // CLAIM all outstanding installments atomically BEFORE charging, so the
+        // auto-debit sweep can't be charging one of them at the same time (which
+        // would double-charge). If any is already 'processing' (a sweep has it),
+        // abort — the customer can retry once it settles.
+        $claim = DB::transaction(function () use ($agreement) {
+            $rows = $agreement->payments()
+                ->where('sequence', '>', 0)
+                ->whereNotIn('status', [InstallmentPayment::STATUS_PAID, InstallmentPayment::STATUS_WAIVED])
+                ->lockForUpdate()->get();
+
+            if ($rows->contains(fn ($p) => $p->status === InstallmentPayment::STATUS_PROCESSING)) {
+                return null; // a charge is in flight
+            }
+            foreach ($rows as $p) {
+                $p->update(['status' => InstallmentPayment::STATUS_PROCESSING, 'last_attempt_at' => now()]);
+            }
+            return $rows;
+        });
+
+        if ($claim === null) {
+            return ['status' => 'skipped', 'message' => 'O plată este în curs de procesare; reîncearcă imediat.'];
+        }
+
+        $outstanding = (int) $claim->sum('amount_cents');
+        if ($outstanding <= 0) {
+            return ['status' => 'skipped', 'message' => 'Nothing outstanding'];
+        }
+
         $result = $processor->chargeWithToken($agreement->mandate_reference, [
             'amount' => $outstanding / 100,
             'currency' => $agreement->currency,
             'description' => 'Plată anticipată — comanda #' . $agreement->order_id,
-            'order_id' => (string) $agreement->order_id,
+            'order_id' => $agreement->order_id . '-payoff',
             'idempotency_key' => 'payoff-' . $agreement->id,
             'metadata' => ['agreement_id' => $agreement->id, 'early_payoff' => true],
         ]);
 
         if (($result['status'] ?? null) !== 'success') {
+            // Release the claim so the schedule/dunning can resume.
+            InstallmentPayment::whereIn('id', $claim->pluck('id'))
+                ->where('status', InstallmentPayment::STATUS_PROCESSING)
+                ->update(['status' => InstallmentPayment::STATUS_RETRYING]);
             return ['status' => $result['status'] ?? 'failed', 'message' => $result['error'] ?? 'declined'];
         }
 
-        $settled = DB::transaction(function () use ($agreement, $result) {
+        $settled = DB::transaction(function () use ($agreement, $result, $claim) {
             $settled = [];
-            foreach ($agreement->payments()->where('sequence', '>', 0)->whereNotIn('status', ['paid', 'waived'])->get() as $p) {
+            foreach (InstallmentPayment::whereIn('id', $claim->pluck('id'))->lockForUpdate()->get() as $p) {
+                if ($p->status === InstallmentPayment::STATUS_PAID) {
+                    continue;
+                }
                 $p->update([
                     'status' => InstallmentPayment::STATUS_PAID,
                     'paid_at' => now(),

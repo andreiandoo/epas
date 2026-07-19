@@ -409,6 +409,13 @@ class NetopiaProcessor implements PaymentProcessorInterface, SupportsTokenizedPa
         return $this->isConfigured() && !empty($this->keys['api_key'] ?? null);
     }
 
+    public function supportsZeroAmountMandate(): bool
+    {
+        // Netopia tokenizes only through a real card transaction, so a non-zero
+        // down payment is required to establish the mandate.
+        return false;
+    }
+
     protected function v2ApiBaseUrl(): string
     {
         return str_contains($this->baseUrl, 'sandbox')

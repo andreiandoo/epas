@@ -97,8 +97,7 @@ class InstallmentController extends Controller
         // Resolve the event-level availability ONCE (same for every ticket type);
         // per-ticket only differs by ticket-eligibility + price.
         $baseAvail = $this->eligibility->availability($client, $provider, [$eventId], []);
-        $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $eventId)
-            ->orWhere('marketplace_event_id', $eventId)->first();
+        $config = \App\Models\EventFlexiblePaymentConfig::resolveFor($eventId, $eventId);
 
         $rows = [];
         foreach ($event->ticketTypes as $tt) {
@@ -165,9 +164,10 @@ class InstallmentController extends Controller
             return response()->json(['error' => 'Marketplace client required'], 422);
         }
 
-        $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $order->event_id)
-            ->orWhere('marketplace_event_id', $order->marketplace_event_id)
-            ->first();
+        $config = \App\Models\EventFlexiblePaymentConfig::resolveFor(
+            $order->event_id,
+            $order->marketplace_event_id
+        );
 
         // The plan must be attached to THIS event and the matching method enabled.
         $methodEnabled = $plan->isBnpl() ? ($config?->enable_bnpl) : ($config?->enable_installments);
@@ -221,6 +221,15 @@ class InstallmentController extends Controller
             return response()->json(['error' => 'Processor does not support installments'], 422);
         }
 
+        // "0 avans" (no down payment) requires a zero-amount mandate capture,
+        // which not every processor supports (Netopia tokenizes only via a real
+        // charge). Reject rather than charging a bogus sub-minimum amount.
+        if ((int) $quote['down_payment_cents'] <= 0 && ! $processor->supportsZeroAmountMandate()) {
+            return response()->json([
+                'error' => 'Acest procesator necesită un avans pentru plata în rate. Configurați un avans pentru eveniment.',
+            ], 422);
+        }
+
         $agreement = $this->agreements->createFromQuote($plan, $quote, [
             'order_id' => $order->id,
             'marketplace_client_id' => $client->id,
@@ -245,7 +254,10 @@ class InstallmentController extends Controller
         $callbackUrl = route('api.marketplace-client.payment.callback', ['client' => $client->slug]);
 
         $payment = $processor->createPaymentWithMandate([
-            'amount' => max($captureCents, 1) / 100,
+            // Pass the real capture amount: 0 lets a zero-amount-capable processor
+            // (Stripe SetupIntent) establish the mandate with no charge; processors
+            // that need a charge were already gated out above for the down=0 case.
+            'amount' => $captureCents / 100,
             'currency' => $order->currency ?? 'RON',
             'description' => $plan->isBnpl() ? 'Verificare card (BNPL)' : 'Avans plată în rate',
             'order_id' => (string) $order->id,

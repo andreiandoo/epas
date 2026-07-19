@@ -27,6 +27,14 @@ interface SupportsTokenizedPayments
     public function supportsTokenization(): bool;
 
     /**
+     * Whether the processor can capture a reusable mandate WITHOUT charging the
+     * card (a zero-amount setup, e.g. a Stripe SetupIntent). This gates "0 avans"
+     * installment plans: processors that can only tokenize via a real charge
+     * (e.g. Netopia) must require a non-zero down payment instead.
+     */
+    public function supportsZeroAmountMandate(): bool;
+
+    /**
      * Create an on-session payment that ALSO stores a reusable mandate/token.
      *
      * Used for:

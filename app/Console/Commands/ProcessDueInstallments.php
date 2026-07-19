@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Jobs\ChargeInstallmentJob;
+use App\Models\InstallmentAgreement;
 use App\Models\InstallmentPayment;
+use App\Services\Installments\InstallmentAgreementService;
 use App\Services\Installments\InstallmentDunningService;
 use Illuminate\Console\Command;
 
@@ -27,6 +29,29 @@ class ProcessDueInstallments extends Command
             ->update(['status' => InstallmentPayment::STATUS_RETRYING]);
         if ($recovered > 0) {
             $this->warn("Recovered {$recovered} stuck 'processing' installment(s).");
+        }
+
+        // Reconcile active agreements against their live event date (§16.3): if
+        // an organizer moved the event, re-fit the remaining schedule BEFORE we
+        // charge, so we never debit a customer past a moved-up deadline.
+        $agreements = app(InstallmentAgreementService::class);
+        $reconciled = 0;
+        InstallmentAgreement::query()
+            ->where('status', InstallmentAgreement::STATUS_ACTIVE)
+            ->whereNotNull('event_id')
+            ->chunkById(200, function ($chunk) use ($agreements, &$reconciled) {
+                foreach ($chunk as $agreement) {
+                    try {
+                        if ($agreements->reconcileEventStartDate($agreement)) {
+                            $reconciled++;
+                        }
+                    } catch (\Throwable $e) {
+                        $this->warn("Reconcile failed for agreement {$agreement->id}: {$e->getMessage()}");
+                    }
+                }
+            });
+        if ($reconciled > 0) {
+            $this->warn("Reconciled {$reconciled} agreement(s) to a changed event date.");
         }
 
         $due = InstallmentPayment::query()

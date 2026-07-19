@@ -74,6 +74,10 @@ class CheckInController extends BaseController
             }
         }
 
+        if ($ticket->status === 'pending_installments') {
+            return $this->error('This ticket is not yet fully paid (installment plan in progress).', 400);
+        }
+
         if (in_array($ticket->status, ['cancelled', 'refunded'], true)) {
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
@@ -142,6 +146,10 @@ class CheckInController extends BaseController
             if (!$ticket->order || !in_array($ticket->order->status, $validOrderStatuses, true)) {
                 return $this->error('Ticket order is not in a valid status', 400);
             }
+        }
+
+        if ($ticket->status === 'pending_installments') {
+            return $this->error('This ticket is not yet fully paid (installment plan in progress).', 400);
         }
 
         if (in_array($ticket->status, ['cancelled', 'refunded'], true)) {

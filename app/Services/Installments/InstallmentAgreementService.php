@@ -78,6 +78,27 @@ class InstallmentAgreementService
                 'customer_total_cents' => $quote['customer_total_cents'],
             ]);
 
+            // Consumer-credit disclosure record (§16.6d): capture what the buyer
+            // was shown and agreed to at checkout — the full cost breakdown and
+            // schedule — so the accepted terms are auditable later. The immutable
+            // plan_snapshot already stores the quote; this is the explicit,
+            // timestamped consent event tied to the disclosed figures.
+            $agreement->log('consent_recorded', 'Customer accepted the payment-plan terms', [
+                'base_total_cents' => $quote['base_total_cents'],
+                'surcharge_cents' => $quote['surcharge_cents'],
+                'customer_total_cents' => $quote['customer_total_cents'],
+                'number_of_installments' => $quote['number_of_installments'],
+                'down_payment_cents' => $quote['down_payment_cents'],
+                'terms_url' => $plan->terms_url,
+                'schedule' => array_map(fn ($r) => [
+                    'sequence' => $r['sequence'],
+                    'due_date' => $r['due_date'],
+                    'amount_cents' => $r['amount_cents'],
+                ], $quote['schedule']),
+                'disclosed_at' => now()->toIso8601String(),
+                'consent_source' => $ctx['consent_source'] ?? 'checkout',
+            ]);
+
             // Reflect on the order (method + outstanding balance).
             $this->syncOrder($agreement);
 
@@ -132,7 +153,53 @@ class InstallmentAgreementService
             app(InstallmentPayoutService::class)->creditInstallment($agreement, $downFreshlyPaid);
         }
 
+        // Card-validity check (§16.2): if the mandate result carries the saved
+        // card's expiry, ensure it outlives the final installment. When it does
+        // not, flag the agreement and email the customer to update their card
+        // before the auto-debit fails. Dormant no-op until a processor supplies
+        // `card_exp_month`/`card_exp_year` in its mandate result.
+        $this->checkCardExpiry($agreement->fresh(), $result);
+
         return $agreement->fresh('payments');
+    }
+
+    /**
+     * Warn when the saved card expires before the plan finishes (§16.2).
+     * No-op unless the processor supplied the card expiry in the mandate result.
+     */
+    protected function checkCardExpiry(InstallmentAgreement $agreement, array $result): void
+    {
+        $month = $result['card_exp_month'] ?? ($result['metadata']['card_exp_month'] ?? null);
+        $year = $result['card_exp_year'] ?? ($result['metadata']['card_exp_year'] ?? null);
+        if (! $month || ! $year) {
+            return;
+        }
+
+        // Card is valid through the LAST day of its expiry month.
+        $cardValidUntil = Carbon::create((int) $year, (int) $month, 1)->endOfMonth();
+        $lastDue = $agreement->payments()->max('due_date');
+        if (! $lastDue) {
+            return;
+        }
+        $lastDue = Carbon::parse($lastDue);
+
+        $agreement->update(['metadata' => array_merge($agreement->metadata ?? [], [
+            'card_exp_month' => (int) $month,
+            'card_exp_year' => (int) $year,
+        ])]);
+
+        if ($cardValidUntil->lessThan($lastDue)) {
+            $agreement->update(['metadata' => array_merge($agreement->metadata ?? [], [
+                'card_expiry_warning' => true,
+            ])]);
+            $agreement->log('card_expiry_warning', 'Saved card expires before the plan ends', [
+                'card_valid_until' => $cardValidUntil->toDateString(),
+                'last_installment_due' => $lastDue->toDateString(),
+            ]);
+            app(FlexiblePaymentMailer::class)->send($agreement, 'installment_action_required', [
+                'reason' => 'card_expiring',
+            ]);
+        }
     }
 
     /**
@@ -164,7 +231,14 @@ class InstallmentAgreementService
             'mandate_reference' => $mandate,
             'payment_id' => $result['transaction_id'] ?? $result['payment_id'] ?? null,
         ]);
-        app(TicketStateService::class)->markPendingForAgreement($agreement->fresh());
+
+        $ticketService = app(TicketStateService::class);
+        $ticketService->markPendingForAgreement($agreement->fresh());
+        // The down payment cleared → the customer owns the seat. Confirm the
+        // held seats (held → sold) so the auto-release sweep can't free them
+        // out from under an active plan (oversell). The ticket stays invalid
+        // until the plan is fully paid.
+        $ticketService->confirmSeatsForOrder($order);
 
         return true;
     }
@@ -178,6 +252,97 @@ class InstallmentAgreementService
         $agreement->update(['status' => InstallmentAgreement::STATUS_COMPLETED, 'next_due_at' => null]);
         $agreement->log('completed', 'All payments settled — ticket valid');
         $this->syncOrder($agreement);
+    }
+
+    /**
+     * Reconcile an active agreement against its live event start date (§16.3).
+     *
+     * The organizer may move the event AFTER a plan started. If it moved EARLIER
+     * we must pull the remaining installments in so the plan still finishes
+     * before the (new) deadline — never charging a customer past it, and never
+     * unfairly defaulting them for the organizer's change. If it moved later we
+     * simply record the new date (more breathing room; no reschedule needed).
+     *
+     * Returns true if the schedule was changed. Safe/no-op when nothing drifted.
+     */
+    public function reconcileEventStartDate(InstallmentAgreement $agreement): bool
+    {
+        if (! $agreement->isActive() || ! $agreement->event_id) {
+            return false;
+        }
+        $event = \App\Models\Event::find($agreement->event_id);
+        $liveStart = $event?->start_date;
+        if (! $liveStart) {
+            return false;
+        }
+        $stored = $agreement->event_start_date;
+        if ($stored && $liveStart->equalTo($stored)) {
+            return false; // no drift
+        }
+
+        $daysBefore = (int) ($agreement->plan_snapshot['plan']['days_before_event_fully_paid'] ?? 1);
+        $deadline = $liveStart->copy()->subDays($daysBefore);
+
+        $agreement->update(['event_start_date' => $liveStart]);
+        $agreement->log('event_rescheduled', 'Event start date changed; schedule reconciled', [
+            'old_start_date' => $stored?->toIso8601String(),
+            'new_start_date' => $liveStart->toIso8601String(),
+            'new_deadline' => $deadline->toIso8601String(),
+        ]);
+
+        // Only outstanding (not-yet-paid) installments can move.
+        $remaining = $agreement->payments()
+            ->where('sequence', '>', 0)
+            ->whereIn('status', [
+                InstallmentPayment::STATUS_SCHEDULED, InstallmentPayment::STATUS_DUE,
+                InstallmentPayment::STATUS_RETRYING, InstallmentPayment::STATUS_ACTION_REQUIRED,
+                InstallmentPayment::STATUS_FAILED,
+            ])
+            ->orderBy('due_date')->get();
+
+        if ($remaining->isEmpty()) {
+            $agreement->recomputeNextDue();
+            return true;
+        }
+
+        // Any installment now due after the deadline must be pulled in. If the
+        // whole tail still fits, only the late ones move; if the deadline is
+        // already upon us, collapse them all to "due now" (customer pays now /
+        // early payoff, else dunning defaults it as before).
+        $now = Carbon::now();
+        $late = $remaining->filter(fn ($p) => $p->due_date->greaterThan($deadline));
+        if ($late->isEmpty()) {
+            $agreement->recomputeNextDue();
+            return true;
+        }
+
+        $count = $remaining->count();
+        if ($deadline->lessThanOrEqualTo($now)) {
+            // No room left → everything is due immediately.
+            foreach ($remaining as $p) {
+                $p->update(['due_date' => $now, 'status' => InstallmentPayment::STATUS_DUE]);
+            }
+        } else {
+            // Spread the remaining installments evenly across [now, deadline].
+            $span = max(1, $now->diffInDays($deadline));
+            $i = 1;
+            foreach ($remaining as $p) {
+                $offset = (int) floor($span * $i / $count);
+                $p->update(['due_date' => $now->copy()->addDays(min($offset, $span))]);
+                $i++;
+            }
+        }
+
+        $agreement->recomputeNextDue();
+        $this->syncOrder($agreement->fresh());
+
+        // Tell the customer their plan was rescheduled with the new dates.
+        app(FlexiblePaymentMailer::class)->send($agreement->fresh(), 'installment_event_rescheduled', [
+            'new_event_date' => $liveStart->toDateString(),
+            'new_deadline' => $deadline->toDateString(),
+        ]);
+
+        return true;
     }
 
     /**

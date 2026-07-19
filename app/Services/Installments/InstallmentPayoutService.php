@@ -33,9 +33,14 @@ class InstallmentPayoutService
             }
 
             // The organizer earns on the base (ticket) price, not the surcharge.
-            // Attribute each installment's base share proportionally.
+            // Attribute each installment's base share by TELESCOPING over the
+            // schedule sequence: share = cumulativeBase(through this seq) −
+            // cumulativeBase(before this seq). Independently rounding each share
+            // would let rounding error accumulate so the sum drifts a few bani
+            // off base_total; the telescoping sum equals base_total exactly and
+            // is deterministic regardless of the order installments settle in.
             $customerTotal = max(1, (int) $agreement->customer_total_cents);
-            $baseShareCents = (int) round($payment->amount_cents * $agreement->base_total_cents / $customerTotal);
+            $baseShareCents = $this->baseShareForPayment($agreement, $payment, $customerTotal);
 
             $commissionRate = (float) ($order->commission_rate ?? 0);
             $commissionCents = (int) round($baseShareCents * $commissionRate / 100);
@@ -57,5 +62,25 @@ class InstallmentPayoutService
             // Payout must never break charging; log and continue.
             Log::error("Installments payout failed for agreement {$agreement->id}: {$e->getMessage()}");
         }
+    }
+
+    /**
+     * Base-price portion attributable to a single installment, telescoped over
+     * the schedule so the shares sum EXACTLY to base_total_cents (no drift).
+     */
+    protected function baseShareForPayment(InstallmentAgreement $agreement, InstallmentPayment $payment, int $customerTotal): int
+    {
+        $base = (int) $agreement->base_total_cents;
+        $cumBefore = 0;
+        foreach ($agreement->payments()->orderBy('sequence')->get() as $p) {
+            if ((int) $p->id === (int) $payment->id) {
+                $cumThrough = $cumBefore + (int) $p->amount_cents;
+                return (int) round($cumThrough * $base / $customerTotal)
+                     - (int) round($cumBefore * $base / $customerTotal);
+            }
+            $cumBefore += (int) $p->amount_cents;
+        }
+        // Fallback (payment not found in schedule): proportional share.
+        return (int) round($payment->amount_cents * $base / $customerTotal);
     }
 }

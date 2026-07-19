@@ -32,13 +32,50 @@ class TicketStateService
         Log::info("Installments: tickets validated for agreement {$agreement->id}");
     }
 
-    /** Invalidate tickets on default/cancellation and release inventory. */
+    /** Invalidate tickets on default/cancellation AND release seats + quota. */
     public function invalidateForAgreement(InstallmentAgreement $agreement): void
     {
         $this->transition($agreement, self::STATUS_INVALIDATED, [self::STATUS_PENDING]);
-        // Inventory/seat release integrates with existing SeatHold/quota flows
-        // via the order's normal cancellation path.
+        if ($agreement->order_id && ($order = Order::find($agreement->order_id))) {
+            $this->releaseInventoryForOrder($order);
+        }
         Log::info("Installments: tickets invalidated for agreement {$agreement->id}");
+    }
+
+    /**
+     * Confirm the order's held seats (held → sold) when the down payment clears —
+     * the customer owns the seat now; the ticket is just invalid until fully paid.
+     * Without this the seat stays 'held' and gets auto-released → oversell.
+     */
+    public function confirmSeatsForOrder(Order $order): void
+    {
+        $seatedItems = $order->meta['seated_items'] ?? [];
+        if (empty($seatedItems)) {
+            return;
+        }
+        $svc = app(\App\Services\Seating\SeatHoldService::class);
+        foreach ($seatedItems as $item) {
+            try {
+                $svc->confirmPurchase(
+                    $item['event_seating_id'],
+                    $item['seat_uids'],
+                    'installment-downpayment',
+                    (int) round(((float) ($order->total ?? 0)) * 100)
+                );
+            } catch (\Throwable $e) {
+                Log::error("Installments: seat confirm failed for order {$order->id}: {$e->getMessage()}");
+            }
+        }
+    }
+
+    /** Release seats + restore quota on default/cancel (no oversell / phantom stock). */
+    public function releaseInventoryForOrder(Order $order): void
+    {
+        try {
+            $order->releaseSeatsAndRestoreStock();
+        } catch (\Throwable $e) {
+            Log::error("Installments: inventory release failed for order {$order->id}: {$e->getMessage()}");
+        }
     }
 
     protected function transition(InstallmentAgreement $agreement, string $to, array $fromStatuses): void

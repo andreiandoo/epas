@@ -66,6 +66,10 @@ class DelegatedPaymentService
                 ->where('order_id', $order->id)
                 ->whereIn('status', ['pending', 'pending_installments'])
                 ->update(['status' => 'valid', 'updated_at' => now()]);
+
+            // Payment cleared → confirm the held seats (held → sold) so they are
+            // no longer subject to the pending-order auto-release sweep.
+            app(TicketStateService::class)->confirmSeatsForOrder($order);
         }
     }
 
@@ -82,7 +86,10 @@ class DelegatedPaymentService
             $order->forceFill([
                 'status' => 'cancelled',
                 'cancelled_at' => now(),
+                'outstanding_cents' => 0,
             ])->save();
+            // Release the held seats + restore quota so the inventory frees up.
+            app(TicketStateService::class)->releaseInventoryForOrder($order);
             Log::info("Delegated pay link {$link->id} expired; order {$order->id} cancelled, inventory released.");
             // A rescue "pay it yourself" email to the buyer can reuse a fresh link.
         }

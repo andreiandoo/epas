@@ -81,6 +81,11 @@ class MockTokenizableProcessor implements PaymentProcessorInterface, SupportsTok
         return true;
     }
 
+    public function supportsZeroAmountMandate(): bool
+    {
+        return true;
+    }
+
     public function createPaymentWithMandate(array $data): array
     {
         return [

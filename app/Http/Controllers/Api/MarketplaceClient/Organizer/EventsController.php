@@ -1456,6 +1456,11 @@ class EventsController extends BaseController
             }
         }
 
+        if ($ticket->status === 'pending_installments') {
+            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'invalid', 'ticket_pending_installments');
+            return $this->error('Biletul nu este încă achitat integral (plată în rate în curs).', 400);
+        }
+
         if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
             $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'invalid', 'ticket_' . $ticket->status);
             return $this->error('This ticket has been ' . $ticket->status, 400);
