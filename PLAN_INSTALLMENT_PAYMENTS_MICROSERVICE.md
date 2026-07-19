@@ -947,8 +947,24 @@ InstallmentEmailTemplatesSeeder (19 șabloane branded), înregistrate în Databa
 
 **Teste**: `tests/Unit/InstallmentPlanCalculatorTest.php` (7 teste, 26 aserțiuni).
 
-### Rămâne ca polish (neblocant pentru testare)
-- Pagină dedicată de analytics avansat (§18bis.B) — momentan acoperită de widget-ul de KPI.
-- Reminder-e multi-canal SMS/WhatsApp (§16.7), card de rezervă, retry inteligent (amânate explicit).
-- Afișarea metodei + sold pe paginile Order/Ticket din admin (§18bis.C) — datele există pe
-  `orders.payment_method_kind`/`outstanding_cents`; rămâne doar coloana/eticheta în UI.
+### Polish finalizat (rundă ulterioară)
+- **Pagină dedicată de analytics** (`FlexiblePaymentAnalytics`) + **pagină de setări**
+  (`FlexiblePaymentSettings`, toggle sub-module) — LIVRATE.
+- **Afișare metodă + sold + desfășurător de plăți** pe `OrderResource` (coloane + secțiune
+  în infolist) — LIVRAT.
+- **Pagina publică** `/plati-flexibile` + **widget KPI** pe dashboard — LIVRATE.
+
+### Hardening din review (rundă de review pe cod)
+- **Securitate:** portal + early payoff erau accesibile după id secvențial (PII + debitare
+  reală a cardului). Acum **token per-agreement** (`portal_token`, ascuns din serializare);
+  rutele publice sunt `throttle:30,1`.
+- **Integritate:** `confirmLink` verifică plata la procesator (`getPaymentStatus`) înainte de
+  a marca link-ul plătit — nu se mai încrede într-un GET.
+- **Payout:** creditarea incrementală acoperă acum și avansul și plata anticipată.
+- **Validare checkout:** `start` respinge comenzi neeligibile și planuri neatașate/dezactivate
+  pe eveniment; `createDelegated` verifică starea comenzii + toggle-ul evenimentului.
+- **BNPL:** captarea de 1 leu e modelată ca avans (sequence 0) → se **scade din sold**.
+- **Reminder due-today** activat.
+
+### Amânat explicit (backlog, neblocant)
+- Reminder-e multi-canal SMS/WhatsApp (§16.7), card de rezervă, retry inteligent temporal.
