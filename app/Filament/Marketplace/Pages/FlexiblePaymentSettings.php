@@ -45,7 +45,10 @@ class FlexiblePaymentSettings extends Page implements HasForms
     {
         $client = static::getMarketplaceClient();
         $pivot = $client?->microservices()->where('slug', 'flexible-payments')->first()?->pivot;
-        $settings = is_array($pivot?->settings) ? $pivot->settings : [];
+        $settings = $pivot?->settings ?? [];
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true) ?: [];
+        }
 
         $this->enable_installments = (bool) ($settings['enable_installments'] ?? true);
         $this->enable_bnpl = (bool) ($settings['enable_bnpl'] ?? true);
@@ -73,12 +76,17 @@ class FlexiblePaymentSettings extends Page implements HasForms
             return;
         }
 
-        $settings = is_array($ms->pivot->settings) ? $ms->pivot->settings : [];
+        $settings = $ms->pivot->settings ?? [];
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true) ?: [];
+        }
         $settings['enable_installments'] = $this->enable_installments;
         $settings['enable_bnpl'] = $this->enable_bnpl;
         $settings['enable_delegated_pay'] = $this->enable_delegated_pay;
 
-        $client->microservices()->updateExistingPivot($ms->id, ['settings' => $settings]);
+        // Match the repo convention (see SmsNotifications): the pivot `settings`
+        // JSON column is written as an encoded string via updateExistingPivot.
+        $client->microservices()->updateExistingPivot($ms->id, ['settings' => json_encode($settings)]);
 
         Notification::make()->success()->title('Setări salvate')->send();
     }
