@@ -103,6 +103,24 @@ class InstallmentAgreementResource extends Resource
                     ->action(function (InstallmentAgreement $r) {
                         app(\App\Services\Installments\InstallmentDunningService::class)->cancel($r, 'manual_cancel');
                     }),
+                Action::make('refund')
+                    ->label('Retur')
+                    ->color('warning')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->requiresConfirmation()
+                    ->visible(fn (InstallmentAgreement $r) => in_array($r->status, ['active', 'completed']) && $r->paidCents() > 0)
+                    ->schema([
+                        \Filament\Forms\Components\Toggle::make('event_cancelled')
+                            ->label('Eveniment anulat (retur integral, inclusiv taxe)')
+                            ->helperText('Bifat: clientul primește tot. Nebifat: retur client — taxele nereturnabile se rețin.')
+                            ->default(false),
+                    ])
+                    ->action(function (InstallmentAgreement $r, array $data) {
+                        $svc = app(\App\Services\Installments\InstallmentRefundService::class);
+                        ($data['event_cancelled'] ?? false)
+                            ? $svc->eventCancelled($r, 'admin_event_cancelled')
+                            : $svc->customerReturn($r, 'admin_customer_return');
+                    }),
             ]);
     }
 

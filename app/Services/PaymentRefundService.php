@@ -19,6 +19,15 @@ class PaymentRefundService
     public function processRefund(MarketplaceRefundRequest $refund): RefundResult
     {
         $order = $refund->order;
+
+        // Flexible-payment orders: a single order.payment_reference would only
+        // refund the down payment. Delegate to the installment-aware service,
+        // which credits EVERY installment's processor transaction and reverses
+        // the organizer payout.
+        if ($order && $order->installment_agreement_id) {
+            return $this->processInstallmentRefund($refund, $order);
+        }
+
         $processor = $order->payment_processor ?? 'unknown';
 
         return match ($processor) {
@@ -31,6 +40,53 @@ class PaymentRefundService
                 requiresManual: true
             ),
         };
+    }
+
+    /**
+     * Refund a flexible-payment (installment / BNPL) order. Credits every
+     * installment's processor transaction and reverses the organizer's balance.
+     * Fault-based: an event-cancellation refund makes the customer whole
+     * (fees included); any other reason keeps the non-refundable fees.
+     */
+    protected function processInstallmentRefund(MarketplaceRefundRequest $refund, Order $order): RefundResult
+    {
+        $agreement = \App\Models\InstallmentAgreement::find($order->installment_agreement_id);
+        if (! $agreement) {
+            return new RefundResult(success: false, error: 'Installment agreement not found', requiresManual: true);
+        }
+
+        $isEventCancel = $this->isEventCancellationReason($refund->reason_category ?? $refund->type ?? '');
+        return $this->refundInstallmentAgreement($agreement, $isEventCancel, $refund->reason ?? '');
+    }
+
+    /**
+     * Core installment refund — shared by the request-based and order-level paths.
+     */
+    protected function refundInstallmentAgreement(\App\Models\InstallmentAgreement $agreement, bool $isEventCancel, string $reason): RefundResult
+    {
+        $service = app(\App\Services\Installments\InstallmentRefundService::class);
+        try {
+            $refunded = $isEventCancel
+                ? $service->eventCancelled($agreement, $reason ?: 'event_cancelled')
+                : $service->customerReturn($agreement, $reason ?: 'customer_return');
+
+            return new RefundResult(
+                success: true,
+                refundId: 'installment-' . $agreement->id,
+                response: ['refunded_cents' => $refunded, 'mode' => $isEventCancel ? 'event_cancelled' : 'customer_return'],
+            );
+        } catch (\Throwable $e) {
+            return new RefundResult(success: false, error: $e->getMessage(), requiresManual: true);
+        }
+    }
+
+    protected function isEventCancellationReason(?string $value): bool
+    {
+        return in_array(
+            strtolower((string) $value),
+            ['event_cancelled', 'event_cancellation', 'event_canceled'],
+            true
+        );
     }
 
     /**
@@ -435,6 +491,18 @@ class PaymentRefundService
      */
     public function processOrderLevelRefund(Order $order, bool $refundCommission, string $reason, ?string $reasonCategory = null): RefundResult
     {
+        // Installment/BNPL orders: refund every transaction + reverse payout.
+        if ($order->installment_agreement_id) {
+            $agreement = \App\Models\InstallmentAgreement::find($order->installment_agreement_id);
+            if ($agreement) {
+                return $this->refundInstallmentAgreement(
+                    $agreement,
+                    $this->isEventCancellationReason($reasonCategory),
+                    $reason
+                );
+            }
+        }
+
         $ticketIds = $order->tickets()
             ->where('refund_status', '!=', 'refunded')
             ->pluck('id')
