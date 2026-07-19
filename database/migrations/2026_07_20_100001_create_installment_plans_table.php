@@ -36,12 +36,16 @@ return new class extends Migration
 
             // Schedule
             $table->integer('number_of_installments')->default(1);
-            $table->enum('schedule_type', ['interval', 'fixed_dates'])->default('interval');
+            $table->enum('schedule_type', ['interval', 'fixed_dates', 'custom'])->default('interval');
             $table->enum('interval_unit', ['day', 'week', 'month'])->default('month');
             $table->integer('interval_count')->default(1);
             $table->json('fixed_dates')->nullable();
             $table->enum('distribution', ['equal', 'custom_percent'])->default('equal');
             $table->json('installments_percentages')->nullable();
+            // Per-installment custom schedule: [{offset_days, offset_from, percent}, ...]
+            // (schedule_type='custom'). Enables irregular timing AND amounts, e.g.
+            // "60% at +30d, then 40% at +14d from the previous".
+            $table->json('custom_schedule')->nullable();
 
             // Costs — marketplace surcharge (customer-facing markup), percent AND/OR fixed.
             $table->integer('surcharge_percent')->default(0);      // percent * 100

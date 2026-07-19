@@ -19,6 +19,8 @@ class EditInstallmentPlan extends EditRecord
     {
         if (($data['plan_type'] ?? null) === 'bnpl_single') {
             $data['number_of_installments'] = 1;
+        } elseif (($data['schedule_type'] ?? null) === 'custom' && is_array($data['custom_schedule'] ?? null)) {
+            $data['number_of_installments'] = count($data['custom_schedule']);
         }
         return $data;
     }

@@ -76,15 +76,20 @@ class InstallmentPlanResource extends Resource
 
             SC\Section::make('Grafic')
                 ->schema([
+                    Forms\Components\Select::make('schedule_type')
+                        ->label('Tip programare')
+                        ->options([
+                            'interval' => 'Interval fix (ex: la fiecare 2 săptămâni)',
+                            'fixed_dates' => 'Date calendaristice fixe',
+                            'custom' => 'Personalizat (fiecare rată cu decalaj + procent propriu)',
+                        ])
+                        ->default('interval')->live(),
                     Forms\Components\TextInput::make('number_of_installments')
                         ->label('Număr de rate')
                         ->numeric()->default(3)->minValue(1)
                         ->disabled(fn (Get $get) => $get('plan_type') === 'bnpl_single')
-                        ->helperText('BNPL are automat o singură plată'),
-                    Forms\Components\Select::make('schedule_type')
-                        ->label('Tip programare')
-                        ->options(['interval' => 'Interval fix', 'fixed_dates' => 'Date fixe'])
-                        ->default('interval')->live(),
+                        ->visible(fn (Get $get) => $get('schedule_type') !== 'custom')
+                        ->helperText('BNPL are automat o singură plată; la „Personalizat" numărul e dat de rânduri'),
                     Forms\Components\Select::make('interval_unit')
                         ->label('Unitate interval')
                         ->options(['day' => 'Zile', 'week' => 'Săptămâni', 'month' => 'Luni'])
@@ -96,7 +101,27 @@ class InstallmentPlanResource extends Resource
                     Forms\Components\Select::make('distribution')
                         ->label('Distribuție sume')
                         ->options(['equal' => 'Egale', 'custom_percent' => 'Procente personalizate'])
-                        ->default('equal'),
+                        ->default('equal')
+                        ->visible(fn (Get $get) => $get('schedule_type') !== 'custom'),
+
+                    // Custom per-installment schedule (timing + amount per row).
+                    Forms\Components\Repeater::make('custom_schedule')
+                        ->label('Rate personalizate')
+                        ->schema([
+                            Forms\Components\TextInput::make('offset_days')
+                                ->label('Peste câte zile')->numeric()->required()->default(30),
+                            Forms\Components\Select::make('offset_from')
+                                ->label('Măsurat din')
+                                ->options(['previous' => 'Rata anterioară (sau avans, la prima)', 'start' => 'Data avansului'])
+                                ->default('previous')->required(),
+                            Forms\Components\TextInput::make('percent')
+                                ->label('% din suma finanțată')->numeric()->required()->suffix('%'),
+                        ])
+                        ->columns(3)
+                        ->minItems(1)
+                        ->addActionLabel('Adaugă rată')
+                        ->helperText('Suma procentelor ar trebui să dea 100. Ex: 60% peste 30z din avans, apoi 40% peste 14z din rata anterioară.')
+                        ->visible(fn (Get $get) => $get('schedule_type') === 'custom'),
                 ])->columns(2)
                 ->visible(fn (Get $get) => $get('plan_type') !== 'bnpl_single'),
 

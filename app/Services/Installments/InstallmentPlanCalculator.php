@@ -96,7 +96,12 @@ class InstallmentPlanCalculator
             : null;
 
         // --- Schedule dates --------------------------------------------------
-        $n = max(1, (int) $plan->number_of_installments);
+        $isCustom = $plan->schedule_type === 'custom'
+            && is_array($plan->custom_schedule) && count($plan->custom_schedule) > 0;
+        $n = $isCustom
+            ? count($plan->custom_schedule)
+            : max(1, (int) $plan->number_of_installments);
+
         if ($plan->isBnpl()) {
             $n = 1;
             $horizon = (int) ($ctx['bnpl_max_horizon_days'] ?? 30);
@@ -156,6 +161,28 @@ class InstallmentPlanCalculator
      */
     protected function installmentDueDates(InstallmentPlan $plan, Carbon $start, ?Carbon $deadline, int $n, array &$result): ?array
     {
+        // Custom per-installment offsets: each step's offset_days counts from the
+        // previous installment (offset_from='previous', default) or from the
+        // down-payment/start date (offset_from='start'). Enables schedules like
+        // "first at +30d, then +14d from the previous".
+        if ($plan->schedule_type === 'custom' && is_array($plan->custom_schedule)) {
+            $dueDates = [];
+            $cursor = $start->copy();
+            foreach ($plan->custom_schedule as $step) {
+                $offset = (int) ($step['offset_days'] ?? 0);
+                $from = $step['offset_from'] ?? 'previous';
+                $cursor = $from === 'start'
+                    ? $start->copy()->addDays($offset)
+                    : $cursor->copy()->addDays($offset);
+                $dueDates[] = $cursor->copy();
+            }
+            if ($deadline && ! empty($dueDates) && end($dueDates)->gt($deadline)) {
+                $result['reason'] = 'does_not_fit';
+                return null;
+            }
+            return $dueDates;
+        }
+
         if ($plan->schedule_type === 'fixed_dates') {
             $dates = collect($plan->fixed_dates ?? [])
                 ->map(fn ($d) => $this->toDate($d))
@@ -208,6 +235,20 @@ class InstallmentPlanCalculator
     protected function splitAmounts(int $financed, int $n, InstallmentPlan $plan): array
     {
         $amounts = [];
+
+        // Custom schedule carries its own per-installment percentages.
+        if ($plan->schedule_type === 'custom' && is_array($plan->custom_schedule) && count($plan->custom_schedule) > 0) {
+            $sum = 0;
+            foreach ($plan->custom_schedule as $step) {
+                $pct = (float) ($step['percent'] ?? 0);
+                $amt = (int) floor($financed * $pct / 100);
+                $amounts[] = $amt;
+                $sum += $amt;
+            }
+            $amounts[$n - 1] += $financed - array_sum($amounts); // remainder on last
+            return $amounts;
+        }
+
         if ($plan->distribution === 'custom_percent' && is_array($plan->installments_percentages)) {
             $pcts = array_slice($plan->installments_percentages, 0, $n);
             $sum = 0;

@@ -137,6 +137,59 @@ class InstallmentPlanCalculatorTest extends TestCase
         $this->assertSame($q['financed_cents'], array_sum(array_column($instalments, 'amount_cents')));
     }
 
+    public function test_custom_schedule_offsets_and_percentages(): void
+    {
+        // "After the down payment, 60% at +30 days from the down payment, then
+        // 40% at +14 days from the previous installment."
+        $plan = $this->plan([
+            'schedule_type' => 'custom',
+            'custom_schedule' => [
+                ['offset_days' => 30, 'offset_from' => 'start', 'percent' => 60],
+                ['offset_days' => 14, 'offset_from' => 'previous', 'percent' => 40],
+            ],
+        ]);
+
+        $q = $this->calc()->quote($plan, 40000, [
+            'down_payment_type' => 'percent',
+            'down_payment_value' => 2500, // 25%
+            'start_date' => '2026-08-01',
+            'event_start_date' => '2026-12-01',
+            'platform_fee_percent' => 2.0,
+        ]);
+
+        $this->assertTrue($q['eligible'], $q['reason'] ?? '');
+        $this->assertSame(2, $q['number_of_installments']);
+
+        $installments = array_values(array_filter($q['schedule'], fn ($r) => $r['sequence'] > 0));
+        // dates: +30d from start, then +14d from the previous
+        $this->assertSame('2026-08-31', $installments[0]['due_date']);
+        $this->assertSame('2026-09-14', $installments[1]['due_date']);
+        // amounts: 60% / 40% of financed, summing to financed exactly
+        $financed = $q['financed_cents'];
+        $this->assertSame((int) floor($financed * 60 / 100), $installments[0]['amount_cents']);
+        $this->assertSame($financed, array_sum(array_column($installments, 'amount_cents')));
+    }
+
+    public function test_custom_schedule_rejected_when_it_overruns_the_event(): void
+    {
+        $plan = $this->plan([
+            'schedule_type' => 'custom',
+            'custom_schedule' => [
+                ['offset_days' => 30, 'offset_from' => 'start', 'percent' => 50],
+                ['offset_days' => 30, 'offset_from' => 'previous', 'percent' => 50],
+            ],
+        ]);
+
+        $q = $this->calc()->quote($plan, 40000, [
+            'start_date' => '2026-08-01',
+            'event_start_date' => '2026-08-20', // event before the 2nd installment
+            'platform_fee_percent' => 2.0,
+        ]);
+
+        $this->assertFalse($q['eligible']);
+        $this->assertSame('does_not_fit', $q['reason']);
+    }
+
     public function test_bnpl_single_payment_within_horizon(): void
     {
         $q = $this->calc()->quote($this->plan([
