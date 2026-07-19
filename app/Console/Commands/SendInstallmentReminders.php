@@ -42,20 +42,25 @@ class SendInstallmentReminders extends Command
             ->chunkById(500, function ($payments) use ($targetDates, $mailer, &$sent) {
                 foreach ($payments as $payment) {
                     $dueDay = $payment->due_date->toDateString();
+                    $isDueToday = $payment->due_date->isToday();
+                    $isUpcoming = in_array($dueDay, $targetDates, true);
 
-                    // Reminder before due date.
-                    if (in_array($dueDay, $targetDates, true)) {
-                        // Only one reminder per calendar day.
-                        if ($payment->reminder_sent_at && $payment->reminder_sent_at->isToday()) {
-                            continue;
-                        }
-                        $agreement = $payment->agreement;
-                        if ($agreement) {
-                            $mailer->send($agreement, 'installment_payment_upcoming', $mailer->paymentVariables($payment, $agreement->currency));
-                            $payment->update(['reminder_sent_at' => now()]);
-                            $sent++;
-                        }
+                    if (! $isDueToday && ! $isUpcoming) {
+                        continue;
                     }
+                    // Only one reminder per calendar day per installment.
+                    if ($payment->reminder_sent_at && $payment->reminder_sent_at->isToday()) {
+                        continue;
+                    }
+                    $agreement = $payment->agreement;
+                    if (! $agreement) {
+                        continue;
+                    }
+
+                    $slug = $isDueToday ? 'installment_payment_due_today' : 'installment_payment_upcoming';
+                    $mailer->send($agreement, $slug, $mailer->paymentVariables($payment, $agreement->currency));
+                    $payment->update(['reminder_sent_at' => now()]);
+                    $sent++;
                 }
             });
 

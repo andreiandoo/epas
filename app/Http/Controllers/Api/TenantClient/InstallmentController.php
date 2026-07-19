@@ -96,9 +96,20 @@ class InstallmentController extends Controller
         }
 
         $baseCents = (int) round(((float) $order->total) * 100);
+
+        // BNPL: the 1-RON card capture IS the down payment (sequence 0), so it is
+        // deducted from the single deferred charge ("scădem leul din sold").
+        if ($plan->isBnpl()) {
+            $downType = 'fixed';
+            $downValue = (int) config('installments.bnpl_card_capture_cents', 100);
+        } else {
+            $downType = $config?->down_payment_type ?? 'none';
+            $downValue = $config?->down_payment_value ?? 0;
+        }
+
         $quote = $this->calculator->quote($plan, $baseCents, [
-            'down_payment_type' => $config?->down_payment_type ?? 'none',
-            'down_payment_value' => $config?->down_payment_value ?? 0,
+            'down_payment_type' => $downType,
+            'down_payment_value' => $downValue,
             'event_start_date' => $order->event?->start_date ?? null,
             'platform_fee_percent' => config('installments.platform_fee_percent_installments', 2.0),
             'bnpl_max_horizon_days' => $config?->bnpl_max_horizon_days ?? 30,
@@ -129,10 +140,9 @@ class InstallmentController extends Controller
             'currency' => $order->currency,
         ]);
 
-        // Charge the down payment (or the BNPL 1-RON card capture) with a mandate.
-        $captureCents = $plan->isBnpl()
-            ? (int) config('installments.bnpl_card_capture_cents', 100)
-            : $quote['down_payment_cents'];
+        // The down payment (sequence 0) is charged now with a mandate. For BNPL
+        // that equals the 1-RON capture set above.
+        $captureCents = $quote['down_payment_cents'];
 
         $payment = $processor->createPaymentWithMandate([
             'amount' => max($captureCents, 1) / 100,
