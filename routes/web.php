@@ -37,6 +37,25 @@ Route::get('/newsletter/open/{token}.gif', [NewsletterTrackingController::class,
     ->name('newsletter.open')
     ->where('token', '[A-Za-z0-9._-]+');
 
+// Flexible Payments — public surface (pay-links + customer portal). JSON-first;
+// the processor's hosted page handles card entry via the returned redirect_url.
+Route::prefix('pay')->group(function () {
+    Route::get('/{token}', [\App\Http\Controllers\FlexiblePaymentController::class, 'showLink'])
+        ->name('flex.pay.show')->where('token', '[A-Za-z0-9]+');
+    Route::post('/{token}', [\App\Http\Controllers\FlexiblePaymentController::class, 'payLink'])
+        ->name('flex.pay.start')->where('token', '[A-Za-z0-9]+');
+    Route::get('/{token}/confirm', [\App\Http\Controllers\FlexiblePaymentController::class, 'confirmLink'])
+        ->name('flex.pay.confirm')->where('token', '[A-Za-z0-9]+');
+});
+Route::prefix('installments')->group(function () {
+    Route::get('/agreements/{agreement}', [\App\Http\Controllers\FlexiblePaymentController::class, 'portal'])
+        ->name('flex.portal')->whereNumber('agreement');
+    Route::post('/agreements/{agreement}/payoff', [\App\Http\Controllers\FlexiblePaymentController::class, 'earlyPayoff'])
+        ->name('flex.payoff')->whereNumber('agreement');
+    Route::post('/orders/{order}/delegated', [\App\Http\Controllers\FlexiblePaymentController::class, 'createDelegated'])
+        ->name('flex.delegated.create')->whereNumber('order');
+});
+
 // Define login route that redirects to Filament admin login
 Route::get('/login', function () {
     return redirect('/admin/login');

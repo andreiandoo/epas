@@ -205,6 +205,62 @@ class InstallmentChargeService
         ]);
     }
 
+    /**
+     * Early payoff: charge the full remaining balance in one MIT and settle all
+     * outstanding installments at once. Ticket becomes valid immediately.
+     */
+    public function chargeRemaining(InstallmentAgreement $agreement): array
+    {
+        if (! $agreement->isActive() || ! $agreement->mandate_reference) {
+            return ['status' => 'skipped', 'message' => 'Not active or no mandate'];
+        }
+
+        $outstanding = $agreement->outstandingCents();
+        if ($outstanding <= 0) {
+            return ['status' => 'skipped', 'message' => 'Nothing outstanding'];
+        }
+
+        $client = $agreement->marketplace_client_id ? MarketplaceClient::find($agreement->marketplace_client_id) : null;
+        $processor = $client ? $this->resolver->tokenizableForMarketplaceClient($client) : null;
+        if (! $processor) {
+            return ['status' => 'skipped', 'message' => 'No tokenizable processor'];
+        }
+
+        $result = $processor->chargeWithToken($agreement->mandate_reference, [
+            'amount' => $outstanding / 100,
+            'currency' => $agreement->currency,
+            'description' => 'Plată anticipată — comanda #' . $agreement->order_id,
+            'order_id' => (string) $agreement->order_id,
+            'idempotency_key' => 'payoff-' . $agreement->id,
+            'metadata' => ['agreement_id' => $agreement->id, 'early_payoff' => true],
+        ]);
+
+        if (($result['status'] ?? null) !== 'success') {
+            return ['status' => $result['status'] ?? 'failed', 'message' => $result['error'] ?? 'declined'];
+        }
+
+        DB::transaction(function () use ($agreement, $result) {
+            foreach ($agreement->payments()->where('sequence', '>', 0)->whereNotIn('status', ['paid', 'waived'])->get() as $p) {
+                $p->update([
+                    'status' => InstallmentPayment::STATUS_PAID,
+                    'paid_at' => now(),
+                    'paid_amount_cents' => $p->amount_cents,
+                    'payment_reference' => $result['payment_id'] ?? null,
+                ]);
+            }
+            $agreement->update([
+                'paid_installments_count' => $agreement->payments()->where('status', 'paid')->count(),
+            ]);
+            $agreement->log('early_payoff', 'Remaining balance paid early', ['reference' => $result['payment_id'] ?? null]);
+        });
+
+        $this->agreements->complete($agreement->fresh());
+        app(TicketStateService::class)->markValidForAgreement($agreement);
+        $this->mailer->send($agreement->fresh(), 'installment_early_payoff_receipt');
+
+        return ['status' => 'success'];
+    }
+
     protected function allSettled(InstallmentAgreement $agreement): bool
     {
         return ! $agreement->payments()

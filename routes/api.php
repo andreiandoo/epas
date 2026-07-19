@@ -66,6 +66,14 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/events', [TenantClientController::class, 'events'])
         ->name('api.tenant-client-public.events');
 
+    // Flexible Payments — storefront: availability, plan previews, start a plan.
+    Route::get('/installments/availability', [\App\Http\Controllers\Api\TenantClient\InstallmentController::class, 'availability'])
+        ->name('api.tenant-client-public.installments.availability');
+    Route::get('/installments/plans', [\App\Http\Controllers\Api\TenantClient\InstallmentController::class, 'plans'])
+        ->name('api.tenant-client-public.installments.plans');
+    Route::post('/installments/start', [\App\Http\Controllers\Api\TenantClient\InstallmentController::class, 'start'])
+        ->name('api.tenant-client-public.installments.start');
+
     Route::get('/events/featured', [TenantClientController::class, 'featuredEvents'])
         ->name('api.tenant-client-public.events.featured');
 
