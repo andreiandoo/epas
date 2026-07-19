@@ -430,8 +430,9 @@ class NetopiaProcessor implements PaymentProcessorInterface, SupportsTokenizedPa
 
         $body = [
             'config' => [
-                'notifyUrl'    => $data['notify_url'] ?? ($data['metadata']['notify_url'] ?? null),
-                'redirectUrl'  => $data['success_url'] ?? null,
+                // IPN target — mirror createPayment which uses callback_url.
+                'notifyUrl'    => $data['callback_url'] ?? $data['notify_url'] ?? ($data['metadata']['notify_url'] ?? null),
+                'redirectUrl'  => $data['return_url'] ?? $data['success_url'] ?? null,
                 'cancelUrl'    => $data['cancel_url'] ?? null,
                 // Request a reusable token for later MIT installment charges.
                 'recurrence'   => ['type' => 'installment'],

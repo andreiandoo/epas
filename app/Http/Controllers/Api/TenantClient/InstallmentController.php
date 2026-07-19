@@ -157,16 +157,24 @@ class InstallmentController extends Controller
         // that equals the 1-RON capture set above.
         $captureCents = $quote['down_payment_cents'];
 
+        // The processor confirms the down payment to the marketplace callback,
+        // whose installment branch activates the agreement + captures the mandate.
+        $callbackUrl = route('api.marketplace-client.payment.callback', ['client' => $client->slug]);
+
         $payment = $processor->createPaymentWithMandate([
             'amount' => max($captureCents, 1) / 100,
             'currency' => $order->currency ?? 'RON',
             'description' => $plan->isBnpl() ? 'Verificare card (BNPL)' : 'Avans plată în rate',
             'order_id' => (string) $order->id,
+            'order_number' => $order->order_number,
             'customer_email' => $order->customer_email,
             'customer_name' => $order->customer_name,
             'success_url' => url("/installments/agreements/{$agreement->portal_token}"),
+            'return_url' => url("/installments/agreements/{$agreement->portal_token}"),
             'cancel_url' => url('/checkout'),
-            'metadata' => ['agreement_id' => $agreement->id],
+            'callback_url' => $callbackUrl,
+            'notify_url' => $callbackUrl,
+            'metadata' => ['agreement_id' => $agreement->id, 'notify_url' => $callbackUrl],
         ]);
 
         return response()->json([
