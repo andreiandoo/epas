@@ -1,10 +1,15 @@
-# Installment Payments Microservice — Implementation Plan
+# Flexible Payments Microservice — Implementation Plan
 
-Plată în rate ("buy-now-pay-later" propriu) pentru orice marketplace și orice
-procesator de plată deja integrat (Netopia, Stripe, EuPlatesc, PayU).
+Microserviciu-**umbrelă „Plăți flexibile"** cu 3 sub-module pentru orice marketplace și orice
+procesator de plată deja integrat (v1: Stripe + Netopia):
 
-Exemplu de referință: **ambilet.ro** (MarketplaceClient) lucrează cu **Netopia**
-și vrea să ofere plata în rate în checkout, cu planuri configurabile din admin.
+1. **Plată în rate** (installments) — cu avans, grafic, surcharge, debitare automată.
+2. **BNPL** — o singură plată amânată ≤30 zile, înainte de eveniment.
+3. **Plată delegată** (someone-else-pays) — blochează biletul, altcineva plătește prin link 24h.
+
+Exemplu de referință: **ambilet.ro** (MarketplaceClient) lucrează cu **Netopia**.
+Documentul păstrează denumirea istorică „installment" în multe secțiuni — motorul de rate e
+nucleul, iar BNPL & plata delegată se sprijină pe el (vezi §19).
 
 ---
 
@@ -442,15 +447,25 @@ clientului (grafic, update card, plată manuală).
 
 ## 12. Înregistrare microserviciu
 
+Microserviciul e o **umbrelă „Plăți flexibile"** cu 3 sub-module activabile independent:
+**rate**, **BNPL**, **plată delegată** (someone-else-pays). Împart ~70% din infra
+(`payment_links`, agreement/charge engine, emailuri, webhooks).
+
 ```php
 Microservice::create([
-  'name' => ['ro' => 'Plată în rate', 'en' => 'Installment Payments'],
-  'slug' => 'installments',
+  'name' => ['ro' => 'Plăți flexibile', 'en' => 'Flexible Payments'],
+  'slug' => 'flexible-payments',
   'icon' => 'heroicon-o-calendar-days',
   'price' => 0.00,            // sau fee de activare
   'currency' => 'EUR',
   'billing_cycle' => 'monthly',
-  'config_schema' => [ /* platform_fee_percent, providers tokenizabili, dunning defaults */ ],
+  'config_schema' => [
+    // toggle-uri sub-module
+    'enable_installments' => true,
+    'enable_bnpl' => true,
+    'enable_delegated_pay' => true,
+    // platform fee, provideri tokenizabili, dunning defaults, hold delegat etc.
+  ],
 ]);
 ```
 Activare per marketplace prin pivot `marketplace_client_microservices.settings`.
@@ -523,6 +538,11 @@ Config global platformă în `config/installments.php`:
 14. **Early payoff (16.9)** → confirmat: sold integral, fără discount de surcharge în v1.
 15. **Legal (16.6)** → marketplace = creditor / Tixello = tech; sign-off juridic = gating înainte de go-live.
 16. **Îmbunătățirile §18 (1–7)** → **acceptate**, intră în backlog de implementare.
+17. **Microserviciu-umbrelă (CONFIRMAT)** → „Plăți flexibile" cu 3 sub-module: rate, BNPL, plată delegată. (§12, §19)
+18. **BNPL (CONFIRMAT)** → **1 leu** la checkout pentru captarea cardului; **auto-charge la
+    scadență + link de plată pe email** (achitabil în cele 30 zile); Tixello **2%**. (§19.1)
+19. **Plată delegată (CONFIRMAT)** → hold **24h** cu **toggle per eveniment**; **gratuit** (doar
+    taxele/comisioanele existente pe bilet); sub aceeași umbrelă. (§19.2)
 
 ---
 
@@ -733,15 +753,15 @@ webhook, apoi acțiune specifică purpose-ului.
   `min(checkout + max_horizon_days[≤30], event_date − buffer)`, `down_payment = 0` (sau mic),
   **surcharge propriu** (comisionul extra). Restul (agreement, `installment_payments` cu o
   singură linie, scheduler, dunning, default, refund, emailuri) se refolosește 1:1.
-- **SCA la checkout:** fiindcă la BNPL nu se plătește avans, folosim pasul de **verificare card
-  cu SCA** (SetupIntent / autorizare-void) ca să avem mandat pentru debitarea automată la scadență.
-- **Debitare:** la scadență, auto-charge pe token (ca la rate). Reminder-e înainte. Dacă eșuează →
-  link de plată (`payment_links` purpose=bnpl) + dunning; dacă nu se plătește până la deadline →
-  bilet invalidat, loc eliberat.
-- **Fee platformă:** BNPL e tot credit amânat → Tixello aplică **aceeași cotă de 2%** (de confirmat).
-- Bilet: `pending_installments` (invalid) până la plata unică → apoi `valid`. Plafon legal §16.6 respectat.
-
-**Întrebări deschise BNPL:** vezi lista din chat (0 la checkout? auto-charge vs. doar link? cota Tixello 2%?).
+- **Captare card la checkout (CONFIRMAT):** clientul plătește **1 leu** la checkout — o
+  tranzacție reală care ne dă token-ul/mandatul (mai sigur decât SetupIntent/void și cu SCA
+  garantat). 1 leul se scade din suma finală (sau se stornează, de aliniat contabil).
+- **Debitare (CONFIRMAT): AMBELE** — auto-charge pe token la scadență **și** un **link de plată
+  trimis pe email** pe care clientul îl poate achita oricând în cele 30 de zile (`payment_links`
+  purpose=bnpl). Reminder-e pe parcurs. Dacă auto-charge eșuează → linkul + dunning; dacă nu se
+  plătește până la deadline → bilet invalidat, loc eliberat.
+- **Fee platformă (CONFIRMAT):** Tixello ia **tot 2%** și pe BNPL.
+- Bilet: `pending_installments` (invalid) până la plata unică → apoi `valid`. Plafon §16.6 (≤30 zile) respectat.
 
 ### 19.2 Buy Now, Someone Else Pays (plată delegată prin link)
 
@@ -760,17 +780,13 @@ plătitorul B (ex. copil cumpără, părinte plătește). NU e credit/rate — d
 **Reutilizare:** checkout/procesare existentă, `SeatHold`/rezervare, `Order`, webhooks,
 `MarketplaceEmailTemplate`. Nou: primitivul `payment_links` + un mic serviciu `DelegatedPaymentService`.
 
-**Considerații:**
-- **Risc de inventar:** hold de 24h e mult mai lung decât cele 15 min de la checkout obișnuit →
-  la evenimente cu cerere mare blochează stoc. Recomand **toggle per eveniment** + durată configurabilă
-  (≤24h) + eventual cap pe nr. de bilete blocate simultan așa.
-- **Fără fee de credit** (nu e amânare de plată reală) — se aplică doar processing fee normal;
-  eventual un mic fee marketplace opțional.
-- **Împachetare:** e o mecanică de plată, nu credit → o pot livra ca **modul separat** ce
-  refolosește `payment_links`, SAU sub aceeași "umbrelă" de plăți flexibile ca BNPL/rate. (De confirmat.)
-
-**Întrebări deschise plată delegată:** vezi lista din chat (hold 24h pe inventar OK + toggle per
-eveniment? fee marketplace opțional? modul separat sau aceeași umbrelă?).
+**Considerații (CONFIRMAT):**
+- **Risc de inventar:** hold de 24h → **toggle per eveniment** (organizatorul îl oprește la
+  evenimente cu cerere mare) + durată configurabilă (≤24h). Recomand și un cap opțional pe nr. de
+  bilete blocate simultan așa.
+- **Gratuit (CONFIRMAT):** nu percepem nimic extra față de taxele și comisioanele deja existente
+  pe acel bilet. Se aplică doar processing fee-ul normal + comisioanele obișnuite ale comenzii.
+- **Împachetare (CONFIRMAT):** **sub aceeași umbrelă** cu rate + BNPL (vezi §12).
 
 ---
 
