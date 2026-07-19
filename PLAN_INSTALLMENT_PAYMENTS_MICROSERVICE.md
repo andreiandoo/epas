@@ -509,13 +509,20 @@ Config global platformă în `config/installments.php`:
 8. **Expirare card** → cerem la checkout un card valabil până la finalul planului; fără
    update-card mid-plan în v1. (§16.2)
 
-### Puncte încă deschise (recomandări în §16, aștept confirmarea ta)
-- **16.1** SCA/MIT: pas 1 mereu SCA (+ verificare card când avans=0), fallback 3DS pe rate.
-- **16.3** Anulare/reprogramare eveniment de organizator: refund integral incl. taxe la anulare;
-  auto-comprimare + opțiune refund la reprogramare.
-- **16.5** Facturare: v1 doar chitanțe; factură unică la finalizare când se adaugă facturarea.
-- **16.6** Legal: planuri ≤3 luni, marketplace = creditor / Tixello = tech, sign-off juridic gating.
-- **16.9** Early payoff: sold integral, fără discount de surcharge în v1.
+9. **SCA/MIT (16.1)** → confirmat. **Avansul e mereu > 0**, deci pasul 1 la checkout e chiar
+   plata avansului (SCA on-session) — nu mai avem nevoie de un pas separat de verificare card
+   la rate. Fallback 3DS pe rate rămâne. (NB: produsul BNPL de la §20.1 reintroduce nevoia de
+   verificare-card la checkout, fiind 0 la start.)
+10. **Anulare eveniment (16.3)** → **ca până acum** (fluxul de refund existent): fie **refund
+    integral** (organizatorul suportă taxele și comisioanele), fie **refund parțial** — la decizie.
+    Nu mai forțăm stornarea automată a fee-ului Tixello; urmează politica de refund existentă.
+11. **Reprogramare (16.3)** → confirmat: auto-comprimare + opțiune de refund.
+12. **Plafon durată (16.6)** → **HARD CAP: planurile de rate ≤ 3 luni de la începere** (validare
+    în calculator + config). BNPL ≤ 30 zile. Ține și de zona legală scutită.
+13. **Facturare (16.5)** → confirmat: v1 doar chitanțe; factură unică la finalizare ulterior.
+14. **Early payoff (16.9)** → confirmat: sold integral, fără discount de surcharge în v1.
+15. **Legal (16.6)** → marketplace = creditor / Tixello = tech; sign-off juridic = gating înainte de go-live.
+16. **Îmbunătățirile §18 (1–7)** → **acceptate**, intră în backlog de implementare.
 
 ---
 
@@ -528,8 +535,10 @@ ordonat după criticitate.
 Sub PSD2, o debitare off-session poate cere autentificare (3DS) chiar și cu token salvat.
 **Model recomandat (MIT — Merchant Initiated Transaction):**
 - **Avansul (pasul 1) e mereu on-session cu SCA** și stabilește mandatul + salvează
-  network transaction id / token. Dacă avansul e 0 → tot facem un pas de **verificare card
-  cu SCA** la checkout (Stripe SetupIntent / autorizare 1 RON + void la Netopia) ca să avem mandat valid.
+  network transaction id / token. **CONFIRMAT: avansul e mereu > 0**, deci plata avansului
+  ESTE pasul SCA — nu mai e nevoie de verificare-card separată la rate.
+  (Excepție: produsul **BNPL** §20.1 pornește de la 0 → acolo folosim un pas de verificare-card
+  cu SCA la checkout: Stripe SetupIntent / autorizare 1 RON + void la Netopia.)
 - **Ratele următoare = MIT/off-session**, în general scutite de SCA (sunt recurente, sumă/comerciant fix).
 - Dacă totuși issuer-ul cere autentificare (`authentication_required`) → rata devine
   `action_required`, NU eșec direct: trimitem email cu link on-session (`pay/{sequence}`),
@@ -544,13 +553,10 @@ Verificăm `exp_month/exp_year` vs. data ultimei scadențe; dacă expiră înain
 cu mesaj clar ("folosește un card valabil până la {ultima_rată}"). **Fără** flux de update-card
 mid-plan în v1 (rămâne ca îmbunătățire viitoare). Simplu și robust.
 
-### 16.3 Anulare/reprogramare eveniment de către organizator (mid-plan) — recomandare
-Cheia: **cine e "de vină" decide cât se returnează** (spre deosebire de returul cerut de client,
-unde taxele sunt reținute).
-- **Anulare eveniment:** oprim debitările, anulăm mandatul, agreement → `cancelled`, iar
-  clientul primește **100% din ce a plătit, INCLUSIV surcharge** (nu e vina lui). Tixello
-  **stornează / nu percepe** platform fee-ul; marketplace suportă stornarea surcharge-ului.
-  (Flux `event-cancelled` existent.)
+### 16.3 Anulare/reprogramare eveniment de către organizator (mid-plan) — CONFIRMAT
+- **Anulare eveniment (CONFIRMAT):** oprim debitările, anulăm mandatul, agreement → `cancelled`,
+  iar refund-ul urmează **fluxul existent** — fie **integral** (organizatorul suportă taxele și
+  comisioanele), fie **parțial**, la decizie. (Flux `event-cancelled` existent, fără logică nouă.)
 - **Reprogramare mai târziu:** planul încape (mai mult timp) → continuă; recalculăm doar deadline-ul.
 - **Reprogramare mai devreme și graficul nu mai încape:** auto-**comprimare** a ratelor rămase
   ca să se termine înainte de noua dată; dacă e imposibil (dată prea apropiată) → notificăm
@@ -583,14 +589,12 @@ Plata în rate cu surcharge = un "cost al creditării", deci scutirea "fără do
 NU se aplică. **Însă** legea scutește creditul **rambursat în ≤3 luni cu costuri nesemnificative**
 și cel sub anumite praguri. Cum biletele trebuie plătite înainte de eveniment, aproape toate
 planurile sunt scurte (≤3 luni) → probabil în zona scutită.
-- **Recomandare structurare:** (a) încurajăm/limităm planurile la **termen scurt (≤3 luni)**,
-  (b) surcharge modest, (c) **marketplace-ul e "creditorul"** (extinde termenul de plată, poartă
-  creanța) — **Tixello e doar furnizor de tehnologie** + încasează 2%; asta contează pentru licențiere,
-  (d) ecran de **informare precontractuală** în checkout (cost total, grafic, diferența vs plata directă)
+- **Structurare (CONFIRMAT):** (a) **HARD CAP: planul de rate ≤ 3 luni de la începere** (validare
+  în `InstallmentPlanCalculator` — respinge orice grafic care depășește), BNPL ≤ 30 zile,
+  (b) surcharge modest, (c) **marketplace-ul e "creditorul"** — **Tixello e doar furnizor tehnic**
+  + încasează 2%; contează pentru licențiere, (d) ecran de **informare precontractuală** în checkout
   + checkbox de acceptare termeni, cu **log de consimțământ**.
 - Nu sunt jurist — **sign-off legal rămâne gating item la client înainte de go-live.**
-- **Întrebare deschisă:** ești OK cu (a) planuri ≤3 luni, (b) marketplace = creditor / Tixello = tech,
-  (c) sign-off juridic ca item obligatoriu înainte de lansare?
 
 ### 16.7 Reminder-e multi-canal (SMS / WhatsApp) — refolosire servicii existente
 Repo-ul are deja servicii SMS și WhatsApp. Aceleași trigger-e de reminder/eșec pot merge și
@@ -659,7 +663,7 @@ trait-ul `Database\Seeders\Concerns\BrandedEmailWrapper` (vezi `PayoutEmailTempl
 
 ---
 
-## 18. Îmbunătățiri suplimentare propuse (research nou)
+## 18. Îmbunătățiri suplimentare — ACCEPTATE (1–7 confirmate, intră în backlog)
 
 Peste cerințe, lucruri care cresc conversia, colectarea și robustețea:
 
@@ -688,8 +692,90 @@ Peste cerințe, lucruri care cresc conversia, colectarea și robustețea:
 
 ---
 
-## 19. Următorul pas
+## 19. Extensii de produs (noi) — BNPL & "plătește altcineva"
 
-Planul e complet și aliniat la deciziile de mai sus. După ce închidem punctele deschise din
-§16 (16.1, 16.3, 16.5, 16.6, 16.9), implementarea începe cu **Faza 0** (tokenizare Stripe +
-Netopia + mandat MIT), fiind dependența critică pentru tot restul.
+Ambele se sprijină pe infra deja proiectată. Introducem un **primitiv comun de link de plată**
+care servește 3 scenarii: link 3DS/manual pentru o rată (§16.1), plata unică BNPL, și plata delegată.
+
+### 19.0 Primitiv comun: `payment_links`
+
+```
+id (uuid, PK)
+token (string, unique, random securizat)
+purpose (enum: installment, bnpl, delegated_pay)
+marketplace_client_id / tenant_id (nullable)
+order_id (FK, nullable)
+installment_payment_id (FK, nullable)      // pt. purpose=installment
+amount_cents (int)
+currency (string)
+status (enum: active, paid, expired, cancelled)
+expires_at (datetime)
+payer_email (string, nullable)             // pt. delegated: cine plătește
+payer_name (string, nullable)
+created_by_customer_id (FK, nullable)
+paid_at (datetime, nullable)
+payment_reference (string, nullable)
+metadata (json, nullable)
+created_at, updated_at
+Index: token (unique), status, expires_at, order_id
+```
+Endpoint public: `GET/POST /pay/{token}` → pagină de plată on-session (SCA), validează plata via
+webhook, apoi acțiune specifică purpose-ului.
+
+### 19.1 Buy Now, Pay Later (o singură plată amânată)
+
+**Definiție:** o singură plată integrală, în ≤ **30 de zile** și **înainte de eveniment**,
+0 (sau mic) la checkout, cu **comision extra**. NU e în rate.
+
+**Reutilizare — e practic un plan cu `N=1`:**
+- Adăugăm `plan_type (enum: installments, bnpl_single)` pe `installment_plans`.
+- Pentru `bnpl_single`: `number_of_installments = 1`, scadență unică la
+  `min(checkout + max_horizon_days[≤30], event_date − buffer)`, `down_payment = 0` (sau mic),
+  **surcharge propriu** (comisionul extra). Restul (agreement, `installment_payments` cu o
+  singură linie, scheduler, dunning, default, refund, emailuri) se refolosește 1:1.
+- **SCA la checkout:** fiindcă la BNPL nu se plătește avans, folosim pasul de **verificare card
+  cu SCA** (SetupIntent / autorizare-void) ca să avem mandat pentru debitarea automată la scadență.
+- **Debitare:** la scadență, auto-charge pe token (ca la rate). Reminder-e înainte. Dacă eșuează →
+  link de plată (`payment_links` purpose=bnpl) + dunning; dacă nu se plătește până la deadline →
+  bilet invalidat, loc eliberat.
+- **Fee platformă:** BNPL e tot credit amânat → Tixello aplică **aceeași cotă de 2%** (de confirmat).
+- Bilet: `pending_installments` (invalid) până la plata unică → apoi `valid`. Plafon legal §16.6 respectat.
+
+**Întrebări deschise BNPL:** vezi lista din chat (0 la checkout? auto-charge vs. doar link? cota Tixello 2%?).
+
+### 19.2 Buy Now, Someone Else Pays (plată delegată prin link)
+
+**Definiție:** clientul A **blochează** biletul și trimite un **link de plată valid 24h** către
+plătitorul B (ex. copil cumpără, părinte plătește). NU e credit/rate — doar mecanică de plată.
+
+**Flux:**
+1. A alege biletele → "plătește altcineva" → creăm `Order` în `awaiting_payment` + **rezervare
+   inventar/loc 24h** (extindem TTL-ul de `SeatHold`/rezervare) + `payment_links`
+   (purpose=delegated_pay, expires_at = +24h, opțional `payer_email`).
+2. A trimite linkul (sau îl trimitem noi pe email/SMS către B, dacă avem contactul).
+3. B deschide `/pay/{token}` → vede sumarul comenzii → plătește **on-session (SCA)**, plată unică normală.
+4. Webhook confirmă plata → `Order.paid`, **biletele devin valide**, email de confirmare către A (și B).
+5. **Expirare 24h fără plată** → eliberăm rezervarea, `Order.cancelled`, notificăm A.
+
+**Reutilizare:** checkout/procesare existentă, `SeatHold`/rezervare, `Order`, webhooks,
+`MarketplaceEmailTemplate`. Nou: primitivul `payment_links` + un mic serviciu `DelegatedPaymentService`.
+
+**Considerații:**
+- **Risc de inventar:** hold de 24h e mult mai lung decât cele 15 min de la checkout obișnuit →
+  la evenimente cu cerere mare blochează stoc. Recomand **toggle per eveniment** + durată configurabilă
+  (≤24h) + eventual cap pe nr. de bilete blocate simultan așa.
+- **Fără fee de credit** (nu e amânare de plată reală) — se aplică doar processing fee normal;
+  eventual un mic fee marketplace opțional.
+- **Împachetare:** e o mecanică de plată, nu credit → o pot livra ca **modul separat** ce
+  refolosește `payment_links`, SAU sub aceeași "umbrelă" de plăți flexibile ca BNPL/rate. (De confirmat.)
+
+**Întrebări deschise plată delegată:** vezi lista din chat (hold 24h pe inventar OK + toggle per
+eveniment? fee marketplace opțional? modul separat sau aceeași umbrelă?).
+
+---
+
+## 20. Următorul pas
+
+Planul e complet și aliniat la deciziile confirmate. Rămân de închis doar întrebările de produs
+de la §19 (BNPL & plată delegată). După aceea, implementarea începe cu **Faza 0** (tokenizare
+Stripe + Netopia + mandat MIT) + primitivul `payment_links`, fiind dependențele critice.
