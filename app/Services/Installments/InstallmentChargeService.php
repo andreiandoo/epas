@@ -28,18 +28,23 @@ class InstallmentChargeService
      */
     public function charge(InstallmentPayment $payment): array
     {
-        // Idempotency: lock and re-check inside a transaction.
-        $payment = DB::transaction(function () use ($payment) {
+        // Idempotency: atomically CLAIM the row. Only the invocation that
+        // performs the payable→processing transition proceeds; a concurrent
+        // worker that finds it already 'processing' does NOT (it never acquired
+        // the claim), preventing a double charge.
+        $claim = DB::transaction(function () use ($payment) {
             $locked = InstallmentPayment::whereKey($payment->id)->lockForUpdate()->first();
             if ($locked && $locked->isPayable()) {
                 $locked->update(['status' => InstallmentPayment::STATUS_PROCESSING, 'last_attempt_at' => now()]);
+                return ['payment' => $locked, 'acquired' => true];
             }
-            return $locked;
+            return ['payment' => $locked, 'acquired' => false];
         });
 
-        if (! $payment || $payment->status !== InstallmentPayment::STATUS_PROCESSING) {
-            return ['status' => 'skipped', 'message' => 'Not payable (already settled or locked)'];
+        if (! $claim['acquired']) {
+            return ['status' => 'skipped', 'message' => 'Not payable (already settled or being charged)'];
         }
+        $payment = $claim['payment'];
 
         $agreement = $payment->agreement;
         if (! $agreement || ! $agreement->isActive()) {
@@ -65,9 +70,11 @@ class InstallmentChargeService
                 'amount' => $payment->amount_cents / 100,
                 'currency' => $agreement->currency,
                 'description' => 'Rata ' . $payment->sequence . ' — comanda #' . $agreement->order_id,
-                'order_id' => (string) $agreement->order_id,
+                // Unique per installment: gateways that dedupe by order id would
+                // otherwise reject installments 2..N of the same order.
+                'order_id' => $agreement->order_id . '-i' . $payment->id,
                 'idempotency_key' => (string) $payment->id,
-                'metadata' => ['agreement_id' => $agreement->id, 'sequence' => $payment->sequence],
+                'metadata' => ['agreement_id' => $agreement->id, 'order_id' => $agreement->order_id, 'sequence' => $payment->sequence],
             ]);
         } catch (\Throwable $e) {
             $this->fail($payment, $agreement, $e->getMessage(), false);
@@ -91,6 +98,25 @@ class InstallmentChargeService
     {
         $this->settlePaid($payment, $agreement, $result['payment_id'] ?? null);
         return ['status' => 'success'];
+    }
+
+    /**
+     * Atomically claim an installment for an ON-SESSION manual payment (pay
+     * link / 3DS). Sets it to 'processing' so the concurrent auto-debit sweep
+     * skips it — mutual exclusion prevents charging it twice. Returns false if
+     * it's already settled or being charged. If the customer abandons, the
+     * stuck-'processing' recovery in process-due frees it after 30 min.
+     */
+    public function claimForManualPayment(InstallmentPayment $payment): bool
+    {
+        return DB::transaction(function () use ($payment) {
+            $locked = InstallmentPayment::whereKey($payment->id)->lockForUpdate()->first();
+            if ($locked && $locked->isPayable()) {
+                $locked->update(['status' => InstallmentPayment::STATUS_PROCESSING, 'last_attempt_at' => now()]);
+                return true;
+            }
+            return false;
+        });
     }
 
     /**

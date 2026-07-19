@@ -101,7 +101,7 @@ class InstallmentAgreementResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (InstallmentAgreement $r) => in_array($r->status, ['active', 'pending']))
                     ->action(function (InstallmentAgreement $r) {
-                        app(\App\Services\Installments\InstallmentDunningService::class)->default($r, 'manual_cancel');
+                        app(\App\Services\Installments\InstallmentDunningService::class)->cancel($r, 'manual_cancel');
                     }),
             ]);
     }

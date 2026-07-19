@@ -34,11 +34,7 @@ class FlexiblePaymentSettings extends Page implements HasForms
 
     public static function shouldRegisterNavigation(): bool
     {
-        return static::getMarketplaceClient()
-            ?->microservices()
-            ->where('slug', 'flexible-payments')
-            ->wherePivot('is_active', true)
-            ->exists() ?? false;
+        return static::marketplaceHasMicroservice('flexible-payments');
     }
 
     public function mount(): void

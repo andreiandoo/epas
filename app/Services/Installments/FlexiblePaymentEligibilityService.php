@@ -149,7 +149,11 @@ class FlexiblePaymentEligibilityService
             ->where('slug', 'flexible-payments')
             ->first()?->pivot;
 
-        if (! $pivot || ! ($pivot->is_active ?? true)) {
+        // Treat the microservice as active on either signal (the panel uses
+        // pivot.status='active' for nav; some flows use is_active) so navigation
+        // and actual availability never diverge.
+        $active = $pivot && (($pivot->status ?? null) === 'active' || ($pivot->is_active ?? false));
+        if (! $active) {
             return ['installments' => false, 'bnpl' => false, 'delegated_pay' => false];
         }
 

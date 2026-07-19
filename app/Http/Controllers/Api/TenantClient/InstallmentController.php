@@ -56,6 +56,19 @@ class InstallmentController extends Controller
             'event_start_date' => $eventStart,
         ]);
 
+        // Apply the same gating as availability() (provider tokenization +
+        // marketplace sub-module toggles), which plansForEvent alone doesn't check.
+        $event = \App\Models\Event::find($eventId);
+        $client = $event && $event->marketplace_client_id ? MarketplaceClient::find($event->marketplace_client_id) : null;
+        $provider = $this->normalizeProvider($client?->getDefaultPaymentMethod()?->slug ?? '');
+        $avail = $this->eligibility->availability($client, $provider, [$eventId]);
+
+        $plans = array_values(array_filter($plans, function ($p) use ($avail) {
+            return $p['plan_type'] === 'bnpl_single'
+                ? ($avail['methods']['bnpl'] ?? false)
+                : ($avail['methods']['installments'] ?? false);
+        }));
+
         return response()->json(['plans' => $plans]);
     }
 
@@ -77,6 +90,11 @@ class InstallmentController extends Controller
         // Only a fresh, unpaid order without an existing plan can start one.
         if ($order->status !== 'pending' || $order->installment_agreement_id) {
             return response()->json(['error' => 'Order is not eligible for a payment plan'], 422);
+        }
+        // Ownership: a logged-in customer may only act on their own order.
+        $authId = optional($request->user())->id;
+        if ($order->marketplace_customer_id && $authId && (int) $order->marketplace_customer_id !== (int) $authId) {
+            return response()->json(['error' => 'Forbidden'], 403);
         }
         $plan = InstallmentPlan::find($data['plan_id']);
         if (! $plan || ! $plan->is_active) {

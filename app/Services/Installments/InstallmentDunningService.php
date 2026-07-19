@@ -66,6 +66,30 @@ class InstallmentDunningService
         return $count;
     }
 
+    /**
+     * Manual cancellation (admin action). Distinct from default(): status
+     * becomes 'cancelled' (not 'defaulted'). Stops debits, cancels the remaining
+     * schedule, and invalidates tickets.
+     */
+    public function cancel(InstallmentAgreement $agreement, string $reason = 'manual_cancel'): void
+    {
+        $agreement->update([
+            'status' => InstallmentAgreement::STATUS_CANCELLED,
+            'auto_debit_enabled' => false,
+            'next_due_at' => null,
+        ]);
+        $agreement->payments()
+            ->whereIn('status', [
+                InstallmentPayment::STATUS_SCHEDULED, InstallmentPayment::STATUS_DUE,
+                InstallmentPayment::STATUS_RETRYING, InstallmentPayment::STATUS_ACTION_REQUIRED,
+                InstallmentPayment::STATUS_FAILED,
+            ])
+            ->update(['status' => InstallmentPayment::STATUS_CANCELLED]);
+
+        $this->tickets->invalidateForAgreement($agreement);
+        $agreement->log('cancelled', "Agreement cancelled ({$reason})");
+    }
+
     public function default(InstallmentAgreement $agreement, string $reason): void
     {
         $agreement->update(['status' => InstallmentAgreement::STATUS_DEFAULTED, 'next_due_at' => null]);

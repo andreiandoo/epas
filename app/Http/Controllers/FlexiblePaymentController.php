@@ -98,6 +98,15 @@ class FlexiblePaymentController extends Controller
             return response()->json(['error' => 'No payment processor available'], 422);
         }
 
+        // For an installment link, claim the row (→ processing) so the auto-debit
+        // sweep can't charge the same installment while the customer pays here.
+        if ($link->purpose === PaymentLink::PURPOSE_INSTALLMENT && $link->installment_payment_id) {
+            $ip = InstallmentPayment::find($link->installment_payment_id);
+            if (! $ip || ! $this->charger->claimForManualPayment($ip)) {
+                return response()->json(['error' => 'Această rată este deja plătită sau în curs de procesare.'], 409);
+            }
+        }
+
         $payment = $resolved['processor']->createPayment([
             'amount' => $link->getAmount(),
             'currency' => $link->currency,
@@ -150,7 +159,9 @@ class FlexiblePaymentController extends Controller
             $this->delegated->confirm($link);
         } elseif ($link->purpose === PaymentLink::PURPOSE_INSTALLMENT && $link->installment_payment_id) {
             $p = InstallmentPayment::with('agreement')->find($link->installment_payment_id);
-            if ($p && $p->agreement && $p->isPayable()) {
+            // The row may be 'processing' (claimed by payLink) — settlePaid is
+            // idempotent and only skips already-PAID rows, so pass it through.
+            if ($p && $p->agreement && $p->status !== InstallmentPayment::STATUS_PAID) {
                 // Shared settlement: payout + receipt + completion → ticket valid
                 // (so paying the LAST installment via link completes the plan).
                 $this->charger->settlePaid($p, $p->agreement, $paymentId);
@@ -169,6 +180,11 @@ class FlexiblePaymentController extends Controller
         // only if the method is enabled for its event.
         if ($orderModel->status !== 'pending') {
             return response()->json(['error' => 'Order is not eligible for delegated payment'], 422);
+        }
+        // Ownership: a logged-in customer may only act on their own order.
+        $authId = optional($request->user())->id;
+        if ($orderModel->marketplace_customer_id && $authId && (int) $orderModel->marketplace_customer_id !== (int) $authId) {
+            return response()->json(['error' => 'Forbidden'], 403);
         }
         $config = \App\Models\EventFlexiblePaymentConfig::where('event_id', $orderModel->event_id)
             ->orWhere('marketplace_event_id', $orderModel->marketplace_event_id)

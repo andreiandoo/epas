@@ -19,11 +19,7 @@ class FlexiblePaymentStatsWidget extends StatsOverviewWidget
 
     public static function canView(): bool
     {
-        return static::getMarketplaceClient()
-            ?->microservices()
-            ->where('slug', 'flexible-payments')
-            ->wherePivot('is_active', true)
-            ->exists() ?? false;
+        return static::marketplaceHasMicroservice('flexible-payments');
     }
 
     protected function getStats(): array
