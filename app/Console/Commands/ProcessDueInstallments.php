@@ -19,6 +19,16 @@ class ProcessDueInstallments extends Command
 
     public function handle(InstallmentDunningService $dunning): int
     {
+        // Recover installments stuck in 'processing' (worker crashed mid-charge)
+        // so they get retried instead of hanging forever.
+        $recovered = InstallmentPayment::query()
+            ->where('status', InstallmentPayment::STATUS_PROCESSING)
+            ->where('last_attempt_at', '<', now()->subMinutes(30))
+            ->update(['status' => InstallmentPayment::STATUS_RETRYING]);
+        if ($recovered > 0) {
+            $this->warn("Recovered {$recovered} stuck 'processing' installment(s).");
+        }
+
         $due = InstallmentPayment::query()
             ->whereIn('status', [
                 InstallmentPayment::STATUS_SCHEDULED,

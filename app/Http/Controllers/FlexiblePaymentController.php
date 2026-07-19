@@ -149,16 +149,11 @@ class FlexiblePaymentController extends Controller
         if ($link->purpose === PaymentLink::PURPOSE_DELEGATED) {
             $this->delegated->confirm($link);
         } elseif ($link->purpose === PaymentLink::PURPOSE_INSTALLMENT && $link->installment_payment_id) {
-            $p = InstallmentPayment::find($link->installment_payment_id);
-            if ($p && $p->isPayable()) {
-                $p->update([
-                    'status' => InstallmentPayment::STATUS_PAID,
-                    'paid_at' => now(),
-                    'paid_amount_cents' => $p->amount_cents,
-                ]);
-                $agreement = $p->agreement;
-                $agreement?->increment('paid_installments_count');
-                $agreement?->recomputeNextDue();
+            $p = InstallmentPayment::with('agreement')->find($link->installment_payment_id);
+            if ($p && $p->agreement && $p->isPayable()) {
+                // Shared settlement: payout + receipt + completion → ticket valid
+                // (so paying the LAST installment via link completes the plan).
+                $this->charger->settlePaid($p, $p->agreement, $paymentId);
             }
         }
 

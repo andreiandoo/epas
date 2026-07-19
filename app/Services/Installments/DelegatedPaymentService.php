@@ -53,12 +53,19 @@ class DelegatedPaymentService
         $order = $link->order;
         if ($order) {
             $order->forceFill([
-                'status' => 'paid',
+                'status' => 'completed',
                 'payment_status' => 'paid',
                 'outstanding_cents' => 0,
                 'paid_at' => now(),
+                'payment_reference' => $result['payment_id'] ?? $order->payment_reference,
             ])->save();
-            // Tickets become valid through the order's normal paid transition.
+
+            // Flip reserved tickets to valid (matches the standard paid-callback
+            // pattern; DB::table avoids re-triggering observers and is idempotent).
+            \Illuminate\Support\Facades\DB::table('tickets')
+                ->where('order_id', $order->id)
+                ->whereIn('status', ['pending', 'pending_installments'])
+                ->update(['status' => 'valid', 'updated_at' => now()]);
         }
     }
 

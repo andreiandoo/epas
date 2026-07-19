@@ -89,24 +89,43 @@ class InstallmentChargeService
 
     protected function succeed(InstallmentPayment $payment, InstallmentAgreement $agreement, array $result): array
     {
-        DB::transaction(function () use ($payment, $agreement, $result) {
-            $payment->update([
+        $this->settlePaid($payment, $agreement, $result['payment_id'] ?? null);
+        return ['status' => 'success'];
+    }
+
+    /**
+     * Settle a single installment as paid — shared by the auto-debit path and
+     * the pay-link / 3DS on-session path (FlexiblePaymentController::confirmLink).
+     * Idempotent: a payment already marked paid is skipped. Handles payout,
+     * receipt, and plan completion → ticket valid.
+     */
+    public function settlePaid(InstallmentPayment $payment, InstallmentAgreement $agreement, ?string $reference): void
+    {
+        $freshlyPaid = DB::transaction(function () use ($payment, $agreement, $reference) {
+            $locked = InstallmentPayment::whereKey($payment->id)->lockForUpdate()->first();
+            if (! $locked || $locked->status === InstallmentPayment::STATUS_PAID) {
+                return false; // already settled
+            }
+            $locked->update([
                 'status' => InstallmentPayment::STATUS_PAID,
                 'paid_at' => now(),
-                'paid_amount_cents' => $payment->amount_cents,
-                'payment_reference' => $result['payment_id'] ?? null,
+                'paid_amount_cents' => $locked->amount_cents,
+                'payment_reference' => $reference,
             ]);
             $agreement->increment('paid_installments_count');
-            $agreement->log('charged', "Installment {$payment->sequence} charged", [
-                'reference' => $result['payment_id'] ?? null,
-            ], $payment->id);
+            $agreement->log('charged', "Installment {$locked->sequence} settled", ['reference' => $reference], $locked->id);
             $agreement->recomputeNextDue();
+            return true;
         });
 
-        // Incremental organizer payout (Phase 5 hook).
-        app(InstallmentPayoutService::class)->creditInstallment($agreement, $payment);
+        if (! $freshlyPaid) {
+            return;
+        }
 
-        $this->mailer->send($agreement, 'installment_payment_receipt', $this->mailer->paymentVariables($payment, $agreement->currency));
+        // Incremental organizer payout.
+        app(InstallmentPayoutService::class)->creditInstallment($agreement, $payment->fresh());
+
+        $this->mailer->send($agreement, 'installment_payment_receipt', $this->mailer->paymentVariables($payment->fresh(), $agreement->currency));
 
         // Completion → ticket valid.
         if ($this->allSettled($agreement)) {
@@ -114,8 +133,6 @@ class InstallmentChargeService
             app(TicketStateService::class)->markValidForAgreement($agreement);
             $this->mailer->send($agreement->fresh(), 'installment_plan_completed');
         }
-
-        return ['status' => 'success'];
     }
 
     protected function actionRequired(InstallmentPayment $payment, InstallmentAgreement $agreement, array $result): array

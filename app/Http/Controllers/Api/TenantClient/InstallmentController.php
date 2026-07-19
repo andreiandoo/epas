@@ -45,8 +45,15 @@ class InstallmentController extends Controller
         $eventId = (int) $request->input('event_id');
         $baseCents = (int) round(((float) $request->input('amount', 0)) * 100);
 
+        // Prefer an explicit date; otherwise derive from the event so the
+        // deadline (last payment ≤ event − 1 day) is always enforced.
+        $eventStart = $request->input('event_start_date');
+        if (! $eventStart) {
+            $eventStart = optional(\App\Models\Event::find($eventId))->start_date;
+        }
+
         $plans = $this->eligibility->plansForEvent($eventId, $baseCents, [
-            'event_start_date' => $request->input('event_start_date'),
+            'event_start_date' => $eventStart,
         ]);
 
         return response()->json(['plans' => $plans]);
@@ -95,7 +102,13 @@ class InstallmentController extends Controller
             return response()->json(['error' => 'Plan not available for this event'], 422);
         }
 
-        $baseCents = (int) round(((float) $order->total) * 100);
+        // total is decimal (major units); fall back to total_cents when null.
+        $baseCents = $order->total !== null
+            ? (int) round(((float) $order->total) * 100)
+            : (int) ($order->total_cents ?? 0);
+        if ($baseCents <= 0) {
+            return response()->json(['error' => 'Order has no payable amount'], 422);
+        }
 
         // BNPL: the 1-RON card capture IS the down payment (sequence 0), so it is
         // deducted from the single deferred charge ("scădem leul din sold").
