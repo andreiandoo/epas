@@ -208,7 +208,9 @@ class InstallmentController extends Controller
             'down_payment_value' => $downValue,
             'event_start_date' => $order->event?->start_date ?? null,
             'platform_fee_percent' => config('installments.platform_fee_percent_installments', 2.0),
-            'bnpl_max_horizon_days' => $config?->bnpl_max_horizon_days ?? 30,
+            'bnpl_max_horizon_days' => $config?->bnpl_max_horizon_days
+                ?: config('installments.bnpl_max_horizon_days', 30),
+            'bnpl_min_horizon_days' => (int) config('installments.bnpl_min_horizon_days', 1),
         ]);
 
         if (empty($quote['eligible'])) {

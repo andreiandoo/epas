@@ -126,7 +126,9 @@ class FlexiblePaymentEligibilityService
                     'event_start_date' => $eventStart,
                     'start_date' => $startDate,
                     'platform_fee_percent' => $platformFeePercent,
-                    'bnpl_max_horizon_days' => $config->bnpl_max_horizon_days,
+                    'bnpl_max_horizon_days' => $config->bnpl_max_horizon_days
+                        ?: config('installments.bnpl_max_horizon_days', 30),
+                    'bnpl_min_horizon_days' => (int) config('installments.bnpl_min_horizon_days', 1),
                 ]);
 
                 return array_merge($quote, [

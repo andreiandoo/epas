@@ -128,6 +128,8 @@ class EventFlexiblePaymentConfigResource extends Resource
             SC\Section::make('BNPL & plată delegată')->schema([
                 Forms\Components\TextInput::make('bnpl_max_horizon_days')
                     ->label('BNPL: zile max până la plată (≤30)')
+                    ->helperText('Plafon, nu perioadă fixă: dacă evenimentul e mai aproape, '
+                        . 'debitarea se face automat mai devreme (mereu înainte de eveniment).')
                     ->numeric()->default(30)->maxValue(30),
                 Forms\Components\TextInput::make('delegated_hold_hours')
                     ->label('Plată delegată: ore de blocare (≤24)')

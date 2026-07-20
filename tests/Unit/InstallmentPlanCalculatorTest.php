@@ -271,4 +271,72 @@ class InstallmentPlanCalculatorTest extends TestCase
         $this->assertSame(20300, array_sum(array_column($instalments, 'amount_cents')));
         $this->assertSame('2026-01-31', end($q['schedule'])['due_date']); // start + 30d
     }
+
+    public function test_bnpl_horizon_shrinks_dynamically_for_a_near_event(): void
+    {
+        // Event only 12 days out: the 30-day BNPL horizon must shrink so the
+        // single charge lands before the event (deadline = event − 1 day), not
+        // at the blind day+30 (which would be AFTER the event).
+        $bnpl = $this->plan([
+            'plan_type' => 'bnpl_single',
+            'number_of_installments' => 1,
+            'surcharge_fixed_cents' => 300,
+            'surcharge_percent' => 0,
+        ]);
+        $q = $this->calc()->quote($bnpl, 20000, [
+            'down_payment_type' => 'none',
+            'start_date' => '2026-01-01',
+            'event_start_date' => '2026-01-13', // 12 days out
+            'bnpl_max_horizon_days' => 30,
+            'platform_fee_percent' => 2.0,
+        ]);
+
+        $this->assertTrue($q['eligible'], $q['reason'] ?? '');
+        // deadline = event − 1 day = 2026-01-12; charge clamped to it.
+        $this->assertSame('2026-01-12', end($q['schedule'])['due_date']);
+    }
+
+    public function test_bnpl_ineligible_when_event_is_within_min_horizon(): void
+    {
+        $bnpl = $this->plan([
+            'plan_type' => 'bnpl_single',
+            'number_of_installments' => 1,
+            'surcharge_fixed_cents' => 300,
+            'surcharge_percent' => 0,
+        ]);
+        // Event tomorrow → deadline is today → no runway to defer the charge.
+        $q = $this->calc()->quote($bnpl, 20000, [
+            'down_payment_type' => 'none',
+            'start_date' => '2026-01-01',
+            'event_start_date' => '2026-01-02', // 1 day out, deadline = today
+            'bnpl_max_horizon_days' => 30,
+            'bnpl_min_horizon_days' => 1,
+            'platform_fee_percent' => 2.0,
+        ]);
+
+        $this->assertFalse($q['eligible']);
+        $this->assertSame('event_too_soon', $q['reason']);
+    }
+
+    public function test_bnpl_respects_a_configured_horizon_above_thirty(): void
+    {
+        // A marketplace configured a 45-day BNPL ceiling; for a far event the
+        // charge should be at day+45, proving the old hardcoded 30 cap is gone.
+        $bnpl = $this->plan([
+            'plan_type' => 'bnpl_single',
+            'number_of_installments' => 1,
+            'surcharge_fixed_cents' => 300,
+            'surcharge_percent' => 0,
+        ]);
+        $q = $this->calc()->quote($bnpl, 20000, [
+            'down_payment_type' => 'none',
+            'start_date' => '2026-01-01',
+            'event_start_date' => '2026-12-01',
+            'bnpl_max_horizon_days' => 45,
+            'platform_fee_percent' => 2.0,
+        ]);
+
+        $this->assertTrue($q['eligible'], $q['reason'] ?? '');
+        $this->assertSame('2026-02-15', end($q['schedule'])['due_date']); // start + 45d
+    }
 }

@@ -19,11 +19,15 @@ return [
     |--------------------------------------------------------------------------
     | Keeping installment plans <= 3 months keeps the marketplace in the RO
     | consumer-credit exemption zone (OUG 50/2010). BNPL is a single deferred
-    | charge capped at 30 days. The last payment must always fall at least
-    | `min_days_before_event` before the event start (never on event day).
+    | charge whose horizon is the CEILING, not a fixed period: it is clamped
+    | dynamically so the charge always lands on or before the deadline (event −
+    | `min_days_before_event`). If the event is nearer than the ceiling, the
+    | window shrinks to fit (e.g. an event 12 days out → charge ~day 11). BNPL
+    | is only offered when at least `bnpl_min_horizon_days` of runway remain.
     */
     'max_installment_duration_days' => (int) env('FLEX_MAX_DURATION_DAYS', 93),
     'bnpl_max_horizon_days' => (int) env('FLEX_BNPL_MAX_DAYS', 30),
+    'bnpl_min_horizon_days' => (int) env('FLEX_BNPL_MIN_DAYS', 1),
     'min_days_before_event' => (int) env('FLEX_MIN_DAYS_BEFORE_EVENT', 1),
 
     /*

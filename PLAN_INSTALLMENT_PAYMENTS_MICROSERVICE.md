@@ -1009,6 +1009,18 @@ prin `UPDATE ... WHERE status != refunded` (0 rânduri afectate → bail).
 - **§16.6(d) consimțământ:** log `consent_recorded` la creare (breakdown + grafic + `terms_url` +
   timestamp) pe lângă `plan_snapshot` imutabil.
 
+### BNPL — orizont dinamic (nu perioadă fixă)
+
+Regula BNPL nu mai e „30 de zile" fixă. `bnpl_max_horizon_days` e acum un **plafon**:
+data unicei debitări se calculează dinamic ca `min(plafon, runway_până_la_deadline)`, unde
+`deadline = eveniment − min_days_before_event`. Dacă la inițierea plății mai sunt doar 12 zile
+până la eveniment, debitarea cade în jur de ziua 11 (înainte de eveniment), nu la ziua 30.
+- Nou config `bnpl_min_horizon_days` (default 1): sub acest runway BNPL devine `event_too_soon`.
+- Plafonul din config (`FLEX_BNPL_MAX_DAYS`) e acum respectat efectiv (înainte era capat hardcodat
+  la 30 în calculator, ignorând un plafon mai mare).
+- Calculatorul rămâne pur: orizonturile vin prin `ctx` (callerul le rezolvă din config).
+- 3 teste noi în `InstallmentPlanCalculatorTest` (shrink dinamic, event_too_soon, plafon >30).
+
 ### Amânat explicit (backlog, neblocant)
 - Reminder-e multi-canal SMS/WhatsApp (§16.7), card de rezervă, retry inteligent temporal.
 - Populare efectivă `card_exp_*` din procesor (necesită expand payment_method la Stripe / câmp Netopia).

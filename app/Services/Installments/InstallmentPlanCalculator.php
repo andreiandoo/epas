@@ -26,7 +26,8 @@ class InstallmentPlanCalculator
      *   - event_start_date: Carbon|string|null
      *   - platform_fee_percent: float (e.g. 2.0)
      *   - start_date: Carbon|string|null (checkout date; defaults to today)
-     *   - bnpl_max_horizon_days: int|null (event override; else plan/30)
+     *   - bnpl_max_horizon_days: int|null (max deferral CEILING; clamped down to
+     *     the event deadline — shrinks dynamically when the event is nearer)
      *
      * @return array{
      *   eligible: bool, reason: string|null, base_total_cents: int,
@@ -104,15 +105,30 @@ class InstallmentPlanCalculator
 
         if ($plan->isBnpl()) {
             $n = 1;
-            $horizon = (int) ($ctx['bnpl_max_horizon_days'] ?? 30);
-            $due = $start->copy()->addDays(min($horizon, 30));
-            if ($deadline && $due->gt($deadline)) {
-                $due = $deadline->copy();
+
+            // Dynamic BNPL horizon: defer the single charge as long as configured,
+            // but ALWAYS land on or before the deadline (last payment ≥
+            // days_before_event before the event). If the event is closer than the
+            // configured horizon, the window shrinks to fit — a "30-day" BNPL on an
+            // event 12 days out is charged around day 11, never after the event.
+            // Pure/stateless: horizons come from ctx (the caller resolves them
+            // from config) with literal fallbacks — no container access here.
+            $maxHorizon = max(1, (int) ($ctx['bnpl_max_horizon_days'] ?? 30));
+            $minHorizon = max(1, (int) ($ctx['bnpl_min_horizon_days'] ?? 1));
+
+            if ($deadline) {
+                // Runway (in whole days) between checkout and the deadline.
+                $runway = $start->diffInDays($deadline, false);
+                // Too close to the event to defer even the minimum window.
+                if ($runway < $minHorizon) {
+                    return $this->ineligible($result, 'event_too_soon');
+                }
+                $horizon = min($maxHorizon, $runway);
+            } else {
+                $horizon = $maxHorizon;
             }
-            if ($deadline && $due->lt($start)) {
-                return $this->ineligible($result, 'event_too_soon');
-            }
-            $dueDates = [$due];
+
+            $dueDates = [$start->copy()->addDays($horizon)];
         } else {
             $dueDates = $this->installmentDueDates($plan, $start, $deadline, $n, $result);
             if ($dueDates === null) {
