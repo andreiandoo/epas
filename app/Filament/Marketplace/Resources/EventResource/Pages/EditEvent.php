@@ -27,18 +27,14 @@ class EditEvent extends EditRecord
     /**
      * Deferred render of the (potentially huge) ticket-types repeater in the
      * "Bilete" tab. Kept false on load so the page — and especially the
-     * "Vânzări" tab — opens fast; flipped true by the "Încarcă biletele"
-     * button when the admin actually needs to edit ticket types. While false
-     * the repeater is hidden, so Filament skips its render AND (per
-     * BelongsToModel::saveRelationships) does NOT touch the ticketTypes
-     * relationship on save — existing ticket types are never wiped.
+     * "Vânzări" tab — opens fast. Set true only when the page is opened with
+     * ?loadTickets=1 (the "Încarcă biletele" button links there and forces a
+     * full reload, so the repeater is visible from mount and hydrates
+     * normally). While false the repeater is hidden, so Filament skips its
+     * render AND (per BelongsToModel::saveRelationships) does NOT touch the
+     * ticketTypes relationship on save — existing ticket types are never wiped.
      */
     public bool $loadTickets = false;
-
-    public function loadTickets(): void
-    {
-        $this->loadTickets = true;
-    }
 
     /**
      * Allow editing child events even though they're filtered from the list query.
@@ -84,6 +80,9 @@ class EditEvent extends EditRecord
     public function mount(int|string $record): void
     {
         parent::mount($record);
+
+        // Opt-in to rendering the heavy ticket-types repeater (see $loadTickets).
+        $this->loadTickets = request()->boolean('loadTickets');
 
         // Redirect hosted events to view-guest page (can't edit events you don't own)
         // Marketplace events use marketplace_client_id, not tenant_id

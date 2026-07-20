@@ -2275,6 +2275,40 @@ class EventResource extends Resource
                                         ->default(false),
                                 ]),
 
+                                // Lazy-load prompt — shown on the edit page until the admin
+                                // clicks "Încarcă biletele". Keeps the page + Vânzări tab fast
+                                // for events with many ticket types (the repeater below is the
+                                // expensive part to render).
+                                SC\Group::make()
+                                    ->visible(fn (\Livewire\Component $livewire) => property_exists($livewire, 'loadTickets') && $livewire->loadTickets !== true)
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('tickets_lazy_hint')
+                                            ->hiddenLabel()
+                                            ->content(function (\Livewire\Component $livewire) use ($t) {
+                                                $count = (method_exists($livewire, 'getRecord') && $livewire->getRecord())
+                                                    ? $livewire->getRecord()->ticketTypes()->count()
+                                                    : 0;
+                                                return new HtmlString(
+                                                    '<div class="flex items-center gap-2 p-3 text-sm border rounded-lg bg-primary-50 border-primary-200 text-primary-800 dark:bg-primary-950/40 dark:border-primary-800 dark:text-primary-200">' .
+                                                        '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' .
+                                                        '<span>' . $t('Biletele nu sunt încărcate (pentru viteză). Acest eveniment are', 'Ticket types are not loaded (for speed). This event has') . ' <strong>' . $count . '</strong> ' . $t('tipuri de bilete. Apasă butonul de mai jos ca să le editezi.', 'ticket types. Click the button below to edit them.') . '</span>' .
+                                                    '</div>'
+                                                );
+                                            })
+                                            ->columnSpanFull(),
+                                        SC\Actions::make([
+                                            Action::make('load_tickets')
+                                                ->label($t('Încarcă biletele', 'Load ticket types'))
+                                                ->icon('heroicon-o-arrow-down-tray')
+                                                ->color('primary')
+                                                // Full reload with ?loadTickets=1 so the repeater is visible
+                                                // from mount and hydrates its relationship normally.
+                                                ->url(fn (\Livewire\Component $livewire) => (method_exists($livewire, 'getRecord') && $livewire->getRecord())
+                                                    ? static::getUrl('edit', ['record' => $livewire->getRecord(), 'loadTickets' => 1, 'tab' => 'bilete'])
+                                                    : null),
+                                        ]),
+                                    ]),
+
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
                                     // Deferred render: on the edit page the heavy per-item schema
@@ -2969,40 +3003,13 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
-                                                // Rich editors (below) are the dominant render cost on
-                                                // leisure events with many ticket types (6 RichEditors ×
-                                                // N tickets). Off by default → they don't render until the
-                                                // admin opens them, so the edit page stays fast. Hidden
-                                                // editors keep their data via ->dehydrated(true) below.
-                                                Forms\Components\Toggle::make('_edit_details')
-                                                    ->label($t('Editează descrierile & traducerile (WYSIWYG)', 'Edit descriptions & translations (WYSIWYG)'))
-                                                    ->helperText($t('Deschis automat pentru biletele care au deja conținut; închis pentru cele goale (încărcare rapidă). Deschide-l ca să adaugi/editezi text bogat.', 'Auto-open for tickets that already have content; closed for empty ones (fast load). Open it to add/edit rich text.'))
-                                                    ->inline(false)
-                                                    ->live()
-                                                    ->dehydrated(false)
-                                                    // Open only when this ticket already has rich content, so
-                                                    // populated editors ALWAYS render + save (no data loss) and
-                                                    // empty ones stay collapsed → the page stays fast. The
-                                                    // ->dehydrated(true) on each editor is a second safety net.
-                                                    ->afterStateHydrated(function (Forms\Components\Toggle $component, SGet $get) {
-                                                        $has = filled($get('product_description'))
-                                                            || filled($get('usage_terms'))
-                                                            || filled($get('meta.translations.product_description.hu'))
-                                                            || filled($get('meta.translations.product_description.en'))
-                                                            || filled($get('meta.translations.usage_terms.hu'))
-                                                            || filled($get('meta.translations.usage_terms.en'));
-                                                        $component->state($has);
-                                                    })
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
-                                                    ->columnSpanFull(),
-
                                                 // ── Leisure Venue: descriere produs (WYSIWYG) ──
                                                 Forms\Components\RichEditor::make('product_description')
                                                     ->label($t('Descriere produs', 'Product description'))
                                                     ->placeholder($t('Detalii afișate pe pagina publică (ex: ce include, recomandări de utilizare).', 'Public-facing details (what is included, usage recommendations).'))
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->dehydrated(true)
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (bool) $get('_edit_details'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
                                                 // ── Leisure Venue: condiții de utilizare ──
@@ -3011,7 +3018,7 @@ class EventResource extends Resource
                                                     ->placeholder($t('Reguli, restricții de vârstă, depozite, ce se întâmplă în caz de pierdere/deteriorare.', 'Rules, age restrictions, deposits, lost/damaged item handling.'))
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->dehydrated(true)
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (bool) $get('_edit_details'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
                                                 // ── Leisure Venue: Traduceri HU + EN (opt-in) ──
@@ -3080,26 +3087,26 @@ class EventResource extends Resource
                                                     ->label('🇭🇺 ' . $t('Descriere produs (HU)', 'Product description (HU)'))
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->dehydrated(true)
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (bool) $get('_edit_details'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
                                                 Forms\Components\RichEditor::make('meta.translations.product_description.en')
                                                     ->label('🇬🇧 ' . $t('Descriere produs (EN)', 'Product description (EN)'))
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->dehydrated(true)
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (bool) $get('_edit_details'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
                                                 Forms\Components\RichEditor::make('meta.translations.usage_terms.hu')
                                                     ->label('🇭🇺 ' . $t('Condiții utilizare (HU)', 'Usage terms (HU)'))
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->dehydrated(true)
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (bool) $get('_edit_details'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
                                                 Forms\Components\RichEditor::make('meta.translations.usage_terms.en')
                                                     ->label('🇬🇧 ' . $t('Condiții utilizare (EN)', 'Usage terms (EN)'))
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->dehydrated(true)
-                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (bool) $get('_edit_details'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
                                                 // ── Leisure Venue: Variante (durată/preț — Bărci 30m/1h, Sanii etc.) ──
