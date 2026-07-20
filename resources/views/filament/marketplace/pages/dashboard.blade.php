@@ -439,6 +439,51 @@
         </div>
         @endif
 
+        {{-- Featured event statistics — admin / super-admin only --}}
+        @if(($isMarketplaceAdmin ?? false) && !empty($featuredEventStats))
+        @php
+            $fes = $featuredEventStats;
+            $cur = $fes['currency'];
+            $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' ' . $cur;
+            $num = fn ($v) => number_format((float) $v, 0, ',', '.');
+            $avg = fn ($v) => number_format((float) $v, 1, ',', '.');
+            $tile = function (string $label, string $value, string $sub, string $c) {
+                return '<div class="p-3 rounded-lg bg-' . $c . '-50 dark:bg-' . $c . '-900/20 border border-' . $c . '-100 dark:border-' . $c . '-800/40">'
+                    . '<p class="text-[10px] uppercase tracking-wide font-semibold text-' . $c . '-700 dark:text-' . $c . '-300">' . $label . '</p>'
+                    . '<p class="mt-1 text-lg font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums">' . $value . '</p>'
+                    . ($sub !== '' ? '<p class="text-[10px] text-' . $c . '-600/80 dark:text-' . $c . '-300/80 mt-0.5">' . $sub . '</p>' : '')
+                    . '</div>';
+            };
+        @endphp
+        <div x-data="{ open: true }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-indigo-200 dark:border-indigo-800/50">
+            <div class="flex items-center justify-between px-4 py-3 border-b bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/40">
+                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
+                    <x-heroicon-o-chevron-right class="w-4 h-4 text-indigo-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
+                    <x-heroicon-o-chart-bar class="w-5 h-5 text-indigo-500" />
+                    <h3 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Statistici · {{ $fes['event_name'] }}</h3>
+                </div>
+                <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $fes['event_id']]) }}" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Deschide eveniment</a>
+            </div>
+            <div class="p-4 space-y-3" x-show="open" x-collapse x-cloak>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {!! $tile('Total bilete', $num($fes['tickets_total']), 'online: ' . $num($fes['tickets_online']) . ' · POS: ' . $num($fes['tickets_pos']), 'indigo') !!}
+                    {!! $tile('Total vânzări', $money($fes['sales_total']), 'online: ' . $money($fes['sales_online']) . ' · POS: ' . $money($fes['sales_pos']), 'emerald') !!}
+                    {!! $tile('Total comisioane', $money($fes['comm_total']), 'online: ' . $money($fes['comm_online']) . ' · POS: ' . $money($fes['comm_pos']), 'amber') !!}
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {!! $tile('Bilete / zi', $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0), $fes['days'] . ' zile de vânzare', 'purple') !!}
+                    {!! $tile('Încasări / zi', $money($fes['days'] > 0 ? $fes['sales_total'] / $fes['days'] : 0), '', 'purple') !!}
+                    {!! $tile('Comision / zi', $money($fes['days'] > 0 ? $fes['comm_total'] / $fes['days'] : 0), '', 'purple') !!}
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {!! $tile('Bilete azi', $num($fes['tickets_today']), '', 'blue') !!}
+                    {!! $tile('Vânzări azi', $money($fes['sales_today']), '', 'blue') !!}
+                    {!! $tile('Comision azi', $money($fes['comm_today']), '', 'blue') !!}
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- Daily per-event sales report (super-admin only) --}}
         @if(isset($dailyEventReport))
         <div class="mb-5">

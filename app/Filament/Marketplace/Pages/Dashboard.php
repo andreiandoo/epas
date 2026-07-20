@@ -28,6 +28,11 @@ class Dashboard extends Page
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.dashboard';
 
+    // Event surfaced in the admin-only "Statistici eveniment" dashboard block
+    // (Lacul Sf. Ana leisure). Only shown when it belongs to the current
+    // marketplace, so other marketplaces don't see it.
+    private const FEATURED_EVENT_ID = 4234;
+
     public ?MarketplaceClient $marketplace = null;
 
     #[Url]
@@ -408,6 +413,7 @@ class Dashboard extends Page
             'marketplace' => $marketplace,
             'isSuperAdmin' => $isSuperAdmin,
             'isMarketplaceAdmin' => $isMarketplaceAdmin,
+            'featuredEventStats' => $isMarketplaceAdmin ? $this->computeFeaturedEventStats($marketplaceId) : null,
             'stats' => $stats['cards'],
             'monthStats' => $monthStats,
             'chartData' => $chartData,
@@ -1493,6 +1499,60 @@ class Dashboard extends Page
         unset($d);
 
         return $out;
+    }
+
+    /**
+     * Stats for the featured event (FEATURED_EVENT_ID) shown in the admin-only
+     * dashboard block: tickets / sales / commission split online vs POS,
+     * per-day averages, and today. Null when the event doesn't exist or isn't
+     * this marketplace's. Cached 5 min (four SalesBreakdownService builds).
+     */
+    private function computeFeaturedEventStats(int $marketplaceId): ?array
+    {
+        $event = Event::find(self::FEATURED_EVENT_ID);
+        if (!$event || (int) $event->marketplace_client_id !== $marketplaceId) {
+            return null;
+        }
+
+        return Cache::remember(
+            'mp_event_stats_v2_' . self::FEATURED_EVENT_ID,
+            300,
+            function () use ($event) {
+                $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                $tz = 'Europe/Bucharest';
+                $todayStart = Carbon::now($tz)->startOfDay()->utc();
+                $todayEnd = Carbon::now($tz)->endOfDay()->utc();
+
+                // per_type rows key the ticket count as 'qty'.
+                $tk = fn (array $bd) => (int) collect($bd['per_type'] ?? [])->sum('qty');
+                $comm = fn (array $bd) => (float) ($bd['total_commission'] ?? 0) + (float) ($bd['total_commission_kept_from_refunds'] ?? 0);
+
+                $full = $svc->build($event);
+                $online = $svc->build($event, excludePos: true);
+                $pos = $svc->build($event, onlyPos: true);
+                $today = $svc->build($event, $todayStart, $todayEnd, exactBounds: true);
+
+                $firstSale = Ticket::where(function ($q) use ($event) {
+                        $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
+                    })
+                    ->whereIn('status', ['valid', 'used'])
+                    ->min('created_at');
+                $days = $firstSale
+                    ? max(1, Carbon::parse($firstSale)->timezone($tz)->startOfDay()->diffInDays(Carbon::now($tz)->startOfDay()) + 1)
+                    : 1;
+
+                return [
+                    'event_id' => $event->id,
+                    'event_name' => $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: ('Event #' . $event->id),
+                    'currency' => $event->marketplaceClient?->currency ?? 'RON',
+                    'tickets_total' => $tk($full), 'tickets_online' => $tk($online), 'tickets_pos' => $tk($pos),
+                    'sales_total' => (float) $full['total_revenue'], 'sales_online' => (float) $online['total_revenue'], 'sales_pos' => (float) $pos['total_revenue'],
+                    'comm_total' => $comm($full), 'comm_online' => $comm($online), 'comm_pos' => $comm($pos),
+                    'days' => $days,
+                    'tickets_today' => $tk($today), 'sales_today' => (float) $today['total_revenue'], 'comm_today' => $comm($today),
+                ];
+            }
+        );
     }
 
     private function computeDailyEventReport(int $marketplaceId, string $date): array
