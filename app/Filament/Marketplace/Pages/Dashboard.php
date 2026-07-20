@@ -143,7 +143,7 @@ class Dashboard extends Page
         $isMarketplaceAdmin = in_array($marketplaceAdminUser?->role, ['super_admin', 'admin'], true);
 
         // Cache stats for 30 minutes (heavy queries on large tables)
-        $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 1800, function () use ($marketplaceId) {
+        $stats = Cache::remember("mp_dash_stats_v2_{$marketplaceId}", 1800, function () use ($marketplaceId) {
             return $this->computeStats($marketplaceId);
         });
 
@@ -442,8 +442,10 @@ class Dashboard extends Page
         $paidStatuses = ['paid', 'confirmed', 'completed'];
         $today = Carbon::now()->startOfDay();
 
-        // 1. Events - single query with conditional counts
+        // 1. Events - single query with conditional counts. whereNull(parent_id)
+        //    matches EventResource's list (child events are hidden there).
         $eventStats = Event::where('marketplace_client_id', $marketplaceId)
+            ->whereNull('parent_id')
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN NOT is_cancelled AND (
                 (duration_mode = 'single_day' AND event_date >= ?) OR
@@ -502,6 +504,17 @@ class Dashboard extends Page
             ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
             ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') AND DATE(tickets.created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
             ->first();
+
+        // Headline "Comenzi" / "Bilete" counts must equal the Orders / Tickets
+        // list-page totals (where an admin drills down), so use the same scope
+        // as each resource's getEloquentQuery: orders by marketplace_client_id,
+        // tickets by order OR ticketType.event marketplace_client_id (the join
+        // above misses orphan/legacy tickets with no ticket_type).
+        $totalOrdersPage = Order::where('marketplace_client_id', $marketplaceId)->count();
+        $totalTicketsPage = Ticket::where(function ($q) use ($marketplaceId) {
+            $q->whereHas('order', fn ($q2) => $q2->where('marketplace_client_id', $marketplaceId))
+                ->orWhereHas('ticketType.event', fn ($q2) => $q2->where('marketplace_client_id', $marketplaceId));
+        })->count();
 
         // External import counts — single combined query
         $externalOrders = Order::where('marketplace_client_id', $marketplaceId)
@@ -603,10 +616,10 @@ class Dashboard extends Page
                 'total_customers' => (int) $customerStats->total,
                 'guest_customers' => (int) $customerStats->guests,
                 'registered_customers' => (int) $customerStats->registered,
-                'total_orders' => $totalOrders,
+                'total_orders' => $totalOrdersPage,
                 'today_orders' => (int) $orderStats->today,
                 'paid_orders' => $paidOrdersCount,
-                'other_orders' => $totalOrders - $paidOrdersCount,
+                'other_orders' => max(0, $totalOrdersPage - $paidOrdersCount),
                 'total_incasari' => $orderRevenue + $serviceOrdersTotal,
                 'order_revenue' => $orderRevenue,
                 'service_revenue' => $serviceOrdersTotal,
@@ -620,7 +633,7 @@ class Dashboard extends Page
                 'service_orders_total' => $serviceOrdersTotal,
                 'total_tickets' => (int) $ticketStats->sold,
                 'today_tickets' => (int) $ticketStats->sold_today,
-                'total_tickets_db' => (int) $ticketStats->total_db,
+                'total_tickets_db' => $totalTicketsPage,
                 'external_tickets' => $externalTickets,
                 'external_orders' => $externalOrders,
                 'external_customers' => $externalCustomers,

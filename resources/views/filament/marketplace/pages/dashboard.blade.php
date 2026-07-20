@@ -669,6 +669,24 @@
                     $salesLabel = $isCurrent ? 'Vânzări până acum' : ($isPast ? 'Vânzări totale' : 'Vânzări reale');
                     $ticketsLabel = $isCurrent ? 'Bilete până acum' : ($isPast ? 'Bilete totale' : 'Bilete reale');
                     $commLabel = $isCurrent ? 'Comisioane până acum' : ($isPast ? 'Comisioane totale' : 'Comisioane reale');
+                    // % change vs last year (null when no last-year baseline).
+                    $pct = function ($cur, $prev) {
+                        $prev = (float) $prev;
+                        if ($prev <= 0) return null;
+                        return round(((float) $cur - $prev) / $prev * 100, 1);
+                    };
+                @endphp
+                @php
+                    $pctBadge = function ($p) {
+                        if ($p === null) return '';
+                        $pos = $p >= 0;
+                        $cls = $pos
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+                        $arrow = $pos ? '▲' : '▼';
+                        $val = ($pos ? '+' : '') . number_format($p, 1, ',', '.');
+                        return '<span class="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ' . $cls . '">' . $arrow . ' ' . $val . '% vs an trecut</span>';
+                    };
                 @endphp
                 <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -678,16 +696,19 @@
                         <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $salesLabel }}</p>
                             <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">RON</span></p>
+                            {!! $pctBadge($pct($chartSummary['sales_so_far'], $chartSummary['prev_year_sales'] ?? 0)) !!}
                             <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ $ticketsLabel }}</p>
                             <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['tickets_so_far'], 0, ',', '.') }}</p>
+                            {!! $pctBadge($pct($chartSummary['tickets_so_far'], $chartSummary['prev_year_tickets'] ?? 0)) !!}
                             <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ $commLabel }}</p>
                             <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['commission_so_far'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">RON</span></p>
+                            {!! $pctBadge($pct($chartSummary['commission_so_far'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}
                             <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
                         @endif
@@ -714,16 +735,19 @@
                         <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">Vânzări - Predicție</p>
                             <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">RON</span></p>
+                            {!! $pctBadge($pct($chartSummary['predicted_sales'] ?? 0, $chartSummary['prev_year_sales'] ?? 0)) !!}
                             <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">Bilete - Predicție</p>
                             <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['predicted_tickets'], 0, ',', '.') }}</p>
+                            {!! $pctBadge($pct($chartSummary['predicted_tickets'] ?? 0, $chartSummary['prev_year_tickets'] ?? 0)) !!}
                             <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">Comisioane - Predicție</p>
                             <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">RON</span></p>
+                            {!! $pctBadge($pct($chartSummary['predicted_commission'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}
                             <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
                         @endif
