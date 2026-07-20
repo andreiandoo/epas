@@ -147,6 +147,102 @@ class EventResource extends Resource
         return ['rate' => $rate, 'mode' => $mode, 'floor_active' => $floorActive, 'fixed' => $fixed, 'source' => $source];
     }
 
+    /**
+     * Per-request memoized organizer lookup. Reuses the same cache as
+     * resolveInheritedCommission so the many ticket-type field closures
+     * (issuing_company options/helperText, etc.) that reference the SAME
+     * organizer don't re-query it dozens of times per render.
+     */
+    protected static function cachedOrganizer(mixed $organizerId): ?MarketplaceOrganizer
+    {
+        $organizerId = is_numeric($organizerId) ? (int) $organizerId : null;
+        if (! $organizerId) {
+            return null;
+        }
+        if (! array_key_exists($organizerId, static::$orgCommissionCache)) {
+            static::$orgCommissionCache[$organizerId] = MarketplaceOrganizer::find($organizerId);
+        }
+
+        return static::$orgCommissionCache[$organizerId];
+    }
+
+    /**
+     * Per-request memo of ticket counts for every ticket type of an event,
+     * built with ONE grouped query instead of 2 count(*) per ticket type
+     * re-run on every closure re-evaluation. Keyed by event id.
+     *
+     * @var array<int, array<int, array{active:int, cancelled:int}>>
+     */
+    protected static array $eventTicketCountsCache = [];
+
+    /**
+     * @return array{active:int, cancelled:int}
+     */
+    protected static function ticketTypeCounts(mixed $ticketTypeId, mixed $eventId): array
+    {
+        $eventId = is_numeric($eventId) ? (int) $eventId : null;
+        $ticketTypeId = is_numeric($ticketTypeId) ? (int) $ticketTypeId : null;
+        $empty = ['active' => 0, 'cancelled' => 0];
+
+        if (! $eventId || ! $ticketTypeId) {
+            return $empty;
+        }
+
+        if (! array_key_exists($eventId, static::$eventTicketCountsCache)) {
+            $typeIds = \App\Models\TicketType::where('event_id', $eventId)->pluck('id');
+            $map = [];
+            if ($typeIds->isNotEmpty()) {
+                $rows = \App\Models\Ticket::whereIn('ticket_type_id', $typeIds)
+                    ->selectRaw('ticket_type_id, status, count(*) as c')
+                    ->groupBy('ticket_type_id', 'status')
+                    ->get();
+                foreach ($rows as $row) {
+                    $tid = (int) $row->ticket_type_id;
+                    if (! isset($map[$tid])) {
+                        $map[$tid] = ['active' => 0, 'cancelled' => 0];
+                    }
+                    if (in_array($row->status, ['valid', 'used'], true)) {
+                        $map[$tid]['active'] += (int) $row->c;
+                    } elseif (in_array($row->status, ['cancelled', 'refunded'], true)) {
+                        $map[$tid]['cancelled'] += (int) $row->c;
+                    }
+                }
+            }
+            static::$eventTicketCountsCache[$eventId] = $map;
+        }
+
+        return static::$eventTicketCountsCache[$eventId][$ticketTypeId] ?? $empty;
+    }
+
+    /**
+     * Per-request memo of the total valid/used tickets across an event's
+     * NON-independent-stock ticket types (used to compute remaining shared
+     * general quota). Same value for every ticket type of the event, so it's
+     * computed once per event instead of once per repeater item.
+     *
+     * @var array<int, int>
+     */
+    protected static array $eventActiveNonIndepCache = [];
+
+    protected static function activeNonIndepCount(mixed $eventId): int
+    {
+        $eventId = is_numeric($eventId) ? (int) $eventId : null;
+        if (! $eventId) {
+            return 0;
+        }
+        if (! array_key_exists($eventId, static::$eventActiveNonIndepCache)) {
+            $nonIndepIds = \App\Models\TicketType::where('event_id', $eventId)
+                ->where('is_independent_stock', false)
+                ->pluck('id');
+            static::$eventActiveNonIndepCache[$eventId] = $nonIndepIds->isEmpty() ? 0
+                : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
+                    ->whereIn('status', ['valid', 'used'])
+                    ->count();
+        }
+
+        return static::$eventActiveNonIndepCache[$eventId];
+    }
+
     public static function form(Schema $schema): Schema
     {
         $today = Carbon::today();
@@ -2449,12 +2545,7 @@ class EventResource extends Resource
                                                                         $eventRecord = $eventId ? Event::find($eventId) : null;
                                                                     }
                                                                     if ($eventRecord) {
-                                                                        $nonIndepIds = $eventRecord->ticketTypes()
-                                                                            ->where('is_independent_stock', false)
-                                                                            ->pluck('id');
-                                                                        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                                                                            ->whereIn('status', ['valid', 'used'])
-                                                                            ->count();
+                                                                        $activeCount = static::activeNonIndepCount($eventRecord->id);
                                                                         $remaining = max(0, $generalQuota - $activeCount);
                                                                         $component->state($remaining);
                                                                     } else {
@@ -2479,12 +2570,9 @@ class EventResource extends Resource
                                                             if ($record) {
                                                                 // Match the same "valid/used" filter used by the Sales table and stats cards
                                                                 // so counts reconcile across the UI.
-                                                                $activeCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
-                                                                    ->whereIn('status', ['valid', 'used'])
-                                                                    ->count();
-                                                                $cancelledCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
-                                                                    ->whereIn('status', ['cancelled', 'refunded'])
-                                                                    ->count();
+                                                                $__counts = static::ticketTypeCounts($record->id, $record->event_id ?? $get('../../id'));
+                                                                $activeCount = $__counts['active'];
+                                                                $cancelledCount = $__counts['cancelled'];
                                                             if ($activeCount > 0 || $cancelledCount > 0) {
                                                                 $capacity = $record->quota_total ?? $record->capacity ?? null;
                                                                 $soldText = $t('Active', 'Active') . ": {$activeCount}";
@@ -2650,8 +2738,7 @@ class EventResource extends Resource
                                                         Forms\Components\Select::make('issuing_company')
                                                             ->label($t('Societate emitentă', 'Issuing company'))
                                                             ->options(function (\Livewire\Component $livewire) use ($t) {
-                                                                $organizerId = $livewire->record?->marketplace_organizer_id ?? null;
-                                                                $organizer = $organizerId ? \App\Models\MarketplaceOrganizer::find($organizerId) : null;
+                                                                $organizer = static::cachedOrganizer($livewire->record?->marketplace_organizer_id);
 
                                                                 $primaryName = $organizer?->company_name
                                                                     ?: $organizer?->name
@@ -2667,8 +2754,7 @@ class EventResource extends Resource
                                                             })
                                                             ->placeholder($t('Principală (implicit)', 'Primary (default)'))
                                                             ->helperText(function (\Livewire\Component $livewire) use ($t) {
-                                                                $organizerId = $livewire->record?->marketplace_organizer_id ?? null;
-                                                                $organizer = $organizerId ? \App\Models\MarketplaceOrganizer::find($organizerId) : null;
+                                                                $organizer = static::cachedOrganizer($livewire->record?->marketplace_organizer_id);
                                                                 if (!$organizer?->has_secondary_issuer) {
                                                                     return $t('Activează "A doua societate emitentă" pe profilul organizatorului pentru a putea selecta societatea secundară.', 'Enable secondary issuer on organizer profile to select it here.');
                                                                 }
