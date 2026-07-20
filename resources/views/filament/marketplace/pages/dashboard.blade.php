@@ -447,11 +447,11 @@
             $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' ' . $cur;
             $num = fn ($v) => number_format((float) $v, 0, ',', '.');
             $avg = fn ($v) => number_format((float) $v, 1, ',', '.');
-            $tile = function (string $label, string $value, string $sub, string $c) {
-                return '<div class="p-3 rounded-lg bg-' . $c . '-50 dark:bg-' . $c . '-900/20 border border-' . $c . '-100 dark:border-' . $c . '-800/40">'
-                    . '<p class="text-[10px] uppercase tracking-wide font-semibold text-' . $c . '-700 dark:text-' . $c . '-300">' . $label . '</p>'
-                    . '<p class="mt-1 text-lg font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums">' . $value . '</p>'
-                    . ($sub !== '' ? '<p class="text-[10px] text-' . $c . '-600/80 dark:text-' . $c . '-300/80 mt-0.5">' . $sub . '</p>' : '')
+            $stat = function (string $label, string $value, string $sub, string $c) {
+                return '<div class="px-2 py-1.5 rounded-md bg-' . $c . '-50 dark:bg-' . $c . '-900/20 border border-' . $c . '-100/60 dark:border-' . $c . '-800/30">'
+                    . '<span class="text-[10px] text-' . $c . '-700 dark:text-' . $c . '-300">' . $label . '</span>'
+                    . '<span class="block text-sm font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums leading-tight">' . $value . '</span>'
+                    . ($sub !== '' ? '<span class="block text-[9px] text-' . $c . '-600/70 dark:text-' . $c . '-300/70 leading-tight">' . $sub . '</span>' : '')
                     . '</div>';
             };
         @endphp
@@ -464,21 +464,37 @@
                 </div>
                 <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $fes['event_id']]) }}" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Deschide eveniment</a>
             </div>
-            <div class="p-4 space-y-3" x-show="open" x-collapse x-cloak>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {!! $tile('Total bilete', $num($fes['tickets_total']), 'online: ' . $num($fes['tickets_online']) . ' · POS: ' . $num($fes['tickets_pos']), 'indigo') !!}
-                    {!! $tile('Total vânzări', $money($fes['sales_total']), 'online: ' . $money($fes['sales_online']) . ' · POS: ' . $money($fes['sales_pos']), 'emerald') !!}
-                    {!! $tile('Total comisioane', $money($fes['comm_total']), 'online: ' . $money($fes['comm_online']) . ' · POS: ' . $money($fes['comm_pos']), 'amber') !!}
+            <div class="p-3 space-y-3" x-show="open" x-collapse x-cloak>
+                {{-- 30-day sales trend (mini bar chart) --}}
+                @php
+                    $ds = $fes['daily_sales'] ?? [];
+                    $maxD = !empty($ds) ? max($ds) : 0; $maxD = $maxD > 0 ? $maxD : 1;
+                    $sum30 = array_sum($ds);
+                @endphp
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[10px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400">Vânzări · ultimele 30 zile</span>
+                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ $money($sum30) }}</span>
+                    </div>
+                    <div class="flex items-end gap-px h-12">
+                        @foreach($ds as $i => $v)
+                            <div class="flex-1 rounded-sm bg-indigo-400/70 dark:bg-indigo-500/60 hover:bg-indigo-600 dark:hover:bg-indigo-400 transition-colors"
+                                 style="height: {{ max(3, (int) round($v / $maxD * 100)) }}%"
+                                 title="{{ $fes['daily_labels'][$i] ?? '' }}: {{ $money($v) }} · {{ $fes['daily_tickets'][$i] ?? 0 }} bilete"></div>
+                        @endforeach
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {!! $tile('Bilete / zi', $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0), $fes['days'] . ' zile de vânzare', 'purple') !!}
-                    {!! $tile('Încasări / zi', $money($fes['days'] > 0 ? $fes['sales_total'] / $fes['days'] : 0), '', 'purple') !!}
-                    {!! $tile('Comision / zi', $money($fes['days'] > 0 ? $fes['comm_total'] / $fes['days'] : 0), '', 'purple') !!}
-                </div>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {!! $tile('Bilete azi', $num($fes['tickets_today']), '', 'blue') !!}
-                    {!! $tile('Vânzări azi', $money($fes['sales_today']), '', 'blue') !!}
-                    {!! $tile('Comision azi', $money($fes['comm_today']), '', 'blue') !!}
+                {{-- Compact stats — 3 columns on all sizes --}}
+                <div class="grid grid-cols-3 gap-2">
+                    {!! $stat('Total bilete', $num($fes['tickets_total']), $num($fes['tickets_online']) . ' on · ' . $num($fes['tickets_pos']) . ' POS', 'indigo') !!}
+                    {!! $stat('Total vânzări', $money($fes['sales_total']), $num($fes['sales_online']) . ' on · ' . $num($fes['sales_pos']) . ' POS', 'emerald') !!}
+                    {!! $stat('Total comision', $money($fes['comm_total']), $num($fes['comm_online']) . ' on · ' . $num($fes['comm_pos']) . ' POS', 'amber') !!}
+                    {!! $stat('Bilete / zi', $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0), $fes['days'] . ' zile', 'purple') !!}
+                    {!! $stat('Încasări / zi', $money($fes['days'] > 0 ? $fes['sales_total'] / $fes['days'] : 0), '', 'purple') !!}
+                    {!! $stat('Comision / zi', $money($fes['days'] > 0 ? $fes['comm_total'] / $fes['days'] : 0), '', 'purple') !!}
+                    {!! $stat('Bilete azi', $num($fes['tickets_today']), '', 'blue') !!}
+                    {!! $stat('Vânzări azi', $money($fes['sales_today']), '', 'blue') !!}
+                    {!! $stat('Comision azi', $money($fes['comm_today']), '', 'blue') !!}
                 </div>
             </div>
         </div>
@@ -520,7 +536,7 @@
                             <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Eveniment</th>
                             <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Locație</th>
                             <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #4f46e5;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Azi</th>
-                            <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Total</th>
+                            <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="hidden sm:table-cell px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Total</th>
                         </tr>
                         {{-- Sub-header row — sticky just under the group row --}}
                         <tr>
@@ -528,10 +544,10 @@
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
                         </tr>
                     </thead>
                     <tbody x-data="{ showAll: false }">
@@ -567,10 +583,10 @@
                                 <td class="px-3 py-2 text-right tabular-nums border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_day']) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-semibold text-indigo-600 dark:text-indigo-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_day'], 2) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_day'], 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_total']) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_total']) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_total'], 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_total'], 2) }}</td>
+                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_total']) }}</td>
+                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_total']) }}</td>
+                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_total'], 2) }}</td>
+                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_total'], 2) }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -611,10 +627,10 @@
                                 <td class="px-3 py-2 text-right tabular-nums text-gray-900 dark:text-white">{{ number_format($sumTicketsDay) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-bold text-indigo-800 dark:text-indigo-300">{{ number_format($sumSalesDay, 2) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-800 dark:text-emerald-300">{{ number_format($sumCommissionDay, 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700"></td>
-                                <td class="px-3 py-2"></td>
-                                <td class="px-3 py-2"></td>
-                                <td class="px-3 py-2"></td>
+                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700"></td>
+                                <td class="hidden sm:table-cell px-3 py-2"></td>
+                                <td class="hidden sm:table-cell px-3 py-2"></td>
+                                <td class="hidden sm:table-cell px-3 py-2"></td>
                             </tr>
                         </tfoot>
                     @endif

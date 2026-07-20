@@ -1515,7 +1515,7 @@ class Dashboard extends Page
         }
 
         return Cache::remember(
-            'mp_event_stats_v2_' . self::FEATURED_EVENT_ID,
+            'mp_event_stats_v3_' . self::FEATURED_EVENT_ID,
             300,
             function () use ($event) {
                 $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
@@ -1541,8 +1541,38 @@ class Dashboard extends Page
                     ? max(1, Carbon::parse($firstSale)->timezone($tz)->startOfDay()->diffInDays(Carbon::now($tz)->startOfDay()) + 1)
                     : 1;
 
+                // Last 30 days daily series (sales = Σ ticket.price, tickets =
+                // count) for the mini trend chart. One grouped query.
+                $since = Carbon::now($tz)->subDays(29)->startOfDay()->utc();
+                $dailyRaw = \Illuminate\Support\Facades\DB::table('tickets as t')
+                    ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                    ->join('orders as o', 'o.id', '=', 't.order_id')
+                    ->where('tt.event_id', $event->id)
+                    ->whereIn('t.status', ['valid', 'used'])
+                    ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+                    ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+                    ->whereBetween('t.created_at', [$since, $todayEnd])
+                    ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as d, COUNT(*) as tickets, COALESCE(SUM(t.price), 0) as sales")
+                    ->groupBy('d')
+                    ->get()
+                    ->keyBy('d');
+                $dailyLabels = [];
+                $dailySales = [];
+                $dailyTickets = [];
+                $cursor = Carbon::now($tz)->subDays(29)->startOfDay();
+                for ($i = 0; $i < 30; $i++) {
+                    $k = $cursor->format('Y-m-d');
+                    $dailyLabels[] = $cursor->format('d.m');
+                    $dailySales[] = (float) ($dailyRaw[$k]->sales ?? 0);
+                    $dailyTickets[] = (int) ($dailyRaw[$k]->tickets ?? 0);
+                    $cursor->addDay();
+                }
+
                 return [
                     'event_id' => $event->id,
+                    'daily_labels' => $dailyLabels,
+                    'daily_sales' => $dailySales,
+                    'daily_tickets' => $dailyTickets,
                     'event_name' => $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: ('Event #' . $event->id),
                     'currency' => $event->marketplaceClient?->currency ?? 'RON',
                     'tickets_total' => $tk($full), 'tickets_online' => $tk($online), 'tickets_pos' => $tk($pos),
