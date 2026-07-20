@@ -204,8 +204,9 @@ class Dashboard extends Page
                 // the prev-year series empty and nothing to compare against.
                 return $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false);
             });
-            $prevYearTicketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
-                return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
+            $prevYearTicketChartData = Cache::remember("mp_dash_tchart_v2_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+                // Include legacy_import for last year (mostly migrated tickets).
+                return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false);
             });
 
             // Future-month prediction needs a YoY growth basis. We don't have
@@ -235,6 +236,23 @@ class Dashboard extends Page
                     $futureGrowthRatio,
                 )
             );
+
+            // Commission cards: "so far" is the authoritative month commission
+            // (SalesBreakdownService, cached). Last-year & prediction are
+            // estimated at the current effective rate (commission ÷ sales),
+            // because the service can't value last year's migrated legacy data.
+            $viewMonthStart = $chartMonthDate->copy()->startOfMonth()->utc();
+            $viewMonthEnd = $chartMonthDate->copy()->endOfMonth()->endOfDay()->utc();
+            $commSoFar = $chartMonthMode === 'future' ? 0.0 : Cache::remember(
+                "mp_month_comm_svc_v2_{$marketplaceId}_{$chartMonthDate->format('Y-m')}",
+                $chartMonthMode === 'past' ? 86400 : 900,
+                fn () => $this->monthCommissionViaService($marketplaceId, $viewMonthStart, $viewMonthEnd)
+            );
+            $salesSoFar = (float) ($chartSummary['sales_so_far'] ?? 0);
+            $effRate = $salesSoFar > 0 ? ($commSoFar / $salesSoFar) : 0.0;
+            $chartSummary['commission_so_far'] = round($commSoFar, 2);
+            $chartSummary['prev_year_commission'] = round((float) ($chartSummary['prev_year_sales'] ?? 0) * $effRate, 2);
+            $chartSummary['predicted_commission'] = round((float) ($chartSummary['predicted_sales'] ?? 0) * $effRate, 2);
 
             // Navigation bounds — keep clamp consistent with shiftChartMonth().
             $minMonth = Carbon::create(2024, 1, 1, 0, 0, 0, $tz);
@@ -943,9 +961,15 @@ class Dashboard extends Page
         return $out;
     }
 
-    private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false): array
+    private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false, bool $excludeLegacy = true): array
     {
         $tz = 'Europe/Bucharest';
+        // Prev-year comparison keeps legacy_import (last year's tickets are
+        // mostly migrated), otherwise the bar is empty. Current period excludes
+        // it. Mirrors getChartData's excludeLegacy handling.
+        $excludedSources = $excludeLegacy
+            ? ['test_order', 'pos_test', 'external_import', 'legacy_import']
+            : ['test_order', 'pos_test', 'external_import'];
         // Count via ticket_types→events→orders (same as the daily report), not
         // the unreliable tickets.marketplace_client_id column, so the chart's
         // ticket bars match the report's tickets_day.
@@ -956,7 +980,7 @@ class Dashboard extends Page
             ->where('e.marketplace_client_id', $marketplaceId)
             ->whereIn('t.status', ['valid', 'used'])
             ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-            ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereNotIn('o.source', $excludedSources)
             ->whereBetween('t.created_at', [$startDate, $endDate])
             ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, COUNT(*) as count")
             ->groupBy('date')
