@@ -4574,7 +4574,7 @@ class EventResource extends Resource
                                     $domain = $marketplace->domain ?? $marketplace->primary_domain ?? 'localhost';
                                     $domain = preg_replace('#^https?://#', '', rtrim($domain, '/'));
                                     $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
-                                    $token = \App\Http\Controllers\Api\MarketplaceClient\BaseController::generatePreviewToken($record->id, auth()->id());
+                                    $token = \App\Http\Controllers\Api\MarketplaceClient\BaseController::generatePreviewToken($record->id, (int) (auth('marketplace_admin')->id() ?? auth()->id() ?? 0));
                                     $url = "{$protocol}://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
 
                                     return new \Illuminate\Support\HtmlString(
