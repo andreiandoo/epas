@@ -2277,6 +2277,14 @@ class EventResource extends Resource
 
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
+                                    // Deferred render: on the edit page the heavy per-item schema
+                                    // (dozens of fields × many ticket types) is only rendered after
+                                    // the admin clicks "Încarcă biletele", so the page and the
+                                    // Vânzări tab open fast. On create (no $loadTickets property) it
+                                    // always renders. While hidden the relationship is NOT saved
+                                    // (Filament skips saveRelationships for hidden components), so
+                                    // ticket types are never wiped by a save from another tab.
+                                    ->visible(fn (\Livewire\Component $livewire) => ! property_exists($livewire, 'loadTickets') || $livewire->loadTickets === true)
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
                                     ->collapsed()
@@ -2291,8 +2299,13 @@ class EventResource extends Resource
                                         $isDeclarable = $state['is_declarable'] ?? true;
                                         $isRefundable = $state['is_refundable'] ?? false;
                                         $isSubscription = $state['is_subscription'] ?? false;
+                                        $isSoldOut = $state['is_sold_out'] ?? false;
 
                                         $badges = '';
+                                        // Sold Out badge (manual flag) — shown first, most prominent
+                                        if ($isSoldOut) {
+                                            $badges .= '<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;padding:1px 6px;border-radius:4px;margin-left:6px;">SOLD OUT</span>';
+                                        }
                                         // Channel badge: Online (default) or Offline (app ticket)
                                         $badges .= $isEntryTicket
                                             ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Offline</span>'
@@ -2430,6 +2443,26 @@ class EventResource extends Resource
                                             ->action(function (array $arguments, Forms\Components\Repeater $component) {
                                                 $state = $component->getState();
                                                 $state[$arguments['item']]['is_subscription'] = !($state[$arguments['item']]['is_subscription'] ?? false);
+                                                $component->state($state);
+                                            }),
+                                        Action::make('toggleSoldOut')
+                                            ->iconButton()
+                                            ->icon(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_sold_out'] ?? false)
+                                                    ? 'heroicon-s-no-symbol'
+                                                    : 'heroicon-o-no-symbol'
+                                            )
+                                            ->color(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_sold_out'] ?? false)
+                                                    ? 'danger' : 'gray'
+                                            )
+                                            ->tooltip(fn (array $arguments, Forms\Components\Repeater $component) =>
+                                                ($component->getState()[$arguments['item']]['is_sold_out'] ?? false)
+                                                    ? 'Sold Out: ON (click pentru a repune în vânzare)' : 'Sold Out: OFF (click pentru a marca sold out)'
+                                            )
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                                $state = $component->getState();
+                                                $state[$arguments['item']]['is_sold_out'] = !($state[$arguments['item']]['is_sold_out'] ?? false);
                                                 $component->state($state);
                                             }),
                                         Action::make('duplicateTicketType')
@@ -2703,6 +2736,7 @@ class EventResource extends Resource
                                                 Forms\Components\Hidden::make('is_declarable')->default(true),
                                                 Forms\Components\Hidden::make('is_refundable')->default(false),
                                                 Forms\Components\Hidden::make('is_subscription')->default(false),
+                                                Forms\Components\Hidden::make('is_sold_out')->default(false),
 
                                                 // Single-day ticket date (visible only for range events)
                                                 Forms\Components\DatePicker::make('valid_date')
@@ -3501,7 +3535,7 @@ class EventResource extends Resource
                                                         $cur = $marketplace?->currency ?? 'RON';
                                                         $lines = [];
                                                         if ($isInherit) {
-                                                            $src = $inh['source'] === 'organizer' ? $t('organizator', 'organizer') : $t('marketplace', 'marketplace');
+                                                            $src = $inh['source'] === 'organizer' ? $t('organizator, conform contract', 'organizer, per contract') : $t('marketplace', 'marketplace');
                                                             $lines[] = $t("Moștenit de la $src: $rateStr% · $modeLabel", "Inherited from $src: $rateStr% · $modeLabel");
                                                         }
                                                         if ($inh['floor_active'] && $inh['fixed'] > 0) {

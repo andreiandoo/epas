@@ -57,6 +57,8 @@ class TicketType extends Model
         'is_declarable',
         // Subscription flag - true if this ticket type is an abonament
         'is_subscription',
+        // Manual "sold out" flag (interface + checkout gating only; stock untouched)
+        'is_sold_out',
         // Multiplier for quantity increment/decrement step
         'multiplier',
         // Series fields for ticket numbering
@@ -119,6 +121,7 @@ class TicketType extends Model
         'is_entry_ticket' => 'boolean',
         'is_declarable' => 'boolean',
         'is_subscription' => 'boolean',
+        'is_sold_out' => 'boolean',
         'is_parking' => 'boolean',
         'requires_vehicle_info' => 'boolean',
         'is_independent_stock' => 'boolean',
@@ -338,6 +341,82 @@ class TicketType extends Model
                 $model->saveQuietly();
             }
         });
+
+        // When a ticket type is manually flipped to sold-out, immediately run the
+        // autostart resolution for its event so any following hidden ticket type
+        // with "Autostart când precedentul e sold out" becomes active right away
+        // (the scheduled command is only a fallback that runs every minute).
+        static::saved(function ($model) {
+            if ($model->wasChanged('is_sold_out') && $model->is_sold_out) {
+                static::autostartHiddenAfterSoldOut($model->event_id);
+            }
+        });
+    }
+
+    /**
+     * Auto-activate hidden ticket types whose "autostart_when_previous_sold_out"
+     * flag is set, when the previous ticket type (by sort_order) is sold out.
+     *
+     * "Previous sold out" is true when the previous type is manually flagged
+     * (is_sold_out) OR its limited stock is exhausted (valid tickets >= quota_total).
+     * Shared by the scheduled command and the admin save flow. Returns the count
+     * of newly activated ticket types.
+     */
+    public static function autostartHiddenAfterSoldOut(?int $eventId = null): int
+    {
+        $query = static::where('status', 'hidden')
+            ->where('autostart_when_previous_sold_out', true);
+
+        if ($eventId !== null) {
+            $query->where('event_id', $eventId);
+        }
+
+        $candidates = $query->get();
+        if ($candidates->isEmpty()) {
+            return 0;
+        }
+
+        $count = 0;
+
+        foreach ($candidates as $candidate) {
+            $previous = static::where('event_id', $candidate->event_id)
+                ->where('sort_order', '<', $candidate->sort_order)
+                ->orderByDesc('sort_order')
+                ->orderByDesc('id')
+                ->first();
+
+            if (! $previous) {
+                continue;
+            }
+
+            $previousSoldOut = (bool) $previous->is_sold_out;
+
+            if (! $previousSoldOut) {
+                // Unlimited stock is never sold out (unless manually flagged above)
+                if ($previous->quota_total < 0) {
+                    continue;
+                }
+
+                $validTicketCount = $previous->tickets()
+                    ->where(function ($q) {
+                        $q->where('is_cancelled', false)
+                          ->orWhereNull('is_cancelled');
+                    })
+                    ->count();
+
+                $previousSoldOut = $validTicketCount >= $previous->quota_total;
+            }
+
+            if ($previousSoldOut) {
+                $candidate->update([
+                    'status' => 'active',
+                    'autostart_when_previous_sold_out' => false,
+                ]);
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**

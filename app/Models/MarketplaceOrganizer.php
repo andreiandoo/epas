@@ -160,6 +160,14 @@ class MarketplaceOrganizer extends Authenticatable
         'payout_details',
     ];
 
+    // Defaults applied to newly created organizers (self-service registration,
+    // onboarding, admin). Existing rows are untouched — these only fill values
+    // that aren't explicitly set on a new model instance.
+    protected $attributes = [
+        'test_pos_enabled' => true,
+        'commission_use_floor' => true,
+    ];
+
     protected $casts = [
         'email_verified_at' => 'datetime',
         'email_verification_expires_at' => 'datetime',

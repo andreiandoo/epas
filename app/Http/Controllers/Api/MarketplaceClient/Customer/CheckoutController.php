@@ -2172,6 +2172,11 @@ class CheckoutController extends BaseController
                 continue;
             }
 
+            if ($ticketType->is_sold_out) {
+                $errors[$key] = "Ticket type is sold out";
+                continue;
+            }
+
             if (!$ticketType->event || (!$ticketType->event->is_published && !$isTestOrder)) {
                 $errors[$key] = "Event is no longer available";
                 continue;

@@ -25,6 +25,22 @@ class EditEvent extends EditRecord
     protected static string $resource = EventResource::class;
 
     /**
+     * Deferred render of the (potentially huge) ticket-types repeater in the
+     * "Bilete" tab. Kept false on load so the page — and especially the
+     * "Vânzări" tab — opens fast; flipped true by the "Încarcă biletele"
+     * button when the admin actually needs to edit ticket types. While false
+     * the repeater is hidden, so Filament skips its render AND (per
+     * BelongsToModel::saveRelationships) does NOT touch the ticketTypes
+     * relationship on save — existing ticket types are never wiped.
+     */
+    public bool $loadTickets = false;
+
+    public function loadTickets(): void
+    {
+        $this->loadTickets = true;
+    }
+
+    /**
      * Allow editing child events even though they're filtered from the list query.
      */
     public function resolveRecord(int|string $key): \Illuminate\Database\Eloquent\Model
@@ -1752,6 +1768,11 @@ class EditEvent extends EditRecord
                 $this->record->saveQuietly();
             }
         }
+
+        // Ticket types are all persisted by now; resolve any "autostart when
+        // previous sold out" types (manual sold-out flag or exhausted stock).
+        // Runs after the save so it can't be overwritten by a later repeater row.
+        \App\Models\TicketType::autostartHiddenAfterSoldOut($this->record->id);
 
         // Auto-fill all SEO keys with latest event data on every save
         $this->autoFillSeoKeys();

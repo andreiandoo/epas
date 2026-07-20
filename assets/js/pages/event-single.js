@@ -733,7 +733,7 @@ const EventPage = {
                     max_per_order: tt.max_per_order || 10,
                     multiplier: tt.multiplier || 1,
                     status: tt.status,
-                    is_sold_out: available <= 0,
+                    is_sold_out: (tt.is_sold_out === true) || available <= 0,
                     has_seating: tt.has_seating || false,
                     seating_sections: tt.seating_sections || [],
                     seating_rows: tt.seating_rows || [],

@@ -542,6 +542,13 @@ class EventsController extends BaseController
                     $available = min($ownAvailable, $poolRemaining);
                 }
 
+                // Manual sold-out flag overrides availability (stock untouched):
+                // report 0 available so every consumer treats it as unavailable.
+                $isSoldOut = (bool) ($tt->is_sold_out ?? false);
+                if ($isSoldOut) {
+                    $available = 0;
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $ttName,
@@ -557,6 +564,7 @@ class EventsController extends BaseController
                     'sale_starts_at' => $tt->sales_start_at,
                     'sale_ends_at' => $tt->sales_end_at,
                     'is_refundable' => (bool) ($tt->is_refundable ?? false),
+                    'is_sold_out' => $isSoldOut,
                 ];
             }),
             'artists' => $event->artists->map(function ($artist) {
@@ -839,6 +847,9 @@ class EventsController extends BaseController
             ->get()
             ->map(function ($tt) {
                 $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
+                if ($tt->is_sold_out) {
+                    $available = 0;
+                }
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                 return [
                     'id' => $tt->id,

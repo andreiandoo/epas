@@ -1177,7 +1177,7 @@ class OrganizerResource extends Resource
                             Forms\Components\Toggle::make('commission_use_floor')
                                 ->label('Calculează cu floor (minim per bilet)')
                                 ->hintIcon('heroicon-m-information-circle', tooltip: 'Când e bifat: comisionul per bilet nu poate fi mai mic decât „Fixed Commission" de mai sus. Aplicat în: POS, customer checkout, pagina de vânzări din admin, raport organizator.')
-                                ->default(false)
+                                ->default(true)
                                 ->inline(false),
 
                             // Opt-in pentru biletul auto-provizionat "Test POS"
@@ -1189,7 +1189,7 @@ class OrganizerResource extends Resource
                             Forms\Components\Toggle::make('test_pos_enabled')
                                 ->label('Bilete Test POS')
                                 ->hintIcon('heroicon-m-information-circle', tooltip: 'Când e bifat: fiecare eveniment (non-leisure) al acestui organizator primește automat un bilet „Test POS" de 10 lei pentru testarea aplicației mobile POS (vânzare + print + scanare). Când NU e bifat: biletul nu se mai creează, iar cele deja existente se pot șterge global cu „php artisan test-tickets:prune-disabled".')
-                                ->default(false)
+                                ->default(true)
                                 ->inline(false),
 
                             // Per-organizer override of marketplace.payment_fees.pass_to_customer.
