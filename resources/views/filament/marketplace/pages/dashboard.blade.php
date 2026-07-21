@@ -147,9 +147,8 @@
         @endif
 
         <!-- Invitation Abuse Detector — events where free-ticket giveaways exceed paid-ticket commission -->
-        {{-- Financial report — restricted to marketplace admins (Administrator +
-             Super Administrator roles); hidden from Moderators. --}}
-        @if(($isMarketplaceAdmin ?? false) && isset($invitationAbuse) && ($invitationAbuse['all_time']['summary']['events_count'] ?? 0) > 0)
+        {{-- Financial report — restricted to Super Administrators only. --}}
+        @if(($isSuperAdmin ?? false) && isset($invitationAbuse) && ($invitationAbuse['all_time']['summary']['events_count'] ?? 0) > 0)
         @php
             $iaAllSum = $invitationAbuse['all_time']['summary'];
             $iaMonthSum = $invitationAbuse['current_month']['summary'];
@@ -439,8 +438,8 @@
         </div>
         @endif
 
-        {{-- Featured event statistics — admin / super-admin only --}}
-        @if(($isMarketplaceAdmin ?? false) && !empty($featuredEventStats))
+        {{-- Featured event statistics — super-admin only (also inside the outer isSuperAdmin gate) --}}
+        @if(($isSuperAdmin ?? false) && !empty($featuredEventStats))
         @php
             $fes = $featuredEventStats;
             $cur = $fes['currency'];

@@ -61,6 +61,11 @@ class DashboardController extends BaseController
                     'venue_city' => $venueCity,
                     'tickets_sold' => $event->tickets_sold ?? 0,
                     'tickets_total' => $event->ticketTypes()->where('quota_total', '<', 0)->exists() ? -1 : ($event->ticketTypes()->sum('quota_total') ?: 100),
+                    // Total sales (all-time) for this event — canonical cached
+                    // number shared with the admin sales page / reports.
+                    'revenue' => (float) $event->total_revenue,
+                    'tickets_total_sold' => (int) $event->total_tickets_sold,
+                    'currency' => $event->currency ?? 'RON',
                     'status' => $event->is_published ? 'published' : 'draft',
                 ];
             });

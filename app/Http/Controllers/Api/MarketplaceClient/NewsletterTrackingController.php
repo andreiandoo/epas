@@ -136,6 +136,27 @@ class NewsletterTrackingController extends Controller
                     'marketplace_contact_list_members.status' => 'unsubscribed',
                     'marketplace_contact_list_members.unsubscribed_at' => now(),
                 ]);
+
+            // Immediately enroll the customer into any dynamic list that targets
+            // active unsubscribers (e.g. "Dezabonați activ"). The scheduled
+            // contact-lists:sync only runs once a day at 03:00, but the
+            // requirement is that every unsubscribe surfaces in that list right
+            // away — so we sync the matching lists for this single customer now.
+            $unsubLists = MarketplaceContactList::where('marketplace_client_id', $marketplace->id)
+                ->where('list_type', 'dynamic')
+                ->get()
+                ->filter(fn ($list) => collect($list->getRules())
+                    ->pluck('type')
+                    ->contains('has_actively_unsubscribed'));
+
+            foreach ($unsubLists as $list) {
+                // Rules are ANDed; confirm the customer matches the list's full
+                // rule set before enrolling (markUnsubscribed above already set
+                // recipient.status='unsubscribed', so the rule now matches).
+                if ($list->buildMatchingCustomersQuery()->whereKey($customer->id)->exists()) {
+                    $list->addSubscriber($customer);
+                }
+            }
         }
 
         return response()->view('marketplace.unsubscribe-success', [

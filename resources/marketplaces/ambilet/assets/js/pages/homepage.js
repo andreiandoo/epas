@@ -224,7 +224,7 @@ const CityEventsFilter = {
             // collapsing into a single category when an organizer imports
             // 10-15 plays in one batch (theatre, etc.). Categories stay
             // hidden on the card — see hideCategory below.
-            const response = await AmbiletAPI.get('/marketplace-events?sort=latest_stratified&per_page=45&max_per_category=4');
+            const response = await AmbiletAPI.get('/marketplace-events?sort=latest_stratified&per_page=96&max_per_category=8');
             if (response.data) {
                 this.allEvents = Array.isArray(response.data) ? response.data : (response.data.events || response.data.data || []);
             }
@@ -330,7 +330,7 @@ const CityEventsFilter = {
 
         // Use AmbiletEventCard component for rendering
         if (typeof AmbiletEventCard !== 'undefined') {
-            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 45), {
+            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 48), {
                 urlPrefix: '/bilete/',
                 // Category badge hidden — backend already stratifies the
                 // feed across categories (sort=latest_stratified) so the
@@ -340,9 +340,10 @@ const CityEventsFilter = {
                 showPrice: true,
                 showVenue: true,
                 // The "ultimele evenimente adăugate" grid intentionally hides
-                // the date badge — the date already appears in the body card
-                // copy, the overlay distracts from the poster artwork.
-                hideDate: true
+                // the date badge over the poster (distracts from the artwork),
+                // but shows a compact date next to the price at the card foot.
+                hideDate: true,
+                showDateWithPrice: true
             });
         } else {
             // Fallback - shouldn't happen

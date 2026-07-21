@@ -36,8 +36,11 @@ const AmbiletEventCard = {
             urlPrefix = '/bilete/',
             linkClass = '',
             showPromotedBadge = false, // Show "Promovat" badge for paid promotions
-            hideDate = false           // Suppress the date badge over the poster
+            hideDate = false,          // Suppress the date badge over the poster
                                        // (used by homepage #cityEventsGrid only)
+            showDateWithPrice = false  // Show the event date at the bottom-right of
+                                       // the card, next to the price (homepage
+                                       // "ultimele evenimente adăugate" grid only)
         } = options;
 
         const isRedirect = !!event.redirectUrl;
@@ -86,11 +89,28 @@ const AmbiletEventCard = {
         // bold ANULAT label.
         const cardMutedClass = event.isCancelled ? ' opacity-60 grayscale hover:opacity-70' : ' hover:-translate-y-1 hover:shadow-xl hover:border-primary';
 
+        // Compact date shown next to the price (bottom-right) when
+        // showDateWithPrice is on. Range events show the range, single-day
+        // events show "18 Iul" style.
+        let priceDateHtml = '';
+        if (showDateWithPrice) {
+            const cardDateShort = (event.isDateRange && event.dateRangeMain)
+                ? event.dateRangeMain + (event.dateRangeYear ? ' ' + event.dateRangeYear : '')
+                : ((event.day !== '' && event.month) ? event.day + ' ' + event.month : '');
+            if (cardDateShort) {
+                priceDateHtml = '<span class="flex items-center gap-1 text-xs font-semibold text-muted whitespace-nowrap">' +
+                    '<svg class="flex-shrink-0 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' +
+                    this.escapeHtml(cardDateShort) +
+                '</span>';
+            }
+        }
+
         let priceRowHtml = '';
         if (showPrice) {
             if (event.isCancelled) {
                 priceRowHtml = '<div class="px-3 flex items-center justify-between pt-1 border-t border-border">' +
                     '<span class="font-bold uppercase tracking-wide text-red-600">Anulat</span>' +
+                    priceDateHtml +
                     (showCategory && event.categoryName ?
                         '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
                         '') +
@@ -101,6 +121,7 @@ const AmbiletEventCard = {
                     '<span class="text-xs ' + (event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
                         (event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                     '</span>' +
+                    priceDateHtml +
                     (showCategory && event.categoryName ?
                         '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
                         '') +

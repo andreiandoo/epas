@@ -1401,13 +1401,14 @@ use App\Http\Controllers\Api\MarketplaceClient\BlogController as MarketplaceBlog
 use App\Http\Controllers\Api\MarketplaceClient\SystemUpdatesController as MarketplaceSystemUpdatesController;
 use App\Http\Controllers\Api\MarketplaceClient\VanityUrlController as MarketplaceVanityUrlController;
 
-Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
-    // Handle OPTIONS preflight requests
-    Route::options('/{any}', fn () => response('', 200))
-        ->where('any', '.*')
-        ->name('api.marketplace-client.options');
-
-    // Newsletter Tracking (public, no auth required)
+// Newsletter tracking + unsubscribe — reached from links and the open pixel
+// inside SENT emails, which carry NO API key. Security is per-recipient HMAC
+// tokens validated inside the controller (NewsletterTrackingController). These
+// MUST stay OUT of the marketplace.auth group, otherwise every email link 401s
+// with "API key is required" (the unsubscribe link was broken for exactly this
+// reason). The URL paths are unchanged so links in already-sent emails keep
+// working.
+Route::prefix('marketplace-client')->middleware('throttle:120,1')->group(function () {
     Route::get('/newsletter/track/open', [NewsletterTrackingController::class, 'trackOpen'])
         ->name('api.marketplace-client.newsletter.track.open');
     Route::get('/newsletter/track/click', [NewsletterTrackingController::class, 'trackClick'])
@@ -1418,6 +1419,13 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.newsletter.preferences');
     Route::post('/newsletter/preferences', [NewsletterTrackingController::class, 'updatePreferences'])
         ->name('api.marketplace-client.newsletter.preferences.update');
+});
+
+Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    // Handle OPTIONS preflight requests
+    Route::options('/{any}', fn () => response('', 200))
+        ->where('any', '.*')
+        ->name('api.marketplace-client.options');
 
     // Configuration & Authentication
     Route::get('/config', [MarketplaceConfigController::class, 'index'])
