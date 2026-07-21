@@ -1515,7 +1515,7 @@ class Dashboard extends Page
         }
 
         return Cache::remember(
-            'mp_event_stats_v3_' . self::FEATURED_EVENT_ID,
+            'mp_event_stats_v4_' . self::FEATURED_EVENT_ID,
             300,
             function () use ($event) {
                 $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
@@ -1543,11 +1543,21 @@ class Dashboard extends Page
 
                 // Last 30 days daily series (sales = Σ ticket.price, tickets =
                 // count) for the mini trend chart. One grouped query.
+                //
+                // Match tickets the SAME way SalesBreakdownService does — by
+                // tickets.event_id OR tickets.marketplace_event_id — NOT by
+                // joining ticket_types.event_id. The latter linkage misses
+                // events (e.g. leisure/Sf. Ana) whose tickets carry event_id
+                // directly but whose ticket_types row resolves differently,
+                // which left this chart empty while the aggregate cards showed
+                // real numbers.
                 $since = Carbon::now($tz)->subDays(29)->startOfDay()->utc();
                 $dailyRaw = \Illuminate\Support\Facades\DB::table('tickets as t')
-                    ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                     ->join('orders as o', 'o.id', '=', 't.order_id')
-                    ->where('tt.event_id', $event->id)
+                    ->where(function ($q) use ($event) {
+                        $q->where('t.event_id', $event->id)
+                          ->orWhere('t.marketplace_event_id', $event->id);
+                    })
                     ->whereIn('t.status', ['valid', 'used'])
                     ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
                     ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
