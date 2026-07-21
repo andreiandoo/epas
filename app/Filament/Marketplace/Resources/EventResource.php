@@ -243,6 +243,19 @@ class EventResource extends Resource
         return static::$eventActiveNonIndepCache[$eventId];
     }
 
+    /**
+     * Whether the record being edited is a leisure venue. Only these events
+     * carry the huge ticket-type repeater that we defer for performance — every
+     * other event renders its ticket types inline as before.
+     */
+    protected static function isLeisureRecord(\Livewire\Component $livewire): bool
+    {
+        $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
+
+        return $record instanceof Event
+            && ($record->display_template ?? 'standard') === 'leisure_venue';
+    }
+
     public static function form(Schema $schema): Schema
     {
         $today = Carbon::today();
@@ -2280,7 +2293,9 @@ class EventResource extends Resource
                                 // for events with many ticket types (the repeater below is the
                                 // expensive part to render).
                                 SC\Group::make()
-                                    ->visible(fn (\Livewire\Component $livewire) => property_exists($livewire, 'loadTickets') && $livewire->loadTickets !== true)
+                                    ->visible(fn (\Livewire\Component $livewire) => static::isLeisureRecord($livewire)
+                                        && property_exists($livewire, 'loadTickets')
+                                        && $livewire->loadTickets !== true)
                                     ->schema([
                                         Forms\Components\Placeholder::make('tickets_lazy_hint')
                                             ->hiddenLabel()
@@ -2311,14 +2326,16 @@ class EventResource extends Resource
 
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
-                                    // Deferred render: on the edit page the heavy per-item schema
-                                    // (dozens of fields × many ticket types) is only rendered after
-                                    // the admin clicks "Încarcă biletele", so the page and the
-                                    // Vânzări tab open fast. On create (no $loadTickets property) it
-                                    // always renders. While hidden the relationship is NOT saved
-                                    // (Filament skips saveRelationships for hidden components), so
-                                    // ticket types are never wiped by a save from another tab.
-                                    ->visible(fn (\Livewire\Component $livewire) => ! property_exists($livewire, 'loadTickets') || $livewire->loadTickets === true)
+                                    // Deferred render — LEISURE EVENTS ONLY. These have the huge
+                                    // per-item schema × many ticket types that made the edit page
+                                    // slow. For leisure, the repeater renders only after the admin
+                                    // clicks "Încarcă biletele" (keeps the page + Vânzări tab fast).
+                                    // Every non-leisure event (and the create page) renders inline
+                                    // as before. While hidden the relationship is NOT saved (Filament
+                                    // skips saveRelationships for hidden components), so ticket types
+                                    // are never wiped by a save from another tab.
+                                    ->visible(fn (\Livewire\Component $livewire) => ! static::isLeisureRecord($livewire)
+                                        || (property_exists($livewire, 'loadTickets') && $livewire->loadTickets === true))
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
                                     ->collapsed()
