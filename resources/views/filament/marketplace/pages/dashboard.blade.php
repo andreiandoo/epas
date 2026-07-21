@@ -161,7 +161,7 @@
                 <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
                     <x-heroicon-o-chevron-right class="w-4 h-4 text-blue-100 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-blue-100" />
-                    <h3 class="font-semibold text-white">Comision pierdut prin invitații gratuite</h3>
+                    <h3 class="font-semibold text-white">Comisioane pierdute</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-900 bg-amber-300 rounded-full">{{ number_format($iaAllSum['events_count']) }} evenimente</span>
                 </div>
                 <div class="flex items-center gap-3">
@@ -449,7 +449,7 @@
             $stat = function (string $label, string $value, string $sub, string $c) {
                 return '<div class="px-2 py-1.5 rounded-md bg-' . $c . '-50 dark:bg-' . $c . '-900/20 border border-' . $c . '-100/60 dark:border-' . $c . '-800/30">'
                     . '<span class="text-[10px] text-' . $c . '-700 dark:text-' . $c . '-300">' . $label . '</span>'
-                    . '<span class="block text-sm font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums leading-tight">' . $value . '</span>'
+                    . '<span class="block mb-1 text-sm font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums leading-tight">' . $value . '</span>'
                     . ($sub !== '' ? '<span class="block text-[10px] text-' . $c . '-600/70 dark:text-' . $c . '-300/70 leading-tight">' . $sub . '</span>' : '')
                     . '</div>';
             };
@@ -560,14 +560,16 @@
             </div>
 
             <div class="overflow-auto max-h-[70vh] bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="daily-report-{{ $dailyReportDate }}">
-                {{-- Responsive columns: on phones (<640px) the "Total" group is
-                     hidden (hidden sm:table-cell on its cells) AND its colgroup
-                     widths collapse to 0 here, so the "Azi" columns reflow to
-                     fill the freed width; the event/venue columns also shrink so
-                     the table fits without a wide horizontal scroll. On desktop
-                     everything shows at full width. --}}
+                {{-- Responsive columns: on phones (<640px) the "Total" group
+                     cells are hidden AND its colgroup widths collapse to 0, so
+                     the "Azi" columns reflow to fill the freed width; the
+                     event/venue columns also shrink so the table fits without a
+                     wide horizontal scroll. On desktop everything shows at full
+                     width. (Uses a scoped media query instead of Tailwind's
+                     `sm:table-cell`, which was hiding the group on desktop too.) --}}
                 <style>
                     @media (max-width: 639px) {
+                        .dr-total-cell { display: none !important; }
                         .dr-col-total { width: 0 !important; }
                         .dr-col-name  { width: 34% !important; }
                         .dr-col-venue { width: 16% !important; }
@@ -587,7 +589,7 @@
                             <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Eveniment</th>
                             <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Locație</th>
                             <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #4f46e5;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Azi</th>
-                            <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="hidden sm:table-cell px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Total</th>
+                            <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="dr-total-cell px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Total</th>
                         </tr>
                         {{-- Sub-header row — sticky just under the group row --}}
                         <tr>
@@ -595,10 +597,10 @@
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
                             <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
-                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="hidden sm:table-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
                         </tr>
                     </thead>
                     <tbody x-data="{ showAll: false }">
@@ -634,10 +636,10 @@
                                 <td class="px-3 py-2 text-right tabular-nums border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_day']) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-semibold text-indigo-600 dark:text-indigo-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_day'], 2) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_day'], 2) }}</td>
-                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_total']) }}</td>
-                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_total']) }}</td>
-                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_total'], 2) }}</td>
-                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_total'], 2) }}</td>
+                                <td class="dr-total-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_total']) }}</td>
+                                <td class="dr-total-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_total']) }}</td>
+                                <td class="dr-total-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_total'], 2) }}</td>
+                                <td class="dr-total-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_total'], 2) }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -678,10 +680,10 @@
                                 <td class="px-3 py-2 text-right tabular-nums text-gray-900 dark:text-white">{{ number_format($sumTicketsDay) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-bold text-indigo-800 dark:text-indigo-300">{{ number_format($sumSalesDay, 2) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-800 dark:text-emerald-300">{{ number_format($sumCommissionDay, 2) }}</td>
-                                <td class="hidden sm:table-cell px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700"></td>
-                                <td class="hidden sm:table-cell px-3 py-2"></td>
-                                <td class="hidden sm:table-cell px-3 py-2"></td>
-                                <td class="hidden sm:table-cell px-3 py-2"></td>
+                                <td class="dr-total-cell px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700"></td>
+                                <td class="dr-total-cell px-3 py-2"></td>
+                                <td class="dr-total-cell px-3 py-2"></td>
+                                <td class="dr-total-cell px-3 py-2"></td>
                             </tr>
                         </tfoot>
                     @endif
