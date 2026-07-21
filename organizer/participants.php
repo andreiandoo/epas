@@ -348,7 +348,7 @@ function renderParticipants(participants) {
             </td>
             <td class="px-6 py-4">
                 ${p.checked_in
-                    ? '<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-success/10 text-success text-sm font-medium rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Check-in</span>'
+                    ? '<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-success/10 text-success text-sm font-medium rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Checked-in</span>'
                     : '<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-warning/10 text-warning text-sm font-medium rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Asteptare</span>'}
             </td>
             <td class="px-6 py-4 text-right">
@@ -357,10 +357,49 @@ function renderParticipants(participants) {
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Check-in
                     </button>`
-                    : `<span class="text-xs text-muted">${p.checked_in_at ? AmbiletUtils.formatDate(p.checked_in_at) : ''}</span>`}
+                    : `<div class="text-xs leading-relaxed text-muted">
+                        <div class="font-medium text-secondary">${formatCheckinDateTime(p.checked_in_at)}</div>
+                        ${p.checked_in_by ? `<div>de ${escapeHtmlP(p.checked_in_by)}</div>` : ''}
+                        ${p.checked_in_via ? `<div class="inline-flex items-center gap-1 mt-0.5">${checkinSourceIcon(p.checked_in_via)}<span>${checkinSourceLabel(p.checked_in_via)}</span></div>` : ''}
+                    </div>`}
             </td>
         </tr>`;
     }).join('');
+}
+
+// Full date + time of the check-in (e.g. "21 iul. 2026, 14:30").
+function formatCheckinDateTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const date = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
+    const time = d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+    return `${date}, ${time}`;
+}
+
+// Human label for where the check-in was performed (tickets.checked_in_via).
+function checkinSourceLabel(via) {
+    switch (via) {
+        case 'organizer_mobile':  return 'Aplicație mobilă';
+        case 'organizer_desktop': return 'Cont organizator (desktop)';
+        case 'organizer_app':     return 'Cont organizator'; // legacy (device unknown)
+        case 'pos_app':           return 'POS';
+        case 'venue_app':         return 'Aplicație locație';
+        case 'online_join':       return 'Online (self check-in)';
+        default:                  return via || '';
+    }
+}
+
+// Small icon matching the check-in source (phone for mobile, monitor for desktop).
+function checkinSourceIcon(via) {
+    const cls = 'class="w-3.5 h-3.5 shrink-0"';
+    if (via === 'organizer_mobile') {
+        return `<svg ${cls} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2" stroke-width="2"/><line x1="11" y1="18" x2="13" y2="18" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    if (via === 'organizer_desktop') {
+        return `<svg ${cls} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1" stroke-width="2"/><path d="M8 20h8M12 16v4" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    return '';
 }
 
 function spoofEmail(email) {
