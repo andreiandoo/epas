@@ -13,7 +13,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
 
     <main class="flex-1 p-4 lg:p-8">
-        <div class="mx-auto max-w-7xl space-y-6 lg:space-y-8">
+        <div class="w-full mx-auto space-y-6 lg:space-y-8" style="max-width:1500px;">
 
             <!-- ===== HERO ===== -->
             <section class="relative overflow-hidden shadow-lg rounded-3xl"
@@ -43,35 +43,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </section>
 
-            <!-- ===== KPI CARDS ===== -->
-            <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
-                    <div class="flex items-center justify-center mb-3 rounded-xl w-11 h-11 bg-emerald-500/10">
+            <!-- ===== KPI TILES (compact, horizontal) ===== -->
+            <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-emerald-500/10">
                         <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 10v1m0-9a9 9 0 110 0z"/></svg>
                     </div>
-                    <p class="text-2xl font-extrabold text-secondary" id="kpi-revenue">—</p>
-                    <p class="mt-1 text-sm text-muted">Vânzări totale</p>
+                    <div class="min-w-0">
+                        <p class="text-lg font-extrabold leading-none text-secondary lg:text-xl tabular-nums" id="kpi-revenue">—</p>
+                        <p class="mt-1 text-xs truncate text-muted">Vânzări totale</p>
+                    </div>
                 </div>
-                <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
-                    <div class="flex items-center justify-center mb-3 rounded-xl w-11 h-11 bg-indigo-500/10">
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-indigo-500/10">
                         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
-                    <p class="text-2xl font-extrabold text-secondary" id="kpi-tickets">—</p>
-                    <p class="mt-1 text-sm text-muted">Bilete vândute</p>
+                    <div class="min-w-0">
+                        <p class="text-lg font-extrabold leading-none text-secondary lg:text-xl tabular-nums" id="kpi-tickets">—</p>
+                        <p class="mt-1 text-xs truncate text-muted">Bilete vândute</p>
+                    </div>
                 </div>
-                <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
-                    <div class="flex items-center justify-center mb-3 rounded-xl w-11 h-11 bg-cyan-500/10">
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-cyan-500/10">
                         <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     </div>
-                    <p class="text-2xl font-extrabold text-secondary" id="kpi-views">—</p>
-                    <p class="mt-1 text-sm text-muted">Vizualizări</p>
+                    <div class="min-w-0">
+                        <p class="text-lg font-extrabold leading-none text-secondary lg:text-xl tabular-nums" id="kpi-views">—</p>
+                        <p class="mt-1 text-xs truncate text-muted">Vizualizări</p>
+                    </div>
                 </div>
-                <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
-                    <div class="flex items-center justify-center mb-3 rounded-xl w-11 h-11 bg-primary/10">
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-primary/10">
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     </div>
-                    <p class="text-2xl font-extrabold text-secondary" id="kpi-events">—</p>
-                    <p class="mt-1 text-sm text-muted">Evenimente în derulare</p>
+                    <div class="min-w-0">
+                        <p class="text-lg font-extrabold leading-none text-secondary lg:text-xl tabular-nums" id="kpi-events">—</p>
+                        <p class="mt-1 text-xs truncate text-muted">Evenimente în derulare</p>
+                    </div>
                 </div>
             </section>
 
@@ -221,7 +229,11 @@ const OrgPanouNou = {
             // events) + status=published → exactly the "în derulare" set.
             const res = await AmbiletAPI.get('/organizer/events?status=published&upcoming=1&per_page=100&sort=event_date&order=asc');
             const all = res.data || res || [];
-            this.events = all.filter(e => !e.is_cancelled && e.status === 'published');
+            // "În derulare" = active/published, not ended, not cancelled, not draft.
+            // Filtered client-side too (belt-and-suspenders) so ended/draft never leak in.
+            this.events = all.filter(e =>
+                e.status === 'published' && !e.is_past && !e.is_cancelled && !e.is_postponed
+            );
         } catch (e) {
             console.warn('loadEvents failed', e);
             this.events = [];
@@ -313,14 +325,48 @@ const OrgPanouNou = {
 
     // ---------- CHART ----------
     async loadChart(days) {
+        let data = null;
         try {
             const res = await AmbiletAPI.get('/organizer/dashboard/analytics-timeline?days=' + days);
-            this.chartData = res.data || res;
+            data = res.data || res;
         } catch (e) {
-            console.warn('loadChart failed', e);
-            this.chartData = null;
+            console.warn('analytics-timeline unavailable', e);
         }
+        const hasSignal = data && data.labels && data.labels.length &&
+            ((data.revenue || []).some(v => v > 0) || (data.tickets || []).some(v => v > 0) || (data.views || []).some(v => v > 0));
+        // Fallback to the always-available sales-timeline (revenue only) when the
+        // richer endpoint isn't deployed yet or returned nothing usable.
+        if (!hasSignal) {
+            const fb = await this.loadChartFallback(days);
+            if (fb) data = fb;
+        }
+        this.chartData = data;
         this.renderChart();
+    },
+
+    async loadChartFallback(days) {
+        try {
+            const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            const to = new Date();
+            const from = new Date(); from.setDate(from.getDate() - (days - 1));
+            const res = await AmbiletAPI.get('/organizer/dashboard/sales-timeline?from_date=' + fmt(from) + '&to_date=' + fmt(to) + '&group_by=day');
+            const rows = (res.data && res.data.timeline) || res.timeline || [];
+            if (!rows.length) return null;
+            const byDay = {};
+            rows.forEach(r => { byDay[String(r.period).slice(0, 10)] = Number(r.revenue) || 0; });
+            const months = ['Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Nov','Dec'];
+            const labels = [], revenue = [], tickets = [], views = [];
+            const cur = new Date(from);
+            for (let i = 0; i < days; i++) {
+                const key = fmt(cur);
+                labels.push(cur.getDate() + ' ' + months[cur.getMonth()]);
+                revenue.push(byDay[key] || 0); tickets.push(0); views.push(0);
+                cur.setDate(cur.getDate() + 1);
+            }
+            return { labels, revenue, tickets, views };
+        } catch (e) {
+            return null;
+        }
     },
 
     renderChart() {
