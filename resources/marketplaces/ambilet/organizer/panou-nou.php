@@ -383,9 +383,14 @@ const OrgPanouNou = {
         const canvas = document.getElementById('pnChart');
         const emptyEl = document.getElementById('pnChartEmpty');
         if (!canvas || typeof Chart === 'undefined') return;
-        const d = this.chartData;
-        const hasData = d && d.labels && d.labels.length &&
-            ((d.revenue || []).some(v => v > 0) || (d.tickets || []).some(v => v > 0) || (d.views || []).some(v => v > 0));
+        const d = this.chartData || {};
+        // Coerce to real numbers — a JSON API can hand back numeric strings,
+        // which Chart.js will not plot as bars.
+        const rev = (d.revenue || []).map(Number);
+        const tik = (d.tickets || []).map(Number);
+        const viw = (d.views || []).map(Number);
+        const hasData = d.labels && d.labels.length &&
+            (rev.some(v => v > 0) || tik.some(v => v > 0) || viw.some(v => v > 0));
 
         if (this.chart) { this.chart.destroy(); this.chart = null; }
 
@@ -398,17 +403,18 @@ const OrgPanouNou = {
         emptyEl.classList.add('hidden'); emptyEl.classList.remove('flex');
 
         this.chart = new Chart(canvas, {
+            type: 'bar',
             data: {
                 labels: d.labels,
                 datasets: [
-                    { type: 'line', label: 'Venituri (RON)', data: d.revenue, yAxisID: 'y',
+                    { type: 'line', label: 'Venituri (RON)', data: rev, yAxisID: 'y',
                       borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.12)',
                       borderWidth: 2.5, fill: true, tension: .35, pointRadius: 0, pointHoverRadius: 4, order: 0,
                       hidden: !this.metrics.revenue },
-                    { type: 'bar', label: 'Bilete', data: d.tickets, yAxisID: 'y1',
+                    { type: 'bar', label: 'Bilete', data: tik, yAxisID: 'y1',
                       backgroundColor: 'rgba(59,130,246,.75)', borderRadius: 4, order: 1,
                       hidden: !this.metrics.tickets },
-                    { type: 'bar', label: 'Vizualizări', data: d.views, yAxisID: 'y1',
+                    { type: 'bar', label: 'Vizualizări', data: viw, yAxisID: 'y1',
                       backgroundColor: 'rgba(6,182,212,.65)', borderRadius: 4, order: 2,
                       hidden: !this.metrics.views },
                 ]
