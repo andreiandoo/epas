@@ -602,7 +602,7 @@ require_once __DIR__ . '/includes/head.php';
 <nav class="absolute top-0 left-0 right-0 z-30 px-6 lg:px-12 py-5">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
         <a href="/" class="flex items-center no-underline flex-shrink-0">
-            <img src="/assets/images/ambilet_logo.webp" width="88" height="40" alt="<?= SITE_NAME ?>" class="h-10 w-auto brightness-0 invert">
+            <img src="/assets/images/ambilet_logo.webp" width="88" height="40" alt="<?= SITE_NAME ?>" class="h-10 w-auto">
         </a>
         <div class="hidden lg:flex items-center gap-1 bg-white/10 backdrop-blur rounded-full px-2 py-1.5">
             <a href="#bilete" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_tickets">Bilete</a>
