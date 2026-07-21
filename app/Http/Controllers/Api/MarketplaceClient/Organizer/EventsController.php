@@ -930,6 +930,22 @@ class EventsController extends BaseController
             $query->where('ticket_type_id', $request->ticket_type_id);
         }
 
+        // Sync incremental pentru tixello-sfana offline mode: cand param `updated_since`
+        // e prezent (ISO datetime), returnam DOAR biletele modificate dupa acel timestamp
+        // (created_at NEW sau updated_at pt scanuri/status changes). Non-breaking —
+        // apelurile fara acest param se comporta identic cu inainte.
+        if ($request->filled('updated_since')) {
+            try {
+                $since = \Carbon\Carbon::parse($request->input('updated_since'));
+                $query->where(function ($q) use ($since) {
+                    $q->where('updated_at', '>=', $since)
+                      ->orWhere('created_at', '>=', $since);
+                });
+            } catch (\Throwable $e) {
+                // Timestamp invalid → ignoram silent, comportament fallback = full list
+            }
+        }
+
         $query->orderBy('created_at', 'desc');
 
         $perPage = min((int) $request->input('per_page', 50), 200);

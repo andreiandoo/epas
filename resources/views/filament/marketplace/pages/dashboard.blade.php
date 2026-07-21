@@ -484,16 +484,21 @@
                         <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ $money($sum30) }}</span>
                     </div>
                     @if($hasTrend)
-                        <div class="flex items-end gap-px h-16">
+                        {{-- Bars use explicit PIXEL heights + an inline background
+                             colour so they never depend on percentage-height
+                             resolution inside a flex row (which some browsers
+                             collapse to 0) or on Tailwind arbitrary-value/opacity
+                             classes being compiled into the panel theme. --}}
+                        <div class="flex items-end gap-px" style="height: 64px;">
                             @foreach($barSeries as $i => $v)
-                                @php $h = $v > 0 ? max(6, (int) round($v / $maxD * 100)) : 2; @endphp
-                                <div class="flex-1 rounded-sm bg-indigo-400/70 dark:bg-indigo-500/60 hover:bg-indigo-600 dark:hover:bg-indigo-400 transition-colors"
-                                     style="height: {{ $h }}%"
+                                @php $barPx = $v > 0 ? max(4, (int) round($v / $maxD * 58)) : 2; @endphp
+                                <div class="flex-1 rounded-sm"
+                                     style="height: {{ $barPx }}px; background-color: #6366f1; opacity: .85;"
                                      title="{{ $fes['daily_labels'][$i] ?? '' }}: {{ $money($fes['daily_sales'][$i] ?? 0) }} · {{ $fes['daily_tickets'][$i] ?? 0 }} bilete"></div>
                             @endforeach
                         </div>
                     @else
-                        <div class="flex items-center justify-center h-16 text-[11px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-md">
+                        <div class="flex items-center justify-center text-[11px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-md" style="height: 64px;">
                             Nicio vânzare în ultimele 30 zile
                         </div>
                     @endif
