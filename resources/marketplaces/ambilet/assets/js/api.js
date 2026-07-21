@@ -388,6 +388,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
         if (endpoint.includes('/organizer/dashboard/sales-timeline')) return 'organizer.dashboard.sales-timeline';
+        if (endpoint.includes('/organizer/dashboard/analytics-timeline')) return 'organizer.dashboard.analytics-timeline';
 
         // Organizer events
         // Leisure venue endpoints (organizer-side)
