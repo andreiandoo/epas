@@ -247,22 +247,30 @@ class DashboardController extends BaseController
                 ->pluck('tickets', 'd');
         }
 
-        // Daily page views from the pre-aggregated rollup (real per-day views).
+        // Daily page views straight from the raw event stream (more reliable
+        // than the pre-aggregated rollup, which depends on a scheduled command
+        // that may not have run). Counts page_view events for the organizer's
+        // events per day.
         $viewsByDay = [];
         try {
             if ($eventIds->isNotEmpty()) {
-                $viewRows = DB::table('event_analytics_daily')
-                    ->whereIn('event_id', $eventIds)
-                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-                    ->selectRaw('date as d, SUM(page_views) as views')
-                    ->groupBy('date')
-                    ->get();
-                foreach ($viewRows as $r) {
-                    $viewsByDay[substr((string) $r->d, 0, 10)] = (int) $r->views;
+                $viewRows = DB::table('core_customer_events')
+                    ->where('event_type', 'page_view')
+                    ->where(function ($q) use ($eventIds) {
+                        $q->whereIn('event_id', $eventIds)
+                          ->orWhereIn('marketplace_event_id', $eventIds);
+                    })
+                    ->whereBetween('created_at', [$fromUtc, $toUtc])
+                    ->selectRaw($dayExpr('created_at') . ' as d')
+                    ->selectRaw('COUNT(*) as views')
+                    ->groupBy('d')
+                    ->pluck('views', 'd');
+                foreach ($viewRows as $k => $v) {
+                    $viewsByDay[substr((string) $k, 0, 10)] = (int) $v;
                 }
             }
         } catch (\Throwable $e) {
-            // rollup table missing / not populated — leave views at 0
+            // events table/columns missing — leave views at 0
         }
 
         $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
