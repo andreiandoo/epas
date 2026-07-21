@@ -243,10 +243,11 @@ const OrgPanouNou = {
     },
 
     renderKpis() {
-        const sum = (k) => this.events.reduce((a, e) => a + (Number(e[k]) || 0), 0);
-        document.getElementById('kpi-revenue').textContent = this.money(sum('revenue'));
-        document.getElementById('kpi-tickets').textContent = this.num(sum('tickets_sold'));
-        document.getElementById('kpi-views').textContent = this.num(sum('views'));
+        const sum = (fn) => this.events.reduce((a, e) => a + (Number(fn(e)) || 0), 0);
+        const paidOf = (e) => (e.tickets_paid != null ? e.tickets_paid : (e.tickets_sold || 0));
+        document.getElementById('kpi-revenue').textContent = this.money(sum(e => e.revenue));
+        document.getElementById('kpi-tickets').textContent = this.num(sum(paidOf));
+        document.getElementById('kpi-views').textContent = this.num(sum(e => e.views));
         document.getElementById('kpi-events').textContent = this.num(this.events.length);
     },
 
@@ -282,14 +283,18 @@ const OrgPanouNou = {
                 <div class="flex flex-col flex-1 p-4">
                     <h3 class="font-bold leading-snug truncate text-secondary" title="${this.esc(e.name)}">${this.esc(e.name)}</h3>
                     <p class="mb-3 text-xs truncate text-muted">${this.esc(venue) || '&nbsp;'}</p>
-                    <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="grid grid-cols-4 gap-1.5 mb-4">
                         <div class="p-2 text-center rounded-xl bg-surface">
                             <p class="text-sm font-bold text-secondary tabular-nums">${this.money(e.revenue || 0)}</p>
                             <p class="text-[10px] text-muted">Vânzări</p>
                         </div>
                         <div class="p-2 text-center rounded-xl bg-surface">
-                            <p class="text-sm font-bold text-secondary tabular-nums">${this.num(e.tickets_sold || 0)}</p>
+                            <p class="text-sm font-bold text-secondary tabular-nums">${this.num(e.tickets_paid != null ? e.tickets_paid : (e.tickets_sold || 0))}</p>
                             <p class="text-[10px] text-muted">Bilete</p>
+                        </div>
+                        <div class="p-2 text-center rounded-xl bg-surface">
+                            <p class="text-sm font-bold text-secondary tabular-nums">${this.num(e.invitations || 0)}</p>
+                            <p class="text-[10px] text-muted">Invitații</p>
                         </div>
                         <div class="p-2 text-center rounded-xl bg-surface">
                             <p class="text-sm font-bold text-secondary tabular-nums">${this.num(e.views || 0)}</p>
