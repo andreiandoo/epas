@@ -491,10 +491,19 @@
                              classes being compiled into the panel theme. --}}
                         <div class="flex items-end gap-px" style="height: 64px;">
                             @foreach($barSeries as $i => $v)
-                                @php $barPx = $v > 0 ? max(4, (int) round($v / $maxD * 58)) : 2; @endphp
+                                @php
+                                    $barPx = $v > 0 ? max(4, (int) round($v / $maxD * 58)) : 2;
+                                    $tip = ($fes['daily_labels'][$i] ?? '')
+                                        . "\nVânzări: " . $money($fes['daily_sales'][$i] ?? 0)
+                                        . "\n• Online: " . $money($fes['daily_sales_online'][$i] ?? 0)
+                                        . "\n• POS: " . $money($fes['daily_sales_pos'][$i] ?? 0)
+                                        . "\nBilete: " . ($fes['daily_tickets'][$i] ?? 0)
+                                        . "\n• Online: " . ($fes['daily_tickets_online'][$i] ?? 0)
+                                        . "\n• POS: " . ($fes['daily_tickets_pos'][$i] ?? 0);
+                                @endphp
                                 <div class="flex-1 rounded-sm"
                                      style="height: {{ $barPx }}px; background-color: #6366f1; opacity: .85;"
-                                     title="{{ $fes['daily_labels'][$i] ?? '' }}: {{ $money($fes['daily_sales'][$i] ?? 0) }} · {{ $fes['daily_tickets'][$i] ?? 0 }} bilete"></div>
+                                     title="{{ $tip }}"></div>
                             @endforeach
                         </div>
                     @else

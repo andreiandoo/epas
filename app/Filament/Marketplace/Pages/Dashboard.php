@@ -1515,7 +1515,7 @@ class Dashboard extends Page
         }
 
         return Cache::remember(
-            'mp_event_stats_v4_' . self::FEATURED_EVENT_ID,
+            'mp_event_stats_v5_' . self::FEATURED_EVENT_ID,
             300,
             function () use ($event) {
                 $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
@@ -1552,6 +1552,9 @@ class Dashboard extends Page
                 // which left this chart empty while the aggregate cards showed
                 // real numbers.
                 $since = Carbon::now($tz)->subDays(29)->startOfDay()->utc();
+                // POS source list (leisure POS + mobile POS app) — shared with
+                // SalesBreakdownService so the online/POS split matches the cards.
+                $posList = "'" . implode("','", \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES) . "'";
                 $dailyRaw = \Illuminate\Support\Facades\DB::table('tickets as t')
                     ->join('orders as o', 'o.id', '=', 't.order_id')
                     ->where(function ($q) use ($event) {
@@ -1562,19 +1565,34 @@ class Dashboard extends Page
                     ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
                     ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
                     ->whereBetween('t.created_at', [$since, $todayEnd])
-                    ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as d, COUNT(*) as tickets, COALESCE(SUM(t.price), 0) as sales")
+                    ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as d,
+                        COUNT(*) as tickets,
+                        COALESCE(SUM(t.price), 0) as sales,
+                        COUNT(*) FILTER (WHERE o.source IN ({$posList})) as tickets_pos,
+                        COUNT(*) FILTER (WHERE o.source NOT IN ({$posList})) as tickets_online,
+                        COALESCE(SUM(t.price) FILTER (WHERE o.source IN ({$posList})), 0) as sales_pos,
+                        COALESCE(SUM(t.price) FILTER (WHERE o.source NOT IN ({$posList})), 0) as sales_online")
                     ->groupBy('d')
                     ->get()
                     ->keyBy('d');
                 $dailyLabels = [];
                 $dailySales = [];
                 $dailyTickets = [];
+                $dailySalesOnline = [];
+                $dailySalesPos = [];
+                $dailyTicketsOnline = [];
+                $dailyTicketsPos = [];
                 $cursor = Carbon::now($tz)->subDays(29)->startOfDay();
                 for ($i = 0; $i < 30; $i++) {
                     $k = $cursor->format('Y-m-d');
+                    $row = $dailyRaw[$k] ?? null;
                     $dailyLabels[] = $cursor->format('d.m');
-                    $dailySales[] = (float) ($dailyRaw[$k]->sales ?? 0);
-                    $dailyTickets[] = (int) ($dailyRaw[$k]->tickets ?? 0);
+                    $dailySales[] = (float) ($row->sales ?? 0);
+                    $dailyTickets[] = (int) ($row->tickets ?? 0);
+                    $dailySalesOnline[] = (float) ($row->sales_online ?? 0);
+                    $dailySalesPos[] = (float) ($row->sales_pos ?? 0);
+                    $dailyTicketsOnline[] = (int) ($row->tickets_online ?? 0);
+                    $dailyTicketsPos[] = (int) ($row->tickets_pos ?? 0);
                     $cursor->addDay();
                 }
 
@@ -1583,6 +1601,10 @@ class Dashboard extends Page
                     'daily_labels' => $dailyLabels,
                     'daily_sales' => $dailySales,
                     'daily_tickets' => $dailyTickets,
+                    'daily_sales_online' => $dailySalesOnline,
+                    'daily_sales_pos' => $dailySalesPos,
+                    'daily_tickets_online' => $dailyTicketsOnline,
+                    'daily_tickets_pos' => $dailyTicketsPos,
                     'event_name' => $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: ('Event #' . $event->id),
                     'currency' => $event->marketplaceClient?->currency ?? 'RON',
                     'tickets_total' => $tk($full), 'tickets_online' => $tk($online), 'tickets_pos' => $tk($pos),
