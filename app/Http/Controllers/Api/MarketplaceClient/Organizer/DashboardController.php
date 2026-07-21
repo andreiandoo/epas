@@ -247,21 +247,19 @@ class DashboardController extends BaseController
                 ->pluck('tickets', 'd');
         }
 
-        // Daily page views straight from the raw event stream (more reliable
-        // than the pre-aggregated rollup, which depends on a scheduled command
-        // that may not have run). Counts page_view events for the organizer's
-        // events per day.
+        // Daily page views straight from the raw event stream — same source and
+        // filter as the single-event analytics endpoint (page_view events keyed
+        // by event_id/marketplace_event_id), grouped by occurred_at per day.
         $viewsByDay = [];
         try {
             if ($eventIds->isNotEmpty()) {
-                $viewRows = DB::table('core_customer_events')
-                    ->where('event_type', 'page_view')
+                $viewRows = \App\Models\Platform\CoreCustomerEvent::where('event_type', 'page_view')
                     ->where(function ($q) use ($eventIds) {
                         $q->whereIn('event_id', $eventIds)
                           ->orWhereIn('marketplace_event_id', $eventIds);
                     })
-                    ->whereBetween('created_at', [$fromUtc, $toUtc])
-                    ->selectRaw($dayExpr('created_at') . ' as d')
+                    ->whereBetween('occurred_at', [$fromUtc, $toUtc])
+                    ->selectRaw($dayExpr('occurred_at') . ' as d')
                     ->selectRaw('COUNT(*) as views')
                     ->groupBy('d')
                     ->pluck('views', 'd');
@@ -270,7 +268,7 @@ class DashboardController extends BaseController
                 }
             }
         } catch (\Throwable $e) {
-            // events table/columns missing — leave views at 0
+            // tracking table/columns missing — leave views at 0
         }
 
         $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
