@@ -3133,6 +3133,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.dashboard.analytics-timeline':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['days'])) $params['days'] = $_GET['days'];
+        $endpoint = '/organizer/dashboard/analytics-timeline' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER EVENTS ====================
 
     case 'organizer.events':
