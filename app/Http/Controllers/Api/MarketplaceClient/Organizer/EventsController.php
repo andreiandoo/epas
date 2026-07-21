@@ -1371,6 +1371,8 @@ class EventsController extends BaseController
                 'seat_label' => $ticket->seat_label ?? null,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                'checked_in_by' => $ticket->checked_in_by,
+                'checked_in_via' => $ticket->checked_in_via,
                 'order_id' => $orderId,
                 'order_number' => $orderNumber,
                 'order_date' => $orderDate,
@@ -1389,6 +1391,23 @@ class EventsController extends BaseController
                 'orders_count' => $ordersCount,
             ],
         ]);
+    }
+
+    /**
+     * Best-effort attribution of WHERE an organizer check-in happened, from
+     * the request User-Agent: the mobile scanner (Android app / PWA) vs the
+     * organizer web account on a desktop. Stored in tickets.checked_in_via so
+     * the participants list can show it. Replaces the old generic
+     * 'organizer_app'; historic rows keep that legacy value and are labelled
+     * "Cont organizator" in the UI.
+     */
+    private function detectOrganizerCheckinSource(Request $request): string
+    {
+        $ua = (string) $request->userAgent();
+
+        return preg_match('/Android|iPhone|iPad|iPod|Mobile|Windows Phone|webOS/i', $ua) === 1
+            ? 'organizer_mobile'
+            : 'organizer_desktop';
     }
 
     /**
@@ -1493,7 +1512,7 @@ class EventsController extends BaseController
         $ticket->update([
             'checked_in_at' => now(),
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
-            'checked_in_via' => 'organizer_app',
+            'checked_in_via' => $this->detectOrganizerCheckinSource($request),
         ]);
 
         $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
@@ -1706,7 +1725,7 @@ class EventsController extends BaseController
         $ticket->update([
             'checked_in_at' => now(),
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
-            'checked_in_via' => 'organizer_app',
+            'checked_in_via' => $this->detectOrganizerCheckinSource($request),
         ]);
 
         $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
