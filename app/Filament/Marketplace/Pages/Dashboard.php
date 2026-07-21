@@ -443,6 +443,54 @@ class Dashboard extends Page
         ];
     }
 
+    /**
+     * Pre-compute the expensive dashboard caches so no USER request ever pays
+     * the cold recompute — the month commission alone is ~1,400 queries / ~3s
+     * (one SalesBreakdownService build per event with sales this month). Run by
+     * the `dashboard:warm` command every 10 minutes; the TTL here is set well
+     * above that interval so a warmed key never lapses between runs.
+     *
+     * Keys mirror the Cache::remember() calls in getViewData() — keep in sync.
+     * Only the marketplace context ($this->marketplace) is required, so this is
+     * safe to call from the console (no Livewire request lifecycle needed).
+     */
+    public function warmCaches(): void
+    {
+        $marketplace = $this->marketplace;
+        if (! $marketplace) {
+            return;
+        }
+
+        $mid = $marketplace->id;
+        $tz = 'Europe/Bucharest';
+        $now = Carbon::now($tz);
+        $ym = $now->format('Y-m');
+        $monthStart = $now->copy()->startOfMonth()->utc();
+        $monthEnd = $now->copy()->endOfMonth()->endOfDay()->utc();
+
+        // Comfortably above the 10-min warm cron so warmed keys never expire
+        // between runs (a user request would otherwise trigger the cold path).
+        $ttl = 1200;
+
+        // Month commission first — computeCurrentMonthStats() reads this same
+        // key, so priming it here means that call reuses it instead of
+        // re-running the ~1,400-query build.
+        Cache::put(
+            "mp_month_comm_svc_v2_{$mid}_{$ym}",
+            $this->monthCommissionViaService($mid, $monthStart, $monthEnd),
+            $ttl
+        );
+
+        Cache::put("mp_dash_stats_v2_{$mid}", $this->computeStats($mid), $ttl);
+        Cache::put("mp_dash_month_{$mid}_{$ym}", $this->computeCurrentMonthStats($mid, $ym), $ttl);
+        Cache::put("mp_dash_today_v2_{$mid}", $this->computeTodayStats($mid), $ttl);
+
+        $featured = $this->computeFeaturedEventStats($mid);
+        if ($featured !== null) {
+            Cache::put('mp_event_stats_v3_' . self::FEATURED_EVENT_ID, $featured, $ttl);
+        }
+    }
+
     private function computeStats(int $marketplaceId): array
     {
         $paidStatuses = ['paid', 'confirmed', 'completed'];
@@ -1435,9 +1483,11 @@ class Dashboard extends Page
             ->pluck('e.id');
 
         $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        // Load all events in one query instead of Event::find() per iteration.
+        $events = Event::whereIn('id', $eventIds->all())->get()->keyBy('id');
         $sum = 0.0;
         foreach ($eventIds as $eid) {
-            $event = Event::find((int) $eid);
+            $event = $events->get((int) $eid);
             if (!$event) {
                 continue;
             }

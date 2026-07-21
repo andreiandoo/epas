@@ -13,6 +13,17 @@ Schedule::command('events:mark-ended')
     ->everyFiveMinutes()
     ->timezone('Europe/Bucharest');
 
+// Keep the marketplace dashboard warm. The heavy month-commission build is
+// ~1,400 queries / ~3s per marketplace; caching it lazily means whichever user
+// request hits the expired key eats that cost. Recomputing it in the background
+// every 10 minutes (TTL 1200s > interval, so it never lapses between runs) keeps
+// every dashboard load fast. withoutOverlapping() guards against a slow run
+// stacking on the next tick.
+Schedule::command('dashboard:warm')
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest');
+
 // Refresh dynamic contact lists nightly so newsletter targeting stays
 // accurate without admins clicking the per-list "Sync" button. Daily
 // 03:00 Europe/Bucharest is the off-peak window the rest of the
