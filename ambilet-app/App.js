@@ -12,7 +12,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.0.11';
+const APP_VERSION = '2.1.0';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -160,8 +160,18 @@ function MainTabs() {
   useKeepAwake(); // Prevent screen from sleeping
   const { userRole, userPermissions, user } = useAuth();
   const insets = useSafeAreaInsets();
-  const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode } = useEvent();
-  const { notifications, markAllRead, shiftStartTime } = useApp();
+  const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode, selectedEvent } = useEvent();
+  const { notifications, markAllRead, shiftStartTime, autoConfirmValid, setAutoConfirm } = useApp();
+
+  // Rule: never auto-confirm scans for a future event — that would let the
+  // operator pass through tickets before the event is open. When the picker
+  // lands on a `future` event, force the toggle off (setter no-ops if it's
+  // already false, so no wasted writes).
+  useEffect(() => {
+    if (selectedEvent?.timeCategory === 'future' && autoConfirmValid) {
+      setAutoConfirm(false);
+    }
+  }, [selectedEvent?.id, selectedEvent?.timeCategory, autoConfirmValid, setAutoConfirm]);
 
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);

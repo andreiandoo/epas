@@ -547,7 +547,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.11'}</Text>
+      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.0.13'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>

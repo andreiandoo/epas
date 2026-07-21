@@ -15,6 +15,7 @@ import Svg, { Path } from 'react-native-svg';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 import { colors } from '../../theme/colors';
 import { getCategoryLabel } from '../../utils/eventCategories';
+import { pickString } from '../../utils/pickString';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -120,8 +121,12 @@ function EventItem({ event, category, onPress }) {
   const isLive = category === 'live';
   const isPast = category === 'past';
 
-  const venueName = event.venue_name || event.venue?.name || '';
-  const venueCity = event.venue_city || event.venue?.city || '';
+  // Guard every field that could be a translatable JSON object. Backend
+  // usually resolves these server-side but auto-eager-loaded relations
+  // occasionally leak the raw {ro,en} shape and rendering that inside
+  // <Text> crashes with "Objects are not valid as a React child".
+  const venueName = pickString(event.venue_name || event.venue?.name);
+  const venueCity = pickString(event.venue_city || event.venue?.city);
   // API returns `starts_at` as a single ISO string (e.g. "2026-05-15T19:00:00").
   // Legacy fields kept as fallback.
   const rawDate = event.starts_at || event.event_date || event.date || event.start_date || '';
@@ -165,7 +170,7 @@ function EventItem({ event, category, onPress }) {
             </Text>
           ) : null}
           <Text style={[styles.eventName, isPast && styles.eventNamePast]} numberOfLines={1}>
-            {event.name || event.title}
+            {pickString(event.name || event.title, 'Eveniment fără titlu')}
           </Text>
           {venueLine ? (
             <Text style={styles.eventMeta} numberOfLines={1}>{venueLine}</Text>
@@ -219,9 +224,9 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent, o
     if (!query.trim()) return true;
     const needle = query.trim().toLowerCase();
     const haystack = [
-      event.name, event.title,
-      event.venue_name, event.venue?.name,
-      event.venue_city, event.venue?.city,
+      pickString(event.name), pickString(event.title),
+      pickString(event.venue_name), pickString(event.venue?.name),
+      pickString(event.venue_city), pickString(event.venue?.city),
     ].filter(Boolean).join(' ').toLowerCase();
     return haystack.includes(needle);
   };

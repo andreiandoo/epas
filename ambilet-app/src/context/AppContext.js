@@ -136,6 +136,14 @@ export function AppProvider({ children }) {
     saveSettings({ autoConfirmValid: newVal });
   };
 
+  // Force-set the auto-confirm flag (used by the "future event auto-uncheck"
+  // rule and the today-event prompt CTA). Persists like toggleAutoConfirm.
+  const setAutoConfirm = (value) => {
+    const next = !!value;
+    setAutoConfirmValid(next);
+    saveSettings({ autoConfirmValid: next });
+  };
+
   const [isDownloadingOffline, setIsDownloadingOffline] = useState(false);
 
   const toggleOfflineMode = async (eventId) => {
@@ -387,6 +395,7 @@ export function AppProvider({ children }) {
       toggleVibration,
       toggleSound,
       toggleAutoConfirm,
+      setAutoConfirm,
       toggleOfflineMode,
 
       // Shift

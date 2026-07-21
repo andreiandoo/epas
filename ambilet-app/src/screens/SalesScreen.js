@@ -432,7 +432,11 @@ export default function SalesScreen({ navigation }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
-  const [showCardConfirm, setShowCardConfirm] = useState(false); // POS card collect-confirm modal
+  // Pending payment method — a single modal now gates BOTH cash and card
+  // sales. The operator confirms cash-in-hand or a settled POS transaction
+  // before the sale is written. Cancel clears the cart back to a clean
+  // slate (per operator request — avoids "accidentally left half a cart").
+  const [pendingPayment, setPendingPayment] = useState(null); // 'cash' | 'card' | null
   const [buyerEmail, setBuyerEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [lastPaymentAmount, setLastPaymentAmount] = useState(0);
@@ -901,7 +905,7 @@ export default function SalesScreen({ navigation }) {
                 styles.paymentButton,
                 paymentMethod === 'card' && styles.paymentButtonActive,
               ]}
-              onPress={() => !isProcessing && setShowCardConfirm(true)}
+              onPress={() => !isProcessing && setPendingPayment('card')}
               activeOpacity={0.7}
               disabled={isProcessing}
             >
@@ -934,7 +938,7 @@ export default function SalesScreen({ navigation }) {
                 styles.paymentButton,
                 paymentMethod === 'cash' && styles.paymentButtonActive,
               ]}
-              onPress={() => !isProcessing && processPayment('cash')}
+              onPress={() => !isProcessing && setPendingPayment('cash')}
               activeOpacity={0.7}
               disabled={isProcessing}
             >
@@ -1006,21 +1010,35 @@ export default function SalesScreen({ navigation }) {
           </View>
         </ScrollView>
 
-        {/* Card confirmation modal — the operator presses Confirm only
-            after the customer's transaction has cleared on the POS
-            terminal. Same backend treatment as cash. */}
-        <Modal visible={showCardConfirm} transparent animationType="fade" onRequestClose={() => setShowCardConfirm(false)}>
+        {/* Payment confirmation modal — gates BOTH cash and card sales.
+            The operator only completes the sale after the money is in
+            hand (cash) or the POS terminal cleared the tx (card). Cancel
+            clears the cart entirely — the operator wanted this so a
+            wrong-cart mistake doesn't linger through the next customer. */}
+        <Modal visible={pendingPayment !== null} transparent animationType="fade" onRequestClose={() => setPendingPayment(null)}>
           <View style={styles.modalBackdrop}>
             <View style={styles.cardConfirmCard}>
-              <Text style={styles.cardConfirmTitle}>Confirmă încasare card</Text>
+              <Text style={styles.cardConfirmTitle}>Confirmă încasarea banilor</Text>
               <Text style={styles.cardConfirmText}>
-                Verifică pe terminalul POS card că suma a fost încasată cu succes, apoi apasă Confirmă.
+                {pendingPayment === 'cash'
+                  ? 'Verifică că ai primit banii în numerar, apoi apasă Confirmă pentru a înregistra vânzarea.'
+                  : 'Verifică pe terminalul POS card că suma a fost încasată cu succes, apoi apasă Confirmă.'}
               </Text>
               <Text style={styles.cardConfirmAmount}>{formatCurrency(total)}</Text>
               <View style={styles.cardConfirmButtons}>
                 <TouchableOpacity
                   style={styles.cardConfirmCancel}
-                  onPress={() => setShowCardConfirm(false)}
+                  onPress={() => {
+                    setPendingPayment(null);
+                    // Clear cart back to a clean slate. Operator asked for
+                    // this — a mis-tapped payment button shouldn't leave
+                    // the previous cart around for the next customer.
+                    setCartItems([]);
+                    setPaymentMethod(null);
+                    setSelectedSeatUids([]);
+                    setSelectedSeatDetails([]);
+                    setSeatingMapTicketTypeId?.(null);
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.cardConfirmCancelText}>Anulează</Text>
@@ -1028,12 +1046,13 @@ export default function SalesScreen({ navigation }) {
                 <TouchableOpacity
                   style={styles.cardConfirmOk}
                   onPress={() => {
-                    setShowCardConfirm(false);
-                    processPayment('card');
+                    const method = pendingPayment;
+                    setPendingPayment(null);
+                    if (method) processPayment(method);
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.cardConfirmOkText}>Confirmă încasarea</Text>
+                  <Text style={styles.cardConfirmOkText}>Confirmă</Text>
                 </TouchableOpacity>
               </View>
             </View>

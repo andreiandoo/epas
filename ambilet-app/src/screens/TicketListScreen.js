@@ -91,6 +91,21 @@ function StatusBadge({ status, checkedInAt }) {
 
 // ─── Ticket Card Component ───────────────────────────────────────────────────
 
+// Format a check-in timestamp as "20.07.26 · 14:32". Accepts an ISO string
+// (server-returned checked_in_at) or a millisecond timestamp. Returns null
+// on unparseable input so the caller can omit the row entirely.
+function formatCheckInStamp(input) {
+  if (!input) return null;
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return null;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}.${mm}.${yy} · ${hh}:${mi}`;
+}
+
 function TicketCard({ item, onCheckIn, isCheckingIn }) {
   const attendeeName = item.attendee?.name;
   const buyerName = item.customer?.name || item.name || item.full_name || 'Anonim';
@@ -103,6 +118,7 @@ function TicketCard({ item, onCheckIn, isCheckingIn }) {
   // Invitations don't have a barcode — fall back to code so they can be checked in too.
   const checkinIdentifier = item.barcode || item.code || item.ticket_code;
   const canCheckIn = !isCheckedIn && !isInvalid && !!checkinIdentifier;
+  const checkedInStamp = isCheckedIn ? formatCheckInStamp(item.checked_in_at) : null;
 
   return (
     <View style={[styles.ticketCard, isCheckedIn && styles.ticketCardChecked]}>
@@ -114,26 +130,31 @@ function TicketCard({ item, onCheckIn, isCheckingIn }) {
         <Text style={styles.ticketCode} numberOfLines={1}>{code}</Text>
         <Text style={styles.ticketType} numberOfLines={1}>{ticketType}</Text>
       </View>
-      {isCheckedIn ? (
-        <StatusBadge status={item.status} checkedInAt={item.checked_in_at} />
-      ) : isInvalid ? (
-        <StatusBadge status={item.status} checkedInAt={null} />
-      ) : canCheckIn ? (
-        <TouchableOpacity
-          style={styles.checkInButton}
-          onPress={() => onCheckIn(item)}
-          disabled={isCheckingIn}
-          activeOpacity={0.7}
-        >
-          {isCheckingIn ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Text style={styles.checkInButtonText}>Check-in</Text>
-          )}
-        </TouchableOpacity>
-      ) : (
-        <StatusBadge status={item.status} checkedInAt={null} />
-      )}
+      <View style={styles.ticketCardRight}>
+        {isCheckedIn ? (
+          <StatusBadge status={item.status} checkedInAt={item.checked_in_at} />
+        ) : isInvalid ? (
+          <StatusBadge status={item.status} checkedInAt={null} />
+        ) : canCheckIn ? (
+          <TouchableOpacity
+            style={styles.checkInButton}
+            onPress={() => onCheckIn(item)}
+            disabled={isCheckingIn}
+            activeOpacity={0.7}
+          >
+            {isCheckingIn ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.checkInButtonText}>Check-in</Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <StatusBadge status={item.status} checkedInAt={null} />
+        )}
+        {checkedInStamp ? (
+          <Text style={styles.checkedInStamp}>{checkedInStamp}</Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -465,8 +486,17 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  ticketCardRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
   ticketCardChecked: {
     opacity: 0.55,
+  },
+  checkedInStamp: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    fontVariant: ['tabular-nums'],
   },
   ticketBeneficiary: {
     fontSize: 15,

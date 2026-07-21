@@ -441,6 +441,7 @@ export default function CheckInScreen({ navigation }) {
         name: storedData?.name || 'Deja scanat',
         ticketType: storedData?.ticketType || 'N/A',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        at: Date.now(),
         code: code,
         eventId: selectedEvent?.id,
       });
@@ -510,6 +511,7 @@ export default function CheckInScreen({ navigation }) {
           name: result.data.name,
           ticketType: result.data.ticketType,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        at: Date.now(),
           code: code,
           eventId: selectedEvent?.id,
         });
@@ -582,6 +584,7 @@ export default function CheckInScreen({ navigation }) {
           name: result.data.name,
           ticketType: result.data.ticketType,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        at: Date.now(),
           code: code,
           eventId: selectedEvent?.id,
         });
@@ -611,6 +614,7 @@ export default function CheckInScreen({ navigation }) {
           name: 'Bilet Invalid',
           ticketType: '-',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        at: Date.now(),
           code: code,
           eventId: selectedEvent?.id,
         });
@@ -1016,36 +1020,60 @@ export default function CheckInScreen({ navigation }) {
         {recentScans.length > 0 && (
           <View style={styles.recentSection}>
             <Text style={styles.recentTitle}>Scanări Recente</Text>
-            {recentScans.map((scan) => (
-              <View key={scan.id} style={styles.recentItem}>
-                <View
-                  style={[
-                    styles.recentStatusIcon,
-                    {
-                      backgroundColor:
-                        scan.type === 'valid'
-                          ? colors.greenBg
-                          : scan.type === 'duplicate'
-                            ? colors.amberBg
-                            : colors.redBg,
-                    },
-                  ]}
-                >
-                  {scan.type === 'valid' && <CheckIcon size={14} color={colors.green} />}
-                  {scan.type === 'duplicate' && <WarningIcon size={14} color={colors.amber} />}
-                  {scan.type === 'invalid' && <XIcon size={14} color={colors.red} />}
+            {recentScans.map((scan) => {
+              // Prefer the raw `at` timestamp (added in v2.0.13) so we can
+              // render a full date+time. Fall back to the legacy `time`
+              // (HH:MM only) for scans stored before this update.
+              let dateLabel = '';
+              let timeLabel = scan.time || '';
+              if (scan.at) {
+                const d = new Date(scan.at);
+                if (!isNaN(d.getTime())) {
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  const yy = String(d.getFullYear()).slice(-2);
+                  const hh = String(d.getHours()).padStart(2, '0');
+                  const mi = String(d.getMinutes()).padStart(2, '0');
+                  dateLabel = `${dd}.${mm}.${yy}`;
+                  timeLabel = `${hh}:${mi}`;
+                }
+              }
+              return (
+                <View key={scan.id} style={styles.recentItem}>
+                  <View
+                    style={[
+                      styles.recentStatusIcon,
+                      {
+                        backgroundColor:
+                          scan.type === 'valid'
+                            ? colors.greenBg
+                            : scan.type === 'duplicate'
+                              ? colors.amberBg
+                              : colors.redBg,
+                      },
+                    ]}
+                  >
+                    {scan.type === 'valid' && <CheckIcon size={14} color={colors.green} />}
+                    {scan.type === 'duplicate' && <WarningIcon size={14} color={colors.amber} />}
+                    {scan.type === 'invalid' && <XIcon size={14} color={colors.red} />}
+                  </View>
+                  <View style={styles.recentItemText}>
+                    <Text style={styles.recentName} numberOfLines={1}>
+                      {scan.ticketType}
+                    </Text>
+                    <Text style={styles.recentTicketType} numberOfLines={1}>
+                      {scan.name} {'\u2022'} {scan.code}
+                    </Text>
+                  </View>
+                  <View style={styles.recentTimeCol}>
+                    <Text style={styles.recentTime}>{timeLabel}</Text>
+                    {dateLabel ? (
+                      <Text style={styles.recentDate}>{dateLabel}</Text>
+                    ) : null}
+                  </View>
                 </View>
-                <View style={styles.recentItemText}>
-                  <Text style={styles.recentName} numberOfLines={1}>
-                    {scan.ticketType}
-                  </Text>
-                  <Text style={styles.recentTicketType} numberOfLines={1}>
-                    {scan.name} {'\u2022'} {scan.code}
-                  </Text>
-                </View>
-                <Text style={styles.recentTime}>{scan.time}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -1486,8 +1514,17 @@ const styles = StyleSheet.create({
   },
   recentTime: {
     fontSize: 12,
-    color: colors.textQuaternary,
-    fontWeight: '500',
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  recentTimeCol: {
+    alignItems: 'flex-end',
+    minWidth: 60,
+  },
+  recentDate: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    marginTop: 1,
   },
 
   // ── Manual Entry Modal ──

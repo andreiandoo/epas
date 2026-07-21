@@ -18,6 +18,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { getDashboard } from '../api/dashboard';
 import { getParticipants } from '../api/participants';
 import { apiGetRaw } from '../api/client';
+import { pickString } from '../utils/pickString';
 
 // Optional: expo-file-system + expo-sharing. Silent no-op fallback when the
 // modules aren't linked (dev without prebuild). The export button shows a
@@ -247,7 +248,7 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
         </View>
         <View style={pastEventStyles.selectorRight}>
           <Text style={pastEventStyles.selectorValue} numberOfLines={1}>
-            {selectedEvent?.title || selectedEvent?.name || 'Selectează'}
+            {pickString(selectedEvent?.title || selectedEvent?.name, 'Selectează')}
           </Text>
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
             <Path
@@ -303,10 +304,10 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
                   >
                     <View style={pastEventStyles.eventItemLeft}>
                       <Text style={[pastEventStyles.eventName, isSelected && pastEventStyles.eventNameSelected]} numberOfLines={1}>
-                        {event.name || event.title}
+                        {pickString(event.name || event.title, 'Eveniment')}
                       </Text>
                       <Text style={pastEventStyles.eventMeta}>
-                        {[event.venue_name, formattedDate].filter(Boolean).join(' \u2022 ')}
+                        {[pickString(event.venue_name), formattedDate].filter(Boolean).join(' \u2022 ')}
                       </Text>
                     </View>
                     {isSelected && (
@@ -482,7 +483,7 @@ export default function ReportsScreen() {
       }
       const csvText = await response.text();
 
-      const eventName = (selectedEvent.name || selectedEvent.title || 'raport')
+      const eventName = pickString(selectedEvent.name || selectedEvent.title, 'raport')
         .toString().toLowerCase()
         .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'raport';
       const today = new Date();

@@ -19,6 +19,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { colors } from '../theme/colors';
 import Skeleton from '../components/Skeleton';
 import { copyToClipboard } from '../utils/copyToClipboard';
+import { pickString } from '../utils/pickString';
 
 // ---------------------------------------------------------------------------
 // SVG Icon component (replaces Ionicons)
@@ -1156,7 +1157,17 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
     recentScans,
     recentSales,
     endShift,
+    autoConfirmValid,
   } = useApp();
+
+  // Prompt shown when the currently-selected event is happening TODAY (or
+  // already live) and auto-confirm is still off. Dismissing it hides it
+  // for this session; the operator can also just enable auto-confirm from
+  // Settings by tapping the CTA.
+  const isTodayLive = selectedEvent?.timeCategory === 'today' || selectedEvent?.timeCategory === 'live';
+  const [autoConfirmPromptDismissed, setAutoConfirmPromptDismissed] = useState(false);
+  useEffect(() => { setAutoConfirmPromptDismissed(false); }, [selectedEvent?.id]);
+  const showAutoConfirmPrompt = isTodayLive && !autoConfirmValid && !autoConfirmPromptDismissed;
 
   const isAdmin = userRole === 'admin' || userRole === 'owner';
 
@@ -1218,12 +1229,38 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
             </View>
           ) : null}
           <Text style={styles.eventName} numberOfLines={1}>
-            {selectedEvent?.title || selectedEvent?.name || 'Niciun Eveniment Selectat'}
+            {pickString(selectedEvent?.title || selectedEvent?.name, 'Niciun Eveniment Selectat')}
           </Text>
           {selectedEvent && venueLine ? (
             <Text style={styles.eventMeta}>{venueLine}</Text>
           ) : null}
         </View>
+
+        {showAutoConfirmPrompt ? (
+          <TouchableOpacity
+            style={styles.autoConfirmPrompt}
+            activeOpacity={0.85}
+            onPress={() => navigation?.navigate?.('Settings')}
+          >
+            <View style={styles.autoConfirmPromptIcon}>
+              <Icon name="check-circle" size={20} color={colors.green} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.autoConfirmPromptTitle}>
+                Pornești auto-validarea biletelor la intrare?
+              </Text>
+              <Text style={styles.autoConfirmPromptText}>
+                Biletele vândute la intrare se marchează automat ca scanate. Apasă pentru a activa din Setări.
+              </Text>
+            </View>
+            <TouchableOpacity
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              onPress={(e) => { e.stopPropagation(); setAutoConfirmPromptDismissed(true); }}
+            >
+              <Icon name="x" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ) : null}
 
         {isAdmin ? (
           <AdminDashboard
@@ -1343,6 +1380,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 4,
+  },
+
+  // Auto-confirm prompt (today/live event, toggle off)
+  autoConfirmPrompt: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    marginTop: 6,
+    marginBottom: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.greenBorder,
+    backgroundColor: colors.greenLight,
+  },
+  autoConfirmPromptIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.greenBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  autoConfirmPromptTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.green,
+    marginBottom: 2,
+  },
+  autoConfirmPromptText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    lineHeight: 15,
   },
 
   // Reports-only banner

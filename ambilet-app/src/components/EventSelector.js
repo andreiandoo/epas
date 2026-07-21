@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
+import { pickString } from '../utils/pickString';
 
 function StatusBadge({ timeCategory, status }) {
   const isLive = timeCategory === 'live';
@@ -115,8 +116,10 @@ function formatEventDateShort(event) {
 function getVenueAndCity(event) {
   if (!event) return '';
   const parts = [];
-  const venueName = event.venue?.name || event.venue_name;
-  const cityName = event.venue?.city || event.venue_city;
+  // Backend may leak translatable JSON on `event.venue.*` when the
+  // relation is eager-loaded — coerce to string before joining.
+  const venueName = pickString(event.venue_name || event.venue?.name);
+  const cityName = pickString(event.venue_city || event.venue?.city);
   if (venueName) parts.push(venueName);
   if (cityName && cityName !== venueName) parts.push(cityName);
   return parts.join(', ');
@@ -147,7 +150,7 @@ export default function EventSelector({ onPress }) {
 
   const dateShort = formatEventDateShort(selectedEvent);
   const venueCity = getVenueAndCity(selectedEvent);
-  const eventTitle = selectedEvent.title || selectedEvent.name || 'Eveniment Fără Titlu';
+  const eventTitle = pickString(selectedEvent.title || selectedEvent.name, 'Eveniment Fără Titlu');
   const timeCategory = selectedEvent.timeCategory || 'upcoming';
 
   return (
