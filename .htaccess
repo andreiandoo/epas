@@ -304,11 +304,12 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/raport-staff/?$ organizer/raport-staff.php [L]
 
+# Organizer dashboard — now served by the redesigned panou-nou page.
+# (Old dashboard.php stays available at /organizator/dashboard as a fallback.)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
+RewriteRule ^organizator/panou/?$ organizer/panou-nou.php [L]
 
-# New (WIP) organizer dashboard — not linked in the menu yet
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou-nou/?$ organizer/panou-nou.php [L]
