@@ -195,6 +195,103 @@ class DashboardController extends BaseController
     }
 
     /**
+     * Aggregated per-day performance across ALL of the organizer's events, for
+     * the new dashboard chart (mirrors the single-event "Performanță vânzări"
+     * chart but summed over every event). Returns REAL daily gross revenue,
+     * valid-ticket count, and page views (from the event_analytics_daily
+     * rollup). Views default to 0 if the rollup isn't available.
+     */
+    public function analyticsTimeline(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $tz = 'Europe/Bucharest';
+        $days = max(1, min((int) $request->input('days', 30), 365));
+        $from = Carbon::now($tz)->subDays($days - 1)->startOfDay();
+        $to = Carbon::now($tz)->endOfDay();
+        $fromUtc = $from->copy()->utc();
+        $toUtc = $to->copy()->utc();
+
+        $isPgsql = DB::getDriverName() === 'pgsql';
+        $dayExpr = fn (string $col) => $isPgsql
+            ? "TO_CHAR({$col} AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}', 'YYYY-MM-DD')"
+            : "DATE_FORMAT({$col}, '%Y-%m-%d')";
+
+        // Daily gross revenue across all events of this organizer.
+        $revenueRows = Order::where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
+            ->whereBetween('created_at', [$fromUtc, $toUtc])
+            ->selectRaw($dayExpr('created_at') . ' as d')
+            ->selectRaw('SUM(total) as revenue')
+            ->groupBy('d')
+            ->pluck('revenue', 'd');
+
+        // Daily valid tickets across all events.
+        $ticketRows = DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where('o.marketplace_organizer_id', $organizer->id)
+            ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+            ->where('o.source', '!=', 'test_order')
+            ->whereIn('t.status', ['valid', 'used'])
+            ->whereBetween('t.created_at', [$fromUtc, $toUtc])
+            ->selectRaw($dayExpr('t.created_at') . ' as d')
+            ->selectRaw('COUNT(*) as tickets')
+            ->groupBy('d')
+            ->pluck('tickets', 'd');
+
+        // Daily page views from the pre-aggregated rollup (real per-day views).
+        $viewsByDay = [];
+        try {
+            $eventIds = Event::where('marketplace_organizer_id', $organizer->id)->pluck('id');
+            if ($eventIds->isNotEmpty()) {
+                $viewRows = DB::table('event_analytics_daily')
+                    ->whereIn('event_id', $eventIds)
+                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+                    ->selectRaw('date as d, SUM(page_views) as views')
+                    ->groupBy('date')
+                    ->get();
+                foreach ($viewRows as $r) {
+                    $viewsByDay[substr((string) $r->d, 0, 10)] = (int) $r->views;
+                }
+            }
+        } catch (\Throwable $e) {
+            // rollup table missing / not populated — leave views at 0
+        }
+
+        $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $labels = [];
+        $rawDates = [];
+        $revenue = [];
+        $tickets = [];
+        $views = [];
+        $cursor = $from->copy();
+        for ($i = 0; $i < $days; $i++) {
+            $key = $cursor->format('Y-m-d');
+            $rawDates[] = $key;
+            $labels[] = $cursor->day . ' ' . $months[$cursor->month - 1];
+            $revenue[] = round((float) ($revenueRows[$key] ?? 0), 2);
+            $tickets[] = (int) ($ticketRows[$key] ?? 0);
+            $views[] = (int) ($viewsByDay[$key] ?? 0);
+            $cursor->addDay();
+        }
+
+        return $this->success([
+            'days' => $days,
+            'labels' => $labels,
+            'raw_dates' => $rawDates,
+            'revenue' => $revenue,
+            'tickets' => $tickets,
+            'views' => $views,
+            'totals' => [
+                'revenue' => array_sum($revenue),
+                'tickets' => array_sum($tickets),
+                'views' => array_sum($views),
+            ],
+        ]);
+    }
+
+    /**
      * Get recent orders
      */
     public function recentOrders(Request $request): JsonResponse

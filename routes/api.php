@@ -1739,6 +1739,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.dashboard.timeline');
         Route::get('/dashboard/sales-timeline', [OrganizerDashboardController::class, 'salesTimeline'])
             ->name('api.marketplace-client.organizer.dashboard.sales-timeline');
+        Route::get('/dashboard/analytics-timeline', [OrganizerDashboardController::class, 'analyticsTimeline'])
+            ->name('api.marketplace-client.organizer.dashboard.analytics-timeline');
         Route::get('/dashboard/recent-orders', [OrganizerDashboardController::class, 'recentOrders'])
             ->name('api.marketplace-client.organizer.dashboard.recent-orders');
         Route::get('/dashboard/payout-summary', [OrganizerDashboardController::class, 'payoutSummary'])
