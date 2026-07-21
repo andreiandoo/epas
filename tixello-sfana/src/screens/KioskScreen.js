@@ -45,11 +45,23 @@ import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
 import { organizerCheckInByCode } from '../api/leisure';
 import { useAppUpdate } from '../hooks/useAppUpdate';
+import { useOfflineTicketSync } from '../hooks/useOfflineTicketSync';
 import UpdateBanner from '../components/UpdateBanner';
 
-// Fereastre de afisare rezultat inainte de auto-return
+// Event ID pentru Sf. Ana in productie. Cache offline se descarca doar pentru
+// acest event (single-event kiosk). Daca vreodata Sf. Ana schimba event-ul,
+// updatezi constanta asta.
+const SFANA_EVENT_ID = 4234;
+// Timeout online request inainte sa consideram ca nu avem net + fallback pe cache.
+// 2000ms = suficient pentru un scanare rapida; peste asta clientul asteapta prea mult.
+const ONLINE_TIMEOUT_MS = 2000;
+
+// Fereastre de afisare rezultat inainte de auto-return.
+// Invalid trebuie sa fie la fel de rapid ca valid (era 4500ms — prea lung dupa
+// feedback operator Sf. Ana). Ambele acum 3500ms → operatorul poate scana urmatorul
+// bilet fara sa astepte.
 const RESULT_MS_SUCCESS = 3500;
-const RESULT_MS_ERROR = 4500;
+const RESULT_MS_ERROR = 3500;
 // Fereastra de debounce intre scanari (evita re-trigger pe acelasi QR)
 const DEBOUNCE_MS = 2500;
 
@@ -71,6 +83,9 @@ export default function KioskScreen() {
   const [payload, setPayload] = useState(null);   // rezultat check-in
   const [errorMsg, setErrorMsg] = useState('');
   const [cameraFacing, setCameraFacing] = useState('back');
+  // Lanterna (torch) — util cand ambientul e intunecat sau ecranul clientului
+  // e pe dark mode cu luminozitate scazuta. Toggle discret alaturi de flip camera.
+  const [torchOn, setTorchOn] = useState(false);
   const lastScanRef = useRef({ code: null, at: 0 });
   const returnTimerRef = useRef(null);
   const successSoundRef = useRef(null);
@@ -152,6 +167,15 @@ export default function KioskScreen() {
     setCameraFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   }, []);
 
+  const toggleTorch = useCallback(() => {
+    setTorchOn((v) => !v);
+  }, []);
+
+  // Offline ticket sync — descarca biletele Sf. Ana in cache local, refresh 60s.
+  // Foloseste `enabled: true` (default ON per spec). Cand internetul cade, folosim
+  // cache-ul local ca fallback. Non-breaking: totul e wrapped in try/catch.
+  const offline = useOfflineTicketSync(SFANA_EVENT_ID, { enabled: true });
+
   const handleScan = useCallback(async ({ data }) => {
     if (!data) return;
     if (status !== S_READY) return;
@@ -162,8 +186,25 @@ export default function KioskScreen() {
     lastScanRef.current = { code: data, at: now };
 
     setStatus(S_LOADING);
+
+    // Wrapper Promise.race pentru timeout — daca API-ul nu raspunde in ONLINE_TIMEOUT_MS
+    // ne intoarcem la fallback cache local. NON-BREAKING: pastreaza pth-ul online normal
+    // cand internetul functioneaza (raspunde sub 2s pe scanare individuala).
+    const withTimeout = (promise, ms) =>
+      Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('OFFLINE_TIMEOUT')), ms)),
+      ]);
+
     try {
-      const resp = await organizerCheckInByCode(data);
+      const resp = await withTimeout(organizerCheckInByCode(data), ONLINE_TIMEOUT_MS);
+      // Sync succes online — flush eventual pending queue (best-effort, silent)
+      try {
+        if (offline && typeof offline.flushPendingScans === 'function') {
+          offline.flushPendingScans((code) => organizerCheckInByCode(code).then(() => true).catch(() => false));
+        }
+      } catch (_e) {}
+
       if (resp?.success) {
         setPayload(resp?.data || resp);
         setStatus(S_SUCCESS);
@@ -187,6 +228,53 @@ export default function KioskScreen() {
       scheduleReturn(RESULT_MS_ERROR);
     } catch (e) {
       const em = e?.message || 'Eroare la validare';
+
+      // ─── FALLBACK OFFLINE ───────────────────────────────────────────────
+      // Cazuri care intra aici: timeout > 2s, network error, "Network request
+      // failed", "OFFLINE_TIMEOUT". Incearcam lookup local + marcare offline.
+      // Non-breaking: doar cand nu am reusit online — pth-ul original ramane
+      // identic pentru toate cazurile OK sau erori API "adevarate" (auth etc).
+      const isNetworkFailure = /OFFLINE_TIMEOUT|Network request failed|Failed to fetch|network|timeout/i.test(em);
+      if (isNetworkFailure && offline && typeof offline.lookupTicket === 'function') {
+        try {
+          const cachedTicket = await offline.lookupTicket(data);
+          if (cachedTicket) {
+            // Bilet gasit in cache local. Verificam daca a fost deja scanat offline.
+            if (cachedTicket.checked_in_at) {
+              // Deja check-in — duplicate offline. Notificam la fel ca online.
+              setPayload({
+                ticket: cachedTicket,
+                offline: true,
+              });
+              setErrorMsg('Bilet deja scanat (offline)');
+              setStatus(S_DUPLICATE);
+              playSound('error');
+              scheduleReturn(RESULT_MS_ERROR);
+              return;
+            }
+            // Bilet valid — marcam local + adaugam in pending queue pentru sync ulterior
+            await offline.markTicketCheckedIn(data);
+            setPayload({
+              ticket: cachedTicket,
+              customer: { name: cachedTicket.attendee_name || cachedTicket.customer_name },
+              offline: true,
+            });
+            setStatus(S_SUCCESS);
+            playSound('success');
+            scheduleReturn(RESULT_MS_SUCCESS);
+            return;
+          }
+          // Cod necunoscut in cache local — probabil scan invalid sau bilet emis dupa ultimul sync
+          setErrorMsg('Bilet necunoscut (offline). Verifica dupa restabilirea internetului.');
+          setStatus(S_INVALID);
+          playSound('error');
+          scheduleReturn(RESULT_MS_ERROR);
+          return;
+        } catch (_offlineErr) {
+          // Fallback la comportament original daca cache-ul e stricat
+        }
+      }
+
       // apiPost arunca cu message inclus; detect duplicate din text
       if (/already checked in/i.test(em) || /deja/i.test(em)) {
         setErrorMsg(em);
@@ -200,7 +288,7 @@ export default function KioskScreen() {
       playSound('error');
       scheduleReturn(RESULT_MS_ERROR);
     }
-  }, [status, scheduleReturn, playSound]);
+  }, [status, scheduleReturn, playSound, offline]);
 
   // Camera permissions gates
   if (!permission) {
@@ -275,6 +363,7 @@ export default function KioskScreen() {
           <CameraView
             style={StyleSheet.absoluteFillObject}
             facing={cameraFacing}
+            enableTorch={torchOn}
             barcodeScannerSettings={{ barcodeTypes: ['qr', 'pdf417', 'code128', 'code39', 'ean13'] }}
             onBarcodeScanned={status === S_READY ? handleScan : undefined}
           />
@@ -290,6 +379,7 @@ export default function KioskScreen() {
                 </Text>
               </View>
               <FlipCameraButton onPress={flipCamera} facing={cameraFacing} />
+              <TorchButton onPress={toggleTorch} on={torchOn} />
             </>
           )}
 
@@ -331,6 +421,7 @@ export default function KioskScreen() {
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing={cameraFacing}
+        enableTorch={torchOn}
         barcodeScannerSettings={{ barcodeTypes: ['qr', 'pdf417', 'code128', 'code39', 'ean13'] }}
         onBarcodeScanned={status === S_READY ? handleScan : undefined}
       />
@@ -339,6 +430,7 @@ export default function KioskScreen() {
         <>
           <ReadyOverlay frameSize={frameSize} />
           <FlipCameraButton onPress={flipCamera} facing={cameraFacing} />
+          <TorchButton onPress={toggleTorch} on={torchOn} />
         </>
       )}
 
@@ -397,6 +489,29 @@ function FlipCameraButton({ onPress, facing }) {
         hitSlop={10}
       >
         <Text style={styles.flipIcon}>🔄</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// Buton lanterna (torch) — pozitionat sub flip button. Util cand:
+//  - ambientul e intunecat (ex: seara, indoor cu putina lumina)
+//  - ecranul clientului e pe dark mode + luminozitate scazuta si QR-ul nu se vede
+// Discret, iconita simpla, la 60px sub flip (nu se suprapun).
+function TorchButton({ onPress, on }) {
+  return (
+    <View style={styles.torchWrap} pointerEvents="box-none">
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.flipBtn,
+          on && styles.torchBtnOn,
+          pressed && styles.flipBtnPressed,
+        ]}
+        accessibilityLabel={on ? 'Oprește lanterna' : 'Pornește lanterna'}
+        hitSlop={10}
+      >
+        <Text style={styles.flipIcon}>{on ? '💡' : '🔦'}</Text>
       </Pressable>
     </View>
   );
@@ -665,6 +780,16 @@ const styles = StyleSheet.create({
     top: 16,
     right: 16,
     zIndex: 20,
+  },
+  torchWrap: {
+    position: 'absolute',
+    top: 68, // sub flip button (16 top + 40 btn + 12 gap)
+    right: 16,
+    zIndex: 20,
+  },
+  torchBtnOn: {
+    backgroundColor: 'rgba(255, 200, 60, 0.85)', // galben cald pentru starea ON
+    borderColor: 'rgba(255, 200, 60, 1)',
   },
   flipBtn: {
     width: 40,

@@ -111,3 +111,18 @@ export async function lookupTicket(code) {
 export async function organizerCheckInByCode(ticketCode) {
   return apiPost('/organizer/participants/checkin', { ticket_code: ticketCode });
 }
+
+// ============================================================================
+// Offline sync — pentru cache local de bilete (KioskScreen fallback fara internet)
+// ============================================================================
+
+// Listeaza participanti pentru un eveniment. Suporta:
+//  - `since` (ISO datetime): filtreaza doar biletele modificate dupa acel timestamp
+//     → folosit pentru sync incremental (payload mic la fiecare 60s)
+//  - `page` / `per_page`: paginare standard
+// Backend: GET /organizer/events/{eventId}/participants?updated_since=...
+export async function fetchEventParticipants(eventId, { since = null, page = 1, perPage = 500 } = {}) {
+  const params = { per_page: perPage, page };
+  if (since) params.updated_since = since;
+  return apiGet(`/organizer/events/${eventId}/participants`, params);
+}

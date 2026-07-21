@@ -12,7 +12,7 @@
 // ce zice endpoint-ul /api/app-version-sfana catre client. Cand APP_VERSION
 // < server, useAppUpdate hook detecteaza si arata UpdateBanner.
 
-export const APP_VERSION = '0.1.1';
+export const APP_VERSION = '0.1.2';
 
 // URL absolut pentru version check (nu trece prin BASE_URL scoped
 // marketplace-client — endpoint-ul e public si nu necesita bearer token).
