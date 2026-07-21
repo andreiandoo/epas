@@ -553,6 +553,25 @@ const AmbiletAuth = {
             window.location.href = '/organizator/login';
             return false;
         }
+
+        // Team members with role 'staff' are limited to the scan/sell PWA
+        // (/organizator/scan*). Any other organizer dashboard page bounces them
+        // back to the app. Owner + admin/manager roles are unaffected. The scan
+        // pages use their own gate (ScanAuth) and never call this, so there is
+        // no redirect loop.
+        try {
+            const orgData = this.getOrganizerData();
+            const teamRole = orgData && orgData.team_member && orgData.team_member.role;
+            if (teamRole === 'staff') {
+                const path = window.location.pathname.replace(/\/$/, '');
+                const isScanPath = path === '/organizator/scan' || path.startsWith('/organizator/scan/');
+                if (!isScanPath) {
+                    window.location.replace('/organizator/scan/panou');
+                    return false;
+                }
+            }
+        } catch (e) { /* non-fatal */ }
+
         return true;
     },
 

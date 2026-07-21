@@ -450,7 +450,7 @@
                 return '<div class="px-2 py-1.5 rounded-md bg-' . $c . '-50 dark:bg-' . $c . '-900/20 border border-' . $c . '-100/60 dark:border-' . $c . '-800/30">'
                     . '<span class="text-[10px] text-' . $c . '-700 dark:text-' . $c . '-300">' . $label . '</span>'
                     . '<span class="block text-sm font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums leading-tight">' . $value . '</span>'
-                    . ($sub !== '' ? '<span class="block text-[9px] text-' . $c . '-600/70 dark:text-' . $c . '-300/70 leading-tight">' . $sub . '</span>' : '')
+                    . ($sub !== '' ? '<span class="block text-[10px] text-' . $c . '-600/70 dark:text-' . $c . '-300/70 leading-tight">' . $sub . '</span>' : '')
                     . '</div>';
             };
         @endphp
@@ -464,31 +464,46 @@
                 <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $fes['event_id']]) }}" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Deschide eveniment</a>
             </div>
             <div class="p-3 space-y-3" x-show="open" x-collapse x-cloak>
-                {{-- 30-day sales trend (mini bar chart) --}}
+                {{-- 30-day trend (mini bar chart). Bars are scaled by sales; when
+                     the daily sales series is flat (e.g. POS-heavy events whose
+                     revenue isn't reflected per-ticket) we fall back to ticket
+                     counts so the chart is still visible. --}}
                 @php
-                    $ds = $fes['daily_sales'] ?? [];
-                    $maxD = !empty($ds) ? max($ds) : 0; $maxD = $maxD > 0 ? $maxD : 1;
-                    $sum30 = array_sum($ds);
+                    $dsSales   = $fes['daily_sales'] ?? [];
+                    $dsTickets = $fes['daily_tickets'] ?? [];
+                    $sum30     = array_sum($dsSales);
+                    // Metric used for bar heights: prefer sales, fall back to tickets.
+                    $barSeries = array_sum($dsSales) > 0 ? $dsSales : $dsTickets;
+                    $maxD      = !empty($barSeries) ? max($barSeries) : 0;
+                    $maxD      = $maxD > 0 ? $maxD : 1;
+                    $hasTrend  = array_sum($dsTickets) > 0 || array_sum($dsSales) > 0;
                 @endphp
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-[10px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400">Vânzări · ultimele 30 zile</span>
                         <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ $money($sum30) }}</span>
                     </div>
-                    <div class="flex items-end gap-px h-12">
-                        @foreach($ds as $i => $v)
-                            <div class="flex-1 rounded-sm bg-indigo-400/70 dark:bg-indigo-500/60 hover:bg-indigo-600 dark:hover:bg-indigo-400 transition-colors"
-                                 style="height: {{ max(3, (int) round($v / $maxD * 100)) }}%"
-                                 title="{{ $fes['daily_labels'][$i] ?? '' }}: {{ $money($v) }} · {{ $fes['daily_tickets'][$i] ?? 0 }} bilete"></div>
-                        @endforeach
-                    </div>
+                    @if($hasTrend)
+                        <div class="flex items-end gap-px h-16">
+                            @foreach($barSeries as $i => $v)
+                                @php $h = $v > 0 ? max(6, (int) round($v / $maxD * 100)) : 2; @endphp
+                                <div class="flex-1 rounded-sm bg-indigo-400/70 dark:bg-indigo-500/60 hover:bg-indigo-600 dark:hover:bg-indigo-400 transition-colors"
+                                     style="height: {{ $h }}%"
+                                     title="{{ $fes['daily_labels'][$i] ?? '' }}: {{ $money($fes['daily_sales'][$i] ?? 0) }} · {{ $fes['daily_tickets'][$i] ?? 0 }} bilete"></div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="flex items-center justify-center h-16 text-[11px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-md">
+                            Nicio vânzare în ultimele 30 zile
+                        </div>
+                    @endif
                 </div>
                 {{-- Compact stats — 3 columns on all sizes --}}
                 <div class="grid grid-cols-3 gap-2">
-                    {!! $stat('Total bilete', $num($fes['tickets_total']), $num($fes['tickets_online']) . ' on · ' . $num($fes['tickets_pos']) . ' POS', 'indigo') !!}
-                    {!! $stat('Total vânzări', $money($fes['sales_total']), $num($fes['sales_online']) . ' on · ' . $num($fes['sales_pos']) . ' POS', 'emerald') !!}
-                    {!! $stat('Total comision', $money($fes['comm_total']), $num($fes['comm_online']) . ' on · ' . $num($fes['comm_pos']) . ' POS', 'amber') !!}
-                    {!! $stat('Bilete / zi', $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0), $fes['days'] . ' zile', 'purple') !!}
+                    {!! $stat('Total bilete', $num($fes['tickets_total']), $num($fes['tickets_online']) . ' online · ' . $num($fes['tickets_pos']) . ' POS', 'indigo') !!}
+                    {!! $stat('Total vânzări', $money($fes['sales_total']), $num($fes['sales_online']) . ' online · ' . $num($fes['sales_pos']) . ' POS', 'emerald') !!}
+                    {!! $stat('Total comision', $money($fes['comm_total']), $num($fes['comm_online']) . ' online · ' . $num($fes['comm_pos']) . ' POS', 'amber') !!}
+                    {!! $stat('Bilete / zi', $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0), '', 'purple') !!}
                     {!! $stat('Încasări / zi', $money($fes['days'] > 0 ? $fes['sales_total'] / $fes['days'] : 0), '', 'purple') !!}
                     {!! $stat('Comision / zi', $money($fes['days'] > 0 ? $fes['comm_total'] / $fes['days'] : 0), '', 'purple') !!}
                     {!! $stat('Bilete azi', $num($fes['tickets_today']), '', 'blue') !!}
@@ -521,13 +536,26 @@
             </div>
 
             <div class="overflow-auto max-h-[70vh] bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="daily-report-{{ $dailyReportDate }}">
+                {{-- Responsive columns: on phones (<640px) the "Total" group is
+                     hidden (hidden sm:table-cell on its cells) AND its colgroup
+                     widths collapse to 0 here, so the "Azi" columns reflow to
+                     fill the freed width; the event/venue columns also shrink so
+                     the table fits without a wide horizontal scroll. On desktop
+                     everything shows at full width. --}}
+                <style>
+                    @media (max-width: 639px) {
+                        .dr-col-total { width: 0 !important; }
+                        .dr-col-name  { width: 34% !important; }
+                        .dr-col-venue { width: 16% !important; }
+                    }
+                </style>
                 <table class="text-xs border-separate border-spacing-0" style="width: 100%; table-layout: fixed;">
                     {{-- Explicit column widths so max-width on td actually clips the event name --}}
                     <colgroup>
-                        <col style="width: 300px;">
-                        <col style="width: 180px;">
+                        <col class="dr-col-name" style="width: 260px;">
+                        <col class="dr-col-venue" style="width: 160px;">
                         <col><col><col><col>
-                        <col><col><col><col>
+                        <col class="dr-col-total"><col class="dr-col-total"><col class="dr-col-total"><col class="dr-col-total">
                     </colgroup>
                     <thead class="text-gray-700 dark:text-gray-200">
                         {{-- Group row — sticky to top of scroll container --}}

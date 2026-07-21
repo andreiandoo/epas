@@ -257,6 +257,26 @@ window.addEventListener('load', async function() {
             document.body.setAttribute('data-restricted-role', 'pos_cashier');
         }
 
+        // Rol 'staff' (membru echipa): acces DOAR la aplicatia de scanare /
+        // vanzare (PWA /organizator/scan*). Din orice pagina de dashboard e
+        // redirectionat catre aplicatie si nu vede sidebar-ul. Owner-ul si
+        // rolurile admin/manager NU sunt afectate.
+        const teamRole = (orgData && orgData.team_member && orgData.team_member.role) || null;
+        if (teamRole === 'staff') {
+            const currentPath = window.location.pathname.replace(/\/$/, '');
+            const isScanPath = currentPath === '/organizator/scan' || currentPath.startsWith('/organizator/scan/');
+            if (!isScanPath) {
+                window.location.replace('/organizator/scan/panou');
+                return;
+            }
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar) sidebar.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
+            document.querySelectorAll('[onclick*="toggleSidebar"]').forEach(el => { el.style.display = 'none'; });
+            document.body.setAttribute('data-restricted-role', 'staff');
+        }
+
         if (orgData) {
             const orgName = document.getElementById('sidebar-org-name');
             const orgInitials = document.getElementById('sidebar-org-initials');
