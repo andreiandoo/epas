@@ -494,12 +494,25 @@ class MarketplaceEventsController extends BaseController
             $perPage = min((int) $request->input('per_page', 20), 100);
             $maxPerCategory = (int) $request->input('max_per_category', 4);
             $oversample = $query->limit($perPage * 5)->get();
-            $stratified = $oversample
+            // Variety pass: up to $maxPerCategory freshest events per category.
+            $picked = $oversample
                 ->groupBy(fn ($e) => $e->marketplace_event_category_id ?? '__uncat__')
                 ->flatMap(fn ($events) => $events->take($maxPerCategory))
                 ->shuffle()
-                ->take($perPage)
                 ->values();
+            // Backfill: if too few categories left us short of $perPage, top up
+            // with the freshest remaining events (any category) so the homepage
+            // grid still fills to the requested count instead of collapsing to
+            // e.g. 25 when only a handful of categories have recent events.
+            if ($picked->count() < $perPage) {
+                $pickedIds = $picked->pluck('id')->all();
+                $backfill = $oversample
+                    ->reject(fn ($e) => in_array($e->id, $pickedIds, true))
+                    ->take($perPage - $picked->count())
+                    ->values();
+                $picked = $picked->concat($backfill);
+            }
+            $stratified = $picked->take($perPage)->shuffle()->values();
             $events = new \Illuminate\Pagination\LengthAwarePaginator(
                 $stratified,
                 $stratified->count(),
