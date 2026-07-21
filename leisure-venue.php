@@ -601,11 +601,8 @@ require_once __DIR__ . '/includes/head.php';
 <!-- ============ TOP NAV (overlay over hero) ============ -->
 <nav class="absolute top-0 left-0 right-0 z-30 px-6 lg:px-12 py-5">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
-        <a href="/" class="flex items-center gap-2 text-white">
-            <div class="w-9 h-9 bg-white/15 backdrop-blur rounded-xl flex items-center justify-center">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-            </div>
-            <span class="font-extrabold text-lg"><?= SITE_NAME ?></span>
+        <a href="/" class="flex items-center no-underline flex-shrink-0">
+            <img src="/assets/images/ambilet_logo.webp" width="88" height="40" alt="<?= SITE_NAME ?>" class="h-10 w-auto brightness-0 invert">
         </a>
         <div class="hidden lg:flex items-center gap-1 bg-white/10 backdrop-blur rounded-full px-2 py-1.5">
             <a href="#bilete" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_tickets">Bilete</a>

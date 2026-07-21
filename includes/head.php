@@ -213,6 +213,31 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
+    <!-- QR SCANNABILITY FIX (Sf. Ana + toti clientii):
+         Android Chrome "Force dark mode" (chrome://flags, activat de multi useri)
+         inverseaza AUTO fundalurile albe pe pagini. QR-urile albe cu module negre
+         devin negre cu module albe → scanner-ele nu le mai detecteaza (asteapta
+         black-on-white). Fix: aplicam color-scheme:light DOAR pe wrapperele QR
+         + img-urile care servesc coduri QR (qrserver.com, /qr, data:image cu QR).
+         Restul paginii isi pastreaza dark mode-ul preferat de user.
+         Non-breaking: doar CSS aditional, nu suprascrie stiluri existente pe alte elemente. -->
+    <style>
+        img[src*="qrserver.com"],
+        img[src*="/qr-code"],
+        img[src*="qrcode"],
+        img[alt*="QR" i],
+        img[alt*="cod" i],
+        .qr-modal-qr,
+        .ticket-qr,
+        #qr-code,
+        #qr-section > div:first-child {
+            color-scheme: light !important;
+            background-color: #ffffff !important;
+            forced-color-adjust: none !important;
+            -webkit-forced-color-adjust: none !important;
+        }
+    </style>
+
     <!-- Preconnect to API/storage origins for faster first call -->
     <link rel="preconnect" href="https://core.tixello.com" crossorigin>
     <link rel="dns-prefetch" href="https://core.tixello.com">

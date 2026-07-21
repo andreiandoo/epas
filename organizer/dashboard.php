@@ -72,6 +72,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
 
+                <!-- Events in progress cards -->
+                <div id="ongoing-events-section" class="hidden mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-secondary">Evenimente în derulare</h2>
+                        <a href="/organizator/events" class="text-sm font-medium text-primary">Vezi toate &rarr;</a>
+                    </div>
+                    <div id="ongoing-events-grid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+                </div>
+
                 <!-- Main Grid -->
                 <div class="grid gap-8 lg:grid-cols-3">
                     <!-- Left Column -->
@@ -344,6 +353,9 @@ const OrgDashboard = {
         const eventsList = d.events_list ?? d.events ?? [];
         this.renderEvents(eventsList);
 
+        // Events-in-progress cards (total sales + total tickets + details)
+        this.renderOngoingEvents(eventsList);
+
         // Upcoming event
         if (eventsList?.length) {
             this.renderUpcomingEvent(eventsList[0]);
@@ -417,6 +429,67 @@ const OrgDashboard = {
                 </tr>
             `;
         }).join('');
+    },
+
+    renderOngoingEvents(events) {
+        const section = document.getElementById('ongoing-events-section');
+        const grid = document.getElementById('ongoing-events-grid');
+        if (!section || !grid) return;
+
+        if (!events?.length) {
+            section.classList.add('hidden');
+            grid.innerHTML = '';
+            return;
+        }
+
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const now = new Date();
+
+        grid.innerHTML = events.map(e => {
+            const date = new Date(e.start_date || e.starts_at);
+            const eventName = e.name || e.title || 'Eveniment';
+            const venueName = e.venue || e.venue_name || '';
+            const venueCity = e.venue_city ? `, ${e.venue_city}` : '';
+            // Total sales (all-time) and total tickets for this event.
+            const revenue = e.revenue ?? 0;
+            const ticketsTotalSold = e.tickets_total_sold ?? e.tickets_sold ?? 0;
+
+            // Days until event badge
+            const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+            let daysLabel = '';
+            if (diffDays === 0) daysLabel = 'Astăzi';
+            else if (diffDays === 1) daysLabel = 'Mâine';
+            else if (diffDays > 0) daysLabel = `În ${diffDays} zile`;
+            const dateValid = !isNaN(date.getTime());
+            const dateText = dateValid ? `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}` : '';
+
+            return `
+                <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                    <div class="relative h-32">
+                        <img src="${getStorageUrl(e.image)}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
+                        ${daysLabel ? `<div class="absolute px-2.5 py-1 text-xs font-bold text-white rounded-lg top-3 left-3 bg-primary">${daysLabel}</div>` : ''}
+                        <span class="absolute px-2 py-1 text-[10px] font-semibold rounded-full top-3 right-3 ${e.status === 'published' ? 'bg-success/90 text-white' : 'bg-white/90 text-muted'}">${e.status === 'published' ? 'Activ' : 'Draft'}</span>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold truncate text-secondary" title="${eventName}">${eventName}</h3>
+                        <p class="mb-3 text-xs truncate text-muted">${dateText}${dateText && (venueName || venueCity) ? ' • ' : ''}${venueName}${venueCity}</p>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div class="p-2.5 text-center bg-surface rounded-xl">
+                                <p class="text-lg font-bold text-secondary">${this.formatCurrency(revenue)}</p>
+                                <p class="text-[11px] text-muted">Vânzări totale</p>
+                            </div>
+                            <div class="p-2.5 text-center bg-surface rounded-xl">
+                                <p class="text-lg font-bold text-secondary">${ticketsTotalSold}</p>
+                                <p class="text-[11px] text-muted">Bilete totale</p>
+                            </div>
+                        </div>
+                        <a href="/organizator/events?id=${e.id}" class="block w-full py-2 text-sm font-semibold text-center transition-colors border rounded-xl border-border text-secondary hover:border-primary">Detalii eveniment</a>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        section.classList.remove('hidden');
     },
 
     renderUpcomingEvent(event) {
