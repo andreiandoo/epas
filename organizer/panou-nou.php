@@ -12,14 +12,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
 
-    <main class="flex-1 p-4 lg:p-8">
+    <main class="flex-1 p-3 sm:p-4 lg:p-8">
         <div class="w-full mx-auto space-y-6 lg:space-y-8" style="max-width:1500px;">
 
             <!-- ===== HERO ===== -->
             <section class="relative overflow-hidden shadow-lg rounded-3xl"
                      style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 55%,#334155 100%);">
                 <div class="absolute inset-0 opacity-40" style="background:radial-gradient(1200px 300px at 85% -20%, rgba(196,30,58,.55), transparent 60%);"></div>
-                <div class="relative flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-9">
+                <div class="relative flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-9">
                     <div>
                         <span class="inline-flex items-center gap-2 px-3 py-1 mb-3 text-[11px] font-bold tracking-wide text-white uppercase rounded-full bg-white/10 backdrop-blur">
                             <span class="relative flex w-2 h-2">
@@ -31,12 +31,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <h1 class="text-2xl font-extrabold text-white lg:text-3xl" id="pn-greeting">Bine ai revenit 👋</h1>
                         <p class="mt-1 text-sm text-slate-300 lg:text-base">Iată cum performează evenimentele tale în derulare.</p>
                     </div>
-                    <div class="flex flex-wrap gap-3">
-                        <a href="/organizator/events?action=create" class="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold text-white transition-all shadow-lg rounded-xl bg-primary hover:opacity-90">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                        <a href="/organizator/events?action=create" class="inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-all shadow-lg rounded-xl bg-primary hover:opacity-90">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                             Eveniment nou
                         </a>
-                        <a href="/organizator/events" class="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">
+                        <a href="/organizator/events" class="inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">
                             Toate evenimentele
                         </a>
                     </div>
@@ -147,18 +147,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <section class="relative overflow-hidden shadow-lg rounded-3xl"
                      style="background:linear-gradient(135deg,#111827 0%,#1f2937 60%,#0b1220 100%);">
                 <div class="absolute inset-0 opacity-50" style="background:radial-gradient(900px 260px at 15% 120%, rgba(6,182,212,.35), transparent 60%);"></div>
-                <div class="relative grid gap-8 p-6 lg:grid-cols-2 lg:p-9">
+                <div class="relative grid gap-6 p-5 lg:grid-cols-2 lg:gap-8 lg:p-9">
                     <div class="flex flex-col justify-center">
                         <span class="inline-flex w-max items-center gap-2 px-3 py-1 mb-3 text-[11px] font-bold tracking-wide text-white uppercase rounded-full bg-white/10 backdrop-blur">Aplicații mobile</span>
                         <h2 class="text-2xl font-extrabold text-white lg:text-3xl">Vinde și scanează bilete din palmă</h2>
                         <p class="max-w-md mt-2 text-sm text-slate-300">Instalează aplicația AmBilet pentru Android sau folosește aplicația de scanare direct din browser. Vânzare la intrare, print și check-in rapid — oriunde te afli.</p>
-                        <div class="flex flex-wrap gap-3 mt-6">
+                        <div class="grid grid-cols-1 gap-3 mt-6 sm:grid-cols-2 sm:max-w-md">
                             <a href="https://ambilet.ro/android" target="_blank" rel="noopener" class="inline-flex items-center gap-3 px-5 py-3 text-sm font-bold text-white transition-all shadow-lg rounded-xl bg-primary hover:opacity-90">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.523 15.342a.998.998 0 01-.998.998.998.998 0 01-.998-.998.998.998 0 01.998-.998.998.998 0 01.998.998m-9.05 0a.998.998 0 01-.997.998.998.998 0 01-.998-.998.998.998 0 01.998-.998.998.998 0 01.997.998m9.405-4.28l1.996-3.459a.416.416 0 00-.152-.567.416.416 0 00-.568.152l-2.02 3.5A12.06 12.06 0 0012 9.5c-1.62 0-3.148.35-4.536.94l-2.02-3.5a.416.416 0 00-.72.415l1.996 3.459C3.29 12.06 1.5 14.72 1.5 17.75h21c0-3.03-1.79-5.69-4.622-6.688"/></svg>
+                                <svg class="flex-shrink-0 w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.523 15.342a.998.998 0 01-.998.998.998.998 0 01-.998-.998.998.998 0 01.998-.998.998.998 0 01.998.998m-9.05 0a.998.998 0 01-.997.998.998.998 0 01-.998-.998.998.998 0 01.998-.998.998.998 0 01.997.998m9.405-4.28l1.996-3.459a.416.416 0 00-.152-.567.416.416 0 00-.568.152l-2.02 3.5A12.06 12.06 0 0012 9.5c-1.62 0-3.148.35-4.536.94l-2.02-3.5a.416.416 0 00-.72.415l1.996 3.459C3.29 12.06 1.5 14.72 1.5 17.75h21c0-3.03-1.79-5.69-4.622-6.688"/></svg>
                                 <span><span class="block text-[10px] font-normal opacity-80">Descarcă pentru</span>Android</span>
                             </a>
                             <a href="/organizator/scan/panou" class="inline-flex items-center gap-3 px-5 py-3 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h.01M4 4h4v4H4V4zm12 0h4v4h-4V4zM4 16h4v4H4v-4z"/></svg>
+                                <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h.01M4 4h4v4H4V4zm12 0h4v4h-4V4zM4 16h4v4H4v-4z"/></svg>
                                 <span><span class="block text-[10px] font-normal opacity-80">Deschide în browser</span>Aplicație Scan</span>
                             </a>
                         </div>
@@ -284,7 +284,7 @@ const OrgPanouNou = {
                 <div class="flex flex-col flex-1 p-4">
                     <h3 class="font-bold leading-snug truncate text-secondary" title="${this.esc(e.name)}">${this.esc(e.name)}</h3>
                     <p class="mb-3 text-xs truncate text-muted">${this.esc(venue) || '&nbsp;'}</p>
-                    <div class="grid grid-cols-4 gap-1.5 mb-4">
+                    <div class="grid grid-cols-2 gap-1.5 mb-4 sm:grid-cols-4">
                         <div class="p-2 text-center rounded-xl bg-surface">
                             <p class="text-sm font-bold text-secondary tabular-nums">${this.money(e.revenue || 0)}</p>
                             <p class="text-[10px] text-muted">Vânzări</p>
