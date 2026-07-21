@@ -493,6 +493,7 @@
                             @foreach($barSeries as $i => $v)
                                 @php
                                     $barPx = $v > 0 ? max(4, (int) round($v / $maxD * 58)) : 2;
+                                    $isWknd = $fes['daily_weekend'][$i] ?? false;
                                     $tip = ($fes['daily_labels'][$i] ?? '')
                                         . "\nVânzări: " . $money($fes['daily_sales'][$i] ?? 0)
                                         . "\n• Online: " . $money($fes['daily_sales_online'][$i] ?? 0)
@@ -501,9 +502,18 @@
                                         . "\n• Online: " . ($fes['daily_tickets_online'][$i] ?? 0)
                                         . "\n• POS: " . ($fes['daily_tickets_pos'][$i] ?? 0);
                                 @endphp
-                                <div class="flex-1 rounded-sm"
-                                     style="height: {{ $barPx }}px; background-color: #6366f1; opacity: .85;"
+                                {{-- Weekend bars are wider (flex 2 vs 1) and yellow so they stand out. --}}
+                                <div class="rounded-sm"
+                                     style="flex: {{ $isWknd ? '2' : '1' }}; height: {{ $barPx }}px; background-color: {{ $isWknd ? '#eab308' : '#6366f1' }}; opacity: {{ $isWknd ? '1' : '.85' }};"
                                      title="{{ $tip }}"></div>
+                            @endforeach
+                        </div>
+                        {{-- Day-of-month labels under the bars (same flex weights so they
+                             line up); weekend days are yellow + bold. --}}
+                        <div class="flex gap-px mt-1">
+                            @foreach($barSeries as $i => $v)
+                                @php $isWknd = $fes['daily_weekend'][$i] ?? false; @endphp
+                                <div class="text-center" style="flex: {{ $isWknd ? '2' : '1' }}; font-size: 8px; line-height: 1; color: {{ $isWknd ? '#ca8a04' : '#9ca3af' }}; font-weight: {{ $isWknd ? '700' : '400' }};">{{ $fes['daily_day_num'][$i] ?? '' }}</div>
                             @endforeach
                         </div>
                     @else
@@ -741,7 +751,7 @@
                     wire:model.live="chartPeriod"
                     class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
                 >
-                    <option value="month">Luna selectată</option>
+                    <option value="month">Avansat</option>
                     <option value="7">7 zile</option>
                     <option value="15">15 zile</option>
                     <option value="30">30 zile</option>
@@ -1271,6 +1281,34 @@
             const chartMeta = chartMetaStr && chartMetaStr !== 'null' ? JSON.parse(chartMetaStr) : null;
             const currency = ctx.getAttribute('data-currency') || 'RON';
 
+            // Weekend detection for the X-axis. Month view ("Avansat") carries
+            // chartMeta.monthStart (index 0 = the 1st), so day = monthStart + i.
+            // All other (N-day) views end "today" and run back N days, so the
+            // last index is today. Used to paint weekend bars + labels yellow.
+            const weekendFlags = (function () {
+                const n = ((ticketData && ticketData.labels) || (salesData && salesData.labels) || []).length;
+                const flags = [];
+                if (chartMeta && chartMeta.monthStart) {
+                    const base = new Date(chartMeta.monthStart + 'T00:00:00');
+                    for (let i = 0; i < n; i++) {
+                        const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
+                        const dow = d.getDay();
+                        flags.push(dow === 0 || dow === 6);
+                    }
+                } else {
+                    const t = new Date(); t.setHours(0, 0, 0, 0);
+                    for (let i = 0; i < n; i++) {
+                        const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - (n - 1 - i));
+                        const dow = d.getDay();
+                        flags.push(dow === 0 || dow === 6);
+                    }
+                }
+                return flags;
+            })();
+            const WEEKEND_BAR = isDark ? 'rgba(234, 179, 8, 0.85)' : 'rgba(202, 138, 4, 0.85)';
+            const WEEKEND_BORDER = '#ca8a04';
+            const WEEKEND_TICK = isDark ? '#facc15' : '#ca8a04';
+
             // Chart-meta mode: null = non-month view; 'past'/'current'/'future'
             // = month view variants. For future months the actuals line is
             // all zeros — blank it out so the chart isn't dragged to a flat
@@ -1307,9 +1345,11 @@
                     type: 'bar',
                     label: 'Bilete',
                     data: ticketData.data,
-                    backgroundColor: isDark ? 'rgba(168, 85, 247, 0.6)' : 'rgba(147, 51, 234, 0.6)',
-                    borderColor: isDark ? '#a855f7' : '#9333ea',
-                    borderWidth: 1, borderRadius: 3,
+                    // Weekend bars are yellow with a thicker border so they stand out.
+                    backgroundColor: ticketData.data.map((_, i) => weekendFlags[i] ? WEEKEND_BAR : (isDark ? 'rgba(168, 85, 247, 0.6)' : 'rgba(147, 51, 234, 0.6)')),
+                    borderColor: ticketData.data.map((_, i) => weekendFlags[i] ? WEEKEND_BORDER : (isDark ? '#a855f7' : '#9333ea')),
+                    borderWidth: ticketData.data.map((_, i) => weekendFlags[i] ? 2 : 1),
+                    borderRadius: 3,
                     yAxisID: 'y1',
                     order: 2,
                 },
@@ -1655,7 +1695,11 @@
                         }
                     },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: isDark ? '#9ca3af' : '#6b7280', maxRotation: 45, font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: {
+                            color: (c) => weekendFlags[c.index] ? WEEKEND_TICK : (isDark ? '#9ca3af' : '#6b7280'),
+                            font: (c) => ({ size: 10, weight: weekendFlags[c.index] ? '700' : '400' }),
+                            maxRotation: 45,
+                        } },
                         y: {
                             type: 'linear', position: 'left', beginAtZero: true,
                             grid: { color: isDark ? '#374151' : '#f3f4f6' },

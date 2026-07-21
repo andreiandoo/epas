@@ -1515,7 +1515,7 @@ class Dashboard extends Page
         }
 
         return Cache::remember(
-            'mp_event_stats_v5_' . self::FEATURED_EVENT_ID,
+            'mp_event_stats_v6_' . self::FEATURED_EVENT_ID,
             300,
             function () use ($event) {
                 $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
@@ -1576,6 +1576,8 @@ class Dashboard extends Page
                     ->get()
                     ->keyBy('d');
                 $dailyLabels = [];
+                $dailyDayNum = [];
+                $dailyWeekend = [];
                 $dailySales = [];
                 $dailyTickets = [];
                 $dailySalesOnline = [];
@@ -1587,6 +1589,8 @@ class Dashboard extends Page
                     $k = $cursor->format('Y-m-d');
                     $row = $dailyRaw[$k] ?? null;
                     $dailyLabels[] = $cursor->format('d.m');
+                    $dailyDayNum[] = $cursor->format('j');      // day of month, no leading zero
+                    $dailyWeekend[] = $cursor->isWeekend();      // Sat/Sun
                     $dailySales[] = (float) ($row->sales ?? 0);
                     $dailyTickets[] = (int) ($row->tickets ?? 0);
                     $dailySalesOnline[] = (float) ($row->sales_online ?? 0);
@@ -1599,6 +1603,8 @@ class Dashboard extends Page
                 return [
                     'event_id' => $event->id,
                     'daily_labels' => $dailyLabels,
+                    'daily_day_num' => $dailyDayNum,
+                    'daily_weekend' => $dailyWeekend,
                     'daily_sales' => $dailySales,
                     'daily_tickets' => $dailyTickets,
                     'daily_sales_online' => $dailySalesOnline,
