@@ -1060,6 +1060,22 @@ class Event extends Model
     }
 
     /**
+     * Paid tickets only (bought through an order) — excludes invitations.
+     */
+    public function getTotalTicketsPaidAttribute(): int
+    {
+        return (int) (\App\Services\EventStatsCache::get($this->id)['total_tickets_paid'] ?? 0);
+    }
+
+    /**
+     * Invitations issued (valid/used tickets with no order).
+     */
+    public function getTotalInvitationsAttribute(): int
+    {
+        return (int) (\App\Services\EventStatsCache::get($this->id)['total_invitations'] ?? 0);
+    }
+
+    /**
      * Check if this event has at least one ticket type that will expire within 24h
      * AND no replacement (no other active ticket beyond 24h, no scheduled future ticket).
      * Uses pre-loaded ticketTypes collection if available (no extra queries).

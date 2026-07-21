@@ -4464,6 +4464,8 @@ class EventsController extends BaseController
             'status' => $this->getEventStatus($event),
             'image' => $this->getStorageUrl($event->poster_url),
             'tickets_sold' => $event->total_tickets_sold,
+            'tickets_paid' => $event->total_tickets_paid,
+            'invitations' => $event->total_invitations,
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
             'days_until' => $daysUntil,
@@ -4614,6 +4616,8 @@ class EventsController extends BaseController
             'rejection_reason' => $event->rejection_reason,
             'rejected_at' => $event->rejected_at?->toIso8601String(),
             'tickets_sold' => $event->total_tickets_sold,
+            'tickets_paid' => $event->total_tickets_paid,
+            'invitations' => $event->total_invitations,
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
             // PERF P2/8 — fetch the per-ticket-type stats hash ONCE outside

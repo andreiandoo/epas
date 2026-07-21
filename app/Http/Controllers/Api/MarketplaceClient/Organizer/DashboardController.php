@@ -227,23 +227,29 @@ class DashboardController extends BaseController
             ->groupBy('d')
             ->pluck('revenue', 'd');
 
-        // Daily valid tickets across all events.
-        $ticketRows = DB::table('tickets as t')
-            ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.marketplace_organizer_id', $organizer->id)
-            ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-            ->where('o.source', '!=', 'test_order')
-            ->whereIn('t.status', ['valid', 'used'])
-            ->whereBetween('t.created_at', [$fromUtc, $toUtc])
-            ->selectRaw($dayExpr('t.created_at') . ' as d')
-            ->selectRaw('COUNT(*) as tickets')
-            ->groupBy('d')
-            ->pluck('tickets', 'd');
+        $eventIds = Event::where('marketplace_organizer_id', $organizer->id)->pluck('id');
+
+        // Daily issued tickets across all events — counted by event (so it
+        // includes invitations, which have no order) to reflect real daily
+        // activity even for invitation-heavy organizers.
+        $ticketRows = collect();
+        if ($eventIds->isNotEmpty()) {
+            $ticketRows = DB::table('tickets as t')
+                ->where(function ($q) use ($eventIds) {
+                    $q->whereIn('t.event_id', $eventIds)
+                      ->orWhereIn('t.marketplace_event_id', $eventIds);
+                })
+                ->whereIn('t.status', ['valid', 'used'])
+                ->whereBetween('t.created_at', [$fromUtc, $toUtc])
+                ->selectRaw($dayExpr('t.created_at') . ' as d')
+                ->selectRaw('COUNT(*) as tickets')
+                ->groupBy('d')
+                ->pluck('tickets', 'd');
+        }
 
         // Daily page views from the pre-aggregated rollup (real per-day views).
         $viewsByDay = [];
         try {
-            $eventIds = Event::where('marketplace_organizer_id', $organizer->id)->pluck('id');
             if ($eventIds->isNotEmpty()) {
                 $viewRows = DB::table('event_analytics_daily')
                     ->whereIn('event_id', $eventIds)

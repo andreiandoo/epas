@@ -1151,9 +1151,10 @@ function renderEvents(events) {
                                 </div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="py-2 pr-4 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
-                            <div class="py-2 pr-4 text-right border-r border-border mobile:text-center mobile:border-l mobile:px-4"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                            <div class="py-2 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
+                            <div class="py-2 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${(event.tickets_paid != null ? event.tickets_paid : (event.tickets_sold || 0))}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                            <div class="py-2 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${event.invitations || 0}</p><p class="text-xs text-muted">Invitații emise</p></div>
                             <div class="py-2 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări nete</p></div>
                         </div>
                     </div>

@@ -122,6 +122,15 @@ class EventStatsCache
             ->whereIn('status', ['valid', 'used'])
             ->count();
 
+        // Invitations have no order_id (issued directly, free) — same
+        // convention as SalesBreakdownService. Everything else that's
+        // valid/used was bought through an order.
+        $invitations = (int) Ticket::where('event_id', $eventId)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereNull('order_id')
+            ->count();
+        $ticketsPaid = max(0, $totalSold - $invitations);
+
         $ticketTypes = $event->ticketTypes;
         $ttIds = $ticketTypes->pluck('id')->toArray();
 
@@ -168,6 +177,8 @@ class EventStatsCache
 
         return [
             'total_tickets_sold' => $totalSold,
+            'total_tickets_paid' => $ticketsPaid,
+            'total_invitations'  => $invitations,
             'total_revenue'      => $revenue,
             'per_ticket_type'    => $perType,
             'computed_at'        => time(),
@@ -178,6 +189,8 @@ class EventStatsCache
     {
         return [
             'total_tickets_sold' => 0,
+            'total_tickets_paid' => 0,
+            'total_invitations'  => 0,
             'total_revenue'      => 0.0,
             'per_ticket_type'    => [],
             'computed_at'        => time(),
