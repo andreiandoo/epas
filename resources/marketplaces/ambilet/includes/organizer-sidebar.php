@@ -261,8 +261,11 @@ window.addEventListener('load', async function() {
         // vanzare (PWA /organizator/scan*). Din orice pagina de dashboard e
         // redirectionat catre aplicatie si nu vede sidebar-ul. Owner-ul si
         // rolurile admin/manager NU sunt afectate.
+        // EXCEPTIE: organizatorii de tip 'leisure' au staff = operatori POS,
+        // care folosesc fluxul lor (leisure-pos / leisure_role='pos_cashier').
+        // Pentru ei NU aplicam redirect-ul (raman ca inainte).
         const teamRole = (orgData && orgData.team_member && orgData.team_member.role) || null;
-        if (teamRole === 'staff') {
+        if (teamRole === 'staff' && orgType !== 'leisure') {
             const currentPath = window.location.pathname.replace(/\/$/, '');
             const isScanPath = currentPath === '/organizator/scan' || currentPath.startsWith('/organizator/scan/');
             if (!isScanPath) {

@@ -559,10 +559,13 @@ const AmbiletAuth = {
         // back to the app. Owner + admin/manager roles are unaffected. The scan
         // pages use their own gate (ScanAuth) and never call this, so there is
         // no redirect loop.
+        // Exception: leisure organizers' staff are POS operators with their own
+        // flow (leisure-pos), so the scan-app redirect must NOT apply to them.
         try {
             const orgData = this.getOrganizerData();
             const teamRole = orgData && orgData.team_member && orgData.team_member.role;
-            if (teamRole === 'staff') {
+            const isLeisure = orgData && orgData.organizer_type === 'leisure';
+            if (teamRole === 'staff' && !isLeisure) {
                 const path = window.location.pathname.replace(/\/$/, '');
                 const isScanPath = path === '/organizator/scan' || path.startsWith('/organizator/scan/');
                 if (!isScanPath) {
