@@ -436,7 +436,7 @@ class LeisureController extends BaseController
             'visit_from' => 'nullable|date',
             'visit_to' => 'nullable|date|after_or_equal:visit_from',
             'status' => 'nullable|in:valid,used,cancelled,refunded',
-            'ticket_type_id' => 'nullable|integer',
+            'ticket_type_id' => 'nullable|string',
             'search' => 'nullable|string|max:100',
             'per_page' => 'nullable|integer|min:1|max:200',
             'page' => 'nullable|integer|min:1',
@@ -451,7 +451,11 @@ class LeisureController extends BaseController
         $perPage = (int) ($validated['per_page'] ?? 50);
         $search = $validated['search'] ?? null;
         $status = $validated['status'] ?? null;
-        $ticketTypeId = $validated['ticket_type_id'] ?? null;
+        // ticket_type_id supports multiple ids as a comma-separated list (e.g. "5,7").
+        $ticketTypeIds = [];
+        if (!empty($validated['ticket_type_id'])) {
+            $ticketTypeIds = array_values(array_filter(array_map('intval', explode(',', $validated['ticket_type_id']))));
+        }
         $visitFrom = isset($validated['visit_from']) ? Carbon::parse($validated['visit_from'])->toDateString() : null;
         $visitTo = isset($validated['visit_to']) ? Carbon::parse($validated['visit_to'])->toDateString() : null;
 
@@ -464,21 +468,26 @@ class LeisureController extends BaseController
 
         // Header filters (status / ticket type / visit-date / search) — applied to
         // BOTH the paginated list and the stats query so the cards match the view.
-        $applyFilters = function ($q) use ($status, $ticketTypeId, $visitFrom, $visitTo, $search) {
+        $applyFilters = function ($q) use ($status, $ticketTypeIds, $visitFrom, $visitTo, $search) {
             if ($status) {
                 $q->where('tickets.status', $status);
             }
-            if ($ticketTypeId) {
-                $q->where('tickets.ticket_type_id', $ticketTypeId);
+            if (!empty($ticketTypeIds)) {
+                $q->whereIn('tickets.ticket_type_id', $ticketTypeIds);
             }
-            // Leisure booking day lives in tickets.meta->visit_date (ISO
-            // 'YYYY-MM-DD'). Text comparison is correct for ISO dates and avoids
-            // ::date cast errors on empty/missing values.
-            if ($visitFrom) {
-                $q->whereRaw("tickets.meta->>'visit_date' >= ?", [$visitFrom]);
-            }
-            if ($visitTo) {
-                $q->whereRaw("tickets.meta->>'visit_date' <= ?", [$visitTo]);
+            // Visit day matches the SAME derivation shown in the table:
+            // meta.visit_date first, then the ticket type's valid_date. LEFT(...,10)
+            // + ::date keeps it robust against ISO strings carrying a time component
+            // and avoids cast errors on empty values (NULLIF -> null -> fallback).
+            if ($visitFrom || $visitTo) {
+                $visitExpr = "COALESCE(NULLIF(LEFT(tickets.meta->>'visit_date', 10), '')::date, "
+                    . "(select vt.valid_date::date from ticket_types vt where vt.id = tickets.ticket_type_id))";
+                if ($visitFrom) {
+                    $q->whereRaw("{$visitExpr} >= ?::date", [$visitFrom]);
+                }
+                if ($visitTo) {
+                    $q->whereRaw("{$visitExpr} <= ?::date", [$visitTo]);
+                }
             }
             if ($search) {
                 $q->where(function ($sq) use ($search) {

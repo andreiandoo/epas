@@ -77,15 +77,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <option value="cancelled">Anulat</option>
                     <option value="refunded">Restituit</option>
                 </select>
-                <select id="lv-f-type" class="px-3 py-2 text-sm bg-white border border-border rounded-lg">
-                    <option value="">Toate tipurile</option>
-                </select>
+                <div class="relative" id="lv-type-wrap">
+                    <button type="button" id="lv-type-btn" class="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-border rounded-lg hover:bg-slate-50">
+                        <span id="lv-type-label">Toate tipurile</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div id="lv-type-menu" class="absolute z-20 hidden p-2 mt-1 overflow-y-auto bg-white border shadow-lg w-60 max-h-64 border-border rounded-lg"></div>
+                </div>
                 <div class="flex items-center gap-1 text-xs text-muted">
                     <span class="font-semibold">Vizită:</span>
                     <input id="lv-f-visit-from" type="date" title="Data vizită de la" class="px-2 py-1.5 text-sm border border-border rounded-lg">
                     <span>–</span>
                     <input id="lv-f-visit-to" type="date" title="Data vizită până la" class="px-2 py-1.5 text-sm border border-border rounded-lg">
                 </div>
+                <button id="lv-reset" class="hidden px-3 py-2 text-xs font-medium border rounded-lg text-rose-600 bg-rose-50 border-rose-200 hover:bg-rose-100">✕ Resetează filtrele</button>
                 <button id="lv-export" class="px-3 py-2 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50">📥 Export CSV</button>
             </div>
             <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
@@ -195,24 +200,62 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         el.classList.toggle('hidden', allRows.length === 0);
     }
 
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     function populateTypes(types) {
-        const sel = $('lv-f-type');
-        (types || []).forEach(t => {
-            const o = document.createElement('option');
-            o.value = t.id;
-            o.textContent = t.name;
-            sel.appendChild(o);
-        });
+        const menu = $('lv-type-menu');
+        menu.innerHTML = (types || []).map(t => `
+            <label class="flex items-center gap-2 px-2 py-1.5 text-sm rounded cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" value="${t.id}" class="lv-type-cb rounded border-border text-primary">
+                <span>${escapeHtml(t.name)}</span>
+            </label>
+        `).join('') || '<div class="px-2 py-2 text-xs text-muted">Niciun tip de bilet.</div>';
+        menu.querySelectorAll('.lv-type-cb').forEach(cb => cb.addEventListener('change', () => {
+            updateTypeLabel();
+            updateResetBtn();
+            loadParticipants(true);
+        }));
+    }
+
+    function selectedTypeIds() {
+        return Array.from(document.querySelectorAll('#lv-type-menu .lv-type-cb:checked')).map(c => c.value);
+    }
+
+    function updateTypeLabel() {
+        const n = selectedTypeIds().length;
+        $('lv-type-label').textContent = n === 0 ? 'Toate tipurile' : (n + (n === 1 ? ' tip selectat' : ' tipuri selectate'));
     }
 
     function currentFilters() {
         return {
             status: $('lv-f-status').value || '',
-            ticket_type_id: $('lv-f-type').value || '',
+            ticket_type_id: selectedTypeIds().join(','),
             visit_from: $('lv-f-visit-from').value || '',
             visit_to: $('lv-f-visit-to').value || '',
             search: ($('lv-search').value || '').trim(),
         };
+    }
+
+    function filtersActive() {
+        const f = currentFilters();
+        return !!(f.status || f.ticket_type_id || f.visit_from || f.visit_to || f.search);
+    }
+
+    function updateResetBtn() {
+        $('lv-reset').classList.toggle('hidden', !filtersActive());
+    }
+
+    function resetFilters() {
+        $('lv-f-status').value = '';
+        document.querySelectorAll('#lv-type-menu .lv-type-cb').forEach(c => c.checked = false);
+        updateTypeLabel();
+        $('lv-f-visit-from').value = '';
+        $('lv-f-visit-to').value = '';
+        $('lv-search').value = '';
+        updateResetBtn();
+        loadParticipants(true);
     }
 
     function setRange(days) {
@@ -377,11 +420,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // not just the loaded rows), each resets to page 1.
         $('lv-search').addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => loadParticipants(true), 300);
+            searchTimer = setTimeout(() => { updateResetBtn(); loadParticipants(true); }, 300);
         });
-        ['lv-f-status', 'lv-f-type', 'lv-f-visit-from', 'lv-f-visit-to'].forEach(id => {
-            $(id).addEventListener('change', () => loadParticipants(true));
+        ['lv-f-status', 'lv-f-visit-from', 'lv-f-visit-to'].forEach(id => {
+            $(id).addEventListener('change', () => { updateResetBtn(); loadParticipants(true); });
         });
+        // Ticket-type multi-select dropdown open/close.
+        $('lv-type-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            $('lv-type-menu').classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!$('lv-type-wrap').contains(e.target)) $('lv-type-menu').classList.add('hidden');
+        });
+        $('lv-reset').addEventListener('click', resetFilters);
         // Infinite scroll — load the next page as the operator nears the bottom.
         window.addEventListener('scroll', maybeLoadMore, { passive: true });
         $('lv-export').addEventListener('click', exportCsv);
