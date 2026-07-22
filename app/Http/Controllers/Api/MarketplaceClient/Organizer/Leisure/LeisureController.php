@@ -433,6 +433,10 @@ class LeisureController extends BaseController
         $validated = $request->validate([
             'from' => 'nullable|date',
             'to' => 'nullable|date|after_or_equal:from',
+            'visit_from' => 'nullable|date',
+            'visit_to' => 'nullable|date|after_or_equal:visit_from',
+            'status' => 'nullable|in:valid,used,cancelled,refunded',
+            'ticket_type_id' => 'nullable|integer',
             'search' => 'nullable|string|max:100',
             'per_page' => 'nullable|integer|min:1|max:200',
             'page' => 'nullable|integer|min:1',
@@ -446,35 +450,57 @@ class LeisureController extends BaseController
             : Carbon::today()->endOfDay();
         $perPage = (int) ($validated['per_page'] ?? 50);
         $search = $validated['search'] ?? null;
+        $status = $validated['status'] ?? null;
+        $ticketTypeId = $validated['ticket_type_id'] ?? null;
+        $visitFrom = isset($validated['visit_from']) ? Carbon::parse($validated['visit_from'])->toDateString() : null;
+        $visitTo = isset($validated['visit_to']) ? Carbon::parse($validated['visit_to'])->toDateString() : null;
 
-        $query = \App\Models\Ticket::query()
-            ->whereHas('order', fn ($q) => $q
-                ->where('event_id', $eventModel->id)
-                ->whereIn('status', ['completed', 'paid'])
-                ->whereBetween('paid_at', [$from, $to]))
-            ->with([
-                'order:id,customer_name,customer_email,customer_phone,paid_at,status,total',
-                'ticketType:id,name,service_category,issuing_company,valid_date',
-            ]);
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('code', 'ilike', "%{$search}%")
-                  ->orWhere('barcode', 'ilike', "%{$search}%")
-                  ->orWhereHas('order', fn ($oq) => $oq
-                      ->where('customer_name', 'ilike', "%{$search}%")
-                      ->orWhere('customer_email', 'ilike', "%{$search}%"));
-            });
-        }
-
-        $paginator = $query->orderByDesc('id')->paginate($perPage);
-
-        // Aggregare stats (total, checked-in, no-show) — query separat pe acelasi filter
-        $statsQuery = \App\Models\Ticket::query()
+        // Base scope: paid/completed tickets for this event within the PAYMENT window.
+        $base = \App\Models\Ticket::query()
             ->whereHas('order', fn ($q) => $q
                 ->where('event_id', $eventModel->id)
                 ->whereIn('status', ['completed', 'paid'])
                 ->whereBetween('paid_at', [$from, $to]));
+
+        // Header filters (status / ticket type / visit-date / search) — applied to
+        // BOTH the paginated list and the stats query so the cards match the view.
+        $applyFilters = function ($q) use ($status, $ticketTypeId, $visitFrom, $visitTo, $search) {
+            if ($status) {
+                $q->where('tickets.status', $status);
+            }
+            if ($ticketTypeId) {
+                $q->where('tickets.ticket_type_id', $ticketTypeId);
+            }
+            // Leisure booking day lives in tickets.meta->visit_date (ISO
+            // 'YYYY-MM-DD'). Text comparison is correct for ISO dates and avoids
+            // ::date cast errors on empty/missing values.
+            if ($visitFrom) {
+                $q->whereRaw("tickets.meta->>'visit_date' >= ?", [$visitFrom]);
+            }
+            if ($visitTo) {
+                $q->whereRaw("tickets.meta->>'visit_date' <= ?", [$visitTo]);
+            }
+            if ($search) {
+                $q->where(function ($sq) use ($search) {
+                    $sq->where('code', 'ilike', "%{$search}%")
+                      ->orWhere('barcode', 'ilike', "%{$search}%")
+                      ->orWhereHas('order', fn ($oq) => $oq
+                          ->where('customer_name', 'ilike', "%{$search}%")
+                          ->orWhere('customer_email', 'ilike', "%{$search}%"));
+                });
+            }
+        };
+
+        $query = (clone $base)->with([
+            'order:id,customer_name,customer_email,customer_phone,paid_at,status,total',
+            'ticketType:id,name,service_category,issuing_company,valid_date',
+        ]);
+        $applyFilters($query);
+        $paginator = $query->orderByDesc('id')->paginate($perPage);
+
+        // Aggregare stats (total, checked-in, no-show) pe ACELASI filter.
+        $statsQuery = clone $base;
+        $applyFilters($statsQuery);
         $totalTickets = (clone $statsQuery)->count();
         $checkedIn = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
         $rate = $totalTickets > 0 ? round($checkedIn / $totalTickets * 100, 1) : 0;
@@ -491,6 +517,7 @@ class LeisureController extends BaseController
                 'customer_name' => $t->order->customer_name ?? null,
                 'customer_email' => $t->order->customer_email ?? null,
                 'ticket_type' => $t->ticketType->name ?? null,
+                'ticket_type_id' => $t->ticket_type_id,
                 'service_category' => $t->ticketType->service_category ?? 'access',
                 'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
                 'visit_date' => $visit,
@@ -498,6 +525,18 @@ class LeisureController extends BaseController
                 'checked_in_at' => optional($t->checked_in_at)->toIso8601String(),
             ];
         });
+
+        // Ticket types of this event — populates the "Tip bilet" filter dropdown.
+        $ticketTypes = $eventModel->ticketTypes()
+            ->orderBy('sort_order')
+            ->get(['id', 'name'])
+            ->map(fn ($tt) => [
+                'id' => $tt->id,
+                'name' => is_array($tt->name)
+                    ? ($tt->name['ro'] ?? $tt->name['en'] ?? (reset($tt->name) ?: ('#' . $tt->id)))
+                    : ($tt->name ?? ('#' . $tt->id)),
+            ])
+            ->values();
 
         return $this->success([
             'from' => $from->toDateString(),
@@ -509,6 +548,7 @@ class LeisureController extends BaseController
                 'rate' => $rate,
             ],
             'rows' => $rows,
+            'ticket_types' => $ticketTypes,
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
