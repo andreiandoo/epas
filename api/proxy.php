@@ -1939,6 +1939,10 @@ switch ($action) {
         if (isset($_GET['from'])) $params['from'] = $_GET['from'];
         if (isset($_GET['to'])) $params['to'] = $_GET['to'];
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['ticket_type_id'])) $params['ticket_type_id'] = $_GET['ticket_type_id'];
+        if (isset($_GET['visit_from'])) $params['visit_from'] = $_GET['visit_from'];
+        if (isset($_GET['visit_to'])) $params['visit_to'] = $_GET['visit_to'];
         if (isset($_GET['page'])) $params['page'] = (int) $_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = (int) $_GET['per_page'];
         $endpoint = '/organizer/events/' . $eventId . '/leisure/participants'
