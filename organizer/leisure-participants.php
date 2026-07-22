@@ -70,6 +70,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div class="bg-white border rounded-2xl border-border">
             <div class="px-5 py-4 border-b border-border flex flex-wrap items-center gap-3">
                 <input id="lv-search" type="text" placeholder="🔍 Caută după nume, email, cod bilet..." class="flex-1 min-w-[200px] px-3 py-2 text-sm border border-border rounded-lg">
+                <select id="lv-f-status" class="px-3 py-2 text-sm bg-white border border-border rounded-lg">
+                    <option value="">Toate statusurile</option>
+                    <option value="valid">Valid</option>
+                    <option value="used">Folosit</option>
+                    <option value="cancelled">Anulat</option>
+                    <option value="refunded">Restituit</option>
+                </select>
+                <select id="lv-f-type" class="px-3 py-2 text-sm bg-white border border-border rounded-lg">
+                    <option value="">Toate tipurile</option>
+                </select>
+                <div class="flex items-center gap-1 text-xs text-muted">
+                    <span class="font-semibold">Vizită:</span>
+                    <input id="lv-f-visit-from" type="date" title="Data vizită de la" class="px-2 py-1.5 text-sm border border-border rounded-lg">
+                    <span>–</span>
+                    <input id="lv-f-visit-to" type="date" title="Data vizită până la" class="px-2 py-1.5 text-sm border border-border rounded-lg">
+                </div>
                 <button id="lv-export" class="px-3 py-2 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50">📥 Export CSV</button>
             </div>
             <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
@@ -88,6 +104,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <tbody id="lv-rows" class="divide-y divide-border"></tbody>
                 </table>
             </div>
+            <div id="lv-loadmore" class="hidden p-4 text-center text-xs text-muted">
+                <div class="inline-block w-4 h-4 border-2 rounded-full border-primary border-t-transparent animate-spin align-middle"></div>
+                <span class="ml-2 align-middle">Se încarcă mai multe...</span>
+            </div>
+            <div id="lv-count" class="hidden px-5 py-3 text-xs border-t text-muted border-border"></div>
             <div id="lv-empty" class="hidden p-8 text-center text-muted">Niciun participant în perioada selectată.</div>
         </div>
 
@@ -96,12 +117,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <script>
 (function(){
     const $ = (id) => document.getElementById(id);
-    let currentRange = '7';
+    let currentRange = '30';
     let currentEventId = null;
     let currentFrom = null;
     let currentTo = null;
-    let allRows = [];
+    let allRows = [];          // accumulated across loaded pages (used by export)
     let searchTimer = null;
+    let currentPage = 1;
+    let lastPage = 1;
+    let loading = false;
+    let typesLoaded = false;
 
     function fmtDate(iso) {
         if (!iso) return '—';
@@ -136,15 +161,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return `<span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded ${m[0]} ${m[1]}">${m[2]}</span>`;
     }
 
-    function renderRows(rows) {
-        const tbody = $('lv-rows');
-        if (!rows || rows.length === 0) {
-            tbody.innerHTML = '';
-            $('lv-table-wrap').classList.add('hidden');
-            $('lv-empty').classList.remove('hidden');
-            return;
-        }
-        tbody.innerHTML = rows.map(r => `
+    function rowHtml(r) {
+        return `
             <tr class="hover:bg-slate-50">
                 <td class="px-5 py-3 font-mono text-xs">${r.code || r.barcode || '—'}</td>
                 <td class="px-5 py-3">
@@ -159,22 +177,42 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <td class="px-5 py-3">${statusBadge(r.status)}</td>
                 <td class="px-5 py-3 text-xs">${r.checked_in_at ? fmtDate(r.checked_in_at) : '<span class="text-muted">— neefectuat</span>'}</td>
             </tr>
-        `).join('');
-        $('lv-table-wrap').classList.remove('hidden');
-        $('lv-empty').classList.add('hidden');
+        `;
     }
 
-    function applyClientSearch() {
-        const q = ($('lv-search').value || '').trim().toLowerCase();
-        if (!q) return renderRows(allRows);
-        const filtered = allRows.filter(r =>
-            (r.code || '').toLowerCase().includes(q) ||
-            (r.barcode || '').toLowerCase().includes(q) ||
-            (r.customer_name || '').toLowerCase().includes(q) ||
-            (r.customer_email || '').toLowerCase().includes(q) ||
-            (r.ticket_type || '').toLowerCase().includes(q)
-        );
-        renderRows(filtered);
+    function appendRows(rows) {
+        $('lv-rows').insertAdjacentHTML('beforeend', rows.map(rowHtml).join(''));
+    }
+
+    function resetTable() {
+        $('lv-rows').innerHTML = '';
+        allRows = [];
+    }
+
+    function updateCount(total) {
+        const el = $('lv-count');
+        el.textContent = `Afișate ${allRows.length} din ${total}`;
+        el.classList.toggle('hidden', allRows.length === 0);
+    }
+
+    function populateTypes(types) {
+        const sel = $('lv-f-type');
+        (types || []).forEach(t => {
+            const o = document.createElement('option');
+            o.value = t.id;
+            o.textContent = t.name;
+            sel.appendChild(o);
+        });
+    }
+
+    function currentFilters() {
+        return {
+            status: $('lv-f-status').value || '',
+            ticket_type_id: $('lv-f-type').value || '',
+            visit_from: $('lv-f-visit-from').value || '',
+            visit_to: $('lv-f-visit-to').value || '',
+            search: ($('lv-search').value || '').trim(),
+        };
     }
 
     function setRange(days) {
@@ -196,26 +234,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const from = new Date(Date.now() - parseInt(days, 10) * 86400000);
             currentFrom = from.toISOString().slice(0, 10);
             currentTo = to.toISOString().slice(0, 10);
-            loadParticipants();
+            loadParticipants(true);
         }
     }
 
-    async function loadParticipants() {
-        $('lv-loading').classList.remove('hidden');
-        $('lv-table-wrap').classList.add('hidden');
-        $('lv-empty').classList.add('hidden');
-
+    async function loadParticipants(reset = true) {
+        if (loading) return;
         if (!currentEventId) {
             $('lv-loading').classList.add('hidden');
             $('lv-empty').textContent = 'Nu există un eveniment de tip Lacul / Locație de agrement asociat.';
             $('lv-empty').classList.remove('hidden');
             return;
         }
+        loading = true;
+        if (reset) {
+            currentPage = 1;
+            resetTable();
+            $('lv-loading').classList.remove('hidden');
+            $('lv-table-wrap').classList.add('hidden');
+            $('lv-empty').classList.add('hidden');
+            $('lv-count').classList.add('hidden');
+        } else {
+            $('lv-loadmore').classList.remove('hidden');
+        }
         try {
-            const params = {};
+            const f = currentFilters();
+            const params = { per_page: 200, page: currentPage };
             if (currentFrom) params.from = currentFrom;
             if (currentTo) params.to = currentTo;
-            params.per_page = 200;
+            if (f.status) params.status = f.status;
+            if (f.ticket_type_id) params.ticket_type_id = f.ticket_type_id;
+            if (f.visit_from) params.visit_from = f.visit_from;
+            if (f.visit_to) params.visit_to = f.visit_to;
+            if (f.search) params.search = f.search;
+
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/participants`, params);
             const data = res.data || {};
             const stats = data.stats || {};
@@ -223,15 +275,49 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-stat-checked').textContent = stats.checked_in || 0;
             $('lv-stat-rate').textContent = stats.rate || 0;
             $('lv-stat-noshow').textContent = stats.no_show || 0;
-            allRows = data.rows || [];
-            applyClientSearch();
+
+            if (!typesLoaded && Array.isArray(data.ticket_types)) {
+                populateTypes(data.ticket_types);
+                typesLoaded = true;
+            }
+
+            const meta = data.meta || {};
+            currentPage = meta.current_page || currentPage;
+            lastPage = meta.last_page || 1;
+
+            const rows = data.rows || [];
+            allRows = allRows.concat(rows);
+
+            if (allRows.length === 0) {
+                $('lv-empty').textContent = 'Niciun participant pentru filtrele selectate.';
+                $('lv-empty').classList.remove('hidden');
+                $('lv-table-wrap').classList.add('hidden');
+            } else {
+                appendRows(rows);
+                $('lv-table-wrap').classList.remove('hidden');
+                $('lv-empty').classList.add('hidden');
+            }
+            updateCount(meta.total != null ? meta.total : allRows.length);
         } catch (e) {
             console.error('[leisure-participants] load failed', e);
-            allRows = [];
-            $('lv-empty').textContent = 'Eroare la încărcarea datelor. Verifică consola.';
-            $('lv-empty').classList.remove('hidden');
+            if (reset) {
+                resetTable();
+                $('lv-empty').textContent = 'Eroare la încărcarea datelor. Verifică consola.';
+                $('lv-empty').classList.remove('hidden');
+            }
         } finally {
+            loading = false;
             $('lv-loading').classList.add('hidden');
+            $('lv-loadmore').classList.add('hidden');
+        }
+    }
+
+    function maybeLoadMore() {
+        if (loading || currentPage >= lastPage) return;
+        const nearBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 400);
+        if (nearBottom) {
+            currentPage += 1;
+            loadParticipants(false);
         }
     }
 
@@ -285,14 +371,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             currentFrom = f;
             currentTo = t;
             $('lv-range-label').textContent = `${f} → ${t}`;
-            loadParticipants();
+            loadParticipants(true);
         });
+        // Search + header filters are server-side now (they query the WHOLE set,
+        // not just the loaded rows), each resets to page 1.
         $('lv-search').addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(applyClientSearch, 150);
+            searchTimer = setTimeout(() => loadParticipants(true), 300);
         });
+        ['lv-f-status', 'lv-f-type', 'lv-f-visit-from', 'lv-f-visit-to'].forEach(id => {
+            $(id).addEventListener('change', () => loadParticipants(true));
+        });
+        // Infinite scroll — load the next page as the operator nears the bottom.
+        window.addEventListener('scroll', maybeLoadMore, { passive: true });
         $('lv-export').addEventListener('click', exportCsv);
-        setRange('7');
+        setRange('30');
     });
 })();
 </script>
