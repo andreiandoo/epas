@@ -48,8 +48,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-total">0</span> <span class="text-sm text-muted">RON</span></p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Bilete vândute</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Produse vândute</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-tickets">0</span></p>
+                <p class="mt-1 text-[10px] leading-tight text-muted">tranzacții — un pachet = 1 (nu persoane)</p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Comenzi</p>

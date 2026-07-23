@@ -57,10 +57,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
-                    <h2 class="mb-3 font-bold text-secondary">Participanți (total)</h2>
+                    <h2 class="mb-3 font-bold text-secondary">Participanți (persoane)</h2>
                     <div class="p-4 mb-3 text-center bg-teal-50 rounded-xl">
                         <p class="text-3xl font-extrabold text-teal-800 tabular-nums" id="ld-part-total">—</p>
-                        <p class="text-xs text-teal-700">bilete de acces (fără parcare/activitate/pachet-părinte)</p>
+                        <p class="text-xs text-teal-700">bilete de acces — pachetele se numără pe componente; fără parcare/activități</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="p-3 text-center rounded-xl bg-surface"><p class="text-xl font-bold text-secondary tabular-nums" id="ld-part-checked">—</p><p class="text-[11px] text-muted">Check-in</p></div>
