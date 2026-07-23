@@ -1018,8 +1018,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const byPay = Array.isArray(snap.by_payment) ? snap.by_payment : [];
         const byTt = Array.isArray(snap.by_ticket_type) ? snap.by_ticket_type : [];
         const PM = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
+        // Cash physically in the drawer to hand over + total taken by card.
+        const cashRev = (byPay.find(p => p.method === 'cash') || {}).revenue || 0;
+        const cardRev = (byPay.find(p => p.method === 'card') || {}).revenue || 0;
 
-        $('lv-cash-summary').innerHTML = `<div class="grid grid-cols-2 gap-3">
+        $('lv-cash-summary').innerHTML = `<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="p-3 border-2 border-amber-300 bg-amber-50 rounded-lg">
+                <p class="text-[10px] uppercase tracking-wider text-amber-700 font-bold">💵 Cash de predat</p>
+                <p class="text-lg font-extrabold text-amber-800">${fmtMoney(cashRev)} <span class="text-xs">RON</span></p>
+            </div>
+            <div class="p-3 border-2 border-sky-200 bg-sky-50 rounded-lg">
+                <p class="text-[10px] uppercase tracking-wider text-sky-700 font-bold">💳 Total card</p>
+                <p class="text-lg font-extrabold text-sky-800">${fmtMoney(cardRev)} <span class="text-xs">RON</span></p>
+            </div>
             <div class="p-3 bg-slate-50 rounded-lg">
                 <p class="text-[10px] uppercase tracking-wider text-muted font-semibold">Total încasat</p>
                 <p class="text-lg font-bold text-emerald-800">${fmtMoney(t.revenue || 0)} <span class="text-xs text-muted">RON</span></p>
@@ -1029,7 +1040,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-lg font-bold text-secondary">${t.orders || 0} · ${t.tickets || 0}</p>
             </div>
         </div>
-        <p class="text-[11px] text-muted mt-2">Deschisă: ${fmtTime(session.opened_at)} · Închisă: ${fmtTime(session.closed_at)} · Durată: ${session.duration_minutes || 0} min</p>`;
+        <p class="text-[11px] text-muted mt-2">Cash de predat = banii fizic în sertar. Cardul/online-ul intră electronic. Deschisă: ${fmtTime(session.opened_at)} · Închisă: ${fmtTime(session.closed_at)} · Durată: ${session.duration_minutes || 0} min</p>`;
 
         const payHtml = byPay.length ? byPay.map(p => `
             <div class="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
