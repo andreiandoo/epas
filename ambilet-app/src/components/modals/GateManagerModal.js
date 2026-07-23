@@ -20,6 +20,7 @@ import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
 import { getVenueGates, createVenueGate, updateVenueGate, deleteVenueGate } from '../../api/gates';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
+import { pickString } from '../../utils/pickString';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -314,9 +315,9 @@ export default function GateManagerModal({ visible, onClose }) {
   const [adding, setAdding] = useState(false);
 
   const venueId = selectedEvent?.venue_id;
-  const venueName = selectedEvent?.venue_name || selectedEvent?.venue?.name || '';
-  const venueCity = selectedEvent?.venue_city || selectedEvent?.venue?.city || '';
-  const venueAddress = selectedEvent?.venue_address || selectedEvent?.venue?.address || '';
+  const venueName = pickString(selectedEvent?.venue_name || selectedEvent?.venue?.name);
+  const venueCity = pickString(selectedEvent?.venue_city || selectedEvent?.venue?.city);
+  const venueAddress = pickString(selectedEvent?.venue_address || selectedEvent?.venue?.address);
 
   // Fetch gates when modal opens
   useEffect(() => {

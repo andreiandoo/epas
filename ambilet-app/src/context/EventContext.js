@@ -4,6 +4,7 @@ import { getParticipants } from '../api/participants';
 import { categorizeEvent, groupEventsByCategory } from '../utils/eventCategories';
 import { createReverbConnection } from '../api/reverb';
 import { useAuth } from './AuthContext';
+import { pickString } from '../utils/pickString';
 
 const EventContext = createContext(null);
 
@@ -116,6 +117,11 @@ export function EventProvider({ children }) {
   const COLOR_PALETTE = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
   const enrichTicketType = (t, i) => ({
     ...t,
+    // Ticket-type `name` on Ambilet legacy events is a translatable JSON
+    // ({en, ro}) that leaks through some backend endpoints unresolved.
+    // Coerce to a string here so every downstream <Text>{tt.name}</Text>
+    // (cart, picker, dashboard breakdown) is safe.
+    name: pickString(t.name, `Bilet ${i + 1}`),
     color: t.color || COLOR_PALETTE[i % COLOR_PALETTE.length],
     available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
     checked_in: t.checked_in ?? 0,
@@ -136,7 +142,12 @@ export function EventProvider({ children }) {
       check_in_rate: rawStats.check_in_rate ?? 0,
       online_count: rawStats.online_count ?? 0,
       door_count: rawStats.door_count ?? 0,
-      by_source_and_type: rawStats.by_source_and_type ?? { online: [], door: [] },
+      // Coerce ticket-type name to string per row — backend selects the raw
+      // (translatable) ticket_types.name column so it can arrive as {en, ro}.
+      by_source_and_type: {
+        online: (rawStats.by_source_and_type?.online || []).map(r => ({ ...r, name: pickString(r.name, 'Bilet') })),
+        door: (rawStats.by_source_and_type?.door || []).map(r => ({ ...r, name: pickString(r.name, 'Bilet') })),
+      },
       hourly_distribution: rawStats.hourly_distribution ?? [],
       peak_hour: rawStats.peak_hour ?? null,
       total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,

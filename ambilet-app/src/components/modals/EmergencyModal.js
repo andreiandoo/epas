@@ -11,6 +11,8 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
+import { reportEmergency } from '../../api/notifications';
+import { useApp } from '../../context/AppContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -168,6 +170,8 @@ function SuccessState() {
 
 export default function EmergencyModal({ visible, onClose }) {
   const [sent, setSent] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const { addNotification } = useApp();
   const closeTimerRef = useRef(null);
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
 
@@ -181,9 +185,37 @@ export default function EmergencyModal({ visible, onClose }) {
     }
   }, [visible]);
 
-  const handleReport = (option) => {
+  const handleReport = async (option) => {
+    if (reporting) return;
+    setReporting(true);
+
+    // Local notification for immediate feedback in the reporter's own
+    // panel — happens regardless of network. The `type: 'alert'` matches
+    // NotificationsPanel's icon map so it renders with the red alert icon.
+    try {
+      addNotification({
+        type: 'alert',
+        message: `Raport trimis: ${option.label}`,
+      });
+    } catch {}
+
+    // Server: creates a MarketplaceNotification row for the current
+    // organizer so admin/owner staff on other devices see the alert too.
+    // Fire-and-forget — the reporter isn't blocked by the request.
+    reportEmergency({
+      type: option.id,
+      title: `Urgență: ${option.label}`,
+      message: `Raportat din aplicație (secțiunea Raportează Problemă).`,
+      severity: option.severity === 'low' ? 'info' : option.severity,
+    }).catch(() => {
+      // Silent — the reporter already got local feedback + the emergency
+      // sheet closes on the timeout below. The alert isn't LOST — they can
+      // re-report from a different device or reach admin directly.
+    });
+
     setSent(true);
     closeTimerRef.current = setTimeout(() => {
+      setReporting(false);
       if (onClose) {
         onClose();
       }

@@ -432,11 +432,38 @@ export default function SalesScreen({ navigation }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
-  // Pending payment method — a single modal now gates BOTH cash and card
-  // sales. The operator confirms cash-in-hand or a settled POS transaction
-  // before the sale is written. Cancel clears the cart back to a clean
-  // slate (per operator request — avoids "accidentally left half a cart").
+  // Pending payment method — kept for the styled Card modal (see below).
+  // Cash uses a native Alert instead so it works regardless of which
+  // ScrollView tree is currently mounted, avoiding a subtle bug where the
+  // cart-view modal wasn't firing on some builds after the seating flow.
   const [pendingPayment, setPendingPayment] = useState(null); // 'cash' | 'card' | null
+
+  // Native confirm — swap to Alert.alert (works across all platforms and
+  // isn't affected by React tree mount ordering). Called on Cash tap AND
+  // Card tap; both go through the same path now. Anulează = wipe cart.
+  const confirmPayment = (method) => {
+    if (isProcessing) return;
+    const cancelAndClearCart = () => {
+      setPendingPayment(null);
+      setCartItems([]);
+      setPaymentMethod(null);
+      setSelectedSeatUids([]);
+      setSelectedSeatDetails([]);
+      setSeatingMapTicketTypeId?.(null);
+    };
+    const body = method === 'cash'
+      ? `Ai primit banii în numerar (${formatCurrency(total)})? Confirmă doar dacă suma e în mână.`
+      : `Suma de ${formatCurrency(total)} a fost încasată pe terminalul POS? Confirmă doar după ce tranzacția e aprobată.`;
+    Alert.alert(
+      'Confirmă încasarea banilor',
+      body,
+      [
+        { text: 'Anulează', style: 'cancel', onPress: cancelAndClearCart },
+        { text: 'Confirmă', onPress: () => processPayment(method) },
+      ],
+      { cancelable: true, onDismiss: () => {} }
+    );
+  };
   const [buyerEmail, setBuyerEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [lastPaymentAmount, setLastPaymentAmount] = useState(0);
@@ -905,7 +932,7 @@ export default function SalesScreen({ navigation }) {
                 styles.paymentButton,
                 paymentMethod === 'card' && styles.paymentButtonActive,
               ]}
-              onPress={() => !isProcessing && setPendingPayment('card')}
+              onPress={() => confirmPayment('card')}
               activeOpacity={0.7}
               disabled={isProcessing}
             >
@@ -938,7 +965,7 @@ export default function SalesScreen({ navigation }) {
                 styles.paymentButton,
                 paymentMethod === 'cash' && styles.paymentButtonActive,
               ]}
-              onPress={() => !isProcessing && setPendingPayment('cash')}
+              onPress={() => confirmPayment('cash')}
               activeOpacity={0.7}
               disabled={isProcessing}
             >
@@ -1010,54 +1037,9 @@ export default function SalesScreen({ navigation }) {
           </View>
         </ScrollView>
 
-        {/* Payment confirmation modal — gates BOTH cash and card sales.
-            The operator only completes the sale after the money is in
-            hand (cash) or the POS terminal cleared the tx (card). Cancel
-            clears the cart entirely — the operator wanted this so a
-            wrong-cart mistake doesn't linger through the next customer. */}
-        <Modal visible={pendingPayment !== null} transparent animationType="fade" onRequestClose={() => setPendingPayment(null)}>
-          <View style={styles.modalBackdrop}>
-            <View style={styles.cardConfirmCard}>
-              <Text style={styles.cardConfirmTitle}>Confirmă încasarea banilor</Text>
-              <Text style={styles.cardConfirmText}>
-                {pendingPayment === 'cash'
-                  ? 'Verifică că ai primit banii în numerar, apoi apasă Confirmă pentru a înregistra vânzarea.'
-                  : 'Verifică pe terminalul POS card că suma a fost încasată cu succes, apoi apasă Confirmă.'}
-              </Text>
-              <Text style={styles.cardConfirmAmount}>{formatCurrency(total)}</Text>
-              <View style={styles.cardConfirmButtons}>
-                <TouchableOpacity
-                  style={styles.cardConfirmCancel}
-                  onPress={() => {
-                    setPendingPayment(null);
-                    // Clear cart back to a clean slate. Operator asked for
-                    // this — a mis-tapped payment button shouldn't leave
-                    // the previous cart around for the next customer.
-                    setCartItems([]);
-                    setPaymentMethod(null);
-                    setSelectedSeatUids([]);
-                    setSelectedSeatDetails([]);
-                    setSeatingMapTicketTypeId?.(null);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.cardConfirmCancelText}>Anulează</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cardConfirmOk}
-                  onPress={() => {
-                    const method = pendingPayment;
-                    setPendingPayment(null);
-                    if (method) processPayment(method);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.cardConfirmOkText}>Confirmă</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* Confirmation dialog is now handled via Alert.alert (see
+            confirmPayment above) so it works uniformly regardless of
+            which view branch is currently mounted. */}
 
         {/* Payment Success Overlay */}
         {showPaymentSuccess && (

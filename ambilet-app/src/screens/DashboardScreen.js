@@ -482,8 +482,8 @@ function OnlineDoorSection({ stats }) {
             onPress={() => toggle('online')}
             activeOpacity={0.85}
           >
-            <Text style={styles.odSegLabel}>Online</Text>
-            <Text style={styles.odSegCount}>
+            <Text style={[styles.odSegLabel, styles.odSegLabelOnline]}>Online</Text>
+            <Text style={[styles.odSegCount, styles.odSegCountOnline]}>
               {onlineCount.toLocaleString()} ({onlinePct}%)
             </Text>
           </TouchableOpacity>
@@ -499,8 +499,12 @@ function OnlineDoorSection({ stats }) {
             onPress={() => toggle('door')}
             activeOpacity={0.85}
           >
-            <Text style={styles.odSegLabel}>La ușă</Text>
-            <Text style={styles.odSegCount}>
+            {/* Door segment anchors its label to the right edge so a
+                skinny door slice still shows the label at the end of the
+                bar (matches the mockup). Dark text on rose bg because
+                white was invisible on light pink. */}
+            <Text style={[styles.odSegLabel, styles.odSegLabelDoor]}>La ușă</Text>
+            <Text style={[styles.odSegCount, styles.odSegCountDoor]}>
               {doorCount.toLocaleString()} ({doorPct}%)
             </Text>
           </TouchableOpacity>
@@ -521,7 +525,9 @@ function OnlineDoorSection({ stats }) {
               return (
                 <View key={`${expanded}-${row.ticket_type_id}`} style={styles.odRow}>
                   <View style={styles.odRowHeader}>
-                    <Text style={styles.odRowLabel} numberOfLines={1}>{row.name}</Text>
+                    <Text style={styles.odRowLabel} numberOfLines={1}>
+                      {pickString(row.name, 'Bilet')}
+                    </Text>
                     <Text style={styles.odRowValue}>{row.sold_count.toLocaleString()}</Text>
                   </View>
                   <View style={styles.odRowBarBg}>
@@ -862,7 +868,7 @@ function TicketSalesByTypeModal({ visible, onClose, ticketTypes, onRefresh }) {
                 <View key={tt.id} style={styles.ttBreakdownCard}>
                   <View style={styles.ttBreakdownHeader}>
                     <View style={[styles.ttBreakdownDot, { backgroundColor: tt.color || colors.purple }]} />
-                    <Text style={styles.ttBreakdownName} numberOfLines={1}>{tt.name}</Text>
+                    <Text style={styles.ttBreakdownName} numberOfLines={1}>{pickString(tt.name, 'Bilet')}</Text>
                     <Text style={styles.ttBreakdownPrice}>{formatCurrency(tt.price)}</Text>
                   </View>
                   <View style={styles.ttBreakdownNumbers}>
@@ -933,7 +939,7 @@ function RemainingByTypeModal({ visible, onClose, ticketTypes, onRefresh }) {
                 <View key={tt.id} style={styles.ttBreakdownCard}>
                   <View style={styles.ttBreakdownHeader}>
                     <View style={[styles.ttBreakdownDot, { backgroundColor: tt.color || colors.purple }]} />
-                    <Text style={styles.ttBreakdownName} numberOfLines={1}>{tt.name}</Text>
+                    <Text style={styles.ttBreakdownName} numberOfLines={1}>{pickString(tt.name, 'Bilet')}</Text>
                   </View>
                   <View style={styles.ttBreakdownNumbers}>
                     <Text style={[styles.ttBreakdownSold, { color: colors.green }]}>{checkedIn} intrați</Text>
@@ -1145,8 +1151,11 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
   const startsAt = selectedEvent?.starts_at || selectedEvent?.event_date || selectedEvent?.date || null;
   const formattedEventDate = formatEventDate(startsAt);
   const countdown = useEventCountdown(startsAt);
-  const venueName = selectedEvent?.venue_name || selectedEvent?.location || '';
-  const venueCity = selectedEvent?.venue_city || selectedEvent?.city || '';
+  // Every venue-flavored field can be a translatable JSON object when the
+  // backend eager-loads the venue relation without resolving locale. Coerce
+  // via pickString so rendering never crashes with "Objects are not valid".
+  const venueName = pickString(selectedEvent?.venue_name || selectedEvent?.venue?.name || selectedEvent?.location);
+  const venueCity = pickString(selectedEvent?.venue_city || selectedEvent?.venue?.city || selectedEvent?.city);
   const venueLine = venueCity ? (venueName ? `${venueName}, ${venueCity}` : venueCity) : venueName;
   const {
     shiftStartTime,
@@ -1857,14 +1866,29 @@ const styles = StyleSheet.create({
   odSegLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   odSegCount: {
     fontSize: 12,
-    color: colors.white,
     marginTop: 2,
+  },
+  odSegLabelOnline: {
+    color: colors.white,
+    textAlign: 'left',
+  },
+  odSegCountOnline: {
+    color: colors.white,
+    textAlign: 'left',
+  },
+  odSegLabelDoor: {
+    // Dark text — rose (#F5C7CE) is too light for white to be legible.
+    color: '#5C0D13',
+    textAlign: 'right',
+  },
+  odSegCountDoor: {
+    color: '#5C0D13',
+    textAlign: 'right',
   },
   odExpand: {
     marginTop: 12,
