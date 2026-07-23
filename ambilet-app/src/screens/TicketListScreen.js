@@ -314,7 +314,7 @@ export default function TicketListScreen({ onClose, onCheckInSuccess }) {
           onPress={onClose}
           activeOpacity={0.7}
         >
-          <CloseIcon size={22} color={colors.white} />
+          <CloseIcon size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <TicketIcon size={20} color={colors.purple} />

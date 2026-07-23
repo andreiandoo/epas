@@ -314,10 +314,11 @@ function TicketTypeCard({ ticket, onAdd }) {
         >
           {isSeated ? (
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M9 18l6-6-6-6" stroke={colors.white} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Dark red on the pink bg — white was invisible on colors.purpleLight. */}
+              <Path d="M9 18l6-6-6-6" stroke={colors.purple} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           ) : (
-            <PlusIcon size={18} color={colors.white} />
+            <PlusIcon size={18} color={colors.purple} />
           )}
         </TouchableOpacity>
       )}
@@ -406,7 +407,7 @@ function CartItemRow({ item, onUpdateQuantity, hideControls, seats }) {
             onPress={() => onUpdateQuantity(item.id, item.quantity + 1)}
             activeOpacity={0.7}
           >
-            <PlusIcon size={16} color={colors.white} />
+            <PlusIcon size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       )}
@@ -438,31 +439,26 @@ export default function SalesScreen({ navigation }) {
   // cart-view modal wasn't firing on some builds after the seating flow.
   const [pendingPayment, setPendingPayment] = useState(null); // 'cash' | 'card' | null
 
-  // Native confirm — swap to Alert.alert (works across all platforms and
-  // isn't affected by React tree mount ordering). Called on Cash tap AND
-  // Card tap; both go through the same path now. Anulează = wipe cart.
+  // Styled confirmation — a proper modal instead of the OS Alert (nicer
+  // typography + AmBilet colours). Renders at the TOP LEVEL of the tree
+  // (see PaymentConfirmModal below in the return) so it doesn't depend on
+  // which view branch is currently mounted. Anulează = wipe cart.
   const confirmPayment = (method) => {
     if (isProcessing) return;
-    const cancelAndClearCart = () => {
-      setPendingPayment(null);
-      setCartItems([]);
-      setPaymentMethod(null);
-      setSelectedSeatUids([]);
-      setSelectedSeatDetails([]);
-      setSeatingMapTicketTypeId?.(null);
-    };
-    const body = method === 'cash'
-      ? `Ai primit banii în numerar (${formatCurrency(total)})? Confirmă doar dacă suma e în mână.`
-      : `Suma de ${formatCurrency(total)} a fost încasată pe terminalul POS? Confirmă doar după ce tranzacția e aprobată.`;
-    Alert.alert(
-      'Confirmă încasarea banilor',
-      body,
-      [
-        { text: 'Anulează', style: 'cancel', onPress: cancelAndClearCart },
-        { text: 'Confirmă', onPress: () => processPayment(method) },
-      ],
-      { cancelable: true, onDismiss: () => {} }
-    );
+    setPendingPayment(method);
+  };
+  const cancelPendingPayment = () => {
+    setPendingPayment(null);
+    setCartItems([]);
+    setPaymentMethod(null);
+    setSelectedSeatUids([]);
+    setSelectedSeatDetails([]);
+    setSeatingMapTicketTypeId?.(null);
+  };
+  const acceptPendingPayment = () => {
+    const method = pendingPayment;
+    setPendingPayment(null);
+    if (method) processPayment(method);
   };
   const [buyerEmail, setBuyerEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -862,7 +858,7 @@ export default function SalesScreen({ navigation }) {
             }}
             activeOpacity={0.7}
           >
-            <ArrowLeftIcon size={22} color={colors.white} />
+            <ArrowLeftIcon size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.cartTitle}>
             {selectedSeatUids.length > 0 ? 'Locuri Selectate' : 'Coș'}
@@ -1037,9 +1033,53 @@ export default function SalesScreen({ navigation }) {
           </View>
         </ScrollView>
 
-        {/* Confirmation dialog is now handled via Alert.alert (see
-            confirmPayment above) so it works uniformly regardless of
-            which view branch is currently mounted. */}
+        {/* Styled payment confirmation modal. Rendered in the cart-view
+            branch AND at the top-level (see the second render below) so
+            it's mounted no matter which view is active when the operator
+            taps a payment button. `statusBarTranslucent` keeps it above
+            the Android edge-to-edge system chrome. */}
+        <Modal
+          visible={pendingPayment !== null}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={cancelPendingPayment}
+        >
+          <View style={styles.payConfirmBackdrop}>
+            <View style={styles.payConfirmCard}>
+              <View style={styles.payConfirmIconWrap}>
+                {pendingPayment === 'cash' ? (
+                  <CashIcon size={30} color={colors.green} />
+                ) : (
+                  <CreditCardIcon size={30} color={colors.purple} />
+                )}
+              </View>
+              <Text style={styles.payConfirmTitle}>Confirmă încasarea</Text>
+              <Text style={styles.payConfirmSubtitle}>
+                {pendingPayment === 'cash'
+                  ? 'Ai primit banii cash? Confirmă doar dacă suma e în mână.'
+                  : 'Verifică pe terminalul POS că tranzacția a fost aprobată.'}
+              </Text>
+              <Text style={styles.payConfirmAmount}>{formatCurrency(total)}</Text>
+              <View style={styles.payConfirmActions}>
+                <TouchableOpacity
+                  style={styles.payConfirmCancel}
+                  onPress={cancelPendingPayment}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.payConfirmCancelText}>Anulează</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.payConfirmOk}
+                  onPress={acceptPendingPayment}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.payConfirmOkText}>Confirmă</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Payment Success Overlay */}
         {showPaymentSuccess && (
@@ -1327,6 +1367,44 @@ export default function SalesScreen({ navigation }) {
         onConfirm={handleSeatingConfirm}
         onClose={() => { setShowSeatingMap(false); setSeatingMapTicketTypeId(null); }}
       />
+
+      {/* Mirror the payment confirmation modal in this branch too so a
+          rapid view-switch (cart → tickets) between tap and confirm
+          doesn't unmount it. Same state, same handlers. */}
+      <Modal
+        visible={pendingPayment !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={cancelPendingPayment}
+      >
+        <View style={styles.payConfirmBackdrop}>
+          <View style={styles.payConfirmCard}>
+            <View style={styles.payConfirmIconWrap}>
+              {pendingPayment === 'cash' ? (
+                <CashIcon size={30} color={colors.green} />
+              ) : (
+                <CreditCardIcon size={30} color={colors.purple} />
+              )}
+            </View>
+            <Text style={styles.payConfirmTitle}>Confirmă încasarea</Text>
+            <Text style={styles.payConfirmSubtitle}>
+              {pendingPayment === 'cash'
+                ? 'Ai primit banii cash? Confirmă doar dacă suma e în mână.'
+                : 'Verifică pe terminalul POS că tranzacția a fost aprobată.'}
+            </Text>
+            <Text style={styles.payConfirmAmount}>{formatCurrency(total)}</Text>
+            <View style={styles.payConfirmActions}>
+              <TouchableOpacity style={styles.payConfirmCancel} onPress={cancelPendingPayment} activeOpacity={0.7}>
+                <Text style={styles.payConfirmCancelText}>Anulează</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.payConfirmOk} onPress={acceptPendingPayment} activeOpacity={0.85}>
+                <Text style={styles.payConfirmOkText}>Confirmă</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1904,6 +1982,97 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  // Payment confirmation modal (styled — replaces the OS Alert).
+  payConfirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,10,10,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  payConfirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 380,
+    alignItems: 'center',
+    shadowColor: '#140A0A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    elevation: 16,
+  },
+  payConfirmIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  payConfirmTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.2,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  payConfirmSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 18,
+  },
+  payConfirmAmount: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.purple,
+    letterSpacing: -0.5,
+    marginBottom: 20,
+  },
+  payConfirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  payConfirmCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payConfirmCancelText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  payConfirmOk: {
+    flex: 1.4,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: colors.purple,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.purple,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  payConfirmOkText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
   cardConfirmCard: {
     backgroundColor: colors.surface,
     borderRadius: 16,
@@ -2014,13 +2183,18 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.textPrimary,
+    // Overlay bg is dark (rgba(10,10,15,0.95)) regardless of theme, so the
+    // title must be light. Was using colors.textPrimary which is dark in
+    // light mode → invisible on the near-black overlay.
+    color: colors.white,
     marginBottom: 8,
   },
   successAmount: {
     fontSize: 32,
     fontWeight: '700',
-    color: colors.green,
+    // colors.green retunes to a darker green in light mode — bump the
+    // brightness so it stays readable on the dark overlay.
+    color: '#7CF29A',
     marginBottom: 40,
   },
   sendEmailButton: {
@@ -2062,7 +2236,8 @@ const styles = StyleSheet.create({
   },
   qrCodeDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
+    // Overlay is dark — bright translucent white keeps the copy readable.
+    color: 'rgba(255,255,255,0.78)',
     textAlign: 'center',
     marginBottom: 28,
     lineHeight: 20,

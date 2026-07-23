@@ -1,6 +1,16 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Vibration } from 'react-native';
 import { getParticipants, checkinByBarcode } from '../api/participants';
+
+// expo-av is optional — we lazy-require so the module is a silent no-op
+// if the native side isn't linked (dev without prebuild).
+let Audio = null;
+try {
+  Audio = require('expo-av').Audio;
+} catch (e) {
+  Audio = null;
+}
 
 const AppContext = createContext(null);
 
@@ -253,6 +263,39 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  // Lazy-load a single Audio.Sound instance for notification chimes so we
+  // don't recreate it on every incoming notification (would spike memory).
+  // Falls back silently if expo-av isn't linked (dev without prebuild).
+  const notificationSoundRef = useRef(null);
+  const loadNotificationSound = useCallback(async () => {
+    if (!Audio || notificationSoundRef.current) return notificationSoundRef.current;
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/warning.mp3'),
+        { volume: 0.9 },
+      );
+      notificationSoundRef.current = sound;
+      return sound;
+    } catch (e) {
+      return null;
+    }
+  }, []);
+  useEffect(() => {
+    return () => {
+      // Release audio when the provider unmounts (logout / hot reload)
+      try { notificationSoundRef.current?.unloadAsync(); } catch {}
+      notificationSoundRef.current = null;
+    };
+  }, []);
+  const playNotificationSound = useCallback(async () => {
+    // Respect the operator's Scanner "Efecte Sonore" toggle — that
+    // preference already governs every other in-app sound cue.
+    if (!soundEffects) return;
+    const sound = await loadNotificationSound();
+    if (!sound) return;
+    try { await sound.replayAsync(); } catch {}
+  }, [soundEffects, loadNotificationSound]);
+
   const addNotification = (notification) => {
     setNotifications(prev => [{
       id: Date.now(),
@@ -260,6 +303,14 @@ export function AppProvider({ children }) {
       time: 'Just now',
       unread: true,
     }, ...prev]);
+    // Fire-and-forget audio + haptic. Alert-type notifications get a
+    // stronger vibration pattern; info/success stay subtle so a normal
+    // "sale confirmed" doesn't feel emergency-loud.
+    playNotificationSound();
+    if (vibrationFeedback) {
+      const heavy = notification?.type === 'alert';
+      try { Vibration.vibrate(heavy ? [0, 120, 80, 120] : 60); } catch {}
+    }
   };
 
   const markAllRead = () => {

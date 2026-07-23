@@ -13,6 +13,7 @@ import { colors } from '../../theme/colors';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 import { reportEmergency } from '../../api/notifications';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -172,6 +173,22 @@ export default function EmergencyModal({ visible, onClose }) {
   const [sent, setSent] = useState(false);
   const [reporting, setReporting] = useState(false);
   const { addNotification } = useApp();
+  const { user, userRole } = useAuth();
+
+  // Reporter identity — team member name if the operator is on a shift
+  // account, otherwise fall back to the owner-side user name. Gate label
+  // may be a string (assigned_gate) or an id — surface either.
+  const reporterName = user?.team_member?.name || user?.name || 'Operator';
+  const reporterRoleLabel = userRole === 'owner' ? 'Proprietar'
+    : userRole === 'admin' ? 'Admin'
+    : userRole === 'manager' ? 'Manager'
+    : userRole === 'staff' ? 'Staff'
+    : userRole;
+  const reporterGate = user?.assigned_gate || user?.team_member?.gate_name || null;
+  const reporterSuffix = [
+    reporterName,
+    reporterGate ? `poarta ${reporterGate}` : null,
+  ].filter(Boolean).join(' · ');
   const closeTimerRef = useRef(null);
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
 
@@ -195,17 +212,19 @@ export default function EmergencyModal({ visible, onClose }) {
     try {
       addNotification({
         type: 'alert',
-        message: `Raport trimis: ${option.label}`,
+        message: `${option.label} — raportat de ${reporterSuffix}`,
       });
     } catch {}
 
     // Server: creates a MarketplaceNotification row for the current
     // organizer so admin/owner staff on other devices see the alert too.
-    // Fire-and-forget — the reporter isn't blocked by the request.
+    // Reporter identity is embedded in the message so the notifications
+    // panel (which just renders `title`/`message`) surfaces who raised
+    // the alert and from which gate without a schema change.
     reportEmergency({
       type: option.id,
       title: `Urgență: ${option.label}`,
-      message: `Raportat din aplicație (secțiunea Raportează Problemă).`,
+      message: `Raportat de ${reporterName} (${reporterRoleLabel})${reporterGate ? ` — poarta ${reporterGate}` : ''}.`,
       severity: option.severity === 'low' ? 'info' : option.severity,
     }).catch(() => {
       // Silent — the reporter already got local feedback + the emergency
