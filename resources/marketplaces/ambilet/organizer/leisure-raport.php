@@ -326,7 +326,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return `<div class="mb-3">
                 <div class="flex justify-between text-sm mb-1">
                     <span class="font-semibold text-${color}-800">${label}</span>
-                    <span class="text-muted">${r.orders} comenzi · ${r.tickets} bilete · <strong class="text-${color}-700">${fmtMoney(r.revenue)} RON</strong></span>
+                    <span class="text-muted">${r.orders} comenzi · ${r.tickets} bilete · <strong class="text-${color}-700">${fmtMoney(r.revenue)} RON</strong> · Comision AmBilet: <strong class="text-blue-700">${fmtMoney(r.commission || 0)} RON</strong></span>
                 </div>
                 <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-${color}-500" style="width:${pct}%"></div></div>
                 <div class="text-[10px] text-muted mt-0.5 text-right">${pct}% din total</div>
@@ -429,7 +429,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return `<div class="mb-3">
                 <div class="flex justify-between text-sm mb-1">
                     <span class="font-semibold" style="color:${meta.hex}">${meta.label}</span>
-                    <span class="text-muted">${r.orders} comenzi · ${r.tickets} bilete · <strong style="color:${meta.hex}">${fmtMoney(rev)} RON</strong></span>
+                    <span class="text-muted">${r.orders} comenzi · ${r.tickets} bilete · <strong style="color:${meta.hex}">${fmtMoney(rev)} RON</strong> · Comision AmBilet: <strong class="text-blue-700">${fmtMoney(r.commission || 0)} RON</strong></span>
                 </div>
                 <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full" style="width:${pct}%;background:${meta.hex}"></div></div>
                 <div class="text-[10px] text-muted mt-0.5 text-right">${pct}% din total</div>

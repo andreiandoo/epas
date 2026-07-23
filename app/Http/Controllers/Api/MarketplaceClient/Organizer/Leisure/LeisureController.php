@@ -460,17 +460,29 @@ class LeisureController extends BaseController
         $visitTo = isset($validated['visit_to']) ? Carbon::parse($validated['visit_to'])->toDateString() : null;
 
         // Base scope: paid/completed tickets for this event within the PAYMENT window.
+        // PARTICIPANTS = only "access" tickets (service_category NULL or 'access').
+        // This deliberately excludes:
+        //   - package umbrella tickets (service_category='package') — e.g. a
+        //     "Familie 2+1" buy emits 1 umbrella + its access components; we count
+        //     only the components (the actual people), never the umbrella;
+        //   - parking / activity / rental / extra tickets (not people).
         $base = \App\Models\Ticket::query()
             ->whereHas('order', fn ($q) => $q
                 ->where('event_id', $eventModel->id)
                 ->whereIn('status', ['completed', 'paid'])
-                ->whereBetween('paid_at', [$from, $to]));
+                ->whereBetween('paid_at', [$from, $to]))
+            ->whereHas('ticketType', fn ($q) => $q->byServiceCategory('access'));
 
         // Header filters (status / ticket type / visit-date / search) — applied to
         // BOTH the paginated list and the stats query so the cards match the view.
         $applyFilters = function ($q) use ($status, $ticketTypeIds, $visitFrom, $visitTo, $search) {
             if ($status) {
                 $q->where('tickets.status', $status);
+            } else {
+                // Default: only active tickets count as participants (a cancelled
+                // or refunded ticket is not a person on site). An explicit status
+                // filter (e.g. 'cancelled') still overrides this.
+                $q->whereIn('tickets.status', ['valid', 'used']);
             }
             if (!empty($ticketTypeIds)) {
                 $q->whereIn('tickets.ticket_type_id', $ticketTypeIds);
@@ -536,7 +548,9 @@ class LeisureController extends BaseController
         });
 
         // Ticket types of this event — populates the "Tip bilet" filter dropdown.
+        // Only access types (people), matching the participants scope above.
         $ticketTypes = $eventModel->ticketTypes()
+            ->byServiceCategory('access')
             ->orderBy('sort_order')
             ->get(['id', 'name'])
             ->map(fn ($tt) => [
