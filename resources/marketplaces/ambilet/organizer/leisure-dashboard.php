@@ -3,218 +3,292 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Dashboard live';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'leisure_dashboard';
+$headExtra = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
 $cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
+
 <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
-    <main class="flex-1 p-4 lg:p-8">
-        <!-- ===== HERO ===== -->
-        <section class="relative mb-6 overflow-hidden shadow-lg rounded-3xl"
-                 style="background:linear-gradient(135deg,#064e3b 0%,#065f46 55%,#0f766e 100%);">
-            <div class="absolute inset-0 opacity-40" style="background:radial-gradient(1000px 260px at 85% -20%, rgba(16,185,129,.55), transparent 60%);"></div>
-            <div class="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-8">
-                <div class="min-w-0">
-                    <span class="inline-flex items-center gap-2 px-3 py-1 mb-2 text-[11px] font-bold tracking-wide text-white uppercase rounded-full bg-white/10 backdrop-blur">
-                        <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-emerald-300"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-300"></span></span>
-                        Live
-                    </span>
-                    <h1 class="text-2xl font-extrabold text-white truncate lg:text-3xl" id="lv-event-name">Dashboard live</h1>
-                    <p class="mt-1 text-sm text-emerald-100/80">Snapshot real-time · actualizare la 10s · ultimul refresh: <span id="lv-last-refresh">—</span></p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <a id="lv-public-link" href="#" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                        Pagină publică
-                    </a>
-                    <a href="/organizator/leisure-pos" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-emerald-900 transition-all bg-white rounded-xl hover:bg-emerald-50">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Emite bilete
-                    </a>
-                </div>
-            </div>
-        </section>
 
-        <!-- Stats grid -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="p-5 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Vândut azi</p>
-                <p class="text-3xl font-bold text-secondary"><span id="lv-stat-sold">0</span></p>
-                <p class="text-xs text-muted mt-1">bilete</p>
-            </div>
-            <div class="p-5 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Scanat azi</p>
-                <p class="text-3xl font-bold text-secondary"><span id="lv-stat-scanned">0</span></p>
-                <p class="text-xs text-muted mt-1">check-in-uri</p>
-            </div>
-            <div class="p-5 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Ocupare curentă</p>
-                <p class="text-3xl font-bold text-emerald-600"><span id="lv-stat-occupancy">0</span></p>
-                <p class="text-xs text-muted mt-1">persoane în locație</p>
-            </div>
-            <div class="p-5 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Venit azi</p>
-                <p class="text-3xl font-bold text-secondary"><span id="lv-stat-revenue">0</span> <span class="text-sm text-muted">RON</span></p>
-                <p class="text-xs text-muted mt-1">total brut</p>
-            </div>
+    <main class="flex-1 p-3 sm:p-4 lg:p-8">
+        <div class="w-full mx-auto space-y-5 lg:space-y-7" style="max-width:1500px;">
+
+            <div id="ld-error" class="hidden p-4 text-sm border rounded-xl bg-rose-50 border-rose-200 text-rose-900"></div>
+
+            <!-- ===== HERO ===== -->
+            <section class="relative overflow-hidden shadow-lg rounded-3xl"
+                     style="background:linear-gradient(135deg,#064e3b 0%,#065f46 55%,#0f766e 100%);">
+                <div class="absolute inset-0 opacity-40" style="background:radial-gradient(1000px 260px at 85% -20%, rgba(16,185,129,.55), transparent 60%);"></div>
+                <div class="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+                    <div class="min-w-0">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 mb-2 text-[11px] font-bold tracking-wide text-white uppercase rounded-full bg-white/10 backdrop-blur">
+                            <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-emerald-300"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-300"></span></span>
+                            Live
+                        </span>
+                        <h1 class="text-2xl font-extrabold text-white truncate lg:text-3xl" id="lv-event-name">Dashboard live</h1>
+                        <p class="mt-1 text-sm text-emerald-100/80">Snapshot real-time · actualizare la 20s · ultimul refresh: <span id="lv-last-refresh">—</span></p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a id="lv-public-link" href="#" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            Pagină publică
+                        </a>
+                        <a href="/organizator/leisure-pos" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-emerald-900 transition-all bg-white rounded-xl hover:bg-emerald-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Emite bilete
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== CASĂ (cash drawer) ===== -->
+            <section id="ld-casa" class="overflow-hidden border shadow-sm rounded-2xl border-border">
+                <!-- filled by JS -->
+            </section>
+
+            <!-- ===== LIVE KPI ===== -->
+            <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-emerald-500/10">🎟️</div>
+                    <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-sold">—</p><p class="mt-1 text-xs truncate text-muted">Bilete azi</p></div>
+                </div>
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-cyan-500/10">✅</div>
+                    <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-scanned">—</p><p class="mt-1 text-xs truncate text-muted">Check-in azi</p></div>
+                </div>
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-amber-500/10">💰</div>
+                    <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-revenue">—</p><p class="mt-1 text-xs truncate text-muted">Venituri azi</p></div>
+                </div>
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-indigo-500/10">🧾</div>
+                    <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-orders">—</p><p class="mt-1 text-xs truncate text-muted">Comenzi azi</p></div>
+                </div>
+                <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-teal-500/10">👥</div>
+                    <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-occupancy">—</p><p class="mt-1 text-xs truncate text-muted">Prezenți acum</p></div>
+                </div>
+            </section>
+
+            <!-- ===== SALES CHART + PARTICIPANTS ===== -->
+            <section class="grid gap-5 lg:grid-cols-3">
+                <div class="p-5 bg-white border shadow-sm rounded-2xl border-border lg:col-span-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <div><h2 class="font-bold text-secondary">Vânzări — ultimele 30 zile</h2><p class="text-xs text-muted">Venituri (RON) și bilete pe zi</p></div>
+                    </div>
+                    <div style="height:280px;position:relative;"><canvas id="ld-sales-chart"></canvas>
+                        <div id="ld-sales-empty" class="absolute inset-0 items-center justify-center hidden text-sm text-muted">Nicio vânzare în perioadă</div>
+                    </div>
+                </div>
+                <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
+                    <h2 class="mb-3 font-bold text-secondary">Participanți (persoane)</h2>
+                    <div class="p-4 mb-3 text-center bg-teal-50 rounded-xl">
+                        <p class="text-3xl font-extrabold text-teal-800 tabular-nums" id="ld-part-total">—</p>
+                        <p class="text-xs text-teal-700">bilete de acces — pachetele se numără pe componente; fără parcare/activități</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3 text-center rounded-xl bg-surface"><p class="text-xl font-bold text-secondary tabular-nums" id="ld-part-checked">—</p><p class="text-[11px] text-muted">Check-in</p></div>
+                        <div class="p-3 text-center rounded-xl bg-surface"><p class="text-xl font-bold text-secondary tabular-nums" id="ld-part-rate">—</p><p class="text-[11px] text-muted">Rată prezență</p></div>
+                    </div>
+                    <a href="/organizator/leisure-participants" class="block w-full py-2 mt-3 text-sm font-semibold text-center transition-colors border rounded-xl border-border text-secondary hover:border-teal-400">Vezi participanții →</a>
+                </div>
+            </section>
+
+            <!-- ===== ACTIVITY STREAM ===== -->
+            <section class="p-5 bg-white border shadow-sm rounded-2xl border-border">
+                <h2 class="mb-3 font-bold text-secondary">Activitate recentă</h2>
+                <div id="ld-stream" class="space-y-1"><p class="py-6 text-sm text-center text-muted">Se încarcă…</p></div>
+            </section>
+
         </div>
-
-        <!-- Two columns: gates live + stream -->
-        <div class="grid lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2 bg-white border rounded-2xl border-border">
-                <div class="px-5 py-4 border-b border-border flex items-center justify-between">
-                    <h2 class="font-bold text-secondary">Activitate scanări (ultima oră)</h2>
-                    <span class="text-xs text-muted">Bucket-uri 5 min</span>
-                </div>
-                <div id="lv-gates" class="p-5">
-                    <p class="text-sm text-muted text-center py-8">Niciun check-in în ultima oră.</p>
-                </div>
-            </div>
-            <div class="bg-white border rounded-2xl border-border">
-                <div class="px-5 py-4 border-b border-border flex items-center justify-between">
-                    <h2 class="font-bold text-secondary">Ultimele activități</h2>
-                    <span class="text-xs text-emerald-600 font-semibold">● Live</span>
-                </div>
-                <div id="lv-stream" class="p-3 max-h-[420px] overflow-y-auto divide-y divide-border">
-                    <p class="text-sm text-muted text-center py-8">Nicio activitate recentă.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="lv-error" class="hidden mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900"></div>
     </main>
 </div>
+
+<?php
+$scriptsExtra = <<<'JS'
 <script>
-(function(){
-    const $ = (id) => document.getElementById(id);
-    let currentEventId = null;
-    let pollHandle = null;
-    let isPolling = false;
+const LeisureDash = {
+    eventId: null,
+    salesChart: null,
 
-    function fmtMoney(v) {
-        return Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-    }
-
-    function timeAgo(iso) {
-        if (!iso) return '—';
-        try {
-            const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-            if (diff < 60) return diff + 's';
-            if (diff < 3600) return Math.floor(diff / 60) + 'm';
-            return Math.floor(diff / 3600) + 'h';
-        } catch { return '—'; }
-    }
-
-    function renderGates(buckets) {
-        const wrap = $('lv-gates');
-        if (!buckets || !buckets.length) {
-            wrap.innerHTML = '<p class="text-sm text-muted text-center py-8">Niciun check-in în ultima oră.</p>';
-            return;
-        }
-        const max = Math.max(1, ...buckets.map(b => b.count));
-        wrap.innerHTML = '<div class="flex items-end gap-1 h-32">' +
-            buckets.map(b => {
-                const h = Math.round((b.count / max) * 100);
-                return `<div class="flex-1 flex flex-col items-center gap-1" title="${b.time}: ${b.count}">
-                    <div class="text-[10px] font-bold text-secondary">${b.count}</div>
-                    <div class="w-full bg-emerald-500 rounded-t" style="height:${h}%;min-height:4px"></div>
-                    <div class="text-[10px] text-muted">${b.time}</div>
-                </div>`;
-            }).join('') +
-        '</div>';
-    }
-
-    function renderStream(stream) {
-        const wrap = $('lv-stream');
-        if (!stream || !stream.length) {
-            wrap.innerHTML = '<p class="text-sm text-muted text-center py-8">Nicio activitate recentă.</p>';
-            return;
-        }
-        wrap.innerHTML = stream.map(ev => {
-            let icon = '🎟️';
-            let colorRing = 'bg-emerald-100';
-            if (ev.type === 'sale') { icon = '💰'; colorRing = 'bg-amber-100'; }
-            else if (ev.type === 'staff_scan') { icon = '👷'; colorRing = 'bg-sky-100'; }
-            return `<div class="px-2 py-2 flex items-start gap-3">
-                <div class="w-9 h-9 ${colorRing} rounded-full flex items-center justify-center text-base flex-shrink-0">${icon}</div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-semibold text-secondary">${ev.label}</div>
-                    <div class="text-xs text-muted truncate">${ev.detail || ''}</div>
-                </div>
-                <div class="text-[11px] text-muted whitespace-nowrap">${timeAgo(ev.at)}</div>
-            </div>`;
-        }).join('');
-    }
-
-    async function refreshDashboard() {
-        if (isPolling || !currentEventId) return;
-        isPolling = true;
-        try {
-            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/dashboard/live`);
-            const data = res.data || {};
-            const s = data.stats || {};
-            $('lv-stat-sold').textContent = s.sold_today || 0;
-            $('lv-stat-scanned').textContent = s.scanned_today || 0;
-            $('lv-stat-occupancy').textContent = s.occupancy || 0;
-            $('lv-stat-revenue').textContent = fmtMoney(s.revenue_today);
-            renderGates(data.gates_activity || []);
-            renderStream(data.stream || []);
-            $('lv-last-refresh').textContent = new Date().toLocaleTimeString('ro-RO');
-            $('lv-error').classList.add('hidden');
-        } catch (e) {
-            console.error('[leisure-dashboard] live failed', e);
-            $('lv-error').textContent = 'Eroare la încărcarea snapshot-ului live: ' + (e?.message || 'necunoscut');
-            $('lv-error').classList.remove('hidden');
-        } finally {
-            isPolling = false;
-        }
-    }
-
-    window.addEventListener('load', async () => {
+    async init() {
+        AmbiletAuth.requireOrganizerAuth();
         let retries = 0;
         while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
-        if (typeof AmbiletAPI === 'undefined') {
-            $('lv-error').textContent = 'API indisponibil — reîncarcă pagina.';
-            $('lv-error').classList.remove('hidden');
-            return;
-        }
         try {
             const res = await AmbiletAPI.get('/organizer/events');
             const events = res.data || [];
             const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
-            if (leisure.length > 0) {
+            if (leisure.length) {
                 const ev = leisure[0];
-                currentEventId = ev.id;
-                const nameEl = $('lv-event-name');
+                this.eventId = ev.id;
+                const nameEl = document.getElementById('lv-event-name');
                 if (nameEl && ev.name) nameEl.textContent = ev.name;
-                const pubLink = $('lv-public-link');
+                const pubLink = document.getElementById('lv-public-link');
                 if (pubLink) pubLink.href = '/bilete/' + (ev.slug || ev.id) + (ev.is_published ? '' : '?preview=1');
             }
         } catch (e) { console.error(e); }
-
-        if (!currentEventId) {
-            $('lv-error').textContent = 'Nu există un eveniment de tip Locație de agrement.';
-            $('lv-error').classList.remove('hidden');
+        if (!this.eventId) {
+            const el = document.getElementById('ld-error');
+            el.textContent = 'Nu există un eveniment de tip Locație de agrement asociat.';
+            el.classList.remove('hidden');
             return;
         }
+        this.refreshAll();
+        // Live refresh of the fast-moving panels every 20s.
+        setInterval(() => { this.loadLive(); this.loadCasa(); }, 20000);
+    },
 
-        refreshDashboard();
-        pollHandle = setInterval(refreshDashboard, 10000);
+    refreshAll() { this.loadLive(); this.loadCasa(); this.loadSales(); this.loadParticipants(); },
 
-        // Oprește polling-ul când tab-ul nu e activ
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                clearInterval(pollHandle);
-                pollHandle = null;
-            } else if (!pollHandle) {
-                refreshDashboard();
-                pollHandle = setInterval(refreshDashboard, 10000);
-            }
+    // ---- Live stats + stream ----
+    async loadLive() {
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/dashboard/live`);
+            const d = res.data || {}; const s = d.stats || {};
+            const refEl = document.getElementById('lv-last-refresh');
+            if (refEl) refEl.textContent = this.fmtTime(d.now || new Date().toISOString());
+            document.getElementById('ld-sold').textContent = this.num(s.sold_today);
+            document.getElementById('ld-scanned').textContent = this.num(s.scanned_today);
+            document.getElementById('ld-revenue').textContent = this.money(s.revenue_today);
+            document.getElementById('ld-orders').textContent = this.num(s.orders_today);
+            document.getElementById('ld-occupancy').textContent = this.num(s.occupancy);
+            this.renderStream(d.stream || []);
+        } catch (e) { console.warn('live', e); }
+    },
+
+    renderStream(stream) {
+        const el = document.getElementById('ld-stream');
+        if (!stream.length) { el.innerHTML = '<p class="py-6 text-sm text-center text-muted">Nicio activitate recentă.</p>'; return; }
+        const ICON = { sale: '🛒', scan: '✅', staff_scan: '👷' };
+        el.innerHTML = stream.slice(0, 20).map(a => `
+            <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+                <span class="text-lg">${ICON[a.type] || '•'}</span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate text-secondary">${this.esc(a.label)}</p>
+                    <p class="text-xs truncate text-muted">${this.esc(a.detail || '')}</p>
+                </div>
+                <span class="text-[11px] text-muted whitespace-nowrap">${this.fmtTime(a.at)}</span>
+            </div>`).join('');
+    },
+
+    // ---- Casă (cash drawer) ----
+    async loadCasa() {
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/cashier/current`);
+            this.renderCasa((res.data || {}).session || null);
+        } catch (e) { console.warn('casa', e); }
+    },
+
+    renderCasa(session) {
+        const el = document.getElementById('ld-casa');
+        if (!session) {
+            el.className = 'overflow-hidden border-2 shadow-sm rounded-2xl border-slate-300 bg-slate-50';
+            el.innerHTML = `<div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div><p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Casă</p><p class="text-lg font-extrabold text-slate-700">🔒 Închisă</p><p class="text-xs text-muted">Nicio sesiune de casă deschisă acum.</p></div>
+                <a href="/organizator/leisure-pos" class="inline-flex px-4 py-2 text-sm font-bold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700">Deschide casa</a>
+            </div>`;
+            return;
+        }
+        const live = session.live || { cash: 0, card: 0, total: 0, orders: 0 };
+        el.className = 'overflow-hidden border-2 shadow-sm rounded-2xl border-emerald-300 bg-emerald-50';
+        el.innerHTML = `
+            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-emerald-200 bg-emerald-100/60">
+                <div><p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Casă · ${this.esc(session.opened_label || 'InfoPoint')}</p>
+                    <p class="text-lg font-extrabold text-emerald-900">🟢 Deschisă de ${this.since(session.opened_at)}</p>
+                    <p class="text-xs text-emerald-700/80">Deschisă la ${this.fmtDateTime(session.opened_at)} · doar vânzările POS din locație (online-ul nu intră în casă)</p>
+                </div>
+                <a href="/organizator/leisure-pos" class="inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50">Gestionează casa</a>
+            </div>
+            <div class="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
+                <div class="p-3 bg-white border-2 rounded-xl border-amber-300">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-amber-700">💵 Cash de predat</p>
+                    <p class="text-2xl font-extrabold text-amber-800 tabular-nums">${this.money(live.cash)} <span class="text-xs">RON</span></p>
+                </div>
+                <div class="p-3 bg-white border-2 rounded-xl border-sky-200">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-sky-700">💳 Card încasat</p>
+                    <p class="text-2xl font-extrabold text-sky-800 tabular-nums">${this.money(live.card)} <span class="text-xs">RON</span></p>
+                </div>
+                <div class="p-3 bg-white rounded-xl">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-muted">Total în casă</p>
+                    <p class="text-2xl font-extrabold text-emerald-800 tabular-nums">${this.money(live.total)} <span class="text-xs">RON</span></p>
+                </div>
+                <div class="p-3 bg-white rounded-xl">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-muted">Comenzi în sesiune</p>
+                    <p class="text-2xl font-extrabold text-secondary tabular-nums">${this.num(live.orders)}</p>
+                </div>
+            </div>`;
+    },
+
+    // ---- Participants ----
+    async loadParticipants() {
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/participants`);
+            const st = (res.data || {}).stats || {};
+            document.getElementById('ld-part-total').textContent = this.num(st.total);
+            document.getElementById('ld-part-checked').textContent = this.num(st.checked_in);
+            document.getElementById('ld-part-rate').textContent = (Number(st.rate) || 0) + '%';
+        } catch (e) { console.warn('participants', e); }
+    },
+
+    // ---- Sales chart ----
+    async loadSales() {
+        try {
+            const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
+            const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/sales-timeline`, { from: fmt(from), to: fmt(to), group_by: 'day' });
+            this.renderSales((res.data || {}).rows || []);
+        } catch (e) { console.warn('sales', e); }
+    },
+
+    renderSales(rows) {
+        const canvas = document.getElementById('ld-sales-chart');
+        const emptyEl = document.getElementById('ld-sales-empty');
+        if (!canvas || typeof Chart === 'undefined') return;
+        const labels = rows.map(r => { const d = new Date((r.date || '') + 'T00:00:00'); return isNaN(d) ? (r.date || '') : (d.getDate() + '.' + (d.getMonth() + 1)); });
+        const revenue = rows.map(r => Number(r.revenue || 0));
+        const tickets = rows.map(r => Number(r.tickets || 0));
+        const has = revenue.some(v => v > 0) || tickets.some(v => v > 0);
+        if (this.salesChart) { this.salesChart.destroy(); this.salesChart = null; }
+        if (!has) { canvas.style.display = 'none'; emptyEl.classList.remove('hidden'); emptyEl.classList.add('flex'); return; }
+        canvas.style.display = ''; emptyEl.classList.add('hidden'); emptyEl.classList.remove('flex');
+        this.salesChart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [
+                { type: 'line', label: 'Venituri (RON)', data: revenue, yAxisID: 'y', borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.12)', borderWidth: 2.5, fill: true, tension: .35, pointRadius: 0, order: 0 },
+                { type: 'bar', label: 'Bilete', data: tickets, yAxisID: 'y1', backgroundColor: 'rgba(20,184,166,.55)', borderRadius: 4, order: 1 },
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 11 } } } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, font: { size: 10 } } },
+                    y: { position: 'left', beginAtZero: true, grid: { color: 'rgba(148,163,184,.15)' }, ticks: { color: '#059669', font: { size: 10 }, callback: v => new Intl.NumberFormat('ro-RO', { notation: 'compact' }).format(v) } },
+                    y1: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { color: '#0d9488', font: { size: 10 }, precision: 0 } },
+                } }
         });
-    });
-})();
+    },
+
+    // ---- helpers ----
+    money(v) { return new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(Math.round(Number(v) || 0)); },
+    num(v) { return new Intl.NumberFormat('ro-RO').format(Number(v) || 0); },
+    fmtTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }); },
+    fmtDateTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); },
+    since(s) { if (!s) return '—'; const mins = Math.max(0, Math.floor((Date.now() - new Date(s).getTime()) / 60000)); const h = Math.floor(mins / 60), m = mins % 60; return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm'); },
+    esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; },
+};
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('-translate-x-full');
+    if (overlay) overlay.classList.toggle('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => LeisureDash.init());
 </script>
-<?php
+JS;
+
 require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>
