@@ -159,21 +159,33 @@ class EventStatsCache
             }
         }
 
-        // Revenue = the sum of each ticket's own locked-in price, i.e. what was
-        // really charged. The previous version multiplied the ticket TYPE's
-        // *currently configured* price by the sold count, which revalued history
-        // whenever a price changed: on event 4564 the presale tickets actually
-        // sold at 240 were reported at the type's later price of 280, showing
-        // 58.000 against the 53.060 actually collected. tickets.price is the
-        // organizer's net per ticket and matches SalesBreakdownService's net, so
-        // the events list now agrees with the report, the payout page and admin.
+        // Revenue comes from SalesBreakdownService — the single source of truth
+        // shared with the admin "Vânzări" tab, the organizer report / payout
+        // pages and invoices. Two simpler formulas were tried here and both
+        // over-reported:
         //
-        // The old order-level discount_amount subtraction is gone with it: the
-        // per-ticket price already reflects what the buyer was charged, so
-        // subtracting again would double-count.
-        $revenue = round((float) Ticket::where('event_id', $eventId)
-            ->whereIn('status', ['valid', 'used'])
-            ->sum('price'), 2);
+        //  - sold_count x the ticket TYPE's *currently configured* price (the
+        //    original) revalued history whenever a price changed: on event 4564
+        //    presale tickets really sold at 240 were counted at the type's later
+        //    price of 280, showing 58.000 against 53.060 actually collected.
+        //  - SUM(tickets.price) still drifted, because an order-level discount
+        //    is not carried on the ticket row (event 3858 was over by exactly
+        //    its 1.177,75 discount) and it counted tickets whose order was never
+        //    paid (events 4689/4691/4695 were over by more than their discount).
+        //
+        // The service applies the paid-order scope, discounts and commission, so
+        // the events list finally agrees with every other surface. It costs more
+        // queries than the old arithmetic, which is precisely what this per-event
+        // cache (invalidated by the order/ticket observers) is here to absorb.
+        $revenue = 0.0;
+        try {
+            $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)->build($event);
+            $revenue = round((float) ($breakdown['total_net'] ?? 0), 2);
+        } catch (\Throwable $e) {
+            // Never let a stats read take down a listing — same policy as the
+            // cache-failure path above.
+            $revenue = 0.0;
+        }
 
         return [
             'total_tickets_sold' => $totalSold,
