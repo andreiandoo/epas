@@ -11,6 +11,78 @@ use Illuminate\Http\Request;
 class NotificationController extends BaseController
 {
     /**
+     * Emergency report from a mobile-app operator — creates a notification
+     * on the current organizer so ALL admin/owner staff on that organizer
+     * can see it in their notifications panel. Reporter's name is embedded
+     * in the payload so the recipients know who raised the alert.
+     *
+     * Body: { type: string, title: string, message: string, severity?: string }
+     */
+    public function reportEmergency(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $validated = $request->validate([
+            'type' => 'required|string|max:64',
+            'title' => 'required|string|max:255',
+            'message' => 'nullable|string|max:2000',
+            'severity' => 'nullable|string|in:high,medium,info',
+        ]);
+
+        // Reporter identity — team member if the token belongs to one,
+        // otherwise fall back to the organizer's own account label.
+        $reporterName = null;
+        $reporterRole = null;
+        $tokenable = $request->user();
+        if ($tokenable && method_exists($tokenable, 'currentAccessToken')) {
+            $token = $tokenable->currentAccessToken();
+            if ($token && $token->name) {
+                $reporterName = $token->name;
+            }
+        }
+        if ($tokenable instanceof \App\Models\MarketplaceOrganizerTeamMember) {
+            $reporterName = $tokenable->name;
+            $reporterRole = $tokenable->role;
+        } elseif ($tokenable instanceof MarketplaceOrganizer) {
+            $reporterName = $tokenable->name ?? $tokenable->email;
+            $reporterRole = 'owner';
+        }
+
+        $severity = $validated['severity'] ?? 'high';
+        $iconMap = [
+            'high' => 'alert-triangle',
+            'medium' => 'alert-circle',
+            'info' => 'info',
+        ];
+        $colorMap = [
+            'high' => 'red',
+            'medium' => 'amber',
+            'info' => 'blue',
+        ];
+
+        $note = MarketplaceNotification::create([
+            'marketplace_client_id' => $organizer->marketplace_client_id,
+            'marketplace_organizer_id' => $organizer->id,
+            'type' => 'emergency_report',
+            'title' => $validated['title'],
+            'message' => $validated['message'] ?? null,
+            'icon' => $iconMap[$severity] ?? 'alert-triangle',
+            'color' => $colorMap[$severity] ?? 'red',
+            'data' => [
+                'emergency_type' => $validated['type'],
+                'severity' => $severity,
+                'reporter' => $reporterName,
+                'reporter_role' => $reporterRole,
+                'reported_at' => now()->toIso8601String(),
+            ],
+        ]);
+
+        return $this->success([
+            'notification' => $this->formatNotification($note),
+        ], 'Raport trimis către administratori');
+    }
+
+    /**
      * Get paginated notifications for organizer
      */
     public function index(Request $request): JsonResponse

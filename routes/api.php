@@ -1932,6 +1932,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/leisure/payouts', [OrganizerLeisureController::class, 'payouts'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.payouts');
+        // Settlement (compensare AmBilet <-> venue) per period
+        Route::get('/events/{event}/leisure/settlement', [OrganizerLeisureController::class, 'settlement'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.settlement');
         // Casa POS — sesiuni deschidere/inchidere
         Route::get('/events/{event}/leisure/cashier/current', [OrganizerLeisureController::class, 'cashierCurrent'])
             ->whereNumber('event')
@@ -2153,6 +2157,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.notifications.destroy');
         Route::delete('/notifications/clear-read', [OrganizerNotificationController::class, 'clearRead'])
             ->name('api.marketplace-client.organizer.notifications.clear-read');
+        Route::post('/notifications/emergency-report', [OrganizerNotificationController::class, 'reportEmergency'])
+            ->name('api.marketplace-client.organizer.notifications.emergency-report');
 
         // Support tickets — beta-gated via config('support.allowed_opener_ids.organizer').
         // The controller enforces the gate; routes stay registered so the
