@@ -72,7 +72,7 @@ $eventId = $_GET['event'] ?? null;
         <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
             <div class="p-4 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div id="summary-revenue" class="text-2xl font-bold text-gray-900">0 lei</div>
-                <div class="text-xs text-gray-500">Venituri totale</div>
+                <div class="text-xs text-gray-500">Venituri nete</div>
             </div>
             <div class="p-4 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div id="summary-tickets" class="text-2xl font-bold text-gray-900">0</div>

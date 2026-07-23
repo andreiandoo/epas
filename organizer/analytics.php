@@ -127,7 +127,7 @@ $eventId = $_GET['event'] ?? null;
                     </span>
                 </div>
                 <div id="stat-revenue" class="text-2xl font-bold text-gray-900">0 lei</div>
-                <div class="mt-1 text-xs text-gray-500">Venituri totale</div>
+                <div class="mt-1 text-xs text-gray-500">Venituri nete</div>
                 <div class="flex items-center gap-2 mt-3">
                     <div class="flex-1 h-1.5 overflow-hidden bg-gray-100 rounded-full">
                         <div id="stat-revenue-bar" class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500" style="width: 0%"></div>
