@@ -396,6 +396,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/reports\/by-issuer/)) return 'organizer.event.leisure.reports.by-issuer';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/venue-config$/)) return 'organizer.event.leisure.venue-config';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/payouts$/)) return 'organizer.event.leisure.payouts';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement/)) return 'organizer.event.leisure.settlement';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/current$/)) return 'organizer.event.leisure.cashier.current';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/open$/)) return 'organizer.event.leisure.cashier.open';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/close$/)) return 'organizer.event.leisure.cashier.close';

@@ -1848,6 +1848,20 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.settlement':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/settlement' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.cashier.current':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }

@@ -4165,6 +4165,94 @@ class LeisureController extends BaseController
         return (string) ($title ?? '');
     }
 
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/settlement?from=&to=
+     *
+     * Settlement (compensare) between AmBilet and the leisure venue for a period:
+     *  - Online sales are collected by AmBilet → AmBilet owes the venue the online
+     *    NET (gross_online - commission_online).
+     *  - POS sales (cash/card) are collected physically at the venue → the venue
+     *    owes AmBilet the POS commission.
+     *  - The balance nets the two off; the result says who pays whom and how much.
+     * Online and POS are kept strictly separate (online never mixes with the
+     * physical cash drawer). Figures use SalesBreakdownService (authoritative
+     * commission), anchored on paid_at.
+     */
+    public function settlement(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tz = 'Europe/Bucharest';
+        // Project start = 2026-07-15; default window = the first 2-week period.
+        $projectStart = Carbon::parse('2026-07-15', $tz)->startOfDay();
+        $from = $request->filled('from')
+            ? Carbon::parse($request->input('from'), $tz)->startOfDay()
+            : $projectStart->copy();
+        $to = $request->filled('to')
+            ? Carbon::parse($request->input('to'), $tz)->endOfDay()
+            : $from->copy()->addDays(13)->endOfDay();
+
+        $fromUtc = $from->copy()->utc();
+        $toUtc = $to->copy()->utc();
+
+        /** @var \App\Services\Marketplace\SalesBreakdownService $svc */
+        $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $online = $svc->build($eventModel, $from, $to, excludePos: true, dateColumn: 'paid_at');
+        $pos    = $svc->build($eventModel, $from, $to, onlyPos: true,   dateColumn: 'paid_at');
+
+        $grossOnline = round((float) $online['total_revenue'], 2);
+        $commOnline  = round((float) $online['total_commission'], 2);
+        $netOnline   = round($grossOnline - $commOnline, 2);
+        $grossPos    = round((float) $pos['total_revenue'], 2);
+        $commPos     = round((float) $pos['total_commission'], 2);
+
+        // Physical money in the POS drawer, split by method (what the customer
+        // actually paid — order.total). Cash = to hand over; card = electronic.
+        $posOrders = Order::where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->where('source', 'pos')
+            ->whereBetween('paid_at', [$fromUtc, $toUtc]);
+        $cashTotal = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'cash'")->sum('total'), 2);
+        $cardTotal = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'card'")->sum('total'), 2);
+
+        // Settlement balance (compensare):
+        //  AmBilet owes venue    = online net (collected online, minus its cut)
+        //  Venue owes AmBilet    = POS commission (venue kept the cash/card)
+        $ambiletOwes = $netOnline;
+        $venueOwes   = $commPos;
+        $net = round($ambiletOwes - $venueOwes, 2);
+
+        return $this->success([
+            'period'    => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
+            'currency'  => $marketplace->currency ?? 'RON',
+            'online'    => [
+                'gross'      => $grossOnline,
+                'commission' => $commOnline,
+                'net'        => $netOnline,
+            ],
+            'pos'       => [
+                'gross'      => $grossPos,
+                'commission' => $commPos,
+                'cash'       => $cashTotal,
+                'card'       => $cardTotal,
+            ],
+            'balance'   => [
+                'ambilet_owes_venue' => $ambiletOwes,
+                'venue_owes_ambilet' => $venueOwes,
+                'net'                => $net,
+                'direction'          => $net > 0 ? 'ambilet_to_venue' : ($net < 0 ? 'venue_to_ambilet' : 'settled'),
+                'amount'             => abs($net),
+            ],
+        ]);
+    }
+
     // ========================================================================
     // SOCIETATI — GET/PUT pentru editarea celor 2 societati emitente
     // ========================================================================

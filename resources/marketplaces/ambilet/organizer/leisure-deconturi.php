@@ -43,6 +43,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
+        <!-- Decontare (compensare AmBilet <-> locație) pe perioade de 2 săptămâni -->
+        <section class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
+            <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border bg-slate-50">
+                <div>
+                    <h2 class="font-bold text-secondary">⚖️ Decontare (compensare)</h2>
+                    <p class="text-xs text-muted">Online-ul e încasat de AmBilet; POS-ul (cash/card) e încasat în locație. Se compensează comisioanele.</p>
+                </div>
+                <label class="flex items-center gap-2 text-sm">
+                    <span class="text-muted">Perioadă:</span>
+                    <select id="dc-settle-period" class="px-3 py-1.5 text-sm bg-white border rounded-lg border-border"></select>
+                </label>
+            </div>
+            <div id="dc-settle-loading" class="hidden p-8 text-center"><div class="inline-block w-5 h-5 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+            <div id="dc-settle-body" class="p-4"></div>
+        </section>
+
         <!-- Tabel deconturi -->
         <div class="bg-white border rounded-2xl border-border overflow-hidden">
             <div class="overflow-x-auto">
@@ -246,7 +262,119 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         $('dc-refresh').addEventListener('click', loadPayouts);
         loadPayouts();
+
+        // Settlement: build the 2-week period selector (from 2026-07-15) and load.
+        buildSettlePeriods();
+        const sel = $('dc-settle-period');
+        if (sel) {
+            sel.addEventListener('change', () => {
+                const opt = sel.selectedOptions[0];
+                if (opt) loadSettlement(opt.dataset.from, opt.dataset.to);
+            });
+            const first = sel.selectedOptions[0];
+            if (first) loadSettlement(first.dataset.from, first.dataset.to);
+        }
     });
+
+    // ---- Settlement (compensare) ----
+    const PROJECT_START = '2026-07-15';
+
+    function ymd(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function shortDate(s) {
+        return new Date(s + 'T00:00:00').toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
+    }
+
+    function buildSettlePeriods() {
+        const sel = $('dc-settle-period');
+        if (!sel) return;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const start = new Date(PROJECT_START + 'T00:00:00');
+        const periods = [];
+        let cur = new Date(start);
+        while (cur <= today && periods.length < 200) {
+            const from = new Date(cur);
+            const to = new Date(cur); to.setDate(to.getDate() + 13);
+            periods.push({ from: ymd(from), to: ymd(to) });
+            cur.setDate(cur.getDate() + 14);
+        }
+        if (!periods.length) periods.push({ from: PROJECT_START, to: ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 13)) });
+        // Newest first
+        periods.reverse();
+        sel.innerHTML = periods.map((p, i) =>
+            `<option value="${i}" data-from="${p.from}" data-to="${p.to}">${shortDate(p.from)} – ${shortDate(p.to)} ${new Date(p.to + 'T00:00:00').getFullYear()}</option>`
+        ).join('');
+    }
+
+    async function loadSettlement(from, to) {
+        if (!currentEventId || !from || !to) return;
+        $('dc-settle-loading').classList.remove('hidden');
+        $('dc-settle-body').classList.add('hidden');
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/settlement`, { from, to });
+            renderSettlement(res.data || {});
+        } catch (e) {
+            console.error('[settlement]', e);
+            $('dc-settle-body').innerHTML = `<p class="text-sm text-rose-700">Eroare la calculul decontării: ${escapeHtml(e?.message || '')}</p>`;
+        } finally {
+            $('dc-settle-loading').classList.add('hidden');
+            $('dc-settle-body').classList.remove('hidden');
+        }
+    }
+
+    function renderSettlement(d) {
+        const on = d.online || {}, pos = d.pos || {}, bal = d.balance || {};
+        const cur = d.currency || 'RON';
+        const M = v => fmtMoney(Number(v || 0)) + ' ' + cur;
+
+        let balanceBox;
+        if (bal.direction === 'ambilet_to_venue') {
+            balanceBox = `<div class="p-4 border-2 rounded-xl bg-emerald-50 border-emerald-300">
+                <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700">De achitat, prin compensare</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-800">AmBilet → Locație</p>
+                <p class="text-3xl font-extrabold text-emerald-900">${M(bal.amount)}</p>
+            </div>`;
+        } else if (bal.direction === 'venue_to_ambilet') {
+            balanceBox = `<div class="p-4 border-2 rounded-xl bg-amber-50 border-amber-300">
+                <p class="text-[11px] uppercase tracking-wider font-bold text-amber-700">De achitat, prin compensare</p>
+                <p class="mt-1 text-lg font-extrabold text-amber-800">Locație → AmBilet</p>
+                <p class="text-3xl font-extrabold text-amber-900">${M(bal.amount)}</p>
+            </div>`;
+        } else {
+            balanceBox = `<div class="p-4 border-2 rounded-xl bg-slate-50 border-slate-300">
+                <p class="text-[11px] uppercase tracking-wider font-bold text-slate-600">Sold</p>
+                <p class="mt-1 text-lg font-extrabold text-slate-700">Zero — nimic de decontat</p>
+                <p class="text-3xl font-extrabold text-slate-800">${M(0)}</p>
+            </div>`;
+        }
+
+        $('dc-settle-body').innerHTML = `
+            <div class="grid gap-4 lg:grid-cols-3">
+                <div class="p-4 border rounded-xl border-border">
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-blue-700 mb-2">🌐 Online (încasat de AmBilet)</p>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between"><span class="text-muted">Brut</span><strong>${M(on.gross)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">Comision AmBilet</span><strong class="text-blue-700">${M(on.commission)}</strong></div>
+                        <div class="flex justify-between pt-1 border-t border-border"><span class="text-muted">Net (AmBilet datorează)</span><strong class="text-emerald-800">${M(on.net)}</strong></div>
+                    </div>
+                </div>
+                <div class="p-4 border rounded-xl border-border">
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700 mb-2">🏪 POS (încasat în locație)</p>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between"><span class="text-muted">Brut</span><strong>${M(pos.gross)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">💵 Cash</span><strong>${M(pos.cash)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">💳 Card</span><strong>${M(pos.card)}</strong></div>
+                        <div class="flex justify-between pt-1 border-t border-border"><span class="text-muted">Comision (locația datorează)</span><strong class="text-amber-700">${M(pos.commission)}</strong></div>
+                    </div>
+                </div>
+                ${balanceBox}
+            </div>
+            <p class="mt-3 text-[11px] text-muted">
+                Compensare: AmBilet datorează locației netul online (<strong>${M(bal.ambilet_owes_venue)}</strong>), iar locația datorează AmBilet comisionul POS (<strong>${M(bal.venue_owes_ambilet)}</strong>).
+                Soldul net = ${M(bal.ambilet_owes_venue)} − ${M(bal.venue_owes_ambilet)} = <strong>${M(bal.net)}</strong>.
+            </p>`;
+    }
 })();
 </script>
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
