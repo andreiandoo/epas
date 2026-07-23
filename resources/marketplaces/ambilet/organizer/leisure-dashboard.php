@@ -10,26 +10,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
     <main class="flex-1 p-4 lg:p-8">
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl flex items-center gap-2">
-                    Dashboard live
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Live"></span>
-                </h1>
-                <p class="mt-1 text-sm text-muted">Snapshot real-time. Actualizare automată la 10s.</p>
+        <!-- ===== HERO ===== -->
+        <section class="relative mb-6 overflow-hidden shadow-lg rounded-3xl"
+                 style="background:linear-gradient(135deg,#064e3b 0%,#065f46 55%,#0f766e 100%);">
+            <div class="absolute inset-0 opacity-40" style="background:radial-gradient(1000px 260px at 85% -20%, rgba(16,185,129,.55), transparent 60%);"></div>
+            <div class="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+                <div class="min-w-0">
+                    <span class="inline-flex items-center gap-2 px-3 py-1 mb-2 text-[11px] font-bold tracking-wide text-white uppercase rounded-full bg-white/10 backdrop-blur">
+                        <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-emerald-300"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-300"></span></span>
+                        Live
+                    </span>
+                    <h1 class="text-2xl font-extrabold text-white truncate lg:text-3xl" id="lv-event-name">Dashboard live</h1>
+                    <p class="mt-1 text-sm text-emerald-100/80">Snapshot real-time · actualizare la 10s · ultimul refresh: <span id="lv-last-refresh">—</span></p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a id="lv-public-link" href="#" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                        Pagină publică
+                    </a>
+                    <a href="/organizator/leisure-pos" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-emerald-900 transition-all bg-white rounded-xl hover:bg-emerald-50">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Emite bilete
+                    </a>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <a id="lv-public-link" href="#" target="_blank" class="px-3 py-2 text-sm font-medium bg-white border border-border rounded-lg hover:bg-slate-50 inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                    Pagină publică
-                </a>
-                <a href="/organizator/leisure-pos" class="px-3 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    Emite bilete
-                </a>
-                <div class="text-xs text-muted ml-2">Ultimul refresh: <span id="lv-last-refresh">—</span></div>
-            </div>
-        </div>
+        </section>
 
         <!-- Stats grid -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -181,6 +186,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (leisure.length > 0) {
                 const ev = leisure[0];
                 currentEventId = ev.id;
+                const nameEl = $('lv-event-name');
+                if (nameEl && ev.name) nameEl.textContent = ev.name;
                 const pubLink = $('lv-public-link');
                 if (pubLink) pubLink.href = '/bilete/' + (ev.slug || ev.id) + (ev.is_published ? '' : '?preview=1');
             }
