@@ -3256,11 +3256,31 @@ class LeisureController extends BaseController
             ->orderByDesc('opened_at')
             ->first();
 
+        // Live drawer totals for the OPEN session (POS orders of this session):
+        // cash = physical money to hand over, card = collected electronically.
+        // Deliberately POS-only — online sales never touch the physical drawer.
+        $live = null;
+        if ($session) {
+            $sessOrders = Order::where('event_id', $eventModel->id)
+                ->whereIn('status', ['paid', 'completed'])
+                ->where('source', 'pos')
+                ->whereRaw("meta->>'cashier_session_id' = ?", [(string) $session->id]);
+            $cash = round((float) (clone $sessOrders)->whereRaw("meta->>'payment_method' = 'cash'")->sum('total'), 2);
+            $card = round((float) (clone $sessOrders)->whereRaw("meta->>'payment_method' = 'card'")->sum('total'), 2);
+            $live = [
+                'cash'   => $cash,
+                'card'   => $card,
+                'total'  => round($cash + $card, 2),
+                'orders' => (clone $sessOrders)->count(),
+            ];
+        }
+
         return $this->success([
             'session' => $session ? [
                 'id' => $session->id,
                 'opened_at' => $session->opened_at?->toIso8601String(),
                 'opened_label' => $session->opened_label,
+                'live' => $live,
             ] : null,
         ]);
     }

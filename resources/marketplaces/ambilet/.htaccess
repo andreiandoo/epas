@@ -326,6 +326,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure-dashboard/?$ organizer/leisure-dashboard.php [L]
 
+# New (WIP) leisure dashboard — not linked in the menu yet
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/leisure-dashboard-nou/?$ organizer/leisure-dashboard-nou.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure-participants/?$ organizer/leisure-participants.php [L]
@@ -367,7 +372,7 @@ RewriteRule ^organizator/deconturi/?$ organizer/leisure-deconturi.php [L]
 # Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|facturare|echipa|sold|panou|panou-nou|vanzari|widget-uri|widgets|invitatii|suport|leisure|leisure-event|leisure-dashboard|leisure-participants|leisure-sales|leisure-pos|leisure-team|leisure-raport|leisure-rentals|leisure-boats|deconturi)/?$
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|facturare|echipa|sold|panou|panou-nou|vanzari|widget-uri|widgets|invitatii|suport|leisure|leisure-event|leisure-dashboard|leisure-dashboard-nou|leisure-participants|leisure-sales|leisure-pos|leisure-team|leisure-raport|leisure-rentals|leisure-boats|deconturi)/?$
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug
