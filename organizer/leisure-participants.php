@@ -49,8 +49,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Stats -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Total participanți</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Participanți (persoane)</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-total">0</span></p>
+                <p class="mt-1 text-[10px] leading-tight text-muted">bilete de acces — pachetele se numără pe componente; fără parcare/activități</p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Check-in efectuat</p>

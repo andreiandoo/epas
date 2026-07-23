@@ -17,26 +17,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <div id="ld-error" class="hidden p-4 text-sm border rounded-xl bg-rose-50 border-rose-200 text-rose-900"></div>
 
-            <!-- ===== HERO ===== -->
-            <section class="relative overflow-hidden shadow-lg rounded-3xl"
-                     style="background:linear-gradient(135deg,#064e3b 0%,#065f46 55%,#0f766e 100%);">
-                <div class="absolute inset-0 opacity-40" style="background:radial-gradient(1000px 260px at 85% -20%, rgba(16,185,129,.55), transparent 60%);"></div>
-                <div class="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-8">
-                    <div class="min-w-0">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 mb-2 text-[11px] font-bold tracking-wide text-white uppercase rounded-full bg-white/10 backdrop-blur">
-                            <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-emerald-300"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-300"></span></span>
-                            Live
-                        </span>
-                        <h1 class="text-2xl font-extrabold text-white truncate lg:text-3xl" id="ld-event-name">Dashboard locație</h1>
-                        <p class="mt-1 text-sm text-emerald-100/80" id="ld-now">Se încarcă…</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="/organizator/leisure-pos" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-emerald-900 transition-all bg-white rounded-xl hover:bg-emerald-50">🏪 Vânzare POS</a>
-                        <a href="/organizator/leisure-raport" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white transition-all rounded-xl bg-white/10 backdrop-blur hover:bg-white/20">📊 Raport</a>
-                    </div>
-                </div>
-            </section>
-
             <!-- ===== CASĂ (cash drawer) ===== -->
             <section id="ld-casa" class="overflow-hidden border shadow-sm rounded-2xl border-border">
                 <!-- filled by JS -->
@@ -77,10 +57,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="p-5 bg-white border shadow-sm rounded-2xl border-border">
-                    <h2 class="mb-3 font-bold text-secondary">Participanți (total)</h2>
+                    <h2 class="mb-3 font-bold text-secondary">Participanți (persoane)</h2>
                     <div class="p-4 mb-3 text-center bg-teal-50 rounded-xl">
                         <p class="text-3xl font-extrabold text-teal-800 tabular-nums" id="ld-part-total">—</p>
-                        <p class="text-xs text-teal-700">bilete de acces (fără parcare/activitate/pachet-părinte)</p>
+                        <p class="text-xs text-teal-700">bilete de acces — pachetele se numără pe componente; fără parcare/activități</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="p-3 text-center rounded-xl bg-surface"><p class="text-xl font-bold text-secondary tabular-nums" id="ld-part-checked">—</p><p class="text-[11px] text-muted">Check-in</p></div>
@@ -115,7 +95,7 @@ const LeisureDash = {
             const res = await AmbiletAPI.get('/organizer/events');
             const events = res.data || [];
             const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
-            if (leisure.length) { this.eventId = leisure[0].id; document.getElementById('ld-event-name').textContent = leisure[0].name || 'Dashboard locație'; }
+            if (leisure.length) { this.eventId = leisure[0].id; }
         } catch (e) { console.error(e); }
         if (!this.eventId) {
             const el = document.getElementById('ld-error');
@@ -135,7 +115,6 @@ const LeisureDash = {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/dashboard/live`);
             const d = res.data || {}; const s = d.stats || {};
-            document.getElementById('ld-now').textContent = 'Actualizat ' + this.fmtTime(d.now);
             document.getElementById('ld-sold').textContent = this.num(s.sold_today);
             document.getElementById('ld-scanned').textContent = this.num(s.scanned_today);
             document.getElementById('ld-revenue').textContent = this.money(s.revenue_today);
