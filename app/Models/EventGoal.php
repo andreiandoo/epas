@@ -205,8 +205,26 @@ class EventGoal extends Model
               ->orWhere('marketplace_event_id', $event->id);
         })->whereIn('status', ['valid', 'checked_in']);
 
+        // A revenue goal must track the same NET figure the organizer sees on
+        // the report card. SUM(orders.total) is the gross the buyer paid
+        // (commission included): on event 3858 it read 19.115,95 against the
+        // card's 17.967,25 — two different numbers for the same thing on one
+        // page. SalesBreakdownService is the single source of truth shared with
+        // the report, the payout page and admin. Only computed for revenue
+        // goals, and never allowed to break the goals listing.
+        $netRevenueCents = 0;
+        if ($this->type === self::TYPE_REVENUE) {
+            try {
+                $net = (float) (app(\App\Services\Marketplace\SalesBreakdownService::class)
+                    ->build($event)['total_net'] ?? 0);
+                $netRevenueCents = (int) round($net * 100);
+            } catch (\Throwable $e) {
+                $netRevenueCents = 0;
+            }
+        }
+
         $this->current_value = match ($this->type) {
-            self::TYPE_REVENUE => (int) ((clone $ordersQuery)->sum('total') * 100), // Convert to cents
+            self::TYPE_REVENUE => $netRevenueCents, // stored in cents
             self::TYPE_TICKETS => (clone $ticketsQuery)->count(),
             self::TYPE_VISITORS => $event->analyticsDaily()->sum('unique_visitors'),
             self::TYPE_CONVERSION => (int) ($event->analyticsDaily()->avg('conversion_rate') * 100),
