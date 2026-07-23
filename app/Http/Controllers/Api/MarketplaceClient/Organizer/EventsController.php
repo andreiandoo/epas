@@ -2066,18 +2066,23 @@ class EventsController extends BaseController
 
         // Ticket types breakdown
         $ticketTypeStats = $event->ticketTypes->map(function ($tt) use ($event) {
-            $sold = $event->tickets()
+            $soldTickets = fn () => $event->tickets()
                 ->where('ticket_type_id', $tt->id)
                 ->whereHas('order', function ($q) {
                     $q->whereIn('status', ['paid', 'confirmed', 'completed']);
-                })->count();
+                });
+
+            $sold = $soldTickets()->count();
+            // Revenue from each ticket's own locked-in price, so an exported
+            // report can't disagree with the on-screen one after a price change.
+            $revenue = round((float) $soldTickets()->sum('price'), 2);
 
             return [
                 'name' => $tt->name,
                 'price' => $tt->display_price,
                 'quota' => $tt->quota_total,
                 'sold' => $sold,
-                'revenue' => $sold * $tt->display_price,
+                'revenue' => $revenue,
             ];
         });
 
@@ -2377,6 +2382,15 @@ class EventsController extends BaseController
                 ->get()
                 ->sum('tickets_count');
 
+            // Revenue from each ticket's own locked-in price. Multiplying the
+            // type's *currently configured* price by the sold count revalued
+            // past sales whenever a price changed (see SalesBreakdownService,
+            // the source of truth used by the report / payout pages).
+            $revenue = round((float) $event->tickets()
+                ->where('ticket_type_id', $tt->id)
+                ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses))
+                ->sum('price'), 2);
+
             return [
                 'id' => $tt->id,
                 'name' => $tt->name,
@@ -2384,7 +2398,7 @@ class EventsController extends BaseController
                 'quantity' => $tt->quota_total,
                 'sold' => $sold,
                 'available' => $tt->available_quantity,
-                'revenue' => $sold * $tt->display_price,
+                'revenue' => $revenue,
             ];
         });
 
@@ -2591,56 +2605,45 @@ class EventsController extends BaseController
             ->groupBy('ticket_type_id')
             ->pluck('cnt', 'ticket_type_id');
 
-        // Net revenue & commission = sum over VALID tickets of the ticket_type's
-        // net price / commission. Uses the ticket_type configured price (ignoring
-        // individual ticket.price which can be 0 for invitations/free tickets).
-        $netRevenue = 0.0;
-        $commissionAmount = 0.0;
-        foreach ($event->ticketTypes as $tt) {
-            $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
-            if ($validCount === 0) continue;
-            $netRevenue += $netPricePerTicket($tt) * $validCount;
-            $commissionAmount += $commissionPerTicket($tt) * $validCount;
-        }
-        $netRevenue = round($netRevenue, 2);
-        $commissionAmount = round($commissionAmount, 2);
+        // Financial figures come from SalesBreakdownService — the single source
+        // of truth already used by the admin "Vânzări" tab, payouts and invoices.
+        //
+        // The previous implementation valued every valid ticket at its ticket
+        // TYPE's *currently configured* price, which silently rewrote history:
+        // a presale ticket really sold at 240 was reported at the type's later
+        // price of 280. On event 4564 that inflated the organizer's net revenue
+        // to 58.000 against 53.060 actually collected (confirmed independently
+        // by SUM(orders.total) = 55.713 gross). The service values each ticket
+        // at the price locked in at sale time, so the organizer now sees exactly
+        // what the platform accounts for.
+        $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)->build($event);
 
-        // Extras attributable to the VALID portion of paid orders (insurance +
-        // cultural card surcharge from Order.meta, proportional to valid_gross
-        // / Order.subtotal). These go to the platform, not the organizer.
-        $extrasValid = 0.0;
-        $paidOrders = (clone $allTimeQuery)->get(['id', 'subtotal', 'meta']);
-        if ($paidOrders->isNotEmpty()) {
-            $paidOrderIds = $paidOrders->pluck('id');
-            $validGrossPerOrder = \App\Models\Ticket::whereIn('order_id', $paidOrderIds)
-                ->whereIn('status', ['valid', 'used'])
-                ->get(['order_id', 'ticket_type_id'])
-                ->groupBy('order_id')
-                ->map(function ($group) use ($event, $netPricePerTicket, $commissionPerTicket) {
-                    $gross = 0.0;
-                    foreach ($group as $t) {
-                        $tt = $event->ticketTypes->firstWhere('id', $t->ticket_type_id);
-                        if (!$tt) continue;
-                        // gross per ticket for allocation = net + commission
-                        $gross += $netPricePerTicket($tt) + $commissionPerTicket($tt);
-                    }
-                    return $gross;
-                });
-            foreach ($paidOrders as $o) {
-                $m = is_array($o->meta) ? $o->meta : [];
-                $orderExtras = (float) ($m['insurance_amount'] ?? 0) + (float) ($m['cultural_card_surcharge'] ?? 0);
-                if ($orderExtras <= 0) continue;
-                $orderSubtotal = (float) $o->subtotal;
-                $orderValidGross = (float) ($validGrossPerOrder[$o->id] ?? 0);
-                $ratio = $orderSubtotal > 0 ? min(1.0, $orderValidGross / $orderSubtotal) : 1.0;
-                $extrasValid += $orderExtras * $ratio;
+        $netRevenue = round((float) ($breakdown['total_net'] ?? 0), 2);
+        $commissionAmount = round((float) ($breakdown['total_commission'] ?? 0), 2);
+        $extrasValid = round((float) ($breakdown['total_extras'] ?? 0), 2);
+        $grossRevenue = round((float) ($breakdown['total_revenue'] ?? 0), 2);
+
+        // Per-ticket-type net, keyed by ticket_type_id. per_type can carry more
+        // than one row per type (the service splits by unit price), so accumulate.
+        // Used by the "Performanță tipuri bilete" table and the daily chart so
+        // both add up to net_revenue instead of drifting on configured prices.
+        $netByTicketTypeId = [];
+        $qtyByTicketTypeId = [];
+        foreach (($breakdown['per_type'] ?? []) as $row) {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            if (!$ttId) {
+                continue;
             }
+            $netByTicketTypeId[$ttId] = ($netByTicketTypeId[$ttId] ?? 0) + (float) ($row['net'] ?? 0);
+            $qtyByTicketTypeId[$ttId] = ($qtyByTicketTypeId[$ttId] ?? 0) + (int) ($row['qty'] ?? 0);
         }
-        $extrasValid = round($extrasValid, 2);
-
-        // Gross = what customer paid for VALID tickets only (matches admin's
-        // Venituri): net + commission + extras.
-        $grossRevenue = round($netRevenue + $commissionAmount + $extrasValid, 2);
+        // Average realised net per ticket, per type — the daily chart multiplies
+        // it by that day's sold count.
+        $netPerTicketByTypeId = [];
+        foreach ($netByTicketTypeId as $ttId => $net) {
+            $q = (int) ($qtyByTicketTypeId[$ttId] ?? 0);
+            $netPerTicketByTypeId[$ttId] = $q > 0 ? round($net / $q, 4) : 0.0;
+        }
 
         // Refunds
         $refundsTotal = (float) Order::where('event_id', $event->id)
@@ -2718,12 +2721,10 @@ class EventsController extends BaseController
         $currentDate = $rangeStart->copy();
         $totalDays = max(1, $rangeStart->diffInDays($rangeEnd) + 1);
 
-        // Pre-index per-ticket-type net price once so the daily revenue loop
-        // below doesn't recompute it per day.
-        $ttNetById = [];
-        foreach ($event->ticketTypes as $tt) {
-            $ttNetById[$tt->id] = $netPricePerTicket($tt);
-        }
+        // Per-ticket-type net price for the daily revenue loop. Uses the net
+        // actually realised per ticket (from SalesBreakdownService) rather than
+        // the type's configured price, so the chart adds up to net_revenue.
+        $ttNetById = $netPerTicketByTypeId;
 
         while ($currentDate <= $rangeEnd) {
             $dayStart = $currentDate->copy()->startOfDay();
@@ -2816,7 +2817,7 @@ class EventsController extends BaseController
         }
 
         // Ticket performance with trend and conversion
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netPricePerTicket) {
+        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netByTicketTypeId) {
             // Broad filter: all valid/used tickets of this tt. Scoping by
             // ticket_type_id is already event-scoped (tt belongs to the event).
             // No event_id check — invitations sometimes have NULL event_id.
@@ -2829,8 +2830,10 @@ class EventsController extends BaseController
 
             $sold = (clone $ticketQuery())->count();
 
-            // Revenue = valid_count × ticket_type's net price.
-            $revenue = round($netPricePerTicket($tt) * $sold, 2);
+            // Revenue = net actually realised for this ticket type (from
+            // SalesBreakdownService), so the column sums to net_revenue instead
+            // of revaluing past sales at the type's current price.
+            $revenue = round((float) ($netByTicketTypeId[$tt->id] ?? 0), 2);
 
             // Classification flags consumed by the UI to annotate the ticket-type name
             $ttMeta = is_array($tt->meta) ? $tt->meta : [];

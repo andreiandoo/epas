@@ -159,21 +159,21 @@ class EventStatsCache
             }
         }
 
-        $gross = 0.0;
-        foreach ($ticketTypes as $tt) {
-            $count = $perType[$tt->id]['sold'] ?? 0;
-            if ($count === 0) continue;
-            $priceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
-                ? (int) $tt->sale_price_cents
-                : (int) ($tt->price_cents ?? 0);
-            $gross += $count * ($priceCents / 100);
-        }
-
-        $discount = (float) Order::where('event_id', $eventId)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->sum('discount_amount');
-
-        $revenue = round(max(0.0, $gross - $discount), 2);
+        // Revenue = the sum of each ticket's own locked-in price, i.e. what was
+        // really charged. The previous version multiplied the ticket TYPE's
+        // *currently configured* price by the sold count, which revalued history
+        // whenever a price changed: on event 4564 the presale tickets actually
+        // sold at 240 were reported at the type's later price of 280, showing
+        // 58.000 against the 53.060 actually collected. tickets.price is the
+        // organizer's net per ticket and matches SalesBreakdownService's net, so
+        // the events list now agrees with the report, the payout page and admin.
+        //
+        // The old order-level discount_amount subtraction is gone with it: the
+        // per-ticket price already reflects what the buyer was charged, so
+        // subtracting again would double-count.
+        $revenue = round((float) Ticket::where('event_id', $eventId)
+            ->whereIn('status', ['valid', 'used'])
+            ->sum('price'), 2);
 
         return [
             'total_tickets_sold' => $totalSold,

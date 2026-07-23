@@ -114,56 +114,20 @@ class PayoutController extends BaseController
                 $commissionMode = $event->getEffectiveCommissionMode();
                 $commissionRate = $event->getEffectiveCommissionRate();
 
-                // Per-ticket-type net/commission, matching EventsController::analytics()
-                // so the Sold page columns (Venituri nete / Comision) track the
-                // Report page cards exactly. Using Ticket.price straight blows up
-                // when invitations / free tickets sit at 0, and commission = gross
-                // minus that gives inflated commission.
-                $defaultRate = (float) ($commissionRate ?? 5);
-                $defaultMode = $commissionMode ?? 'included';
-                $ttIds = $event->ticketTypes->pluck('id')->all();
-                $validCountsByType = [];
-                if (!empty($ttIds)) {
-                    $validCountsByType = \App\Models\Ticket::whereIn('ticket_type_id', $ttIds)
-                        ->whereIn('status', ['valid', 'used'])
-                        ->where(function ($q) {
-                            $q->whereDoesntHave('order')
-                              ->orWhereHas('order', fn ($qq) => $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
-                                  ->where('source', '!=', 'external_import'));
-                        })
-                        ->selectRaw('ticket_type_id, COUNT(*) as cnt')
-                        ->groupBy('ticket_type_id')
-                        ->pluck('cnt', 'ticket_type_id')
-                        ->all();
-                }
-
-                $netRevenue = 0.0;
-                $commissionAmount = 0.0;
-                foreach ($event->ticketTypes as $tt) {
-                    $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
-                    if ($validCount === 0) continue;
-
-                    $basePriceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
-                        ? (int) $tt->sale_price_cents
-                        : (int) ($tt->price_cents ?? 0);
-                    $basePrice = $basePriceCents / 100;
-
-                    $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-                    $mode = $effective['mode'];
-                    $commPerTicket = (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
-                    $netPerTicket = in_array($mode, ['on_top', 'added_on_top'], true)
-                        ? $basePrice
-                        : max(0.0, $basePrice - $commPerTicket);
-
-                    $netRevenue += $netPerTicket * $validCount;
-                    $commissionAmount += $commPerTicket * $validCount;
-                }
-                $netRevenue = round($netRevenue, 2);
-                $commissionAmount = round($commissionAmount, 2);
-                // Gross from the organizer's perspective = net + commission (what
-                // the ticket costs the buyer, excluding platform extras like
-                // insurance / cultural card surcharge which the organizer never sees).
-                $grossRevenue = round($netRevenue + $commissionAmount, 2);
+                // Figures come from SalesBreakdownService — the single source of
+                // truth shared with the admin "Vânzări" tab, payouts and invoices.
+                //
+                // This used to mirror EventsController::analytics() and value every
+                // valid ticket at its ticket TYPE's *currently configured* price.
+                // That revalued history: a presale ticket sold at 240 was reported
+                // at the type's later price of 280, so the Sold page promised more
+                // than was ever collected (event 4564: 58.000 shown vs 53.060 real,
+                // gross 60.900 vs 55.713 confirmed by SUM(orders.total)). The
+                // service values each ticket at the price locked in at sale time.
+                $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)->build($event);
+                $netRevenue = round((float) ($breakdown['total_net'] ?? 0), 2);
+                $commissionAmount = round((float) ($breakdown['total_commission'] ?? 0), 2);
+                $grossRevenue = round((float) ($breakdown['total_revenue'] ?? 0), 2);
 
                 // Get payouts for this event (if tracked per event)
                 $eventPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
