@@ -271,7 +271,12 @@ function seatMap(eventId) {
         },
         checkout() {
             if (this.selected.length === 0) return;
-            localStorage.setItem('teatru_cart', JSON.stringify(this.selected));
+            const seats = this.selected.map(s => ({ label: s.section + ' Rând ' + s.row + ', Loc ' + s.seat_label, price: s.price }));
+            localStorage.setItem('teatru_cart', JSON.stringify({
+                event: <?= json_encode(['title' => $event['title'] ?? '', 'author' => ($event['category']['name'] ?? ''), 'date' => $dateStr, 'venue' => $venueName, 'image' => $poster], JSON_UNESCAPED_UNICODE) ?>,
+                seats: seats,
+                subtotal: this.total
+            }));
             window.location.href = '/cos';
         }
     };
