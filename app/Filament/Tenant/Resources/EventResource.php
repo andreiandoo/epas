@@ -118,6 +118,13 @@ class EventResource extends Resource
             Forms\Components\Hidden::make('tenant_id')
                 ->default($tenant?->id),
 
+            SC\Tabs::make('EventTabs')
+                ->persistTabInQueryString()
+                ->columnSpanFull()
+                ->tabs([
+
+            SC\Tabs\Tab::make('Detalii')->schema([
+
             // BASICS - Single Language based on Tenant setting
             SC\Section::make('Event Details')
                 ->schema([
@@ -235,6 +242,10 @@ class EventResource extends Resource
                         ->native(false)
                         ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                 ])->columns(1),
+
+            ]),
+
+            SC\Tabs\Tab::make('Program')->schema([
 
             // SCHEDULE
             SC\Section::make('Schedule')
@@ -426,6 +437,10 @@ class EventResource extends Resource
                         ->maxLength(255),
                 ])->columns(2),
 
+            ]),
+
+            SC\Tabs\Tab::make('Conținut')->schema([
+
             // MEDIA
             SC\Section::make('Media')
                 ->schema([
@@ -459,6 +474,10 @@ class EventResource extends Resource
                         ->columnSpanFull()
                         ->default($tenant?->ticket_terms ?? null),
                 ])->columns(1),
+
+            ]),
+
+            SC\Tabs\Tab::make('Taxonomii & Relații')->schema([
 
             // TAXONOMIES
             SC\Section::make('Taxonomies & Relations')
@@ -621,6 +640,10 @@ class EventResource extends Resource
                             return new HtmlString($html);
                         }),
                 ])->columns(2),
+
+            ]),
+
+            SC\Tabs\Tab::make('Bilete')->schema([
 
             // TICKETS
             SC\Section::make('Tickets')
@@ -884,6 +907,10 @@ class EventResource extends Resource
                         ]),
                 ])->collapsible(),
 
+            ]),
+
+            SC\Tabs\Tab::make('SEO')->schema([
+
             // SEO Section
             SC\Section::make('SEO')
                 ->collapsed()
@@ -1084,6 +1111,9 @@ class EventResource extends Resource
                             'robots'           => 'index,follow',
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Add custom SEO meta tags. Use templates above to quickly add common sets.'),
+                ]),
+            ]),
+
                 ]),
         ])->columns(1);
     }
