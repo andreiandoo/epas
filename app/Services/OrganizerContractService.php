@@ -215,15 +215,17 @@ class OrganizerContractService
             $sigPath = sprintf('organizer-signatures/%d/signature_%s.png', $organizer->id, now()->format('YmdHis'));
             Storage::disk('public')->put($sigPath, $binary);
 
-            // 3. Persist signature + audit trail on the organizer. saveQuietly so
-            //    the observer (which reacts to verified_at / test_pos_enabled) is
-            //    not touched by a signature-only change.
+            // 3. Set signature + audit trail IN MEMORY only — the template render
+            //    below reads $organizer->signature_image, but we don't persist the
+            //    "signed" state until the PDF is successfully produced (step 5), so
+            //    a render failure never leaves the organizer signed without a doc.
+            $signedAt = now();
             $organizer->forceFill([
                 'signature_image' => $sigPath,
-                'contract_signed_at' => now(),
+                'contract_signed_at' => $signedAt,
                 'contract_signed_ip' => $meta['ip'] ?? null,
                 'contract_signed_user_agent' => $meta['user_agent'] ?? null,
-            ])->saveQuietly();
+            ]);
 
             // 4. Resolve template + the existing (unsigned) contract to re-render
             //    in place — same number, now with the signature embedded.
@@ -303,6 +305,11 @@ class OrganizerContractService
                     'issued_at' => now(),
                 ]);
             }
+
+            // 5. PDF produced + document persisted — now it's safe to commit the
+            //    signed state on the organizer. saveQuietly so the observer (which
+            //    reacts to verified_at / test_pos_enabled) isn't touched.
+            $organizer->saveQuietly();
 
             Log::info('signContract: organizer contract signed', [
                 'organizer_id' => $organizer->id,
