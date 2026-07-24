@@ -6,7 +6,7 @@ $slug = $_GET['slug'] ?? '';
 if ($slug === '') { header('Location: /repertoriu'); exit; }
 
 $resp  = api_get('/tenant-client/events/' . rawurlencode($slug), [], 60);
-$event = $resp['success'] ? ($resp['data'] ?? null) : null;
+$event = ($resp['success'] && !empty($resp['data'])) ? tc_norm_event($resp['data']) : null;
 
 if (!$event) {
     http_response_code(404);

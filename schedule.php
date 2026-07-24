@@ -2,8 +2,8 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
-$resp   = api_get('/tenant-client/events', ['limit' => 100]);
-$events = $resp['success'] ? ($resp['data'] ?? []) : [];
+$resp   = api_get('/tenant-client/events', ['per_page' => 100]);
+$events = tc_events($resp);
 
 // Sortare cronologică + grupare pe lună
 usort($events, fn($a, $b) => strcmp($a['start_date'] ?? '', $b['start_date'] ?? ''));
