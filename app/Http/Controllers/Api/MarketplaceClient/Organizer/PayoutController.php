@@ -289,6 +289,13 @@ class PayoutController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
+        // Contract gate: no payouts until the organizer has electronically
+        // signed their onboarding contract (they can still view the account).
+        // Grandfathered organizers (onboarded before e-signing) are exempt.
+        if ($organizer->isContractSignatureRequired() && !$organizer->hasSignedContract()) {
+            return $this->error('Trebuie să semnezi contractul înainte de a putea retrage bani.', 403);
+        }
+
         $validated = $request->validate([
             'amount' => 'nullable|numeric|min:1',
             'event_id' => 'nullable|integer|exists:events,id',

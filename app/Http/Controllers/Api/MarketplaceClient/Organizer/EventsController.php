@@ -570,6 +570,13 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
+        // Contract gate: an organizer can set events up but cannot publish until
+        // they have electronically signed their onboarding contract. Grandfathered
+        // organizers (onboarded before e-signing shipped) are exempt.
+        if ($organizer->isContractSignatureRequired() && !$organizer->hasSignedContract()) {
+            return $this->error('Trebuie să semnezi contractul înainte de a putea publica evenimente.', 403);
+        }
+
         if ($event->is_published) {
             return $this->error('Evenimentul este deja publicat', 400);
         }

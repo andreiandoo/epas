@@ -400,13 +400,31 @@ class MarketplaceOrganizer extends Authenticatable
     // =========================================
 
     /**
-     * Whether the organizer has electronically signed their onboarding
-     * contract. Gates outward/money actions (publishing events, requesting
-     * payouts) until they do — the account itself stays viewable.
+     * Organizers created from this date onward must e-sign their contract
+     * before they can publish events or request payouts. Earlier organizers are
+     * grandfathered — they onboarded before e-signing shipped and must not be
+     * locked out (live-site safety). Adjust the date to change the cutoff.
+     */
+    public const CONTRACT_SIGNATURE_REQUIRED_FROM = '2026-07-24';
+
+    /**
+     * Whether the organizer has electronically signed their onboarding contract.
      */
     public function hasSignedContract(): bool
     {
         return $this->contract_signed_at !== null;
+    }
+
+    /**
+     * Whether this organizer is in scope for the mandatory contract signature
+     * (i.e. onboarded on/after the feature launch). Combine with
+     * hasSignedContract() to gate publishing / payouts.
+     */
+    public function isContractSignatureRequired(): bool
+    {
+        $from = \Illuminate\Support\Carbon::parse(self::CONTRACT_SIGNATURE_REQUIRED_FROM)->startOfDay();
+
+        return $this->created_at !== null && $this->created_at->gte($from);
     }
 
     /**
