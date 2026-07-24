@@ -1,0 +1,32 @@
+# teatru.tixello.ro — Apache + PHP 8.3
+
+DirectoryIndex index.php index.html
+
+# Securitate: blochează accesul direct la include-uri, cache, logs, config local
+<FilesMatch "\.(log|md)$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 /includes/
+RedirectMatch 404 /cache/
+<Files "config.local.php">
+    Require all denied
+</Files>
+
+# Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Compresie
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# Cache assets statice
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/svg+xml "access plus 7 days"
+    ExpiresByType text/css "access plus 1 day"
+</IfModule>

@@ -131,7 +131,7 @@ class TenantClientController extends Controller
         $events = $query->with([
                 'venue:id,name,city',
                 'eventTypes',
-                'artists:id,name,main_image',
+                'artists:id,name,main_image_url',
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
             ])
             ->orderBy($orderColumn, 'asc')
@@ -214,7 +214,7 @@ class TenantClientController extends Controller
                 'venue',
                 'eventTypes',
                 'eventGenres',
-                'artists:id,name,main_image',
+                'artists:id,name,main_image_url',
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
             ])
             ->first();
@@ -324,7 +324,7 @@ class TenantClientController extends Controller
             'artists' => $event->artists->map(fn ($artist) => [
                 'id' => $artist->id,
                 'name' => $artist->name,
-                'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                'image' => $artist->main_image_url ? Storage::disk('public')->url($artist->main_image_url) : null,
             ]),
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
