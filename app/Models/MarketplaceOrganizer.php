@@ -28,6 +28,11 @@ class MarketplaceOrganizer extends Authenticatable
         'person_type',
         'work_mode',
         'organizer_type',
+        // Contract e-signature (SES) + audit trail
+        'signature_image',
+        'contract_signed_at',
+        'contract_signed_ip',
+        'contract_signed_user_agent',
         'leisure_template_variant',
 
         // Company details
@@ -172,6 +177,7 @@ class MarketplaceOrganizer extends Authenticatable
         'email_verified_at' => 'datetime',
         'email_verification_expires_at' => 'datetime',
         'verified_at' => 'datetime',
+        'contract_signed_at' => 'datetime',
         'has_proxy_authorization' => 'boolean',
         'password' => 'hashed',
         'social_links' => 'array',
@@ -392,6 +398,16 @@ class MarketplaceOrganizer extends Authenticatable
     // =========================================
     // Commission
     // =========================================
+
+    /**
+     * Whether the organizer has electronically signed their onboarding
+     * contract. Gates outward/money actions (publishing events, requesting
+     * payouts) until they do — the account itself stays viewable.
+     */
+    public function hasSignedContract(): bool
+    {
+        return $this->contract_signed_at !== null;
+    }
 
     /**
      * Get the effective commission rate for this organizer

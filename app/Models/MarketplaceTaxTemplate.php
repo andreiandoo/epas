@@ -134,6 +134,9 @@ class MarketplaceTaxTemplate extends Model
             '{{organizer_work_mode}}' => 'Work Mode (Exclusiv/Neexclusiv)',
             '{{organizer_bank_name}}' => 'Bank Name',
             '{{organizer_iban}}' => 'IBAN',
+            '{{organizer_signature_image}}' => 'Semnătura organizator (tag img complet, desenată în cont)',
+            '{{organizer_signed_name}}' => 'Nume semnatar organizator',
+            '{{organizer_signed_date}}' => 'Data semnării de către organizator',
         ],
         'Organizer Guarantor' => [
             '{{guarantor_first_name}}' => 'Guarantor First Name (Prenume)',
@@ -483,6 +486,35 @@ class MarketplaceTaxTemplate extends Model
         if ($organizer) {
             $variables['organizer_name'] = $organizer->name ?? '';
             $variables['organizer_email'] = $organizer->email ?? '';
+
+            // Organizer's drawn e-signature (SES) — same base64 <img> pattern as
+            // the marketplace signature above so DomPDF embeds it. Empty until the
+            // organizer signs; the same image fills both signing spots via the
+            // {{organizer_signature_image}} placeholder.
+            $variables['organizer_signature_image'] = '';
+            if ($organizer->signature_image
+                && \Illuminate\Support\Facades\Storage::disk('public')->exists($organizer->signature_image)) {
+                $orgSig = \Illuminate\Support\Facades\Storage::disk('public')->get($organizer->signature_image);
+                $orgSigMime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($organizer->signature_image) ?: 'image/png';
+                if (str_contains($orgSigMime, 'webp') && function_exists('imagecreatefromwebp')) {
+                    $img = @imagecreatefromwebp(\Illuminate\Support\Facades\Storage::disk('public')->path($organizer->signature_image));
+                    if ($img) {
+                        ob_start();
+                        imagepng($img);
+                        $orgSig = ob_get_clean();
+                        imagedestroy($img);
+                        $orgSigMime = 'image/png';
+                    }
+                }
+                $orgSigB64 = 'data:' . $orgSigMime . ';base64,' . base64_encode($orgSig);
+                $variables['organizer_signature_image'] = '<img src="' . $orgSigB64 . '" alt="Semnătura organizator" style="max-height:100px;max-width:250px;display:block;" />';
+            }
+            $variables['organizer_signed_name'] = $organizer->contract_signed_at
+                ? ($organizer->company_name ?: $organizer->name ?: '')
+                : '';
+            $variables['organizer_signed_date'] = $organizer->contract_signed_at
+                ? \Illuminate\Support\Carbon::parse($organizer->contract_signed_at)->format('d.m.Y')
+                : '';
             $variables['organizer_company_name'] = $organizer->company_name ?? '';
             $variables['organizer_tax_id'] = $organizer->tax_id ?? $organizer->company_tax_id ?? '';
             $variables['organizer_registration_number'] = $organizer->registration_number ?? $organizer->company_registration ?? '';
