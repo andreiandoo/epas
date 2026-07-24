@@ -197,6 +197,9 @@ class Event extends Model
         // multi-day json
         'multi_slots',
 
+        // theater vertical details
+        'theater_director', 'theater_lead', 'theater_duration', 'theater_cast', 'theater_creative',
+
         // recurring
         'recurring_frequency', 'recurring_start_date', 'recurring_start_time',
         'recurring_door_time', 'recurring_end_time', 'recurring_weekday',
@@ -317,6 +320,8 @@ class Event extends Model
 
         // json
         'multi_slots'       => 'array',
+        'theater_cast'      => 'array',
+        'theater_creative'  => 'array',
         'organizer_notifications' => 'array',
         'seo'               => 'array',
         'venue_config'      => 'array',

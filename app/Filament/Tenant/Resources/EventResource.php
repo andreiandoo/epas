@@ -113,6 +113,12 @@ class EventResource extends Resource
         // Get tenant's language (check both 'language' and 'locale' columns)
         $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
 
+        // Theater vertical: artist names for autocomplete + whether to show theater fields
+        $isTheater = (bool) ($tenant?->isTheater());
+        $artistNames = $isTheater && $tenant
+            ? \App\Models\TenantArtist::where('tenant_id', $tenant->id)->orderBy('name')->pluck('name')->filter()->values()->all()
+            : [];
+
         return $schema->schema([
             // Hidden tenant_id field
             Forms\Components\Hidden::make('tenant_id')
@@ -642,6 +648,52 @@ class EventResource extends Resource
                 ])->columns(2),
 
             ]),
+
+            SC\Tabs\Tab::make('Distribuție')
+                ->visible(fn () => $isTheater)
+                ->schema([
+                    SC\Section::make('Detalii spectacol')
+                        ->description('Se afișează pe pagina publică a spectacolului (vertical Teatru).')
+                        ->schema([
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('theater_director')->label('Regia')->maxLength(190)->datalist($artistNames),
+                                Forms\Components\TextInput::make('theater_lead')->label('În rolul principal')->maxLength(190)->datalist($artistNames),
+                                Forms\Components\TextInput::make('theater_duration')->label('Durata')->placeholder('2h 45min')->maxLength(60),
+                            ]),
+                        ]),
+                    SC\Section::make('Distribuție')
+                        ->schema([
+                            Forms\Components\Repeater::make('theater_cast')
+                                ->label('')
+                                ->schema([
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\TextInput::make('name')->label('Nume')->datalist($artistNames),
+                                        Forms\Components\TextInput::make('role')->label('Rol / Personaj'),
+                                    ]),
+                                ])
+                                ->reorderable()
+                                ->collapsible()
+                                ->itemLabel(fn (array $state) => trim(($state['name'] ?? '') . (!empty($state['role']) ? ' — ' . $state['role'] : '')) ?: 'Interpret')
+                                ->addActionLabel('Adaugă în distribuție')
+                                ->defaultItems(0),
+                        ]),
+                    SC\Section::make('Echipa creativă')
+                        ->schema([
+                            Forms\Components\Repeater::make('theater_creative')
+                                ->label('')
+                                ->schema([
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\TextInput::make('role')->label('Funcție')->placeholder('Scenografie, Costume, Muzica...'),
+                                        Forms\Components\TextInput::make('name')->label('Nume')->datalist($artistNames),
+                                    ]),
+                                ])
+                                ->reorderable()
+                                ->collapsible()
+                                ->itemLabel(fn (array $state) => trim(($state['role'] ?? '') . (!empty($state['name']) ? ': ' . $state['name'] : '')) ?: 'Rol creativ')
+                                ->addActionLabel('Adaugă în echipă')
+                                ->defaultItems(0),
+                        ]),
+                ]),
 
             SC\Tabs\Tab::make('Bilete')->schema([
 

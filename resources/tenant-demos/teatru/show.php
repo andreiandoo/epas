@@ -32,7 +32,12 @@ $pageTitle = ($event['title'] ?? 'Spectacol') . ' — ' . SITE_NAME;
 $pageDescription = $event['short_description'] ?? '';
 $fallback = 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1920&q=80';
 $poster   = asset_url($event['poster_url'] ?? $event['hero_image_url'] ?? null, 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&q=80');
-$lead     = $event['artists'][0]['name'] ?? null;
+$th        = $event['theater'] ?? [];
+$director  = $th['director'] ?? null;
+$lead      = $th['lead'] ?? ($event['artists'][0]['name'] ?? null);
+$duration  = $th['duration'] ?? null;
+$castList  = $th['cast'] ?? [];
+$creative  = $th['creative'] ?? [];
 $pageExtraStyles = '
     .seat { width: 24px; height: 24px; border-radius: 5px 5px 3px 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; transition: all .15s ease; }
     .seat.available { background: #3d1f23; border: 1px solid #722F37; }
@@ -71,10 +76,11 @@ include __DIR__ . '/includes/header.php';
                     <p class="text-ivory/70 text-lg leading-relaxed mb-8 max-w-2xl"><?= e($event['short_description']) ?></p>
                 <?php endif; ?>
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
-                    <?php if ($lead): ?><div><p class="text-warm-gray text-sm">În distribuție</p><p class="font-display text-lg"><?= e($lead) ?></p></div><?php endif; ?>
-                    <?php if ($dateStr): ?><div><p class="text-warm-gray text-sm">Data</p><p class="font-display text-lg"><?= e($dateStr) ?></p></div><?php endif; ?>
+                    <?php if ($director): ?><div><p class="text-warm-gray text-sm">Regia</p><p class="font-display text-lg"><?= e($director) ?></p></div><?php endif; ?>
+                    <?php if ($lead): ?><div><p class="text-warm-gray text-sm">În rolul principal</p><p class="font-display text-lg"><?= e($lead) ?></p></div><?php endif; ?>
+                    <?php if ($duration): ?><div><p class="text-warm-gray text-sm">Durata</p><p class="font-display text-lg"><?= e($duration) ?></p></div><?php endif; ?>
                     <?php if ($venueName): ?><div><p class="text-warm-gray text-sm">Sală</p><p class="font-display text-lg"><?= e($venueName) ?></p></div><?php endif; ?>
-                    <?php if (!empty($event['category']['name'])): ?><div><p class="text-warm-gray text-sm">Gen</p><p class="font-display text-lg"><?= e($event['category']['name']) ?></p></div><?php endif; ?>
+                    <?php if ($dateStr): ?><div><p class="text-warm-gray text-sm">Data</p><p class="font-display text-lg"><?= e($dateStr) ?></p></div><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -163,20 +169,37 @@ include __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<?php if (!empty($event['description'])): ?>
+<?php if (!empty($event['description']) || !empty($castList) || !empty($creative)): ?>
 <!-- Despre spectacol -->
 <section class="py-16 px-4 lg:px-8">
     <div class="max-w-4xl mx-auto">
+        <?php if (!empty($event['description'])): ?>
         <h2 class="font-display text-3xl mb-6">Despre spectacol</h2>
         <div class="prose prose-invert prose-lg max-w-none text-ivory/70"><?= $event['description'] ?></div>
-        <?php if (!empty($event['artists'])): ?>
+        <?php endif; ?>
+
+        <?php if (!empty($castList)): ?>
         <div class="mt-12">
             <h3 class="font-display text-2xl mb-6">Distribuție</h3>
-            <div class="grid md:grid-cols-2 gap-4">
-                <?php foreach ($event['artists'] as $a): ?>
-                <div class="flex items-center gap-4 bg-charcoal/50 rounded-lg p-4">
-                    <?php if (!empty($a['image'])): ?><img src="<?= e($a['image']) ?>" alt="<?= e($a['name']) ?>" class="w-16 h-16 rounded-full object-cover"><?php endif; ?>
-                    <p class="font-display text-lg"><?= e($a['name']) ?></p>
+            <div class="grid md:grid-cols-2 gap-3">
+                <?php foreach ($castList as $c): ?>
+                <div class="flex items-center justify-between gap-4 bg-charcoal/50 rounded-lg px-5 py-4">
+                    <p class="font-display text-lg"><?= e($c['name'] ?? '') ?></p>
+                    <?php if (!empty($c['role'])): ?><p class="text-warm-gray text-sm text-right"><?= e($c['role']) ?></p><?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($creative)): ?>
+        <div class="mt-12">
+            <h3 class="font-display text-2xl mb-6">Echipa creativă</h3>
+            <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <?php foreach ($creative as $cr): ?>
+                <div class="bg-charcoal/40 rounded-lg p-4">
+                    <p class="text-warm-gray text-sm"><?= e($cr['role'] ?? '') ?></p>
+                    <p class="font-display text-lg"><?= e($cr['name'] ?? '') ?></p>
                 </div>
                 <?php endforeach; ?>
             </div>

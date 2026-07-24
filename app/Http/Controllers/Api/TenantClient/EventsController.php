@@ -364,6 +364,15 @@ class EventsController extends Controller
                 'ticket_terms' => $event->getTranslation('ticket_terms', $locale),
                 'gallery' => $event->gallery ?? [],
 
+                // Theater vertical details
+                'theater' => [
+                    'director' => $event->theater_director,
+                    'lead'     => $event->theater_lead,
+                    'duration' => $event->theater_duration,
+                    'cast'     => $event->theater_cast ?? [],
+                    'creative' => $event->theater_creative ?? [],
+                ],
+
                 // Commission info
                 'commission' => [
                     'mode' => $commissionMode, // 'included' or 'added_on_top'
