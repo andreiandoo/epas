@@ -70,6 +70,16 @@
             $domain = 'https://' . $domain;
         }
         $publicSiteUrl = $domain;
+    } elseif ($isTenantPanel && auth()->check() && auth()->user()->tenant) {
+        $tenant = auth()->user()->tenant;
+        $tenantDomain = optional($tenant->domains()->where('is_active', true)->orderByDesc('is_primary')->first())->domain
+            ?? $tenant->domain;
+        if ($tenantDomain) {
+            if (!str_starts_with($tenantDomain, 'http://') && !str_starts_with($tenantDomain, 'https://')) {
+                $tenantDomain = 'https://' . $tenantDomain;
+            }
+            $publicSiteUrl = $tenantDomain;
+        }
     }
 @endphp
 @if(session()->has('demo_tenant_id'))

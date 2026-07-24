@@ -111,6 +111,7 @@ class TenantPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\SetTenantPanelLocale::class,
             ])
 
             // Custom assets (Tailwind utilities + custom skin)
@@ -166,6 +167,11 @@ class TenantPanelProvider extends PanelProvider
             .fi-fo-repeater-item-content,
             .fi-fo-repeater-item-content .fi-section,
             .fi-fo-repeater-item-content .fi-section-content-ctn { overflow: visible !important; }
+            /* Allow select/date dropdowns to escape sections (were clipped by overflow:hidden on tabbed / header sections) */
+            .fi-sc-tabs .fi-section,
+            .fi-section.fi-section-has-header,
+            .fi-section-content-ctn,
+            .fi-fo-field-wrp { overflow: visible !important; }
             </style>
             HTML)
 
