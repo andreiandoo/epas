@@ -543,6 +543,53 @@ class OrganizerResource extends Resource
                                 ->suffix('zile')
                                 ->placeholder('Default din setări')
                                 ->helperText('Suprascrie setarea globală de zile scadență. Lasă gol pentru a folosi valoarea din Setări.'),
+
+                            // Download for the system-generated contract (organizer_documents).
+                            Forms\Components\Placeholder::make('generated_contract_download')
+                                ->label('Contract generat de sistem')
+                                ->columnSpanFull()
+                                ->visible(fn ($record) => $record && \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
+                                    ->where('document_type', 'organizer_contract')
+                                    ->exists())
+                                ->content(function ($record) {
+                                    $doc = \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
+                                        ->where('document_type', 'organizer_contract')
+                                        ->latest('id')
+                                        ->first();
+                                    if (! $doc) {
+                                        return null;
+                                    }
+                                    $url = \Illuminate\Support\Facades\Storage::disk('public')->url($doc->file_path);
+                                    $signed = ! empty($doc->document_data['signed'] ?? null);
+                                    $badge = $signed
+                                        ? '<span style="margin-left:8px;font-size:11px;color:#059669;font-weight:600;">semnat electronic</span>'
+                                        : '<span style="margin-left:8px;font-size:11px;color:#d97706;font-weight:600;">nesemnat</span>';
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<a href="' . e($url) . '" target="_blank" '
+                                        . 'style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;background:#4f46e5;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">'
+                                        . '<svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>'
+                                        . 'Descarcă contract</a>' . $badge
+                                    );
+                                }),
+
+                            // Manual upload for organizers the system never generated a
+                            // contract for. Filament's FileUpload gives native download +
+                            // delete on the uploaded file.
+                            Forms\Components\FileUpload::make('contract_document')
+                                ->label('Încarcă contract (manual)')
+                                ->helperText('Pentru organizatorii cărora sistemul nu le-a generat un contract. După încărcare poate fi descărcat sau șters.')
+                                ->columnSpanFull()
+                                ->disk('public')
+                                ->directory('organizer-contracts')
+                                ->acceptedFileTypes(['application/pdf'])
+                                ->maxSize(10240)
+                                ->downloadable()
+                                ->openable()
+                                ->deletable()
+                                ->visible(fn ($record) => ! $record || ! \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
+                                    ->where('document_type', 'organizer_contract')
+                                    ->exists()),
                         ])
                         ->columns(2),
 

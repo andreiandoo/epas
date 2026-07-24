@@ -33,6 +33,8 @@ class MarketplaceOrganizer extends Authenticatable
         'contract_signed_at',
         'contract_signed_ip',
         'contract_signed_user_agent',
+        // Manually-uploaded contract (admin, for organizers without a generated one)
+        'contract_document',
         'leisure_template_variant',
 
         // Company details
