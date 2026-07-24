@@ -2,10 +2,10 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
-$all      = api_get('/tenant-client/events', ['limit' => 9]);
-$events   = $all['success'] ? ($all['data'] ?? []) : [];
+$all      = api_get('/tenant-client/events', ['per_page' => 9]);
+$events   = tc_events($all);
 $featResp = api_get('/tenant-client/events/featured', ['limit' => 1]);
-$featured = $featResp['success'] ? ($featResp['data'][0] ?? null) : null;
+$featured = tc_events($featResp)[0] ?? null;
 if (!$featured && !empty($events)) { $featured = $events[0]; }
 // Excludem evenimentul featured din grila "în program"
 $grid = array_values(array_filter($events, fn($e) => !$featured || ($e['slug'] ?? '') !== ($featured['slug'] ?? '')));

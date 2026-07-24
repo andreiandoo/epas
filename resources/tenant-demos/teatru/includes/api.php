@@ -106,3 +106,35 @@ function price_fmt($amount, string $currency = 'RON'): string {
     if ($amount === null || $amount === '') { return ''; }
     return number_format((float) $amount, 0, ',', '.') . ' ' . $currency;
 }
+
+/**
+ * Normalizează un eveniment din API-ul tenant-client la forma folosită în skin:
+ * asigură `category` (din event_types[0]) și `currency`.
+ */
+function tc_norm_event($e): array {
+    if (!is_array($e)) { return []; }
+    if (empty($e['category']) && !empty($e['event_types'][0])) {
+        $e['category'] = $e['event_types'][0];
+    }
+    if (empty($e['currency'])) {
+        $e['currency'] = $e['ticket_types'][0]['currency'] ?? 'RON';
+    }
+    return $e;
+}
+
+/**
+ * Extrage lista de evenimente dintr-un răspuns API, tratând ambele forme:
+ * data.events[] (paginat) sau data[] (listă directă). Normalizează fiecare eveniment.
+ */
+function tc_events(array $resp): array {
+    if (!($resp['success'] ?? false)) { return []; }
+    $d = $resp['data'] ?? [];
+    if (isset($d['events']) && is_array($d['events'])) {
+        $list = $d['events'];
+    } elseif (is_array($d) && (array_keys($d) === range(0, count($d) - 1))) {
+        $list = $d; // listă directă
+    } else {
+        $list = [];
+    }
+    return array_map('tc_norm_event', $list);
+}

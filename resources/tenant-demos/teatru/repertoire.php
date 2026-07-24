@@ -3,8 +3,8 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
 // Evenimente reale ale tenantului (Repertoriu = toate cele viitoare)
-$resp   = api_get('/tenant-client/events', ['limit' => 60]);
-$events = $resp['success'] ? ($resp['data'] ?? []) : [];
+$resp   = api_get('/tenant-client/events', ['per_page' => 60]);
+$events = tc_events($resp);
 
 $fallbackImg = 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&q=80';
 
