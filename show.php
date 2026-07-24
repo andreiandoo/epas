@@ -30,37 +30,53 @@ if (!empty($event['start_date'])) {
 
 $pageTitle = ($event['title'] ?? 'Spectacol') . ' — ' . SITE_NAME;
 $pageDescription = $event['short_description'] ?? '';
+$fallback = 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1920&q=80';
+$poster   = asset_url($event['poster_url'] ?? $event['hero_image_url'] ?? null, 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&q=80');
+$lead     = $event['artists'][0]['name'] ?? null;
 $pageExtraStyles = '
-    .seat { width: 22px; height: 22px; border-radius: 6px 6px 3px 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; transition: all .15s ease; }
-    .seat.available { background: rgba(114,47,55,.55); }
-    .seat.available:hover { background: #8B3A44; transform: translateY(-2px); }
-    .seat.available.vip { background: rgba(212,175,55,.35); }
+    .seat { width: 24px; height: 24px; border-radius: 5px 5px 3px 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; transition: all .15s ease; }
+    .seat.available { background: #3d1f23; border: 1px solid #722F37; }
+    .seat.available:hover { background: #722F37; transform: translateY(-2px); }
+    .seat.available.vip { background: rgba(212,175,55,.18); border: 1px solid rgba(212,175,55,.5); }
     .seat.available.vip:hover { background: #D4AF37; color:#0A0A0A; }
-    .seat.selected { background: #D4AF37; color:#0A0A0A; }
-    .seat.taken { background: #2A2A2A; cursor: not-allowed; opacity:.5; }
+    .seat.selected { background: #D4AF37; border-color:#D4AF37; color:#0A0A0A; }
+    .seat.taken { background: #1a1a1a; border: 1px solid #2a2a2a; cursor: not-allowed; opacity:.35; }
     .seat.busy { opacity:.5; pointer-events:none; }
-    .stage { background: linear-gradient(180deg, rgba(212,175,55,.15), transparent); border-top: 2px solid rgba(212,175,55,.4); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
-    .date-btn { border: 1px solid rgba(212,175,55,.2); transition: all .2s ease; }
-    .date-btn:hover { border-color:#D4AF37; }
-    .date-btn.selected { background:#D4AF37; color:#0A0A0A; border-color:#D4AF37; }
+    .stage { background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%); border: 1px solid rgba(212,175,55,.3); border-radius: 4px 4px 50% 50% / 4px 4px 20% 20%; }
 ';
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>
 <!-- Hero -->
 <section class="relative pt-20">
-    <div class="absolute inset-0 h-[420px] overflow-hidden">
-        <img src="<?= e($hero) ?>" alt="<?= e($event['title'] ?? '') ?>" class="w-full h-full object-cover opacity-40">
-        <div class="absolute inset-0 bg-gradient-to-t from-midnight via-midnight/70 to-transparent"></div>
+    <div class="absolute inset-0 h-[50vh]">
+        <img src="<?= e($hero) ?>" alt="<?= e($event['title'] ?? '') ?>" class="w-full h-full object-cover opacity-30">
+        <div class="absolute inset-0 bg-gradient-to-t from-midnight via-midnight/80 to-midnight/40"></div>
     </div>
-    <div class="relative max-w-7xl mx-auto px-4 lg:px-8 pt-32 pb-8">
-        <?php if (!empty($event['category']['name'])): ?>
-            <p class="text-gold tracking-[0.2em] text-sm mb-3 uppercase"><?= e($event['category']['name']) ?></p>
-        <?php endif; ?>
-        <h1 class="font-display text-4xl lg:text-6xl mb-4"><?= e($event['title'] ?? 'Spectacol') ?></h1>
-        <div class="flex flex-wrap gap-6 text-warm-gray">
-            <?php if ($venueName): ?><div><span class="text-ivory/50">Locație:</span> <span class="font-display text-lg text-ivory"><?= e($venueName) ?></span></div><?php endif; ?>
-            <?php if ($dateStr): ?><div><span class="text-ivory/50">Data:</span> <span class="font-display text-lg text-ivory"><?= e($dateStr) ?></span></div><?php endif; ?>
+    <div class="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 pt-10 pb-8">
+        <a href="/program" class="text-ivory/70 hover:text-gold text-sm transition-colors">← Înapoi la program</a>
+        <div class="flex flex-col lg:flex-row gap-8 mt-6">
+            <!-- Poster -->
+            <div class="lg:w-80 flex-shrink-0">
+                <img src="<?= e($poster) ?>" alt="<?= e($event['title'] ?? '') ?>" class="w-full rounded-lg border border-gold/20 shadow-2xl aspect-[3/4] object-cover">
+            </div>
+            <!-- Info -->
+            <div class="flex-1">
+                <?php if (!empty($event['category']['name'])): ?>
+                    <div class="flex items-center gap-3 mb-4"><span class="text-gold"><?= e($event['category']['name']) ?></span></div>
+                <?php endif; ?>
+                <?php if ($lead): ?><p class="text-gold tracking-wider text-sm mb-2 uppercase"><?= e($lead) ?></p><?php endif; ?>
+                <h1 class="font-display text-5xl lg:text-7xl italic mb-6"><?= e($event['title'] ?? 'Spectacol') ?></h1>
+                <?php if (!empty($event['short_description'])): ?>
+                    <p class="text-ivory/70 text-lg leading-relaxed mb-8 max-w-2xl"><?= e($event['short_description']) ?></p>
+                <?php endif; ?>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
+                    <?php if ($lead): ?><div><p class="text-warm-gray text-sm">În distribuție</p><p class="font-display text-lg"><?= e($lead) ?></p></div><?php endif; ?>
+                    <?php if ($dateStr): ?><div><p class="text-warm-gray text-sm">Data</p><p class="font-display text-lg"><?= e($dateStr) ?></p></div><?php endif; ?>
+                    <?php if ($venueName): ?><div><p class="text-warm-gray text-sm">Sală</p><p class="font-display text-lg"><?= e($venueName) ?></p></div><?php endif; ?>
+                    <?php if (!empty($event['category']['name'])): ?><div><p class="text-warm-gray text-sm">Gen</p><p class="font-display text-lg"><?= e($event['category']['name']) ?></p></div><?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 </section>
