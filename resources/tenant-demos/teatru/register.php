@@ -13,7 +13,7 @@ include __DIR__ . '/includes/header.php';
             <input type="email" placeholder="Email" required class="w-full bg-midnight border border-gold/20 rounded-lg px-4 py-3 focus:border-gold outline-none">
             <input type="password" placeholder="Parolă" required class="w-full bg-midnight border border-gold/20 rounded-lg px-4 py-3 focus:border-gold outline-none">
             <button type="submit" class="btn-gold w-full py-3 rounded-lg">Creează cont</button>
-            <p class="text-sm text-warm-gray text-center pt-2">Ai deja cont? <a href="/login.php" class="text-gold hover:text-gold-light">Autentifică-te</a></p>
+            <p class="text-sm text-warm-gray text-center pt-2">Ai deja cont? <a href="/autentificare" class="text-gold hover:text-gold-light">Autentifică-te</a></p>
         </form>
     </div>
 </section>

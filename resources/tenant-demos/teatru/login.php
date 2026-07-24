@@ -14,8 +14,8 @@ include __DIR__ . '/includes/header.php';
             <input type="password" placeholder="Parolă" required class="w-full bg-midnight border border-gold/20 rounded-lg px-4 py-3 focus:border-gold outline-none">
             <button type="submit" class="btn-gold w-full py-3 rounded-lg">Intră în cont</button>
             <div class="flex items-center justify-between text-sm text-warm-gray pt-2">
-                <a href="/register.php" class="hover:text-gold">Cont nou</a>
-                <a href="/forgot-password.php" class="hover:text-gold">Ai uitat parola?</a>
+                <a href="/inregistrare" class="hover:text-gold">Cont nou</a>
+                <a href="/recuperare-parola" class="hover:text-gold">Ai uitat parola?</a>
             </div>
         </form>
     </div>

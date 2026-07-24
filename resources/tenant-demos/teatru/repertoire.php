@@ -69,7 +69,7 @@ include __DIR__ . '/includes/header.php';
         <div class="max-w-7xl mx-auto">
             <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <template x-for="show in (filter === 'all' ? shows : shows.filter(s => s.category === filter))" :key="show.slug">
-                    <a :href="'/show.php?slug=' + show.slug" class="show-card rounded-lg overflow-hidden group">
+                    <a :href="'/spectacol/' + show.slug" class="show-card rounded-lg overflow-hidden group">
                         <div class="relative aspect-[3/4]">
                             <img :src="show.image" :alt="show.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <div class="absolute inset-0 bg-gradient-to-t from-midnight via-transparent to-transparent"></div>

@@ -40,9 +40,9 @@ include __DIR__ . '/includes/header.php';
         <?php endif; ?>
         <div class="flex flex-wrap gap-4">
             <?php if ($featured && !empty($featured['slug'])): ?>
-                <a href="/show.php?slug=<?= e($featured['slug']) ?>" class="btn-gold px-8 py-4 rounded-lg text-lg">Cumpără bilete</a>
+                <a href="/spectacol/<?= e($featured['slug']) ?>" class="btn-gold px-8 py-4 rounded-lg text-lg">Cumpără bilete</a>
             <?php endif; ?>
-            <a href="/repertoire.php" class="btn-outline px-8 py-4 rounded-lg text-lg">Vezi repertoriul</a>
+            <a href="/repertoriu" class="btn-outline px-8 py-4 rounded-lg text-lg">Vezi repertoriul</a>
         </div>
     </div>
 </section>
@@ -56,7 +56,7 @@ include __DIR__ . '/includes/header.php';
         <?php else: ?>
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($events as $e): ?>
-            <a href="/show.php?slug=<?= e($e['slug'] ?? '') ?>" class="show-card rounded-lg overflow-hidden group">
+            <a href="/spectacol/<?= e($e['slug'] ?? '') ?>" class="show-card rounded-lg overflow-hidden group">
                 <div class="relative aspect-[3/4]">
                     <img src="<?= e(ev_img($e, $fallback)) ?>" alt="<?= e($e['title'] ?? '') ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     <div class="absolute inset-0 bg-gradient-to-t from-midnight via-transparent to-transparent"></div>
@@ -74,7 +74,7 @@ include __DIR__ . '/includes/header.php';
             </a>
             <?php endforeach; ?>
         </div>
-        <div class="text-center mt-10"><a href="/repertoire.php" class="btn-outline px-8 py-3 rounded-lg inline-block">Toate spectacolele</a></div>
+        <div class="text-center mt-10"><a href="/repertoriu" class="btn-outline px-8 py-3 rounded-lg inline-block">Toate spectacolele</a></div>
         <?php endif; ?>
     </div>
 </section>
@@ -85,7 +85,7 @@ include __DIR__ . '/includes/header.php';
         <p class="text-gold tracking-[0.2em] text-sm mb-3 uppercase">Fidelitate</p>
         <h2 class="font-display text-4xl mb-4">Abonamente de stagiune</h2>
         <p class="text-ivory/70 mb-8 max-w-2xl mx-auto">Păstrați același loc la toate spectacolele stagiunii. Reduceri pentru elevi, studenți și pensionari.</p>
-        <a href="/subscriptions.php" class="btn-gold px-8 py-4 rounded-lg inline-block">Vezi abonamentele</a>
+        <a href="/abonamente" class="btn-gold px-8 py-4 rounded-lg inline-block">Vezi abonamentele</a>
     </div>
 </section>
 <?php

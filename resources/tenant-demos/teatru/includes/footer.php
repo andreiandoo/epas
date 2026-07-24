@@ -16,8 +16,8 @@ $year = date('Y');
                 <span>© <?= $year ?> <?= htmlspecialchars($siteName) ?></span>
             </div>
             <div class="flex items-center gap-6">
-                <a href="/privacy.php" class="hover:text-gold transition-colors">Confidențialitate</a>
-                <a href="/terms.php" class="hover:text-gold transition-colors">Termeni</a>
+                <a href="/confidentialitate" class="hover:text-gold transition-colors">Confidențialitate</a>
+                <a href="/termeni" class="hover:text-gold transition-colors">Termeni</a>
                 <p>Ticketing by <a href="https://tixello.ro" class="text-gold hover:text-gold-light font-semibold">tixello</a></p>
             </div>
         </div>

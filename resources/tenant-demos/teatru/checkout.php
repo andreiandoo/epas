@@ -12,7 +12,7 @@ include __DIR__ . '/includes/header.php';
             <p class="text-ivory/80 mb-2">🔒 Plata (card / Netopia) se activează în etapa următoare a implementării.</p>
             <p class="text-warm-gray text-sm">Selecția locurilor pe hartă și rezervarea temporară sunt funcționale în această versiune.</p>
         </div>
-        <a href="/schedule.php" class="btn-outline px-8 py-3 rounded-lg inline-block mt-8">Înapoi la program</a>
+        <a href="/program" class="btn-outline px-8 py-3 rounded-lg inline-block mt-8">Înapoi la program</a>
     </div>
 </section>
 <?php include __DIR__ . '/includes/footer.php';
