@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unsubscribe Error</title>
+    <title>Eroare la dezabonare</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -58,8 +58,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
         </div>
-        <h1>Unsubscribe Failed</h1>
-        <p>We couldn't process your unsubscribe request. The link may be invalid or expired. Please contact support if you continue to receive unwanted emails.</p>
+        <h1>Dezabonare eșuată</h1>
+        <p>Nu am putut procesa cererea de dezabonare. Linkul poate fi invalid sau expirat. Te rugăm să contactezi suportul dacă primești în continuare emailuri nedorite.</p>
     </div>
 </body>
 </html>

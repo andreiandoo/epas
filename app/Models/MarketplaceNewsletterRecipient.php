@@ -17,6 +17,8 @@ class MarketplaceNewsletterRecipient extends Model
         'clicked_at',
         'bounced_at',
         'unsubscribed_at',
+        'unsubscribe_reason',
+        'unsubscribe_reason_detail',
         'error_message',
     ];
 

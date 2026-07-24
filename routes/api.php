@@ -1415,6 +1415,8 @@ Route::prefix('marketplace-client')->middleware('throttle:120,1')->group(functio
         ->name('api.marketplace-client.newsletter.track.click');
     Route::get('/newsletter/unsubscribe', [NewsletterTrackingController::class, 'unsubscribe'])
         ->name('api.marketplace-client.newsletter.unsubscribe');
+    Route::post('/newsletter/unsubscribe-reason', [NewsletterTrackingController::class, 'submitUnsubscribeReason'])
+        ->name('api.marketplace-client.newsletter.unsubscribe.reason');
     Route::get('/newsletter/preferences', [NewsletterTrackingController::class, 'preferences'])
         ->name('api.marketplace-client.newsletter.preferences');
     Route::post('/newsletter/preferences', [NewsletterTrackingController::class, 'updatePreferences'])

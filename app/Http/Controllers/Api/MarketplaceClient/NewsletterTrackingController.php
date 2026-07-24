@@ -167,7 +167,48 @@ class NewsletterTrackingController extends Controller
 
         return response()->view('marketplace.unsubscribe-success', [
             'marketplace' => $recipient->newsletter->marketplaceClient->name ?? 'Marketplace',
+            // Passed to the reason form so it can POST back under the same token.
+            'recipientId' => $recipient->id,
+            'token' => $token,
         ]);
+    }
+
+    /**
+     * Store the optional reason the recipient gave for unsubscribing. Guarded by
+     * the same token as unsubscribe() — the success page POSTs id + token +
+     * reason here. Pure feedback: the unsubscribe already happened, so a missing
+     * or invalid submission never changes the subscription state.
+     */
+    public function submitUnsubscribeReason(Request $request)
+    {
+        $validated = $request->validate([
+            'id' => 'required',
+            'token' => 'required|string',
+            'reason' => 'required|string|max:50',
+            'detail' => 'nullable|string|max:500',
+        ]);
+
+        $recipient = MarketplaceNewsletterRecipient::find($validated['id']);
+        if (!$recipient) {
+            return response()->json(['error' => 'not_found'], 404);
+        }
+
+        $expectedToken = hash('sha256', $recipient->id . $recipient->email . config('app.key'));
+        if (!hash_equals($expectedToken, $validated['token'])) {
+            return response()->json(['error' => 'invalid_token'], 403);
+        }
+
+        // Whitelist the category so free text can't be smuggled into the key
+        // (keeps the column aggregatable for "why do people unsubscribe?").
+        $allowed = ['too_many', 'not_relevant', 'never_signed_up', 'spam', 'other'];
+        $reason = in_array($validated['reason'], $allowed, true) ? $validated['reason'] : 'other';
+
+        $recipient->update([
+            'unsubscribe_reason' => $reason,
+            'unsubscribe_reason_detail' => $validated['detail'] ?? null,
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     /**
