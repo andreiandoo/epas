@@ -210,16 +210,28 @@ function eventSortKey(event) {
   }
 }
 
+// Filter tabs: 'curente' merges live + today + future (anything the
+// operator can still operate on), 'draft' surfaces unpublished only, and
+// 'trecute' isolates past. `curente` is the default because 90%+ of the
+// time the operator wants an actionable event.
+const FILTER_TO_CATEGORIES = {
+  curente: ['live', 'today', 'future'],
+  draft: ['unpublished'],
+  trecute: ['past'],
+};
+
 export default function EventsModal({ visible, onClose, events, onSelectEvent, onRefresh }) {
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
-  // Past is intentionally listed LAST so the picker leads with actionable
-  // groups (live / today / drafts / future) and lets the operator scroll to
-  // history if they need it. Past sorted DESC (most recent first) so a two-
-  // day-old event is easier to reach than one from last year.
-  const categories = ['live', 'today', 'unpublished', 'future', 'past'];
+  const [filter, setFilter] = useState('curente');
+  const categories = FILTER_TO_CATEGORIES[filter] || FILTER_TO_CATEGORIES.curente;
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
-  useEffect(() => { if (!visible) setQuery(''); }, [visible]);
+  useEffect(() => {
+    if (!visible) {
+      setQuery('');
+      setFilter('curente');
+    }
+  }, [visible]);
   const matchesQuery = (event) => {
     if (!query.trim()) return true;
     const needle = query.trim().toLowerCase();
@@ -261,6 +273,9 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent, o
   };
 
   const hasEvents = events && categories.some(cat => events[cat] && events[cat].length > 0);
+  const emptyLabel = filter === 'draft' ? 'Niciun draft'
+    : filter === 'trecute' ? 'Niciun eveniment trecut'
+    : 'Niciun eveniment curent';
 
   return (
     <Modal
@@ -316,6 +331,39 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent, o
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* Filter tabs — count per tab so the operator sees at a
+                glance whether there's anything to switch to. */}
+            <View style={styles.filterTabs}>
+              {[
+                { key: 'curente', label: 'Curente' },
+                { key: 'draft', label: 'Draft' },
+                { key: 'trecute', label: 'Trecute' },
+              ].map(t => {
+                const count = FILTER_TO_CATEGORIES[t.key]
+                  .reduce((n, cat) => n + ((events?.[cat] || []).length), 0);
+                const active = filter === t.key;
+                return (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[styles.filterTab, active && styles.filterTabActive]}
+                    onPress={() => setFilter(t.key)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.filterTabText, active && styles.filterTabTextActive]}>
+                      {t.label}
+                    </Text>
+                    {count > 0 ? (
+                      <View style={[styles.filterTabBadge, active && styles.filterTabBadgeActive]}>
+                        <Text style={[styles.filterTabBadgeText, active && styles.filterTabBadgeTextActive]}>
+                          {count}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           {/* Event List */}
@@ -343,7 +391,7 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent, o
                     strokeLinejoin="round"
                   />
                 </Svg>
-                <Text style={styles.emptyText}>Niciun eveniment disponibil</Text>
+                <Text style={styles.emptyText}>{emptyLabel}</Text>
               </View>
             ) : (
               (() => {
@@ -456,6 +504,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     padding: 0,
+  },
+  filterTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  filterTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  filterTabActive: {
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  filterTabTextActive: {
+    color: colors.white,
+  },
+  filterTabBadge: {
+    minWidth: 20,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterTabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.24)',
+  },
+  filterTabBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  filterTabBadgeTextActive: {
+    color: colors.white,
   },
   scrollView: {
     flexGrow: 0,

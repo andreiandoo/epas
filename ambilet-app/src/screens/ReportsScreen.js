@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  TextInput,
 } from 'react-native';
 import Svg, { Polyline, Rect, Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -207,6 +208,8 @@ function HourlyChart({ data }) {
 
 function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
   const [showModal, setShowModal] = useState(false);
+  const [query, setQuery] = useState('');
+  useEffect(() => { if (!showModal) setQuery(''); }, [showModal]);
 
   if (!pastEvents || pastEvents.length === 0) return null;
 
@@ -221,6 +224,21 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
     const bt = bRaw ? new Date(bRaw).getTime() : 0;
     return bt - at;
   });
+
+  // Case-insensitive substring match over name + venue + city — same fields
+  // the Dashboard picker searches, so the operator's mental model stays
+  // consistent across the two selectors.
+  const needle = query.trim().toLowerCase();
+  const filteredPast = needle
+    ? sortedPast.filter(e => {
+        const hay = [
+          pickString(e.name), pickString(e.title),
+          pickString(e.venue_name), pickString(e.venue?.name),
+          pickString(e.venue_city), pickString(e.venue?.city),
+        ].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(needle);
+      })
+    : sortedPast;
 
   const handleSelect = (event) => {
     onSelect(event);
@@ -278,9 +296,43 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
             <View style={pastEventStyles.sheetHeader}>
               <View style={pastEventStyles.handle} />
               <Text style={pastEventStyles.sheetTitle}>Evenimente Trecute</Text>
+              {/* Search — free-text over name + venue + city. Cleared on close. */}
+              <View style={pastEventStyles.searchWrap}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <Path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35"
+                    stroke={colors.textTertiary} strokeWidth={2}
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Caută după nume, venue, oraș"
+                  placeholderTextColor={colors.textTertiary}
+                  style={pastEventStyles.searchInput}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  returnKeyType="search"
+                />
+                {query.length > 0 && (
+                  <TouchableOpacity onPress={() => setQuery('')} activeOpacity={0.7}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                      <Path d="M18 6L6 18M6 6l12 12"
+                        stroke={colors.textTertiary} strokeWidth={2}
+                        strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             <ScrollView style={pastEventStyles.sheetScroll} showsVerticalScrollIndicator={false}>
-              {sortedPast.map((event, index) => {
+              {filteredPast.length === 0 ? (
+                <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
+                    {needle ? `Nimic pentru „${query.trim()}"` : 'Niciun eveniment'}
+                  </Text>
+                </View>
+              ) : null}
+              {filteredPast.map((event, index) => {
                 const isSelected = selectedEvent?.id === event.id;
                 let formattedDate = '';
                 // API returns `starts_at` (ISO) for most events, `event_date`
@@ -395,6 +447,26 @@ const pastEventStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 8,
+    marginTop: 12,
+    marginHorizontal: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    padding: 0,
   },
   sheetScroll: {
     paddingHorizontal: 20,
