@@ -250,7 +250,10 @@ const LeisureDash = {
         const labels = rows.map(r => { const d = new Date((r.date || '') + 'T00:00:00'); return isNaN(d) ? (r.date || '') : (d.getDate() + '.' + (d.getMonth() + 1)); });
         const revenue = rows.map(r => Number(r.revenue || 0));
         const tickets = rows.map(r => Number(r.tickets || 0));
-        const has = revenue.some(v => v > 0) || tickets.some(v => v > 0);
+        // Vizitatori = bilete fizice scanabile (componente pachet + individuale + bonus ghid,
+        // exclus umbrella pachet). Fallback la `tickets` pentru rows vechi fara acest field.
+        const visitors = rows.map(r => (r.visitors != null ? Number(r.visitors) : Number(r.tickets || 0)));
+        const has = revenue.some(v => v > 0) || tickets.some(v => v > 0) || visitors.some(v => v > 0);
         if (this.salesChart) { this.salesChart.destroy(); this.salesChart = null; }
         if (!has) { canvas.style.display = 'none'; emptyEl.classList.remove('hidden'); emptyEl.classList.add('flex'); return; }
         canvas.style.display = ''; emptyEl.classList.add('hidden'); emptyEl.classList.remove('flex');
@@ -258,10 +261,27 @@ const LeisureDash = {
             type: 'bar',
             data: { labels, datasets: [
                 { type: 'line', label: 'Venituri (RON)', data: revenue, yAxisID: 'y', borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.12)', borderWidth: 2.5, fill: true, tension: .35, pointRadius: 0, order: 0 },
-                { type: 'bar', label: 'Bilete', data: tickets, yAxisID: 'y1', backgroundColor: 'rgba(20,184,166,.55)', borderRadius: 4, order: 1 },
+                // 2 bare grupate: Bilete vandute (tranzactii cu valoare) + Vizitatori (bilete fizice).
+                // Diferenta = componente pachet + bonusuri ghid + invitatii. Ambele impartesc aceeasi
+                // axa Y1 (numeric compact); grupate side-by-side pe fiecare zi.
+                { type: 'bar', label: 'Bilete vândute', data: tickets, yAxisID: 'y1', backgroundColor: 'rgba(20,184,166,.65)', borderRadius: 4, order: 1 },
+                { type: 'bar', label: 'Vizitatori', data: visitors, yAxisID: 'y1', backgroundColor: 'rgba(139,92,246,.55)', borderRadius: 4, order: 1 },
             ]},
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 11 } } } },
+                plugins: {
+                    legend: { display: true, labels: { boxWidth: 10, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            // Tooltip explicativ pentru diferenta bilete vs vizitatori
+                            afterBody: (items) => {
+                                const t = Number(items.find(i => i.dataset.label === 'Bilete vândute')?.parsed?.y || 0);
+                                const v = Number(items.find(i => i.dataset.label === 'Vizitatori')?.parsed?.y || 0);
+                                if (v > t) return ['', 'Vizitatori = bilete scanate la poartă', '(include componente pachet + invitații)'];
+                                return null;
+                            },
+                        },
+                    },
+                },
                 scales: {
                     x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, font: { size: 10 } } },
                     y: { position: 'left', beginAtZero: true, grid: { color: 'rgba(148,163,184,.15)' }, ticks: { color: '#059669', font: { size: 10 }, callback: v => new Intl.NumberFormat('ro-RO', { notation: 'compact' }).format(v) } },

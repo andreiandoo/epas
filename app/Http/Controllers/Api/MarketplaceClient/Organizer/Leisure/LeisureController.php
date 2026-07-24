@@ -640,20 +640,30 @@ class LeisureController extends BaseController
         foreach ($orders as $order) {
             $key = $fmtKey($order->paid_at);
             if (!isset($buckets[$key])) {
-                $buckets[$key] = ['date' => $key, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+                // `tickets` = tranzactii (bilete cu valoare, umbrella pachet).
+                // `visitors` = persoane fizice ce scaneaza la poarta (componente pachet
+                //  + bilete simple + bonus ghid, DAR EXCLUS umbrella care nu se scaneaza).
+                $buckets[$key] = ['date' => $key, 'orders' => 0, 'tickets' => 0, 'visitors' => 0, 'revenue' => 0.0];
             }
             $buckets[$key]['orders']++;
 
             // Revenue post-discount = suma effective_price a biletelor NErefundate.
             // Consistent cu /organizator/leisure-raport: NU folosim order.total (include
             // on-top commission / insurance / fee, si NU reflecta discount-uri per-ticket
-            // cand promo code se aplica pe subset din cart).
+            // cand promo code se aplica pe subset din cart). Contorizam si `visitors` in
+            // aceeasi bucla — bilete fizice scanabile = componente pachet + individuale +
+            // bonus ghid; SKIP umbrella-ul pachetului (nu se scaneaza, componentele da).
             $rev = 0.0;
             foreach ($order->tickets as $t) {
                 if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
                 $rev += method_exists($t, 'getEffectivePrice')
                     ? (float) $t->getEffectivePrice()
                     : (float) ($t->price ?? 0);
+                // Vizitatori: skip umbrella pachet (bilet-parinte doar contabil, nu QR scanabil)
+                $isUmbrella = is_array($t->meta ?? null) && !empty($t->meta['is_package_umbrella']);
+                if (!$isUmbrella) {
+                    $buckets[$key]['visitors']++;
+                }
             }
             $rev = round($rev, 2);
             $buckets[$key]['revenue'] += $rev;
