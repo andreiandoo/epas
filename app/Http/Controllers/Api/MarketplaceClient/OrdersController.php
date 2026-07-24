@@ -234,6 +234,34 @@ class OrdersController extends BaseController
                 $orderMeta['team_member_name'] = $teamMemberName;
             }
 
+            // Idempotency for offline-mode POS retries. Client generates a
+            // UUID when queuing a sale offline, ships the same key on every
+            // sync attempt. If we've already booked an order with that key
+            // for this organizer we return the existing one instead of
+            // duplicating tickets (which would double-charge the customer).
+            $idempotencyKey = $request->input('idempotency_key');
+            if (is_string($idempotencyKey) && strlen($idempotencyKey) >= 8 && strlen($idempotencyKey) <= 64) {
+                $existingId = DB::table('orders')
+                    ->where('marketplace_client_id', $client->id)
+                    ->whereRaw("meta->>'idempotency_key' = ?", [$idempotencyKey])
+                    ->value('id');
+                if ($existingId) {
+                    $existing = Order::find($existingId);
+                    if ($existing) {
+                        return $this->success([
+                            'order' => [
+                                'id' => $existing->id,
+                                'order_number' => $existing->order_number,
+                                'status' => $existing->status,
+                                'total' => (float) $existing->total,
+                            ],
+                            'replayed' => true,
+                        ], 'Order already processed', 200);
+                    }
+                }
+                $orderMeta['idempotency_key'] = $idempotencyKey;
+            }
+
             // Newsletter attribution — the marketplace JS sends `nl` from
             // the URL/localStorage (set by clicks through the tracked
             // newsletter redirect). Persist only when it resolves to a

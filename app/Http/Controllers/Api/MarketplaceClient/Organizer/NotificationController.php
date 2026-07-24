@@ -27,7 +27,39 @@ class NotificationController extends BaseController
             'title' => 'required|string|max:255',
             'message' => 'nullable|string|max:2000',
             'severity' => 'nullable|string|in:high,medium,info',
+            // Optional attachments from the mobile emergency sheet.
+            // Photo capped at 5MB (JPG/PNG/WebP). Voice note capped at
+            // 2MB (m4a/mp3/aac) which is ~30-60s @ 32kbps. Both are
+            // stored on the public disk and the URL persisted in the
+            // notification's `data` blob for panel rendering.
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'audio' => 'nullable|file|mimes:m4a,mp3,aac,mp4|max:2048',
         ]);
+
+        // Store attachments first (before creating the notification row)
+        // so we don't end up with orphan data.photo_url pointing nowhere
+        // if the file save fails after the row is inserted.
+        $photoUrl = null;
+        $audioUrl = null;
+        try {
+            if ($request->hasFile('photo')) {
+                $path = $request->file('photo')->store(
+                    "emergency_reports/{$organizer->id}",
+                    'public'
+                );
+                $photoUrl = \Storage::disk('public')->url($path);
+            }
+            if ($request->hasFile('audio')) {
+                $path = $request->file('audio')->store(
+                    "emergency_reports/{$organizer->id}",
+                    'public'
+                );
+                $audioUrl = \Storage::disk('public')->url($path);
+            }
+        } catch (\Throwable $e) {
+            // Fall through — attach whatever succeeded; notification still
+            // gets created so the alert lands even if media upload failed.
+        }
 
         // Reporter identity — team member if the token belongs to one,
         // otherwise fall back to the organizer's own account label.
@@ -68,13 +100,15 @@ class NotificationController extends BaseController
             'message' => $validated['message'] ?? null,
             'icon' => $iconMap[$severity] ?? 'alert-triangle',
             'color' => $colorMap[$severity] ?? 'red',
-            'data' => [
+            'data' => array_filter([
                 'emergency_type' => $validated['type'],
                 'severity' => $severity,
                 'reporter' => $reporterName,
                 'reporter_role' => $reporterRole,
                 'reported_at' => now()->toIso8601String(),
-            ],
+                'photo_url' => $photoUrl,
+                'audio_url' => $audioUrl,
+            ]),
         ]);
 
         return $this->success([
