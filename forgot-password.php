@@ -12,7 +12,7 @@ include __DIR__ . '/includes/header.php';
         <form class="space-y-4 bg-charcoal/40 rounded-2xl p-8" onsubmit="event.preventDefault(); alert('Link de resetare trimis (demo).');">
             <input type="email" placeholder="Email" required class="w-full bg-midnight border border-gold/20 rounded-lg px-4 py-3 focus:border-gold outline-none">
             <button type="submit" class="btn-gold w-full py-3 rounded-lg">Trimite link</button>
-            <p class="text-sm text-warm-gray text-center pt-2"><a href="/login.php" class="text-gold hover:text-gold-light">Înapoi la autentificare</a></p>
+            <p class="text-sm text-warm-gray text-center pt-2"><a href="/autentificare" class="text-gold hover:text-gold-light">Înapoi la autentificare</a></p>
         </form>
     </div>
 </section>

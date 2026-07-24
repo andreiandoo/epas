@@ -40,7 +40,7 @@ include __DIR__ . '/includes/header.php';
             <div class="space-y-3">
                 <?php foreach ($m['events'] as $e):
                     $ts = !empty($e['start_date']) ? strtotime($e['start_date']) : null; ?>
-                <a href="/show.php?slug=<?= e($e['slug'] ?? '') ?>" class="flex items-center gap-6 bg-charcoal/50 hover:bg-charcoal rounded-xl p-5 transition-colors group">
+                <a href="/spectacol/<?= e($e['slug'] ?? '') ?>" class="flex items-center gap-6 bg-charcoal/50 hover:bg-charcoal rounded-xl p-5 transition-colors group">
                     <div class="text-center min-w-[64px]">
                         <p class="font-display text-3xl text-gold"><?= $ts ? date('d', $ts) : '—' ?></p>
                         <p class="text-xs text-warm-gray uppercase"><?= $ts ? substr($monthNames[(int)date('n',$ts)] ?? '',0,3) : '' ?></p>

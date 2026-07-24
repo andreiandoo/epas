@@ -30,7 +30,7 @@ $plans = [
             <ul class="space-y-2 mb-8 text-sm text-ivory/80">
                 <?php foreach ($p['features'] as $f): ?><li class="flex items-center gap-2"><span class="text-gold">✓</span> <?= e($f) ?></li><?php endforeach; ?>
             </ul>
-            <a href="/checkout.php?plan=<?= e($p['code']) ?>" class="<?= !empty($p['featured']) ? 'btn-gold' : 'btn-outline' ?> w-full py-3 rounded-lg block text-center">Alege abonamentul</a>
+            <a href="/finalizare?plan=<?= e($p['code']) ?>" class="<?= !empty($p['featured']) ? 'btn-gold' : 'btn-outline' ?> w-full py-3 rounded-lg block text-center">Alege abonamentul</a>
         </div>
         <?php endforeach; ?>
     </div>

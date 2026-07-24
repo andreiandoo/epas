@@ -9,7 +9,7 @@ include __DIR__ . '/includes/header.php';
     <div class="max-w-md mx-auto w-full text-center">
         <h1 class="font-display text-4xl mb-4">Contul meu</h1>
         <p class="text-warm-gray mb-8">Autentifică-te pentru a vedea biletele și abonamentele tale.</p>
-        <a href="/login.php" class="btn-gold px-8 py-3 rounded-lg inline-block">Autentificare</a>
+        <a href="/autentificare" class="btn-gold px-8 py-3 rounded-lg inline-block">Autentificare</a>
     </div>
 </section>
 <?php include __DIR__ . '/includes/footer.php';

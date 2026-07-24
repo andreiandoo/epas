@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
 $slug = $_GET['slug'] ?? '';
-if ($slug === '') { header('Location: /repertoire.php'); exit; }
+if ($slug === '') { header('Location: /repertoriu'); exit; }
 
 $resp  = api_get('/tenant-client/events/' . rawurlencode($slug), [], 60);
 $event = $resp['success'] ? ($resp['data'] ?? null) : null;
@@ -13,7 +13,7 @@ if (!$event) {
     $pageTitle = 'Spectacol negăsit — ' . SITE_NAME;
     include __DIR__ . '/includes/head.php';
     include __DIR__ . '/includes/header.php';
-    echo '<section class="pt-40 pb-40 px-4 text-center"><h1 class="font-display text-4xl mb-4">Spectacol negăsit</h1><a href="/repertoire.php" class="btn-gold px-6 py-3 rounded-lg inline-block mt-4">Vezi repertoriul</a></section>';
+    echo '<section class="pt-40 pb-40 px-4 text-center"><h1 class="font-display text-4xl mb-4">Spectacol negăsit</h1><a href="/repertoriu" class="btn-gold px-6 py-3 rounded-lg inline-block mt-4">Vezi repertoriul</a></section>';
     include __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -256,7 +256,7 @@ function seatMap(eventId) {
         checkout() {
             if (this.selected.length === 0) return;
             localStorage.setItem('teatru_cart', JSON.stringify(this.selected));
-            window.location.href = '/cart.php';
+            window.location.href = '/cos';
         }
     };
 }

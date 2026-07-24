@@ -11,7 +11,7 @@ include __DIR__ . '/includes/header.php';
 
         <div x-show="items.length === 0" class="bg-charcoal/40 rounded-xl p-10 text-center">
             <p class="text-warm-gray mb-6">Coșul este gol.</p>
-            <a href="/schedule.php" class="btn-gold px-8 py-3 rounded-lg inline-block">Vezi programul</a>
+            <a href="/program" class="btn-gold px-8 py-3 rounded-lg inline-block">Vezi programul</a>
         </div>
 
         <div x-show="items.length > 0">
@@ -39,7 +39,7 @@ include __DIR__ . '/includes/header.php';
                 <p class="text-warm-gray text-sm">Locurile rămân rezervate temporar. Această versiune demonstrează selecția de loc pe hartă reală.</p>
             </div>
             <div class="flex gap-4 mt-6">
-                <a href="/schedule.php" class="btn-outline px-6 py-3 rounded-lg">Continuă selecția</a>
+                <a href="/program" class="btn-outline px-6 py-3 rounded-lg">Continuă selecția</a>
                 <button @click="clear()" class="text-warm-gray hover:text-burgundy px-6 py-3">Golește coșul</button>
             </div>
         </div>

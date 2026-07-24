@@ -26,19 +26,19 @@ function nav_cls($key, $active) {
                 </div>
             </a>
             <div class="hidden lg:flex items-center gap-8">
-                <a href="/repertoire.php" class="<?= nav_cls('repertoire', $activeNav) ?>">Repertoriu</a>
-                <a href="/schedule.php" class="<?= nav_cls('schedule', $activeNav) ?>">Program</a>
-                <a href="/subscriptions.php" class="<?= nav_cls('subscriptions', $activeNav) ?>">Abonamente</a>
-                <a href="/troupe.php" class="<?= nav_cls('troupe', $activeNav) ?>">Trupa</a>
-                <a href="/about.php" class="<?= nav_cls('about', $activeNav) ?>">Despre noi</a>
-                <a href="/contact.php" class="<?= nav_cls('contact', $activeNav) ?>">Contact</a>
+                <a href="/repertoriu" class="<?= nav_cls('repertoire', $activeNav) ?>">Repertoriu</a>
+                <a href="/program" class="<?= nav_cls('schedule', $activeNav) ?>">Program</a>
+                <a href="/abonamente" class="<?= nav_cls('subscriptions', $activeNav) ?>">Abonamente</a>
+                <a href="/trupa" class="<?= nav_cls('troupe', $activeNav) ?>">Trupa</a>
+                <a href="/despre" class="<?= nav_cls('about', $activeNav) ?>">Despre noi</a>
+                <a href="/contact" class="<?= nav_cls('contact', $activeNav) ?>">Contact</a>
             </div>
             <div class="flex items-center gap-4">
-                <a href="/cart.php" class="text-ivory/80 hover:text-gold transition-colors" title="Coșul meu">
+                <a href="/cos" class="text-ivory/80 hover:text-gold transition-colors" title="Coșul meu">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 </a>
-                <a href="/login.php" class="text-ivory/80 hover:text-gold transition-colors hidden sm:block">Contul meu</a>
-                <a href="/schedule.php" class="btn-gold px-5 py-2.5 rounded text-sm">Cumpără bilete</a>
+                <a href="/autentificare" class="text-ivory/80 hover:text-gold transition-colors hidden sm:block">Contul meu</a>
+                <a href="/program" class="btn-gold px-5 py-2.5 rounded text-sm">Cumpără bilete</a>
             </div>
         </div>
     </nav>
