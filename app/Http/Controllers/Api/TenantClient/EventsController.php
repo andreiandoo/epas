@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\TenantClient;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Models\Event;
+use App\Models\Tenant;
 use App\Models\Venue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,7 +101,7 @@ class EventsController extends Controller
                 'venue:id,name,city,slug',
                 'eventTypes',
                 'eventGenres',
-                'artists:id,name,main_image',
+                'artists:id,name,main_image_url',
                 'tags',
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
                 'tenant:id,name,public_name,slug',
@@ -194,7 +195,7 @@ class EventsController extends Controller
                         'artists' => $event->artists->map(fn ($artist) => [
                             'id' => $artist->id,
                             'name' => $artist->name,
-                            'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                            'image' => $artist->main_image_url ? Storage::disk('public')->url($artist->main_image_url) : null,
                         ]),
                         'tags' => $event->tags->map(fn ($tag) => [
                             'id' => $tag->id,
@@ -388,7 +389,7 @@ class EventsController extends Controller
                     'name' => $artist->name,
                     'slug' => $artist->slug ?? null,
                     'bio' => $artist->getTranslation('bio_html', $locale),
-                    'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                    'image' => $artist->main_image_url ? Storage::disk('public')->url($artist->main_image_url) : null,
                     'portrait' => $artist->portrait_url ? Storage::disk('public')->url($artist->portrait_url) : null,
                     'city' => $artist->city,
                     'country' => $artist->country,
@@ -605,7 +606,7 @@ class EventsController extends Controller
                 'venue:id,name,city,slug',
                 'eventTypes',
                 'eventGenres',
-                'artists:id,name,main_image',
+                'artists:id,name,main_image_url',
                 'tags',
                 'tenant:id,name,public_name,slug',
             ])
@@ -668,7 +669,7 @@ class EventsController extends Controller
                         'artists' => $event->artists->map(fn ($artist) => [
                             'id' => $artist->id,
                             'name' => $artist->name,
-                            'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                            'image' => $artist->main_image_url ? Storage::disk('public')->url($artist->main_image_url) : null,
                         ]),
 
                         // Note: No ticket_types for past events - they can't be purchased
