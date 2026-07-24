@@ -1,57 +1,83 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
-$pageTitle = 'Coș — ' . SITE_NAME;
+$pageTitle = 'Coșul tău — ' . SITE_NAME;
+$pageExtraStyles = '.cart-item { background: linear-gradient(180deg,#1A1A1A 0%,#0A0A0A 100%); border: 1px solid rgba(212,175,55,.1); }';
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>
-<section class="pt-32 pb-24 px-4 lg:px-8" x-data="cart()" x-init="load()">
-    <div class="max-w-3xl mx-auto">
-        <h1 class="font-display text-4xl lg:text-5xl mb-8">Coșul tău</h1>
+<main class="pt-32 pb-20 px-4 lg:px-8" x-data="cartPage()" x-init="init()">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="font-display text-4xl mb-8">Coșul tău</h1>
 
-        <div x-show="items.length === 0" class="bg-charcoal/40 rounded-xl p-10 text-center">
-            <p class="text-warm-gray mb-6">Coșul este gol.</p>
-            <a href="/program" class="btn-gold px-8 py-3 rounded-lg inline-block">Vezi programul</a>
+        <!-- With items -->
+        <div x-show="cart && cart.seats && cart.seats.length > 0">
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="cart-item rounded-xl p-5 flex flex-col sm:flex-row gap-5">
+                        <img :src="cart.event.image" :alt="cart.event.title" class="w-full sm:w-32 h-32 rounded-lg object-cover">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="text-gold text-sm" x-text="cart.event.author"></p>
+                                    <h3 class="font-display text-xl" x-text="cart.event.title"></h3>
+                                </div>
+                                <button @click="clear()" class="text-warm-gray hover:text-burgundy transition-colors p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                            </div>
+                            <p class="text-warm-gray text-sm mb-3" x-text="[cart.event.date, cart.event.venue].filter(Boolean).join(' • ')"></p>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <template x-for="(s,i) in cart.seats" :key="i"><span class="bg-charcoal px-3 py-1 rounded text-sm" x-text="s.label"></span></template>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm text-warm-gray" x-text="cart.seats.length + ' bilete'"></p>
+                                <p class="font-display text-xl text-gold" x-text="subtotal + ' RON'"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="/program" class="block text-center py-4 border border-dashed border-gold/20 rounded-xl text-warm-gray hover:border-gold/40 hover:text-ivory transition-colors">+ Adaugă alte bilete</a>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-charcoal rounded-xl p-6 sticky top-28">
+                        <h2 class="font-display text-xl mb-6">Sumar comandă</h2>
+                        <div class="space-y-3 pb-4 border-b border-gold/10">
+                            <div class="flex justify-between"><span class="text-warm-gray">Subtotal</span><span x-text="subtotal + ' RON'"></span></div>
+                            <div class="flex justify-between"><span class="text-warm-gray">Taxă serviciu (5%)</span><span x-text="serviceFee + ' RON'"></span></div>
+                        </div>
+                        <div class="flex justify-between py-4 mb-6"><span class="font-medium text-lg">Total</span><span class="font-display text-2xl text-gold" x-text="total + ' RON'"></span></div>
+                        <div class="bg-burgundy/20 rounded-lg p-4 mb-6 flex items-center gap-3">
+                            <svg class="w-5 h-5 text-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <div><p class="text-sm">Locurile sunt rezervate pentru</p><p class="font-display text-gold" x-text="timer"></p></div>
+                        </div>
+                        <a href="/finalizare" class="btn-gold w-full py-4 rounded-lg text-center block text-lg">Finalizează comanda</a>
+                        <div class="mt-6 flex items-center justify-center gap-2 text-warm-gray"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-xs">Plată securizată SSL</span></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div x-show="items.length > 0">
-            <div class="bg-charcoal/40 rounded-xl p-6 mb-6">
-                <p class="text-sm text-warm-gray mb-4">Locuri rezervate (10 minute)</p>
-                <div class="space-y-2">
-                    <template x-for="s in items" :key="s.seat_uid">
-                        <div class="flex items-center justify-between py-2 border-b border-gold/10">
-                            <div>
-                                <p class="font-medium" x-text="s.section"></p>
-                                <p class="text-sm text-warm-gray" x-text="'Rând ' + s.row + ', Loc ' + s.seat_label"></p>
-                            </div>
-                            <p class="text-gold font-display" x-text="(s.price||0) + ' RON'"></p>
-                        </div>
-                    </template>
-                </div>
-                <div class="flex items-center justify-between mt-6">
-                    <p class="text-lg">Total</p>
-                    <p class="font-display text-3xl text-gold" x-text="total + ' RON'"></p>
-                </div>
-            </div>
-
-            <div class="bg-gold/10 border border-gold/30 rounded-xl p-6 text-center">
-                <p class="text-ivory/80 mb-2">🔒 Finalizarea plății (card, Netopia) se activează în pasul următor al implementării.</p>
-                <p class="text-warm-gray text-sm">Locurile rămân rezervate temporar. Această versiune demonstrează selecția de loc pe hartă reală.</p>
-            </div>
-            <div class="flex gap-4 mt-6">
-                <a href="/program" class="btn-outline px-6 py-3 rounded-lg">Continuă selecția</a>
-                <button @click="clear()" class="text-warm-gray hover:text-burgundy px-6 py-3">Golește coșul</button>
-            </div>
+        <!-- Empty -->
+        <div x-show="!cart || !cart.seats || cart.seats.length === 0" class="text-center py-20">
+            <div class="w-24 h-24 rounded-full bg-charcoal mx-auto mb-6 flex items-center justify-center"><svg class="w-12 h-12 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg></div>
+            <h2 class="font-display text-2xl mb-3">Coșul tău este gol</h2>
+            <p class="text-warm-gray mb-8">Explorează repertoriul și alege spectacolele care te inspiră.</p>
+            <a href="/program" class="btn-gold px-8 py-4 rounded-lg inline-block">Vezi programul</a>
         </div>
     </div>
-</section>
+</main>
 <script>
-function cart() {
+function cartPage() {
     return {
-        items: [],
-        load() { try { this.items = JSON.parse(localStorage.getItem('teatru_cart') || '[]'); } catch(e){ this.items = []; } },
-        get total() { return this.items.reduce((s,x) => s + (x.price||0), 0); },
-        clear() { localStorage.removeItem('teatru_cart'); this.items = []; }
+        cart: null, timerSeconds: 600,
+        init() {
+            try { this.cart = JSON.parse(localStorage.getItem('teatru_cart') || 'null'); } catch(e) { this.cart = null; }
+            setInterval(() => { if (this.timerSeconds > 0) this.timerSeconds--; }, 1000);
+        },
+        get subtotal() { return this.cart && this.cart.seats ? this.cart.seats.reduce((s,x)=>s+(x.price||0),0) : 0; },
+        get serviceFee() { return Math.round(this.subtotal * 0.05); },
+        get total() { return this.subtotal + this.serviceFee; },
+        get timer() { const m = Math.floor(this.timerSeconds/60), s = this.timerSeconds%60; return `${m}:${s.toString().padStart(2,'0')}`; },
+        clear() { localStorage.removeItem('teatru_cart'); this.cart = null; }
     };
 }
 </script>
