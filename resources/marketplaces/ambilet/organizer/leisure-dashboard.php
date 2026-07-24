@@ -52,7 +52,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
                     <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-emerald-500/10">🎟️</div>
-                    <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-sold">—</p><p class="mt-1 text-xs truncate text-muted">Bilete azi</p></div>
+                    <div class="min-w-0">
+                        <p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-sold">—</p>
+                        <p class="mt-1 text-xs truncate text-muted">Bilete vândute azi</p>
+                        <p class="text-[10px] text-muted mt-0.5 truncate" id="ld-visitors-hint">—</p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
                     <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-cyan-500/10">✅</div>
@@ -151,6 +155,18 @@ const LeisureDash = {
             const refEl = document.getElementById('lv-last-refresh');
             if (refEl) refEl.textContent = this.fmtTime(d.now || new Date().toISOString());
             document.getElementById('ld-sold').textContent = this.num(s.sold_today);
+            // Sub-label: numar vizitatori (bilete fizice, include componente pachet).
+            // Cand === sold_today, ascundem randul (n-are informatie noua).
+            const vhint = document.getElementById('ld-visitors-hint');
+            if (vhint) {
+                const v = s.visitors_today != null ? Number(s.visitors_today) : null;
+                if (v != null && v !== Number(s.sold_today)) {
+                    vhint.textContent = this.num(v) + ' vizitatori (bilete scanabile)';
+                    vhint.style.display = '';
+                } else {
+                    vhint.style.display = 'none';
+                }
+            }
             document.getElementById('ld-scanned').textContent = this.num(s.scanned_today);
             document.getElementById('ld-revenue').textContent = this.money(s.revenue_today);
             document.getElementById('ld-orders').textContent = this.num(s.orders_today);

@@ -788,13 +788,32 @@ class LeisureController extends BaseController
         $todayRevenue = round((float) $ordersToday->sum('total'), 2);
         $todayOrders = $ordersToday->count();
 
-        $todaySoldTickets = (int) \App\Models\Ticket::query()
+        // Bilete azi — 2 metrici distincte, consistente cu chart-ul din sales-timeline:
+        //  - sold_today: TRANZACTII cu valoare (umbrella pachet + bilete individuale)
+        //    EXCLUDE componentele pachet (from_package=true) + bilete pret=0 (bonus/free)
+        //  - visitors_today: bilete FIZICE scanabile la poarta (componente + individuale + bonus)
+        //    EXCLUDE umbrella pachet (nu se scaneaza, componentele lui da)
+        // Fara distinctia asta cardul afisa 420 (toate biletele) iar chart-ul 312/394 → discordanta.
+        $todayTicketsBase = \App\Models\Ticket::query()
             ->whereHas('order', fn ($q) => $q
                 ->where('event_id', $eventModel->id)
                 ->whereIn('status', ['paid', 'completed'])
                 ->whereBetween('paid_at', [$todayStart, $todayEnd]))
             ->whereNotIn('status', ['cancelled', 'refunded'])
-            ->count();
+            ->get(['id', 'price', 'meta']);
+
+        $todaySoldTickets = 0;
+        $todayVisitors = 0;
+        foreach ($todayTicketsBase as $t) {
+            $meta = is_array($t->meta ?? null) ? $t->meta : [];
+            $isFromPackage = !empty($meta['from_package']);
+            $isUmbrella = !empty($meta['is_package_umbrella']);
+            $price = (float) ($t->price ?? 0);
+            // sold_today = tranzactii cu valoare (mirror filtru salesTimeline)
+            if (!$isFromPackage && $price > 0) $todaySoldTickets++;
+            // visitors_today = bilete scanabile fizic (exclus umbrella)
+            if (!$isUmbrella) $todayVisitors++;
+        }
 
         $todayCheckedIn = (int) \App\Models\Ticket::query()
             ->whereHas('order', fn ($q) => $q->where('event_id', $eventModel->id))
@@ -913,6 +932,7 @@ class LeisureController extends BaseController
             'now' => Carbon::now()->toIso8601String(),
             'stats' => [
                 'sold_today' => $todaySoldTickets,
+                'visitors_today' => $todayVisitors, // bilete fizice scanabile (mirror chart 'visitors')
                 'scanned_today' => $todayCheckedIn,
                 'occupancy' => $occupancy,
                 'revenue_today' => $todayRevenue,
