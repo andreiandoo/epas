@@ -897,6 +897,58 @@ class AuthController extends BaseController
                 'id_card' => $organizer->id_card_document ? url('storage/' . $organizer->id_card_document) : null,
                 'cui' => $organizer->cui_document ? url('storage/' . $organizer->cui_document) : null,
             ],
+            // Signing state — drives the onboarding signature step + the gate.
+            'is_signed' => $organizer->hasSignedContract(),
+            'signed_at' => $organizer->contract_signed_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Apply the organizer's drawn e-signature (SES) to their contract and get
+     * back the final signed PDF. Same token auth as the rest of this controller.
+     */
+    public function signContract(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'signature' => 'required|string',
+            'agreement' => 'required|accepted',
+        ]);
+
+        // Already signed — idempotent, don't re-render or overwrite.
+        if ($organizer->hasSignedContract()) {
+            return $this->success([
+                'already_signed' => true,
+                'signed_at' => $organizer->contract_signed_at?->toIso8601String(),
+            ]);
+        }
+
+        $document = app(\App\Services\OrganizerContractService::class)->signContract(
+            $organizer,
+            $validated['signature'],
+            [
+                'ip' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 500),
+                'agreement' => 'Am citit și sunt de acord cu termenii contractului.',
+            ],
+        );
+
+        if (!$document) {
+            return $this->error('Nu am putut procesa semnătura. Încearcă din nou.', 422);
+        }
+
+        return $this->success([
+            'signed' => true,
+            'signed_at' => $organizer->fresh()->contract_signed_at?->toIso8601String(),
+            'contract' => [
+                'id' => $document->id,
+                'title' => $document->title,
+                'download_url' => url('storage/' . $document->file_path),
+            ],
         ]);
     }
 
