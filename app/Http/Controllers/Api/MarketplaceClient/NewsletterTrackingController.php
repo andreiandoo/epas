@@ -129,12 +129,18 @@ class NewsletterTrackingController extends Controller
             $listIds = MarketplaceContactList::where('marketplace_client_id', $marketplace->id)
                 ->pluck('id');
 
-            // Update pivot to unsubscribed status
-            $customer->contactLists()
-                ->whereIn('marketplace_contact_lists.id', $listIds)
+            // Mark the customer's memberships in every marketplace list as
+            // unsubscribed. NB: calling ->update() on the belongsToMany relation
+            // targets the RELATED table (marketplace_contact_lists), which has no
+            // `status` column — that was the 500 ("column status does not exist").
+            // Pivot rows must be updated on the pivot table directly.
+            \Illuminate\Support\Facades\DB::table('marketplace_contact_list_members')
+                ->where('marketplace_customer_id', $customer->id)
+                ->whereIn('list_id', $listIds)
                 ->update([
-                    'marketplace_contact_list_members.status' => 'unsubscribed',
-                    'marketplace_contact_list_members.unsubscribed_at' => now(),
+                    'status' => 'unsubscribed',
+                    'unsubscribed_at' => now(),
+                    'updated_at' => now(),
                 ]);
 
             // Immediately enroll the customer into any dynamic list that targets
