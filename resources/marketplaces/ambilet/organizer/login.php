@@ -95,8 +95,21 @@ function togglePassword() {
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
     }
 }
+async function redirectAfterAuth() {
+    // Send organizers who still owe a contract signature to the signing step
+    // (the onboarding final step); everyone else lands on the account.
+    let target = '/organizator/events';
+    try {
+        if (typeof AmbiletAPI !== 'undefined') {
+            const res = await AmbiletAPI.get('/organizer/contract');
+            const d = (res && res.data) || {};
+            if (d.signature_required && !d.is_signed) target = '/organizator/semneaza-contract';
+        }
+    } catch (e) { /* fall back to the account */ }
+    window.location.href = target;
+}
 document.addEventListener('DOMContentLoaded', function() {
-if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer()) { window.location.href = '/organizator/events'; }
+if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer()) { redirectAfterAuth(); }
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -109,7 +122,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         const result = await AmbiletAuth.loginOrganizer(form.email.value, form.password.value);
         if (result.success) {
             AmbiletNotifications.success('Autentificare reusita!');
-            setTimeout(() => { window.location.href = '/organizator/events'; }, 500);
+            setTimeout(() => { redirectAfterAuth(); }, 500);
         } else {
             errorDiv.textContent = result.message || 'Autentificare esuata. Verifica email-ul si parola.';
             errorDiv.classList.remove('hidden');

@@ -892,7 +892,9 @@ class AuthController extends BaseController
                 'id' => $contract->id,
                 'title' => $contract->title,
                 'issued_at' => $contract->issued_at?->toIso8601String(),
+                'download_url' => url('storage/' . $contract->file_path),
             ] : null,
+            'signature_required' => $organizer->isContractSignatureRequired(),
             'documents' => [
                 'id_card' => $organizer->id_card_document ? url('storage/' . $organizer->id_card_document) : null,
                 'cui' => $organizer->cui_document ? url('storage/' . $organizer->cui_document) : null,

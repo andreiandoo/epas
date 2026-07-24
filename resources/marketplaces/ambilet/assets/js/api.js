@@ -337,6 +337,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/settings/notifications') return 'organizer.notifications';
         if (endpoint === '/organizer/contract') return 'organizer.contract';
         if (endpoint === '/organizer/contract/download') return 'organizer.contract.download';
+        if (endpoint === '/organizer/contract/sign') return 'organizer.contract.sign';
         if (endpoint === '/organizer/documents/upload') return 'organizer.documents.upload';
         if (endpoint === '/organizer/profile') return 'organizer.profile';
         if (endpoint === '/organizer/password') return 'organizer.password';

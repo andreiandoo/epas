@@ -2997,6 +2997,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.contract.sign':
+        $method = 'POST';
+        $body = file_get_contents('php://input'); // { signature: dataURL, agreement: true }
+        $endpoint = '/organizer/contract/sign';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.documents.upload':
         $method = 'POST';
         $endpoint = '/organizer/documents/upload';
