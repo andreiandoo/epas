@@ -557,13 +557,25 @@ class EventResource extends Resource
                         ->fileAttachmentsDirectory('event-thank-you')
                         ->fileAttachmentsVisibility('public'),
                     Forms\Components\TextInput::make('video_url')
-                        ->label($tenantLanguage === 'ro' ? 'Videoclip YouTube' : 'YouTube video')
+                        ->label($tenantLanguage === 'ro' ? 'Videoclip / Trailer' : 'Video / Trailer')
                         ->url()
                         ->maxLength(500)
                         ->placeholder('https://www.youtube.com/watch?v=...')
                         ->helperText($tenantLanguage === 'ro'
-                            ? 'Va fi afișat ca videoclip pe pagina publică a spectacolului.'
-                            : 'Will be shown as an embedded video on the public event page.')
+                            ? 'Link YouTube — va fi afișat ca videoclip pe pagina publică a spectacolului.'
+                            : 'YouTube link — shown as an embedded video on the public event page.')
+                        ->columnSpanFull(),
+                    Forms\Components\FileUpload::make('gallery')
+                        ->label($tenantLanguage === 'ro' ? 'Galerie foto' : 'Photo gallery')
+                        ->helperText($tenantLanguage === 'ro' ? 'Imaginile apar pe pagina publică a spectacolului. Trage pentru a reordona.' : 'Shown on the public event page. Drag to reorder.')
+                        ->multiple()
+                        ->image()
+                        ->reorderable()
+                        ->appendFiles()
+                        ->disk('public')
+                        ->directory('event-gallery')
+                        ->visibility('public')
+                        ->imageEditor()
                         ->columnSpanFull(),
                 ])->columns(1),
 

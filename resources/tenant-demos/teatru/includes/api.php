@@ -138,3 +138,22 @@ function tc_events(array $resp): array {
     }
     return array_map('tc_norm_event', $list);
 }
+
+/**
+ * Lista de artiști/actori ai tenantului (trupa).
+ */
+function tc_artists(?int $cacheTtl = null): array {
+    $resp = api_get('/tenant-client/artists', [], $cacheTtl);
+    if (!($resp['success'] ?? false) || !is_array($resp['data'] ?? null)) { return []; }
+    return $resp['data'];
+}
+
+/**
+ * Un singur artist după slug sau id (include bio + galerie).
+ * Întoarce null dacă nu există.
+ */
+function tc_artist(string $slug, ?int $cacheTtl = null): ?array {
+    $resp = api_get('/tenant-client/artists/' . rawurlencode($slug), [], $cacheTtl);
+    if (!($resp['success'] ?? false) || !is_array($resp['data'] ?? null)) { return null; }
+    return $resp['data'];
+}

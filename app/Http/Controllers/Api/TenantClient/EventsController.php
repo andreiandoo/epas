@@ -362,7 +362,11 @@ class EventsController extends Controller
                 'short_description' => $event->getTranslation('short_description', $locale),
                 'description' => $event->getTranslation('description', $locale),
                 'ticket_terms' => $event->getTranslation('ticket_terms', $locale),
-                'gallery' => $event->gallery ?? [],
+                'gallery' => collect($event->gallery ?? [])
+                    ->filter()
+                    ->map(fn ($p) => (preg_match('#^https?://#', $p) ? $p : Storage::disk('public')->url($p)))
+                    ->values()
+                    ->all(),
 
                 // Theater vertical details
                 'theater' => [

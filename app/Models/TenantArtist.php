@@ -22,6 +22,7 @@ class TenantArtist extends Model
         'role',
         'bio',
         'photo_url',
+        'gallery',
         'phone',
         'email',
         'contract_start',
@@ -34,6 +35,7 @@ class TenantArtist extends Model
     protected $casts = [
         'bio' => 'array',
         'meta' => 'array',
+        'gallery' => 'array',
         'contract_start' => 'date',
         'contract_end' => 'date',
         'is_resident' => 'boolean',

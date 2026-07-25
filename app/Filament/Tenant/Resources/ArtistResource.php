@@ -77,9 +77,15 @@ class ArtistResource extends Resource
             SC\Section::make('Foto & Contact')
                 ->schema([
                     Forms\Components\TextInput::make('photo_url')
-                        ->label('URL fotografie')
+                        ->label('URL fotografie (portret)')
                         ->url()
                         ->placeholder('https://...')
+                        ->columnSpanFull(),
+                    Forms\Components\FileUpload::make('gallery')
+                        ->label('Galerie foto')
+                        ->helperText('Apare pe pagina publică a actorului. Trage pentru a reordona.')
+                        ->multiple()->image()->reorderable()->appendFiles()
+                        ->disk('public')->directory('artist-gallery')->visibility('public')->imageEditor()
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('email')->label('Email')->email(),
                     Forms\Components\TextInput::make('phone')->label('Telefon'),

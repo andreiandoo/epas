@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\EventType;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Models\TenantArtist;
 use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -257,6 +258,81 @@ class TenantClientController extends Controller
                 'icon' => $type->icon ?? 'calendar',
             ]),
         ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
+    }
+
+    /**
+     * Public list of tenant artists (troupe/ensemble).
+     */
+    public function artists(Request $request): JsonResponse
+    {
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+        $tenantId = $resolved['tenant']->id;
+
+        $artists = TenantArtist::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->orderByRaw('is_resident DESC')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'data' => $artists->map(fn ($a) => $this->formatArtist($a, false))->values(),
+        ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
+    }
+
+    /**
+     * Public single tenant artist with gallery + bio.
+     */
+    public function artist(Request $request, string $slug): JsonResponse
+    {
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+        $tenantId = $resolved['tenant']->id;
+
+        $artist = TenantArtist::where('tenant_id', $tenantId)
+            ->where(fn ($q) => $q->where('slug', $slug)->orWhere('id', $slug))
+            ->where('status', 'active')
+            ->first();
+
+        if (!$artist) {
+            return response()->json(['error' => 'Artist not found'], 404);
+        }
+
+        return response()->json([
+            'data' => $this->formatArtist($artist, true),
+        ]);
+    }
+
+    private function formatArtist(TenantArtist $artist, bool $detail = false): array
+    {
+        $locale = app()->getLocale();
+        $photo = $artist->photo_url
+            ? (preg_match('#^https?://#', $artist->photo_url) ? $artist->photo_url : Storage::disk('public')->url($artist->photo_url))
+            : null;
+
+        $data = [
+            'id' => $artist->id,
+            'name' => $artist->name,
+            'slug' => $artist->slug ?: (string) $artist->id,
+            'role' => $artist->role,
+            'is_resident' => (bool) $artist->is_resident,
+            'photo_url' => $photo,
+        ];
+
+        if ($detail) {
+            $data['bio'] = $artist->getTranslation('bio', $locale);
+            $data['gallery'] = collect($artist->gallery ?? [])->filter()
+                ->map(fn ($p) => preg_match('#^https?://#', $p) ? $p : Storage::disk('public')->url($p))
+                ->values()->all();
+            $data['email'] = $artist->email;
+            $data['phone'] = $artist->phone;
+        }
+
+        return $data;
     }
 
     /**

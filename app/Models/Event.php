@@ -200,6 +200,9 @@ class Event extends Model
         // theater vertical details
         'theater_director', 'theater_lead', 'theater_duration', 'theater_cast', 'theater_creative',
 
+        // photo gallery (public event page)
+        'gallery',
+
         // recurring
         'recurring_frequency', 'recurring_start_date', 'recurring_start_time',
         'recurring_door_time', 'recurring_end_time', 'recurring_weekday',
@@ -322,6 +325,7 @@ class Event extends Model
         'multi_slots'       => 'array',
         'theater_cast'      => 'array',
         'theater_creative'  => 'array',
+        'gallery'           => 'array',
         'organizer_notifications' => 'array',
         'seo'               => 'array',
         'venue_config'      => 'array',
