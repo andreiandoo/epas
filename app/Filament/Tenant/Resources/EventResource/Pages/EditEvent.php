@@ -52,4 +52,37 @@ class EditEvent extends EditRecord
 
         return $actions;
     }
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        $tenant = auth()->user()?->tenant;
+        $lang = $tenant?->locale ?? $tenant?->language ?? 'ro';
+
+        $title = $this->record->getTranslation('title', $lang)
+            ?? $this->record->getTranslation('title', 'ro')
+            ?? $this->record->getTranslation('title', 'en')
+            ?? '';
+
+        $parts = [];
+        $city = $this->record->city ?? $this->record->venue?->city ?? null;
+        if ($city) {
+            $parts[] = $city;
+        }
+        $dateLabel = method_exists($this->record, 'displayDateLabel') ? $this->record->displayDateLabel() : null;
+        if ($dateLabel) {
+            $parts[] = $dateLabel;
+        }
+        if (!empty($parts)) {
+            $title .= ' (' . implode(', ', $parts) . ')';
+        }
+
+        $css = '<style>.fi-header{flex-direction:column;align-items:start;}</style>';
+
+        return new \Illuminate\Support\HtmlString(e($title ?: 'Editare eveniment') . $css);
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
 }
