@@ -2,6 +2,19 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 $pageTitle = 'Finalizare comandă — ' . SITE_NAME;
+$gami = tc_gamification();
+$badgeMap = [
+    'card'          => ['badge' => 'DEMO', 'class' => 'bg-gradient-to-r from-amber-600 to-amber-800'],
+    'card_cultural' => ['badge' => 'CULTURAL', 'class' => 'bg-gradient-to-r from-purple-600 to-purple-800'],
+];
+$pmDisplay = array_map(fn ($m) => [
+    'id'                => $m['id'] ?? 'card',
+    'name'              => $m['name'] ?? 'Card',
+    'hint'              => $m['hint'] ?? '',
+    'surcharge_percent' => (float) ($m['surcharge_percent'] ?? 0),
+    'badge'             => $badgeMap[$m['id'] ?? 'card']['badge'] ?? 'CARD',
+    'badgeClass'        => $badgeMap[$m['id'] ?? 'card']['class'] ?? 'bg-gradient-to-r from-amber-600 to-amber-800',
+], tc_payment_methods());
 $pageExtraStyles = '
     .input-field { background: #1A1A1A; border: 1px solid rgba(212,175,55,.2); transition: all .3s ease; }
     .input-field:focus { border-color: #D4AF37; outline: none; box-shadow: 0 0 0 3px rgba(212,175,55,.1); }
@@ -128,11 +141,19 @@ include __DIR__ . '/includes/header.php';
                             <div class="flex flex-wrap gap-2 mt-3"><template x-for="(s,i) in cart.seats" :key="i"><span class="bg-midnight px-2 py-1 rounded text-xs" x-text="s.label"></span></template></div>
                         </div>
                     </template>
-                    <div class="flex justify-between items-center mb-6">
-                        <span class="font-medium">Total</span>
-                        <span class="font-display text-2xl text-gold" x-text="subtotal + ' RON'"></span>
+                    <div class="space-y-2 mb-4 text-sm">
+                        <div class="flex justify-between"><span class="text-warm-gray">Subtotal</span><span x-text="subtotal + ' RON'"></span></div>
+                        <div x-show="surcharge() > 0" x-cloak class="flex justify-between"><span class="text-warm-gray" x-text="'Comision ' + (selectedMethod()?.name || '')"></span><span x-text="'+' + surcharge() + ' RON'"></span></div>
                     </div>
-                    <button @click="pay()" :disabled="loading || !canPay" class="btn-gold w-full py-4 rounded-lg text-lg" x-text="loading ? 'Se procesează...' : 'Plătește ' + subtotal + ' RON'"></button>
+                    <div class="flex justify-between items-center mb-4 pt-3 border-t border-gold/10">
+                        <span class="font-medium">Total</span>
+                        <span class="font-display text-2xl text-gold" x-text="grandTotal + ' RON'"></span>
+                    </div>
+                    <div x-show="earnEnabled && earnedPoints() > 0" x-cloak class="flex items-center gap-3 bg-gold/10 border border-gold/20 rounded-lg p-3 mb-6">
+                        <span class="text-2xl">🎁</span>
+                        <p class="text-sm">Vei câștiga <span class="text-gold font-semibold" x-text="earnedPoints()"></span> <span x-text="earnName"></span> la această comandă.</p>
+                    </div>
+                    <button @click="pay()" :disabled="loading || !canPay" class="btn-gold w-full py-4 rounded-lg text-lg" x-text="loading ? 'Se procesează...' : 'Plătește ' + grandTotal + ' RON'"></button>
                     <p class="text-warm-gray text-xs text-center mt-3">Vei fi redirecționat către gateway-ul de plată securizat.</p>
                 </div>
             </div>
@@ -143,11 +164,17 @@ include __DIR__ . '/includes/header.php';
 function checkoutPage() {
     return {
         cart: null, loading: false, error: '', loggedIn: false, user: null,
+        earnEnabled: <?= !empty($gami['enabled']) ? 'true' : 'false' ?>,
+        earnPct: <?= (float) ($gami['earn_percentage'] ?? 0) ?>,
+        earnMin: <?= (float) ($gami['min_order'] ?? 0) ?>,
+        earnName: <?= json_encode($gami['points_name'] ?? 'puncte', JSON_UNESCAPED_UNICODE) ?>,
+        earnedPoints() { return (this.earnEnabled && this.grandTotal >= this.earnMin) ? Math.floor(this.grandTotal * this.earnPct) : 0; },
         form: { firstName:'', lastName:'', email:'', emailConfirm:'', phone:'', createAccount:false, password:'', differentBeneficiaries:false, terms:false, newsletter:false, paymentMethod:'card' },
         beneficiaries: [],
-        paymentMethods: [
-            { id:'card', name:'Card bancar (demo)', hint:'Visa, Mastercard — gateway simulat', badge:'DEMO', badgeClass:'bg-gradient-to-r from-amber-600 to-amber-800' },
-        ],
+        paymentMethods: <?= json_encode($pmDisplay, JSON_UNESCAPED_UNICODE) ?>,
+        selectedMethod() { return this.paymentMethods.find(m => m.id === this.form.paymentMethod) || this.paymentMethods[0]; },
+        surcharge() { const m = this.selectedMethod(); return m && m.surcharge_percent ? Math.round(this.subtotal * m.surcharge_percent / 100) : 0; },
+        get grandTotal() { return this.subtotal + this.surcharge(); },
         init() {
             try { this.cart = JSON.parse(localStorage.getItem('teatru_cart') || 'null'); } catch(e) { this.cart = null; }
             this.beneficiaries = (this.cart?.seats || []).map(() => ({ name:'', email:'' }));

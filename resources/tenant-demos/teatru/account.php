@@ -37,6 +37,23 @@ include __DIR__ . '/includes/header.php';
                 <button @click="logout()" class="btn-outline px-4 py-2 rounded-lg text-sm">Ieși din cont</button>
             </div>
 
+            <!-- Puncte de fidelitate -->
+            <div x-show="points && points.enabled" x-cloak class="mb-8">
+                <div class="bg-gradient-to-br from-gold/10 to-transparent border border-gold/20 rounded-2xl p-6 flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-4">
+                        <span class="text-4xl">🎁</span>
+                        <div>
+                            <p class="text-warm-gray text-sm" x-text="'Sold ' + (points?.points_name || 'puncte')"></p>
+                            <p class="font-display text-3xl text-gold" x-text="(points?.current_balance ?? 0)"></p>
+                        </div>
+                    </div>
+                    <div class="text-right text-sm text-warm-gray">
+                        <p>Total câștigate: <span class="text-ivory" x-text="points?.total_earned ?? 0"></span></p>
+                        <p x-show="points?.current_tier">Nivel: <span class="text-gold" x-text="points?.current_tier"></span></p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Abonamente -->
             <div class="mb-8">
                 <h2 class="font-display text-2xl mb-4">Abonamentele mele</h2>
@@ -120,7 +137,7 @@ include __DIR__ . '/includes/header.php';
 <script>
 function accountPage() {
     return {
-        loading: true, user: null, subs: [], busy: false,
+        loading: true, user: null, subs: [], points: null, busy: false,
         events: <?= json_encode($evList, JSON_UNESCAPED_UNICODE) ?>,
         redeemPick: {}, redeemErr: {},
         auth() { try { return JSON.parse(localStorage.getItem('teatru_auth') || 'null'); } catch(e) { return null; } },
@@ -131,7 +148,7 @@ function accountPage() {
             try {
                 const r = await fetch('/api/proxy.php?action=me', { headers: { 'Authorization': 'Bearer ' + a.token } });
                 const d = await r.json().catch(()=>({}));
-                if (r.ok && d.success && d.data) { this.user = d.data; await this.loadSubs(); }
+                if (r.ok && d.success && d.data) { this.user = d.data; await this.loadSubs(); await this.loadPoints(); }
                 else { localStorage.removeItem('teatru_auth'); }
             } catch (e) {}
             this.loading = false;
@@ -142,6 +159,14 @@ function accountPage() {
                 const r = await fetch('/api/proxy.php?action=my-subscriptions', { headers: { 'Authorization': 'Bearer ' + a.token } });
                 const d = await r.json().catch(()=>({}));
                 if (r.ok && d.success && Array.isArray(d.data)) { this.subs = d.data; }
+            } catch (e) {}
+        },
+        async loadPoints() {
+            const a = this.auth();
+            try {
+                const r = await fetch('/api/proxy.php?action=gami-balance', { headers: { 'Authorization': 'Bearer ' + a.token } });
+                const d = await r.json().catch(()=>({}));
+                if (r.ok && d && d.enabled) { this.points = d; }
             } catch (e) {}
         },
         availableEvents(s) {

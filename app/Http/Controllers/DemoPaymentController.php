@@ -83,6 +83,18 @@ class DemoPaymentController extends Controller
                     ->update(['status' => 'active']);
             }
 
+            // Puncte de fidelitate (dacă microserviciul e activ) — nu bloca plata
+            try {
+                if ($order->customer_id) {
+                    $gami = app(\App\Services\Gamification\GamificationService::class);
+                    if ($gami->isEnabled($order->tenant_id)) {
+                        $gami->awardOrderPoints($order->tenant_id, $order->customer_id, (int) ($order->total_cents ?? 0), 'order', $order->id);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignoră — punctele nu trebuie să afecteze confirmarea plății
+            }
+
             $redirect = $success ?: url('/');
             $sep = str_contains($redirect, '?') ? '&' : '?';
             return redirect()->away($redirect . $sep . 'order=' . $order->id . '&status=paid');

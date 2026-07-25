@@ -148,6 +148,21 @@ class DemoCheckoutController extends Controller
                     }
                 }
 
+                // Comision card cultural (dacă e activat pe tenant, via Netopia)
+                $surchargeCents = 0;
+                if (($validated['payment_method'] ?? '') === 'card_cultural') {
+                    $pivot = $tenant->microservices()->where('slug', 'payment-netopia')->wherePivot('is_active', true)->first();
+                    $settings = $pivot?->pivot?->settings ?? [];
+                    if (is_string($settings)) {
+                        $settings = json_decode($settings, true) ?: [];
+                    }
+                    if (! empty($settings['cultural_card_enabled'])) {
+                        $pct = (float) ($settings['cultural_card_surcharge_percent'] ?? 4);
+                        $surchargeCents = (int) round($totalCents * $pct / 100);
+                        $totalCents += $surchargeCents;
+                    }
+                }
+
                 $seatedItems = [];
                 if ($eventSeatingId && ! empty($seatUids)) {
                     $seatedItems[] = ['event_seating_id' => (int) $eventSeatingId, 'seat_uids' => $seatUids];
@@ -167,6 +182,7 @@ class DemoCheckoutController extends Controller
                         'event_id'       => $event->id,
                         'payment'        => 'demo',
                         'payment_method' => $validated['payment_method'] ?? 'card',
+                        'surcharge_cents' => $surchargeCents,
                         'newsletter'     => (bool) ($validated['newsletter'] ?? false),
                         'seated_items'   => $seatedItems,
                     ],

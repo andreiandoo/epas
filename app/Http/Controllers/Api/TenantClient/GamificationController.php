@@ -130,6 +130,33 @@ class GamificationController extends Controller
     }
 
     /**
+     * Sold puncte pentru skin-ul demo — autentificare via CustomerToken (sha256),
+     * spre deosebire de balance() care folosește api_token. Întoarce direct
+     * sumarul (cu flag-ul enabled) ca să fie ușor de consumat pe front.
+     */
+    public function skinBalance(Request $request): JsonResponse
+    {
+        $tenant = $this->resolveTenant($request);
+        if (!$tenant || !$this->hasGamificationMicroservice($tenant)) {
+            return response()->json(['enabled' => false]);
+        }
+
+        $customerId = null;
+        $token = $request->bearerToken();
+        if ($token) {
+            $ct = \App\Models\CustomerToken::where('token', hash('sha256', $token))->first();
+            if ($ct && (!method_exists($ct, 'isExpired') || !$ct->isExpired())) {
+                $customerId = $ct->customer_id;
+            }
+        }
+        if (!$customerId) {
+            return response()->json(['enabled' => true, 'error' => 'Unauthenticated'], 401);
+        }
+
+        return response()->json($this->gamificationService->getCustomerSummary($tenant->id, $customerId));
+    }
+
+    /**
      * Get points transaction history
      */
     public function history(Request $request): JsonResponse

@@ -100,6 +100,15 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::post('/subscriptions/{id}/redeem', [SubscriptionController::class, 'redeem'])
         ->name('api.tenant-client-public.subscriptions.redeem');
 
+    // Metode de plată disponibile (inclusiv card cultural dacă Netopia activ)
+    Route::get('/payment-methods', [TenantClientController::class, 'paymentMethods'])
+        ->name('api.tenant-client-public.payment-methods');
+
+    // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
+    // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.
+    Route::get('/gamification-balance', [GamificationController::class, 'skinBalance'])
+        ->name('api.tenant-client-public.gamification.skin-balance');
+
     Route::get('/artists', [TenantClientController::class, 'artists'])
         ->name('api.tenant-client-public.artists');
 

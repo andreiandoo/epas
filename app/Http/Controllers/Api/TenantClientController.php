@@ -313,6 +313,22 @@ class TenantClientController extends Controller
             'seat_label' => $t->meta['seat_label'] ?? null,
         ])->values();
 
+        // Puncte de fidelitate câștigate (dacă microserviciul e activ)
+        $pointsEarned = null;
+        $pointsName = null;
+        try {
+            $gami = app(\App\Services\Gamification\GamificationService::class);
+            if ($gami->isEnabled($tenantId)) {
+                $config = $gami->getConfig($tenantId);
+                if ($config) {
+                    $pointsEarned = (int) $config->calculateEarnedPoints((int) ($order->total_cents ?? 0));
+                    $pointsName = $config->points_name ?? 'puncte';
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignoră
+        }
+
         $email = (string) $order->customer_email;
         $maskedEmail = $email;
         if (str_contains($email, '@')) {
@@ -330,7 +346,9 @@ class TenantClientController extends Controller
                 'customer_email' => $maskedEmail,
                 'total'      => ($order->total_cents ?? 0) / 100,
                 'currency'   => $order->currency ?? 'RON',
-                'payment_method' => ($meta['payment'] ?? null) === 'demo' ? 'Card (demo)' : 'Card',
+                'payment_method' => (($meta['payment_method'] ?? 'card') === 'card_cultural') ? 'Card cultural (demo)' : 'Card (demo)',
+                'points_earned'  => $pointsEarned,
+                'points_name'    => $pointsName,
                 'event'      => $event ? [
                     'title'   => $event->getTranslation('title', $locale),
                     'slug'    => $event->slug,
@@ -382,6 +400,48 @@ class TenantClientController extends Controller
                 'is_featured'      => (bool) $p->is_featured,
             ])->values(),
         ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
+    }
+
+    /**
+     * Metode de plată disponibile pentru tenant. Cardul cultural apare doar
+     * dacă microserviciul Netopia e activ + are cultural_card_enabled
+     * (oglindește regula din marketplace).
+     */
+    public function paymentMethods(Request $request): JsonResponse
+    {
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (! $resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+        $tenant = $resolved['tenant'];
+
+        $methods = [[
+            'id'                => 'card',
+            'name'              => 'Card bancar',
+            'hint'              => 'Visa, Mastercard',
+            'surcharge_percent' => 0,
+        ]];
+
+        // Card cultural (dacă Netopia activ + activat)
+        $pivot = $tenant->microservices()
+            ->where('slug', 'payment-netopia')
+            ->wherePivot('is_active', true)
+            ->first();
+        $settings = $pivot?->pivot?->settings ?? [];
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true) ?: [];
+        }
+        if (! empty($settings['cultural_card_enabled'])) {
+            $methods[] = [
+                'id'                => 'card_cultural',
+                'name'              => 'Card cultural',
+                'hint'              => 'Tichet Cultural, Edenred, Up Cultural',
+                'surcharge_percent' => (float) ($settings['cultural_card_surcharge_percent'] ?? 4),
+            ];
+        }
+
+        return response()->json(['data' => $methods])
+            ->header('Cache-Control', 'public, max-age=120');
     }
 
     /**
