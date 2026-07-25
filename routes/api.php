@@ -118,6 +118,16 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/account/reviews', [TenantAccountController::class, 'reviews'])->name('api.tenant-client-public.account.reviews');
     Route::get('/account/reviews/eligible', [TenantAccountController::class, 'reviewsEligible'])->name('api.tenant-client-public.account.reviews.eligible');
     Route::post('/account/reviews', [TenantAccountController::class, 'submitReview'])->name('api.tenant-client-public.account.reviews.submit');
+    Route::get('/account/notifications', [TenantAccountController::class, 'notifications'])->name('api.tenant-client-public.account.notifications');
+    Route::get('/account/beneficiaries', [TenantAccountController::class, 'beneficiaries'])->name('api.tenant-client-public.account.beneficiaries');
+    Route::post('/account/beneficiaries', [TenantAccountController::class, 'addBeneficiary'])->name('api.tenant-client-public.account.beneficiaries.add');
+    Route::delete('/account/beneficiaries/{id}', [TenantAccountController::class, 'removeBeneficiary'])->name('api.tenant-client-public.account.beneficiaries.remove');
+    Route::get('/account/payment-methods', [TenantAccountController::class, 'paymentMethods'])->name('api.tenant-client-public.account.payment-methods');
+    Route::post('/account/payment-methods', [TenantAccountController::class, 'addPaymentMethod'])->name('api.tenant-client-public.account.payment-methods.add');
+    Route::post('/account/payment-methods/{id}/default', [TenantAccountController::class, 'setDefaultPaymentMethod'])->name('api.tenant-client-public.account.payment-methods.default');
+    Route::delete('/account/payment-methods/{id}', [TenantAccountController::class, 'removePaymentMethod'])->name('api.tenant-client-public.account.payment-methods.remove');
+    Route::get('/account/gift-cards', [TenantAccountController::class, 'giftCards'])->name('api.tenant-client-public.account.gift-cards');
+    Route::post('/account/gift-cards/redeem', [TenantAccountController::class, 'redeemGiftCard'])->name('api.tenant-client-public.account.gift-cards.redeem');
 
     // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.

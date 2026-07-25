@@ -198,6 +198,66 @@ switch ($action) {
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
+    case 'acc-notifications':
+        $path   = '/tenant-client/account/notifications';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-beneficiaries':
+        $path   = '/tenant-client/account/beneficiaries';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-beneficiary-add':
+        $method = 'POST';
+        $path   = '/tenant-client/account/beneficiaries';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'acc-beneficiary-remove':
+        $method = 'DELETE';
+        $path   = '/tenant-client/account/beneficiaries/' . (int) ($_GET['id'] ?? 0);
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-payment-methods':
+        $path   = '/tenant-client/account/payment-methods';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-payment-add':
+        $method = 'POST';
+        $path   = '/tenant-client/account/payment-methods';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'acc-payment-default':
+        $method = 'POST';
+        $path   = '/tenant-client/account/payment-methods/' . (int) ($_GET['id'] ?? 0) . '/default';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = [];
+        break;
+
+    case 'acc-payment-remove':
+        $method = 'DELETE';
+        $path   = '/tenant-client/account/payment-methods/' . (int) ($_GET['id'] ?? 0);
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-gift-cards':
+        $path   = '/tenant-client/account/gift-cards';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-gift-redeem':
+        $method = 'POST';
+        $path   = '/tenant-client/account/gift-cards/redeem';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     case 'redeem':
         $method = 'POST';
         $subId  = (int) ($_GET['sub'] ?? 0);
