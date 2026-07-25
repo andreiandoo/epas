@@ -83,19 +83,19 @@ switch ($action) {
     case 'login':
         $method = 'POST';
         $path   = '/tenant-client/auth/login';
-        $query  = ['tenant' => TENANT_ID];
+        $query  = ['tenant' => TENANT_ID, 'hostname' => ($_SERVER['HTTP_HOST'] ?? '')];
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
     case 'me':
         $path   = '/tenant-client/auth/me';
-        $query  = ['tenant' => TENANT_ID];
+        $query  = ['tenant' => TENANT_ID, 'hostname' => ($_SERVER['HTTP_HOST'] ?? '')];
         break;
 
     case 'logout':
         $method = 'POST';
         $path   = '/tenant-client/auth/logout';
-        $query  = ['tenant' => TENANT_ID];
+        $query  = ['tenant' => TENANT_ID, 'hostname' => ($_SERVER['HTTP_HOST'] ?? '')];
         $body   = [];
         break;
 
