@@ -3,6 +3,36 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 $pageTitle = 'Trupa — ' . SITE_NAME;
 $activeNav = 'troupe';
+
+// Date reale din core (tenant-client artists)
+$rawArtists = tc_artists();
+
+// Derivă tipul pentru filtre din rolul textual
+$deriveType = function (?string $role): string {
+    $r = mb_strtolower((string) $role);
+    if (preg_match('/regiz|director/u', $r)) { return 'director'; }
+    if (preg_match('/scenograf|scenog/u', $r)) { return 'scenographer'; }
+    return 'actor';
+};
+
+$featured = [];
+$grid = [];
+foreach ($rawArtists as $a) {
+    $item = [
+        'id'       => $a['id'] ?? null,
+        'slug'     => $a['slug'] ?? (string) ($a['id'] ?? ''),
+        'name'     => $a['name'] ?? '',
+        'category' => $a['role'] ?? '',
+        'title'    => mb_strtoupper((string) ($a['role'] ?? 'ARTIST')),
+        'type'     => $deriveType($a['role'] ?? null),
+        'image'    => $a['photo_url'] ?? null,
+    ];
+    $grid[] = $item;
+    if (!empty($a['is_resident'])) { $featured[] = $item; }
+}
+// Maxim 4 în banda „de onoare"
+$featured = array_slice($featured, 0, 4);
+
 $pageExtraStyles = '
     .actor-card { transition: all .4s ease; }
     .actor-card:hover { transform: translateY(-8px); }
@@ -20,7 +50,7 @@ include __DIR__ . '/includes/header.php';
         <div class="max-w-7xl mx-auto">
             <p class="text-gold tracking-[0.2em] text-sm mb-3 uppercase">Artiștii noștri</p>
             <h1 class="font-display text-5xl lg:text-6xl mb-6">Trupa</h1>
-            <p class="text-ivory/70 text-lg max-w-2xl">Actori consacrați și tinere talente care dau viață scenei de peste un secol.</p>
+            <p class="text-ivory/70 text-lg max-w-2xl">Actori consacrați și tinere talente care dau viață scenei.</p>
         </div>
     </section>
 
@@ -35,14 +65,14 @@ include __DIR__ . '/includes/header.php';
     </section>
 
     <!-- Featured -->
-    <section class="pb-8 px-4 lg:px-8" x-show="filter==='all' || filter==='actor'">
+    <section class="pb-8 px-4 lg:px-8" x-show="(filter==='all' || filter==='actor') && featured.length" x-cloak>
         <div class="max-w-7xl mx-auto">
             <h2 class="font-display text-2xl mb-8 text-gold">Actori de onoare</h2>
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <template x-for="a in featured" :key="a.id">
-                    <a :href="'/artist/' + a.id" class="actor-card group relative rounded-xl overflow-hidden block">
-                        <div class="aspect-[3/4] overflow-hidden">
-                            <img :src="a.image" :alt="a.name" class="w-full h-full object-cover transition-transform duration-500">
+                    <a :href="'/artist/' + a.slug" class="actor-card group relative rounded-xl overflow-hidden block">
+                        <div class="aspect-[3/4] overflow-hidden bg-charcoal">
+                            <img :src="a.image || PLACEHOLDER" :alt="a.name" class="w-full h-full object-cover transition-transform duration-500">
                             <div class="absolute inset-0 bg-gradient-to-t from-midnight via-transparent to-transparent"></div>
                         </div>
                         <div class="absolute bottom-0 left-0 right-0 p-5">
@@ -61,9 +91,9 @@ include __DIR__ . '/includes/header.php';
             <h2 class="font-display text-2xl mb-8 text-gold" x-text="sectionTitle()"></h2>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <template x-for="a in filtered" :key="a.id">
-                    <a :href="'/artist/' + a.id" class="actor-card group relative rounded-lg overflow-hidden bg-charcoal block">
+                    <a :href="'/artist/' + a.slug" class="actor-card group relative rounded-lg overflow-hidden bg-charcoal block">
                         <div class="aspect-square overflow-hidden">
-                            <img :src="a.image" :alt="a.name" class="w-full h-full object-cover transition-transform duration-500">
+                            <img :src="a.image || PLACEHOLDER" :alt="a.name" class="w-full h-full object-cover transition-transform duration-500">
                         </div>
                         <div class="p-3">
                             <h3 class="font-display text-sm leading-tight" x-text="a.name"></h3>
@@ -86,31 +116,12 @@ include __DIR__ . '/includes/header.php';
     </section>
 </div>
 <script>
+const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='%23181818'/%3E%3Cpath d='M150 90a35 35 0 100 70 35 35 0 000-70zm0 88c-40 0-72 20-72 45v7h144v-7c0-25-32-45-72-45z' fill='%23D4AF37' opacity='.35'/%3E%3C/svg%3E";
 function troupePage() {
     return {
         filter: 'all',
-        featured: [
-            { id: 1, name: 'Victor Rebengiuc', title: 'ACTOR DE ONOARE', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80' },
-            { id: 2, name: 'Maia Morgenstern', title: 'ACTRIȚĂ DE ONOARE', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80' },
-            { id: 3, name: 'Marcel Iureș', title: 'ACTOR DE ONOARE', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80' },
-            { id: 4, name: 'Oana Pellea', title: 'ACTRIȚĂ DE ONOARE', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80' }
-        ],
-        artists: [
-            { id: 5, name: 'Ana Ularu', category: 'Actriță', type: 'actor', image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&q=80' },
-            { id: 6, name: 'Florin Piersic Jr.', category: 'Actor', type: 'actor', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80' },
-            { id: 7, name: 'Marius Manole', category: 'Actor', type: 'actor', image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&q=80' },
-            { id: 8, name: 'Medeea Marinescu', category: 'Actriță', type: 'actor', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&q=80' },
-            { id: 9, name: 'Alexandru Dabija', category: 'Regizor', type: 'director', image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300&q=80' },
-            { id: 10, name: 'Andrei Șerban', category: 'Regizor', type: 'director', image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&q=80' },
-            { id: 11, name: 'Dragoș Buhagiar', category: 'Scenograf', type: 'scenographer', image: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=300&q=80' },
-            { id: 12, name: 'Diana Cavallioti', category: 'Actriță', type: 'actor', image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&q=80' },
-            { id: 13, name: 'Richard Bovnoczki', category: 'Actor', type: 'actor', image: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=300&q=80' },
-            { id: 14, name: 'Lia Manțoc', category: 'Scenograf', type: 'scenographer', image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=300&q=80' },
-            { id: 15, name: 'Silviu Purcărete', category: 'Regizor', type: 'director', image: 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?w=300&q=80' },
-            { id: 16, name: 'Emilia Popescu', category: 'Actriță', type: 'actor', image: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=300&q=80' },
-            { id: 17, name: 'Vlad Ivanov', category: 'Actor', type: 'actor', image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&q=80' },
-            { id: 18, name: 'Radu Afrim', category: 'Regizor', type: 'director', image: 'https://images.unsplash.com/photo-1507537297725-24a1c029d3ca?w=300&q=80' }
-        ],
+        featured: <?= json_encode($featured, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+        artists: <?= json_encode($grid, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
         get filtered() { return this.filter==='all' ? this.artists : this.artists.filter(a => a.type===this.filter); },
         sectionTitle() { return {all:'Toți artiștii',actor:'Actori',director:'Regizori',scenographer:'Scenografi'}[this.filter]; }
     };

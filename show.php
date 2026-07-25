@@ -209,6 +209,22 @@ include __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
+<?php if (!empty($event['gallery'])): ?>
+<!-- Galerie foto -->
+<section class="py-16 px-4 lg:px-8 bg-charcoal/20">
+    <div class="max-w-6xl mx-auto">
+        <div class="divider-ornate mb-10"><span class="text-gold font-display text-2xl">Galerie</span></div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <?php foreach ($event['gallery'] as $img): ?>
+            <a href="<?= e($img) ?>" target="_blank" class="block aspect-[4/3] overflow-hidden rounded-lg border border-gold/10 group">
+                <img src="<?= e($img) ?>" alt="<?= e($event['title'] ?? '') ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <script>
 function seatMap(eventId) {
     return {
