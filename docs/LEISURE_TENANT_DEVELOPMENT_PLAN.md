@@ -83,6 +83,53 @@ Codul conține **două implementări leisure** care coexistă. Înțelegerea ace
 | D4 | Tipărire bon | ✅ **Driver WebUSB ESC/POS** portat din ambilet (`pos-printer.js`) ca țintă principală; `leisure.receipt` (browser print) = fallback | Cerut explicit „ca la ambilet”; paritate fiscală (2 copii, TVA, serii) |
 | D5 | Sesiune de casă | ✅ Model nou **tenant-scoped** `LeisureCashierSession` (`tenant_id` + `tenant_team_member_id`), portat 1:1 din logica marketplace | Decurge din D2; consistență cu panoul Operator (deja tenant-scoped) |
 | D6 | Roluri operaționale | ✅ Consolidare pe `TenantTeamMember.leisure_role` (setul stiva B), cu mapare din setul marketplace | Decurge din D2; panoul Operator citește deja acest câmp |
+| D7 | Entitate „Locație” | ✅ **Reutilizăm `Venue`** ca locație leisure (tenant-scoped, are adresă/program/open_hours/capacitate/reguli) | Zero model nou; un tenant leisure poate avea 1..N locații |
+| D8 | Container produse (tenant „nu are evenimente”) | ✅ **`tenant_id` direct pe `TicketType`** + `event_id` nullable + pivot many-to-many `location_product` (Venue ↔ produs) cu override-uri per locație | Decuplează produsele de `Event`; „Event” dispare din UI leisure |
+| D9 | Taxonomie tipuri de produse | ✅ Enum nou **`LeisureServiceCategory`**: `access`, `service_rental`, `product_rental`, `parking`, `camping`, `other` + `package`; mapare din valorile vechi | Acoperă toate scenariile (acces limitat, închirieri servicii/produse, parcări, camping) |
+| D10 | Subtip tenant leisure | ✅ Coloană **`leisure_subtype`** + enum `LeisureSubtype` (salină, parc aventură, parc distracții, rezervație, muzeu) care conduce preset-uri | Profiluri foarte diferite; `TenantType::Museum` rămâne separat pentru muzee „simple” |
+
+---
+
+## Modelul de domeniu leisure (revizuit — „fără evenimente”)
+
+Un tenant leisure **nu operează evenimente**. Operează **locații** și un **catalog de produse/servicii**.
+Este fundamental diferit de toate celelalte tipuri de tenant. Scenarii pe care modelul trebuie să le suporte:
+
+- **1..N locații** (o salină cu mai multe puncte, un parc cu mai multe zone/porți).
+- **1..N societăți (CIF-uri)** cu **alocare per produs**: unele produse pe SC1, altele pe SC2
+  (`TicketType.tenant_tax_registry_id`, opțional override per locație).
+- **Produse configurabile avansat, folosibile pe orice locație aleasă** (pivot produs↔locație).
+- **Subtipuri foarte diferite**: salină, parc aventură, parc distracții, rezervație, muzeu.
+
+### Entități
+
+| Concept | Model | Note |
+|---|---|---|
+| **Locație** | `Venue` (reutilizat, D7) | tenant-scoped; adresă, `open_hours`, `schedule`, capacitate, reguli, galerie, metode plată |
+| **Produs / Serviciu** | `TicketType` (decuplat de `Event`, D8) | primește `tenant_id` direct; `event_id` devine nullable; păstrează toate coloanele leisure |
+| **Produs ↔ Locație** | pivot nou `location_product` | many-to-many Venue↔TicketType; override-uri per locație: capacitate, preț, program, activ/inactiv |
+| **Societate fiscală** | `TenantTaxRegistry` (există) | N per tenant; alocare per produs via `TicketType.tenant_tax_registry_id` (+ override per locație opțional) |
+| **Subtip** | coloană `leisure_subtype` + enum `LeisureSubtype` (D10) | salină / parc aventură / parc distracții / rezervație / muzeu → preset-uri |
+
+### Taxonomia produselor (`LeisureServiceCategory`, D9)
+
+| Categorie | Exemplu | Capacitate/Inventar | Note |
+|---|---|---|---|
+| `access` | bilet acces salină/parc/muzeu, 1 zi sau durată limitată | `TicketTypeCapacity` (zi/slot) | poate cere durată/oră; „bilet de acces” pe care alte produse îl pot pretinde |
+| `service_rental` | închiriere ghid, tobogan, tiroliană, activitate cu durată | slot + durată (`RentalService`) | variante durată + overtime |
+| `product_rental` | închiriere bărci, biciclete, echipament | inventar fizic (`PhysicalResource` + `ResourceRental` + lock interval) | unități fizice cu QR |
+| `parking` | loc parcare pe zi/interval | capacitate zilnică | poate fi pe altă societate |
+| `camping` | loc cort/rulotă pe noapte | capacitate pe interval de nopți | **nou**, necesită logică multi-noapte |
+| `other` | orice alt serviciu | configurabil | fallback |
+| `package` | (flag de compunere) | umbrella + componente $0 | combină produse din categoriile de mai sus |
+
+Preset-urile pe subtip (D10) pre-selectează categoriile relevante la onboarding
+(ex. *parc aventură* → access + service_rental; *rezervație/salină/muzeu* → access + parking;
+*parc distracții* → access + service_rental + product_rental).
+
+> Impact în plan: containerul de produse nu mai e `Event`, ci **catalog tenant + locații**. Asta
+> revizuiește EPIC 1 (adaugă modelul de domeniu), EPIC 5 (wizard-ul vorbește locații/produse, nu evenimente),
+> EPIC 6 (site-ul public e per-locație) și scoping-ul din EPIC 3/4 (produse pe `tenant_id`, nu pe `event_id`).
 
 ---
 
@@ -99,13 +146,21 @@ Planul e organizat în 7 epice. Ordinea recomandată de execuție e dată în se
     prin dot-notation (ex. `hasFeature('leisure.pos.enabled')`).
   - Refactorizăm cele ~10 locuri cu `tenant_type->value === 'leisure'` inline (toate Resources leisure,
     `EventResource`, `TicketTypeResource`, paginile) să folosească helper-ul.
-- **1.2 Consolidare reprezentare eveniment (D1).** Confirmăm că fluxul tenant folosește `Event` +
-  coloanele de prim rang pe `TicketType`. Documentăm maparea `venue_config`/`meta` → coloane și marcăm
-  path-ul legacy `IsLeisureVenue` ca „doar marketplace”. (Fără ștergere acum — doar delimitare.)
-- **1.3 Enum-uri & etichete.** Verificăm `TenantType::Leisure` label/microservicii/features (deja OK).
-  Adăugăm, dacă e cazul, un `LeisureRole` enum dedicat (azi e string cu 6 valori pe `TenantTeamMember`).
+- **1.2 Model de domeniu leisure (D1, D7, D8, D9, D10).** Piesa fundamentală — vezi secțiunea „Modelul de
+  domeniu leisure”:
+  - **Decuplare produs↔Event**: migrare care adaugă `tenant_id` pe `ticket_types` (backfill din `event.tenant_id`),
+    face `event_id` nullable; actualizăm `TicketType` (relație + scope pe `tenant_id`, nu prin `event`).
+  - **Locații**: reutilizăm `Venue` ca locație leisure; pivot nou **`location_product`** (Venue↔TicketType)
+    cu override-uri per locație (`capacity`, `price_cents`, `schedule`, `is_active`).
+  - **Taxonomie**: enum `LeisureServiceCategory` (`access`/`service_rental`/`product_rental`/`parking`/`camping`/`other` + `package`);
+    migrare de mapare a valorilor vechi (`rental`→`service_rental`/`product_rental` după inventar, `activity`→`service_rental`, `extra`→`other`).
+  - **Subtip**: coloană `leisure_subtype` + enum `LeisureSubtype` (salină/parc aventură/parc distracții/rezervație/muzeu).
+  - Marcăm path-ul legacy `IsLeisureVenue`/`venue_config` ca „doar marketplace”.
+- **1.3 Enum-uri & etichete.** Verificăm `TenantType::Leisure` (OK). `LeisureSubtype` cu `label()` +
+  `defaultServiceCategories()` (preset-uri). Opțional `LeisureRole` enum (azi string cu 6 valori).
 
-**Livrabile:** helper-e pe Tenant, refactor gating, notă de arhitectură în `docs/`.
+**Livrabile:** migrări (tenant_id pe ticket_types, pivot location_product, leisure_subtype, mapare taxonomie),
+enum-uri `LeisureServiceCategory`/`LeisureSubtype`, helper-e pe Tenant, refactor gating, notă de arhitectură.
 
 ---
 
@@ -175,9 +230,10 @@ Portăm logica din `LeisureController::posSale()` + endpoint-urile de casă înt
 - **4.2 Sesiuni de casă (tenant).** Pagini/acțiuni Operator: „Deschidere casă / Închidere casă”,
   overlay de blocare când casa e închisă, „Desfășurător casă” (timeline sesiuni cu breakdown pe
   metodă de plată și pe societate SC1/SC2), export CSV, snapshot la închidere (Z-report).
-- **4.3 Conectare `Operator\Pos::checkout()`** la `PosSaleService`; adăugăm în UI: panou client/companie
-  (cu **lookup ANAF** pe CUI), selector metodă de plată (cash/card/link), variante/sloturi/inventar,
-  add-ons, pachete, comision, total.
+- **4.3 Conectare `Operator\Pos::checkout()`** la `PosSaleService`; adăugăm în UI: **selector locație**
+  (dacă operatorul acoperă mai multe), catalog produse filtrat pe locație (pivot `location_product`),
+  panou client/companie (cu **lookup ANAF** pe CUI), selector metodă de plată (cash/card/link),
+  variante/sloturi/inventar, add-ons, pachete, comision, total. Alocarea pe societate rezultă din produs.
 - **4.4 Tipărire bon & factură (D4).** Portăm `resources/marketplaces/ambilet/assets/js/pos-printer.js`
   (WebUSB ESC/POS) în panoul Operator: conectare imprimantă, status hârtie, auto-print, reprint,
   bon bilet (cu QR), **factură fiscală RO** în 2 copii (CUI/serie/TVA/semnături). `leisure.receipt`
@@ -194,9 +250,13 @@ Portăm logica din `LeisureController::posSale()` + endpoint-urile de casă înt
 Pe lângă ce există deja (echipă/ture, inventar/tipuri/QR, excepții capacitate, multi-societate,
 istoric rentals, rapoarte, pontaj), adăugăm:
 
-- **5.1 Flux „Locație/Serviciu & Produs”.** Ecran prietenos de creare a evenimentului-container leisure
-  + tipuri de bilet (azi `EventResource` e ascuns pentru leisure, iar crearea Event nu e expusă).
-  Wizard: date locație → program de bază → produse (`service_category`) → prețuri (canal/sezon/durată).
+- **5.1 Locații + Catalog produse (fără „evenimente”).** Două resurse Filament noi:
+  - **`LocationResource`** (peste `Venue`, filtrat leisure): CRUD locații (adresă, program, capacitate, reguli).
+  - **`ProductResource`** (peste `TicketType` tenant-scoped): catalog de produse cu wizard avansat pe
+    `LeisureServiceCategory` (access/service_rental/product_rental/parking/camping/other), societate
+    (`tenant_tax_registry_id`), prețuri (canal/sezon/durată), inventar (pentru product_rental), și
+    **asignare pe locații** (pivot `location_product` cu override-uri per locație).
+  - Preset-uri la creare în funcție de `leisure_subtype`. `EventResource` rămâne ascuns pentru leisure.
 - **5.2 Calendar disponibilitate de bază** (nu doar excepții): ecran lunar peste `TicketTypeCapacity`
   cu capacitate/vândut/rezervat/închis/price-override și acțiuni Livewire (analog `DailyCapacities`
   din marketplace), plus derivare sloturi din `leisure_schedule_*`.
@@ -227,10 +287,12 @@ Urmăm fidel pattern-ul `resources/tenant-demos/teatru/`:
   - `.htaccess` cu alias-uri RO adecvate leisure;
   - `cont/` (zonă cont client) + `_webhook-deploy.php` (branch `leisure`).
 - **6.2 Set de pagini leisure** (diferă de teatru — **fără seat map**, cu **selector dată/slot**):
-  - `index.php` (hero + servicii/produse featured), `servicii.php`/catalog, `serviciu.php` (detaliu
-    produs + **date/slot picker** din `/api/leisure/.../availability` month + `.../slots`),
-    `cos.php`, `finalizare.php`, `confirmare.php`, `cont/*`, pagini statice (about/contact/termeni).
+  - `index.php` (hero + locații + servicii/produse featured), `locatii.php` / selector locație (dacă
+    tenantul are >1 locație), `servicii.php`/catalog filtrat pe locație, `serviciu.php` (detaliu produs +
+    **date/slot picker** din `/api/leisure/.../availability` month + `.../slots`), `cos.php`,
+    `finalizare.php`, `confirmare.php`, `cont/*`, pagini statice (about/contact/termeni).
   - Reutilizăm fluxul Alpine de cart/checkout din teatru; înlocuim `seatMap()` cu `slotPicker()`.
+  - Catalogul se rezolvă prin pivot `location_product`; produsele afișate depind de locația aleasă.
 - **6.3 Extindere API public `/api/leisure/*` (D3)** — backend. Azi există doar `availability`. Adăugăm:
   - `GET /leisure/tenants/{tenant}/config` (branding, produse, societăți, metode plată);
   - `GET /leisure/tenants/{tenant}/products` (+ detaliu);
