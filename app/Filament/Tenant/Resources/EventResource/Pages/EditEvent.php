@@ -2,13 +2,21 @@
 
 namespace App\Filament\Tenant\Resources\EventResource\Pages;
 
+use App\Filament\Tenant\Concerns\AutoFillsEventSeo;
 use App\Filament\Tenant\Resources\EventResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditEvent extends EditRecord
 {
+    use AutoFillsEventSeo;
+
     protected static string $resource = EventResource::class;
+
+    protected function afterSave(): void
+    {
+        $this->autoFillSeoKeys();
+    }
 
     public function mount(int|string $record): void
     {
@@ -57,14 +65,14 @@ class EditEvent extends EditRecord
 
         // Statistics button - always visible
         $actions[] = Actions\Action::make('statistics')
-            ->label('Statistics')
+            ->label('Statistici')
             ->icon('heroicon-o-chart-bar')
             ->color('info')
             ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
 
         if ($hasInvitations) {
             $actions[] = Actions\Action::make('invitations')
-                ->label('Create Invitations')
+                ->label('Creează invitații')
                 ->icon('heroicon-o-envelope')
                 ->color('warning')
                 ->url(fn () => route('filament.tenant.pages.invitations') . '?event=' . $this->record->id);

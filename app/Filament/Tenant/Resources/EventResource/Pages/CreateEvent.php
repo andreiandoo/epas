@@ -2,12 +2,20 @@
 
 namespace App\Filament\Tenant\Resources\EventResource\Pages;
 
+use App\Filament\Tenant\Concerns\AutoFillsEventSeo;
 use App\Filament\Tenant\Resources\EventResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateEvent extends CreateRecord
 {
+    use AutoFillsEventSeo;
+
     protected static string $resource = EventResource::class;
+
+    protected function afterCreate(): void
+    {
+        $this->autoFillSeoKeys();
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {

@@ -174,6 +174,10 @@ class TenantPanelProvider extends PanelProvider
             .fi-fo-field-wrp { overflow: visible !important; }
             /* Remove padding on tabs nav */
             .fi-sc-tabs > nav.fi-tabs { padding: 0 !important; }
+            /* Restore inner padding for specific repeaters (cast/creative) — the
+               global rule above zeroes it for the compact ticket-type repeater */
+            .ep-repeater-padded .fi-fo-repeater-item-content { padding: 0.75rem 1rem !important; }
+            .ep-repeater-padded .fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap { gap: 0.75rem !important; }
             </style>
             HTML)
 

@@ -98,8 +98,7 @@ class EventCategoryResource extends Resource
                 Tables\Columns\ImageColumn::make('image')->label('Imagine')->disk('public')->square(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro'))
-                    ->searchable()
+                    ->getStateUsing(fn ($record) => $record->getTranslation('name', 'ro'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')->label('Slug')->toggleable(),
                 Tables\Columns\TextColumn::make('icon')->label('Icon')->badge()->toggleable(),

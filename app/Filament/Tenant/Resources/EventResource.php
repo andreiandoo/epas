@@ -30,7 +30,7 @@ class EventResource extends Resource
 {
     protected static ?string $model = Event::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
-    protected static ?string $navigationLabel = 'My Events';
+    protected static ?string $navigationLabel = 'Evenimentele mele';
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 2;
 
@@ -200,7 +200,7 @@ class EventResource extends Resource
             SC\Tabs\Tab::make('Detalii')->icon('heroicon-o-information-circle')->schema([
 
             // BASICS - Single Language based on Tenant setting
-            SC\Section::make('Event Details')
+            SC\Section::make('Detalii eveniment')
                 ->schema([
                     SC\Group::make()
                         ->schema([
@@ -221,11 +221,11 @@ class EventResource extends Resource
                 ]),
 
             // FLAGS
-            SC\Section::make('Status Flags')
+            SC\Section::make('Stări')
                 ->schema([
                     SC\Grid::make(5)->schema([
                         Forms\Components\Toggle::make('is_sold_out')
-                            ->label('Sold out')
+                            ->label('Epuizat')
                             ->onIcon('heroicon-m-lock-closed')
                             ->offIcon('heroicon-m-lock-open')
                             ->live()
@@ -236,12 +236,12 @@ class EventResource extends Resource
                             })
                             ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                         Forms\Components\Toggle::make('door_sales_only')
-                            ->label('Door sales only')
+                            ->label('Doar vânzare la ușă')
                             ->onIcon('heroicon-m-key')
                             ->offIcon('heroicon-m-key')
                             ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                         Forms\Components\Toggle::make('is_cancelled')
-                            ->label('Cancelled')
+                            ->label('Anulat')
                             ->onIcon('heroicon-m-x-circle')
                             ->offIcon('heroicon-m-x-circle')
                             ->live()
@@ -254,7 +254,7 @@ class EventResource extends Resource
                                 }
                             }),
                         Forms\Components\Toggle::make('is_postponed')
-                            ->label('Postponed')
+                            ->label('Amânat')
                             ->onIcon('heroicon-m-clock')
                             ->offIcon('heroicon-m-clock')
                             ->live()
@@ -271,7 +271,7 @@ class EventResource extends Resource
                             })
                             ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                         Forms\Components\Toggle::make('is_promoted')
-                            ->label('Promoted')
+                            ->label('Promovat')
                             ->onIcon('heroicon-m-sparkles')
                             ->offIcon('heroicon-m-sparkles')
                             ->live()
@@ -282,36 +282,36 @@ class EventResource extends Resource
                     ]),
 
                     Forms\Components\Textarea::make('cancel_reason')
-                        ->label('Cancellation reason')
+                        ->label('Motiv anulare')
                         ->rows(2)
                         ->visible(fn (SGet $get) => (bool) $get('is_cancelled')),
 
                     SC\Grid::make(4)->schema([
                         Forms\Components\DatePicker::make('postponed_date')
-                            ->label('New date')
+                            ->label('Dată nouă')
                             ->minDate($today)
                             ->native(false),
                         Forms\Components\TimePicker::make('postponed_start_time')
-                            ->label('Start time')
+                            ->label('Ora de început')
                             ->seconds(false)
                             ->native(true),
                         Forms\Components\TimePicker::make('postponed_door_time')
-                            ->label('Door time')
+                            ->label('Ora deschiderii')
                             ->seconds(false)
                             ->native(true),
                         Forms\Components\TimePicker::make('postponed_end_time')
-                            ->label('End time')
+                            ->label('Ora de sfârșit')
                             ->seconds(false)
                             ->native(true),
                     ])->visible(fn (SGet $get) => (bool) $get('is_postponed')),
 
                     Forms\Components\Textarea::make('postponed_reason')
-                        ->label('Postponement reason')
+                        ->label('Motiv amânare')
                         ->rows(2)
                         ->visible(fn (SGet $get) => (bool) $get('is_postponed')),
 
                     Forms\Components\DatePicker::make('promoted_until')
-                        ->label('Promoted until')
+                        ->label('Promovat până la')
                         ->minDate($today)
                         ->native(false)
                         ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
@@ -322,15 +322,15 @@ class EventResource extends Resource
             SC\Tabs\Tab::make('Program')->icon('heroicon-o-calendar-days')->schema([
 
             // SCHEDULE
-            SC\Section::make('Schedule')
+            SC\Section::make('Program')
                 ->schema([
                     Forms\Components\Radio::make('duration_mode')
-                        ->label('Duration')
+                        ->label('Durată')
                         ->options([
-                            'single_day' => 'Single day',
-                            'range' => 'Range',
-                            'multi_day' => 'Multiple days',
-                            'recurring' => 'Recurring',
+                            'single_day' => 'O singură zi',
+                            'range' => 'Interval',
+                            'multi_day' => 'Mai multe zile',
+                            'recurring' => 'Recurent',
                         ])
                         ->inline()
                         ->default('single_day')
@@ -340,20 +340,20 @@ class EventResource extends Resource
                     // Single day
                     SC\Grid::make(4)->schema([
                         Forms\Components\DatePicker::make('event_date')
-                            ->label('Date')
+                            ->label('Dată')
                             ->minDate($today)
                             ->native(false),
                         Forms\Components\TimePicker::make('start_time')
-                            ->label('Start time')
+                            ->label('Ora de început')
                             ->seconds(false)
                             ->native(true)
                             ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
                         Forms\Components\TimePicker::make('door_time')
-                            ->label('Door time')
+                            ->label('Ora deschiderii')
                             ->seconds(false)
                             ->native(true),
                         Forms\Components\TimePicker::make('end_time')
-                            ->label('End time')
+                            ->label('Ora de sfârșit')
                             ->seconds(false)
                             ->native(true),
                     ])->visible(fn (SGet $get) => $get('duration_mode') === 'single_day'),
@@ -361,45 +361,45 @@ class EventResource extends Resource
                     // Range
                     SC\Grid::make(4)->schema([
                         Forms\Components\DatePicker::make('range_start_date')
-                            ->label('Start date')
+                            ->label('Data de început')
                             ->minDate($today)
                             ->native(false),
                         Forms\Components\DatePicker::make('range_end_date')
-                            ->label('End date')
+                            ->label('Data de sfârșit')
                             ->native(false),
                         Forms\Components\TimePicker::make('range_start_time')
-                            ->label('Start time')
+                            ->label('Ora de început')
                             ->seconds(false)
                             ->native(true),
                         Forms\Components\TimePicker::make('range_end_time')
-                            ->label('End time')
+                            ->label('Ora de sfârșit')
                             ->seconds(false)
                             ->native(true),
                     ])->visible(fn (SGet $get) => $get('duration_mode') === 'range'),
 
                     // Multi day
                     Forms\Components\Repeater::make('multi_slots')
-                        ->label('Days & times')
+                        ->label('Zile & ore')
                         ->schema([
                             Forms\Components\DatePicker::make('date')
-                                ->label('Date')
+                                ->label('Dată')
                                 ->minDate($today)
                                 ->native(false)
                                 ->required(),
                             Forms\Components\TimePicker::make('start_time')
-                                ->label('Start')
+                                ->label('Început')
                                 ->seconds(false)
                                 ->native(true),
                             Forms\Components\TimePicker::make('door_time')
-                                ->label('Door')
+                                ->label('Uși')
                                 ->seconds(false)
                                 ->native(true),
                             Forms\Components\TimePicker::make('end_time')
-                                ->label('End')
+                                ->label('Sfârșit')
                                 ->seconds(false)
                                 ->native(true),
                         ])
-                        ->addActionLabel('Add another date')
+                        ->addActionLabel('Adaugă altă dată')
                         ->default([])
                         ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
                         ->columns(4),
@@ -410,7 +410,7 @@ class EventResource extends Resource
                         ->schema([
                             SC\Grid::make(4)->schema([
                                 Forms\Components\DatePicker::make('recurring_start_date')
-                                    ->label('Initial date')
+                                    ->label('Data inițială')
                                     ->minDate(now()->startOfDay())
                                     ->native(false)
                                     ->live()
@@ -420,23 +420,23 @@ class EventResource extends Resource
                                         $set('recurring_weekday', $w);
                                     }),
                                 Forms\Components\TextInput::make('recurring_weekday')
-                                    ->label('Weekday')
+                                    ->label('Zi a săptămânii')
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->formatStateUsing(function (SGet $get) {
-                                        $map = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
+                                        $map = [1=>'Lun',2=>'Mar',3=>'Mie',4=>'Joi',5=>'Vin',6=>'Sâm',7=>'Dum'];
                                         return $map[$get('recurring_weekday')] ?? '';
                                     }),
                                 Forms\Components\Select::make('recurring_frequency')
-                                    ->label('Recurrence')
+                                    ->label('Recurență')
                                     ->options([
-                                        'weekly' => 'Weekly',
-                                        'monthly_nth' => 'Monthly (Nth weekday)',
+                                        'weekly' => 'Săptămânal',
+                                        'monthly_nth' => 'Lunar (a N-a zi din săptămână)',
                                     ])
                                     ->required()
                                     ->live(),
                                 Forms\Components\TextInput::make('recurring_count')
-                                    ->label('Occurrences')
+                                    ->label('Repetări')
                                     ->numeric()
                                     ->minValue(1),
                             ]),
@@ -444,32 +444,32 @@ class EventResource extends Resource
                                 ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
                                 ->schema([
                                     Forms\Components\Select::make('recurring_week_of_month')
-                                        ->label('Week of month')
+                                        ->label('Săptămâna din lună')
                                         ->options([
-                                            1 => 'First', 2 => 'Second', 3 => 'Third', 4 => 'Fourth', -1 => 'Last',
+                                            1 => 'Prima', 2 => 'A doua', 3 => 'A treia', 4 => 'A patra', -1 => 'Ultima',
                                         ])
                                         ->required(),
                                 ]),
                             SC\Grid::make(3)->schema([
                                 Forms\Components\TimePicker::make('recurring_start_time')
-                                    ->label('Start time')
+                                    ->label('Ora de început')
                                     ->seconds(false)->native(true)
                                     ->required(),
                                 Forms\Components\TimePicker::make('recurring_door_time')
-                                    ->label('Door time')
+                                    ->label('Ora deschiderii')
                                     ->seconds(false)->native(true),
                                 Forms\Components\TimePicker::make('recurring_end_time')
-                                    ->label('End time')
+                                    ->label('Ora de sfârșit')
                                     ->seconds(false)->native(true),
                             ]),
                         ]),
                 ])->columns(1),
 
             // LOCATION & LINKS
-            SC\Section::make('Location & Links')
+            SC\Section::make('Locație & Linkuri')
                 ->schema([
                     Forms\Components\Select::make('venue_id')
-                        ->label('Venue')
+                        ->label('Locație')
                         ->searchable()
                         ->preload()
                         ->live()
@@ -495,18 +495,18 @@ class EventResource extends Resource
                         })
                         ->nullable(),
                     Forms\Components\TextInput::make('address')
-                        ->label('Address')
+                        ->label('Adresă')
                         ->maxLength(255),
                     Forms\Components\TextInput::make('website_url')
-                        ->label('Website')
+                        ->label('Site web')
                         ->url()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('facebook_url')
-                        ->label('Facebook Event')
+                        ->label('Eveniment Facebook')
                         ->url()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('event_website_url')
-                        ->label('Event Website')
+                        ->label('Site web eveniment')
                         ->url()
                         ->maxLength(255),
                 ])->columns(2),
@@ -524,14 +524,14 @@ class EventResource extends Resource
                         ->directory('events/posters')
                         ->disk('public'),
                     Forms\Components\FileUpload::make('hero_image_url')
-                        ->label('Hero image (horizontal)')
+                        ->label('Imagine hero (orizontală)')
                         ->image()
                         ->directory('events/hero')
                         ->disk('public'),
                 ])->columns(2),
 
             // CONTENT - Single Language
-            SC\Section::make('Content')
+            SC\Section::make('Conținut')
                 ->schema([
                     Forms\Components\Textarea::make("short_description.{$tenantLanguage}")
                         ->label($tenantLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
@@ -576,6 +576,8 @@ class EventResource extends Resource
                         ->directory('event-gallery')
                         ->visibility('public')
                         ->imageEditor()
+                        ->panelLayout('grid')
+                        ->imagePreviewHeight('120')
                         ->columnSpanFull(),
                 ])->columns(1),
 
@@ -584,7 +586,7 @@ class EventResource extends Resource
             SC\Tabs\Tab::make('Taxonomii & Relații')->icon('heroicon-o-tag')->schema([
 
             // TAXONOMIES
-            SC\Section::make('Taxonomies & Relations')
+            SC\Section::make('Taxonomii & Relații')
                 ->schema([
                     Forms\Components\Select::make('tenantEventCategories')
                         ->label('Categoriile tale')
@@ -600,7 +602,7 @@ class EventResource extends Resource
                         ->helperText('Categorii proprii, gestionate în „Categorii evenimente". Apar pe site-ul tău.'),
 
                     Forms\Components\Select::make('eventTypes')
-                        ->label('Event types')
+                        ->label('Tipuri de eveniment')
                         ->relationship(
                             name: 'eventTypes',
                             modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')
@@ -634,7 +636,7 @@ class EventResource extends Resource
                         }),
 
                     Forms\Components\Select::make('eventGenres')
-                        ->label('Event genres')
+                        ->label('Genuri')
                         ->relationship(
                             name: 'eventGenres',
                             modifyQueryUsing: function (Builder $query, SGet $get) {
@@ -659,14 +661,16 @@ class EventResource extends Resource
                         ->maxItems(5),
 
                     Forms\Components\Select::make('artists')
-                        ->label('Artists')
+                        ->label('Artiști')
                         ->relationship('artists', 'name')
                         ->multiple()
                         ->preload()
-                        ->searchable(),
+                        ->searchable()
+                        // La teatru distribuția se gestionează în tab-ul Distribuție
+                        ->visible(fn () => !$isTheater),
 
                     Forms\Components\Select::make('tags')
-                        ->label('Event tags')
+                        ->label('Etichete')
                         ->relationship('tags', 'name')
                         ->multiple()
                         ->preload()
@@ -777,6 +781,7 @@ class EventResource extends Resource
                         ->schema([
                             Forms\Components\Repeater::make('theater_cast')
                                 ->label('')
+                                ->extraAttributes(['class' => 'ep-repeater-padded'])
                                 ->schema([
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\Select::make('name')->label('Nume')
@@ -806,6 +811,7 @@ class EventResource extends Resource
                         ->schema([
                             Forms\Components\Repeater::make('theater_creative')
                                 ->label('')
+                                ->extraAttributes(['class' => 'ep-repeater-padded'])
                                 ->schema([
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\TextInput::make('role')->label('Funcție')->placeholder('Scenografie, Costume, Muzica...'),
@@ -836,11 +842,11 @@ class EventResource extends Resource
             SC\Tabs\Tab::make('Bilete')->icon('heroicon-o-ticket')->schema([
 
             // TICKETS
-            SC\Section::make('Tickets')
+            SC\Section::make('Bilete')
                 ->schema([
                     // Ticket Template selector
                     Forms\Components\Select::make('ticket_template_id')
-                        ->label('Ticket Template')
+                        ->label('Șablon bilet')
                         ->relationship(
                             name: 'ticketTemplate',
                             modifyQueryUsing: fn (Builder $query) => $query
@@ -1309,7 +1315,7 @@ class EventResource extends Resource
                 ->collapsible()
                 ->schema([
                     Forms\Components\Select::make('seo_presets')
-                        ->label('Add SEO keys from template')
+                        ->label('Adaugă chei SEO din șablon')
                         ->multiple()
                         ->dehydrated(false)
                         ->options([
@@ -1491,8 +1497,8 @@ class EventResource extends Resource
                         }),
 
                     Forms\Components\KeyValue::make('seo')
-                        ->keyLabel('Meta key')
-                        ->valueLabel('Meta value')
+                        ->keyLabel('Cheie meta')
+                        ->valueLabel('Valoare meta')
                         ->addable()
                         ->deletable()
                         ->reorderable()
@@ -1546,7 +1552,7 @@ class EventResource extends Resource
                                 ->prefixIcon('heroicon-o-lock-closed')
                                 ->columnSpanFull(),
                             Forms\Components\TextInput::make('redirect_url')
-                                ->label('Redirect')
+                                ->label('Redirecționare')
                                 ->url()->maxLength(500)->placeholder('https://...')
                                 ->prefixIcon('heroicon-o-arrow-top-right-on-square')
                                 ->hintIcon('heroicon-o-information-circle', tooltip: $tenantLanguage === 'ro' ? 'Dacă setezi un URL, evenimentul apare în listări dar link-ul duce către acest URL.' : 'If set, the event appears in listings but the link goes to this URL.')
@@ -1620,32 +1626,34 @@ class EventResource extends Resource
                         return null;
                     }),
                 Tables\Columns\TextColumn::make('ownership')
-                    ->label('Type')
+                    ->label('Tip')
                     ->badge()
                     ->getStateUsing(function (Event $record) use ($tenant) {
-                        return $record->tenant_id === $tenant?->id ? 'Your Event' : 'Hosted';
+                        return $record->tenant_id === $tenant?->id ? 'Evenimentul tău' : 'Găzduit';
                     })
                     ->color(fn (string $state): string => match ($state) {
-                        'Your Event' => 'success',
-                        'Hosted' => 'info',
+                        'Evenimentul tău' => 'success',
+                        'Găzduit' => 'info',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('tenant.name')
-                    ->label('Organizer')
+                    ->label('Organizator')
                     ->getStateUsing(fn (Event $record) => $record->tenant?->public_name ?? $record->tenant?->name)
                     ->visible(fn () => $tenant?->ownsVenues() ?? false)
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('venue.name')
+                    ->label('Locație')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('event_date')
+                    ->label('Dată')
                     ->date()
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_cancelled')
                     ->boolean()
-                    ->label('Cancelled'),
+                    ->label('Anulat'),
                 Tables\Columns\IconColumn::make('is_sold_out')
                     ->boolean()
-                    ->label('Sold Out'),
+                    ->label('Epuizat'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -1655,10 +1663,10 @@ class EventResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
                 Tables\Filters\TernaryFilter::make('is_sold_out'),
                 Tables\Filters\SelectFilter::make('ownership')
-                    ->label('Event Type')
+                    ->label('Tip eveniment')
                     ->options([
-                        'own' => 'Your Events',
-                        'hosted' => 'Hosted Events',
+                        'own' => 'Evenimentele tale',
+                        'hosted' => 'Evenimente găzduite',
                     ])
                     ->query(function (Builder $query, array $data) use ($tenant) {
                         return match ($data['value'] ?? null) {
@@ -1673,14 +1681,14 @@ class EventResource extends Resource
             ->bulkActions([])
             ->recordActions([
                 Action::make('statistics')
-                    ->label('Statistics')
+                    ->label('Statistici')
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
                 EditAction::make()
                     ->visible(fn (Event $record) => $record->tenant_id === $tenant?->id),
                 Action::make('view-guest')
-                    ->label('View Details')
+                    ->label('Vezi detalii')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
                     ->url(fn (Event $record) => static::getUrl('view-guest', ['record' => $record]))
