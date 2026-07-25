@@ -123,6 +123,47 @@ switch ($action) {
         $query  = ['tenant' => TENANT_ID];
         break;
 
+    case 'acc-stats':
+        $path   = '/tenant-client/account/stats';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-orders':
+        $path   = '/tenant-client/account/orders';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-order':
+        $path   = '/tenant-client/account/orders/' . (int) ($_GET['id'] ?? 0);
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-tickets':
+        $path   = '/tenant-client/account/tickets';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-profile':
+        $method = 'POST';
+        $path   = '/tenant-client/account/profile';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'acc-password':
+        $method = 'POST';
+        $path   = '/tenant-client/account/password';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'acc-delete':
+        $method = 'POST';
+        $path   = '/tenant-client/account/delete';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     case 'redeem':
         $method = 'POST';
         $subId  = (int) ($_GET['sub'] ?? 0);

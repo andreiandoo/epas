@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\DemoCheckoutController;
 use App\Http\Controllers\Api\TenantClient\SubscriptionController;
+use App\Http\Controllers\Api\TenantClient\CustomerAccountController as TenantAccountController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
@@ -103,6 +104,15 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     // Metode de plată disponibile (inclusiv card cultural dacă Netopia activ)
     Route::get('/payment-methods', [TenantClientController::class, 'paymentMethods'])
         ->name('api.tenant-client-public.payment-methods');
+
+    // Cont client tenant (necesită bearer CustomerToken)
+    Route::get('/account/stats', [TenantAccountController::class, 'stats'])->name('api.tenant-client-public.account.stats');
+    Route::get('/account/orders', [TenantAccountController::class, 'orders'])->name('api.tenant-client-public.account.orders');
+    Route::get('/account/orders/{id}', [TenantAccountController::class, 'orderDetail'])->name('api.tenant-client-public.account.order');
+    Route::get('/account/tickets', [TenantAccountController::class, 'tickets'])->name('api.tenant-client-public.account.tickets');
+    Route::post('/account/profile', [TenantAccountController::class, 'updateProfile'])->name('api.tenant-client-public.account.profile');
+    Route::post('/account/password', [TenantAccountController::class, 'changePassword'])->name('api.tenant-client-public.account.password');
+    Route::post('/account/delete', [TenantAccountController::class, 'deleteAccount'])->name('api.tenant-client-public.account.delete');
 
     // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.
@@ -2338,19 +2348,19 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.settings.update');
 
         // Account
-        Route::get('/orders', [CustomerAccountController::class, 'orders'])
+        Route::get('/orders', [TenantAccountController::class, 'orders'])
             ->name('api.marketplace-client.customer.orders');
-        Route::get('/orders/{order}', [CustomerAccountController::class, 'orderDetail'])
+        Route::get('/orders/{order}', [TenantAccountController::class, 'orderDetail'])
             ->name('api.marketplace-client.customer.orders.show');
-        Route::get('/tickets', [CustomerAccountController::class, 'upcomingTickets'])
+        Route::get('/tickets', [TenantAccountController::class, 'upcomingTickets'])
             ->name('api.marketplace-client.customer.tickets');
-        Route::get('/tickets/all', [CustomerAccountController::class, 'allTickets'])
+        Route::get('/tickets/all', [TenantAccountController::class, 'allTickets'])
             ->name('api.marketplace-client.customer.tickets.all');
-        Route::get('/tickets/{ticket}', [CustomerAccountController::class, 'ticketDetail'])
+        Route::get('/tickets/{ticket}', [TenantAccountController::class, 'ticketDetail'])
             ->name('api.marketplace-client.customer.tickets.show');
-        Route::get('/past-events', [CustomerAccountController::class, 'pastEvents'])
+        Route::get('/past-events', [TenantAccountController::class, 'pastEvents'])
             ->name('api.marketplace-client.customer.past-events');
-        Route::delete('/account', [CustomerAccountController::class, 'deleteAccount'])
+        Route::delete('/account', [TenantAccountController::class, 'deleteAccount'])
             ->name('api.marketplace-client.customer.account.delete');
 
         // Avatar
