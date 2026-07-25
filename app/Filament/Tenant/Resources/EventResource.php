@@ -846,6 +846,9 @@ class EventResource extends Resource
                                 }),
                         ])
                         ->schema([
+                            SC\Section::make('Identificare')
+                                ->columns(12)->columnSpan(12)
+                                ->schema([
                             Forms\Components\TextInput::make('name')
                                 ->label('Name')
                                 ->placeholder('e.g. Early Bird, Standard, VIP')
@@ -955,6 +958,13 @@ class EventResource extends Resource
                                 })
                                 ->columnSpan(12),
 
+                                ]),
+
+                            SC\Section::make('Disponibilitate')
+                                ->collapsible()->collapsed()->persistCollapsed()->compact()
+                                ->columns(12)->columnSpan(12)
+                                ->schema([
+
                             SC\Grid::make(3)->schema([
                                 Forms\Components\TextInput::make('capacity')
                                     ->label('Capacity')
@@ -1015,6 +1025,13 @@ class EventResource extends Resource
                                 ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
                                 ->columnSpan(12),
 
+                                ]),
+
+                            SC\Section::make('Condiții & note')
+                                ->collapsible()->collapsed()->persistCollapsed()->compact()
+                                ->columns(12)->columnSpan(12)
+                                ->schema([
+
                             Forms\Components\Repeater::make('perks')
                                 ->label('Condiții & beneficii')
                                 ->simple(Forms\Components\TextInput::make('text')->placeholder('ex: Acces backstage, Program gratuit'))
@@ -1026,6 +1043,13 @@ class EventResource extends Resource
                                 ->label('Note interne (nu apar public)')
                                 ->rows(2)
                                 ->columnSpan(12),
+
+                                ]),
+
+                            SC\Section::make('Reduceri la cantitate')
+                                ->collapsible()->collapsed()->persistCollapsed()->compact()
+                                ->columns(12)->columnSpan(12)
+                                ->schema([
 
                             // Bulk discounts
                             Forms\Components\Repeater::make('bulk_discounts')
@@ -1078,6 +1102,8 @@ class EventResource extends Resource
                                         ->columnSpan(3),
                                 ])
                                 ->columnSpan(12),
+
+                                ]),
 
                             Forms\Components\Toggle::make('is_active')
                                 ->label('Active?')
