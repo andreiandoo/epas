@@ -13,6 +13,7 @@ use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -41,6 +42,13 @@ class DemoCheckoutController extends Controller
             'items'             => 'nullable|array',
             'items.*.ticket_type_id' => 'required_with:items|integer',
             'items.*.quantity'  => 'required_with:items|integer|min:1',
+            'beneficiaries'     => 'nullable|array',
+            'beneficiaries.*.name'  => 'nullable|string|max:190',
+            'beneficiaries.*.email' => 'nullable|email|max:190',
+            'create_account'    => 'nullable|boolean',
+            'password'          => 'nullable|string|min:8',
+            'newsletter'        => 'nullable|boolean',
+            'payment_method'    => 'nullable|string|max:40',
             'success_url'       => 'nullable|url',
             'cancel_url'        => 'nullable|url',
         ]);
@@ -78,6 +86,11 @@ class DemoCheckoutController extends Controller
                     ]
                 );
 
+                // Creare cont automat: setează parola (dacă nu are deja una)
+                if (! empty($validated['create_account']) && ! empty($validated['password']) && empty($customer->password)) {
+                    $customer->update(['password' => Hash::make($validated['password'])]);
+                }
+
                 // Tipuri de bilete active pentru maparea locurilor
                 $ticketTypes = TicketType::where('event_id', $event->id)->where('status', 'active')->get();
                 $fallbackTtId = $ticketTypes->first()?->id;
@@ -99,11 +112,13 @@ class DemoCheckoutController extends Controller
                 $seatUids = [];
                 $eventSeatingId = $validated['event_seating_id'] ?? null;
 
+                $beneficiaries = $validated['beneficiaries'] ?? [];
                 if (! empty($seats)) {
-                    foreach ($seats as $seat) {
+                    foreach ($seats as $idx => $seat) {
                         $priceCents = (int) round(((float) ($seat['price'] ?? 0)) * 100);
                         $totalCents += $priceCents;
                         $seatUids[] = $seat['seat_uid'];
+                        $ben = $beneficiaries[$idx] ?? null;
                         $ticketRows[] = [
                             'ticket_type_id' => $priceToTt($priceCents),
                             'price_cents'    => $priceCents,
@@ -111,6 +126,10 @@ class DemoCheckoutController extends Controller
                                 'seat_uid'         => $seat['seat_uid'],
                                 'seat_label'       => $seat['label'] ?? null,
                                 'event_seating_id' => $eventSeatingId,
+                                'beneficiary'      => ($ben && ! empty($ben['name'])) ? [
+                                    'name'  => $ben['name'],
+                                    'email' => $ben['email'] ?? null,
+                                ] : null,
                             ], fn ($v) => $v !== null),
                         ];
                     }
@@ -147,6 +166,8 @@ class DemoCheckoutController extends Controller
                         'customer_phone' => $validated['customer']['phone'] ?? null,
                         'event_id'       => $event->id,
                         'payment'        => 'demo',
+                        'payment_method' => $validated['payment_method'] ?? 'card',
+                        'newsletter'     => (bool) ($validated['newsletter'] ?? false),
                         'seated_items'   => $seatedItems,
                     ],
                 ]);
