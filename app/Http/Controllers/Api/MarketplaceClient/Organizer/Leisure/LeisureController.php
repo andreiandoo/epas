@@ -3459,7 +3459,9 @@ class LeisureController extends BaseController
             ],
         ];
         $totalOrders = $orders->count();
-        $totalTickets = 0;
+        $totalTickets = 0;         // raw: toate ticketele non-cancelled (backwards compat + label "Tickets fizice")
+        $totalTicketsSold = 0;     // tranzactii cu valoare (mirror dashboard "Bilete vandute"): exclude from_package + price<=0
+        $totalTicketsVisitors = 0; // bilete scanabile (mirror dashboard "Vizitatori"): exclude umbrella parent pachet
         $totalRevenue = 0.0;
 
         foreach ($orders as $o) {
@@ -3481,13 +3483,18 @@ class LeisureController extends BaseController
             foreach ($o->tickets as $t) {
                 if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
 
-                $isFromPackage = is_array($t->meta ?? null) && !empty($t->meta['from_package']);
+                $metaArr = is_array($t->meta ?? null) ? $t->meta : [];
+                $isFromPackage = !empty($metaArr['from_package']);
+                $isUmbrella = !empty($metaArr['is_package_umbrella']);
                 $tp = (float) ($t->price ?? 0);
                 $tt = $t->ticketType;
                 $svcCat = $tt->service_category ?? 'access';
                 $isPackageParent = ($svcCat === 'package');
 
                 $totalTickets++;
+                // Metrici paralele (aliniere EXACTA cu dashboardLive):
+                if (!$isFromPackage && $tp > 0) $totalTicketsSold++;   // "Bilete vandute" (tranzactii cu valoare)
+                if (!$isUmbrella) $totalTicketsVisitors++;              // "Vizitatori" (bilete scanabile fizic)
                 $byPayment[$pm]['tickets']++;
 
                 $ttId = $t->ticket_type_id;
@@ -3567,7 +3574,9 @@ class LeisureController extends BaseController
         $snapshot = [
             'totals' => [
                 'orders' => $totalOrders,
-                'tickets' => $totalTickets,
+                'tickets' => $totalTickets,               // raw (backwards compat)
+                'tickets_sold' => $totalTicketsSold,       // "Bilete vandute" - mirror dashboard
+                'tickets_visitors' => $totalTicketsVisitors, // "Vizitatori" - mirror dashboard
                 'revenue' => round($totalRevenue, 2),
                 'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
             ],
