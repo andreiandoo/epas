@@ -400,23 +400,32 @@ redemption la poartă/POS, card membru QR, vânzare online+POS, rapoarte.
 ### EPIC 10 — Blocante de corectitudine & conformitate (descoperiri din analiză)
 *Bug-uri și lipsuri care fac vânzarea leisure incorectă/ilegală dacă nu sunt rezolvate. Prioritate MAXIMĂ.*
 
-- **10.1 Scurgere de capacitate la refund/anulare (BUG).** `Order::releaseStockForTickets()` (`app/Models/Order.php:415`)
-  **nu** apelează `SlotBookingService::release()` și **nu** decrementează `TicketTypeCapacity.sold/reserved`.
-  Un bilet leisure rambursat consumă permanent slotul → sold-out fantomă. *Fix:* ramură leisure în release
-  care cheamă serviciile existente (deja scrise, dar orfane).
-- **10.2 Lipsă TTL pe rezervări de capacitate (BUG).** `CapacityAvailabilityService::reserve()` crește `reserved`
-  fără `expires_at` și fără cron de eliberare; `SlotBookingService` crește direct `bookings_count`. Un coș
-  abandonat blochează capacitatea la nesfârșit. *Fix:* `expires_at` pe rezervare (sau tabel `leisure_capacity_holds`)
-  + comandă `leisure:release-expired-holds` (model după `ReleaseExpiredHolds`/`SeatHoldService`). **Obligatoriu
-  înainte de site-ul public de vânzare.**
-- **10.3 Webhook de plată tenant nefinalizat (BLOCANT).** `TenantPaymentWebhookController::handle()` verifică
-  semnătura dar blocul de update comandă e `// TODO` (liniile ~74-88): la plată online reușită nu se marchează
-  comanda, nu se confirmă capacitatea, nu se emit biletele. *Fix:* rezolvare `Order` din `client_reference_id`,
-  `paid` → `CapacityAvailabilityService::confirm()`/`SlotBookingService`, emitere bilete, chitanță/e-Factura,
-  **idempotență pe event-id**, atenție la **raw body** pentru semnătura Stripe (controllerul pasează array, nu string).
-- **10.4 Fără validare dată/slot/durată la poartă (BUG).** `CheckInController` nu citește `meta.visit_date`/`slot_time`;
-  un bilet de pe 20 iul intră pe 25 iul, un slot de 10:00 intră la 16:00. *Fix:* validare dată/slot/fereastră în
-  check-in, cu respingeri în `LeisureScanAttempt`; suport re-entry/anti-passback pentru bilete de zi.
+- **10.1 Release de capacitate nu e leisure-aware (LATENT → obligatoriu la construirea vânzării).**
+  Verificat: `Order::releaseStockForTickets()` (`app/Models/Order.php:415`) eliberează doar locuri
+  (`EventSeat`/`SeatHold`) și stoc generic (`MarketplaceTicketType.quantity_sold` / `TicketType.quota_sold`);
+  **nicio** referință la `Leisure\TicketTypeCapacity`, `SlotBookingService` sau `LeisureSlotBooking`.
+  **Nuanță de severitate:** azi `CapacityAvailabilityService::confirm()` (write `sold`) **nu e apelat de nicăieri**
+  (POS = stub; marketplace numără `OrderItem`-uri, nu contorul stocat) → deci **nu e un bug care arde în producție**,
+  ci o **cerință de design**: când legăm vânzarea tenant de `confirm()`/`reserve()`, release-ul pe refund TREBUIE
+  să elibereze și capacitatea leisure. *Fix:* ramură leisure în release care cheamă serviciile (deja scrise, orfane).
+- **10.2 Lipsă TTL pe rezervări (LATENT → prerechizit pt. coșul online).** Verificat: `ticket_type_capacities`
+  are `sold`/`reserved` dar **niciun `expires_at`**; `reserve()` doar `increment('reserved')`; nicio comandă din
+  `app/Console/Commands` nu atinge `TicketTypeCapacity`/`SlotBookingService`. `reserve()` **nu e apelat încă nicăieri**
+  → latent. Devine activ în momentul în care coșul online cheamă `reserve()`. *Fix (înainte de site-ul public):*
+  `expires_at` pe rezervare (sau tabel `leisure_capacity_holds`) + comandă `leisure:release-expired-holds`
+  (model după `ReleaseExpiredHolds`/`SeatHoldService`).
+- **10.3 Webhook de plată tenant nefinalizat (BLOCANT — CONFIRMAT).** Verificat: `TenantPaymentWebhookController::handle()`
+  verifică semnătura și `processCallback()`, dar tot blocul de update comandă e **cod comentat** (liniile 74-88,
+  literalmente `// TODO: Process the payment result`). La plată online reușită nu se marchează comanda, nu se
+  confirmă capacitatea, nu se emit biletele. În plus `$payload = $request->all()` (array) e dat lui
+  `verifySignature` — Stripe are nevoie de **raw body** (`getContent()`). *Fix:* rezolvare `Order` din
+  `client_reference_id`, `paid` → `confirm()`/`SlotBookingService`, emitere bilete, chitanță/e-Factura,
+  **idempotență pe event-id**, corectare raw-body pentru Stripe. **Blocant real pentru checkout online.**
+- **10.4 Fără validare dată/slot/durată la poartă (BUG — CONFIRMAT).** Verificat: `CheckInController::checkInByCode`
+  și `checkInPerEvent` verifică doar `is_invitation` și `checked_in_at` (dublă-intrare) — **nu** citesc
+  `meta.visit_date`/`slot_time`. Un bilet de pe 20 iul intră pe 25 iul; un slot de 10:00 intră la 16:00.
+  *Fix:* validare dată/slot/fereastră în check-in, cu respingeri în `LeisureScanAttempt`; suport
+  re-entry/anti-passback pentru bilete de zi.
 - **10.5 Fiscalizare — bon fiscal (CONFORMITATE LEGALĂ).** `ReceiptPrinterService` produce un bon **ne-fiscal**
   (HTML 80mm). Un tenant leisure care vinde B2C cash în RO e **obligat legal** să emită **bon fiscal de la o
   casă de marcat/AMEF certificată** și să raporteze la ANAF. e-Factura ≠ bon fiscal. *Fix:* strat de dispozitiv
