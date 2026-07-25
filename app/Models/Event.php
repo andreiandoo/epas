@@ -164,6 +164,7 @@ class Event extends Model
         'commission_rate',
         'use_fixed_commission',
         'title',
+        'subtitle',
         'slug',
         'event_series',
         'duration_mode',

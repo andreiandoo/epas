@@ -218,6 +218,14 @@ class EventResource extends Resource
                                 ->maxLength(190)
                                 ->rule('alpha_dash'),
                         ])->columns(2)->columnSpanFull(),
+
+                    // Subtitlu — doar pentru tenant de tip teatru
+                    Forms\Components\TextInput::make("subtitle.{$tenantLanguage}")
+                        ->label('Subtitlu')
+                        ->placeholder('ex: dupa William Shakespeare')
+                        ->maxLength(190)
+                        ->visible($isTheater)
+                        ->columnSpanFull(),
                 ]),
 
             // FLAGS

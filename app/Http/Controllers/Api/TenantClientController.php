@@ -437,7 +437,12 @@ class TenantClientController extends Controller
         $locale = app()->getLocale();
         $basic = $this->formatEvent($event);
 
+        // Hartă nume -> slug pentru actorii tenantului (link către pagina lor publică)
+        $artistSlugs = \App\Models\TenantArtist::where('tenant_id', $event->tenant_id)
+            ->pluck('slug', 'name');
+
         return array_merge($basic, [
+            'subtitle' => $event->getTranslation('subtitle', $locale),
             'description' => $event->getTranslation('description', $locale),
             'short_description' => $event->getTranslation('short_description', $locale),
             'gallery' => collect($event->gallery ?? [])->filter()
@@ -447,10 +452,10 @@ class TenantClientController extends Controller
                 'lead' => $event->theater_lead,
                 'duration' => $event->theater_duration,
                 'cast' => collect($event->theater_cast ?? [])
-                    ->map(fn ($c) => ['name' => $c['name'] ?? '', 'role' => $c['role'] ?? ''])
+                    ->map(fn ($c) => ['name' => $c['name'] ?? '', 'role' => $c['role'] ?? '', 'slug' => $artistSlugs[$c['name'] ?? ''] ?? null])
                     ->filter(fn ($c) => $c['name'] !== '')->values()->all(),
                 'creative' => collect($event->theater_creative ?? [])
-                    ->map(fn ($c) => ['role' => $c['role'] ?? '', 'name' => $c['name'] ?? ''])
+                    ->map(fn ($c) => ['role' => $c['role'] ?? '', 'name' => $c['name'] ?? '', 'slug' => $artistSlugs[$c['name'] ?? ''] ?? null])
                     ->filter(fn ($c) => $c['name'] !== '')->values()->all(),
             ],
             'artists' => $event->artists->map(fn ($artist) => [
