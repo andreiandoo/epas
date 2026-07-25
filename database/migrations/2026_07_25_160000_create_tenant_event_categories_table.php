@@ -12,11 +12,14 @@ return new class extends Migration
             Schema::create('tenant_event_categories', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-                $table->json('name');
+                // jsonb (not json): Postgres can't SELECT DISTINCT over json columns,
+                // which Filament's belongsToMany relationship Select does when resolving
+                // option labels. jsonb has equality operators, json does not.
+                $table->jsonb('name');
                 $table->string('slug');
                 $table->string('icon', 64)->nullable();
                 $table->string('image')->nullable();
-                $table->json('description')->nullable();
+                $table->jsonb('description')->nullable();
                 $table->integer('sort_order')->default(0);
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
