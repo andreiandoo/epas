@@ -346,6 +346,37 @@ class TenantClientController extends Controller
     }
 
     /**
+     * Planuri de abonament active ale tenantului (pentru pagina publică).
+     */
+    public function subscriptions(Request $request): JsonResponse
+    {
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (! $resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+        $tenantId = $resolved['tenant']->id;
+
+        $plans = \App\Models\TenantSubscriptionPlan::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'data' => $plans->map(fn ($p) => [
+                'name'        => $p->name,
+                'slug'        => $p->slug,
+                'subtitle'    => $p->subtitle,
+                'price'       => ($p->price_cents ?? 0) / 100,
+                'currency'    => $p->currency ?: 'RON',
+                'benefits'    => array_values(array_filter($p->benefits ?? [])),
+                'description' => $p->description,
+                'image'       => $this->publicUrl($p->image),
+                'is_featured' => (bool) $p->is_featured,
+            ])->values(),
+        ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
+    }
+
+    /**
      * Public list of tenant artists (troupe/ensemble).
      */
     public function artists(Request $request): JsonResponse

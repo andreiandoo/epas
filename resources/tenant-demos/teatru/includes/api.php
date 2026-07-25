@@ -149,6 +149,15 @@ function tc_artists(?int $cacheTtl = null): array {
 }
 
 /**
+ * Planuri de abonament active ale tenantului.
+ */
+function tc_subscriptions(?int $cacheTtl = null): array {
+    $resp = api_get('/tenant-client/subscriptions', [], $cacheTtl);
+    if (!($resp['success'] ?? false) || !is_array($resp['data'] ?? null)) { return []; }
+    return $resp['data'];
+}
+
+/**
  * Rezumat comandă pentru pagina de confirmare. Null dacă nu există.
  */
 function tc_order_summary(int $orderId): ?array {

@@ -87,6 +87,10 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/order-summary', [TenantClientController::class, 'orderSummary'])
         ->name('api.tenant-client-public.order-summary');
 
+    // Planuri de abonament active
+    Route::get('/subscriptions', [TenantClientController::class, 'subscriptions'])
+        ->name('api.tenant-client-public.subscriptions');
+
     Route::get('/artists', [TenantClientController::class, 'artists'])
         ->name('api.tenant-client-public.artists');
 

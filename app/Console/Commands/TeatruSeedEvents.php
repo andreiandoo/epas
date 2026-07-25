@@ -179,6 +179,23 @@ class TeatruSeedEvents extends Command
         // 2c) Client demo pentru autentificare
         Artisan::call('teatru:seed-customer', ['tenant' => $tenantId], $this->getOutput());
 
+        // 2d) Planuri de abonament demo
+        $plans = [
+            ['name' => 'Clasic', 'slug' => 'clasic', 'subtitle' => '5 spectacole • Staluri', 'price_cents' => 35000, 'is_featured' => false, 'sort_order' => 1,
+                'benefits' => ['5 spectacole la alegere', 'Locuri în Staluri', 'Economie ~15%', 'Valabil toată stagiunea']],
+            ['name' => 'Premium', 'slug' => 'premium', 'subtitle' => '10 spectacole • Balcon', 'price_cents' => 60000, 'is_featured' => true, 'sort_order' => 2,
+                'benefits' => ['10 spectacole la alegere', 'Locuri premium în Balcon', 'Economie ~30%', 'Acces prioritar la premiere', 'Program de fidelitate']],
+            ['name' => 'Familie', 'slug' => 'familie', 'subtitle' => '4 persoane • 5 spectacole', 'price_cents' => 120000, 'is_featured' => false, 'sort_order' => 3,
+                'benefits' => ['4 bilete per spectacol', '5 spectacole la alegere', 'Locuri alăturate garantate', 'Economie ~25%', 'Ateliere pentru copii']],
+        ];
+        foreach ($plans as $plan) {
+            \App\Models\TenantSubscriptionPlan::updateOrCreate(
+                ['tenant_id' => $tenantId, 'slug' => $plan['slug']],
+                array_merge($plan, ['tenant_id' => $tenantId, 'currency' => 'RON', 'is_active' => true])
+            );
+        }
+        $this->line('  planuri abonament: ' . count($plans));
+
         // 3) Categorii (globale)
         $cats = [];
         foreach ($this->categories as $slug => $name) {
