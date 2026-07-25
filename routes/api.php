@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\TenantClient\AuthController;
 use App\Http\Controllers\Api\TenantClient\AccountController;
 use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
+use App\Http\Controllers\Api\TenantClient\DemoCheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
@@ -77,6 +78,10 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
 
     Route::get('/categories', [TenantClientController::class, 'categories'])
         ->name('api.tenant-client-public.categories');
+
+    // Checkout DEMO (site-uri de test): creează comandă + inițiază plata simulată
+    Route::post('/demo-checkout', [DemoCheckoutController::class, 'store'])
+        ->name('api.tenant-client-public.demo-checkout');
 
     Route::get('/artists', [TenantClientController::class, 'artists'])
         ->name('api.tenant-client-public.artists');

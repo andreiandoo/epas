@@ -57,10 +57,11 @@ include __DIR__ . '/includes/header.php';
                             <div><label class="block text-sm text-warm-gray mb-2">CVV</label><input class="input-field w-full px-4 py-3 rounded-lg text-ivory" placeholder="123"></div>
                         </div>
                     </div>
-                    <div class="bg-gold/10 border border-gold/30 rounded-lg p-4 mb-6 text-sm text-ivory/80">🔒 Plata reală (Netopia / card) se activează în etapa următoare a implementării. Acest pas demonstrează fluxul.</div>
+                    <div class="bg-gold/10 border border-gold/30 rounded-lg p-4 mb-6 text-sm text-ivory/80">🔒 Mediu demo: la „Plătește" vei fi redirecționat către un gateway de plată simulat (fără bani reali). Comanda și biletele se creează real.</div>
+                    <div x-show="error" x-text="error" class="bg-red-900/30 border border-red-500/40 text-red-200 rounded-lg p-3 mb-4 text-sm"></div>
                     <div class="flex gap-4">
-                        <button @click="step=1" class="btn-outline px-6 py-4 rounded-lg">Înapoi</button>
-                        <button @click="step=3" class="btn-gold flex-1 py-4 rounded-lg text-lg">Plătește <span x-text="total + ' RON'"></span></button>
+                        <button @click="step=1" :disabled="loading" class="btn-outline px-6 py-4 rounded-lg">Înapoi</button>
+                        <button @click="pay()" :disabled="loading" class="btn-gold flex-1 py-4 rounded-lg text-lg" x-text="loading ? 'Se procesează...' : ('Plătește ' + total + ' RON')"></button>
                     </div>
                 </div>
 
@@ -97,11 +98,39 @@ include __DIR__ . '/includes/header.php';
 <script>
 function checkoutPage() {
     return {
-        step: 1, cart: null, form: { firstName:'', lastName:'', email:'', phone:'', terms:false },
+        step: 1, cart: null, loading: false, error: '',
+        form: { firstName:'', lastName:'', email:'', phone:'', terms:false },
         init() { try { this.cart = JSON.parse(localStorage.getItem('teatru_cart') || 'null'); } catch(e) { this.cart = null; } },
         get subtotal() { return this.cart && this.cart.seats ? this.cart.seats.reduce((s,x)=>s+(x.price||0),0) : 0; },
         get serviceFee() { return Math.round(this.subtotal * 0.05); },
-        get total() { return this.subtotal + this.serviceFee; }
+        get total() { return this.subtotal + this.serviceFee; },
+        async pay() {
+            if (this.loading) return;
+            if (!this.cart || !this.cart.event || !this.cart.seats || !this.cart.seats.length) { this.error = 'Coșul este gol.'; return; }
+            this.loading = true; this.error = '';
+            try {
+                const payload = {
+                    event_id: this.cart.event.id,
+                    event_seating_id: this.cart.event_seating_id || null,
+                    customer: { first_name: this.form.firstName, last_name: this.form.lastName, email: this.form.email, phone: this.form.phone },
+                    seats: this.cart.seats.map(s => ({ seat_uid: s.seat_uid, price: s.price, label: s.label })),
+                    success_url: window.location.origin + '/confirmare',
+                    cancel_url: window.location.origin + '/cos'
+                };
+                const r = await fetch('/api/proxy.php?action=checkout', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const d = await r.json().catch(() => ({}));
+                if (r.ok && d.success && d.redirect_url) {
+                    window.location.href = d.redirect_url;
+                } else {
+                    this.error = d.error || 'Nu am putut iniția plata. Încearcă din nou.';
+                    this.loading = false;
+                }
+            } catch (e) {
+                this.error = 'Eroare de conexiune.'; this.loading = false;
+            }
+        }
     };
 }
 </script>

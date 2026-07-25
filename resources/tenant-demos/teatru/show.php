@@ -321,9 +321,10 @@ function seatMap(eventId) {
         },
         checkout() {
             if (this.selected.length === 0) return;
-            const seats = this.selected.map(s => ({ label: s.section + ' Rând ' + s.row + ', Loc ' + s.seat_label, price: s.price }));
+            const seats = this.selected.map(s => ({ label: s.section + ' Rând ' + s.row + ', Loc ' + s.seat_label, price: s.price, seat_uid: s.seat_uid }));
             localStorage.setItem('teatru_cart', JSON.stringify({
-                event: <?= json_encode(['title' => $event['title'] ?? '', 'author' => ($event['category']['name'] ?? ''), 'date' => $dateStr, 'venue' => $venueName, 'image' => $poster], JSON_UNESCAPED_UNICODE) ?>,
+                event: <?= json_encode(['id' => $eventId, 'title' => $event['title'] ?? '', 'author' => ($event['category']['name'] ?? ''), 'date' => $dateStr, 'venue' => $venueName, 'image' => $poster], JSON_UNESCAPED_UNICODE) ?>,
+                event_seating_id: this.eventSeatingId,
                 seats: seats,
                 subtotal: this.total
             }));

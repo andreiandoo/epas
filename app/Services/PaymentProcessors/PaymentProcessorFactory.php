@@ -43,6 +43,7 @@ class PaymentProcessorFactory
             'netopia' => new NetopiaProcessor($config),
             'euplatesc' => new EuplatescProcessor($config),
             'payu' => new PayUProcessor($config),
+            'demo' => new DemoProcessor($config),
             default => throw new \Exception("Unsupported payment processor: {$config->processor}"),
         };
     }
@@ -101,6 +102,7 @@ class PaymentProcessorFactory
             'netopia' => new NetopiaProcessor(null, $config),
             'euplatesc' => new EuplatescProcessor(null, $config),
             'payu' => new PayUProcessor(null, $config),
+            'demo' => new DemoProcessor(null, $config),
             default => throw new \Exception("Unsupported payment processor: {$processor}"),
         };
     }

@@ -73,6 +73,13 @@ switch ($action) {
         $query = ['event_seating_id' => $_GET['event_seating_id'] ?? ''];
         break;
 
+    case 'checkout':
+        $method = 'POST';
+        $path   = '/tenant-client/demo-checkout';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'acțiune necunoscută']);
