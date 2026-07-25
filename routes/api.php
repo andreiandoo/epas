@@ -128,6 +128,7 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::delete('/account/payment-methods/{id}', [TenantAccountController::class, 'removePaymentMethod'])->name('api.tenant-client-public.account.payment-methods.remove');
     Route::get('/account/gift-cards', [TenantAccountController::class, 'giftCards'])->name('api.tenant-client-public.account.gift-cards');
     Route::post('/account/gift-cards/redeem', [TenantAccountController::class, 'redeemGiftCard'])->name('api.tenant-client-public.account.gift-cards.redeem');
+    Route::post('/account/gift-cards/purchase', [TenantAccountController::class, 'purchaseGiftCard'])->name('api.tenant-client-public.account.gift-cards.purchase');
 
     // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.

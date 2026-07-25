@@ -18,6 +18,7 @@ use App\Services\Gamification\GamificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Contul clientului tenant (bilete, comenzi, statistici, profil) — echivalentul
@@ -45,6 +46,21 @@ class CustomerAccountController extends Controller
         return [$resolved['tenant'], $customer];
     }
 
+    /**
+     * Comenzile clientului: potrivim după customer_id SAU customer_email, ca să
+     * prindem și comenzile plasate cu același email dar sub alt rând de customer
+     * (ex. checkout ca invitat cu email-ul contului).
+     */
+    private function ordersQuery($tenant, $customer)
+    {
+        return Order::where('tenant_id', $tenant->id)->where(function ($q) use ($customer) {
+            $q->where('customer_id', $customer->id);
+            if (! empty($customer->email)) {
+                $q->orWhere('customer_email', $customer->email);
+            }
+        });
+    }
+
     /** Rezumat pentru panoul principal. */
     public function stats(Request $request): JsonResponse
     {
@@ -52,7 +68,7 @@ class CustomerAccountController extends Controller
         if ($ctx instanceof JsonResponse) { return $ctx; }
         [$tenant, $customer] = $ctx;
 
-        $paidOrders = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+        $paidOrders = $this->ordersQuery($tenant, $customer)
             ->whereIn('status', $this->paidStatuses)->get(['id', 'total_cents']);
 
         $ticketsCount = Ticket::whereIn('order_id', $paidOrders->pluck('id'))->where('status', 'valid')->count();
@@ -74,7 +90,7 @@ class CustomerAccountController extends Controller
             'favorites' => 0,
             'points' => $points,
             'total_spent' => $paidOrders->sum('total_cents') / 100,
-            'orders_count' => Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)->count(),
+            'orders_count' => $this->ordersQuery($tenant, $customer)->count(),
         ]]);
     }
 
@@ -85,7 +101,7 @@ class CustomerAccountController extends Controller
         if ($ctx instanceof JsonResponse) { return $ctx; }
         [$tenant, $customer] = $ctx;
 
-        $orders = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+        $orders = $this->ordersQuery($tenant, $customer)
             ->withCount('tickets')->latest()->get();
 
         $eventIds = $orders->pluck('meta.event_id')->filter()->unique()->all();
@@ -113,7 +129,7 @@ class CustomerAccountController extends Controller
         if ($ctx instanceof JsonResponse) { return $ctx; }
         [$tenant, $customer] = $ctx;
 
-        $order = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+        $order = $this->ordersQuery($tenant, $customer)
             ->withCount('tickets')->find($orderId);
         if (! $order) {
             return response()->json(['success' => false, 'error' => 'Order not found'], 404);
@@ -145,7 +161,7 @@ class CustomerAccountController extends Controller
         if ($ctx instanceof JsonResponse) { return $ctx; }
         [$tenant, $customer] = $ctx;
 
-        $orderIds = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+        $orderIds = $this->ordersQuery($tenant, $customer)
             ->whereIn('status', $this->paidStatuses)->pluck('id', 'id');
         $orders = Order::whereIn('id', $orderIds)->get()->keyBy('id');
 
@@ -333,7 +349,7 @@ class CustomerAccountController extends Controller
         if ($ctx instanceof JsonResponse) { return $ctx; }
         [$tenant, $customer] = $ctx;
 
-        $orderIds = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+        $orderIds = $this->ordersQuery($tenant, $customer)
             ->whereIn('status', $this->paidStatuses)->pluck('id');
         $eventIds = collect();
         foreach (Order::whereIn('id', $orderIds)->get() as $o) {
@@ -393,7 +409,7 @@ class CustomerAccountController extends Controller
         $items = collect();
 
         // Comenzi confirmate → confirmări de comandă
-        $orders = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+        $orders = $this->ordersQuery($tenant, $customer)
             ->whereIn('status', $this->paidStatuses)->withCount('tickets')->latest()->take(15)->get();
         $eventIds = $orders->pluck('meta.event_id')->filter()->unique()->all();
         $events = Event::whereIn('id', $eventIds)->get()->keyBy('id');
@@ -689,6 +705,39 @@ class CustomerAccountController extends Controller
         ]);
 
         return response()->json(['success' => true, 'data' => ['balance' => $card->balance_cents / 100]]);
+    }
+
+    /** Cumpărare card cadou (demo — fără procesator; emite cardul direct). */
+    public function purchaseGiftCard(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $v = $request->validate([
+            'amount'         => 'required|numeric|min:25|max:5000',
+            'recipient_name' => 'nullable|string|max:190',
+            'message'        => 'nullable|string|max:500',
+        ]);
+
+        do {
+            $code = 'TC-GIFT-' . strtoupper(Str::random(6));
+        } while (TenantGiftCard::where('code', $code)->exists());
+
+        $cents = (int) round(((float) $v['amount']) * 100);
+        $card = TenantGiftCard::create([
+            'tenant_id'      => $tenant->id,
+            'customer_id'    => $customer->id,
+            'code'           => $code,
+            'initial_cents'  => $cents,
+            'balance_cents'  => $cents,
+            'status'         => 'active',
+            'recipient_name' => $v['recipient_name'] ?? null,
+            'message'        => $v['message'] ?? null,
+            'meta'           => ['source' => 'demo_purchase'],
+        ]);
+
+        return response()->json(['success' => true, 'data' => ['code' => $card->code, 'balance' => $cents / 100]]);
     }
 
     private function formatOrder(Order $order, $events): array

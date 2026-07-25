@@ -12,7 +12,10 @@ require __DIR__ . '/_inc/top.php';
             <div class="card p-5"><p class="font-display text-3xl text-emerald-300" x-text="money(stats.balance ?? 0)">0</p><p class="mt-1 text-xs text-paper/38">Sold disponibil</p></div>
             <div class="card p-5"><p class="font-display text-3xl text-amber-300" x-text="money(totalInitial())">0</p><p class="mt-1 text-xs text-paper/38">Valoare totală</p></div>
         </div>
-        <button @click="redeem=true" class="btn-primary self-start rounded-full px-5 py-3 text-sm font-bold">Activează un cod</button>
+        <div class="flex flex-wrap gap-3 self-start">
+            <button @click="buy=true" class="btn-primary rounded-full px-5 py-3 text-sm font-bold">Cumpără un card</button>
+            <button @click="redeem=true" class="btn-secondary rounded-full px-5 py-3 text-sm">Activează un cod</button>
+        </div>
     </div>
 
     <div x-show="loading" class="py-12 text-center"><div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brass border-t-transparent"></div></div>
@@ -38,6 +41,18 @@ require __DIR__ . '/_inc/top.php';
         </template>
     </div>
 
+    <div x-cloak x-show="buy" class="fixed inset-0 z-[90] grid place-items-center bg-ink/90 p-5" @click.self="buy=false">
+        <form @submit.prevent="purchase()" class="card w-full max-w-md p-6"><div class="flex justify-between"><h3 class="font-display text-2xl">Cumpără un card cadou</h3><button type="button" @click="buy=false"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+            <div class="mt-5 overflow-hidden rounded-3xl border border-brass/30 bg-gradient-to-br from-brass/25 via-wine-dark to-coal p-5"><p class="text-sm text-paper/40">CARD CADOU</p><strong class="mt-1 block font-display text-4xl" x-text="money(form.amount)"></strong><p class="mt-4 text-xs text-paper/40" x-text="form.recipient_name?('Pentru '+form.recipient_name):'Pentru cine dorești'"></p></div>
+            <div class="mt-5"><span class="label">Valoare</span><div class="grid grid-cols-4 gap-2"><template x-for="v in [50,100,150,200]" :key="v"><button type="button" @click="form.amount=v" :class="Number(form.amount)===v?'bg-brass text-ink':'border border-white/10 text-paper/50'" class="rounded-xl py-2 text-sm font-bold" x-text="v"></button></template></div><input type="number" min="25" max="5000" class="input mt-2" x-model="form.amount" placeholder="Altă sumă (lei)"></div>
+            <label class="mt-4 block"><span class="label">Destinatar (opțional)</span><input class="input" x-model="form.recipient_name" placeholder="Numele persoanei"></label>
+            <label class="mt-4 block"><span class="label">Mesaj (opțional)</span><textarea class="input" rows="2" x-model="form.message" placeholder="Un gând pentru destinatar"></textarea></label>
+            <p x-show="err" x-text="err" class="mt-3 text-sm text-rose-300"></p>
+            <button :disabled="busy" class="btn-primary mt-5 w-full rounded-full px-5 py-3 font-bold disabled:opacity-40" x-text="busy?'Se procesează...':('Cumpără · '+money(form.amount))"></button>
+            <p class="mt-2 text-center text-[11px] text-paper/30">Demo — cardul e emis instant, fără plată reală.</p>
+        </form>
+    </div>
+
     <div x-cloak x-show="redeem" class="fixed inset-0 z-[90] grid place-items-center bg-ink/90 p-5" @click.self="redeem=false">
         <form @submit.prevent="submit()" class="card w-full max-w-md p-6"><div class="flex justify-between"><h3 class="font-display text-2xl">Activează cardul</h3><button type="button" @click="redeem=false"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button></div>
             <label class="mt-5 block"><span class="label">Cod card cadou</span><input class="input font-mono" x-model="code" placeholder="TC-GIFT-XXXX" required></label>
@@ -49,7 +64,8 @@ require __DIR__ . '/_inc/top.php';
 <script>
 function giftPage(){
     return {
-        loading:true, redeem:false, busy:false, err:'', cards:[], stats:{}, code:'',
+        loading:true, redeem:false, buy:false, busy:false, err:'', cards:[], stats:{}, code:'',
+        form:{ amount:100, recipient_name:'', message:'' },
         auth(){ try { return JSON.parse(localStorage.getItem('teatru_auth')||'null'); } catch(e){ return null; } },
         money(v){ return (Number(v)||0).toLocaleString('ro-RO')+' lei'; },
         totalInitial(){ return this.cards.reduce((s,c)=>s+(Number(c.initial)||0),0); },
@@ -68,6 +84,18 @@ function giftPage(){
                 const d=await r.json().catch(()=>({}));
                 if(r.ok&&d.success){ this.redeem=false; this.code=''; this.showToast('Cardul a fost activat'); await this.load(); }
                 else this.err=d.error||'Cod invalid.';
+            } catch(e){ this.err='Eroare de conexiune.'; }
+            this.busy=false;
+        },
+        async purchase(){
+            const amt=Number(this.form.amount);
+            if(this.busy||!(amt>=25)){ this.err='Alege o valoare de minim 25 lei.'; return; }
+            this.busy=true; this.err=''; const a=this.auth();
+            try {
+                const r=await fetch('/api/proxy.php?action=acc-gift-purchase',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.token},body:JSON.stringify({amount:amt,recipient_name:this.form.recipient_name,message:this.form.message})});
+                const d=await r.json().catch(()=>({}));
+                if(r.ok&&d.success){ this.buy=false; this.form={amount:100,recipient_name:'',message:''}; this.showToast('Card cadou emis'); await this.load(); }
+                else this.err=d.error||'Nu am putut emite cardul.';
             } catch(e){ this.err='Eroare de conexiune.'; }
             this.busy=false;
         }
