@@ -479,6 +479,24 @@ class EventResource extends Resource
                         ->label($tenantLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
                         ->columnSpanFull()
                         ->default($tenant?->ticket_terms ?? null),
+                    Forms\Components\RichEditor::make("thank_you_message.{$tenantLanguage}")
+                        ->label($tenantLanguage === 'ro' ? 'Mesaj post-achiziție (thank-you)' : 'Post-purchase message')
+                        ->helperText($tenantLanguage === 'ro'
+                            ? 'Afișat clientului pe pagina de confirmare a comenzii, imediat după plată.'
+                            : 'Shown to the customer on the order confirmation page right after payment.')
+                        ->columnSpanFull()
+                        ->fileAttachmentsDisk('public')
+                        ->fileAttachmentsDirectory('event-thank-you')
+                        ->fileAttachmentsVisibility('public'),
+                    Forms\Components\TextInput::make('video_url')
+                        ->label($tenantLanguage === 'ro' ? 'Videoclip YouTube' : 'YouTube video')
+                        ->url()
+                        ->maxLength(500)
+                        ->placeholder('https://www.youtube.com/watch?v=...')
+                        ->helperText($tenantLanguage === 'ro'
+                            ? 'Va fi afișat ca videoclip pe pagina publică a spectacolului.'
+                            : 'Will be shown as an embedded video on the public event page.')
+                        ->columnSpanFull(),
                 ])->columns(1),
 
             ]),
@@ -720,44 +738,19 @@ class EventResource extends Resource
                             ->wherePivot('is_active', true)
                             ->exists() ?? false),
 
-                    // Commission Mode for event
+                    // Event-level capacity & reference price (commission mode is set globally in Settings)
                     SC\Grid::make(2)->schema([
-                        Forms\Components\Select::make('commission_mode')
-                            ->label('Commission Mode')
-                            ->options([
-                                'included' => 'Include commission in ticket price (you receive less)',
-                                'added_on_top' => 'Add commission on top (customer pays more)',
-                            ])
-                            ->placeholder('Use default from contract')
-                            ->helperText(function () use ($tenant) {
-                                $mode = $tenant->commission_mode ?? 'included';
-                                $rate = $tenant->commission_rate ?? 5.00;
-                                $modeText = $mode === 'included'
-                                    ? 'included in price'
-                                    : 'added on top';
-                                return "Your default: {$rate}% {$modeText}. Leave empty to use this default.";
-                            })
-                            ->live()
-                            ->nullable(),
+                        Forms\Components\TextInput::make('general_quota')
+                            ->label('Capacitate generală')
+                            ->numeric()->minValue(1)->nullable()
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul maxim total de bilete (pool partajat între tipurile fără stoc independent). Gol = fără limită.')
+                            ->placeholder('gol = fără limită'),
 
-                        Forms\Components\Placeholder::make('commission_example')
-                            ->label('Example (100 RON ticket)')
-                            ->live()
-                            ->content(function (SGet $get) use ($tenant) {
-                                $eventMode = $get('commission_mode');
-                                $mode = $eventMode ?: ($tenant->commission_mode ?? 'included');
-                                $rate = $tenant->commission_rate ?? 5.00;
-                                $ticketPrice = 100;
-                                $commission = round($ticketPrice * ($rate / 100), 2);
-
-                                if ($mode === 'included') {
-                                    $revenue = $ticketPrice - $commission;
-                                    return "Customer pays: **{$ticketPrice} RON** → You receive: **{$revenue} RON** (commission: {$commission} RON)";
-                                } else {
-                                    $total = $ticketPrice + $commission;
-                                    return "Customer pays: **{$total} RON** → You receive: **{$ticketPrice} RON** (commission: {$commission} RON)";
-                                }
-                            }),
+                        Forms\Components\TextInput::make('target_price')
+                            ->label('Preț la intrare (referință)')
+                            ->numeric()->minValue(0)->step(0.01)
+                            ->suffix($tenant?->currency ?? 'RON')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Preț de referință pentru planificare. Nu este afișat public.'),
                     ]),
 
                     Forms\Components\Repeater::make('ticketTypes')
@@ -898,6 +891,60 @@ class EventResource extends Resource
                                     ->seconds(false)
                                     ->displayFormat('Y-m-d H:i'),
                             ])->columnSpan(12),
+
+                            // Order limits
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('min_per_order')->label('Min / comandă')->numeric()->minValue(1)->default(1),
+                                Forms\Components\TextInput::make('max_per_order')->label('Max / comandă')->numeric()->minValue(1)->default(10),
+                                Forms\Components\TextInput::make('multiplier')->label('Multiplicator (locuri/bilet)')->numeric()->minValue(1)->default(1),
+                            ])->columnSpan(12),
+
+                            // Availability scheduling
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\DateTimePicker::make('scheduled_at')->label('Activare programată')->native(false)->seconds(false)->displayFormat('Y-m-d H:i'),
+                                Forms\Components\DateTimePicker::make('active_until')->label('Activ până la')->native(false)->seconds(false)->displayFormat('Y-m-d H:i'),
+                                Forms\Components\Toggle::make('autostart_when_previous_sold_out')->label('Pornește automat când precedentul e sold out')->inline(false),
+                            ])->columnSpan(12),
+
+                            // Stock + grouping
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('sale_stock')->label('Stoc la reducere')->numeric()->minValue(0)->nullable(),
+                                Forms\Components\Toggle::make('is_independent_stock')->label('Stoc independent (nu din pool)')->inline(false)->default(false),
+                                Forms\Components\TextInput::make('ticket_group')->label('Grup bilete')->maxLength(120),
+                            ])->columnSpan(12),
+
+                            // Ticket series
+                            SC\Grid::make(2)->schema([
+                                Forms\Components\TextInput::make('series_start')->label('Serie – de la')->maxLength(50),
+                                Forms\Components\TextInput::make('series_end')->label('Serie – până la')->maxLength(50),
+                            ])->columnSpan(12),
+
+                            // Flags
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\Toggle::make('is_entry_ticket')->label('Bilet de acces')->inline(false),
+                                Forms\Components\Toggle::make('is_declarable')->label('Declarabil fiscal')->inline(false),
+                                Forms\Components\Toggle::make('is_refundable')->label('Rambursabil')->inline(false),
+                                Forms\Components\Toggle::make('is_subscription')->label('Abonament')->inline(false),
+                                Forms\Components\Toggle::make('is_sold_out')->label('Sold out')->inline(false),
+                            ])->columnSpan(12),
+
+                            Forms\Components\DatePicker::make('valid_date')
+                                ->label('Valabil pentru data (mod interval)')
+                                ->native(false)
+                                ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
+                                ->columnSpan(12),
+
+                            Forms\Components\Repeater::make('perks')
+                                ->label('Condiții & beneficii')
+                                ->simple(Forms\Components\TextInput::make('text')->placeholder('ex: Acces backstage, Program gratuit'))
+                                ->defaultItems(0)
+                                ->reorderable()
+                                ->columnSpan(12),
+
+                            Forms\Components\Textarea::make('admin_notes')
+                                ->label('Note interne (nu apar public)')
+                                ->rows(2)
+                                ->columnSpan(12),
 
                             // Bulk discounts
                             Forms\Components\Repeater::make('bulk_discounts')
