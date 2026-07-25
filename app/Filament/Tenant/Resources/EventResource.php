@@ -119,10 +119,23 @@ class EventResource extends Resource
             ? \App\Models\TenantArtist::where('tenant_id', $tenant->id)->orderBy('name')->pluck('name')->filter()->values()->all()
             : [];
 
+        // Public base URL of the tenant (for preview / test links in the sidebar)
+        $publicBase = null;
+        if ($tenant) {
+            $td = optional($tenant->domains()->where('is_active', true)->orderByDesc('is_primary')->first())->domain
+                ?? $tenant->domain ?? null;
+            if ($td) {
+                $publicBase = rtrim(str_starts_with($td, 'http') ? $td : 'https://' . $td, '/');
+            }
+        }
+
         return $schema->schema([
             // Hidden tenant_id field
             Forms\Components\Hidden::make('tenant_id')
                 ->default($tenant?->id),
+
+            SC\Grid::make(4)->schema([
+            SC\Group::make()->columnSpan(3)->schema([
 
             SC\Tabs::make('EventTabs')
                 ->persistTabInQueryString()
@@ -788,6 +801,50 @@ class EventResource extends Resource
                             ? '✓ ' . ($state['name'] ?? 'Ticket')
                             : '○ ' . ($state['name'] ?? 'Ticket'))
                         ->columns(12)
+                        ->extraItemActions([
+                            \Filament\Actions\Action::make('toggleApp')->iconButton()
+                                ->icon(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_entry_ticket'] ?? false) ? 'heroicon-s-device-phone-mobile' : 'heroicon-o-device-phone-mobile')
+                                ->color(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_entry_ticket'] ?? false) ? 'success' : 'gray')
+                                ->tooltip('Bilet de acces (app)')
+                                ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $s = $component->getState(); $s[$arguments['item']]['is_entry_ticket'] = !($s[$arguments['item']]['is_entry_ticket'] ?? false); $component->state($s);
+                                }),
+                            \Filament\Actions\Action::make('toggleDeclarabil')->iconButton()
+                                ->icon(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_declarable'] ?? true) ? 'heroicon-s-document-check' : 'heroicon-o-document-check')
+                                ->color(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_declarable'] ?? true) ? 'info' : 'gray')
+                                ->tooltip('Declarabil fiscal')
+                                ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $s = $component->getState(); $s[$arguments['item']]['is_declarable'] = !($s[$arguments['item']]['is_declarable'] ?? true); $component->state($s);
+                                }),
+                            \Filament\Actions\Action::make('toggleReturnabil')->iconButton()
+                                ->icon(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_refundable'] ?? false) ? 'heroicon-s-arrow-uturn-left' : 'heroicon-o-arrow-uturn-left')
+                                ->color(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_refundable'] ?? false) ? 'warning' : 'gray')
+                                ->tooltip('Rambursabil')
+                                ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $s = $component->getState(); $s[$arguments['item']]['is_refundable'] = !($s[$arguments['item']]['is_refundable'] ?? false); $component->state($s);
+                                }),
+                            \Filament\Actions\Action::make('toggleAbonament')->iconButton()
+                                ->icon(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_subscription'] ?? false) ? 'heroicon-s-clock' : 'heroicon-o-clock')
+                                ->color(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_subscription'] ?? false) ? 'warning' : 'gray')
+                                ->tooltip('Abonament')
+                                ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $s = $component->getState(); $s[$arguments['item']]['is_subscription'] = !($s[$arguments['item']]['is_subscription'] ?? false); $component->state($s);
+                                }),
+                            \Filament\Actions\Action::make('toggleSoldOut')->iconButton()
+                                ->icon(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_sold_out'] ?? false) ? 'heroicon-s-no-symbol' : 'heroicon-o-no-symbol')
+                                ->color(fn (array $arguments, Forms\Components\Repeater $component): string => ($component->getState()[$arguments['item']]['is_sold_out'] ?? false) ? 'danger' : 'gray')
+                                ->tooltip('Sold out')
+                                ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $s = $component->getState(); $s[$arguments['item']]['is_sold_out'] = !($s[$arguments['item']]['is_sold_out'] ?? false); $component->state($s);
+                                }),
+                            \Filament\Actions\Action::make('duplicateTicketType')->icon('heroicon-m-document-duplicate')->color('gray')
+                                ->tooltip('Duplică tipul de bilet')
+                                ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $s = $component->getState(); $d = $s[$arguments['item']] ?? null; if (!$d) { return; }
+                                    $d['name'] = '[DUP] ' . ($d['name'] ?? ''); $d['id'] = null; $d['sku'] = ''; $d['quota_sold'] = 0; $d['series_start'] = null; $d['series_end'] = null;
+                                    $s[(string) Str::uuid()] = $d; $component->state($s);
+                                }),
+                        ])
                         ->schema([
                             Forms\Components\TextInput::make('name')
                                 ->label('Name')
@@ -945,14 +1002,12 @@ class EventResource extends Resource
                                 Forms\Components\TextInput::make('series_end')->label('Serie – până la')->maxLength(50),
                             ])->columnSpan(12),
 
-                            // Flags
-                            SC\Grid::make(3)->schema([
-                                Forms\Components\Toggle::make('is_entry_ticket')->label('Bilet de acces')->inline(false),
-                                Forms\Components\Toggle::make('is_declarable')->label('Declarabil fiscal')->inline(false),
-                                Forms\Components\Toggle::make('is_refundable')->label('Rambursabil')->inline(false),
-                                Forms\Components\Toggle::make('is_subscription')->label('Abonament')->inline(false),
-                                Forms\Components\Toggle::make('is_sold_out')->label('Sold out')->inline(false),
-                            ])->columnSpan(12),
+                            // Flags — toggled via the header icon-actions on each ticket
+                            Forms\Components\Hidden::make('is_entry_ticket')->default(false),
+                            Forms\Components\Hidden::make('is_declarable')->default(true),
+                            Forms\Components\Hidden::make('is_refundable')->default(false),
+                            Forms\Components\Hidden::make('is_subscription')->default(false),
+                            Forms\Components\Hidden::make('is_sold_out')->default(false),
 
                             Forms\Components\DatePicker::make('valid_date')
                                 ->label('Valabil pentru data (mod interval)')
@@ -1240,6 +1295,98 @@ class EventResource extends Resource
             ]),
 
                 ]),
+                ]),
+
+                // ========== SIDEBAR (colspan 1) ==========
+                SC\Group::make()->columnSpan(1)->schema([
+
+                    SC\Section::make($tenantLanguage === 'ro' ? 'Publicare' : 'Publish')
+                        ->schema([
+                            Forms\Components\Toggle::make('is_published')
+                                ->label($tenantLanguage === 'ro' ? 'Publicat' : 'Published')
+                                ->onIcon('heroicon-m-eye')->offIcon('heroicon-m-eye-slash')
+                                ->default(false)
+                                ->columnSpanFull(),
+                            Forms\Components\Placeholder::make('preview_link')
+                                ->hiddenLabel()
+                                ->content(function (?Event $record) use ($publicBase, $tenantLanguage) {
+                                    if (!$record || !$record->exists) {
+                                        return new \Illuminate\Support\HtmlString('<span class="text-sm text-gray-500">' . ($tenantLanguage === 'ro' ? 'Salvează evenimentul pentru link' : 'Save the event to get the link') . '</span>');
+                                    }
+                                    if (!$publicBase) { return null; }
+                                    $url = $publicBase . '/spectacol/' . $record->slug;
+                                    return new \Illuminate\Support\HtmlString('<a href="' . e($url) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors">' . ($tenantLanguage === 'ro' ? 'Previzualizare' : 'Preview') . '</a>');
+                                }),
+                            Forms\Components\Placeholder::make('test_link')
+                                ->hiddenLabel()
+                                ->visible(fn (?Event $record) => $record && $record->exists && $publicBase)
+                                ->content(function (?Event $record) use ($publicBase, $tenantLanguage) {
+                                    if (!$record || !$record->exists || !$publicBase) { return null; }
+                                    $url = $publicBase . '/spectacol/' . $record->slug . '?preview=1';
+                                    $label = $tenantLanguage === 'ro' ? 'Link test' : 'Test link';
+                                    $copied = $tenantLanguage === 'ro' ? 'Copiat!' : 'Copied!';
+                                    return new \Illuminate\Support\HtmlString('<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $copied . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $label . '\', 2000);" class="inline-flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold rounded-lg cursor-pointer text-amber-200 bg-amber-600/30 hover:bg-amber-600/50"><span>' . $label . '</span></button>');
+                                }),
+                            Forms\Components\TextInput::make('access_password')
+                                ->label($tenantLanguage === 'ro' ? 'Parolă acces eveniment' : 'Event access password')
+                                ->placeholder($tenantLanguage === 'ro' ? 'Lasă gol pentru acces liber' : 'Leave empty for open access')
+                                ->prefixIcon('heroicon-o-lock-closed')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('redirect_url')
+                                ->label('Redirect')
+                                ->url()->maxLength(500)->placeholder('https://...')
+                                ->prefixIcon('heroicon-o-arrow-top-right-on-square')
+                                ->hintIcon('heroicon-o-information-circle', tooltip: $tenantLanguage === 'ro' ? 'Dacă setezi un URL, evenimentul apare în listări dar link-ul duce către acest URL.' : 'If set, the event appears in listings but the link goes to this URL.')
+                                ->columnSpanFull(),
+                        ]),
+
+                    SC\Section::make($tenantLanguage === 'ro' ? 'Activitate recentă' : 'Recent activity')
+                        ->icon('heroicon-o-clock')->compact()->collapsed()
+                        ->visible(fn (?Event $record) => $record && $record->exists)
+                        ->schema([
+                            Forms\Components\Placeholder::make('recent_activity')
+                                ->hiddenLabel()
+                                ->content(function (?Event $record) use ($tenantLanguage) {
+                                    if (!$record) { return ''; }
+                                    $html = '<div class="space-y-2 text-sm">';
+                                    if ($record->updated_at) { $html .= '<div>' . ($tenantLanguage === 'ro' ? 'Modificat' : 'Updated') . ': ' . e($record->updated_at->diffForHumans()) . '</div>'; }
+                                    if ($record->created_at) { $html .= '<div class="text-gray-400">' . ($tenantLanguage === 'ro' ? 'Creat' : 'Created') . ': ' . e($record->created_at->diffForHumans()) . '</div>'; }
+                                    $html .= '</div>';
+                                    return new \Illuminate\Support\HtmlString($html);
+                                }),
+                        ]),
+
+                    SC\Section::make($tenantLanguage === 'ro' ? 'Checklist publicare' : 'Publish checklist')
+                        ->icon('heroicon-o-clipboard-document-check')->compact()
+                        ->schema([
+                            Forms\Components\Placeholder::make('publish_checklist')
+                                ->hiddenLabel()
+                                ->live(onBlur: true)
+                                ->content(function (SGet $get, ?Event $record) use ($tenantLanguage) {
+                                    $has = fn ($v) => !empty($v);
+                                    $hasTT = false;
+                                    foreach ((array) ($get('ticketTypes') ?? []) as $tt) { if (!empty($tt['name'])) { $hasTT = true; break; } }
+                                    if (!$hasTT && $record && $record->exists) { $hasTT = $record->ticketTypes()->count() > 0; }
+                                    $hasImg = $record && (!empty($record->poster_url) || !empty($record->hero_image_url));
+                                    $checks = [
+                                        [$has($get("title.{$tenantLanguage}")), $tenantLanguage === 'ro' ? 'Titlu' : 'Title'],
+                                        [$hasImg, $tenantLanguage === 'ro' ? 'Imagini' : 'Images'],
+                                        [$has($get('venue_id')) || $has($get('venue_name')), $tenantLanguage === 'ro' ? 'Locație' : 'Venue'],
+                                        [$has($get('event_date')) || $has($get('range_start_date')), $tenantLanguage === 'ro' ? 'Date' : 'Dates'],
+                                        [$hasTT, $tenantLanguage === 'ro' ? 'Tipuri de bilete' : 'Ticket types'],
+                                    ];
+                                    $done = count(array_filter($checks, fn ($c) => $c[0]));
+                                    $html = '<div class="space-y-2 text-sm">';
+                                    foreach ($checks as $c) {
+                                        $html .= '<div class="flex items-center gap-2"><span class="' . ($c[0] ? 'text-success-500' : 'text-gray-400') . '">' . ($c[0] ? '✓' : '○') . '</span><span>' . e($c[1]) . '</span></div>';
+                                    }
+                                    $html .= '</div><div class="mt-3 text-xs font-medium text-gray-400">' . $done . '/' . count($checks) . ' ' . ($tenantLanguage === 'ro' ? 'complet' : 'complete') . '</div>';
+                                    return new \Illuminate\Support\HtmlString($html);
+                                }),
+                        ]),
+
+                ]),
+            ]),
         ])->columns(1);
     }
 
