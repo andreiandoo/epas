@@ -298,6 +298,8 @@ curl_setopt_array($ch, [
     CURLOPT_CUSTOMREQUEST  => $method,
     CURLOPT_TIMEOUT        => API_TIMEOUT,
     CURLOPT_CONNECTTIMEOUT => 8,
+    // Forțează IPv4 (vezi includes/api.php) — evită stall-ul de ~5s pe IPv6.
+    CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
     CURLOPT_HTTPHEADER     => $headers,
     CURLOPT_USERAGENT      => 'teatru-skin-proxy/1.0',
 ]);
