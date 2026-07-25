@@ -60,8 +60,11 @@ function familyPage(){
         dateStr(iso){ if(!iso) return ''; try { return new Date(iso).toLocaleDateString('ro-RO',{day:'numeric',month:'long'}); } catch(e){ return ''; } },
         async load(){
             const a=this.auth(); if(!a||!a.token){ this.loading=false; return; }
-            try { const r=await fetch('/api/proxy.php?action=acc-beneficiaries',{headers:{'Authorization':'Bearer '+a.token}}); const d=await r.json().catch(()=>({})); if(d&&d.success) this.members=d.data||[]; } catch(e){}
-            try { const r2=await fetch('/api/proxy.php?action=acc-tickets',{headers:{'Authorization':'Bearer '+a.token}}); const d2=await r2.json().catch(()=>({})); if(d2&&d2.success&&d2.data) this.tickets=d2.data.upcoming||[]; } catch(e){}
+            const h={'Authorization':'Bearer '+a.token};
+            const get=(action)=>fetch('/api/proxy.php?action='+action,{headers:h}).then(r=>r.json()).catch(()=>({}));
+            const [bn,tk]=await Promise.all([get('acc-beneficiaries'),get('acc-tickets')]);
+            if(bn&&bn.success) this.members=bn.data||[];
+            if(tk&&tk.success&&tk.data) this.tickets=tk.data.upcoming||[];
             this.loading=false;
         },
         async submit(){

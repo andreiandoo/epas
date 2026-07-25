@@ -136,9 +136,12 @@ function dashPage(){
         daysLabel(iso){ const n=this.daysTo(iso); if(n===null) return ''; if(n<=0) return 'ASTĂZI'; if(n===1) return 'MÂINE'; return n+' ZILE'; },
         async load(){
             const a=this.auth(); if(!a||!a.token){ this.loading=false; return; }
-            try { const r=await fetch('/api/proxy.php?action=acc-stats',{headers:{'Authorization':'Bearer '+a.token}}); const d=await r.json().catch(()=>({})); if(d&&d.success) this.s=d.data||{}; } catch(e){}
-            try { const r=await fetch('/api/proxy.php?action=my-subscriptions',{headers:{'Authorization':'Bearer '+a.token}}); const d=await r.json().catch(()=>({})); if(d&&d.success&&Array.isArray(d.data)) this.subs=d.data.filter(x=>x.status!=='cancelled'); } catch(e){}
-            try { const r=await fetch('/api/proxy.php?action=acc-tickets',{headers:{'Authorization':'Bearer '+a.token}}); const d=await r.json().catch(()=>({})); if(d&&d.success&&d.data) this.upcoming=(d.data.upcoming||[]).slice().sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))); } catch(e){}
+            const h={'Authorization':'Bearer '+a.token};
+            const get=(action)=>fetch('/api/proxy.php?action='+action,{headers:h}).then(r=>r.json()).catch(()=>({}));
+            const [st,su,tk]=await Promise.all([get('acc-stats'),get('my-subscriptions'),get('acc-tickets')]);
+            if(st&&st.success) this.s=st.data||{};
+            if(su&&su.success&&Array.isArray(su.data)) this.subs=su.data.filter(x=>x.status!=='cancelled');
+            if(tk&&tk.success&&tk.data) this.upcoming=(tk.data.upcoming||[]).slice().sort((x,y)=>String(x.date||'').localeCompare(String(y.date||'')));
             this.loading=false;
         }
     };
