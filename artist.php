@@ -57,8 +57,14 @@ include __DIR__ . '/includes/header.php';
             <?php else: ?>
             <p class="text-warm-gray">Biografie în curs de completare.</p>
             <?php endif; ?>
-            <div class="flex flex-wrap gap-4 mt-8">
+            <div class="flex flex-wrap items-center gap-4 mt-8">
                 <a href="/program" class="btn-gold px-6 py-3 rounded-lg">Vezi spectacolele</a>
+                <button x-data="favBtn('artist', <?= (int) ($artist['id'] ?? $slug) ?>, <?= htmlspecialchars(json_encode(['title' => $name, 'id' => $artist['id'] ?? $slug, 'role' => $role], JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>)" x-init="init()" @click="toggle()" :aria-pressed="on"
+                    class="inline-flex items-center gap-2 rounded-lg border px-6 py-3 transition-colors"
+                    :class="on ? 'border-gold bg-gold/15 text-gold' : 'border-gold/40 text-gold hover:bg-gold hover:text-midnight'">
+                    <svg class="h-5 w-5" :fill="on ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 21s-7.5-4.6-10-9.3C.5 8.4 2 4.8 5.3 4.8c2 0 3.3 1.2 4.2 2.5.9-1.3 2.2-2.5 4.2-2.5 3.3 0 4.8 3.6 3.3 6.9C19.5 16.4 12 21 12 21Z"/></svg>
+                    <span x-text="on ? 'Urmărești' : 'Urmărește'">Urmărește</span>
+                </button>
                 <a href="/trupa" class="btn-outline px-6 py-3 rounded-lg">Înapoi la trupă</a>
             </div>
         </div>

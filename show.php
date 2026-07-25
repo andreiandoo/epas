@@ -71,7 +71,14 @@ include __DIR__ . '/includes/header.php';
                     <div class="flex items-center gap-3 mb-4"><span class="text-gold"><?= e($event['category']['name']) ?></span></div>
                 <?php endif; ?>
                 <?php if ($lead): ?><p class="text-gold tracking-wider text-sm mb-2 uppercase"><?= e($lead) ?></p><?php endif; ?>
-                <h1 class="font-display text-5xl lg:text-7xl italic mb-3"><?= e($event['title'] ?? 'Spectacol') ?></h1>
+                <div class="flex items-start justify-between gap-4">
+                    <h1 class="font-display text-5xl lg:text-7xl italic mb-3"><?= e($event['title'] ?? 'Spectacol') ?></h1>
+                    <button x-data="favBtn('event', <?= $eventId ?>, <?= htmlspecialchars(json_encode(['title' => $event['title'] ?? '', 'slug' => $slug, 'category' => $event['category']['name'] ?? ''], JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>)" x-init="init()" @click="toggle()" :aria-pressed="on" title="Adaugă la favorite"
+                        class="mt-2 grid h-12 w-12 shrink-0 place-items-center rounded-full border transition-colors"
+                        :class="on ? 'border-gold bg-gold/15 text-gold' : 'border-gold/25 text-ivory/70 hover:border-gold/60 hover:text-gold'">
+                        <svg class="h-6 w-6" :fill="on ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 21s-7.5-4.6-10-9.3C.5 8.4 2 4.8 5.3 4.8c2 0 3.3 1.2 4.2 2.5.9-1.3 2.2-2.5 4.2-2.5 3.3 0 4.8 3.6 3.3 6.9C19.5 16.4 12 21 12 21Z"/></svg>
+                    </button>
+                </div>
                 <?php if (!empty($event['subtitle'])): ?>
                     <p class="text-ivory/60 font-display text-xl lg:text-2xl italic mb-6"><?= e($event['subtitle']) ?></p>
                 <?php endif; ?>

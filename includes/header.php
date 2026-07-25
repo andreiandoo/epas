@@ -37,8 +37,33 @@ function nav_cls($key, $active) {
                 <a href="/cos" class="text-ivory/80 hover:text-gold transition-colors" title="Coșul meu">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 </a>
-                <a href="/autentificare" class="text-ivory/80 hover:text-gold transition-colors hidden sm:block">Contul meu</a>
+                <div x-data="headerAuth()" x-init="init()" class="hidden sm:block" style="[x-cloak]">
+                    <a x-show="!user" href="/autentificare" class="text-ivory/80 hover:text-gold transition-colors">Contul meu</a>
+                    <a x-show="user" x-cloak href="/cont/profil" class="inline-flex items-center gap-2 rounded-full border border-gold/20 py-1.5 pl-1.5 pr-3 hover:border-gold/50 transition-colors" title="Contul meu">
+                        <span class="grid h-8 w-8 place-items-center rounded-full bg-burgundy text-xs font-bold text-ivory" x-text="initials">CD</span>
+                        <span class="text-xs" x-text="firstName">Client</span>
+                    </a>
+                </div>
                 <a href="/program" class="btn-gold px-5 py-2.5 rounded text-sm">Cumpără bilete</a>
             </div>
         </div>
     </nav>
+    <style>[x-cloak]{display:none!important}</style>
+    <script>
+    function headerAuth(){return{
+        user:null, firstName:'', initials:'',
+        init(){
+            try{
+                var a=JSON.parse(localStorage.getItem('teatru_auth')||'null');
+                if(a&&a.token&&a.user){
+                    var u=a.user;
+                    this.user=u;
+                    var fn=(u.first_name||u.firstName||(u.name||'').trim().split(/\s+/)[0]||'').trim();
+                    this.firstName=fn||'Contul meu';
+                    var full=(u.name||((u.first_name||'')+' '+(u.last_name||''))).trim()||u.email||'';
+                    this.initials=(full.split(/\s+/).map(function(p){return p[0];}).slice(0,2).join('')||'?').toUpperCase();
+                }
+            }catch(e){}
+        }
+    };}
+    </script>

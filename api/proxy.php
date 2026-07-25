@@ -258,6 +258,13 @@ switch ($action) {
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
+    case 'acc-gift-purchase':
+        $method = 'POST';
+        $path   = '/tenant-client/account/gift-cards/purchase';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     case 'redeem':
         $method = 'POST';
         $subId  = (int) ($_GET['sub'] ?? 0);

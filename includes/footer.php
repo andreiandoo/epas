@@ -22,5 +22,36 @@ $year = date('Y');
             </div>
         </div>
     </footer>
+
+    <!-- Toast global + componentă Alpine „favorite/follow” pentru pagini publice -->
+    <div x-data="{msg:'',show:false}" x-init="window.teatruToast=(m)=>{msg=m;show=true;setTimeout(()=>show=false,2600)}" x-show="show" x-cloak style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120" class="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-midnight shadow-xl" x-text="msg"></div>
+    <script>
+    function favBtn(type, id, meta){
+        return {
+            on:false, busy:false, ready:false,
+            auth(){ try { return JSON.parse(localStorage.getItem('teatru_auth')||'null'); } catch(e){ return null; } },
+            async init(){
+                const a=this.auth(); if(!a||!a.token){ this.ready=true; return; }
+                try {
+                    const r=await fetch('/api/proxy.php?action=acc-favorites',{headers:{'Authorization':'Bearer '+a.token}});
+                    const d=await r.json().catch(()=>({}));
+                    if(d&&d.success){ const list=(type==='artist'?d.data.artists:d.data.events)||[]; this.on=list.some(x=>String(x.item_id)===String(id)); }
+                } catch(e){}
+                this.ready=true;
+            },
+            async toggle(){
+                const a=this.auth();
+                if(!a||!a.token){ window.location.href='/autentificare?next='+encodeURIComponent(location.pathname+location.search); return; }
+                if(this.busy) return; this.busy=true;
+                const prev=this.on; this.on=!prev;
+                try {
+                    await fetch('/api/proxy.php?action=acc-fav-toggle',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.token},body:JSON.stringify({item_type:type,item_id:id,meta:meta||{}})});
+                    if(window.teatruToast) window.teatruToast(this.on?(type==='artist'?'Artist urmărit':'Adăugat la favorite'):'Eliminat din favorite');
+                } catch(e){ this.on=prev; }
+                this.busy=false;
+            }
+        };
+    }
+    </script>
 </body>
 </html>
