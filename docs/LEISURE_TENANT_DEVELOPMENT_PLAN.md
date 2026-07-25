@@ -355,12 +355,17 @@ script deploy, (opțional) categorie template + template SPA.
 **8.B Abonamente / Season pass.** Fundații existente: `TenantSubscriptionPlan` + `TenantCustomerSubscription`
 (orientate teatru: `shows_included`/`shows_used`/`seat_mode`/`allowed_sections`), `SubscriptionController`
 (`/tenant-client/subscriptions`, `/subscribe`, `/redeem`), `Season`/`SeasonSubscription`.
-- **8.B.1** Model de abonament leisure — fie extindem `TenantSubscriptionPlan` cu câmpuri leisure, fie
-  un profil nou. Necesar: **intrări incluse** (`entries_included`, sau nelimitat), **fereastră de valabilitate**
-  (sezon/an/interval), **produse & locații acoperite** (pivot cu `location_product` / categorii), **limită pe zi**
-  (ex. 1 intrare/zi), preț, beneficii, card membru cu QR.
-- **8.B.2** Redemption la **poartă (check-in)** și la **POS**: verifică intrări rămase, acoperire produs/locație,
-  limită zilnică, expirare; decrementează `entries_used`; loghează scanarea (anti-fraudă — vezi risc #9).
+- **8.B.1 REUTILIZARE `FlexPass`.** Există deja un motor complet de pass multi-intrare/multi-zi:
+  `app/Models/FlexPass.php` + `FlexPassRedemption.php` + `FlexPassPurchase` — `total_entries` (punch-card),
+  `valid_from`/`valid_until` (fereastră multi-zi), `eligible_event_ids`/`eligible_ticket_type_ids`,
+  `max_entries_per_event`, `is_transferable`/`is_refundable`; `FlexPassRedemption` loghează fiecare intrare.
+  Plus `app/Models/SeasonSubscription.php` (`valid_from`/`valid_until`, `subscription_type`, `events_included`,
+  `auto_renew`) pentru **abonament anual (pass de an)**. → Adaptăm `FlexPass` la leisure (event=locație,
+  `eligible_ticket_type_ids` = produse acoperite, `max_entries_per_event`/zi = limită zilnică) în loc să
+  construim de la zero. `TenantSubscriptionPlan` rămâne pentru abonamentele „stil teatru”.
+- **8.B.2** Redemption la **poartă (check-in)** și la **POS**: creăm un `FlexPassRedemption` per scanare
+  (nu doar flip pe `checked_in_at`); verifică intrări rămase, acoperire produs/locație, limită zilnică,
+  expirare; loghează în `LeisureScanAttempt` (anti-fraudă — vezi risc #8).
 - **8.B.3** Emitere abonament cu **QR/card membru** (reutilizăm generarea QR din `PhysicalResource`/`Ticket`).
 - **8.B.4** Reînnoire / expirare / notificări; raport „abonați activi” și utilizare.
 - **8.B.5** Vânzare abonament online (pagina `/abonamente` pe skin-ul leisure) + la POS.
@@ -392,6 +397,74 @@ redemption la poartă/POS, card membru QR, vânzare online+POS, rapoarte.
 
 ---
 
+### EPIC 10 — Blocante de corectitudine & conformitate (descoperiri din analiză)
+*Bug-uri și lipsuri care fac vânzarea leisure incorectă/ilegală dacă nu sunt rezolvate. Prioritate MAXIMĂ.*
+
+- **10.1 Scurgere de capacitate la refund/anulare (BUG).** `Order::releaseStockForTickets()` (`app/Models/Order.php:415`)
+  **nu** apelează `SlotBookingService::release()` și **nu** decrementează `TicketTypeCapacity.sold/reserved`.
+  Un bilet leisure rambursat consumă permanent slotul → sold-out fantomă. *Fix:* ramură leisure în release
+  care cheamă serviciile existente (deja scrise, dar orfane).
+- **10.2 Lipsă TTL pe rezervări de capacitate (BUG).** `CapacityAvailabilityService::reserve()` crește `reserved`
+  fără `expires_at` și fără cron de eliberare; `SlotBookingService` crește direct `bookings_count`. Un coș
+  abandonat blochează capacitatea la nesfârșit. *Fix:* `expires_at` pe rezervare (sau tabel `leisure_capacity_holds`)
+  + comandă `leisure:release-expired-holds` (model după `ReleaseExpiredHolds`/`SeatHoldService`). **Obligatoriu
+  înainte de site-ul public de vânzare.**
+- **10.3 Webhook de plată tenant nefinalizat (BLOCANT).** `TenantPaymentWebhookController::handle()` verifică
+  semnătura dar blocul de update comandă e `// TODO` (liniile ~74-88): la plată online reușită nu se marchează
+  comanda, nu se confirmă capacitatea, nu se emit biletele. *Fix:* rezolvare `Order` din `client_reference_id`,
+  `paid` → `CapacityAvailabilityService::confirm()`/`SlotBookingService`, emitere bilete, chitanță/e-Factura,
+  **idempotență pe event-id**, atenție la **raw body** pentru semnătura Stripe (controllerul pasează array, nu string).
+- **10.4 Fără validare dată/slot/durată la poartă (BUG).** `CheckInController` nu citește `meta.visit_date`/`slot_time`;
+  un bilet de pe 20 iul intră pe 25 iul, un slot de 10:00 intră la 16:00. *Fix:* validare dată/slot/fereastră în
+  check-in, cu respingeri în `LeisureScanAttempt`; suport re-entry/anti-passback pentru bilete de zi.
+- **10.5 Fiscalizare — bon fiscal (CONFORMITATE LEGALĂ).** `ReceiptPrinterService` produce un bon **ne-fiscal**
+  (HTML 80mm). Un tenant leisure care vinde B2C cash în RO e **obligat legal** să emită **bon fiscal de la o
+  casă de marcat/AMEF certificată** și să raporteze la ANAF. e-Factura ≠ bon fiscal. *Fix:* strat de dispozitiv
+  fiscal (prin calea ESC/POS din Stiva A sau serviciu fiscal cloud). **Hard requirement, nu opțional.**
+- **10.6 Numerotare facturi consolidată.** Două autorități de numerotare: `TenantTaxRegistry::nextInvoiceNumber()`
+  (tenant) vs `InvoiceGeneratorService` pe `settings.invoice_next_number` (marketplace) → risc de goluri/duplicate.
+  *Fix:* pe calea tenant leisure folosim exclusiv `TenantTaxRegistry`.
+- **10.7 Câmpuri leisure de prim rang pe bilet.** `visit_date`/`slot_time`/durată trăiesc doar în `tickets.meta`
+  (JSON) → scanarea, refund-ul, reminderele, PDF-ul, analytics-ul sunt „oarbe”. *Fix:* coloane de prim rang
+  (`visit_date`, `slot_time`, `valid_until`) pe `tickets`, backfill din meta, indexare.
+- **10.8 PDF bilet leisure + QR consistent.** `pdf/ticket.blade.php` nu afișează câmpuri leisure (arată dată
+  goală/greșită); URL-ul de verificare diferă (`/v/{code}` în job vs `/t/{code}` în model). *Fix:* ramură leisure
+  în PDF (visit_date/slot/durată/emitent) + unificare URL QR.
+- **10.9 Enforcement microservicii.** `Tenant::hasMicroservice()` există dar nu e aplicat central; microserviciile
+  leisure au `price=0`. *Fix:* middleware/policy care mapează rute+pagini Filament la slug-uri și aplică
+  entitlement; prețuri reale + facturare recurentă (reutilizăm calea `Invoice`/`StripeService`).
+
+---
+
+### EPIC 11 — Componente reutilizabile descoperite (accelerează epicele)
+*Nu construi ce există deja. Hartă reuse → funcționalitate.*
+
+| Nevoie leisure | Componentă existentă (reuse) | Epic țintă |
+|---|---|---|
+| Abonament multi-intrare / multi-zi / pass sezon | `FlexPass`+`FlexPassRedemption`+`FlexPassPurchase`, `SeasonSubscription` | 8.B |
+| Rambursări parțiale per bilet (multi-societate) | `PaymentRefundService::processTicketLevelRefund`, `MarketplaceRefundRequest` (de portat tenant-scoped) | 7, 10.1 |
+| Plăți online card + Apple/Google Pay | `StripeProcessor` (`automatic_payment_methods`), `PaymentProcessorFactory::make(Tenant)` | 6.4, 10.3 |
+| Payment-link pe email (POS „link plată”) | `StripeService::createInvoicePaymentLink` (de abstractizat în interfață) | 4.3 |
+| e-Factura + adaptor ANAF real (SPV, UBL, semnătură) | `EFacturaService` + `AnafAdapter` + `AnafQueue` | 5.7, 10.5/10.6 |
+| Lookup firmă după CUI (autofill B2B la POS) | `AnafService::lookupByCui()` | 4.3 |
+| Contabilitate (SmartBill/Oblio/FGO/Keez) | `app/Services/Accounting/*` | 5.7 |
+| Cupoane pe zi/oră, per produs, tenant-scoped | `Coupon\CouponCode` + `CouponService` | 8.A / marketing |
+| Gift cards (cadou zi-pass) | `Shop\ShopGiftCard` + `SendGiftCardEmailJob` | 8.B / marketing |
+| Reselleri / OTA | `Affiliate*` + `AffiliateTrackingService` | marketing |
+| Wallet Apple/Google | `WalletPass` + `GenerateWalletPassJob` | 6 / bilete |
+| SMS / WhatsApp confirmări & remindere | `SendTicketConfirmationSmsJob`, `Services/Sms/*`, `Services/WhatsApp/*` | 9 / notificări |
+| Email bilete leisure (RO/HU/EN, QR, per-emitent) | `SendLeisureTicketsEmailJob` + `LeisureTicketsConfirmation` | deja folosit |
+| Waitlist (ofertă la eliberare slot) | `Waitlist`+`WaitlistEntry`+`WaitlistService` | 9.3 |
+| Analytics/dashboards/rapoarte programate | `Services/Analytics/*`, `AnalyticsWidget`, `ScheduledReportService` | 5.5 |
+| Multi-valută (afișare) | `ExchangeRate` + `ExchangeRateService` | 9.8 |
+| Season pass RFID / brățări NFC | stack `Wristband`/`Cashless/Nfc/*` (azi festival-scoped) | 9 (opțional) |
+| Semnătură/contracte (waivere) | `ESignatureService`, `ContractPdfService` | 9.2 |
+
+**Notă:** multe sunt „event/festival/marketplace-scoped” azi; reuse ≠ zero muls — necesită adaptare la
+`tenant_id` / event-locație. Dar economisesc constructia de la zero a motoarelor.
+
+---
+
 ## Faze & secvențiere (milestones)
 
 ```
@@ -399,11 +472,16 @@ Faza 1 (fundații)      : EPIC 1  → EPIC 2   (model domeniu: locații, produse
 Faza 2 (date)          : EPIC 3             (poate începe în paralel cu Faza 1 după D1/D5)
 Faza 3 (POS)           : EPIC 4             (depinde de EPIC 3.1 casă + 3.x capacități)
 Faza 4 (admin)         : EPIC 5             (în paralel cu EPIC 4, partajează serviciile)
-Faza 5 (public)        : EPIC 6             (depinde de PosSaleService din EPIC 4 pt. checkout)
-Faza 6 (grup+abonam.)  : EPIC 8             (după cascada de preț din EPIC 4/5)
+Faza 5 (public)        : EPIC 6             (depinde de PosSaleService + EPIC 10.1/10.2/10.3)
+Faza 6 (grup+abonam.)  : EPIC 8             (după cascada de preț din EPIC 4/5; reuse FlexPass)
 Faza 7 (extra profil)  : EPIC 9             (prioritizabil per subtip/client)
+Blocante corectitudine : EPIC 10            (10.1/10.2/10.3/10.5 = GATE pt. Faza 3/5 — se fac ÎNAINTE de go-live)
+Reuse (accelerator)    : EPIC 11            (consultat de toate epicele — nu construi ce există)
 Transversal            : EPIC 7             (continuu)
 ```
+
+> **Regulă de go-live:** nu se lansează vânzarea publică (Faza 5) fără **10.1** (fix scurgere capacitate),
+> **10.2** (TTL rezervări), **10.3** (webhook plată) și **10.5** (bon fiscal). Sunt condiții de corectitudine/legalitate.
 
 Cale critică: **D1/D5 → EPIC 3.1 (casă tenant) → EPIC 4 (PosSaleService) → EPIC 6.3 (API public checkout)**.
 `PosSaleService` e piesa refolosită atât de POS (canal POS + casă) cât și de site-ul public (canal online).
@@ -497,5 +575,7 @@ Ordonate după impact. Fiecare are o strategie de mitigare recomandată.
 | Interfață publică vânzare + template `tenant-demos/leisure` | EPIC 6 | Skin PHP + API public + plată online + deploy |
 | Interfață POS (ca la ambilet) | EPIC 4 | POS Operator funcțional + casă + tipărire ESC/POS |
 | Admin complet pentru tenant leisure | EPIC 5 | Locații + catalog produse, calendar, sezoane, casă, rapoarte, embed, facturare |
-| Tarife de grup & abonamente/season pass | EPIC 8 | Praguri grup pe produs, rezervări grup, abonament leisure cu redemption poartă/POS |
+| Tarife de grup & abonamente/season pass | EPIC 8 | Praguri grup pe produs, rezervări grup, abonament leisure via **FlexPass** cu redemption poartă/POS |
 | Capabilități specifice profil (salină/parc/rezervație/muzeu) | EPIC 9 | Restricții, waivere, camping multi-noapte, offline check-in, kiosk, rapoarte fiscale |
+| Blocante corectitudine & conformitate | EPIC 10 | Fix scurgere capacitate, TTL rezervări, webhook plată, validare poartă, **bon fiscal**, numerotare, câmpuri prim rang |
+| Accelerare prin reuse | EPIC 11 | Hartă componente existente (FlexPass, e-Factura/ANAF, wallet, cupoane, waitlist, analytics) → epice |
