@@ -685,7 +685,20 @@ class EventResource extends Resource
                                 ->label('')
                                 ->schema([
                                     SC\Grid::make(2)->schema([
-                                        Forms\Components\TextInput::make('name')->label('Nume')->datalist($artistNames),
+                                        Forms\Components\Select::make('name')->label('Nume')
+                                            ->options(fn () => \App\Models\TenantArtist::where('tenant_id', $tenant?->id)->orderBy('name')->pluck('name', 'name'))
+                                            ->searchable()
+                                            ->createOptionForm([
+                                                Forms\Components\TextInput::make('name')->label('Nume')->required(),
+                                                Forms\Components\TextInput::make('role')->label('Rol / funcție implicită'),
+                                            ])
+                                            ->createOptionUsing(function (array $data) use ($tenant) {
+                                                $ta = \App\Models\TenantArtist::firstOrCreate(
+                                                    ['tenant_id' => $tenant?->id, 'name' => $data['name']],
+                                                    ['slug' => \Illuminate\Support\Str::slug($data['name']) . '-' . substr(md5($data['name']), 0, 6), 'role' => $data['role'] ?? null, 'status' => 'active']
+                                                );
+                                                return $ta->name;
+                                            }),
                                         Forms\Components\TextInput::make('role')->label('Rol / Personaj'),
                                     ]),
                                 ])
@@ -702,7 +715,20 @@ class EventResource extends Resource
                                 ->schema([
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\TextInput::make('role')->label('Funcție')->placeholder('Scenografie, Costume, Muzica...'),
-                                        Forms\Components\TextInput::make('name')->label('Nume')->datalist($artistNames),
+                                        Forms\Components\Select::make('name')->label('Nume')
+                                            ->options(fn () => \App\Models\TenantArtist::where('tenant_id', $tenant?->id)->orderBy('name')->pluck('name', 'name'))
+                                            ->searchable()
+                                            ->createOptionForm([
+                                                Forms\Components\TextInput::make('name')->label('Nume')->required(),
+                                                Forms\Components\TextInput::make('role')->label('Rol / funcție implicită'),
+                                            ])
+                                            ->createOptionUsing(function (array $data) use ($tenant) {
+                                                $ta = \App\Models\TenantArtist::firstOrCreate(
+                                                    ['tenant_id' => $tenant?->id, 'name' => $data['name']],
+                                                    ['slug' => \Illuminate\Support\Str::slug($data['name']) . '-' . substr(md5($data['name']), 0, 6), 'role' => $data['role'] ?? null, 'status' => 'active']
+                                                );
+                                                return $ta->name;
+                                            }),
                                     ]),
                                 ])
                                 ->reorderable()
@@ -1012,7 +1038,7 @@ class EventResource extends Resource
 
             // SEO Section
             SC\Section::make('SEO')
-                ->collapsed()
+                ->collapsible()
                 ->schema([
                     Forms\Components\Select::make('seo_presets')
                         ->label('Add SEO keys from template')
