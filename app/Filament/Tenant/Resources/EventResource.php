@@ -847,6 +847,24 @@ class EventResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Preț de referință pentru planificare. Nu este afișat public.'),
                     ]),
 
+                    Forms\Components\Select::make('seating_layout_id')
+                        ->label('Hartă de locuri')
+                        ->searchable()->preload()->live(onBlur: true)
+                        ->visible(function (SGet $get) {
+                            $venueId = $get('venue_id');
+                            if (!$venueId) return false;
+                            return \App\Models\Seating\SeatingLayout::where('venue_id', $venueId)->where('status', 'published')->exists();
+                        })
+                        ->options(function (SGet $get) {
+                            $venueId = $get('venue_id');
+                            if (!$venueId) return [];
+                            return \App\Models\Seating\SeatingLayout::query()->where('venue_id', $venueId)->where('status', 'published')->orderBy('name')->get()
+                                ->mapWithKeys(fn ($layout) => [$layout->id => $layout->name . ' (' . $layout->sections()->count() . ' secțiuni)']);
+                        })
+                        ->helperText('Selectează o hartă pentru locuri numerotate. Lasă gol pentru acces general.')
+                        ->nullable()
+                        ->columnSpanFull(),
+
                     Forms\Components\Repeater::make('ticketTypes')
                         ->relationship()
                         ->label('Tipuri de bilete')
@@ -1239,6 +1257,24 @@ class EventResource extends Resource
                 ])->collapsible(),
 
             ]),
+
+            SC\Tabs\Tab::make('Harta Locuri')
+                ->key('harta')
+                ->icon('heroicon-o-map')
+                ->visible(fn (SGet $get) => (bool) $get('seating_layout_id'))
+                ->schema([
+                    Forms\Components\Placeholder::make('seating_map_editor')
+                        ->hiddenLabel()
+                        ->content(function (?Event $record) {
+                            if (!$record || !$record->seating_layout_id) {
+                                return new \Illuminate\Support\HtmlString('<div class="p-6 text-center text-gray-500">Salvați evenimentul cu o hartă de locuri selectată pentru a vedea vizualizarea și a aloca tipurile de bilete pe secțiuni/rânduri.</div>');
+                            }
+                            return new \Illuminate\Support\HtmlString(
+                                view('filament.forms.components.seating-map-editor', ['record' => $record])->render()
+                            );
+                        })
+                        ->columnSpanFull(),
+                ]),
 
             SC\Tabs\Tab::make('SEO')->schema([
 
