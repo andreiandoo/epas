@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\TenantArtist;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -33,6 +34,35 @@ class TeatruSeedActors extends Command
         ['Dragoș Buhagiar', 'Scenograf', 1966, '1507591064344-4c6ce005b128', [], 'Scenograf premiat, autor al unor decoruri și costume de excepție.'],
     ];
 
+    /**
+     * Descarcă o imagine în disk-ul public și întoarce calea RELATIVĂ. Null la eșec.
+     */
+    private function dl(string $url, string $dir, string $name): ?string
+    {
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => 25,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT      => 'teatru-seed/1.0',
+            ]);
+            $data = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($data === false || $code >= 400 || strlen((string) $data) < 500) {
+                return null;
+            }
+            $path = trim($dir, '/') . '/' . $name . '.jpg';
+            Storage::disk('public')->put($path, $data);
+            return $path;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     public function handle(): int
     {
         $tenantId = (int) $this->argument('tenant');
@@ -44,7 +74,13 @@ class TeatruSeedActors extends Command
         foreach ($this->actors as [$name, $role, $year, $photo, $galleryIds, $bio]) {
             $slug = Str::slug($name);
 
-            $gallery = array_map(fn ($id) => $img($id, 1000), $galleryIds);
+            // Descarcă foto + galerie ca fișiere reale (căi relative — compatibil FileUpload)
+            $photoPath = $this->dl($img($photo, 900), 'artist-photos', $slug);
+            $gallery = [];
+            foreach ($galleryIds as $gi => $gid) {
+                $p = $this->dl($img($gid, 1200), 'artist-gallery', $slug . '-g' . ($gi + 1));
+                if ($p) { $gallery[] = $p; }
+            }
 
             $artist = TenantArtist::updateOrCreate(
                 ['tenant_id' => $tenantId, 'slug' => $slug],
@@ -53,7 +89,7 @@ class TeatruSeedActors extends Command
                     'role'        => $role,
                     'birth_date'  => sprintf('%04d-01-01', $year),
                     'bio'         => ['ro' => '<p>' . $bio . '</p>', 'en' => '<p>' . $bio . '</p>'],
-                    'photo_url'   => $img($photo, 800),
+                    'photo_url'   => $photoPath,
                     'gallery'     => $gallery,
                     'is_resident' => true,
                     'status'      => 'active',

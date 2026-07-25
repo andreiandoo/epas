@@ -53,6 +53,7 @@ class Settings extends Page
                 'bank_name' => $tenant->bank_name,
                 'bank_account' => $tenant->bank_account,
                 'currency' => $tenant->currency ?? 'EUR',
+                'ticket_series_prefix' => $tenant->ticket_series_prefix ?? '',
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $tenant->public_name ?? $tenant->name ?? '',
@@ -508,6 +509,7 @@ class Settings extends Page
             'bank_account' => $data['bank_account'],
             'currency' => $data['currency'],
             'ticket_terms' => $data['ticket_terms'],
+            'ticket_series_prefix' => $data['ticket_series_prefix'] ?: null,
         ]);
 
         // Update settings JSON

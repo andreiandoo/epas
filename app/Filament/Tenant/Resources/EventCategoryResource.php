@@ -76,10 +76,10 @@ class EventCategoryResource extends Resource
                         ->directory('event-categories')
                         ->visibility('public')
                         ->columnSpanFull(),
-                    Forms\Components\Textarea::make('description.ro')
+                    Forms\Components\RichEditor::make('description.ro')
                         ->label('Descriere (RO)')
-                        ->rows(2)
-                        ->maxLength(500),
+                        ->toolbarButtons(['bold', 'italic', 'underline', 'bulletList', 'orderedList', 'link', 'h2', 'h3', 'redo', 'undo'])
+                        ->columnSpanFull(),
                     Forms\Components\TextInput::make('sort_order')
                         ->label('Ordine')
                         ->numeric()

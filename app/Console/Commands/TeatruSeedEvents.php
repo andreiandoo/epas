@@ -8,6 +8,7 @@ use App\Models\Seating\SeatingLayout;
 use App\Models\Venue;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Populează un tenant de teatru cap-coadă cu date demo:
@@ -32,6 +33,36 @@ class TeatruSeedEvents extends Command
     private function img(string $id, int $w = 1200): string
     {
         return "https://images.unsplash.com/photo-{$id}?w={$w}&q=80&auto=format&fit=crop";
+    }
+
+    /**
+     * Descarcă o imagine în disk-ul public și întoarce calea RELATIVĂ
+     * (necesar pentru FileUpload din formularul de editare). Null dacă eșuează.
+     */
+    private function dl(string $url, string $dir, string $name): ?string
+    {
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => 25,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT      => 'teatru-seed/1.0',
+            ]);
+            $data = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($data === false || $code >= 400 || strlen((string) $data) < 500) {
+                return null;
+            }
+            $path = trim($dir, '/') . '/' . $name . '.jpg';
+            Storage::disk('public')->put($path, $data);
+            return $path;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     // Fiecare spectacol: date bogate (imagini, distribuție, echipă creativă, detalii).
@@ -169,6 +200,14 @@ class TeatruSeedEvents extends Command
             $event = Event::where('tenant_id', $tenantId)->where('slug', $slug)->first();
             $isNew = ! $event;
 
+            // Descarcă imaginile ca fișiere reale (căi relative — compatibil FileUpload)
+            $posterPath = $this->dl($this->img($s['poster'], 1600), 'event-posters', $slug . '-poster');
+            $galleryPaths = [];
+            foreach ($s['gallery'] as $gi => $gid) {
+                $p = $this->dl($this->img($gid, 1600), 'event-gallery', $slug . '-g' . ($gi + 1));
+                if ($p) { $galleryPaths[] = $p; }
+            }
+
             $payload = [
                 'tenant_id'         => $tenantId,
                 'title'             => ['ro' => $s['title'], 'en' => $s['title']],
@@ -183,10 +222,10 @@ class TeatruSeedEvents extends Command
                 'is_cancelled'      => false,
                 'short_description' => ['ro' => $s['short'], 'en' => $s['short']],
                 'description'       => ['ro' => $s['body'], 'en' => $s['body']],
-                // Imagini (free stock, passthrough-safe în API)
-                'poster_url'        => $this->img($s['poster'], 800),
-                'hero_image_url'    => $this->img($s['poster'], 1920),
-                'gallery'           => array_map(fn ($id) => $this->img($id, 1400), $s['gallery']),
+                // Imagini descărcate local (căi relative pe disk-ul public)
+                'poster_url'        => $posterPath,
+                'hero_image_url'    => $posterPath,
+                'gallery'           => $galleryPaths,
                 // Detalii spectacol + distribuție + echipă creativă
                 'theater_director'  => $s['director'],
                 'theater_lead'      => $s['lead'],

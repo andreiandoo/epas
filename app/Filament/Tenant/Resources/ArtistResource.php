@@ -46,14 +46,21 @@ class ArtistResource extends Resource
                 ->icon('heroicon-o-book-open')
                 ->collapsible()
                 ->schema([
-                    // Căutare live după artiști existenți în core (doar la creare)
-                    Forms\Components\Placeholder::make('library_search')
+                    // Câmp de căutare dedicat (nu se salvează — doar pentru import)
+                    Forms\Components\TextInput::make('library_query')
+                        ->label('Caută artist în bibliotecă')
+                        ->placeholder('Scrie un nume, ex: Maia Morgenstern...')
+                        ->live(debounce: 500)
+                        ->dehydrated(false)
+                        ->columnSpanFull(),
+                    // Rezultate live
+                    Forms\Components\Placeholder::make('library_results')
                         ->label('')
                         ->content(function (SGet $get) {
-                            $name = $get('name');
+                            $name = $get('library_query');
                             if (empty($name) || mb_strlen($name) < 2) {
                                 return new \Illuminate\Support\HtmlString(
-                                    '<div class="text-xs text-gray-400 italic py-1">Scrie în câmpul „Nume" de mai jos ca să cauți în bibliotecă.</div>'
+                                    '<div class="text-xs text-gray-400 italic py-1">Scrie cel puțin 2 litere în câmpul de mai sus.</div>'
                                 );
                             }
 

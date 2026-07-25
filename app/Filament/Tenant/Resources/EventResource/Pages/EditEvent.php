@@ -21,6 +21,28 @@ class EditEvent extends EditRecord
         }
     }
 
+    /**
+     * Defensive: FileUpload components (poster_url/hero_image_url/gallery) expect
+     * paths on the 'public' disk. Legacy/seeded rows may hold full external URLs,
+     * which break the uploader on load. Strip those from the FORM only (DB value
+     * is untouched until an explicit save) so the edit page never 500s.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        foreach (['poster_url', 'hero_image_url'] as $f) {
+            if (!empty($data[$f]) && is_string($data[$f]) && preg_match('#^https?://#', $data[$f])) {
+                $data[$f] = null;
+            }
+        }
+        if (!empty($data['gallery']) && is_array($data['gallery'])) {
+            $data['gallery'] = array_values(array_filter(
+                $data['gallery'],
+                fn ($p) => is_string($p) && !preg_match('#^https?://#', $p)
+            ));
+        }
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         $tenant = auth()->user()->tenant;

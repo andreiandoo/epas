@@ -1610,7 +1610,7 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->formatStateUsing(fn (Event $record) => $record->getTranslation('title', $tenant?->locale ?: 'ro'))
+                    ->getStateUsing(fn (Event $record) => $record->getTranslation('title', $tenant?->locale ?: 'ro'))
                     ->searchable()
                     ->sortable()
                     ->description(function (Event $record) use ($tenant) {
