@@ -426,19 +426,25 @@ redemption la poartă/POS, card membru QR, vânzare online+POS, rapoarte.
   `meta.visit_date`/`slot_time`. Un bilet de pe 20 iul intră pe 25 iul; un slot de 10:00 intră la 16:00.
   *Fix:* validare dată/slot/fereastră în check-in, cu respingeri în `LeisureScanAttempt`; suport
   re-entry/anti-passback pentru bilete de zi.
-- **10.5 Fiscalizare — bon fiscal (CONFORMITATE LEGALĂ).** `ReceiptPrinterService` produce un bon **ne-fiscal**
-  (HTML 80mm). Un tenant leisure care vinde B2C cash în RO e **obligat legal** să emită **bon fiscal de la o
-  casă de marcat/AMEF certificată** și să raporteze la ANAF. e-Factura ≠ bon fiscal. *Fix:* strat de dispozitiv
-  fiscal (prin calea ESC/POS din Stiva A sau serviciu fiscal cloud). **Hard requirement, nu opțional.**
-- **10.6 Numerotare facturi consolidată.** Două autorități de numerotare: `TenantTaxRegistry::nextInvoiceNumber()`
-  (tenant) vs `InvoiceGeneratorService` pe `settings.invoice_next_number` (marketplace) → risc de goluri/duplicate.
-  *Fix:* pe calea tenant leisure folosim exclusiv `TenantTaxRegistry`.
-- **10.7 Câmpuri leisure de prim rang pe bilet.** `visit_date`/`slot_time`/durată trăiesc doar în `tickets.meta`
-  (JSON) → scanarea, refund-ul, reminderele, PDF-ul, analytics-ul sunt „oarbe”. *Fix:* coloane de prim rang
-  (`visit_date`, `slot_time`, `valid_until`) pe `tickets`, backfill din meta, indexare.
-- **10.8 PDF bilet leisure + QR consistent.** `pdf/ticket.blade.php` nu afișează câmpuri leisure (arată dată
-  goală/greșită); URL-ul de verificare diferă (`/v/{code}` în job vs `/t/{code}` în model). *Fix:* ramură leisure
-  în PDF (visit_date/slot/durată/emitent) + unificare URL QR.
+- **10.5 Fiscalizare — bon fiscal (CONFORMITATE LEGALĂ — CONFIRMAT).** Verificat: în `app/` nu există nicio
+  integrare de casă de marcat/AMEF (grep `casa de marcat|fiscal_printer|amef|datecs|escpos` → doar
+  `Cashless/VendorStand.fiscal_device_id`, festival NFC, nelegat). `ReceiptPrinterService` declară explicit
+  bon **ne-fiscal** HTML 80mm („browser's print dialog handles ESC/POS conversion"). Un tenant leisure care
+  vinde B2C cash în RO e **obligat legal** la **bon fiscal de la casă de marcat/AMEF certificată** + raportare ANAF.
+  e-Factura ≠ bon fiscal. *Fix:* strat de dispozitiv fiscal (ESC/POS din Stiva A sau serviciu fiscal cloud).
+  **Hard requirement, nu opțional.**
+- **10.6 Numerotare facturi (CONFIRMAT — două autorități).** Verificat: `TenantTaxRegistry::nextInvoiceNumber()`
+  (`app/Models/Leisure/TenantTaxRegistry.php:41` — `increment('invoice_next_number')`) vs `InvoiceGeneratorService`
+  (`:166-172` — `settings['invoice_next_number']`). Două contoare independente → risc de goluri/duplicate pe
+  aceeași entitate legală dacă ambele emit. *Fix:* pe calea tenant leisure folosim **exclusiv** `TenantTaxRegistry`.
+- **10.7 Câmpuri leisure de prim rang pe bilet (CONFIRMAT).** Verificat: nicio migrare nu adaugă `visit_date`/
+  `slot_time` ca **coloană** pe `tickets` (apar doar pe `leisure_slot_bookings` / `marketplace_event_date_capacities`).
+  Pe bilet trăiesc doar în `tickets.meta` (JSON) → scanarea, refund, remindere, PDF, analytics sunt „oarbe".
+  *Fix:* coloane de prim rang (`visit_date`, `slot_time`, `valid_until`) pe `tickets`, backfill din meta, indexare.
+- **10.8 PDF bilet leisure + QR inconsistent (CONFIRMAT).** Verificat: `pdf/ticket.blade.php:159-161` afișează
+  `$event->event_date`/`start_time` (goale/statice pt. o locație leisure), nu `visit_date`/`slot_time`. URL QR
+  divergent: `SendLeisureTicketsEmailJob:65` = `ambilet.ro/v/{code}` vs `Ticket::getVerifyUrl():503` = `/t/{code}`
+  (folosit de PDF) → același bilet are două URL-uri de verificare. *Fix:* ramură leisure în PDF + unificare URL QR.
 - **10.9 Enforcement microservicii.** `Tenant::hasMicroservice()` există dar nu e aplicat central; microserviciile
   leisure au `price=0`. *Fix:* middleware/policy care mapează rute+pagini Filament la slug-uri și aplică
   entitlement; prețuri reale + facturare recurentă (reutilizăm calea `Invoice`/`StripeService`).
