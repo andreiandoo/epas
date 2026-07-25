@@ -99,6 +99,26 @@ switch ($action) {
         $body   = [];
         break;
 
+    case 'subscribe':
+        $method = 'POST';
+        $path   = '/tenant-client/subscribe';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'my-subscriptions':
+        $path   = '/tenant-client/my-subscriptions';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'redeem':
+        $method = 'POST';
+        $subId  = (int) ($_GET['sub'] ?? 0);
+        $path   = "/tenant-client/subscriptions/{$subId}/redeem";
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'acțiune necunoscută']);
