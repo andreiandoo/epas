@@ -157,6 +157,30 @@ class GamificationController extends Controller
     }
 
     /**
+     * Istoric puncte pentru skin (auth via CustomerToken).
+     */
+    public function skinHistory(Request $request): JsonResponse
+    {
+        $tenant = $this->resolveTenant($request);
+        if (!$tenant || !$this->hasGamificationMicroservice($tenant)) {
+            return response()->json(['enabled' => false, 'data' => []]);
+        }
+        $customerId = null;
+        $token = $request->bearerToken();
+        if ($token) {
+            $ct = \App\Models\CustomerToken::where('token', hash('sha256', $token))->first();
+            if ($ct && (!method_exists($ct, 'isExpired') || !$ct->isExpired())) {
+                $customerId = $ct->customer_id;
+            }
+        }
+        if (!$customerId) {
+            return response()->json(['enabled' => true, 'error' => 'Unauthenticated', 'data' => []], 401);
+        }
+        $history = $this->gamificationService->getPointsHistory($tenant->id, $customerId, (int) $request->input('limit', 20));
+        return response()->json(['enabled' => true, 'data' => $history]);
+    }
+
+    /**
      * Get points transaction history
      */
     public function history(Request $request): JsonResponse

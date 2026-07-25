@@ -123,6 +123,11 @@ switch ($action) {
         $query  = ['tenant' => TENANT_ID];
         break;
 
+    case 'gami-history':
+        $path   = '/tenant-client/gamification-history';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
     case 'acc-stats':
         $path   = '/tenant-client/account/stats';
         $query  = ['tenant' => TENANT_ID];

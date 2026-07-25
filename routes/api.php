@@ -118,6 +118,8 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.
     Route::get('/gamification-balance', [GamificationController::class, 'skinBalance'])
         ->name('api.tenant-client-public.gamification.skin-balance');
+    Route::get('/gamification-history', [GamificationController::class, 'skinHistory'])
+        ->name('api.tenant-client-public.gamification.skin-history');
 
     Route::get('/artists', [TenantClientController::class, 'artists'])
         ->name('api.tenant-client-public.artists');
