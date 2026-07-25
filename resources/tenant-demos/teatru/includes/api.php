@@ -118,6 +118,9 @@ function api_request(string $method, string $url, array $body = [], array $heade
         CURLOPT_TIMEOUT        => API_TIMEOUT,
         CURLOPT_CONNECTTIMEOUT => 8,
         CURLOPT_FOLLOWLOCATION => true,
+        // Forțează IPv4: pe unele host-uri connect-ul IPv6 către core stă blocat
+        // ~5s (happy-eyeballs) înainte să cadă pe IPv4 — cauza TTFB-ului de 5s.
+        CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
         CURLOPT_HTTPHEADER     => array_merge($defaultHeaders, $headers),
         CURLOPT_USERAGENT      => 'teatru-skin/1.0',
     ]);
