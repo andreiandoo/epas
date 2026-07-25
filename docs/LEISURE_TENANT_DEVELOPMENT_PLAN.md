@@ -73,16 +73,16 @@ Codul conține **două implementări leisure** care coexistă. Înțelegerea ace
 
 ---
 
-## Decizii de arhitectură (recomandări — de confirmat)
+## Decizii de arhitectură (CONFIRMATE — 2026-07-25)
 
-| # | Decizie | Recomandare | Motiv |
-|---|---------|-------------|-------|
-| D1 | Consolidare model eveniment | **Stiva B**: `Event` + `TicketType` tenant-scoped, cu coloane de prim rang; abandonăm progresiv `venue_config`/`meta` pentru tenant | Scaffolding-ul tenant deja folosește coloanele; serviciile B le citesc |
-| D2 | Portare vs bridge la API marketplace | **Portare nativă** în tenant (nu bridge) | Scopul e îmbogățirea *modelului tenant*; bridge-ul ar lega tenantul de `marketplace_organizer_id` |
-| D3 | API public leisure | **Extindem `/api/leisure/*`** cu paritate față de `/tenant-client/*` (config, events, order, order-summary), reutilizând `ResolvesTenant` + `TenantClientCors` | Menține separarea slot/availability; permite reutilizarea cart/checkout din teatru |
-| D4 | Tipărire bon | **Portăm driverul WebUSB ESC/POS** din ambilet (`pos-printer.js`) ca țintă principală; `leisure.receipt` (browser print) rămâne fallback | User a cerut explicit „ca la ambilet”; paritate fiscală (2 copii, TVA, serii) |
-| D5 | Sesiune de casă | Model nou **tenant-scoped** `LeisureCashierSession` (tenant_id + team_member_id), portat 1:1 din logica marketplace | Consistență cu panoul Operator care e deja tenant-scoped |
-| D6 | Roluri operaționale | Consolidăm pe `TenantTeamMember.leisure_role` (setul din stiva B), cu mapare din setul mai bogat marketplace | Panoul Operator citește deja acest câmp |
+| # | Decizie | Alegere confirmată | Motiv |
+|---|---------|--------------------|-------|
+| D1 | Consolidare model eveniment | ✅ **Stiva B**: `Event` + `TicketType` tenant-scoped, cu coloane de prim rang; abandonăm `venue_config`/`meta` pentru tenant | Scaffolding-ul tenant deja folosește coloanele; serviciile B le citesc |
+| D2 | Portare vs bridge la API marketplace | ✅ **Portare nativă** în tenant (nu bridge) | Scopul e îmbogățirea *modelului tenant*; bridge-ul ar lega tenantul de `marketplace_organizer_id` |
+| D3 | API public leisure | ✅ **Extindem `/api/leisure/*`** cu config, products, orders, order-summary, reutilizând `ResolvesTenant` + `TenantClientCors` | Menține separarea slot/availability; permite reutilizarea cart/checkout din teatru |
+| D4 | Tipărire bon | ✅ **Driver WebUSB ESC/POS** portat din ambilet (`pos-printer.js`) ca țintă principală; `leisure.receipt` (browser print) = fallback | Cerut explicit „ca la ambilet”; paritate fiscală (2 copii, TVA, serii) |
+| D5 | Sesiune de casă | ✅ Model nou **tenant-scoped** `LeisureCashierSession` (`tenant_id` + `tenant_team_member_id`), portat 1:1 din logica marketplace | Decurge din D2; consistență cu panoul Operator (deja tenant-scoped) |
+| D6 | Roluri operaționale | ✅ Consolidare pe `TenantTeamMember.leisure_role` (setul stiva B), cu mapare din setul marketplace | Decurge din D2; panoul Operator citește deja acest câmp |
 
 ---
 
