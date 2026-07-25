@@ -176,6 +176,9 @@ class TeatruSeedEvents extends Command
         // 2b) Actori (ansamblu) — necesari pentru distribuție
         Artisan::call('teatru:seed-actors', ['tenant' => $tenantId], $this->getOutput());
 
+        // 2c) Client demo pentru autentificare
+        Artisan::call('teatru:seed-customer', ['tenant' => $tenantId], $this->getOutput());
+
         // 3) Categorii (globale)
         $cats = [];
         foreach ($this->categories as $slug => $name) {

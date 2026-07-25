@@ -83,6 +83,10 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::post('/demo-checkout', [DemoCheckoutController::class, 'store'])
         ->name('api.tenant-client-public.demo-checkout');
 
+    // Rezumat comandă pentru pagina de confirmare (thank-you)
+    Route::get('/order-summary', [TenantClientController::class, 'orderSummary'])
+        ->name('api.tenant-client-public.order-summary');
+
     Route::get('/artists', [TenantClientController::class, 'artists'])
         ->name('api.tenant-client-public.artists');
 

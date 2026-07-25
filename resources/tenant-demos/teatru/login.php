@@ -14,7 +14,7 @@ $pageExtraStyles = '
 ';
 include __DIR__ . '/includes/head.php';
 ?>
-<body class="antialiased min-h-screen" x-data="{ loading: false, showPassword: false }">
+<body class="antialiased min-h-screen" x-data="loginPage()">
 <div class="min-h-screen flex">
     <!-- Left - Form -->
     <div class="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 py-12">
@@ -25,16 +25,22 @@ include __DIR__ . '/includes/head.php';
             </a>
             <h1 class="font-display text-4xl mb-2">Bine ai revenit</h1>
             <p class="text-ivory/70 mb-8">Intră în contul tău pentru a vedea biletele și abonamentele.</p>
-            <form @submit.prevent="loading = true; setTimeout(() => { window.location.href = '/cont' }, 1200)">
+            <div class="bg-gold/10 border border-gold/30 rounded-lg p-4 mb-6 text-sm">
+                <p class="text-gold font-medium mb-1">Cont demo</p>
+                <p class="text-ivory/70">Email: <span class="font-mono">demo@teatru.tixello.ro</span> · Parolă: <span class="font-mono">demo1234</span></p>
+                <button type="button" @click="fillDemo()" class="text-gold hover:underline mt-1">Completează automat</button>
+            </div>
+            <div x-show="error" x-text="error" class="bg-red-900/30 border border-red-500/40 text-red-200 rounded-lg p-3 mb-4 text-sm"></div>
+            <form @submit.prevent="submit()">
                 <div class="space-y-5">
                     <div>
                         <label class="block text-sm text-warm-gray mb-2">Email</label>
-                        <input type="email" class="input-field w-full px-4 py-3 rounded-lg text-ivory" placeholder="ion@email.com" required>
+                        <input type="email" x-model="email" class="input-field w-full px-4 py-3 rounded-lg text-ivory" placeholder="ion@email.com" required>
                     </div>
                     <div>
                         <label class="block text-sm text-warm-gray mb-2">Parolă</label>
                         <div class="relative">
-                            <input :type="showPassword ? 'text' : 'password'" class="input-field w-full px-4 py-3 rounded-lg text-ivory pr-12" placeholder="••••••••" required>
+                            <input :type="showPassword ? 'text' : 'password'" x-model="password" class="input-field w-full px-4 py-3 rounded-lg text-ivory pr-12" placeholder="••••••••" required>
                             <button type="button" @click="showPassword = !showPassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-warm-gray hover:text-gold">
                                 <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 <svg x-show="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
@@ -75,5 +81,34 @@ include __DIR__ . '/includes/head.php';
         </div>
     </div>
 </div>
+<script>
+function loginPage() {
+    return {
+        loading: false, showPassword: false, error: '',
+        email: '', password: '',
+        fillDemo() { this.email = 'demo@teatru.tixello.ro'; this.password = 'demo1234'; },
+        async submit() {
+            if (this.loading) return;
+            this.loading = true; this.error = '';
+            try {
+                const r = await fetch('/api/proxy.php?action=login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: this.email, password: this.password })
+                });
+                const d = await r.json().catch(() => ({}));
+                if (r.ok && d.success && d.data && d.data.token) {
+                    localStorage.setItem('teatru_auth', JSON.stringify({ token: d.data.token, user: d.data.user }));
+                    window.location.href = '/cont';
+                } else {
+                    this.error = (d.message || (d.errors && d.errors.email && d.errors.email[0])) || 'Date de autentificare incorecte.';
+                    this.loading = false;
+                }
+            } catch (e) {
+                this.error = 'Eroare de conexiune.'; this.loading = false;
+            }
+        }
+    };
+}
+</script>
 </body>
 </html>

@@ -282,6 +282,70 @@ class TenantClientController extends Controller
     }
 
     /**
+     * Rezumat comandă pentru pagina de confirmare (thank-you). Scopat pe tenant.
+     * Email mascat pentru a limita expunerea PII prin ghicirea id-ului.
+     */
+    public function orderSummary(Request $request): JsonResponse
+    {
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (! $resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+        $tenantId = $resolved['tenant']->id;
+        $orderId = (int) $request->query('order');
+
+        $order = \App\Models\Order::where('tenant_id', $tenantId)->find($orderId);
+        if (! $order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+
+        $locale = app()->getLocale();
+        $meta = $order->meta ?? [];
+
+        $event = null;
+        if (! empty($meta['event_id'])) {
+            $event = Event::with('venue')->find($meta['event_id']);
+        }
+
+        $tickets = $order->tickets()->with('ticketType')->get()->map(fn ($t) => [
+            'code'       => $t->code,
+            'type'       => $t->ticketType?->name,
+            'seat_label' => $t->meta['seat_label'] ?? null,
+        ])->values();
+
+        $email = (string) $order->customer_email;
+        $maskedEmail = $email;
+        if (str_contains($email, '@')) {
+            [$u, $d] = explode('@', $email, 2);
+            $maskedEmail = (mb_strlen($u) <= 2 ? mb_substr($u, 0, 1) : mb_substr($u, 0, 1) . str_repeat('*', min(4, mb_strlen($u) - 2)) . mb_substr($u, -1)) . '@' . $d;
+        }
+
+        return response()->json([
+            'data' => [
+                'order_id'   => $order->id,
+                'status'     => $order->status,
+                'is_paid'    => in_array($order->status, ['paid', 'confirmed', 'completed']),
+                'created_at' => $order->created_at?->toIso8601String(),
+                'customer_name'  => $meta['customer_name'] ?? null,
+                'customer_email' => $maskedEmail,
+                'total'      => ($order->total_cents ?? 0) / 100,
+                'currency'   => $order->currency ?? 'RON',
+                'payment_method' => ($meta['payment'] ?? null) === 'demo' ? 'Card (demo)' : 'Card',
+                'event'      => $event ? [
+                    'title'   => $event->getTranslation('title', $locale),
+                    'slug'    => $event->slug,
+                    'date'    => $event->event_date?->toIso8601String(),
+                    'time'    => $event->start_time,
+                    'venue'   => $event->venue?->getTranslation('name', $locale),
+                    'city'    => $event->venue?->city,
+                    'poster'  => $this->publicUrl($event->poster_url ?: $event->hero_image_url),
+                ] : null,
+                'tickets'    => $tickets,
+            ],
+        ]);
+    }
+
+    /**
      * Public list of tenant artists (troupe/ensemble).
      */
     public function artists(Request $request): JsonResponse

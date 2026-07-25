@@ -149,6 +149,15 @@ function tc_artists(?int $cacheTtl = null): array {
 }
 
 /**
+ * Rezumat comandă pentru pagina de confirmare. Null dacă nu există.
+ */
+function tc_order_summary(int $orderId): ?array {
+    $resp = api_get('/tenant-client/order-summary', ['order' => $orderId], 0);
+    if (!($resp['success'] ?? false) || !is_array($resp['data'] ?? null)) { return null; }
+    return $resp['data'];
+}
+
+/**
  * Un singur artist după slug sau id (include bio + galerie).
  * Întoarce null dacă nu există.
  */
