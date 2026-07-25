@@ -14,6 +14,14 @@ class TenantSubscriptionPlan extends Model
         'subtitle',
         'price_cents',
         'currency',
+        'shows_included',
+        'tickets_included',
+        'seat_mode',
+        'allowed_sections',
+        'validity_mode',
+        'valid_from',
+        'valid_until',
+        'priority_access',
         'benefits',
         'description',
         'image',
@@ -23,11 +31,17 @@ class TenantSubscriptionPlan extends Model
     ];
 
     protected $casts = [
-        'benefits'    => 'array',
-        'is_featured' => 'boolean',
-        'is_active'   => 'boolean',
-        'price_cents' => 'integer',
-        'sort_order'  => 'integer',
+        'benefits'         => 'array',
+        'allowed_sections' => 'array',
+        'is_featured'      => 'boolean',
+        'is_active'        => 'boolean',
+        'priority_access'  => 'boolean',
+        'price_cents'      => 'integer',
+        'shows_included'   => 'integer',
+        'tickets_included' => 'integer',
+        'sort_order'       => 'integer',
+        'valid_from'       => 'date',
+        'valid_until'      => 'date',
     ];
 
     public function tenant(): BelongsTo

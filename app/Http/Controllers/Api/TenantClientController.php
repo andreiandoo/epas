@@ -363,15 +363,23 @@ class TenantClientController extends Controller
 
         return response()->json([
             'data' => $plans->map(fn ($p) => [
-                'name'        => $p->name,
-                'slug'        => $p->slug,
-                'subtitle'    => $p->subtitle,
-                'price'       => ($p->price_cents ?? 0) / 100,
-                'currency'    => $p->currency ?: 'RON',
-                'benefits'    => array_values(array_filter($p->benefits ?? [])),
-                'description' => $p->description,
-                'image'       => $this->publicUrl($p->image),
-                'is_featured' => (bool) $p->is_featured,
+                'name'             => $p->name,
+                'slug'             => $p->slug,
+                'subtitle'         => $p->subtitle,
+                'price'            => ($p->price_cents ?? 0) / 100,
+                'currency'         => $p->currency ?: 'RON',
+                'shows_included'   => $p->shows_included,
+                'tickets_included' => $p->tickets_included,
+                'seat_mode'        => $p->seat_mode,
+                'allowed_sections' => array_values(array_filter($p->allowed_sections ?? [])),
+                'validity_mode'    => $p->validity_mode,
+                'valid_from'       => $p->valid_from?->toDateString(),
+                'valid_until'      => $p->valid_until?->toDateString(),
+                'priority_access'  => (bool) $p->priority_access,
+                'benefits'         => array_values(array_filter($p->benefits ?? [])),
+                'description'      => $p->description,
+                'image'            => $this->publicUrl($p->image),
+                'is_featured'      => (bool) $p->is_featured,
             ])->values(),
         ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
     }

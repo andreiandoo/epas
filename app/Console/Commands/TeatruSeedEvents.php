@@ -182,10 +182,13 @@ class TeatruSeedEvents extends Command
         // 2d) Planuri de abonament demo
         $plans = [
             ['name' => 'Clasic', 'slug' => 'clasic', 'subtitle' => '5 spectacole • Staluri', 'price_cents' => 35000, 'is_featured' => false, 'sort_order' => 1,
+                'shows_included' => 5, 'tickets_included' => 1, 'seat_mode' => 'client_choice', 'allowed_sections' => ['Staluri'], 'priority_access' => false,
                 'benefits' => ['5 spectacole la alegere', 'Locuri în Staluri', 'Economie ~15%', 'Valabil toată stagiunea']],
             ['name' => 'Premium', 'slug' => 'premium', 'subtitle' => '10 spectacole • Balcon', 'price_cents' => 60000, 'is_featured' => true, 'sort_order' => 2,
+                'shows_included' => 10, 'tickets_included' => 1, 'seat_mode' => 'predefined', 'allowed_sections' => ['Balcon'], 'priority_access' => true,
                 'benefits' => ['10 spectacole la alegere', 'Locuri premium în Balcon', 'Economie ~30%', 'Acces prioritar la premiere', 'Program de fidelitate']],
             ['name' => 'Familie', 'slug' => 'familie', 'subtitle' => '4 persoane • 5 spectacole', 'price_cents' => 120000, 'is_featured' => false, 'sort_order' => 3,
+                'shows_included' => 5, 'tickets_included' => 4, 'seat_mode' => 'client_choice', 'allowed_sections' => ['Staluri', 'Balcon'], 'priority_access' => false,
                 'benefits' => ['4 bilete per spectacol', '5 spectacole la alegere', 'Locuri alăturate garantate', 'Economie ~25%', 'Ateliere pentru copii']],
         ];
         foreach ($plans as $plan) {

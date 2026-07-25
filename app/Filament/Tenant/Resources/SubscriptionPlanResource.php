@@ -8,6 +8,7 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -72,6 +73,51 @@ class SubscriptionPlanResource extends Resource
                         ->label('Monedă')
                         ->options(['RON' => 'RON', 'EUR' => 'EUR'])
                         ->default('RON'),
+                ])->columns(2),
+
+            SC\Section::make('Reguli abonament')
+                ->description('Configurează cum funcționează abonamentul — se aplică la achiziție și la consum.')
+                ->icon('heroicon-o-adjustments-horizontal')
+                ->schema([
+                    Forms\Components\TextInput::make('shows_included')
+                        ->label('Spectacole incluse')
+                        ->helperText('Câte spectacole poate alege abonatul.')
+                        ->numeric()->minValue(1)->placeholder('ex: 5'),
+                    Forms\Components\TextInput::make('tickets_included')
+                        ->label('Bilete/locuri per spectacol')
+                        ->helperText('Câte locuri primește la fiecare spectacol ales.')
+                        ->numeric()->minValue(1)->default(1),
+                    Forms\Components\Select::make('seat_mode')
+                        ->label('Alegerea locului')
+                        ->options([
+                            'client_choice' => 'Ales de client (într-o zonă permisă)',
+                            'predefined'    => 'Loc predefinit (același pentru toate spectacolele)',
+                        ])
+                        ->default('client_choice')
+                        ->helperText('Locul ales devine locul abonatului la toate spectacolele incluse.'),
+                    Forms\Components\TagsInput::make('allowed_sections')
+                        ->label('Zone permise')
+                        ->placeholder('ex: Staluri, Balcon')
+                        ->helperText('Lasă gol pentru toate zonele.'),
+                    Forms\Components\Select::make('validity_mode')
+                        ->label('Valabilitate')
+                        ->options([
+                            'season'     => 'Pe stagiune',
+                            'date_range' => 'Interval de date',
+                        ])
+                        ->default('season')
+                        ->live(),
+                    Forms\Components\Toggle::make('priority_access')
+                        ->label('Acces prioritar la premiere')
+                        ->default(false),
+                    Forms\Components\DatePicker::make('valid_from')
+                        ->label('Valabil de la')
+                        ->native(false)
+                        ->visible(fn (SGet $get) => $get('validity_mode') === 'date_range'),
+                    Forms\Components\DatePicker::make('valid_until')
+                        ->label('Valabil până la')
+                        ->native(false)
+                        ->visible(fn (SGet $get) => $get('validity_mode') === 'date_range'),
                 ])->columns(2),
 
             SC\Section::make('Beneficii & Aspect')
