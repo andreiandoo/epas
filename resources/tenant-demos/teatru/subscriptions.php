@@ -43,7 +43,7 @@ if (empty($plans)) {
     </div>
 </section>
 
-<section class="py-16 px-4 lg:px-8">
+<section class="py-16 px-4 lg:px-8" x-data="subsPage()">
     <div class="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         <?php foreach ($plans as $p): ?>
         <div class="subscription-card <?= $p['featured'] ? 'featured' : '' ?> rounded-2xl p-8 relative">
@@ -53,10 +53,22 @@ if (empty($plans)) {
             <ul class="space-y-3 mb-8">
                 <?php foreach ($p['features'] as $f): ?><li class="flex items-center gap-3"><?= $check ?><span class="text-ivory/80"><?= e($f) ?></span></li><?php endforeach; ?>
             </ul>
-            <a href="/finalizare?plan=<?= e($p['code']) ?>" class="<?= $p['featured'] ? 'btn-gold' : 'btn-outline' ?> w-full py-3 rounded-lg block text-center">Alege abonamentul</a>
+            <button @click="choosePlan('<?= e($p['code']) ?>')" class="<?= $p['featured'] ? 'btn-gold' : 'btn-outline' ?> w-full py-3 rounded-lg block text-center">Alege abonamentul</button>
         </div>
         <?php endforeach; ?>
     </div>
-    <p class="text-center text-warm-gray text-sm mt-12 max-w-2xl mx-auto">Reduceri sociale (elevi, studenți, pensionari) și pentru grupuri organizate. Contactați casieria pentru abonamente personalizate.</p>
+    <p class="text-center text-warm-gray text-sm mt-12 max-w-2xl mx-auto">Abonamentele necesită un cont. Reduceri sociale (elevi, studenți, pensionari) și pentru grupuri organizate — contactați casieria.</p>
 </section>
+<script>
+function subsPage() {
+    return {
+        isLoggedIn() { try { return !!(JSON.parse(localStorage.getItem('teatru_auth') || 'null')?.token); } catch(e) { return false; } },
+        choosePlan(slug) {
+            const dest = '/abonament?plan=' + encodeURIComponent(slug);
+            if (this.isLoggedIn()) { window.location.href = dest; }
+            else { window.location.href = '/autentificare?next=' + encodeURIComponent(dest); }
+        }
+    };
+}
+</script>
 <?php include __DIR__ . '/includes/footer.php';

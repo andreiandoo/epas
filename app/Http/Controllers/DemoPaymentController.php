@@ -75,6 +75,14 @@ class DemoPaymentController extends Controller
                 $order->update(['status' => 'paid']);
             }
 
+            // Activează abonamentul asociat (dacă e o comandă de abonament)
+            $subId = $order->meta['subscription_id'] ?? null;
+            if ($subId) {
+                \App\Models\TenantCustomerSubscription::where('id', $subId)
+                    ->where('status', 'pending')
+                    ->update(['status' => 'active']);
+            }
+
             $redirect = $success ?: url('/');
             $sep = str_contains($redirect, '?') ? '&' : '?';
             return redirect()->away($redirect . $sep . 'order=' . $order->id . '&status=paid');

@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\TenantClient\AccountController;
 use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\DemoCheckoutController;
+use App\Http\Controllers\Api\TenantClient\SubscriptionController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
@@ -90,6 +91,14 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     // Planuri de abonament active
     Route::get('/subscriptions', [TenantClientController::class, 'subscriptions'])
         ->name('api.tenant-client-public.subscriptions');
+
+    // Achiziție + gestionare abonamente client (necesită bearer token)
+    Route::post('/subscribe', [SubscriptionController::class, 'store'])
+        ->name('api.tenant-client-public.subscribe');
+    Route::get('/my-subscriptions', [SubscriptionController::class, 'mine'])
+        ->name('api.tenant-client-public.my-subscriptions');
+    Route::post('/subscriptions/{id}/redeem', [SubscriptionController::class, 'redeem'])
+        ->name('api.tenant-client-public.subscriptions.redeem');
 
     Route::get('/artists', [TenantClientController::class, 'artists'])
         ->name('api.tenant-client-public.artists');

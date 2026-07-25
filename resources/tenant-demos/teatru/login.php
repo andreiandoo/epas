@@ -98,7 +98,8 @@ function loginPage() {
                 const d = await r.json().catch(() => ({}));
                 if (r.ok && d.success && d.data && d.data.token) {
                     localStorage.setItem('teatru_auth', JSON.stringify({ token: d.data.token, user: d.data.user }));
-                    window.location.href = '/cont';
+                    const next = new URLSearchParams(location.search).get('next');
+                    window.location.href = (next && next.startsWith('/')) ? next : '/cont';
                 } else {
                     this.error = (d.message || (d.errors && d.errors.email && d.errors.email[0])) || 'Date de autentificare incorecte.';
                     this.loading = false;
