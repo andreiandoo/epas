@@ -325,15 +325,71 @@ script deploy, (opțional) categorie template + template SPA.
 
 ---
 
+### EPIC 8 — Tarife de grup & Abonamente / Season pass leisure
+*Adaptarea la modelul produse+locații (azi sunt legate de evenimente/locuri). Efort: mediu-mare.*
+
+**8.A Tarife de grup.** Fundații existente: `GroupBooking`, `GroupBookingMember`, `GroupPricingTier`
+(azi `event_id`-scoped), `GroupBookingResource` + `GroupBookingPage` (tenant + marketplace),
+`TicketType.min_per_order/max_per_order/ticket_group`.
+- **8.A.1** Re-scope `GroupPricingTier` de pe `event_id` pe **produs** (`ticket_type_id`) și/sau pe **tenant**
+  (praguri globale reutilizabile). Praguri: `min_tickets`/`max_tickets` → `discount_percentage` (sau sumă fixă).
+- **8.A.2** Aplicare în cascada de preț (vezi risc #8) atât la POS cât și online; „group guide bonus”
+  (bilet ghid gratuit la fiecare N) portat din marketplace ca opțiune per produs.
+- **8.A.3** `GroupBooking` decuplat de `Event` → legat de **locație + produse + dată/slot vizită**
+  (rezervări de grup pentru școli, firme), cu ofertă/deviz și plată ulterioară (invoice).
+- **8.A.4** Ecran admin: praguri per produs + gestiune rezervări de grup; pe site-ul public: formular „cerere grup”.
+
+**8.B Abonamente / Season pass.** Fundații existente: `TenantSubscriptionPlan` + `TenantCustomerSubscription`
+(orientate teatru: `shows_included`/`shows_used`/`seat_mode`/`allowed_sections`), `SubscriptionController`
+(`/tenant-client/subscriptions`, `/subscribe`, `/redeem`), `Season`/`SeasonSubscription`.
+- **8.B.1** Model de abonament leisure — fie extindem `TenantSubscriptionPlan` cu câmpuri leisure, fie
+  un profil nou. Necesar: **intrări incluse** (`entries_included`, sau nelimitat), **fereastră de valabilitate**
+  (sezon/an/interval), **produse & locații acoperite** (pivot cu `location_product` / categorii), **limită pe zi**
+  (ex. 1 intrare/zi), preț, beneficii, card membru cu QR.
+- **8.B.2** Redemption la **poartă (check-in)** și la **POS**: verifică intrări rămase, acoperire produs/locație,
+  limită zilnică, expirare; decrementează `entries_used`; loghează scanarea (anti-fraudă — vezi risc #9).
+- **8.B.3** Emitere abonament cu **QR/card membru** (reutilizăm generarea QR din `PhysicalResource`/`Ticket`).
+- **8.B.4** Reînnoire / expirare / notificări; raport „abonați activi” și utilizare.
+- **8.B.5** Vânzare abonament online (pagina `/abonamente` pe skin-ul leisure) + la POS.
+
+**Livrabile:** praguri de grup pe produs, rezervări de grup leisure, model+flux abonament leisure cu
+redemption la poartă/POS, card membru QR, vânzare online+POS, rapoarte.
+
+---
+
+### EPIC 9 — Capabilități suplimentare recomandate (specifice profilurilor leisure)
+*Ce lipsește pentru scenarii reale de salină/parc aventură/parc distracții/rezervație/muzeu. Prioritizabil.*
+
+- **9.1 Restricții pe produs**: vârstă minimă, înălțime/greutate (parc aventură/distracții), număr max
+  participanți/slot, echipament necesar. Validare la vânzare și la check-in.
+- **9.2 Waivere / declarații de răspundere** (parc aventură): consimțământ + semnătură digitală per
+  participant, atașat biletului; reutilizăm infrastructura de contracte/semnătură existentă.
+- **9.3 Rezervări cu resurse limitate & programare**: sloturi cu ghizi/echipament finit (nu doar capacitate
+  numerică) — alocarea unei resurse/persoane pe slot; listă de așteptare (waiting list) pentru sloturi pline.
+- **9.4 Camping multi-noapte**: rezervare pe interval de nopți (logică tip hotel: check-in/out, disponibilitate
+  pe noapte, tarif pe noapte/sezon), distinct de biletele pe zi.
+- **9.5 Politici de anulare/rambursare/no-show** per produs (ex. rambursare până cu 24h înainte), reprogramare.
+- **9.6 Check-in offline pe tabletă**: conectivitate slabă la salină/rezervație → validare locală cu sync
+  ulterior (cache bilete valabile pe zi + coadă de scanări).
+- **9.7 Kiosk self-check-in** (rol `kiosk_selfcheckin` din marketplace): terminal auto-servire la intrare.
+- **9.8 Multi-locale pe produse/bilete/bonuri** (RO/HU/EN) — strategie de traducere pe coloane de prim rang
+  (azi marketplace folosește `meta.translations`).
+- **9.9 Rapoarte fiscale & export**: registru de casă, Z-report pe tură, export ANAF/SAF-T, decont pe societate.
+- **9.10 Pass-uri combo / bilete-familie** cross-produs și cross-locație (compunere `package` extinsă).
+
+---
+
 ## Faze & secvențiere (milestones)
 
 ```
-Faza 1 (fundații)      : EPIC 1  → EPIC 2
-Faza 2 (date)          : EPIC 3            (poate începe în paralel cu Faza 1 după D1/D5)
-Faza 3 (POS)           : EPIC 4            (depinde de EPIC 3.1 casă + 3.x capacități)
-Faza 4 (admin)         : EPIC 5            (în paralel cu EPIC 4, partajează serviciile)
-Faza 5 (public)        : EPIC 6            (depinde de PosSaleService din EPIC 4 pt. checkout)
-Transversal            : EPIC 7            (continuu)
+Faza 1 (fundații)      : EPIC 1  → EPIC 2   (model domeniu: locații, produse, subtipuri, taxonomie)
+Faza 2 (date)          : EPIC 3             (poate începe în paralel cu Faza 1 după D1/D5)
+Faza 3 (POS)           : EPIC 4             (depinde de EPIC 3.1 casă + 3.x capacități)
+Faza 4 (admin)         : EPIC 5             (în paralel cu EPIC 4, partajează serviciile)
+Faza 5 (public)        : EPIC 6             (depinde de PosSaleService din EPIC 4 pt. checkout)
+Faza 6 (grup+abonam.)  : EPIC 8             (după cascada de preț din EPIC 4/5)
+Faza 7 (extra profil)  : EPIC 9             (prioritizabil per subtip/client)
+Transversal            : EPIC 7             (continuu)
 ```
 
 Cale critică: **D1/D5 → EPIC 3.1 (casă tenant) → EPIC 4 (PosSaleService) → EPIC 6.3 (API public checkout)**.
@@ -341,19 +397,84 @@ Cale critică: **D1/D5 → EPIC 3.1 (casă tenant) → EPIC 4 (PosSaleService) �
 
 ---
 
-## Riscuri & puncte de atenție
+## Riscuri & puncte de atenție (analiză proactivă)
 
-1. **Dublarea config-ului** (`venue_config`/`meta` vs coloane) — dacă nu se decide clar D1, riscăm a
-   treia divergență. Recomandare: tenant folosește exclusiv coloanele de prim rang.
-2. **Concurență la capacități/inventar** — trebuie păstrat pattern-ul de `lockForUpdate` din serviciile
-   existente; teste dedicate pe race conditions.
-3. **Paritate fiscală RO** — facturarea pe 2+ societăți, seriile și TVA trebuie portate exact
-   (referință: `pos-printer.js::buildInvoiceCommands` + `MarketplaceOrganizer::reserveNextInvoiceNumber`).
-4. **WebUSB doar Chrome/Edge** (și WinUSB pe Windows) — de comunicat operatorilor; fallback browser-print.
-5. **Nu reutiliza `DoorSalesController`/`app/Services/DoorSales`** — e scaffold neconectat, card-only/EUR;
-   `door-sales` rămâne doar feature-flag/microserviciu, nu logică de vânzare.
-6. **Volum de portat** — `LeisureController` are ~4.500 linii; portarea trebuie făcută incremental,
-   pe sub-domenii (casă, sale, scanări, rapoarte), cu teste la fiecare pas.
+Ordonate după impact. Fiecare are o strategie de mitigare recomandată.
+
+### Critice (pot corupe date sau bani)
+
+1. **Decuplarea `TicketType`↔`Event` sparge cod partajat.** Multe locuri presupun `ticketType->event`
+   non-null: scoping (`TicketType` nu are `TenantScope` propriu azi — se bazează pe `event.tenant_id`,
+   ex. linia 656), rapoarte, PDF bilete, `Order`/`Ticket`, panoul marketplace.
+   *Mitigare:* audit exhaustiv al utilizărilor `->event->` pe `TicketType` **înainte** de a face `event_id`
+   nullable; adăugăm un `TenantScope` direct pe `TicketType` (`tenant_id`); menținem backfill + testăm
+   că marketplace-ul (care rămâne pe `Event`) nu regresează. Facem migrarea în „expand/contract”
+   (adăugăm `tenant_id`, populăm, comutăm citirile, abia apoi facem `event_id` nullable).
+
+2. **Overselling la concurență** (online + POS + mai multe case vând simultan aceeași capacitate/slot/unitate).
+   Azi există două surse de adevăr (`CapacityAvailabilityService` pe `TicketTypeCapacity` vs `SlotBookingService`
+   pe `LeisureSlotBooking`). *Mitigare:* **o singură sursă de adevăr** cu `lockForUpdate` + constrângeri unice;
+   unificăm cele două servicii; teste de concurență dedicate; rezervare→confirmare→eliberare cu TTL.
+
+3. **Numerotare facturi multi-societate.** Coș cu produse pe SC1 și SC2 → split în comenzi/facturi separate,
+   fiecare cu seria ei; numerotarea trebuie **atomică** (reference: `reserveNextInvoiceNumber`), fără
+   găuri/duplicate, inclusiv la retur/refund parțial pe o singură societate. *Mitigare:* rezervare număr
+   în tranzacție cu lock pe `TenantTaxRegistry`; strategie clară de storno; teste pe refund parțial.
+
+4. **Sesiune de casă & reconciliere cash.** Riscuri: casă lăsată deschisă peste noapte, mai mulți operatori pe
+   aceeași casă, Z-report greșit la schimb de tură, bani nereconciliați. *Mitigare:* o sesiune activă per
+   casă, avertisment/auto-close la capăt de zi, snapshot imutabil la închidere, reconciliere cash declarat vs
+   calculat cu diferență raportată.
+
+5. **Vânzare înregistrată dar bon netipărit** (imprimanta ESC/POS cade la mijloc). *Mitigare:* separăm
+   „sale committed” de „printed”; **reprint idempotent** din istoricul comenzii; coadă de tipărire cu retry;
+   niciodată nu re-creăm comanda la retry de print.
+
+### Majore (regresii funcționale / experiență)
+
+6. **Regresie pe marketplace-ul LIVE.** Modelele `Event`/`TicketType`/`Order`/`Ticket` sunt partajate cu
+   stiva marketplace (producție „Lacul Sf. Ana”, ambilet). *Mitigare:* orice schimbare pe modele partajate e
+   aditivă și ramificată pe `tenant_id`/`display_template`; suită de regresie pe fluxul marketplace înainte de merge.
+
+7. **Cascada de preț devine impredictibilă.** Se compun: bază → variantă durată → reguli pe zi → sezon
+   (`LeisurePricingResolver`) → preț absolut pe canal (`ChannelPricingResolver`) → discount grup → abonament
+   (gratis/redus) → `price_override` per dată → override per locație. *Mitigare:* **o singură funcție „preț
+   efectiv” cu ordine deterministă documentată**, un singur punct de intrare folosit de POS + online + rapoarte;
+   teste tabelare pe combinații; afișare „defalcare preț” în UI.
+
+8. **Anti-fraudă abonamente/season pass.** Un abonament folosit de mai multe persoane, la mai multe porți
+   simultan. *Mitigare:* scanare obligatorie la poartă cu log (`LeisureScanAttempt`), limită pe zi, detecție
+   utilizări suspecte, foto/nume pe card membru.
+
+9. **Scoping multi-locație.** Un operator legat de o locație nu trebuie să vândă/scaneze/raporteze pentru
+   alta; produsele sunt pe pivot. *Mitigare:* scoping pe `location_id` în panoul Operator (nu doar `tenant_id`),
+   verificat pe fiecare query; teste de izolare între locații.
+
+10. **Conversia unui tenant existent la leisure.** `TenantObserver::updating` completează features, dar tenantul
+    poate avea deja evenimente/comenzi. *Mitigare:* flux de conversie explicit (nu automat), validări, fără
+    ștergere de date; leisure nou ≠ tenant convertit.
+
+### Moderate (calitate / operare)
+
+11. **Performanță catalog × locații × calendar.** Disponibilitate pe lună, POS instant pe tabletă. *Mitigare:*
+    indexare (`tenant_id`, `ticket_type_id`, `capacity_date`), cache disponibilitate, paginare, query-uri lean.
+12. **WebUSB doar Chrome/Edge** (+ WinUSB/Zadig pe Windows), diacritice RO/HU. *Mitigare:* documentație operator,
+    fallback browser-print (`leisure.receipt`), test pe imprimante reale (Bixolon/Epson/Star/Citizen).
+13. **Multi-locale** pe produse/bilete/bonuri (marketplace folosește `meta.translations`). *Mitigare:* strategie
+    de traducere decisă devreme pentru coloanele de prim rang (tabel de traduceri vs JSON dedicat).
+14. **Domenii publice per locație.** Un tenant cu N locații: un site cu selector vs subdomeniu per locație —
+    afectează rezolvarea prin `Domain`. *Mitigare:* decizie de produs (recomandat: un site cu selector locație).
+15. **Offline la checkin** (salină/rezervație cu semnal slab). *Mitigare:* EPIC 9.6 (validare locală + sync).
+16. **Nu reutiliza `DoorSalesController`/`app/Services/DoorSales`** — scaffold neconectat, card-only/EUR;
+    `door-sales` rămâne doar feature-flag/microserviciu.
+17. **Volum de portat** — `LeisureController` ~4.500 linii. *Mitigare:* portare incrementală pe sub-domenii
+    (casă → sale → scanări → rapoarte), cu teste la fiecare pas; fără „big bang”.
+
+### Strategie transversală de mitigare
+- **Expand/contract** pentru toate migrările pe tabele partajate (nicicând schimbări distructive directe).
+- **Feature flags** (`features.leisure.*`) pentru a livra incremental și a putea dezactiva rapid.
+- **Suită de regresie marketplace** rulată înainte de orice merge care atinge modele partajate.
+- **Seeder demo realist** (EPIC 2.3) ca fundație de testare manuală + automată.
 
 ---
 
@@ -361,7 +482,9 @@ Cale critică: **D1/D5 → EPIC 3.1 (casă tenant) → EPIC 4 (PosSaleService) �
 
 | Cerință | Epice | Rezultat |
 |---|---|---|
-| Toate funcționalitățile marketplace pe tenant leisure | EPIC 1, 2, 3, 7 | Model tenant-scoped complet + provisioning + refactor |
+| Toate funcționalitățile marketplace pe tenant leisure | EPIC 1, 2, 3, 7 | Model tenant-scoped complet (locații+produse) + provisioning + refactor |
 | Interfață publică vânzare + template `tenant-demos/leisure` | EPIC 6 | Skin PHP + API public + plată online + deploy |
 | Interfață POS (ca la ambilet) | EPIC 4 | POS Operator funcțional + casă + tipărire ESC/POS |
-| Admin complet pentru tenant leisure | EPIC 5 | Wizard produs, calendar, sezoane, casă, rapoarte, embed, facturare |
+| Admin complet pentru tenant leisure | EPIC 5 | Locații + catalog produse, calendar, sezoane, casă, rapoarte, embed, facturare |
+| Tarife de grup & abonamente/season pass | EPIC 8 | Praguri grup pe produs, rezervări grup, abonament leisure cu redemption poartă/POS |
+| Capabilități specifice profil (salină/parc/rezervație/muzeu) | EPIC 9 | Restricții, waivere, camping multi-noapte, offline check-in, kiosk, rapoarte fiscale |
