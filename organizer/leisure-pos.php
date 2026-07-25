@@ -908,7 +908,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 ${badge}
             </div>
             ${!isOpen && t.revenue != null ? `<div class="pt-2 border-t border-slate-100">
-                <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets || 0} bilete · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
+                <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets_sold != null ? (t.tickets_sold + ' bilete vândute') : ((t.tickets || 0) + ' bilete')}${t.tickets_visitors != null && t.tickets_visitors !== (t.tickets_sold ?? t.tickets) ? ' · ' + t.tickets_visitors + ' vizitatori' : ''} · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
                 ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : ''}
                 ${issuerHtml}
             </div>` : ''}
@@ -946,18 +946,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
 
         // Total zi
-        let totalRev = 0, totalOrders = 0, totalTickets = 0;
+        //   tickets       = raw (backwards compat pentru snapshot-uri vechi)
+        //   tickets_sold  = "Bilete vandute" (exclude from_package + price<=0) — mirror dashboard
+        //   tickets_visit = "Vizitatori" (exclude umbrella parent pachet) — mirror dashboard
+        // Cand snapshot-ul e vechi (fara cele 2 fields noi), afisam doar tickets (raw).
+        let totalRev = 0, totalOrders = 0, totalTickets = 0, totalSold = 0, totalVisitors = 0;
+        let hasSoldMetric = false, hasVisitorMetric = false;
+        let spansMidnight = false;
         sessions.forEach(s => {
             const t = s.snapshot?.totals || {};
             totalRev += Number(t.revenue || 0);
             totalOrders += Number(t.orders || 0);
             totalTickets += Number(t.tickets || 0);
+            if (t.tickets_sold != null) { totalSold += Number(t.tickets_sold); hasSoldMetric = true; }
+            if (t.tickets_visitors != null) { totalVisitors += Number(t.tickets_visitors); hasVisitorMetric = true; }
+            // Detecteaza sesiuni care traverseaza miezul noptii (revenue-ul poate include ziua anterioara)
+            if (s.opened_at && s.closed_at) {
+                const od = new Date(s.opened_at).toLocaleDateString('ro-RO');
+                const cd = new Date(s.closed_at).toLocaleDateString('ro-RO');
+                if (od !== cd) spansMidnight = true;
+            }
         });
 
+        // Prefera tickets_sold cand exista, altfel raw tickets
+        const primaryTickets = hasSoldMetric ? totalSold : totalTickets;
+        const primaryLabel = hasSoldMetric ? 'bilete vândute' : 'bilete';
+        const visitorSuffix = (hasVisitorMetric && totalVisitors !== primaryTickets)
+            ? ` · ${totalVisitors} vizitatori`
+            : '';
+        const midnightNote = spansMidnight
+            ? `<p class="text-[10px] text-emerald-700 mt-1 italic">⚠️ O sesiune acoperă miezul nopții — totalul include și comenzi din ziua anterioară.</p>`
+            : '';
+
         const summary = `<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-            <p class="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Total zi</p>
+            <p class="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Total sesiuni</p>
             <p class="text-2xl font-bold text-emerald-900">${fmtMoney(totalRev)} <span class="text-xs text-emerald-700">RON</span></p>
-            <p class="text-xs text-emerald-700 mt-0.5">${totalOrders} comenzi · ${totalTickets} bilete · ${sessions.length} sesiun${sessions.length === 1 ? 'e' : 'i'}</p>
+            <p class="text-xs text-emerald-700 mt-0.5">${totalOrders} comenzi · ${primaryTickets} ${primaryLabel}${visitorSuffix} · ${sessions.length} sesiun${sessions.length === 1 ? 'e' : 'i'}</p>
+            ${midnightNote}
         </div>`;
 
         const rows = sessions.map(s => renderCashSessionCard(s)).join('');
