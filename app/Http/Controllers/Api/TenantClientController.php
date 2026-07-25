@@ -120,8 +120,9 @@ class TenantClientController extends Controller
         }
 
         if ($category) {
-            $query->whereHas('eventTypes', function ($q) use ($category) {
-                $q->where('slug', $category);
+            $query->where(function ($outer) use ($category) {
+                $outer->whereHas('tenantEventCategories', fn ($q) => $q->where('slug', $category))
+                    ->orWhereHas('eventTypes', fn ($q) => $q->where('slug', $category));
             });
         }
 
@@ -132,6 +133,7 @@ class TenantClientController extends Controller
         $events = $query->with([
                 'venue:id,name,city',
                 'eventTypes',
+                'tenantEventCategories',
                 'artists:id,name,main_image_url',
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
             ])
@@ -215,6 +217,7 @@ class TenantClientController extends Controller
                 'venue',
                 'eventTypes',
                 'eventGenres',
+                'tenantEventCategories',
                 'artists:id,name,main_image_url',
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
             ])
@@ -242,6 +245,24 @@ class TenantClientController extends Controller
 
         $tenantId = $resolved['tenant']->id;
         $locale = app()->getLocale();
+
+        // Prefer tenant's own categories; fall back to global EventTypes used by its events.
+        $own = \App\Models\TenantEventCategory::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($own->isNotEmpty()) {
+            return response()->json([
+                'data' => $own->map(fn ($cat) => [
+                    'id' => $cat->id,
+                    'name' => $cat->getTranslation('name', $locale) ?: $cat->getTranslation('name', 'ro'),
+                    'slug' => $cat->slug,
+                    'icon' => $cat->icon ?: 'calendar',
+                    'image' => $this->publicUrl($cat->image),
+                ]),
+            ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
+        }
 
         $types = Cache::remember("tenant_categories_{$tenantId}", now()->addMinutes(10), function () use ($tenantId) {
             return EventType::whereHas('events', function ($q) use ($tenantId) {
@@ -336,6 +357,18 @@ class TenantClientController extends Controller
     }
 
     /**
+     * Resolve a stored image path to a public URL. Pass full http(s) URLs
+     * through unchanged (e.g. seeded stock images), else build the storage URL.
+     */
+    private function publicUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+        return preg_match('#^https?://#', $path) ? $path : Storage::disk('public')->url($path);
+    }
+
+    /**
      * Format event for list view
      */
     private function formatEvent(Event $event): array
@@ -366,14 +399,25 @@ class TenantClientController extends Controller
             ] : null,
 
             // Media
-            'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
-            'hero_image_url' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
+            'poster_url' => $this->publicUrl($event->poster_url),
+            'hero_image_url' => $this->publicUrl($event->hero_image_url),
 
-            // Category
-            'category' => $event->eventTypes->first() ? [
-                'name' => $event->eventTypes->first()->getTranslation('name', $locale),
-                'slug' => $event->eventTypes->first()->slug,
-            ] : null,
+            // Category — prefer tenant's own category, fall back to global EventType
+            'category' => (function () use ($event, $locale) {
+                $own = $event->relationLoaded('tenantEventCategories') ? $event->tenantEventCategories->first() : null;
+                if ($own) {
+                    return [
+                        'name' => $own->getTranslation('name', $locale) ?: $own->getTranslation('name', 'ro'),
+                        'slug' => $own->slug,
+                        'icon' => $own->icon,
+                    ];
+                }
+                $type = $event->eventTypes->first();
+                return $type ? [
+                    'name' => $type->getTranslation('name', $locale),
+                    'slug' => $type->slug,
+                ] : null;
+            })(),
 
             // Pricing - exclude invitations
             'price_from' => $event->ticketTypes
@@ -396,11 +440,23 @@ class TenantClientController extends Controller
         return array_merge($basic, [
             'description' => $event->getTranslation('description', $locale),
             'short_description' => $event->getTranslation('short_description', $locale),
-            'gallery' => $event->gallery ?? [],
+            'gallery' => collect($event->gallery ?? [])->filter()
+                ->map(fn ($p) => $this->publicUrl($p))->values()->all(),
+            'theater' => [
+                'director' => $event->theater_director,
+                'lead' => $event->theater_lead,
+                'duration' => $event->theater_duration,
+                'cast' => collect($event->theater_cast ?? [])
+                    ->map(fn ($c) => ['name' => $c['name'] ?? '', 'role' => $c['role'] ?? ''])
+                    ->filter(fn ($c) => $c['name'] !== '')->values()->all(),
+                'creative' => collect($event->theater_creative ?? [])
+                    ->map(fn ($c) => ['role' => $c['role'] ?? '', 'name' => $c['name'] ?? ''])
+                    ->filter(fn ($c) => $c['name'] !== '')->values()->all(),
+            ],
             'artists' => $event->artists->map(fn ($artist) => [
                 'id' => $artist->id,
                 'name' => $artist->name,
-                'image' => $artist->main_image_url ? Storage::disk('public')->url($artist->main_image_url) : null,
+                'image' => $this->publicUrl($artist->main_image_url),
             ]),
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,

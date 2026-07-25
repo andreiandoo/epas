@@ -18,7 +18,6 @@ class EditSeatingLayout extends EditRecord
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->url(fn () => SeatingLayoutResource::getUrl('designer', ['record' => $this->record])),
-            Actions\DeleteAction::make(),
         ];
     }
 }

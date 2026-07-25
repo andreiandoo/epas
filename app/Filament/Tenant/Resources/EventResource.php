@@ -197,7 +197,7 @@ class EventResource extends Resource
                 ->columnSpanFull()
                 ->tabs([
 
-            SC\Tabs\Tab::make('Detalii')->schema([
+            SC\Tabs\Tab::make('Detalii')->icon('heroicon-o-information-circle')->schema([
 
             // BASICS - Single Language based on Tenant setting
             SC\Section::make('Event Details')
@@ -319,7 +319,7 @@ class EventResource extends Resource
 
             ]),
 
-            SC\Tabs\Tab::make('Program')->schema([
+            SC\Tabs\Tab::make('Program')->icon('heroicon-o-calendar-days')->schema([
 
             // SCHEDULE
             SC\Section::make('Schedule')
@@ -513,7 +513,7 @@ class EventResource extends Resource
 
             ]),
 
-            SC\Tabs\Tab::make('Conținut')->schema([
+            SC\Tabs\Tab::make('Conținut')->icon('heroicon-o-document-text')->schema([
 
             // MEDIA
             SC\Section::make('Media')
@@ -581,11 +581,24 @@ class EventResource extends Resource
 
             ]),
 
-            SC\Tabs\Tab::make('Taxonomii & Relații')->schema([
+            SC\Tabs\Tab::make('Taxonomii & Relații')->icon('heroicon-o-tag')->schema([
 
             // TAXONOMIES
             SC\Section::make('Taxonomies & Relations')
                 ->schema([
+                    Forms\Components\Select::make('tenantEventCategories')
+                        ->label('Categoriile tale')
+                        ->relationship(
+                            name: 'tenantEventCategories',
+                            titleAttribute: 'slug',
+                            modifyQueryUsing: fn (Builder $query) => $query->where('tenant_id', $tenant?->id)->where('is_active', true)->orderBy('sort_order')
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro'))
+                        ->multiple()
+                        ->preload()
+                        ->searchable()
+                        ->helperText('Categorii proprii, gestionate în „Categorii evenimente". Apar pe site-ul tău.'),
+
                     Forms\Components\Select::make('eventTypes')
                         ->label('Event types')
                         ->relationship(
@@ -748,6 +761,7 @@ class EventResource extends Resource
             ]),
 
             SC\Tabs\Tab::make('Distribuție')
+                ->icon('heroicon-o-user-group')
                 ->visible(fn () => $isTheater)
                 ->schema([
                     SC\Section::make('Detalii spectacol')
@@ -819,7 +833,7 @@ class EventResource extends Resource
                         ]),
                 ]),
 
-            SC\Tabs\Tab::make('Bilete')->schema([
+            SC\Tabs\Tab::make('Bilete')->icon('heroicon-o-ticket')->schema([
 
             // TICKETS
             SC\Section::make('Tickets')
@@ -1288,7 +1302,7 @@ class EventResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            SC\Tabs\Tab::make('SEO')->schema([
+            SC\Tabs\Tab::make('SEO')->icon('heroicon-o-magnifying-glass')->schema([
 
             // SEO Section
             SC\Section::make('SEO')
@@ -1596,7 +1610,7 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->formatStateUsing(fn (Event $record) => $record->getTranslation('title', app()->getLocale()))
+                    ->formatStateUsing(fn (Event $record) => $record->getTranslation('title', $tenant?->locale ?: 'ro'))
                     ->searchable()
                     ->sortable()
                     ->description(function (Event $record) use ($tenant) {

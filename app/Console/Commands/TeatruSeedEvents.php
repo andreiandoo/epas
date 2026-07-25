@@ -28,13 +28,90 @@ class TeatruSeedEvents extends Command
         'balet'   => ['ro' => 'Balet', 'en' => 'Ballet'],
     ];
 
-    // titlu, categorie, zile în viitor, oră, descriere scurtă
-    private array $shows = [
-        ['Hamlet', 'drama', 14, '19:00', 'Capodopera shakespeariană într-o viziune regizorală contemporană.'],
-        ['O scrisoare pierdută', 'comedie', 21, '19:30', 'Comedia clasică a lui I.L. Caragiale, o satiră politică mereu actuală.'],
-        ['Livada de vișini', 'drama', 30, '19:00', 'Cehov, despre trecerea timpului și sfârșitul unei lumi.'],
-        ['Lacul lebedelor', 'balet', 38, '18:30', 'Baletul lui Ceaikovski, o poveste despre iubire și transformare.'],
-    ];
+    // Fotografii free stock (Unsplash), doar pentru demo.
+    private function img(string $id, int $w = 1200): string
+    {
+        return "https://images.unsplash.com/photo-{$id}?w={$w}&q=80&auto=format&fit=crop";
+    }
+
+    // Fiecare spectacol: date bogate (imagini, distribuție, echipă creativă, detalii).
+    private function shows(): array
+    {
+        return [
+            [
+                'title' => 'Hamlet', 'cat' => 'drama', 'days' => 14, 'time' => '19:00',
+                'short' => 'Capodopera shakespeariană într-o viziune regizorală contemporană.',
+                'body' => '<p>Într-o montare de amploare, tragedia prințului danez este redescoperită printr-o estetică vizuală tulburătoare și interpretări de forță.</p><p>Spectacolul explorează temele răzbunării, ale nebuniei și ale îndoielii, într-un limbaj scenic modern care păstrează întreaga forță a textului original.</p>',
+                'director' => 'Alexandru Dabija', 'lead' => 'Marius Manole', 'duration' => '2h 50min',
+                'cast' => [
+                    ['name' => 'Marius Manole', 'role' => 'Hamlet'],
+                    ['name' => 'Maia Morgenstern', 'role' => 'Gertrude'],
+                    ['name' => 'Marcel Iureș', 'role' => 'Claudius'],
+                    ['name' => 'Oana Pellea', 'role' => 'Ofelia'],
+                    ['name' => 'Victor Rebengiuc', 'role' => 'Polonius'],
+                ],
+                'creative' => [
+                    ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
+                    ['role' => 'Costume', 'name' => 'Dragoș Buhagiar'],
+                    ['role' => 'Muzica', 'name' => 'Vasile Șirli'],
+                ],
+                'poster' => '1507924538820-ede94a04019d',
+                'gallery' => ['1503095396549-807759245b35', '1516450360452-9312f5e86fc7', '1460881680858-30d872d5b530', '1519677100203-a0e668c92439'],
+            ],
+            [
+                'title' => 'O scrisoare pierdută', 'cat' => 'comedie', 'days' => 21, 'time' => '19:30',
+                'short' => 'Comedia clasică a lui I.L. Caragiale, o satiră politică mereu actuală.',
+                'body' => '<p>Cea mai jucată comedie a dramaturgiei românești revine pe scenă într-o montare vie și alertă.</p><p>Intrigi electorale, scrisori pierdute și personaje savuroase compun un tablou al moravurilor politice de o actualitate uimitoare.</p>',
+                'director' => 'Silviu Purcărete', 'lead' => 'Marcel Iureș', 'duration' => '2h 20min',
+                'cast' => [
+                    ['name' => 'Marcel Iureș', 'role' => 'Tipătescu'],
+                    ['name' => 'Medeea Marinescu', 'role' => 'Zoe'],
+                    ['name' => 'Marius Manole', 'role' => 'Cațavencu'],
+                    ['name' => 'Victor Rebengiuc', 'role' => 'Trahanache'],
+                ],
+                'creative' => [
+                    ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
+                    ['role' => 'Costume', 'name' => 'Lia Manțoc'],
+                ],
+                'poster' => '1460881680858-30d872d5b530',
+                'gallery' => ['1507924538820-ede94a04019d', '1470229722913-7c0e2dbbafd3', '1516450360452-9312f5e86fc7'],
+            ],
+            [
+                'title' => 'Livada de vișini', 'cat' => 'drama', 'days' => 30, 'time' => '19:00',
+                'short' => 'Cehov, despre trecerea timpului și sfârșitul unei lumi.',
+                'body' => '<p>Ultima piesă a lui Cehov, o meditație delicată despre schimbare, nostalgie și inevitabila trecere a timpului.</p><p>Într-un ritm muzical, personajele își iau rămas-bun de la o lume care dispare, în timp ce livada de vișini este scoasă la licitație.</p>',
+                'director' => 'Silviu Purcărete', 'lead' => 'Oana Pellea', 'duration' => '2h 40min',
+                'cast' => [
+                    ['name' => 'Oana Pellea', 'role' => 'Liubov Ranevskaia'],
+                    ['name' => 'Marcel Iureș', 'role' => 'Gaev'],
+                    ['name' => 'Ana Ularu', 'role' => 'Ania'],
+                    ['name' => 'Marius Manole', 'role' => 'Lopahin'],
+                ],
+                'creative' => [
+                    ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
+                    ['role' => 'Muzica', 'name' => 'Vasile Șirli'],
+                ],
+                'poster' => '1470229722913-7c0e2dbbafd3',
+                'gallery' => ['1503095396549-807759245b35', '1519677100203-a0e668c92439'],
+            ],
+            [
+                'title' => 'Lacul lebedelor', 'cat' => 'balet', 'days' => 38, 'time' => '18:30',
+                'short' => 'Baletul lui Ceaikovski, o poveste despre iubire și transformare.',
+                'body' => '<p>Cel mai iubit balet clasic, într-o montare care îmbină virtuozitatea tehnică cu forța emoțională a partiturii lui Ceaikovski.</p><p>Povestea prințesei-lebădă Odette prinde viață printr-o coregrafie de o eleganță rafinată.</p>',
+                'director' => 'Alexandru Dabija', 'lead' => 'Ana Ularu', 'duration' => '2h 30min',
+                'cast' => [
+                    ['name' => 'Ana Ularu', 'role' => 'Odette / Odile'],
+                    ['name' => 'Medeea Marinescu', 'role' => 'Regina'],
+                ],
+                'creative' => [
+                    ['role' => 'Coregrafie', 'name' => 'Alexandru Dabija'],
+                    ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
+                ],
+                'poster' => '1519677100203-a0e668c92439',
+                'gallery' => ['1516450360452-9312f5e86fc7', '1460881680858-30d872d5b530', '1507924538820-ede94a04019d'],
+            ],
+        ];
+    }
 
     public function handle(): int
     {
@@ -65,44 +142,79 @@ class TeatruSeedEvents extends Command
             if ($layout) { $this->line("  layout sală: #{$layout->id}"); }
         }
 
+        // 2b) Actori (ansamblu) — necesari pentru distribuție
+        Artisan::call('teatru:seed-actors', ['tenant' => $tenantId], $this->getOutput());
+
         // 3) Categorii (globale)
         $cats = [];
         foreach ($this->categories as $slug => $name) {
             $cats[$slug] = EventType::firstOrCreate(['slug' => $slug], ['name' => $name]);
         }
 
-        // 4) Evenimente + bilete
-        $created = [];
-        foreach ($this->shows as [$title, $catSlug, $days, $time, $desc]) {
-            $slug = \Illuminate\Support\Str::slug($title) . '-' . $tenantId;
-            $event = Event::where('tenant_id', $tenantId)->where('slug', $slug)->first();
-            if ($event) { $this->line("  eveniment existent: {$title} (#{$event->id})"); $created[] = $event; continue; }
+        // 3b) Categorii proprii tenant (TenantEventCategory)
+        $tenantCats = [];
+        $order = 1;
+        $icons = ['drama' => 'fire', 'comedie' => 'face-smile', 'balet' => 'musical-note'];
+        foreach ($this->categories as $slug => $name) {
+            $tenantCats[$slug] = \App\Models\TenantEventCategory::updateOrCreate(
+                ['tenant_id' => $tenantId, 'slug' => $slug],
+                ['name' => $name, 'icon' => $icons[$slug] ?? 'calendar', 'is_active' => true, 'sort_order' => $order++]
+            );
+        }
 
-            $event = Event::create([
+        // 4) Evenimente + bilete (creează sau îmbogățește pe cele existente)
+        $created = [];
+        foreach ($this->shows() as $s) {
+            $slug = \Illuminate\Support\Str::slug($s['title']) . '-' . $tenantId;
+            $event = Event::where('tenant_id', $tenantId)->where('slug', $slug)->first();
+            $isNew = ! $event;
+
+            $payload = [
                 'tenant_id'         => $tenantId,
-                'title'             => ['ro' => $title, 'en' => $title],
+                'title'             => ['ro' => $s['title'], 'en' => $s['title']],
                 'slug'              => $slug,
                 'venue_id'          => $venue->id,
                 'seating_layout_id' => $layout?->id,
                 'duration_mode'     => 'single_day',
-                'event_date'        => now()->addDays($days)->toDateString(),
-                'start_time'        => $time,
+                'event_date'        => now()->addDays($s['days'])->toDateString(),
+                'start_time'        => $s['time'],
                 'end_time'          => '21:30',
                 'is_published'      => true,
                 'is_cancelled'      => false,
-                'short_description' => ['ro' => $desc, 'en' => $desc],
-                'description'       => ['ro' => '<p>' . $desc . '</p>', 'en' => '<p>' . $desc . '</p>'],
-            ]);
+                'short_description' => ['ro' => $s['short'], 'en' => $s['short']],
+                'description'       => ['ro' => $s['body'], 'en' => $s['body']],
+                // Imagini (free stock, passthrough-safe în API)
+                'poster_url'        => $this->img($s['poster'], 800),
+                'hero_image_url'    => $this->img($s['poster'], 1920),
+                'gallery'           => array_map(fn ($id) => $this->img($id, 1400), $s['gallery']),
+                // Detalii spectacol + distribuție + echipă creativă
+                'theater_director'  => $s['director'],
+                'theater_lead'      => $s['lead'],
+                'theater_duration'  => $s['duration'],
+                'theater_cast'      => $s['cast'],
+                'theater_creative'  => $s['creative'],
+            ];
 
-            if (isset($cats[$catSlug])) {
-                $event->eventTypes()->syncWithoutDetaching([$cats[$catSlug]->id]);
+            if ($isNew) {
+                $event = Event::create($payload);
+            } else {
+                $event->update($payload);
             }
 
-            // Bilete: Staluri 80 / Balcon 120 (aliniate cu price tiers)
-            $event->ticketTypes()->create(['name' => 'Staluri', 'price_max' => 80, 'currency' => 'RON', 'capacity' => 110, 'is_active' => true, 'sort_order' => 1]);
-            $event->ticketTypes()->create(['name' => 'Balcon', 'price_max' => 120, 'currency' => 'RON', 'capacity' => 28, 'is_active' => true, 'sort_order' => 2]);
+            if (isset($cats[$s['cat']])) {
+                $event->eventTypes()->syncWithoutDetaching([$cats[$s['cat']]->id]);
+            }
+            if (isset($tenantCats[$s['cat']])) {
+                $event->tenantEventCategories()->syncWithoutDetaching([$tenantCats[$s['cat']]->id]);
+            }
 
-            $this->line("  eveniment creat: {$title} (#{$event->id}) — " . $event->event_date);
+            // Bilete: Staluri 80 / Balcon 120 (o singură dată)
+            if ($event->ticketTypes()->count() === 0) {
+                $event->ticketTypes()->create(['name' => 'Staluri', 'price_max' => 80, 'currency' => 'RON', 'capacity' => 110, 'is_active' => true, 'sort_order' => 1]);
+                $event->ticketTypes()->create(['name' => 'Balcon', 'price_max' => 120, 'currency' => 'RON', 'capacity' => 28, 'is_active' => true, 'sort_order' => 2]);
+            }
+
+            $this->line(($isNew ? '  eveniment creat: ' : '  eveniment îmbogățit: ') . "{$s['title']} (#{$event->id}) — " . $event->event_date);
             $created[] = $event;
         }
 

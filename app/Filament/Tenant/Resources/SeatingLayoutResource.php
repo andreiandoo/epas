@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\SeatingLayoutResource\Pages;
+use App\Models\Scopes\TenantScope;
 use App\Models\Seating\SeatingLayout;
 use App\Models\Venue;
 use Filament\Forms;
@@ -12,7 +13,6 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -28,8 +28,23 @@ class SeatingLayoutResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        // SeatingLayout carries a TenantScope global scope → auto-filtered to the tenant.
-        return parent::getEloquentQuery();
+        // TenantScope resolves auth()->user()->tenant_id, which is null for tenant-panel
+        // users → it wouldn't filter and ALL layouts would leak. Filter explicitly instead:
+        // show only layouts created by this tenant OR attached to one of its venues.
+        $tenant = auth()->user()?->tenant;
+        $tenantId = $tenant?->id;
+        $venueIds = $tenantId
+            ? Venue::where('tenant_id', $tenantId)->pluck('id')->all()
+            : [];
+
+        return parent::getEloquentQuery()
+            ->withoutGlobalScope(TenantScope::class)
+            ->where(function (Builder $q) use ($tenantId, $venueIds) {
+                $q->where('seating_layouts.tenant_id', $tenantId);
+                if (!empty($venueIds)) {
+                    $q->orWhereIn('seating_layouts.venue_id', $venueIds);
+                }
+            });
     }
 
     public static function form(Schema $schema): Schema
@@ -96,7 +111,6 @@ class SeatingLayoutResource extends Resource
                 Action::make('designer')->label('Designer')->icon('heroicon-o-pencil-square')->color('primary')
                     ->url(fn ($record) => static::getUrl('designer', ['record' => $record])),
                 EditAction::make(),
-                DeleteAction::make(),
             ])
             ->defaultSort('updated_at', 'desc');
     }

@@ -466,6 +466,16 @@ class Event extends Model
     }
 
     /**
+     * Per-tenant event categories (tenant-scoped taxonomy, distinct from the
+     * global EventType). Used by tenant panels + their public skins.
+     */
+    public function tenantEventCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(TenantEventCategory::class, 'event_tenant_event_category')
+            ->withTimestamps();
+    }
+
+    /**
      * Merch products linked to this event.
      */
     public function merchProducts(): BelongsToMany

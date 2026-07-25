@@ -2551,7 +2551,7 @@ textarea.pos-input{resize:none}
       <h2>Vrei să vezi sistemul<br><span class="grad">pe sala teatrului tău?</span></h2>
       <p class="lede2">Îți configurez o demonstrație cu harta reală a sălii voastre și cu un spectacol din stagiunea curentă. Durează 30 de minute.</p>
       <div class="cta-actions">
-        <a class="btn btn-primary" href="mailto:andrei.nastase@tixello.com?subject=Demo%20Tixello%20%E2%80%94%20teatru&amp;body=Bun%C4%83%20ziua%2C%20Andrei%2C%0A%0AAm%20parcurs%20prezentarea%20Tixello%20pentru%20teatre%20%C8%99i%20a%C8%99%20dori%20o%20demonstra%C8%9Bie.%0A%0AInstitu%C8%9Bia%3A%20%0APersoana%20de%20contact%3A%20%0ATelefon%3A%20%0A%0AV%C4%83%20mul%C8%9Bumesc.">
+        <a class="btn btn-primary" href="mailto:andrei@tixello.ro?subject=Demo%20Tixello%20%E2%80%94%20teatru&amp;body=Bun%C4%83%20ziua%2C%20Andrei%2C%0A%0AAm%20parcurs%20prezentarea%20Tixello%20pentru%20teatre%20%C8%99i%20a%C8%99%20dori%20o%20demonstra%C8%9Bie.%0A%0AInstitu%C8%9Bia%3A%20%0APersoana%20de%20contact%3A%20%0ATelefon%3A%20%0A%0AV%C4%83%20mul%C8%9Bumesc.">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
           Trimite un email
         </a>
@@ -2567,7 +2567,7 @@ textarea.pos-input{resize:none}
       <div class="rep-name">Andrei Năstase</div>
       <div class="rep-role">Fondator · Tixello</div>
       <div class="rep-links">
-        <a href="mailto:andrei.nastase@tixello.com">andrei.nastase@tixello.com</a>
+        <a href="mailto:andrei@tixello.ro">andrei@tixello.ro</a>
         <a href="https://www.linkedin.com/in/nastase-andrei" target="_blank" rel="noopener">linkedin.com/in/nastase-andrei</a>
         <a href="https://tixello.com" target="_blank" rel="noopener">tixello.com</a>
       </div>
@@ -2773,7 +2773,7 @@ textarea.pos-input{resize:none}
     </div>
 
     <div class="cta-actions rv" data-d="4" style="margin-top:32px">
-      <a class="btn btn-primary" href="mailto:andrei.nastase@tixello.com?subject=Demo%20Tixello%20%E2%80%94%20teatru&amp;body=Bun%C4%83%20ziua%2C%20Andrei%2C%0A%0AAm%20parcurs%20prezentarea%20Tixello%20pentru%20teatre%20%C8%99i%20a%C8%99%20dori%20o%20demonstra%C8%9Bie.%0A%0AInstitu%C8%9Bia%3A%20%0APersoana%20de%20contact%3A%20%0ATelefon%3A%20%0A%0AV%C4%83%20mul%C8%9Bumesc.">
+      <a class="btn btn-primary" href="mailto:andrei@tixello.ro?subject=Demo%20Tixello%20%E2%80%94%20teatru&amp;body=Bun%C4%83%20ziua%2C%20Andrei%2C%0A%0AAm%20parcurs%20prezentarea%20Tixello%20pentru%20teatre%20%C8%99i%20a%C8%99%20dori%20o%20demonstra%C8%9Bie.%0A%0AInstitu%C8%9Bia%3A%20%0APersoana%20de%20contact%3A%20%0ATelefon%3A%20%0A%0AV%C4%83%20mul%C8%9Bumesc.">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
         Scrie-i lui Andrei
       </a>

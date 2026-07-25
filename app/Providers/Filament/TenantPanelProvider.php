@@ -172,6 +172,8 @@ class TenantPanelProvider extends PanelProvider
             .fi-section.fi-section-has-header,
             .fi-section-content-ctn,
             .fi-fo-field-wrp { overflow: visible !important; }
+            /* Remove padding on tabs nav */
+            .fi-sc-tabs > nav.fi-tabs { padding: 0 !important; }
             </style>
             HTML)
 

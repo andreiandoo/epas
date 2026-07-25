@@ -8,6 +8,7 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -35,9 +36,50 @@ class ArtistResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $tenant = auth()->user()->tenant;
+        $isTheater = (bool) ($tenant?->isTheater());
 
         return $schema->schema([
             Forms\Components\Hidden::make('tenant_id')->default($tenant?->id),
+
+            SC\Section::make('Importă din biblioteca Tixello')
+                ->description('Caută un artist existent în biblioteca globală și preia numele, fotografia și biografia lui.')
+                ->icon('heroicon-o-book-open')
+                ->collapsible()
+                ->schema([
+                    // Căutare live după artiști existenți în core (doar la creare)
+                    Forms\Components\Placeholder::make('library_search')
+                        ->label('')
+                        ->content(function (SGet $get) {
+                            $name = $get('name');
+                            if (empty($name) || mb_strlen($name) < 2) {
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div class="text-xs text-gray-400 italic py-1">Scrie în câmpul „Nume" de mai jos ca să cauți în bibliotecă.</div>'
+                                );
+                            }
+
+                            $artists = \App\Models\Artist::whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($name) . '%'])
+                                ->limit(6)->get();
+
+                            if ($artists->isEmpty()) {
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div class="text-xs text-gray-400 italic py-1">Niciun artist în bibliotecă pentru „' . e($name) . '".</div>'
+                                );
+                            }
+
+                            $html = '<div class="space-y-1 py-1"><div class="text-xs font-medium text-amber-600 mb-1">Artiști din bibliotecă:</div>';
+                            foreach ($artists as $artist) {
+                                $city = $artist->city ? ' — ' . e($artist->city) : '';
+                                $html .= '<div class="flex items-center justify-between gap-2 px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">'
+                                    . '<span class="text-xs"><strong>' . e($artist->name) . '</strong>' . $city . '</span>'
+                                    . '<button type="button" wire:click="importFromLibrary(' . $artist->id . ')" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-800 dark:hover:bg-amber-700">'
+                                    . '+ Importă</button>'
+                                    . '</div>';
+                            }
+                            $html .= '</div>';
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
+                ])
+                ->visible(fn ($context) => $context === 'create'),
 
             SC\Section::make('Identitate')
                 ->schema([
@@ -59,6 +101,12 @@ class ArtistResource extends Resource
                         ->label('Rol / Funcție')
                         ->placeholder('Actor, Regizor, Scenograf...')
                         ->maxLength(120),
+                    Forms\Components\DatePicker::make('birth_date')
+                        ->label('Data nașterii')
+                        ->native(false)
+                        ->displayFormat('d.m.Y')
+                        ->maxDate(now())
+                        ->visible($isTheater),
                 ])->columns(2),
 
             SC\Section::make('Biografie')
@@ -76,10 +124,15 @@ class ArtistResource extends Resource
 
             SC\Section::make('Foto & Contact')
                 ->schema([
-                    Forms\Components\TextInput::make('photo_url')
-                        ->label('URL fotografie (portret)')
-                        ->url()
-                        ->placeholder('https://...')
+                    Forms\Components\FileUpload::make('photo_url')
+                        ->label('Fotografie (portret)')
+                        ->helperText('Trage o imagine aici sau click pentru a încărca.')
+                        ->image()
+                        ->avatar()
+                        ->imageEditor()
+                        ->disk('public')
+                        ->directory('artist-photos')
+                        ->visibility('public')
                         ->columnSpanFull(),
                     Forms\Components\FileUpload::make('gallery')
                         ->label('Galerie foto')
