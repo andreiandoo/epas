@@ -87,6 +87,13 @@ switch ($action) {
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
+    case 'register':
+        $method = 'POST';
+        $path   = '/tenant-client/auth/register';
+        $query  = ['tenant' => TENANT_ID, 'hostname' => ($_SERVER['HTTP_HOST'] ?? '')];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     case 'me':
         $path   = '/tenant-client/auth/me';
         $query  = ['tenant' => TENANT_ID, 'hostname' => ($_SERVER['HTTP_HOST'] ?? '')];
