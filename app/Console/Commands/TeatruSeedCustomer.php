@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Customer;
+use App\Models\Domain;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Hash;
  */
 class TeatruSeedCustomer extends Command
 {
-    protected $signature = 'teatru:seed-customer {tenant=17 : ID tenant} {--email=demo@teatru.tixello.ro} {--password=demo1234}';
+    protected $signature = 'teatru:seed-customer {tenant=17 : ID tenant} {--email=demo@teatru.tixello.ro} {--password=demo1234} {--domain=teatru.tixello.ro}';
     protected $description = 'Seed client demo (login) pentru un tenant de test';
 
     public function handle(): int
@@ -23,6 +24,17 @@ class TeatruSeedCustomer extends Command
         $tenantId = (int) $this->argument('tenant');
         $email = strtolower(trim($this->option('email')));
         $password = $this->option('password');
+
+        // Înregistrează domeniul skin-ului pentru tenant (necesar la auth, care
+        // rezolvă tenantul DOAR după hostname, nu după ?tenant).
+        $domain = trim((string) $this->option('domain'));
+        if ($domain !== '') {
+            Domain::updateOrCreate(
+                ['domain' => $domain],
+                ['tenant_id' => $tenantId, 'is_active' => true, 'is_suspended' => false, 'is_primary' => false]
+            );
+            $this->line('  domeniu înregistrat: ' . $domain . ' -> tenant #' . $tenantId);
+        }
 
         $customer = Customer::updateOrCreate(
             ['tenant_id' => $tenantId, 'email' => $email],
