@@ -87,7 +87,6 @@ include __DIR__ . '/includes/header.php';
                     </template>
                     <div class="space-y-3">
                         <div class="flex justify-between"><span class="text-warm-gray">Subtotal</span><span x-text="subtotal + ' RON'"></span></div>
-                        <div class="flex justify-between"><span class="text-warm-gray">Taxă serviciu (5%)</span><span x-text="serviceFee + ' RON'"></span></div>
                         <div class="flex justify-between pt-3 border-t border-gold/10"><span class="font-medium">Total</span><span class="font-display text-2xl text-gold" x-text="total + ' RON'"></span></div>
                     </div>
                 </div>
@@ -102,8 +101,7 @@ function checkoutPage() {
         form: { firstName:'', lastName:'', email:'', phone:'', terms:false },
         init() { try { this.cart = JSON.parse(localStorage.getItem('teatru_cart') || 'null'); } catch(e) { this.cart = null; } },
         get subtotal() { return this.cart && this.cart.seats ? this.cart.seats.reduce((s,x)=>s+(x.price||0),0) : 0; },
-        get serviceFee() { return Math.round(this.subtotal * 0.05); },
-        get total() { return this.subtotal + this.serviceFee; },
+        get total() { return this.subtotal; },
         async pay() {
             if (this.loading) return;
             if (!this.cart || !this.cart.event || !this.cart.seats || !this.cart.seats.length) { this.error = 'Coșul este gol.'; return; }

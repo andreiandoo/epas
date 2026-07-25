@@ -80,6 +80,25 @@ switch ($action) {
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
+    case 'login':
+        $method = 'POST';
+        $path   = '/tenant-client/auth/login';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'me':
+        $path   = '/tenant-client/auth/me';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'logout':
+        $method = 'POST';
+        $path   = '/tenant-client/auth/logout';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = [];
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'acțiune necunoscută']);
@@ -96,6 +115,9 @@ $headers = [
     'X-Session-Id: ' . $sid,
 ];
 if ($body !== null) { $headers[] = 'Content-Type: application/json'; }
+// Forward token-ul de autentificare al clientului (pt. /me, /logout)
+$authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+if ($authHeader) { $headers[] = 'Authorization: ' . $authHeader; }
 
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
