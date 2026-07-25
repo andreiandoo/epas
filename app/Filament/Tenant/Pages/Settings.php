@@ -161,6 +161,14 @@ class Settings extends Page
                                             ->default('EUR')
                                             ->required()
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default currency for sales and invoices'),
+
+                                        Forms\Components\TextInput::make('ticket_series_prefix')
+                                            ->label('Prefix serie bilete')
+                                            ->placeholder('ex: TNB')
+                                            ->maxLength(20)
+                                            ->rule('alpha_dash')
+                                            ->helperText('Prefixul folosit la seriile de bilete (ex: TNB-12-00001). Lasă gol pentru implicit.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Se aplică la evenimentele create după setare.'),
                                     ])->columns(3),
 
                                 SC\Section::make('Address')

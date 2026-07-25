@@ -356,10 +356,12 @@ class Event extends Model
     {
         parent::boot();
 
-        // Auto-generate event_series after creating an event
+        // Auto-generate event_series after creating an event.
+        // Prefix is per-tenant configurable (falls back to 'AMB' for marketplace / unset).
         static::created(function ($event) {
             if (empty($event->event_series)) {
-                $event->event_series = 'AMB-' . $event->id;
+                $prefix = $event->tenant?->ticket_series_prefix ?: 'AMB';
+                $event->event_series = $prefix . '-' . $event->id;
                 $event->saveQuietly(); // Save without triggering events again
             }
         });

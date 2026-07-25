@@ -16,6 +16,7 @@ class Tenant extends Model
         'public_name',
         'owner_id',
         'slug',
+        'ticket_series_prefix',
         'domain',
         'status',
         'plan',
