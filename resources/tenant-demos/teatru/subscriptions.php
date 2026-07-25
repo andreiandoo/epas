@@ -62,12 +62,7 @@ if (empty($plans)) {
 <script>
 function subsPage() {
     return {
-        isLoggedIn() { try { return !!(JSON.parse(localStorage.getItem('teatru_auth') || 'null')?.token); } catch(e) { return false; } },
-        choosePlan(slug) {
-            const dest = '/abonament?plan=' + encodeURIComponent(slug);
-            if (this.isLoggedIn()) { window.location.href = dest; }
-            else { window.location.href = '/autentificare?next=' + encodeURIComponent(dest); }
-        }
+        choosePlan(slug) { window.location.href = '/abonament?plan=' + encodeURIComponent(slug); }
     };
 }
 </script>
