@@ -71,7 +71,10 @@ include __DIR__ . '/includes/header.php';
                     <div class="flex items-center gap-3 mb-4"><span class="text-gold"><?= e($event['category']['name']) ?></span></div>
                 <?php endif; ?>
                 <?php if ($lead): ?><p class="text-gold tracking-wider text-sm mb-2 uppercase"><?= e($lead) ?></p><?php endif; ?>
-                <h1 class="font-display text-5xl lg:text-7xl italic mb-6"><?= e($event['title'] ?? 'Spectacol') ?></h1>
+                <h1 class="font-display text-5xl lg:text-7xl italic mb-3"><?= e($event['title'] ?? 'Spectacol') ?></h1>
+                <?php if (!empty($event['subtitle'])): ?>
+                    <p class="text-ivory/60 font-display text-xl lg:text-2xl italic mb-6"><?= e($event['subtitle']) ?></p>
+                <?php endif; ?>
                 <?php if (!empty($event['short_description'])): ?>
                     <p class="text-ivory/70 text-lg leading-relaxed mb-8 max-w-2xl"><?= e($event['short_description']) ?></p>
                 <?php endif; ?>
@@ -184,7 +187,11 @@ include __DIR__ . '/includes/header.php';
             <div class="grid md:grid-cols-2 gap-3">
                 <?php foreach ($castList as $c): ?>
                 <div class="flex items-center justify-between gap-4 bg-charcoal/50 rounded-lg px-5 py-4">
-                    <p class="font-display text-lg"><?= e($c['name'] ?? '') ?></p>
+                    <?php if (!empty($c['slug'])): ?>
+                        <a href="/artist/<?= e($c['slug']) ?>" class="font-display text-lg text-gold hover:text-gold/80 transition-colors"><?= e($c['name'] ?? '') ?></a>
+                    <?php else: ?>
+                        <p class="font-display text-lg"><?= e($c['name'] ?? '') ?></p>
+                    <?php endif; ?>
                     <?php if (!empty($c['role'])): ?><p class="text-warm-gray text-sm text-right"><?= e($c['role']) ?></p><?php endif; ?>
                 </div>
                 <?php endforeach; ?>
@@ -199,7 +206,11 @@ include __DIR__ . '/includes/header.php';
                 <?php foreach ($creative as $cr): ?>
                 <div class="bg-charcoal/40 rounded-lg p-4">
                     <p class="text-warm-gray text-sm"><?= e($cr['role'] ?? '') ?></p>
-                    <p class="font-display text-lg"><?= e($cr['name'] ?? '') ?></p>
+                    <?php if (!empty($cr['slug'])): ?>
+                        <a href="/artist/<?= e($cr['slug']) ?>" class="font-display text-lg text-gold hover:text-gold/80 transition-colors"><?= e($cr['name'] ?? '') ?></a>
+                    <?php else: ?>
+                        <p class="font-display text-lg"><?= e($cr['name'] ?? '') ?></p>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
             </div>
