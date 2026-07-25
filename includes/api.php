@@ -25,17 +25,28 @@ function api_get(string $path, array $params = [], ?int $cacheTtl = null): array
         $url .= '?' . http_build_query($params);
     }
 
-    // Cache pe fișier (doar GET-uri publice)
+    // Cache pe fișier cu stale-while-revalidate: dacă avem o copie (chiar expirată)
+    // o servim INSTANT și reîmprospătăm în fundal — userul nu așteaptă niciodată
+    // apelul lent către core (a fost măsurat ~5s pe cache rece).
     $ttl = $cacheTtl ?? API_CACHE_TTL;
     $cacheFile = null;
     if ($ttl > 0) {
         $cacheFile = CACHE_DIR . '/api_' . md5($url) . '.json';
-        if (is_file($cacheFile) && (time() - filemtime($cacheFile) < $ttl)) {
-            $cached = json_decode(file_get_contents($cacheFile), true);
-            if (is_array($cached)) { return $cached; }
+        if (is_file($cacheFile)) {
+            $age = time() - filemtime($cacheFile);
+            $cached = json_decode(@file_get_contents($cacheFile), true);
+            if (is_array($cached)) {
+                if ($age < $ttl) {
+                    return $cached; // proaspăt
+                }
+                // expirat: servim copia veche acum, reîmprospătăm după flush
+                api_schedule_refresh($url, $cacheFile);
+                return $cached;
+            }
         }
     }
 
+    // Cold miss (nicio copie utilizabilă) — trebuie să așteptăm sincron o dată.
     $result = api_request('GET', $url);
 
     if ($result['success'] && $cacheFile) {
@@ -43,6 +54,54 @@ function api_get(string $path, array $params = [], ?int $cacheTtl = null): array
     }
 
     return $result;
+}
+
+/**
+ * Programează reîmprospătarea unei intrări de cache expirate, DUPĂ ce răspunsul
+ * a fost trimis clientului (fastcgi/litespeed_finish_request), cu single-flight
+ * (un lock atomic) ca să nu pornim mai multe refresh-uri pentru același URL.
+ */
+function api_schedule_refresh(string $url, string $cacheFile): void {
+    $lock = $cacheFile . '.lock';
+    // Lock atomic: create-exclusive. Dacă există deja, altcineva reîmprospătează.
+    $fh = @fopen($lock, 'x');
+    if ($fh === false) {
+        // Recuperare lock rămas blocat (proces mort) mai vechi de 60s.
+        if (is_file($lock) && (time() - filemtime($lock)) > 60) {
+            @unlink($lock);
+            $fh = @fopen($lock, 'x');
+        }
+        if ($fh === false) { return; }
+    }
+    fclose($fh);
+
+    $GLOBALS['__api_refresh_queue'][] = [$url, $cacheFile, $lock];
+
+    static $registered = false;
+    if (!$registered) {
+        $registered = true;
+        register_shutdown_function('api_run_refresh_queue');
+    }
+}
+
+/** Rulează coada de reîmprospătări după ce răspunsul a fost flush-uit la client. */
+function api_run_refresh_queue(): void {
+    // Închide conexiunea cu clientul; restul rulează detașat, în fundal.
+    if (function_exists('fastcgi_finish_request')) {
+        @fastcgi_finish_request();
+    } elseif (function_exists('litespeed_finish_request')) {
+        @litespeed_finish_request();
+    }
+    @ignore_user_abort(true);
+
+    foreach (($GLOBALS['__api_refresh_queue'] ?? []) as [$url, $cacheFile, $lock]) {
+        $result = api_request('GET', $url);
+        if ($result['success'] ?? false) {
+            @file_put_contents($cacheFile, json_encode($result), LOCK_EX);
+        }
+        @unlink($lock);
+    }
+    $GLOBALS['__api_refresh_queue'] = [];
 }
 
 /**
