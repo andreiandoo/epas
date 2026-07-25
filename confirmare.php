@@ -128,6 +128,20 @@ include __DIR__ . '/includes/header.php';
             </div>
         </div>
 
+        <?php if (!empty($summary['points_earned'])): ?>
+        <!-- Points earned -->
+        <div class="ep-rise ep-d3 flex items-center justify-between gap-4 p-5 mb-6 bg-gradient-to-br from-gold/10 to-transparent border border-gold/20 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🎁</span>
+                <div>
+                    <p class="font-medium">Ai câștigat <?= e($summary['points_name'] ?? 'puncte') ?>!</p>
+                    <p class="text-warm-gray text-sm">Le găsești în contul tău, la următoarea vizită.</p>
+                </div>
+            </div>
+            <p class="font-display text-2xl text-gold">+<?= e((string) $summary['points_earned']) ?></p>
+        </div>
+        <?php endif; ?>
+
         <!-- Actions -->
         <div class="ep-rise ep-d3 grid sm:grid-cols-2 gap-4">
             <a href="/cont" class="flex items-center justify-center gap-3 p-4 bg-charcoal rounded-xl border border-gold/10 hover:border-gold/40 transition-colors">

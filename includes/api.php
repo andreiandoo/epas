@@ -149,6 +149,32 @@ function tc_artists(?int $cacheTtl = null): array {
 }
 
 /**
+ * Metode de plată disponibile (card + card cultural dacă e activ).
+ */
+function tc_payment_methods(?int $cacheTtl = 120): array {
+    $resp = api_get('/tenant-client/payment-methods', [], $cacheTtl);
+    $d = $resp['data'] ?? null;
+    if (is_array($d) && !empty($d)) { return $d; }
+    return [['id' => 'card', 'name' => 'Card bancar (demo)', 'hint' => 'Visa, Mastercard — gateway simulat', 'surcharge_percent' => 0]];
+}
+
+/**
+ * Info gamification (public): dacă e activ + procentul de câștig puncte.
+ */
+function tc_gamification(?int $cacheTtl = 120): array {
+    $resp = api_get('/tenant-client/gamification/config', [], $cacheTtl);
+    $raw = $resp['raw'] ?? [];
+    if (empty($raw['enabled'])) { return ['enabled' => false]; }
+    $d = $resp['data'] ?? [];
+    return [
+        'enabled'         => true,
+        'earn_percentage' => (float) ($d['earn_percentage'] ?? 0),
+        'min_order'       => 0,
+        'points_name'     => $d['points_name'] ?? 'puncte',
+    ];
+}
+
+/**
  * Planuri de abonament active ale tenantului.
  */
 function tc_subscriptions(?int $cacheTtl = null): array {

@@ -111,6 +111,11 @@ switch ($action) {
         $query  = ['tenant' => TENANT_ID];
         break;
 
+    case 'gami-balance':
+        $path   = '/tenant-client/gamification-balance';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
     case 'redeem':
         $method = 'POST';
         $subId  = (int) ($_GET['sub'] ?? 0);

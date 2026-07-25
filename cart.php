@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 $pageTitle = 'Coșul tău — ' . SITE_NAME;
+$gami = tc_gamification();
 $pageExtraStyles = '.cart-item { background: linear-gradient(180deg,#1A1A1A 0%,#0A0A0A 100%); border: 1px solid rgba(212,175,55,.1); }';
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
@@ -42,9 +43,13 @@ include __DIR__ . '/includes/header.php';
                         <h2 class="font-display text-xl mb-6">Sumar comandă</h2>
                         <div class="space-y-3 pb-4 border-b border-gold/10">
                             <div class="flex justify-between"><span class="text-warm-gray">Subtotal</span><span x-text="subtotal + ' RON'"></span></div>
-                            <div class="flex justify-between"><span class="text-warm-gray">Taxă serviciu (5%)</span><span x-text="serviceFee + ' RON'"></span></div>
                         </div>
-                        <div class="flex justify-between py-4 mb-6"><span class="font-medium text-lg">Total</span><span class="font-display text-2xl text-gold" x-text="total + ' RON'"></span></div>
+                        <div class="flex justify-between py-4"><span class="font-medium text-lg">Total</span><span class="font-display text-2xl text-gold" x-text="total + ' RON'"></span></div>
+                        <div x-show="earnEnabled && earnedPoints() > 0" x-cloak class="flex items-center gap-3 bg-gold/10 border border-gold/20 rounded-lg p-3 mb-4">
+                            <span class="text-2xl">🎁</span>
+                            <p class="text-sm">Câștigi <span class="text-gold font-semibold" x-text="earnedPoints()"></span> <span x-text="earnName"></span>.</p>
+                        </div>
+                        <div class="mb-2"></div>
                         <div class="bg-burgundy/20 rounded-lg p-4 mb-6 flex items-center gap-3">
                             <svg class="w-5 h-5 text-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <div><p class="text-sm">Locurile sunt rezervate pentru</p><p class="font-display text-gold" x-text="timer"></p></div>
@@ -69,13 +74,17 @@ include __DIR__ . '/includes/header.php';
 function cartPage() {
     return {
         cart: null, timerSeconds: 600,
+        earnEnabled: <?= !empty($gami['enabled']) ? 'true' : 'false' ?>,
+        earnPct: <?= (float) ($gami['earn_percentage'] ?? 0) ?>,
+        earnMin: <?= (float) ($gami['min_order'] ?? 0) ?>,
+        earnName: <?= json_encode($gami['points_name'] ?? 'puncte', JSON_UNESCAPED_UNICODE) ?>,
+        earnedPoints() { return (this.earnEnabled && this.subtotal >= this.earnMin) ? Math.floor(this.subtotal * this.earnPct) : 0; },
         init() {
             try { this.cart = JSON.parse(localStorage.getItem('teatru_cart') || 'null'); } catch(e) { this.cart = null; }
             setInterval(() => { if (this.timerSeconds > 0) this.timerSeconds--; }, 1000);
         },
         get subtotal() { return this.cart && this.cart.seats ? this.cart.seats.reduce((s,x)=>s+(x.price||0),0) : 0; },
-        get serviceFee() { return Math.round(this.subtotal * 0.05); },
-        get total() { return this.subtotal + this.serviceFee; },
+        get total() { return this.subtotal; },
         get timer() { const m = Math.floor(this.timerSeconds/60), s = this.timerSeconds%60; return `${m}:${s.toString().padStart(2,'0')}`; },
         clear() { localStorage.removeItem('teatru_cart'); this.cart = null; }
     };
