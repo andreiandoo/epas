@@ -16,6 +16,11 @@ DirectoryIndex index.php index.html
     RewriteRule ^spectacol/([^/]+)/?$ show.php?slug=$1 [L,QSA]
     RewriteRule ^artist/([^/]+)/?$ artist.php?id=$1 [L,QSA]
 
+    # Cont client (design nou, sub /cont)
+    RewriteRule ^cont/?$ cont/index.php [L,QSA]
+    RewriteCond %{DOCUMENT_ROOT}/cont/$1.php -f
+    RewriteRule ^cont/([a-z0-9-]+)/?$ cont/$1.php [L,QSA]
+
     # Alias-uri simple
     RewriteRule ^repertoriu/?$ repertoire.php [L,QSA]
     RewriteRule ^program/?$ schedule.php [L,QSA]
@@ -25,7 +30,6 @@ DirectoryIndex index.php index.html
     RewriteRule ^contact/?$ contact.php [L,QSA]
     RewriteRule ^cos/?$ cart.php [L,QSA]
     RewriteRule ^finalizare/?$ checkout.php [L,QSA]
-    RewriteRule ^cont/?$ account.php [L,QSA]
     RewriteRule ^autentificare/?$ login.php [L,QSA]
     RewriteRule ^inregistrare/?$ register.php [L,QSA]
     RewriteRule ^recuperare-parola/?$ forgot-password.php [L,QSA]
@@ -44,6 +48,7 @@ DirectoryIndex index.php index.html
     Require all denied
 </FilesMatch>
 RedirectMatch 404 /includes/
+RedirectMatch 404 /cont/_inc/
 RedirectMatch 404 /cache/
 <Files "config.local.php">
     Require all denied
