@@ -7,7 +7,9 @@ use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\TenantCustomerFavorite;
 use App\Models\TenantCustomerSubscription;
+use App\Models\TenantReview;
 use App\Models\Ticket;
 use App\Services\Gamification\GamificationService;
 use Illuminate\Http\JsonResponse;
@@ -244,6 +246,132 @@ class CustomerAccountController extends Controller
         ])]);
 
         return response()->json(['success' => true]);
+    }
+
+    // ==================== FAVORITE ====================
+
+    public function favorites(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $favs = TenantCustomerFavorite::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+            ->latest()->get();
+
+        $map = fn ($f) => array_merge(['id' => $f->id, 'item_type' => $f->item_type, 'item_id' => $f->item_id], $f->meta ?? []);
+
+        return response()->json(['success' => true, 'data' => [
+            'events'  => $favs->where('item_type', 'event')->map($map)->values(),
+            'artists' => $favs->where('item_type', 'artist')->map($map)->values(),
+        ]]);
+    }
+
+    public function toggleFavorite(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $v = $request->validate([
+            'item_type' => 'required|in:event,artist',
+            'item_id'   => 'required|integer',
+            'meta'      => 'nullable|array',
+        ]);
+
+        $existing = TenantCustomerFavorite::where('customer_id', $customer->id)
+            ->where('item_type', $v['item_type'])->where('item_id', $v['item_id'])->first();
+
+        if ($existing) {
+            $existing->delete();
+            return response()->json(['success' => true, 'favorited' => false]);
+        }
+
+        TenantCustomerFavorite::create([
+            'tenant_id' => $tenant->id, 'customer_id' => $customer->id,
+            'item_type' => $v['item_type'], 'item_id' => $v['item_id'], 'meta' => $v['meta'] ?? null,
+        ]);
+        return response()->json(['success' => true, 'favorited' => true]);
+    }
+
+    // ==================== RECENZII ====================
+
+    public function reviews(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $reviews = TenantReview::with('event')->where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+            ->latest()->get();
+
+        $published = $reviews->where('status', 'published');
+
+        return response()->json(['success' => true, 'data' => $reviews->map(fn ($r) => [
+            'id' => $r->id,
+            'event' => $r->event?->getTranslation('title', 'ro'),
+            'rating' => $r->rating,
+            'title' => $r->title,
+            'body' => $r->body,
+            'status' => $r->status,
+            'created_at' => $r->created_at?->toIso8601String(),
+        ])->values(), 'stats' => [
+            'total' => $reviews->count(),
+            'published' => $published->count(),
+            'pending' => $reviews->where('status', 'pending')->count(),
+            'avg' => $published->count() ? round($published->avg('rating'), 1) : 0,
+        ]]);
+    }
+
+    /** Evenimente la care a participat, fără recenzie încă. */
+    public function reviewsEligible(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $orderIds = Order::where('tenant_id', $tenant->id)->where('customer_id', $customer->id)
+            ->whereIn('status', $this->paidStatuses)->pluck('id');
+        $eventIds = collect();
+        foreach (Order::whereIn('id', $orderIds)->get() as $o) {
+            if (! empty($o->meta['event_id'])) { $eventIds->push($o->meta['event_id']); }
+        }
+        $reviewed = TenantReview::where('customer_id', $customer->id)->pluck('event_id')->filter()->all();
+        $today = now()->toDateString();
+
+        $events = Event::whereIn('id', $eventIds->unique()->all())
+            ->whereNotIn('id', $reviewed)
+            ->get()
+            ->filter(fn ($e) => ! $e->event_date || $e->event_date->toDateString() <= $today)
+            ->map(fn ($e) => ['id' => $e->id, 'title' => $e->getTranslation('title', 'ro'), 'date' => $e->event_date?->toDateString()])
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $events]);
+    }
+
+    public function submitReview(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $v = $request->validate([
+            'event_id'     => 'nullable|integer',
+            'rating'       => 'required|integer|min:1|max:5',
+            'title'        => 'nullable|string|max:190',
+            'body'         => 'required|string|max:4000',
+            'is_anonymous' => 'nullable|boolean',
+            'recommend'    => 'nullable|boolean',
+            'aspects'      => 'nullable|array',
+        ]);
+
+        $review = TenantReview::create(array_merge($v, [
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'status' => 'pending',
+        ]));
+
+        return response()->json(['success' => true, 'data' => ['id' => $review->id, 'status' => $review->status]]);
     }
 
     private function formatOrder(Order $order, $events): array

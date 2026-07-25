@@ -113,6 +113,11 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::post('/account/profile', [TenantAccountController::class, 'updateProfile'])->name('api.tenant-client-public.account.profile');
     Route::post('/account/password', [TenantAccountController::class, 'changePassword'])->name('api.tenant-client-public.account.password');
     Route::post('/account/delete', [TenantAccountController::class, 'deleteAccount'])->name('api.tenant-client-public.account.delete');
+    Route::get('/account/favorites', [TenantAccountController::class, 'favorites'])->name('api.tenant-client-public.account.favorites');
+    Route::post('/account/favorites/toggle', [TenantAccountController::class, 'toggleFavorite'])->name('api.tenant-client-public.account.favorites.toggle');
+    Route::get('/account/reviews', [TenantAccountController::class, 'reviews'])->name('api.tenant-client-public.account.reviews');
+    Route::get('/account/reviews/eligible', [TenantAccountController::class, 'reviewsEligible'])->name('api.tenant-client-public.account.reviews.eligible');
+    Route::post('/account/reviews', [TenantAccountController::class, 'submitReview'])->name('api.tenant-client-public.account.reviews.submit');
 
     // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.

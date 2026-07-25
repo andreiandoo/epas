@@ -148,6 +148,35 @@ switch ($action) {
         $query  = ['tenant' => TENANT_ID];
         break;
 
+    case 'acc-favorites':
+        $path   = '/tenant-client/account/favorites';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-fav-toggle':
+        $method = 'POST';
+        $path   = '/tenant-client/account/favorites/toggle';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    case 'acc-reviews':
+        $path   = '/tenant-client/account/reviews';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-reviews-eligible':
+        $path   = '/tenant-client/account/reviews/eligible';
+        $query  = ['tenant' => TENANT_ID];
+        break;
+
+    case 'acc-review-submit':
+        $method = 'POST';
+        $path   = '/tenant-client/account/reviews';
+        $query  = ['tenant' => TENANT_ID];
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     case 'acc-profile':
         $method = 'POST';
         $path   = '/tenant-client/account/profile';
