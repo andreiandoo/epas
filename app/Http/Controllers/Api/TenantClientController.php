@@ -149,7 +149,7 @@ class TenantClientController extends Controller
                 'limit' => $limit,
                 'offset' => $offset,
             ],
-        ]);
+        ])->header('Cache-Control', 'public, max-age=60, s-maxage=300');
     }
 
     /**
@@ -229,7 +229,7 @@ class TenantClientController extends Controller
 
         return response()->json([
             'data' => $this->formatEventDetail($event),
-        ]);
+        ])->header('Cache-Control', 'public, max-age=120, s-maxage=600');
     }
 
     /**
