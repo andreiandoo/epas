@@ -30,5 +30,16 @@ return [
     'cta_url'   => '/concerte',
     'cart_url'  => '/cos',
 
-    'pages' => ['index', 'tour', 'music', 'gallery', 'epk', 'contact', 'show', '404'],
+    'pages' => [
+        'index'    => ['set' => 'home'],
+        'tour'     => ['set' => 'tours',    'nav' => 'tour'],
+        'music'    => ['set' => 'music',    'nav' => 'music'],
+        'gallery'  => ['set' => 'gallery',  'nav' => 'gallery'],
+        'epk'      => ['set' => 'epk',      'nav' => 'epk'],
+        'contact'  => ['set' => 'contact',  'nav' => 'contact'],
+        'show'     => ['set' => 'show'],
+        'cart'     => ['set' => 'cart'],
+        'checkout' => ['set' => 'checkout'],
+        '404'      => ['set' => '404'],
+    ],
 ];

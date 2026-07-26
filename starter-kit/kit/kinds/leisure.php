@@ -29,5 +29,15 @@ return [
     'cta_url'   => '/activitati',
     'cart_url'  => '/cos',
 
-    'pages' => ['index', 'activities', 'rentals', 'about', 'show', 'cart', 'checkout', '404'],
+    'pages' => [
+        'index'      => ['set' => 'home'],
+        'activities' => ['set' => 'listing',   'nav' => 'activities'],
+        'rentals'    => ['set' => 'rentals',   'nav' => 'rentals'],
+        'giftcards'  => ['set' => 'giftcards', 'nav' => 'giftcards'],
+        'about'      => ['set' => 'about',     'nav' => 'about'],
+        'show'       => ['set' => 'show'],
+        'cart'       => ['set' => 'cart'],
+        'checkout'   => ['set' => 'checkout'],
+        '404'        => ['set' => '404'],
+    ],
 ];

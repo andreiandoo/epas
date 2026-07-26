@@ -83,6 +83,28 @@ function kit_artist(string $slug, ?int $ttl = null): ?array {
     return (kit_artist_adapter())($resp['data'], Kit::config());
 }
 
+/** Venues → canonical venue view-models. */
+function kit_venues(array $params = [], ?int $ttl = null): array {
+    $endpoint = Kit::isProfile('marketplace') ? '/marketplace-client/venues' : '/tenant-client/venues';
+    $resp = kit_api_get($endpoint, $params, $ttl);
+    $list = $resp['data']['venues'] ?? $resp['data'] ?? [];
+    if (!is_array($list)) return [];
+    $cfg = Kit::config();
+    $out = [];
+    foreach ($list as $v) {
+        if (!is_array($v)) continue;
+        $slug = $v['slug'] ?? (string)($v['id'] ?? '');
+        $out[] = vm_fill([
+            'id' => $v['id'] ?? 0, 'slug' => $slug,
+            'name' => $v['name'] ?? '', 'city' => $v['city'] ?? '', 'country' => $v['country'] ?? '',
+            'image_url' => kit_asset_url($v['image_url'] ?? $v['poster_url'] ?? null, $cfg),
+            'events_count' => $v['events_count'] ?? $v['count'] ?? null,
+            'url' => vm_url($cfg['venue_url_pattern'] ?? '/venue/{slug}', ['slug' => $slug, 'id' => $v['id'] ?? 0]),
+        ], vm_venue_defaults());
+    }
+    return $out;
+}
+
 /** Subscription plans (tenant only). Returns raw plan arrays (shape is tenant-specific). */
 function kit_subscriptions(?int $ttl = null): array {
     if (!Kit::isProfile('tenant')) return [];

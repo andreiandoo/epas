@@ -80,7 +80,8 @@ a afișa/ascunde zone specifice, și `kit_term()` pentru text.
 php tools/create-template.php <kind|profile> <slug> "Nume Site"
 #   kind:    teatru | filarmonica | agentie | leisure | artist | organizator
 #   profile: tenant | marketplace   (fără kind)
-# Kind-ul setează deja menu, terms, features, URL-uri și lista de pagini.
+# Cu un KIND, generatorul produce TOATE paginile tipului (wrappere peste
+# kit/pagesets/*) + routes.php. Site-ul e funcțional imediat.
 
 # 2. IDENTITATE  → editează templates/<slug>/site.config.php
 #    - tenant_id (kind) / api_key (marketplace)

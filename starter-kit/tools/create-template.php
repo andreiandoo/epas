@@ -9,11 +9,12 @@
  *   php tools/create-template.php marketplace bilete-x "BileteX"
  *
  * <kind>    = teatru | filarmonica | agentie | leisure | artist | organizator
- *             → profile 'tenant', seeds menu/terms/features/URLs from the kind.
- * <profile> = tenant | marketplace   (no kind; blank preset)
+ *             → profile 'tenant'. Scaffolds the kind's FULL page-set + routes.php
+ *               (pages are thin wrappers over kit/pagesets/*, editable).
+ * <profile> = tenant | marketplace   (blank starter, no kind)
  *
  * After scaffolding you edit two files — site.config.php (tenant_id/api_key) and
- * theme.css (brand) — then `php tools/build.php <slug>`.
+ * theme.css (brand) — then `php tools/build.php <slug>`. Pages already exist.
  */
 declare(strict_types=1);
 
@@ -24,20 +25,17 @@ $arg  = $argv[1] ?? '';
 $slug = $argv[2] ?? '';
 $name = $argv[3] ?? ucfirst($slug);
 
-$kinds = kit_kinds();  // [name => label]
-if ($slug === '' || ($arg === '')) {
+$kinds = kit_kinds();
+if ($slug === '' || $arg === '') {
     fwrite(STDERR, "usage: php tools/create-template.php <kind|profile> <slug> \"Site Name\"\n");
-    fwrite(STDERR, "kinds: " . implode(', ', array_keys($kinds)) . "\n");
-    fwrite(STDERR, "profiles: tenant, marketplace\n");
+    fwrite(STDERR, "kinds: " . implode(', ', array_keys($kinds)) . "\nprofiles: tenant, marketplace\n");
     exit(1);
 }
 
-// Resolve kind vs profile.
-$kind = null; $profile = null;
+$kind = null; $profile = null; $manifest = [];
 if (isset($kinds[$arg])) {
     $manifest = require $root . "/kit/kinds/$arg.php";
-    $kind = $arg;
-    $profile = $manifest['profile'] ?? 'tenant';
+    $kind = $arg; $profile = $manifest['profile'] ?? 'tenant';
 } elseif (in_array($arg, ['tenant', 'marketplace'], true)) {
     $profile = $arg;
 } else {
@@ -56,21 +54,70 @@ rcopy($src, $dst);
 foreach (['site.config.php', 'theme.css'] as $f) {
     $p = "$dst/$f";
     if (!is_file($p)) continue;
-    $c = file_get_contents($p);
-    $c = str_replace(['__SITE_NAME__', '__SLUG__', '__KIND__'], [addslashes($name), $slug, (string)$kind], $c);
+    $c = str_replace(['__SITE_NAME__', '__SLUG__', '__KIND__'], [addslashes($name), $slug, (string)$kind], file_get_contents($p));
     file_put_contents($p, $c);
 }
 
-echo "Created templates/$slug" . ($kind ? " (kind: $kind)" : " (profile: $profile)") . "\n";
+// For a KIND: generate the full page-set + routes.php (replacing the starter's
+// placeholder index/404). Pages are thin wrappers over kit/pagesets/*.
+$generated = [];
 if ($kind) {
-    $pages = $manifest['pages'] ?? [];
-    echo "Recommended pages for '$kind': " . implode(', ', $pages) . "\n";
-    echo "Starter ships: index, 404. Add the rest under templates/$slug/pages/ (see docs/TEMPLATE-AUTHORING.md §4).\n";
+    array_map('unlink', glob("$dst/pages/*.php") ?: []);
+    @unlink("$dst/routes.php");
+
+    foreach (($manifest['pages'] ?? []) as $pname => $spec) {
+        $set = $spec['set'] ?? $pname;
+        $nav = $spec['nav'] ?? null;
+        $body = "<?php\nrequire __DIR__ . '/../includes/bootstrap.php';\n";
+        if ($nav !== null) $body .= "\$PAGE = ['nav' => " . var_export($nav, true) . "];\n";
+        $body .= "require KIT_DIR . '/pagesets/" . $set . ".php';\n";
+        file_put_contents("$dst/pages/$pname.php", $body);
+        $generated[] = $pname;
+    }
+
+    file_put_contents("$dst/routes.php", derive_routes($manifest));
 }
+
+echo "Created templates/$slug" . ($kind ? " (kind: $kind)" : " (profile: $profile)") . "\n";
+if ($kind) echo "Pages generated: " . implode(', ', $generated) . "\n";
 echo "Next:\n";
 echo "  1. edit templates/$slug/site.config.php   (" . ($profile === 'marketplace' ? 'api_key' : 'tenant_id') . ", brand)\n";
 echo "  2. edit templates/$slug/theme.css          (tokens)\n";
-echo "  3. php tools/build.php $slug\n";
+echo "  3. (optional) customize any pages/*.php — they wrap kit/pagesets/*\n";
+echo "  4. php tools/build.php $slug\n";
+
+/* ---- routes derivation ---- */
+function derive_routes(array $m): string {
+    $pages = $m['pages'] ?? [];
+    $menu  = $m['menu'] ?? [];
+    $urlByKey = [];
+    foreach ($menu as $it) $urlByKey[$it['key'] ?? ''] = $it['url'] ?? '';
+
+    $exact = ['/' => 'index'];
+    $special = ['index' => 1, 'show' => 1, 'cart' => 1, 'checkout' => 1, '404' => 1];
+    foreach ($pages as $pname => $spec) {
+        if (isset($special[$pname])) continue;
+        $nav = $spec['nav'] ?? $pname;
+        $url = $urlByKey[$nav] ?? '';
+        if ($url && $url[0] === '/') $exact[strtok($url, '?')] = $pname;
+    }
+    if (isset($pages['cart']))     $exact[$m['cart_url'] ?? '/cos'] = 'cart';
+    if (isset($pages['checkout'])) $exact['/finalizare'] = 'checkout';
+
+    $capture = [];
+    if (isset($pages['show']) && preg_match('#^/([^/{]+)/#', $m['event_url_pattern'] ?? '', $mm)) {
+        $capture[$mm[1]] = 'show';
+    }
+
+    $fmt = function (array $a): string {
+        $out = [];
+        foreach ($a as $k => $v) $out[] = "        " . var_export($k, true) . " => " . var_export($v, true) . ",";
+        return implode("\n", $out);
+    };
+    return "<?php\n/** Auto-generated from the kind manifest. Edit freely. */\nreturn [\n"
+        . "    'exact' => [\n" . $fmt($exact) . "\n    ],\n"
+        . "    'capture' => [\n" . $fmt($capture) . "\n    ],\n];\n";
+}
 
 function rcopy($s, $d) {
     @mkdir($d, 0775, true);

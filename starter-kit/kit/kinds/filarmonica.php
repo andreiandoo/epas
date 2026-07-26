@@ -32,5 +32,16 @@ return [
     'cta_url'   => '/program',
     'cart_url'  => '/cos',
 
-    'pages' => ['index', 'schedule', 'season', 'subscriptions', 'orchestra', 'about', 'show', 'cart', 'checkout', '404'],
+    'pages' => [
+        'index'         => ['set' => 'home'],
+        'schedule'      => ['set' => 'calendar',      'nav' => 'schedule'],
+        'season'        => ['set' => 'listing',       'nav' => 'season'],
+        'subscriptions' => ['set' => 'subscriptions', 'nav' => 'subscriptions'],
+        'orchestra'     => ['set' => 'artists',       'nav' => 'orchestra'],
+        'about'         => ['set' => 'about',         'nav' => 'about'],
+        'show'          => ['set' => 'show'],
+        'cart'          => ['set' => 'cart'],
+        'checkout'      => ['set' => 'checkout'],
+        '404'           => ['set' => '404'],
+    ],
 ];

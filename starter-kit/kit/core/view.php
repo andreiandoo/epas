@@ -76,6 +76,22 @@ function kit_theme_links(): string {
     return "<link rel=\"stylesheet\" href=\"{$tokens}\">\n<link rel=\"stylesheet\" href=\"{$theme}\">";
 }
 
+/** Label of the menu item with the given nav key (for page titles/H1s). */
+function kit_nav_label(string $navKey, string $fallback = ''): string {
+    foreach ((Kit::get('menu') ?? []) as $item) {
+        if (($item['key'] ?? '') === $navKey) return $item['label'] ?? $fallback;
+    }
+    return $fallback;
+}
+
+/** URL of the menu item with the given nav key (for pagination/base links). */
+function kit_nav_url(string $navKey, string $fallback = '/'): string {
+    foreach ((Kit::get('menu') ?? []) as $item) {
+        if (($item['key'] ?? '') === $navKey) return $item['url'] ?? $fallback;
+    }
+    return $fallback;
+}
+
 /** Convenience: format a date badge (day + short month) from Y-m-d. */
 function kit_date_badge(string $ymd, string $locale = 'ro'): array {
     if (!$ymd) return ['day' => '', 'month' => ''];

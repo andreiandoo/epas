@@ -32,5 +32,16 @@ return [
     'cta_url'   => '/evenimente',
     'cart_url'  => '/cos',
 
-    'pages' => ['index', 'events', 'artists', 'tours', 'venues', 'show', 'cart', 'checkout', '404'],
+    'pages' => [
+        'index'    => ['set' => 'home'],
+        'events'   => ['set' => 'listing', 'nav' => 'events'],
+        'artists'  => ['set' => 'artists', 'nav' => 'artists'],
+        'tours'    => ['set' => 'tours',   'nav' => 'tours'],
+        'venues'   => ['set' => 'venues',  'nav' => 'venues'],
+        'about'    => ['set' => 'about',   'nav' => 'about'],
+        'show'     => ['set' => 'show'],
+        'cart'     => ['set' => 'cart'],
+        'checkout' => ['set' => 'checkout'],
+        '404'      => ['set' => '404'],
+    ],
 ];

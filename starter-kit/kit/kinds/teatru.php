@@ -37,6 +37,17 @@ return [
     'cta_url'   => '/program',
     'cart_url'  => '/cos',
 
-    // Recommended pages for this kind (the generator scaffolds these).
-    'pages' => ['index', 'repertoire', 'schedule', 'subscriptions', 'troupe', 'about', 'show', 'cart', 'checkout', '404'],
+    // Page-set the generator scaffolds: page name => [pageset, nav].
+    'pages' => [
+        'index'         => ['set' => 'home'],
+        'repertoire'    => ['set' => 'listing',       'nav' => 'repertoire'],
+        'schedule'      => ['set' => 'calendar',      'nav' => 'schedule'],
+        'subscriptions' => ['set' => 'subscriptions', 'nav' => 'subscriptions'],
+        'troupe'        => ['set' => 'artists',       'nav' => 'troupe'],
+        'about'         => ['set' => 'about',         'nav' => 'about'],
+        'show'          => ['set' => 'show'],
+        'cart'          => ['set' => 'cart'],
+        'checkout'      => ['set' => 'checkout'],
+        '404'           => ['set' => '404'],
+    ],
 ];

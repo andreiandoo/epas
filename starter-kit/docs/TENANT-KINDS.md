@@ -71,31 +71,52 @@ carduri, coș, checkout) e identic pentru toate.
 ## 5. Cum generezi 10 template-uri pentru un tip
 
 ```bash
-# 1 dată per tip: kind-ul există deja (kit/kinds/<kind>.php)
 php tools/create-template.php teatru teatru-sibiu   "Teatrul Radu Stanca"
-php tools/create-template.php teatru teatru-cluj     "Teatrul Național Cluj"
 php tools/create-template.php filarmonica filarm-iasi "Filarmonica Moldova"
 php tools/create-template.php leisure    salina-turda "Salina Turda"
 php tools/create-template.php artist     the-motans   "The Motans"
-# ...
 ```
-Fiecare comandă îți dă un template cu meniul, vocabularul, features și URL-urile
-tipului deja setate. Rămâne să editezi DOAR:
+Fiecare comandă generează un template **complet, funcțional**: toate paginile
+tipului (din `manifest['pages']`), `routes.php` derivat automat, meniul,
+vocabularul, features și URL-urile — gata. Rămâne să editezi DOAR:
 1. `site.config.php` → `tenant_id`, `site_name/city/logo`, `fonts_href`
 2. `theme.css` → paleta de brand
-3. paginile recomandate ale kind-ului (din `manifest['pages']`) — compuse din
-   componente, după blueprint-urile din `TEMPLATE-AUTHORING.md §4`.
 
 Zece teatre = același `kind: teatru`, zece perechi (config, theme) diferite.
+
+### Cum arată paginile generate
+Fiecare `pages/<name>.php` e un **wrapper subțire** peste un „pageset" din
+`kit/pagesets/`:
+```php
+<?php
+require __DIR__ . '/../includes/bootstrap.php';
+$PAGE = ['nav' => 'repertoire'];
+require KIT_DIR . '/pagesets/listing.php';
+```
+Pageset-urile sunt kind-aware (`kit_term`, `kit_feature`), deci același
+`listing.php` afișează „Spectacole" pentru teatru și „Activități" pentru leisure,
+iar `show.php` alege singur `seat-map` (dacă `feature('seating')`) sau
+`ticket-selector`. Vrei să personalizezi o pagină? Înlocuiește wrapper-ul cu o
+compoziție proprie de componente — pagesets sunt doar punctul de plecare.
+
+### Pageset-uri disponibile (`kit/pagesets/`)
+`home`, `listing`, `calendar`, `subscriptions`, `artists`, `venues`, `show`,
+`cart`, `checkout`, `about`, `contact`, `tours`, `404` (comune) +
+`rentals` (leisure), `epk`/`music`/`gallery` (artist), `giftcards` (leisure/gift).
+Un `kind` mapează numele paginii la pageset în `manifest['pages']`:
+`'repertoire' => ['set'=>'listing','nav'=>'repertoire']`.
 
 ## 6. Cum adaugi un kind nou
 
 1. `kit/kinds/<nume>.php` cu manifestul (profile, label, terms, features, menu,
-   url patterns, pages).
-2. Dacă are pagini/blocuri proprii (ex. leisure „rentals”, artist „epk”), adaugă
-   componentele lor în `kit/components/` (rețeta din `STARTER-KIT.md §5.1`) și
-   afișează-le condiționat pe `kit_feature('...')`.
-3. Gata — apare automat în `kit_kinds()` și în generator.
+   url patterns, și `pages` = map `name => ['set'=>pageset,'nav'=>key]`).
+2. Refolosește pageset-urile existente pentru paginile comune. Dacă tipul are o
+   pagină proprie (ca `rentals`/`epk`), adaug-o în `kit/pagesets/<nume>.php`
+   (kind-aware, feature-gated) și referă-o în `pages`.
+3. Blocuri vizuale noi → componente în `kit/components/` (rețeta `STARTER-KIT.md §5.1`),
+   afișate condiționat pe `kit_feature('...')`.
+4. Gata — apare automat în `kit_kinds()`, iar generatorul îi produce toate
+   paginile + `routes.php`.
 
 ## 7. Reguli
 

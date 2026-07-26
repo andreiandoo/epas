@@ -58,6 +58,8 @@ starter-kit/
                        # filarmonica, agentie, leisure, artist, organizator)
                        # → menu, terms, features, url-patterns, page-set. Vezi docs/TENANT-KINDS.md
     components/        # partial-uri pure: date in → HTML out (vezi docs/COMPONENTS.md)
+    pagesets/          # pagini GENERICE kind-aware (home, listing, show, cart,
+                       # rentals, epk, ...) — generatorul le înfășoară per template
     layouts/public.php # <head> + header + footer, token-driven
     tokens/tokens.css  # CONTRACTUL de variabile + stilurile de bază .kit-*
     js/kit.js          # runtime client: cart, Alpine ticket-selector, hydrate seat-map, img fallback
