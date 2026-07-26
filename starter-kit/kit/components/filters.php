@@ -14,7 +14,7 @@ $fields = $fields ?? [];
     <label class="kit-filters__field">
       <span class="kit-muted"><?= e($f['label'] ?? '') ?></span>
       <select name="<?= e($f['name']) ?>" onchange="this.form.submit()">
-        <option value=""><?= e($f['placeholder'] ?? 'Toate') ?></option>
+        <option value=""><?= e($f['placeholder'] ?? t('common.all')) ?></option>
         <?php foreach (($f['options'] ?? []) as $o): ?>
           <?php [$val,$lab] = [$o['value'] ?? $o[0] ?? '', $o['label'] ?? $o[1] ?? '']; ?>
           <option value="<?= e($val) ?>"<?= ((string)($f['value'] ?? '') === (string)$val) ? ' selected' : '' ?>><?= e($lab) ?></option>

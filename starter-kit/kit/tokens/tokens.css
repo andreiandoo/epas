@@ -330,3 +330,15 @@
 .kit-prose ul, .kit-prose ol { margin:0 0 1rem 1.25rem; display:flex; flex-direction:column; gap:.35rem; }
 .kit-prose img { max-width:100%; border-radius:var(--kit-radius); }
 .kit-prose blockquote { border-left:3px solid var(--kit-primary); padding-left:1rem; margin:1rem 0; color:var(--kit-text-muted); }
+
+/* Favorite button + reviews ----------------------------------------------- */
+.kit-fav { display:inline-flex; align-items:center; justify-content:center; width:2.4rem; height:2.4rem;
+  border-radius:999px; border:1px solid var(--kit-border); background:var(--kit-surface); color:var(--kit-text-muted);
+  cursor:pointer; font-size:1.1rem; transition:var(--kit-transition); }
+.kit-fav:hover { border-color:var(--kit-primary); color:var(--kit-primary); }
+.kit-fav.is-active { color:var(--kit-primary); border-color:var(--kit-primary); }
+.kit-actions-row { display:flex; align-items:center; gap:.6rem; margin:1rem 0; }
+.kit-reviews { display:flex; flex-direction:column; gap:.75rem; }
+.kit-stars-input { display:inline-flex; gap:.15rem; font-size:1.4rem; cursor:pointer; }
+.kit-stars-input span { color:var(--kit-border); }
+.kit-stars-input span.on { color:var(--kit-accent); }

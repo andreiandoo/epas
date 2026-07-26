@@ -46,6 +46,8 @@ $ACTIONS = [
     'subscriptions' => ['GET',  "$base/subscriptions",       300],
     'payment-methods'=>['GET',  "$base/payment-methods",     300],
     'page'          => ['GET',  "$base/pages/{slug}",        600],
+    'event-reviews' => ['GET',  "$base/events/{event}/reviews", 120],
+    'search'        => ['GET',  "$base/search",              60],
     'blog'          => ['GET',  "$base/blog-articles",       300],
     'post'          => ['GET',  "$base/blog-articles/{slug}",300],
     // seating (session-based, never cache)
@@ -71,6 +73,9 @@ $ACTIONS = [
     'acc-subscriptions' => ['GET', "$base/account/subscriptions", 0],
     'acc-giftcards'     => ['GET', "$base/account/gift-cards",    0],
     'acc-giftcard-redeem' => ['POST', "$base/account/gift-cards/redeem", 0],
+    'acc-favorites'   => ['GET',  "$base/account/favorites",   0],
+    'fav-toggle'      => ['POST', "$base/account/favorites/toggle", 0],
+    'review-submit'   => ['POST', "$base/events/{event}/reviews", 0],
 ];
 
 // Forward the browser's Authorization header (Bearer token) for account calls.

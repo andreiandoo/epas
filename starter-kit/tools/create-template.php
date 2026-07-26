@@ -79,6 +79,8 @@ if ($kind) {
             'cont-index'   => ['account-dashboard',   '/cont'],
             'cont-bilete'  => ['account-tickets',     '/cont/bilete'],
             'cont-comenzi' => ['account-orders',      '/cont/comenzi'],
+            'cont-favorite'=> ['account-favorites',   '/cont/favorite'],
+            'cauta'        => ['search',              '/cauta'],
         ];
         if (!empty($feat['subscriptions'])) $commerce['cont-abonamente'] = ['account-subscriptions', '/cont/abonamente'];
         if (!empty($feat['gift_cards']))    $commerce['cont-carduri']    = ['account-giftcards', '/cont/carduri-cadou'];

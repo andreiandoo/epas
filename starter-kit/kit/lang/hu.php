@@ -1,6 +1,23 @@
 <?php
 /** Hungarian UI strings. Mirror the keys in ro.php. */
 return [
+    'nav.search' => 'Keresés',
+    'search.title' => 'Keresés',
+    'search.results' => 'Találatok: „{q}”',
+    'search.prompt' => 'Keress eseményeket, művészeket…',
+    'search.none' => 'Nincs találat.',
+    'common.add_to_calendar' => 'Naptárhoz adás',
+    'reviews.title' => 'Vélemények',
+    'reviews.none' => 'Még nincs vélemény.',
+    'reviews.write' => 'Írj véleményt',
+    'reviews.submit' => 'Vélemény küldése',
+    'reviews.thanks' => 'Köszönjük a véleményt!',
+    'reviews.placeholder' => 'A véleményed…',
+    'fav.add' => 'Kedvencekhez',
+    'fav.remove' => 'Kedvencekből törlés',
+    'menu.favorites' => 'Kedvencek',
+    'account.no_favorites' => 'Nincs kedvenc.',
+    'common.all' => 'Összes',
     'nav.blog' => 'Blog',
     'nav.terms' => 'Feltételek',
     'nav.privacy' => 'Adatvédelem',

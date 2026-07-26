@@ -99,6 +99,26 @@
     };
   };
 
+  /* ---- Alpine: favorites ------------------------------------------------ */
+  var FAVKEY = 'kit_favs';
+  function favAll() { try { return JSON.parse(localStorage.getItem(FAVKEY)) || {}; } catch (e) { return {}; } }
+  function favKey(type, id) { return type + ':' + id; }
+  window.KitFavorites = { has: function (t, id) { return !!favAll()[favKey(t, id)]; },
+    ids: function (t) { return Object.keys(favAll()).filter(function (k) { return k.indexOf(t + ':') === 0; }).map(function (k) { return k.split(':')[1]; }); } };
+  window.kitFav = function (type, id, labels) {
+    return {
+      active: false, L: labels || { add: '', remove: '' },
+      init: function () { this.active = !!favAll()[favKey(type, id)]; },
+      toggle: function () {
+        this.active = !this.active;
+        var all = favAll(); var k = favKey(type, id);
+        if (this.active) all[k] = 1; else delete all[k];
+        try { localStorage.setItem(FAVKEY, JSON.stringify(all)); } catch (e) {}
+        if (window.KitAuth && KitAuth.token()) proxy('fav-toggle', {}, { method: 'POST', body: { type: type, id: id, active: this.active } });
+      }
+    };
+  };
+
   /* ---- Alpine: calendar ------------------------------------------------- */
   window.kitCalendar = function (events, firstDate) {
     var f = new Date(firstDate || Date.now());

@@ -222,6 +222,34 @@ function kit_nav_url(string $navKey, string $fallback = '/'): string {
     return $fallback;
 }
 
+/**
+ * Build a `data:` .ics link for a canonical event (add-to-calendar, no backend).
+ * All-day if the event has no time.
+ */
+function kit_ics_link(array $event): string {
+    if (empty($event['date'])) return '';
+    $esc = fn($s) => preg_replace('/([,;\\\\])/', '\\\\$1', str_replace("\n", '\\n', (string)$s));
+    $date = str_replace('-', '', $event['date']);
+    if (!empty($event['time'])) {
+        $dt = 'DTSTART:' . $date . 'T' . str_replace(':', '', $event['time']) . '00';
+    } else {
+        $dt = 'DTSTART;VALUE=DATE:' . $date;
+    }
+    $loc = trim(($event['venue_name'] ?? '') . (!empty($event['city']) ? ', ' . $event['city'] : ''), ', ');
+    $lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//kit//event//EN', 'BEGIN:VEVENT',
+        'UID:' . ($event['id'] ?? uniqid()) . '@' . preg_replace('#^https?://#', '', (string)Kit::get('site_url', 'site')),
+        $dt,
+        'SUMMARY:' . $esc($event['title'] ?? ''),
+        $loc ? 'LOCATION:' . $esc($loc) : '',
+        !empty($event['short_description']) ? 'DESCRIPTION:' . $esc($event['short_description']) : '',
+        !empty($event['url']) ? 'URL:' . $esc($event['url']) : '',
+        'END:VEVENT', 'END:VCALENDAR',
+    ];
+    $ics = implode("\r\n", array_filter($lines));
+    return 'data:text/calendar;charset=utf-8,' . rawurlencode($ics);
+}
+
 /** Convenience: format a date badge (day + short month) from Y-m-d. */
 function kit_date_badge(string $ymd, string $locale = 'ro'): array {
     if (!$ymd) return ['day' => '', 'month' => ''];

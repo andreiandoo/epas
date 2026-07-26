@@ -1,0 +1,4 @@
+{"success":true,"data":[
+ {"id":101,"title":"Hamlet","venue_name":"Sala Mare","city":"București","poster_url":"https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=600&q=80","url":"/spectacol/hamlet"},
+ {"id":103,"title":"Livada de vișini","venue_name":"Sala Studio","city":"București","poster_url":"https://images.unsplash.com/photo-1470019693664-1d202d2c0907?w=600&q=80","url":"/spectacol/livada-de-visini"}
+]}

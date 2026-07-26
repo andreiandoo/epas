@@ -1,6 +1,23 @@
 <?php
 /** English UI strings. Mirror the keys in ro.php. */
 return [
+    'nav.search' => 'Search',
+    'search.title' => 'Search',
+    'search.results' => 'Results for „{q}”',
+    'search.prompt' => 'Search events, artists, venues…',
+    'search.none' => 'No results.',
+    'common.add_to_calendar' => 'Add to calendar',
+    'reviews.title' => 'Reviews',
+    'reviews.none' => 'No reviews yet.',
+    'reviews.write' => 'Write a review',
+    'reviews.submit' => 'Submit review',
+    'reviews.thanks' => 'Thanks for your review!',
+    'reviews.placeholder' => 'Your thoughts…',
+    'fav.add' => 'Add to favorites',
+    'fav.remove' => 'Remove from favorites',
+    'menu.favorites' => 'Favorites',
+    'account.no_favorites' => 'No favorites yet.',
+    'common.all' => 'All',
     'nav.blog' => 'Blog',
     'nav.terms' => 'Terms',
     'nav.privacy' => 'Privacy',

@@ -5,6 +5,23 @@
  * Kind-specific NOUNS live in the kind manifest (terms / terms_i18n), not here.
  */
 return [
+    'nav.search' => 'Căutare',
+    'search.title' => 'Căutare',
+    'search.results' => 'Rezultate pentru „{q}”',
+    'search.prompt' => 'Caută evenimente, artiști, locații…',
+    'search.none' => 'Niciun rezultat.',
+    'common.add_to_calendar' => 'Adaugă în calendar',
+    'reviews.title' => 'Recenzii',
+    'reviews.none' => 'Nicio recenzie încă.',
+    'reviews.write' => 'Scrie o recenzie',
+    'reviews.submit' => 'Trimite recenzia',
+    'reviews.thanks' => 'Mulțumim pentru recenzie!',
+    'reviews.placeholder' => 'Părerea ta…',
+    'fav.add' => 'Adaugă la favorite',
+    'fav.remove' => 'Scoate de la favorite',
+    'menu.favorites' => 'Favorite',
+    'account.no_favorites' => 'Nu ai favorite.',
+    'common.all' => 'Toate',
     'nav.blog' => 'Blog',
     'nav.terms' => 'Termeni',
     'nav.privacy' => 'Confidențialitate',

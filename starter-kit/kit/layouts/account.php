@@ -18,6 +18,7 @@ $menu = $__cfg['account_menu'] ?? array_values(array_filter([
     ['key' => 'dashboard', 'label' => t('menu.dashboard'), 'url' => '/cont',            'icon' => '🏠'],
     ['key' => 'tickets',   'label' => t('menu.tickets'),   'url' => '/cont/bilete',     'icon' => '🎫'],
     ['key' => 'orders',    'label' => t('menu.orders'),    'url' => '/cont/comenzi',    'icon' => '🧾'],
+    ['key' => 'favorites', 'label' => t('menu.favorites'), 'url' => '/cont/favorite',   'icon' => '❤️'],
     kit_feature('subscriptions') ? ['key' => 'subscriptions', 'label' => t('menu.subscriptions'), 'url' => '/cont/abonamente', 'icon' => '🎟️'] : null,
     kit_feature('gift_cards')    ? ['key' => 'giftcards',     'label' => t('menu.giftcards'),     'url' => '/cont/carduri-cadou', 'icon' => '🎁'] : null,
     ['key' => 'settings',  'label' => t('menu.settings'),  'url' => '/cont/setari',     'icon' => '⚙️'],
