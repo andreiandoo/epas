@@ -65,7 +65,31 @@ if ($kind) {
     array_map('unlink', glob("$dst/pages/*.php") ?: []);
     @unlink("$dst/routes.php");
 
-    foreach (($manifest['pages'] ?? []) as $pname => $spec) {
+    $pages = $manifest['pages'] ?? [];
+
+    // Standard commerce + account block for tenant kinds (feature-gated).
+    // pageName => [pageset, cleanRoute]
+    $extraExact = [];
+    if ($profile === 'tenant') {
+        $feat = $manifest['features'] ?? [];
+        $commerce = [
+            'login'        => ['login',               '/autentificare'],
+            'register'     => ['register',            '/inregistrare'],
+            'confirmare'   => ['confirmare',          '/confirmare'],
+            'cont-index'   => ['account-dashboard',   '/cont'],
+            'cont-bilete'  => ['account-tickets',     '/cont/bilete'],
+            'cont-comenzi' => ['account-orders',      '/cont/comenzi'],
+        ];
+        if (!empty($feat['subscriptions'])) $commerce['cont-abonamente'] = ['account-subscriptions', '/cont/abonamente'];
+        if (!empty($feat['gift_cards']))    $commerce['cont-carduri']    = ['account-giftcards', '/cont/carduri-cadou'];
+        $commerce['cont-setari'] = ['account-settings', '/cont/setari'];
+        foreach ($commerce as $pname => [$set, $route]) {
+            $pages[$pname] = ['set' => $set];
+            $extraExact[$route] = $pname;
+        }
+    }
+
+    foreach ($pages as $pname => $spec) {
         $set = $spec['set'] ?? $pname;
         $nav = $spec['nav'] ?? null;
         $body = "<?php\nrequire __DIR__ . '/../includes/bootstrap.php';\n";
@@ -75,7 +99,7 @@ if ($kind) {
         $generated[] = $pname;
     }
 
-    file_put_contents("$dst/routes.php", derive_routes($manifest));
+    file_put_contents("$dst/routes.php", derive_routes($manifest, $extraExact));
 }
 
 echo "Created templates/$slug" . ($kind ? " (kind: $kind)" : " (profile: $profile)") . "\n";
@@ -87,7 +111,7 @@ echo "  3. (optional) customize any pages/*.php — they wrap kit/pagesets/*\n";
 echo "  4. php tools/build.php $slug\n";
 
 /* ---- routes derivation ---- */
-function derive_routes(array $m): string {
+function derive_routes(array $m, array $extraExact = []): string {
     $pages = $m['pages'] ?? [];
     $menu  = $m['menu'] ?? [];
     $urlByKey = [];
@@ -103,6 +127,7 @@ function derive_routes(array $m): string {
     }
     if (isset($pages['cart']))     $exact[$m['cart_url'] ?? '/cos'] = 'cart';
     if (isset($pages['checkout'])) $exact['/finalizare'] = 'checkout';
+    foreach ($extraExact as $route => $name) $exact[$route] = $name;
 
     $capture = [];
     if (isset($pages['show']) && preg_match('#^/([^/{]+)/#', $m['event_url_pattern'] ?? '', $mm)) {

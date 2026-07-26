@@ -12,13 +12,18 @@
 /** @var array $__cfg */ /** @var string $slot */
 $title = $title ?? ('Contul meu — ' . $__cfg['site_name']);
 $navActive = $nav ?? '';
-$menu = $__cfg['account_menu'] ?? [
-    ['key' => 'dashboard', 'label' => 'Panou',    'url' => '/cont',           'icon' => '🏠'],
-    ['key' => 'tickets',   'label' => 'Bilete',   'url' => '/cont/bilete',    'icon' => '🎫'],
-    ['key' => 'orders',    'label' => 'Comenzi',  'url' => '/cont/comenzi',   'icon' => '🧾'],
-    ['key' => 'settings',  'label' => 'Setări',   'url' => '/cont/setari',    'icon' => '⚙️'],
-];
+// Default account menu is feature-gated: subscription/gift-card entries appear
+// only for kinds that enable them.
+$menu = $__cfg['account_menu'] ?? array_values(array_filter([
+    ['key' => 'dashboard', 'label' => 'Panou',        'url' => '/cont',              'icon' => '🏠'],
+    ['key' => 'tickets',   'label' => 'Bilete',       'url' => '/cont/bilete',       'icon' => '🎫'],
+    ['key' => 'orders',    'label' => 'Comenzi',      'url' => '/cont/comenzi',      'icon' => '🧾'],
+    kit_feature('subscriptions') ? ['key' => 'subscriptions', 'label' => 'Abonamente', 'url' => '/cont/abonamente', 'icon' => '🎟️'] : null,
+    kit_feature('gift_cards')    ? ['key' => 'giftcards',     'label' => 'Carduri cadou', 'url' => '/cont/carduri-cadou', 'icon' => '🎁'] : null,
+    ['key' => 'settings',  'label' => 'Setări',       'url' => '/cont/setari',       'icon' => '⚙️'],
+]));
 $loginUrl = $__cfg['login_url'] ?? '/autentificare';
+$demo = !empty($__cfg['fixtures']);  // dev preview: skip auth gate when using fixtures
 ?><!DOCTYPE html>
 <html lang="<?= e($__cfg['locale']) ?>">
 <head>
@@ -26,11 +31,11 @@ $loginUrl = $__cfg['login_url'] ?? '/autentificare';
   <title><?= e($title) ?></title>
   <?php if (!empty($__cfg['fonts_href'])): ?><link href="<?= e($__cfg['fonts_href']) ?>" rel="stylesheet"><?php endif; ?>
   <?php if ($__cfg['use_tailwind'] ?? true): ?><script src="https://cdn.tailwindcss.com"></script><?php endif; ?>
-  <?php if ($__cfg['use_alpine'] ?? true): ?><script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script><?php endif; ?>
+  <?= kit_head_scripts() ?>
   <?= kit_theme_links() ?>
   <?php if (!empty($extra_styles)): ?><style><?= $extra_styles ?></style><?php endif; ?>
 </head>
-<body class="kit-body" x-data="kitAccountShell('<?= e($loginUrl) ?>')" x-init="init()">
+<body class="kit-body" x-data="kitAccountShell('<?= e($loginUrl) ?>', <?= $demo ? 'true' : 'false' ?>)" x-init="init()">
   <div class="kit-account" x-show="ready" x-cloak>
     <aside class="kit-account__side">
       <a href="/" class="kit-logo" style="padding:1.25rem"><span class="kit-logo__mark"><?= e($__cfg['logo_text'] ?: 'K') ?></span><span class="kit-logo__name"><?= e($__cfg['site_name']) ?></span></a>
@@ -46,11 +51,6 @@ $loginUrl = $__cfg['login_url'] ?? '/autentificare';
     <main class="kit-account__main"><?= $slot ?></main>
   </div>
   <?php component('qr-modal'); ?>
-  <script>window.KIT = <?= json_encode([
-      'proxy' => $__cfg['proxy_url'] ?? '/api/proxy.php', 'cartKey' => $__cfg['cart_key'] ?? 'kit_cart',
-      'authKey' => $__cfg['auth_key'] ?? 'kit_auth', 'currency' => $__cfg['currency'] ?? 'RON',
-  ], JSON_UNESCAPED_SLASHES) ?>;</script>
-  <script src="<?= e($__cfg['kit_js_href'] ?? '/kit/kit.js') ?>" defer></script>
 </body>
 </html>
 <style id="kit-account-css">

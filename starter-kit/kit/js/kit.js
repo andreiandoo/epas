@@ -86,12 +86,13 @@
     };
   };
 
-  /* Account shell: gate a cont/* page on auth; redirect to login if absent. */
-  window.kitAccountShell = function (loginUrl) {
+  /* Account shell: gate a cont/* page on auth; redirect to login if absent.
+     `demo` (dev preview with fixtures) skips the gate so the area is viewable. */
+  window.kitAccountShell = function (loginUrl, demo) {
     return {
       ready: false,
       init: function () {
-        if (!Auth.token()) { window.location.href = (loginUrl || '/autentificare') + '?next=' + encodeURIComponent(location.pathname); return; }
+        if (!demo && !Auth.token()) { window.location.href = (loginUrl || '/autentificare') + '?next=' + encodeURIComponent(location.pathname); return; }
         this.ready = true;
       },
       logout: function () { proxy('logout', {}, { method: 'POST' }).finally(function () { Auth.clear(); window.location.href = '/'; }); }
@@ -159,17 +160,35 @@
   }
   window.KitProxy = proxy;
 
-  /* ---- vanilla: seat-map hydration ------------------------------------- */
+  /* ---- vanilla: seat-map hydration with LIVE holds ---------------------
+     Contract with /api/public (forwarded by the site proxy):
+       GET  seating?event=ID  → { data: { event_seating_id, seats:[
+              { seat_uid, row_label, seat_label, status, price_cents, section_name } ] } }
+       POST hold    { event, event_seating_id, seat_uid }  → holds the seat (session)
+       DELETE release { event, event_seating_id, seat_uid }
+     Selecting a free seat holds it; the hold timer (default 10 min) counts down;
+     "Continuă" writes the held seats to the cart and goes to checkout. */
   function hydrateSeatMap(el) {
     var eventId  = el.getAttribute('data-event-id');
+    var checkout = el.getAttribute('data-checkout') || (CFG.cartUrl || '/cos');
     var canvas   = el.querySelector('[data-seatmap-canvas]');
     var summary  = el.querySelector('[data-seatmap-summary]');
     var countEl  = el.querySelector('[data-seatmap-count]');
     var totalEl  = el.querySelector('[data-seatmap-total]');
-    var selected = {};
+    var contBtn  = el.querySelector('[data-seatmap-continue]');
+    var timerEl  = document.createElement('span');
+    timerEl.className = 'kit-seatmap__timer';
+    if (summary) summary.insertBefore(timerEl, summary.firstChild);
+
+    var selected = {};     // uid → seat
+    var esid = null;       // event_seating_id
+    var deadline = 0, ticking = null;
+    var meta = { title: el.getAttribute('data-title') || 'Bilet', image: el.getAttribute('data-image') || '' };
 
     proxy('seating', { event: eventId }).then(function (res) {
-      var seats = (res && res.data && (res.data.seats || res.data)) || [];
+      var d = (res && res.data) || {};
+      esid = d.event_seating_id || d.id || null;
+      var seats = d.seats || (Array.isArray(d) ? d : []);
       if (!Array.isArray(seats) || !seats.length) {
         canvas.innerHTML = '<p class="kit-muted" style="text-align:center;padding:2rem">Harta locurilor nu este disponibilă.</p>';
         return;
@@ -179,13 +198,10 @@
       grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center';
       seats.forEach(function (s) {
         var b = document.createElement('button');
-        b.className = 'kit-seat';
-        b.type = 'button';
+        b.className = 'kit-seat'; b.type = 'button';
         b.setAttribute('data-status', s.status || 'free');
-        b.title = (s.row_label || '') + (s.seat_label || '');
-        if ((s.status || 'free') === 'free') {
-          b.addEventListener('click', function () { toggle(s, b); });
-        }
+        b.title = (s.section_name ? s.section_name + ' · ' : '') + (s.row_label || '') + (s.seat_label || '');
+        if ((s.status || 'free') === 'free') b.addEventListener('click', function () { toggle(s, b); });
         grid.appendChild(b);
       });
       canvas.appendChild(grid);
@@ -195,17 +211,54 @@
 
     function toggle(seat, btn) {
       var uid = seat.seat_uid || (seat.row_label + seat.seat_label);
-      if (selected[uid]) { delete selected[uid]; btn.classList.remove('is-selected'); }
-      else { selected[uid] = seat; btn.classList.add('is-selected'); }
-      render();
+      btn.disabled = true;
+      if (selected[uid]) {
+        proxy('release', {}, { method: 'DELETE', body: { event: eventId, event_seating_id: esid, seat_uid: uid } })
+          .finally(function () { delete selected[uid]; btn.classList.remove('is-selected'); btn.disabled = false; render(); });
+      } else {
+        proxy('hold', {}, { method: 'POST', body: { event: eventId, event_seating_id: esid, seat_uid: uid } })
+          .then(function (r) {
+            if (r && r.success === false) { alert(r.error || 'Locul nu mai este disponibil.'); btn.setAttribute('data-status', 'sold'); return; }
+            selected[uid] = seat; btn.classList.add('is-selected'); startTimer();
+          })
+          .catch(function () { alert('Eroare la rezervarea locului.'); })
+          .finally(function () { btn.disabled = false; render(); });
+      }
+    }
+    function startTimer() {
+      if (deadline) return;
+      var mins = Number(CFG.holdMinutes || 10);
+      deadline = Date.now() + mins * 60000;
+      ticking = setInterval(tick, 1000); tick();
+    }
+    function tick() {
+      var left = Math.max(0, deadline - Date.now());
+      if (left <= 0) { clearInterval(ticking); ticking = null; deadline = 0; selected = {};
+        el.querySelectorAll('.kit-seat.is-selected').forEach(function (b) { b.classList.remove('is-selected'); });
+        alert('Rezervarea a expirat. Te rugăm să reîncerci.'); render(); return; }
+      var m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+      timerEl.textContent = '⏱ ' + m + ':' + (s < 10 ? '0' : '') + s;
     }
     function render() {
       var keys = Object.keys(selected);
-      var total = keys.reduce(function (t, k) { return t + Number((selected[k].price_cents || 0) / 100 || selected[k].price || 0); }, 0);
-      summary.hidden = keys.length === 0;
-      countEl.textContent = keys.length + ' ' + (keys.length === 1 ? 'loc' : 'locuri');
-      totalEl.textContent = fmt(total);
+      var total = keys.reduce(function (t, k) { return t + seatPrice(selected[k]); }, 0);
+      if (summary) summary.hidden = keys.length === 0;
+      if (countEl) countEl.textContent = keys.length + ' ' + (keys.length === 1 ? 'loc' : 'locuri');
+      if (totalEl) totalEl.textContent = fmt(total);
+      if (!keys.length && ticking) { clearInterval(ticking); ticking = null; deadline = 0; timerEl.textContent = ''; }
     }
+    function seatPrice(s) { return Number(s.price_cents != null ? s.price_cents / 100 : (s.price || 0)); }
+
+    if (contBtn) contBtn.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      var seats = Object.keys(selected).map(function (uid) {
+        return { seat_uid: uid, label: (selected[uid].row_label || '') + (selected[uid].seat_label || ''), price: seatPrice(selected[uid]) };
+      });
+      if (!seats.length) return;
+      Cart.add({ event_id: eventId, event_seating_id: esid, title: meta.title, image: meta.image,
+        url: location.pathname, seats: seats, price: seats.reduce(function (t, s) { return t + s.price; }, 0), currency: CURRENCY });
+      window.location.href = checkout;
+    });
   }
 
   var HYDRATORS = { 'seat-map': hydrateSeatMap };

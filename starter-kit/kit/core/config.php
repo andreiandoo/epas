@@ -50,6 +50,7 @@ final class Kit {
             'fixtures'           => null,
             'tokens_href'        => '/theme/tokens.css',
             'theme_href'         => '/theme/theme.css',
+            'alpine_href'        => '/kit/js/vendor/alpine.min.js', // vendored (no CDN dependency)
             // Nouns the UI uses; a kind overrides these so generic pages read
             // "Spectacole" for a theatre, "Activități" for a leisure venue, etc.
             'terms' => [
@@ -85,6 +86,10 @@ final class Kit {
 
         self::$cfg = $merged;
         self::$booted = true;
+    }
+
+    public static function booted(): bool {
+        return self::$booted;
     }
 
     public static function config(): array {

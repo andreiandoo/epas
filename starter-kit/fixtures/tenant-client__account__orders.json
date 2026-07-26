@@ -1,0 +1,5 @@
+{"success":true,"data":[
+  {"id":10427,"date":"2026-08-01","total":200,"currency":"RON","status":"paid","items_count":2},
+  {"id":10500,"date":"2026-08-20","total":90,"currency":"RON","status":"paid","items_count":1},
+  {"id":10533,"date":"2026-08-25","total":150,"currency":"RON","status":"pending","items_count":1}
+]}

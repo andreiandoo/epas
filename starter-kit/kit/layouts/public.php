@@ -30,7 +30,7 @@ $useTailwind = $__cfg['use_tailwind'] ?? true;
   <title><?= e($title) ?></title>
   <?php if (!empty($__cfg['fonts_href'])): ?><link href="<?= e($__cfg['fonts_href']) ?>" rel="stylesheet"><?php endif; ?>
   <?php if ($useTailwind): ?><script src="https://cdn.tailwindcss.com"></script><?php endif; ?>
-  <?php if ($__cfg['use_alpine'] ?? true): ?><script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script><?php endif; ?>
+  <?= kit_head_scripts() ?>
   <?= kit_theme_links() ?>
   <?php if (!empty($extra_styles)): ?><style><?= $extra_styles ?></style><?php endif; ?>
   <?= $extra_head ?? '' ?>
@@ -65,14 +65,6 @@ $useTailwind = $__cfg['use_tailwind'] ?? true;
     </div>
   </footer>
 
-  <script>window.KIT = <?= json_encode([
-      'proxy'    => $__cfg['proxy_url'] ?? '/api/proxy.php',
-      'cartKey'  => $__cfg['cart_key'] ?? 'kit_cart',
-      'authKey'  => $__cfg['auth_key'] ?? 'kit_auth',
-      'cartUrl'  => $__cfg['cart_url'] ?? '/cos',
-      'currency' => $__cfg['currency'] ?? 'RON',
-  ], JSON_UNESCAPED_SLASHES) ?>;</script>
-  <script src="<?= e($__cfg['kit_js_href'] ?? '/kit/kit.js') ?>" defer></script>
 </body>
 </html>
 <?php

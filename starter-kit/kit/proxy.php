@@ -18,7 +18,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/core/config.php';
-kit_boot(require dirname(__DIR__) . '/site.config.php'); // template vendors kit next to site.config.php
+// In a deployed site the kit is vendored next to site.config.php. In dev the
+// router may pre-boot the kit with the active site config; skip re-booting then.
+if (!Kit::booted()) {
+    kit_boot(require dirname(__DIR__) . '/site.config.php');
+}
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -54,9 +58,13 @@ $ACTIONS = [
     'register'      => ['POST', "$base/auth/register",        0],
     'me'            => ['GET',  "$base/account/me",           0],
     'logout'        => ['POST', "$base/auth/logout",          0],
+    'me-update'     => ['POST', "$base/account/me",           0],
     'acc-stats'     => ['GET',  "$base/account/stats",        0],
     'acc-tickets'   => ['GET',  "$base/account/tickets",      0],
     'acc-orders'    => ['GET',  "$base/account/orders",       0],
+    'acc-subscriptions' => ['GET', "$base/account/subscriptions", 0],
+    'acc-giftcards'     => ['GET', "$base/account/gift-cards",    0],
+    'acc-giftcard-redeem' => ['POST', "$base/account/gift-cards/redeem", 0],
 ];
 
 // Forward the browser's Authorization header (Bearer token) for account calls.
@@ -81,9 +89,11 @@ $endpoint = preg_replace_callback('/\{(\w+)\}/', function ($m) use (&$params) {
     return rawurlencode((string)$v);
 }, $endpoint);
 
-// Forward. Cacheable public GETs go through the cache; everything else (auth,
-// mutations) is a direct request that also forwards the Bearer token.
-if ($verb === 'GET' && $ttl > 0 && !$fwd) {
+// Forward. GETs go through kit_api_get when cacheable OR when fixtures are
+// configured (so account/order pages preview offline); auth/mutations are a
+// direct request that forwards the Bearer token.
+$useFixtures = !empty(Kit::get('fixtures'));
+if ($verb === 'GET' && ($useFixtures || ($ttl > 0 && !$fwd))) {
     $resp = kit_api_get($endpoint, $params, $ttl);
 } else {
     // tenant scoping for direct requests too

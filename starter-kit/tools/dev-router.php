@@ -26,6 +26,26 @@ if (isset($map[$uri])) {
     http_response_code(404); return true;
 }
 
+// Serve any static kit asset (kit.js, vendor/alpine.min.js, ...).
+if (strpos($uri, '/kit/') === 0 && preg_match('/\.(js|css|svg|png|woff2?)$/', $uri)) {
+    $file = $root . $uri;
+    if (is_file($file)) {
+        $mimes = ['js' => 'application/javascript', 'css' => 'text/css', 'svg' => 'image/svg+xml'];
+        $ext = pathinfo($file, PATHINFO_EXTENSION);
+        header('Content-Type: ' . ($mimes[$ext] ?? 'application/octet-stream'));
+        readfile($file); return true;
+    }
+    http_response_code(404); return true;
+}
+
+// Client gateway: boot the active site, then hand off to the kit proxy.
+if ($uri === '/api/proxy.php') {
+    require_once $root . '/kit/core/config.php';
+    kit_boot(require $root . "/templates/$site/site.config.php");
+    require $root . '/kit/proxy.php';
+    return true;
+}
+
 // Use the template's real routes.php so preview == production routing.
 $routes = is_file($root . "/templates/$site/routes.php") ? require $root . "/templates/$site/routes.php" : [];
 $path = trim($uri, '/');

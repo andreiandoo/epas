@@ -19,7 +19,9 @@ $checkout = $checkout_url ?? ($__cfg['cart_url'] ?? '/cos');
      data-component="seat-map"
      data-event-id="<?= (int)$event['id'] ?>"
      data-checkout="<?= e($checkout) ?>"
-     data-currency="<?= e($event['currency']) ?>">
+     data-currency="<?= e($event['currency']) ?>"
+     data-title="<?= e($event['title']) ?>"
+     data-image="<?= e($event['poster_url']) ?>">
   <div class="kit-seatmap__stage">SCENA</div>
   <div class="kit-seatmap__canvas" data-seatmap-canvas>
     <div class="kit-skeleton" style="height:260px"></div>

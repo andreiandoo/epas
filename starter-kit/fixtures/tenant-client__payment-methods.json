@@ -1,0 +1,5 @@
+{"success":true,"data":[
+  {"id":"card","name":"Card bancar","hint":"Visa, Mastercard — 3D Secure"},
+  {"id":"card_cultural","name":"Card cultural","hint":"Plată cu voucher cultural"},
+  {"id":"transfer","name":"Transfer bancar","hint":"Confirmare în 1-2 zile"}
+]}

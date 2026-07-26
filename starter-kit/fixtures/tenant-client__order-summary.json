@@ -1,0 +1,6 @@
+{"success":true,"data":{"id":10427,"status":"paid","total":200,"currency":"RON",
+  "items":[{"title":"Hamlet — Categoria I","price":120},{"title":"Hamlet — Categoria II","price":80}],
+  "tickets":[
+    {"event":"Hamlet","seat_label":"Stal, rând 3, loc 12","code":"TIX-10427-1"},
+    {"event":"Hamlet","seat_label":"Stal, rând 3, loc 13","code":"TIX-10427-2"}
+  ]}}

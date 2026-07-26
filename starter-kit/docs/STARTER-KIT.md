@@ -244,8 +244,15 @@ Integrarea cu `deploy-*.bat` existente: în loc să copieze
 - Core complet: config, http (+cache SWR +fixtures +forward Bearer), data,
   view, viewmodel, ambele adaptoare.
 - Token contract + `layout('public')` + `layout('account')` (gated pe auth) +
-  `kit.js` (cart, auth, ticket-selector, calendar, seat-map hydrate, QR modal,
-  account shell, img fallback).
+  `kit.js` (cart, auth, ticket-selector, calendar, seat-map cu **holds live** +
+  timer, QR modal, account shell, img fallback). **Alpine vendorizat local**
+  (`kit/js/vendor/alpine.min.js`) — fără dependență de CDN.
+- **Flux de cumpărare end-to-end**: seat-map ține locurile prin proxy
+  (`hold`/`release` + timer 10 min) → cart → `checkout` (metode de plată +
+  submit la proxy) → `confirmare` (order-summary). Plus **zona de cont**
+  hidratată prin proxy cu Bearer (`acc-stats/tickets/orders/subscriptions/
+  gift-cards`, `me`). Toate paginile comerciale/cont sunt generate per kind
+  (feature-gated).
 - **26 componente** — vezi `docs/COMPONENTS.md` pentru lista + input-uri.
 - **Al treilea layer `kind`** (6 tipuri de tenant) cu manifest de capabilități +
   merge la boot (`defaults ← kind ← site`), helper-e `kit_kind/kit_feature/kit_term/kit_kinds`,

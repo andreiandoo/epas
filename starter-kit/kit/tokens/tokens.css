@@ -287,3 +287,9 @@
 .kit-qr__close { position:absolute; top:.75rem; right:.75rem; border:none; background:transparent; font-size:1.1rem; cursor:pointer; color:var(--kit-text-muted); }
 .kit-qr__canvas { display:grid; place-items:center; min-height:200px; }
 .kit-qr__fallback { font-family:monospace; font-size:1.1rem; letter-spacing:.1em; padding:2rem 1rem; background:var(--kit-surface-2); border-radius:var(--kit-radius); word-break:break-all; }
+
+/* Seat-map timer + payment options + checkout layout ---------------------- */
+.kit-seatmap__timer { font-weight:700; color:var(--kit-warning); margin-right:auto; }
+.kit-payopt { display:block; padding:.7rem .9rem; border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); cursor:pointer; transition:var(--kit-transition); }
+.kit-payopt.is-active { border-color:var(--kit-primary); background:color-mix(in srgb, var(--kit-primary) 8%, transparent); }
+@media (min-width:800px){ .kit-cart-layout { grid-template-columns:1.5fr 1fr !important; } }

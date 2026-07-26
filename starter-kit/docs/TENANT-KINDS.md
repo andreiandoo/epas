@@ -100,11 +100,31 @@ iar `show.php` alege singur `seat-map` (dacă `feature('seating')`) sau
 compoziție proprie de componente — pagesets sunt doar punctul de plecare.
 
 ### Pageset-uri disponibile (`kit/pagesets/`)
-`home`, `listing`, `calendar`, `subscriptions`, `artists`, `venues`, `show`,
-`cart`, `checkout`, `about`, `contact`, `tours`, `404` (comune) +
-`rentals` (leisure), `epk`/`music`/`gallery` (artist), `giftcards` (leisure/gift).
+Publice: `home`, `listing`, `calendar`, `subscriptions`, `artists`, `venues`,
+`show`, `cart`, `checkout`, `about`, `contact`, `tours`, `404` + `rentals`
+(leisure), `epk`/`music`/`gallery` (artist), `giftcards`.
+Comerț/cont (auto-adăugate pentru orice kind `tenant`): `login`, `register`,
+`confirmare`, `account-dashboard`, `account-tickets`, `account-orders`,
+`account-subscriptions` (dacă `feature('subscriptions')`), `account-giftcards`
+(dacă `feature('gift_cards')`), `account-settings`.
 Un `kind` mapează numele paginii la pageset în `manifest['pages']`:
 `'repertoire' => ['set'=>'listing','nav'=>'repertoire']`.
+
+### Fluxul de cumpărare + contul (end-to-end, live prin proxy)
+Generatorul adaugă automat, pentru orice kind `tenant`, paginile de auth,
+checkout/confirmare și zona `cont/*` (meniul de cont e feature-gated în
+`layout('account')`). Fluxul:
+```
+show → seat-map (hold/release live + timer 10 min) SAU ticket-selector
+     → cart (KitCart, localStorage)
+     → /finalizare  checkout: payment-methods + POST proxy 'checkout'
+     → /confirmare?order=ID  order-summary + bilete + QR
+cont/* : login/register (proxy) → Bearer în localStorage → acc-* hidratate
+```
+Endpoint-urile din proxy (`kit/proxy.php`, allow-list): `seating/seats/hold/
+release`, `checkout`, `order-summary`, `payment-methods`, `login/register/me/
+me-update/logout`, `acc-stats/tickets/orders/subscriptions/giftcards`,
+`acc-giftcard-redeem`. Extinde lista pe măsură ce conectezi mai mult din API.
 
 ## 6. Cum adaugi un kind nou
 

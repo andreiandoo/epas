@@ -1,0 +1,4 @@
+{"success":true,"data":[
+  {"event":"Hamlet","venue":"Sala Mare","date":"2026-09-18","month":"Sep","time":"19:00","seat_label":"Stal R3 L12","code":"TIX-10427-1","is_subscription":false},
+  {"event":"Livada de vișini","venue":"Sala Studio","date":"2026-10-02","month":"Oct","time":"18:00","seat_label":"Balcon R1 L4","code":"TIX-10500-1","is_subscription":true}
+]}

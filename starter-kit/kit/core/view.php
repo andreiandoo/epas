@@ -76,6 +76,29 @@ function kit_theme_links(): string {
     return "<link rel=\"stylesheet\" href=\"{$tokens}\">\n<link rel=\"stylesheet\" href=\"{$theme}\">";
 }
 
+/**
+ * Emit the JS bootstrap in the CORRECT ORDER: window.KIT config, then kit.js
+ * (defines KitProxy/KitAuth/kitAccountShell/…), then Alpine. Both scripts are
+ * deferred and execute in document order, so kit.js's globals exist before
+ * Alpine evaluates x-data. Layouts must call this in <head> (once).
+ */
+function kit_head_scripts(): string {
+    $cfg = Kit::config();
+    $kitCfg = json_encode([
+        'proxy'    => $cfg['proxy_url'] ?? '/api/proxy.php',
+        'cartKey'  => $cfg['cart_key'] ?? 'kit_cart',
+        'authKey'  => $cfg['auth_key'] ?? 'kit_auth',
+        'cartUrl'  => $cfg['cart_url'] ?? '/cos',
+        'currency' => $cfg['currency'] ?? 'RON',
+    ], JSON_UNESCAPED_SLASHES);
+    $out  = "<script>window.KIT = {$kitCfg};</script>\n";
+    $out .= '<script defer src="' . e($cfg['kit_js_href'] ?? '/kit/kit.js') . '"></script>' . "\n";
+    if ($cfg['use_alpine'] ?? true) {
+        $out .= '<script defer src="' . e($cfg['alpine_href']) . '"></script>';
+    }
+    return $out;
+}
+
 /** Label of the menu item with the given nav key (for page titles/H1s). */
 function kit_nav_label(string $navKey, string $fallback = ''): string {
     foreach ((Kit::get('menu') ?? []) as $item) {
