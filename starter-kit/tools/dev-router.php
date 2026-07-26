@@ -38,6 +38,14 @@ if (strpos($uri, '/kit/') === 0 && preg_match('/\.(js|css|svg|png|woff2?)$/', $u
     http_response_code(404); return true;
 }
 
+// Dev-only styleguide: boot the active site, render the styleguide pageset.
+if ($uri === '/styleguide') {
+    require_once $root . '/kit/core/config.php';
+    kit_boot(require $root . "/templates/$site/site.config.php");
+    require $root . '/kit/pagesets/styleguide.php';
+    return true;
+}
+
 // Client gateway: boot the active site, then hand off to the kit proxy.
 if ($uri === '/api/proxy.php') {
     require_once $root . '/kit/core/config.php';

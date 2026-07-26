@@ -58,8 +58,13 @@ Merged at boot: `defaults ← kind ← site` (deep-merge for `terms`/`features`)
 ```
 bash tools/verify.sh
 ```
-Lints all PHP, checks kit.js, renders the examples, and generates + builds every
-kind. Green means safe.
+Lints all PHP, checks kit.js, guards against hardcoded colours/fonts in
+components, runs the i18n key audit, renders the examples, and generates +
+builds every kind. Green means safe.
+
+- `php tools/i18n-audit.php` — reports t() keys missing from any dictionary.
+- Preview every component in a theme: `KIT_SITE=<slug> … dev-router` then open
+  `/styleguide`.
 
 ## Offline note
 This repo can't reach `core.tixello.com`; `fixtures/` back GET requests so pages
