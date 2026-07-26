@@ -30,7 +30,8 @@ $demo = !empty($__cfg['fixtures']);  // dev preview: skip auth gate when using f
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= e($title) ?></title>
   <?php if (!empty($__cfg['fonts_href'])): ?><link href="<?= e($__cfg['fonts_href']) ?>" rel="stylesheet"><?php endif; ?>
-  <?php if ($__cfg['use_tailwind'] ?? true): ?><script src="https://cdn.tailwindcss.com"></script><?php endif; ?>
+  <?php if (!empty($__cfg['favicon'])): ?><link rel="icon" href="<?= e($__cfg['favicon']) ?>"><?php endif; ?>
+  <?php if ($__cfg['use_tailwind'] ?? false): ?><script src="https://cdn.tailwindcss.com"></script><?php endif; ?>
   <?= kit_head_scripts() ?>
   <?= kit_theme_links() ?>
   <?php if (!empty($extra_styles)): ?><style><?= $extra_styles ?></style><?php endif; ?>

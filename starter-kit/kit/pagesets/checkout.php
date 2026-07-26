@@ -46,7 +46,18 @@ function () { ?>
         <template x-for="(l,i) in items" :key="i">
           <div class="kit-ordersum__row"><span class="kit-muted" x-text="l.title + (l.seats?(' ('+l.seats.length+' locuri)'):(l.qty?(' × '+l.qty):''))"></span><span x-text="fmt((l.price||0)*(l.seats?1:(l.qty||1)))"></span></div>
         </template>
-        <div class="kit-ordersum__row kit-ordersum__row--total"><span>Total</span><strong x-text="fmt(total())"></strong></div>
+
+        <div style="display:flex;gap:.4rem;margin:.75rem 0">
+          <input class="kit-search" style="max-width:none;flex:1" x-model="promo" placeholder="Cod promoțional / card cadou">
+          <button type="button" class="kit-btn kit-btn--outline" @click="applyPromo()" :disabled="promoBusy">Aplică</button>
+        </div>
+        <p x-show="promoMsg" x-text="promoMsg" :style="discount>0?'color:var(--kit-success)':'color:var(--kit-error)'" style="font-size:.82rem"></p>
+
+        <div class="kit-ordersum__totals">
+          <div class="kit-ordersum__row"><span class="kit-muted">Subtotal</span><span x-text="fmt(subtotal())"></span></div>
+          <div class="kit-ordersum__row" x-show="discount>0"><span class="kit-muted">Reducere</span><span x-text="'−'+fmt(discount)"></span></div>
+          <div class="kit-ordersum__row kit-ordersum__row--total"><span>Total</span><strong x-text="fmt(total())"></strong></div>
+        </div>
       </div>
     </div>
   </div></section>
@@ -54,17 +65,31 @@ function () { ?>
   <script>
   function kitCheckout(){ return {
     items: (window.KitCart?KitCart.all():[]), methods: [], method: '', contact:{name:'',email:'',phone:''}, terms:false, submitting:false, error:'',
+    promo:'', promoCode:'', promoBusy:false, promoMsg:'', discount:0,
     fmt(v){ return new Intl.NumberFormat('ro-RO').format(v)+' '+((window.KIT&&KIT.currency)||'RON'); },
-    total(){ return this.items.reduce((t,l)=>t+(l.price||0)*(l.seats?1:(l.qty||1)),0); },
+    subtotal(){ return this.items.reduce((t,l)=>t+(l.price||0)*(l.seats?1:(l.qty||1)),0); },
+    total(){ return Math.max(0, this.subtotal() - this.discount); },
     async init(){
       const r = await KitProxy('payment-methods');
       this.methods = (r&&r.data)|| [{id:'card',name:'Card bancar',hint:'Visa, Mastercard'}];
       if(this.methods[0]) this.method = this.methods[0].id;
     },
+    async applyPromo(){
+      if(!this.promo){ return; } this.promoBusy=true; this.promoMsg='';
+      try{
+        const r = await KitProxy('promo-validate',{},{method:'POST',body:{code:this.promo, subtotal:this.subtotal()}});
+        const d=(r&&r.data)||{};
+        if(r&&r.success && (d.discount||d.amount)){
+          this.discount = Number(d.discount||d.amount); this.promoCode=this.promo;
+          this.promoMsg = d.message || ('Cod aplicat: −'+this.fmt(this.discount));
+        } else { this.discount=0; this.promoCode=''; this.promoMsg=(r&&r.error)||'Cod invalid.'; }
+      }catch(e){ this.promoMsg='Nu am putut valida codul.'; }
+      finally{ this.promoBusy=false; }
+    },
     async submit(){
       this.error=''; this.submitting=true;
       try{
-        const r = await KitProxy('checkout',{},{method:'POST',body:{ items:this.items, contact:this.contact, payment_method:this.method }});
+        const r = await KitProxy('checkout',{},{method:'POST',body:{ items:this.items, contact:this.contact, payment_method:this.method, promo_code:this.promoCode }});
         const d = (r&&r.data)||{};
         if(d.payment_url){ window.location.href=d.payment_url; return; }
         if(d.order_id||d.id){ localStorage.removeItem((window.KIT&&KIT.cartKey)||'kit_cart'); window.location.href='/confirmare?order='+(d.order_id||d.id); return; }

@@ -142,6 +142,45 @@
     hide: function () { var m = document.getElementById('kit-qr'); if (m) m.hidden = true; }
   };
 
+  /* ---- newsletter (Alpine) --------------------------------------------- */
+  window.kitNewsletter = function () {
+    return {
+      email: '', busy: false, done: false,
+      async submit() {
+        if (!this.email) return; this.busy = true;
+        try { await proxy('newsletter', {}, { method: 'POST', body: { email: this.email } }); this.done = true; this.email = ''; }
+        catch (e) {} finally { this.busy = false; }
+      }
+    };
+  };
+
+  /* ---- cookie consent + consent-gated analytics ------------------------- */
+  var CONSENT_KEY = 'kit_consent';
+  function consentState() { try { return localStorage.getItem(CONSENT_KEY); } catch (e) { return null; } }
+  function loadAnalytics() {
+    var a = window.KIT_ANALYTICS || {};
+    if (a.gtm) { var g = document.createElement('script'); g.async = true; g.src = 'https://www.googletagmanager.com/gtm.js?id=' + a.gtm; document.head.appendChild(g);
+      window.dataLayer = window.dataLayer || []; window.dataLayer.push({ 'gtm.start': +new Date(), event: 'gtm.js' }); }
+    if (a.ga4) { var s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + a.ga4; document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); }; gtag('js', new Date()); gtag('config', a.ga4); }
+    if (a.meta) { !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+      if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', a.meta); window.fbq('track', 'PageView'); }
+  }
+  window.kitConsent = function () {
+    return {
+      show: false,
+      init() {
+        var required = window.KIT_CONSENT_REQUIRED !== false;
+        var st = consentState();
+        if (!required || st === 'accepted') { loadAnalytics(); this.show = false; return; }
+        this.show = st === null; // hidden once a choice is stored
+      },
+      accept() { try { localStorage.setItem(CONSENT_KEY, 'accepted'); } catch (e) {} loadAnalytics(); this.show = false; },
+      reject() { try { localStorage.setItem(CONSENT_KEY, 'rejected'); } catch (e) {} this.show = false; }
+    };
+  };
+
   /* ---- proxy helper ----------------------------------------------------- */
   function proxy(action, params, opts) {
     opts = opts || {};

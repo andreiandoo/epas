@@ -77,6 +77,75 @@ function kit_theme_links(): string {
 }
 
 /**
+ * Emit SEO <head> tags: description, canonical, Open Graph, Twitter card, and
+ * JSON-LD. $seo keys: title, description, image, canonical, og_type ('website'|
+ * 'article'|'event'…), event (canonical event → Event schema).
+ */
+function kit_seo_tags(array $seo = []): string {
+    $cfg   = Kit::config();
+    $title = $seo['title'] ?? $cfg['site_name'];
+    $desc  = $seo['description'] ?? $cfg['description'] ?? ($cfg['site_name'] . ' — bilete și evenimente');
+    $img   = $seo['image'] ?? $cfg['og_image'] ?? '';
+    $type  = $seo['og_type'] ?? 'website';
+    $base  = rtrim($cfg['site_url'] ?? '', '/');
+    $canon = $seo['canonical'] ?? ($base . ($_SERVER['REQUEST_URI'] ?? '/'));
+    $canon = strtok($canon, '?');
+
+    $t = [];
+    $t[] = '<meta name="description" content="' . e($desc) . '">';
+    $t[] = '<link rel="canonical" href="' . e($canon) . '">';
+    $t[] = '<meta property="og:site_name" content="' . e($cfg['site_name']) . '">';
+    $t[] = '<meta property="og:title" content="' . e($title) . '">';
+    $t[] = '<meta property="og:description" content="' . e($desc) . '">';
+    $t[] = '<meta property="og:type" content="' . e($type) . '">';
+    $t[] = '<meta property="og:url" content="' . e($canon) . '">';
+    if ($img) $t[] = '<meta property="og:image" content="' . e($img) . '">';
+    $t[] = '<meta name="twitter:card" content="' . ($img ? 'summary_large_image' : 'summary') . '">';
+    if (!empty($cfg['twitter'])) $t[] = '<meta name="twitter:site" content="' . e($cfg['twitter']) . '">';
+
+    // JSON-LD: Organization (always) + Event (on event pages).
+    $ld = [
+        '@context' => 'https://schema.org',
+        '@type'    => $cfg['organization_type'] ?? 'Organization',
+        'name'     => $cfg['site_name'],
+        'url'      => $base ?: $canon,
+    ];
+    if (!empty($cfg['social'])) $ld['sameAs'] = array_values($cfg['social']);
+    $graph = [$ld];
+    if (!empty($seo['event']) && is_array($seo['event'])) {
+        $ev = $seo['event'];
+        $event = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'Event',
+            'name'       => $ev['title'] ?? '',
+            'startDate'  => $ev['starts_at'] ?? ($ev['date'] ?? ''),
+            'eventStatus'=> $ev['is_cancelled'] ? 'https://schema.org/EventCancelled'
+                          : ($ev['is_postponed'] ? 'https://schema.org/EventPostponed' : 'https://schema.org/EventScheduled'),
+            'url'        => $canon,
+        ];
+        if (!empty($ev['venue_name'])) $event['location'] = ['@type' => 'Place', 'name' => $ev['venue_name'], 'address' => $ev['city'] ?? ''];
+        if (!empty($ev['poster_url'])) $event['image'] = $ev['poster_url'];
+        if ($ev['price_from'] !== null) $event['offers'] = ['@type' => 'Offer', 'price' => $ev['price_from'], 'priceCurrency' => $ev['currency'] ?? 'RON', 'availability' => ($ev['is_sold_out'] ?? false) ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock'];
+        $graph[] = $event;
+    }
+    $t[] = '<script type="application/ld+json">' . json_encode(count($graph) === 1 ? $graph[0] : $graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
+    return implode("\n  ", $t);
+}
+
+/** Emit window.KIT_ANALYTICS so kit.js can load trackers AFTER consent. */
+function kit_analytics_config(): string {
+    $cfg = Kit::config();
+    $a = array_filter([
+        'ga4'   => $cfg['ga4_id'] ?? null,
+        'gtm'   => $cfg['gtm_id'] ?? null,
+        'meta'  => $cfg['meta_pixel_id'] ?? null,
+    ]);
+    if (!$a && !($cfg['cookie_consent'] ?? true)) return '';
+    return '<script>window.KIT_ANALYTICS=' . json_encode($a, JSON_UNESCAPED_SLASHES)
+         . ';window.KIT_CONSENT_REQUIRED=' . (($cfg['cookie_consent'] ?? true) ? 'true' : 'false') . ';</script>';
+}
+
+/**
  * Emit the JS bootstrap in the CORRECT ORDER: window.KIT config, then kit.js
  * (defines KitProxy/KitAuth/kitAccountShell/…), then Alpine. Both scripts are
  * deferred and execute in document order, so kit.js's globals exist before

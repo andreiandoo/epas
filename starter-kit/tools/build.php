@@ -55,6 +55,23 @@ copy("$root/kit/deploy/htaccess",  "$out/.htaccess");
 mkdir("$out/api", 0775, true);
 file_put_contents("$out/api/proxy.php", "<?php require __DIR__ . '/../kit/proxy.php';\n");
 
+// 6) robots.txt + sitemap.xml (static routes; event URLs are generated at
+//    runtime — extend the sitemap from the API when you need full coverage)
+$cfg  = @include "$src/site.config.php";
+$base = rtrim($cfg['site_url'] ?? '', '/');
+$routes = is_file("$src/routes.php") ? (include "$src/routes.php") : ['exact' => []];
+$urls = [];
+foreach (($routes['exact'] ?? []) as $url => $name) {
+    if (in_array($name, ['login','register','confirmare','403','500','503','404','cart','checkout'], true)) continue;
+    if (strpos($url, '/cont') === 0) continue;
+    $urls[] = $base . $url;
+}
+$xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
+foreach (array_unique($urls) as $u) $xml .= "  <url><loc>" . htmlspecialchars($u) . "</loc></url>\n";
+$xml .= "</urlset>\n";
+file_put_contents("$out/sitemap.xml", $xml);
+file_put_contents("$out/robots.txt", "User-agent: *\nAllow: /\n" . ($base ? "Sitemap: $base/sitemap.xml\n" : ""));
+
 echo "Built $site → $out\n";
 echo "Serve locally:  php -S 127.0.0.1:8080 -t " . escapeshellarg($out) . " " . escapeshellarg($out . '/index.php') . "\n";
 

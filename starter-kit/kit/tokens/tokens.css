@@ -293,3 +293,15 @@
 .kit-payopt { display:block; padding:.7rem .9rem; border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); cursor:pointer; transition:var(--kit-transition); }
 .kit-payopt.is-active { border-color:var(--kit-primary); background:color-mix(in srgb, var(--kit-primary) 8%, transparent); }
 @media (min-width:800px){ .kit-cart-layout { grid-template-columns:1.5fr 1fr !important; } }
+
+/* Newsletter + footer social + cookie consent ----------------------------- */
+.kit-newsletter { display:flex; gap:1.5rem; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:2rem 1.25rem; border-bottom:1px solid var(--kit-border); }
+.kit-newsletter form { flex:1; min-width:260px; max-width:420px; }
+.kit-footer-social { display:flex; gap:1rem; }
+.kit-footer-social a { color:var(--kit-text-muted); text-decoration:none; font-size:.9rem; }
+.kit-footer-social a:hover { color:var(--kit-primary); }
+.kit-consent { position:fixed; left:1rem; right:1rem; bottom:1rem; z-index:200; max-width:640px; margin:0 auto;
+  background:var(--kit-surface); color:var(--kit-text); border:1px solid var(--kit-border); border-radius:var(--kit-radius);
+  box-shadow:var(--kit-shadow-lg); padding:1.1rem 1.25rem; display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.kit-consent p { font-size:.85rem; margin:0; flex:1; min-width:220px; }
+.kit-consent__actions { display:flex; gap:.5rem; }

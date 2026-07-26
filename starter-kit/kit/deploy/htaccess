@@ -4,6 +4,10 @@
 Options -Indexes
 DirectoryIndex index.php
 
+ErrorDocument 403 /403
+ErrorDocument 500 /500
+ErrorDocument 503 /503
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 

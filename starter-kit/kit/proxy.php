@@ -50,6 +50,9 @@ $ACTIONS = [
     'seats'         => ['GET',  '/public/events/{event}/seats',   0],
     'hold'          => ['POST', '/public/seats/hold',             0],
     'release'       => ['DELETE','/public/seats/hold',            0],
+    // newsletter (public)
+    'newsletter'    => ['POST', "$base/newsletter/subscribe", 0],
+    'promo-validate'=> ['POST', "$base/promo-codes/validate", 0],
     // checkout (never cache)
     'checkout'      => ['POST', "$base/demo-checkout",        0],
     'order-summary' => ['GET',  "$base/order-summary",        0],

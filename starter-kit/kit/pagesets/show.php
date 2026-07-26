@@ -20,7 +20,14 @@ $rail = kit_feature('seating')
     ? component_html('seat-map', ['event' => $event])
     : component_html('ticket-selector', ['event' => $event]);
 
-layout('public', ['title' => $event['title'] . ' — ' . kit_cfg('site_name'), 'nav' => ''],
+layout('public', [
+    'title'       => $event['title'] . ' — ' . kit_cfg('site_name'),
+    'nav'         => '',
+    'og_type'     => 'event',
+    'event'       => $event,                                   // → Event JSON-LD
+    'description' => $event['short_description'] ?: ($event['title'] . ' la ' . ($event['venue_name'] ?: kit_cfg('site_name'))),
+    'image'       => $event['hero_image_url'] ?: $event['poster_url'],
+],
 function () use ($event, $related, $rail) {
     component('event-hero', ['event' => $event, 'slot' => $rail]);
     ?>

@@ -51,6 +51,21 @@ final class Kit {
             'tokens_href'        => '/theme/tokens.css',
             'theme_href'         => '/theme/theme.css',
             'alpine_href'        => '/kit/js/vendor/alpine.min.js', // vendored (no CDN dependency)
+            'use_tailwind'       => false, // kit is self-contained via kit-* classes; opt in only if a template uses Tailwind utilities
+            'use_alpine'         => true,
+            // SEO / social
+            'description'        => null,   // default meta description
+            'og_image'           => null,   // absolute URL for OG/Twitter image
+            'twitter'            => null,   // @handle
+            'social'             => [],     // ['facebook'=>url,'instagram'=>url,...] for footer + JSON-LD sameAs
+            'organization_type'  => 'Organization', // schema.org type (e.g. PerformingGroup, MusicGroup)
+            // Analytics (gated behind cookie consent). Any may be null.
+            'ga4_id'             => null,   // G-XXXXXXXXXX
+            'gtm_id'             => null,   // GTM-XXXXXXX
+            'meta_pixel_id'      => null,
+            'cookie_consent'     => true,   // show the GDPR banner
+            'newsletter'         => true,   // show the footer newsletter form
+            'favicon'            => '/favicon.svg',
             // Nouns the UI uses; a kind overrides these so generic pages read
             // "Spectacole" for a theatre, "Activități" for a leisure venue, etc.
             'terms' => [

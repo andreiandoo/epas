@@ -89,11 +89,18 @@ if ($kind) {
         }
     }
 
+    // Error pages (all kinds). 404 comes from the kind's own pageset.
+    foreach ([403, 500, 503] as $code) {
+        $pages[(string)$code] = ['set' => 'error', 'vars' => ['code' => $code]];
+        $extraExact["/$code"] = (string)$code;
+    }
+
     foreach ($pages as $pname => $spec) {
-        $set = $spec['set'] ?? $pname;
-        $nav = $spec['nav'] ?? null;
+        $set  = $spec['set'] ?? $pname;
+        $vars = $spec['vars'] ?? [];
+        if (isset($spec['nav'])) $vars['nav'] = $spec['nav'];
         $body = "<?php\nrequire __DIR__ . '/../includes/bootstrap.php';\n";
-        if ($nav !== null) $body .= "\$PAGE = ['nav' => " . var_export($nav, true) . "];\n";
+        if ($vars) $body .= "\$PAGE = " . var_export($vars, true) . ";\n";
         $body .= "require KIT_DIR . '/pagesets/" . $set . ".php';\n";
         file_put_contents("$dst/pages/$pname.php", $body);
         $generated[] = $pname;

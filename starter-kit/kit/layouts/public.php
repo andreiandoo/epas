@@ -20,16 +20,18 @@ $title       = $title       ?? $__cfg['site_name'];
 $description = $description ?? ($__cfg['site_name'] . ' — bilete și evenimente');
 $navActive   = $nav ?? '';
 $menu        = $__cfg['menu'] ?? [];
-$useTailwind = $__cfg['use_tailwind'] ?? true;
+$useTailwind = $__cfg['use_tailwind'] ?? false;
 ?><!DOCTYPE html>
 <html lang="<?= e($__cfg['locale']) ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="<?= e($description) ?>">
   <title><?= e($title) ?></title>
+  <?php if (!empty($__cfg['favicon'])): ?><link rel="icon" href="<?= e($__cfg['favicon']) ?>"><?php endif; ?>
+  <?= kit_seo_tags(['title' => $title, 'description' => $description, 'image' => $image ?? null, 'og_type' => $og_type ?? 'website', 'event' => $event ?? null, 'canonical' => $canonical ?? null]) ?>
   <?php if (!empty($__cfg['fonts_href'])): ?><link href="<?= e($__cfg['fonts_href']) ?>" rel="stylesheet"><?php endif; ?>
   <?php if ($useTailwind): ?><script src="https://cdn.tailwindcss.com"></script><?php endif; ?>
+  <?= kit_analytics_config() ?>
   <?= kit_head_scripts() ?>
   <?= kit_theme_links() ?>
   <?php if (!empty($extra_styles)): ?><style><?= $extra_styles ?></style><?php endif; ?>
@@ -59,11 +61,30 @@ $useTailwind = $__cfg['use_tailwind'] ?? true;
   <main class="kit-main"><?= $slot ?></main>
 
   <footer class="kit-site-footer">
+    <?php if ($__cfg['newsletter'] ?? true): ?>
+      <div class="kit-container kit-newsletter" x-data="kitNewsletter()">
+        <div>
+          <h3 class="kit-display" style="font-size:1.15rem">Abonează-te la newsletter</h3>
+          <p class="kit-muted" style="font-size:.85rem">Primești primul veștile despre <?= e(kit_term('events', 'evenimente')) ?>.</p>
+        </div>
+        <form class="kit-search" @submit.prevent="submit()">
+          <input class="kit-search" style="max-width:none" type="email" x-model="email" placeholder="Email" required>
+          <button class="kit-btn kit-btn--primary" :disabled="busy"><span x-text="done ? 'Mulțumim ✓' : 'Abonează-te'"></span></button>
+        </form>
+      </div>
+    <?php endif; ?>
     <div class="kit-container kit-site-footer__inner">
       <p><?= e($__cfg['site_name']) ?><?php if (!empty($__cfg['site_city'])): ?> · <?= e($__cfg['site_city']) ?><?php endif; ?></p>
-      <p class="kit-muted">© <?= date('Y') ?> · Powered by Kit</p>
+      <?php if (!empty($__cfg['social'])): ?>
+        <p class="kit-footer-social">
+          <?php foreach ($__cfg['social'] as $net => $url): ?><a href="<?= e($url) ?>" rel="noopener" target="_blank"><?= e(ucfirst($net)) ?></a><?php endforeach; ?>
+        </p>
+      <?php endif; ?>
+      <p class="kit-muted">© <?= date('Y') ?> <?= e($__cfg['site_name']) ?></p>
     </div>
   </footer>
+
+  <?php if ($__cfg['cookie_consent'] ?? true) component('cookie-consent'); ?>
 
 </body>
 </html>

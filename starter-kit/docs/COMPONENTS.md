@@ -35,6 +35,7 @@ Legendă: **canonic** = view-model din `viewmodel.php` (produs de `kit_*` din
 | `cta` | `title`,`text`,`action`={label,url} | Bandă call-to-action. |
 | `stat-tile` | `num`,`label`,`hint` | Tile de statistică (dashboard/cont). |
 | `empty-state` | `message`,`icon`,`action`={label,url} | Stare goală / negăsit. |
+| `cookie-consent` | — (render o dată de layout) | Banner GDPR; analytics se încarcă doar după Accept (kit.js). |
 
 ## Layout-uri
 | Layout | Vars | Note |

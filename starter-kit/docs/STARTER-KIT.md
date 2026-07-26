@@ -253,7 +253,15 @@ Integrarea cu `deploy-*.bat` existente: în loc să copieze
   hidratată prin proxy cu Bearer (`acc-stats/tickets/orders/subscriptions/
   gift-cards`, `me`). Toate paginile comerciale/cont sunt generate per kind
   (feature-gated).
-- **26 componente** — vezi `docs/COMPONENTS.md` pentru lista + input-uri.
+- **27 componente** — vezi `docs/COMPONENTS.md` pentru lista + input-uri.
+- **Production hardening**: SEO complet (meta + Open Graph + Twitter + JSON-LD
+  Organization/Event via `kit_seo_tags`), cookie consent GDPR + analytics
+  gated pe consimțământ (GA4/GTM/Meta din config), newsletter în footer,
+  pagini de eroare 403/500/503, `robots.txt` + `sitemap.xml` la build,
+  promo code / card cadou la checkout. **Fully self-contained** — fără CDN
+  (Alpine vendorizat, Tailwind oprit implicit; kit-* acoperă tot).
+- **Ergonomie**: `bash tools/verify.sh` (lint + render + generate/build toate
+  kind-urile) și `CLAUDE.md` pentru orientarea sesiunilor viitoare.
 - **Al treilea layer `kind`** (6 tipuri de tenant) cu manifest de capabilități +
   merge la boot (`defaults ← kind ← site`), helper-e `kit_kind/kit_feature/kit_term/kit_kinds`,
   și generator care acceptă kind. Vezi `docs/TENANT-KINDS.md`.
