@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "events": [
+      {
+        "id": 101,
+        "slug": "hamlet",
+        "title": "Hamlet",
+        "event_types": [{ "name": "Tragedie", "slug": "tragedie" }],
+        "venue": { "id": 1, "name": "Sala Mare", "city": "București" },
+        "schedule": { "duration_mode": "single", "start_date": "2026-09-18T00:00:00+03:00", "start_time": "19:00" },
+        "poster_url": "https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=600&q=80",
+        "hero_image_url": "https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=1600&q=80",
+        "is_sold_out": false,
+        "is_promoted": true,
+        "short_description": "Capodopera lui Shakespeare într-o montare contemporană.",
+        "artists": [{ "id": 5, "name": "Radu Ionescu", "image": "" }],
+        "ticket_types": [
+          { "id": 1, "name": "Categoria I", "price": 120, "currency": "RON" },
+          { "id": 2, "name": "Categoria II", "price": 80, "currency": "RON" }
+        ]
+      },
+      {
+        "id": 102,
+        "slug": "o-scrisoare-pierduta",
+        "title": "O scrisoare pierdută",
+        "event_types": [{ "name": "Comedie", "slug": "comedie" }],
+        "venue": { "id": 1, "name": "Sala Mare", "city": "București" },
+        "schedule": { "duration_mode": "single", "start_date": "2026-09-21T00:00:00+03:00", "start_time": "19:30" },
+        "poster_url": "https://images.unsplash.com/photo-1503095396549-807759245b35?w=600&q=80",
+        "is_sold_out": true,
+        "ticket_types": [{ "id": 3, "name": "Bilet standard", "price": 90, "currency": "RON" }]
+      },
+      {
+        "id": 103,
+        "slug": "livada-de-visini",
+        "title": "Livada de vișini",
+        "event_types": [{ "name": "Dramă", "slug": "drama" }],
+        "venue": { "id": 2, "name": "Sala Studio", "city": "București" },
+        "schedule": { "duration_mode": "single", "start_date": "2026-10-02T00:00:00+03:00", "start_time": "18:00" },
+        "poster_url": "https://images.unsplash.com/photo-1470019693664-1d202d2c0907?w=600&q=80",
+        "is_sold_out": false,
+        "ticket_types": [{ "id": 4, "name": "Bilet standard", "price": 70, "currency": "RON" }]
+      }
+    ]
+  },
+  "meta": { "total": 3, "per_page": 100, "current_page": 1, "last_page": 1 }
+}

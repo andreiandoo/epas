@@ -1,0 +1,16 @@
+/* ==========================================================================
+   THEME — __SITE_NAME__
+   The whole visual identity. Override only the tokens you want to change;
+   anything you leave out inherits the sensible default from tokens.css.
+   ========================================================================== */
+:root {
+  --kit-primary:      #A51C30;   /* TODO brand colour */
+  --kit-primary-dark: #8B1728;
+  --kit-on-primary:   #ffffff;
+  --kit-accent:       #E67E22;
+
+  /* --kit-bg: #0A0A0A;  --kit-surface: #1A1A1A;  --kit-text: #fff;  (dark theme) */
+
+  /* --kit-font-display: 'Playfair Display', serif; */
+  /* --kit-radius: 0.5rem; */
+}

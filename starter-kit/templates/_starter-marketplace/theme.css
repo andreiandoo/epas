@@ -1,0 +1,9 @@
+/* THEME — __SITE_NAME__  (override only what you need; rest inherits tokens.css) */
+:root {
+  --kit-primary:      #A51C30;   /* TODO brand colour */
+  --kit-primary-dark: #8B1728;
+  --kit-on-primary:   #ffffff;
+  --kit-accent:       #E67E22;
+  --kit-radius:       1rem;
+  /* --kit-font-display: 'Plus Jakarta Sans', sans-serif; */
+}

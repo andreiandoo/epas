@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "data": {
+    "events": [
+      {
+        "id": 900, "slug": "untold-2026", "name": "UNTOLD 2026",
+        "event_date": "2026-08-06", "start_time": "16:00",
+        "venue": "Cluj Arena", "city": "Cluj-Napoca",
+        "category": "Festival",
+        "poster_url": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80",
+        "price_from": 499, "currency": "RON",
+        "has_availability": true, "has_paid_promotion": true,
+        "ticket_types": [{ "name": "Abonament 4 zile", "price": 499 }]
+      },
+      {
+        "id": 901, "slug": "smiley-live", "name": "Smiley Live",
+        "event_date": "2026-09-12", "start_time": "20:00",
+        "venue": "Sala Palatului", "city": "București",
+        "category": "Concert",
+        "poster_url": "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=80",
+        "price_from": 150, "currency": "RON", "has_availability": true,
+        "ticket_types": [{ "name": "Categoria A", "price": 150 }]
+      },
+      {
+        "id": 902, "slug": "vama-acustic", "name": "Vama — Acustic",
+        "event_date": "2026-10-04", "start_time": "19:00",
+        "venue": "Arenele Romane", "city": "București",
+        "category": "Concert",
+        "poster_url": "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=600&q=80",
+        "price_from": 120, "currency": "RON", "has_availability": false,
+        "ticket_types": [{ "name": "Acces general", "price": 120 }]
+      },
+      {
+        "id": 903, "slug": "swan-lake", "name": "Lacul lebedelor",
+        "event_date": "2026-11-20", "start_time": "18:30",
+        "venue": "Opera Națională", "city": "București",
+        "category": "Balet",
+        "poster_url": "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?w=600&q=80",
+        "price_from": 90, "currency": "RON", "has_availability": true,
+        "ticket_types": [{ "name": "Stal", "price": 90 }]
+      }
+    ]
+  },
+  "meta": { "total": 4, "per_page": 12, "current_page": 1, "last_page": 1 }
+}

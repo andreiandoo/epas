@@ -1,0 +1,215 @@
+/* ==========================================================================
+   KIT TOKEN CONTRACT
+   --------------------------------------------------------------------------
+   This file defines the DEFAULT values for every design token the kit's
+   components read, plus the base component styles keyed on those tokens.
+
+   A template does NOT edit this file. A template ships a `theme.css` that
+   re-declares the :root variables it wants to change. Because every component
+   style below references var(--kit-*), overriding the variable restyles the
+   entire site — that is what makes a new template "instant".
+
+   Rule for component authors: never hard-code a colour, font, or radius in a
+   component. Reference a --kit-* token. If you need a new knob, add it here
+   with a sensible default first.
+   ========================================================================== */
+
+:root {
+  /* ---- Brand colours ---- */
+  --kit-primary:        #A51C30;
+  --kit-primary-dark:   #8B1728;
+  --kit-primary-light:  #C41E3A;
+  --kit-on-primary:     #ffffff;   /* text on a primary background */
+  --kit-accent:         #E67E22;
+
+  /* ---- Surfaces & text ---- */
+  --kit-bg:             #ffffff;   /* page background */
+  --kit-surface:        #F8FAFC;   /* card background */
+  --kit-surface-2:      #f1f5f9;   /* subtle raised surface */
+  --kit-text:           #0f172a;   /* body text */
+  --kit-text-muted:     #64748b;
+  --kit-border:         #e2e8f0;
+
+  /* ---- Status ---- */
+  --kit-success:        #10b981;
+  --kit-warning:        #f59e0b;
+  --kit-error:          #ef4444;
+
+  /* ---- Typography ---- */
+  --kit-font-body:      'Plus Jakarta Sans', system-ui, sans-serif;
+  --kit-font-display:   var(--kit-font-body);
+  --kit-font-weight-display: 700;
+
+  /* ---- Shape & motion ---- */
+  --kit-radius:         0.75rem;
+  --kit-radius-sm:      0.375rem;
+  --kit-radius-lg:      1.25rem;
+  --kit-shadow:         0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --kit-shadow-lg:      0 12px 30px -12px rgba(0,0,0,.25);
+  --kit-transition:     200ms ease;
+
+  /* ---- Seat map (used by seat-map component) ---- */
+  --kit-seat-free:      var(--kit-success);
+  --kit-seat-held:      var(--kit-warning);
+  --kit-seat-sold:      #94a3b8;
+  --kit-seat-selected:  var(--kit-primary);
+}
+
+/* ==========================================================================
+   BASE COMPONENT STYLES  (all keyed on tokens above)
+   ========================================================================== */
+
+.kit-body { background: var(--kit-bg); color: var(--kit-text); font-family: var(--kit-font-body); }
+.kit-display { font-family: var(--kit-font-display); font-weight: var(--kit-font-weight-display); }
+.kit-muted { color: var(--kit-text-muted); }
+
+/* Buttons ------------------------------------------------------------------ */
+.kit-btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  padding:.625rem 1.25rem; border-radius:var(--kit-radius-sm); font-weight:600;
+  transition:var(--kit-transition); cursor:pointer; text-decoration:none; line-height:1; }
+.kit-btn--primary { background:var(--kit-primary); color:var(--kit-on-primary); }
+.kit-btn--primary:hover { background:var(--kit-primary-dark); }
+.kit-btn--outline { border:1px solid var(--kit-primary); color:var(--kit-primary); background:transparent; }
+.kit-btn--outline:hover { background:var(--kit-primary); color:var(--kit-on-primary); }
+.kit-btn[aria-disabled="true"], .kit-btn:disabled { opacity:.5; pointer-events:none; }
+
+/* Badges ------------------------------------------------------------------- */
+.kit-badge { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem .55rem;
+  border-radius:999px; font-size:.7rem; font-weight:700; letter-spacing:.02em; }
+.kit-badge--soldout { background:var(--kit-error); color:#fff; }
+.kit-badge--cancelled { background:var(--kit-text-muted); color:#fff; }
+.kit-badge--postponed { background:var(--kit-warning); color:#111; }
+.kit-badge--promoted { background:var(--kit-accent); color:#fff; }
+
+/* Event card --------------------------------------------------------------- */
+.kit-event-card { display:flex; flex-direction:column; background:var(--kit-surface);
+  border:1px solid var(--kit-border); border-radius:var(--kit-radius); overflow:hidden;
+  transition:var(--kit-transition); text-decoration:none; color:inherit; height:100%; }
+.kit-event-card:hover { transform:translateY(-4px); box-shadow:var(--kit-shadow-lg);
+  border-color:var(--kit-primary); }
+.kit-event-card__media { position:relative; aspect-ratio:2/3; background:var(--kit-surface-2); overflow:hidden; }
+.kit-event-card__media img { width:100%; height:100%; object-fit:cover; }
+.kit-event-card__badges { position:absolute; top:.6rem; left:.6rem; display:flex; gap:.35rem; flex-wrap:wrap; }
+.kit-event-card__date { position:absolute; bottom:.6rem; left:.6rem; background:rgba(0,0,0,.7);
+  color:#fff; border-radius:var(--kit-radius-sm); padding:.3rem .5rem; text-align:center; line-height:1; }
+.kit-event-card__date b { font-size:1.1rem; display:block; }
+.kit-event-card__date span { font-size:.6rem; text-transform:uppercase; letter-spacing:.05em; }
+.kit-event-card__body { padding:.9rem 1rem 1.1rem; display:flex; flex-direction:column; gap:.35rem; flex:1; }
+.kit-event-card__cat { font-size:.72rem; color:var(--kit-primary); font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.kit-event-card__title { font-family:var(--kit-font-display); font-weight:var(--kit-font-weight-display); font-size:1.05rem; line-height:1.25; }
+.kit-event-card__meta { font-size:.8rem; color:var(--kit-text-muted); }
+.kit-event-card__price { margin-top:auto; padding-top:.4rem; font-weight:700; color:var(--kit-text); }
+
+/* Horizontal variant */
+.kit-event-card--horizontal { flex-direction:row; }
+.kit-event-card--horizontal .kit-event-card__media { aspect-ratio:1/1; width:120px; flex:none; }
+
+/* Generic card / grid ------------------------------------------------------ */
+.kit-grid { display:grid; gap:1.25rem; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+.kit-card { background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius); overflow:hidden; transition:var(--kit-transition); }
+.kit-card:hover { box-shadow:var(--kit-shadow-lg); }
+
+/* Skeleton ----------------------------------------------------------------- */
+.kit-skeleton { background:linear-gradient(90deg,var(--kit-surface-2) 25%,var(--kit-border) 37%,var(--kit-surface-2) 63%);
+  background-size:400% 100%; animation:kit-shimmer 1.4s ease infinite; border-radius:var(--kit-radius-sm); }
+@keyframes kit-shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
+
+/* Empty state -------------------------------------------------------------- */
+.kit-empty { text-align:center; padding:4rem 1rem; color:var(--kit-text-muted);
+  background:var(--kit-surface); border-radius:var(--kit-radius); }
+
+/* Stat tile ---------------------------------------------------------------- */
+.kit-stat { background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius); padding:1.1rem 1.25rem; }
+.kit-stat__num { font-family:var(--kit-font-display); font-size:1.9rem; font-weight:var(--kit-font-weight-display); }
+.kit-stat__label { font-size:.8rem; color:var(--kit-text-muted); }
+
+/* Breadcrumb --------------------------------------------------------------- */
+.kit-breadcrumb { display:flex; gap:.4rem; align-items:center; font-size:.82rem; color:var(--kit-text-muted); }
+.kit-breadcrumb a { color:var(--kit-text-muted); text-decoration:none; }
+.kit-breadcrumb a:hover { color:var(--kit-primary); }
+
+/* Pagination --------------------------------------------------------------- */
+.kit-pagination { display:flex; gap:.35rem; justify-content:center; flex-wrap:wrap; margin-top:2rem; }
+.kit-pagination a, .kit-pagination span { display:inline-flex; min-width:2.25rem; height:2.25rem;
+  align-items:center; justify-content:center; border-radius:var(--kit-radius-sm);
+  border:1px solid var(--kit-border); text-decoration:none; color:var(--kit-text); padding:0 .5rem; }
+.kit-pagination .is-active { background:var(--kit-primary); color:var(--kit-on-primary); border-color:var(--kit-primary); }
+
+/* Hero --------------------------------------------------------------------- */
+.kit-hero { position:relative; color:#fff; padding:5rem 1.5rem; text-align:center; overflow:hidden; }
+.kit-hero__bg { position:absolute; inset:0; background-size:cover; background-position:center; z-index:-2; }
+.kit-hero::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.75)); z-index:-1; }
+.kit-hero__eyebrow { text-transform:uppercase; letter-spacing:.2em; font-size:.8rem; opacity:.85; }
+.kit-hero__title { font-family:var(--kit-font-display); font-weight:var(--kit-font-weight-display); font-size:clamp(2rem,5vw,3.5rem); margin:.5rem 0 1rem; }
+
+/* Subscription / pricing card --------------------------------------------- */
+.kit-plan { background:var(--kit-surface); border:1px solid var(--kit-border); border-radius:var(--kit-radius-lg); padding:1.75rem; position:relative; }
+.kit-plan--featured { border-color:var(--kit-primary); box-shadow:var(--kit-shadow-lg); }
+.kit-plan__price { font-family:var(--kit-font-display); font-size:2.4rem; font-weight:var(--kit-font-weight-display); }
+.kit-plan__benefits { list-style:none; padding:0; margin:1rem 0; display:flex; flex-direction:column; gap:.5rem; }
+.kit-plan__benefits li { display:flex; gap:.5rem; font-size:.9rem; }
+
+/* Chips ------------------------------------------------------------------- */
+.kit-chip { display:inline-block; margin-top:.4rem; padding:.15rem .55rem; font-size:.72rem;
+  border-radius:999px; background:var(--kit-surface-2); color:var(--kit-text-muted); }
+
+/* Artist / venue / taxonomy cards ----------------------------------------- */
+.kit-artist-card { display:flex; flex-direction:column; text-decoration:none; color:inherit; }
+.kit-artist-card__media { aspect-ratio:1/1; overflow:hidden; background:var(--kit-surface-2); }
+.kit-artist-card__media img, .kit-place-card__media img { width:100%; height:100%; object-fit:cover; }
+.kit-artist-card__body { padding:.8rem 1rem 1rem; display:flex; flex-direction:column; gap:.2rem; }
+.kit-place-card { display:flex; flex-direction:column; text-decoration:none; color:inherit; }
+.kit-place-card__media { aspect-ratio:3/2; overflow:hidden; background:var(--kit-surface-2); }
+.kit-place-card__body { padding:.8rem 1rem 1rem; display:flex; flex-direction:column; gap:.25rem; }
+.kit-tax-card { position:relative; min-height:120px; display:grid; place-items:center; text-decoration:none;
+  color:var(--kit-text); background-size:cover; background-position:center; }
+.kit-tax-card--img { color:#fff; }
+.kit-tax-card--img::after { content:''; position:absolute; inset:0; background:rgba(0,0,0,.45); }
+.kit-tax-card__inner { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:.2rem; padding:1rem; }
+.kit-tax-card__icon { font-size:1.6rem; }
+.kit-tax-card__name { font-size:1.05rem; }
+
+/* Filters ----------------------------------------------------------------- */
+.kit-filters { display:flex; gap:1rem; flex-wrap:wrap; align-items:end; margin-bottom:1.5rem; }
+.kit-filters__field { display:flex; flex-direction:column; gap:.25rem; font-size:.8rem; }
+.kit-filters select { padding:.5rem .75rem; border-radius:var(--kit-radius-sm); border:1px solid var(--kit-border);
+  background:var(--kit-surface); color:var(--kit-text); min-width:9rem; }
+
+/* Event hero (single) ----------------------------------------------------- */
+.kit-event-hero { position:relative; color:#fff; padding:4rem 0; overflow:hidden; }
+.kit-event-hero__bg { position:absolute; inset:0; background-size:cover; background-position:center; filter:blur(18px) brightness(.4); transform:scale(1.1); z-index:-1; }
+.kit-event-hero__grid { display:grid; gap:2rem; grid-template-columns:1fr; }
+@media (min-width:800px){ .kit-event-hero__grid { grid-template-columns:300px 1fr; } }
+.kit-event-hero__poster img { width:100%; border-radius:var(--kit-radius); box-shadow:var(--kit-shadow-lg); }
+.kit-event-hero__meta { list-style:none; padding:0; margin:0 0 1rem; display:flex; flex-direction:column; gap:.4rem; opacity:.95; }
+.kit-event-hero__rail { margin-top:1.5rem; background:var(--kit-surface); color:var(--kit-text); border-radius:var(--kit-radius); padding:1.25rem; max-width:26rem; }
+
+/* Ticket selector --------------------------------------------------------- */
+.kit-ticket-row { display:flex; justify-content:space-between; align-items:center; padding:.6rem 0; border-bottom:1px solid var(--kit-border); }
+.kit-qty { display:inline-flex; align-items:center; gap:.6rem; }
+.kit-qty button { width:2rem; height:2rem; border-radius:var(--kit-radius-sm); border:1px solid var(--kit-border); background:var(--kit-surface-2); color:var(--kit-text); font-size:1.1rem; cursor:pointer; }
+.kit-ticket-total { display:flex; justify-content:space-between; padding:.8rem 0; font-family:var(--kit-font-display); font-size:1.2rem; }
+
+/* Seat map ---------------------------------------------------------------- */
+.kit-seatmap { background:var(--kit-surface); border:1px solid var(--kit-border); border-radius:var(--kit-radius); padding:1.25rem; }
+.kit-seatmap__stage { text-align:center; letter-spacing:.4em; font-size:.75rem; color:var(--kit-text-muted); padding:.5rem; border-bottom:1px solid var(--kit-border); margin-bottom:1rem; }
+.kit-seatmap__legend { display:flex; gap:1.25rem; justify-content:center; margin-top:1rem; font-size:.8rem; color:var(--kit-text-muted); }
+.kit-seatmap__legend i { display:inline-block; width:.8rem; height:.8rem; border-radius:3px; vertical-align:middle; margin-right:.3rem; }
+.kit-seat { width:1.4rem; height:1.4rem; border-radius:4px; border:none; cursor:pointer; background:var(--kit-seat-free); }
+.kit-seat[data-status="sold"] { background:var(--kit-seat-sold); cursor:not-allowed; }
+.kit-seat[data-status="held"] { background:var(--kit-seat-held); cursor:not-allowed; }
+.kit-seat.is-selected { background:var(--kit-seat-selected); outline:2px solid var(--kit-on-primary); }
+.kit-seatmap__summary { display:flex; align-items:center; gap:1rem; justify-content:space-between; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--kit-border); }
+
+/* CTA band ---------------------------------------------------------------- */
+.kit-cta { padding:3.5rem 0; background:var(--kit-surface); border-top:1px solid var(--kit-border); border-bottom:1px solid var(--kit-border); }
+
+/* Cart line --------------------------------------------------------------- */
+.kit-cart-line { display:flex; gap:1rem; align-items:center; padding:1rem 0; border-bottom:1px solid var(--kit-border); }
+.kit-cart-line__img { width:64px; height:64px; border-radius:var(--kit-radius-sm); object-fit:cover; flex:none; }
+.kit-cart-line__info { flex:1; display:flex; flex-direction:column; gap:.2rem; }
+.kit-cart-line__title { text-decoration:none; color:var(--kit-text); font-size:1rem; }
+.kit-cart-line__seats { display:flex; gap:.3rem; flex-wrap:wrap; margin-top:.25rem; }
+.kit-cart-line__price { font-weight:700; white-space:nowrap; }

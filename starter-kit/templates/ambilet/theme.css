@@ -1,0 +1,29 @@
+/* ==========================================================================
+   THEME — ambilet (marketplace)
+   Light theme, crimson brand. Same components as teatru, totally different
+   look — achieved purely by overriding tokens.
+   ========================================================================== */
+:root {
+  --kit-primary:       #A51C30;
+  --kit-primary-dark:  #8B1728;
+  --kit-primary-light: #C41E3A;
+  --kit-on-primary:    #ffffff;
+  --kit-accent:        #E67E22;
+
+  --kit-bg:            #ffffff;
+  --kit-surface:       #ffffff;
+  --kit-surface-2:     #f1f5f9;
+  --kit-text:          #0f172a;
+  --kit-text-muted:    #64748b;
+  --kit-border:        #e2e8f0;
+
+  --kit-font-body:     'Plus Jakarta Sans', system-ui, sans-serif;
+  --kit-font-display:  'Plus Jakarta Sans', system-ui, sans-serif;
+  --kit-font-weight-display: 800;
+
+  --kit-radius:        1rem;
+  --kit-radius-sm:     0.5rem;
+  --kit-shadow-lg:     0 12px 30px -12px rgba(0,0,0,.18);
+}
+
+.kit-event-card { box-shadow: var(--kit-shadow); }

@@ -1,0 +1,24 @@
+# Kit deploy .htaccess — clean URLs → front controller.
+# Renamed to `.htaccess` at build time.
+
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve real files/dirs directly (theme/, kit/, api/, favicon, images, css, js)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Everything else → front controller
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Never serve source/config to the browser
+<FilesMatch "^(site\.config|routes)\.php$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 403 ^/includes/
+RedirectMatch 403 ^/kit/(core|components|layouts)/

@@ -1,0 +1,34 @@
+/* ==========================================================================
+   THEME — teatru
+   The ENTIRE visual identity of this tenant. Overrides the token contract
+   from tokens.css. Nothing else in this template touches colours/fonts.
+   Recreates the teatru "gold / burgundy / midnight" look.
+   ========================================================================== */
+:root {
+  --kit-primary:        #722F37;   /* burgundy */
+  --kit-primary-dark:   #5C262E;
+  --kit-primary-light:  #8B3A44;
+  --kit-on-primary:     #FFFEF2;   /* ivory */
+  --kit-accent:         #D4AF37;   /* gold */
+
+  --kit-bg:             #0A0A0A;   /* midnight */
+  --kit-surface:        #1A1A1A;   /* charcoal */
+  --kit-surface-2:      #242424;
+  --kit-text:           #FFFEF2;   /* ivory */
+  --kit-text-muted:     #9A9590;   /* warm gray */
+  --kit-border:         rgba(212,175,55,.14);
+
+  --kit-font-body:      'Lato', system-ui, sans-serif;
+  --kit-font-display:   'Playfair Display', serif;
+  --kit-font-weight-display: 600;
+
+  --kit-radius:         0.6rem;
+  --kit-radius-sm:      0.3rem;
+  --kit-shadow-lg:      0 12px 40px -12px rgba(0,0,0,.6);
+}
+
+/* Theme-specific flourishes (optional, on top of tokenized components) */
+.kit-event-card__cat { color: var(--kit-accent); }
+.kit-btn--primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px -10px rgba(212,175,55,.4); }
+.kit-hero__eyebrow { color: var(--kit-accent); }
+::selection { background: var(--kit-accent); color: #0A0A0A; }
