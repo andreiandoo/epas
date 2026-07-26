@@ -43,6 +43,9 @@ final class Kit {
             'cache_ttl'          => 120,
             'api_timeout'        => 15,
             'debug'              => false,
+            'cart_key'           => 'kit_cart',   // localStorage key for the cart
+            'auth_key'           => 'kit_auth',   // localStorage key for {token,user}
+            'proxy_url'          => '/api/proxy.php',
             'fixtures'           => null,
             'tokens_href'        => '/theme/tokens.css',
             'theme_href'         => '/theme/theme.css',

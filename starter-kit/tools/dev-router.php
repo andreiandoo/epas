@@ -26,16 +26,18 @@ if (isset($map[$uri])) {
     http_response_code(404); return true;
 }
 
-// Map a clean path to a page file. Support the teatru rewrites we use in demos.
-$aliases = [
-    '/' => 'index', '/repertoriu' => 'repertoire', '/program' => 'schedule',
-    '/evenimente' => 'events', '/spectacol' => 'show',
-];
-$name = $aliases[$uri] ?? trim($uri, '/');
-if ($name === '' ) $name = 'index';
-// /spectacol/hamlet → show.php?slug=hamlet
-if (strpos(trim($uri,'/'), 'spectacol/') === 0) { $_GET['slug'] = basename($uri); $name = 'show'; }
-if (strpos(trim($uri,'/'), 'bilete/') === 0)    { $_GET['slug'] = basename($uri); $name = 'show'; }
+// Use the template's real routes.php so preview == production routing.
+$routes = is_file($root . "/templates/$site/routes.php") ? require $root . "/templates/$site/routes.php" : [];
+$path = trim($uri, '/');
+$name = null;
+if (isset($routes['exact'][$uri]) || isset($routes['exact'][$path === '' ? '/' : $uri])) {
+    $name = $routes['exact'][$uri] ?? $routes['exact']['/'];
+} else {
+    foreach (($routes['capture'] ?? []) as $prefix => $target) {
+        if (strpos($path, $prefix . '/') === 0) { $_GET['slug'] = basename($path); $name = $target; break; }
+    }
+}
+if ($name === null) $name = $path === '' ? 'index' : preg_replace('/[^a-z0-9\-_]/i', '', $path);
 
 $page = $root . "/templates/$site/pages/$name.php";
 if (is_file($page)) { require $page; return true; }

@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Abonament Stagiune", "price": 600, "currency": "RON", "subtitle": "10 spectacole la alegere", "is_featured": false, "benefits": ["10 intrări", "Loc rezervat", "Anulare gratuită"] },
+    { "id": 2, "name": "Abonament Premium", "price": 950, "currency": "RON", "subtitle": "Acces nelimitat + loje", "is_featured": true, "benefits": ["Intrări nelimitate", "Acces la loje", "Invitații la premiere", "Program tipărit"] },
+    { "id": 3, "name": "Abonament Tânăr", "price": 300, "currency": "RON", "subtitle": "Sub 26 de ani", "is_featured": false, "benefits": ["6 intrări", "Reducere 50%", "Newsletter"] }
+  ]
+}

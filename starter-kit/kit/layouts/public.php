@@ -65,6 +65,13 @@ $useTailwind = $__cfg['use_tailwind'] ?? true;
     </div>
   </footer>
 
+  <script>window.KIT = <?= json_encode([
+      'proxy'    => $__cfg['proxy_url'] ?? '/api/proxy.php',
+      'cartKey'  => $__cfg['cart_key'] ?? 'kit_cart',
+      'authKey'  => $__cfg['auth_key'] ?? 'kit_auth',
+      'cartUrl'  => $__cfg['cart_url'] ?? '/cos',
+      'currency' => $__cfg['currency'] ?? 'RON',
+  ], JSON_UNESCAPED_SLASHES) ?>;</script>
   <script src="<?= e($__cfg['kit_js_href'] ?? '/kit/kit.js') ?>" defer></script>
 </body>
 </html>

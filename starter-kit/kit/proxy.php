@@ -49,7 +49,20 @@ $ACTIONS = [
     // checkout (never cache)
     'checkout'      => ['POST', "$base/demo-checkout",        0],
     'order-summary' => ['GET',  "$base/order-summary",        0],
+    // auth + account (require the browser's Bearer token; never cache)
+    'login'         => ['POST', "$base/auth/login",           0],
+    'register'      => ['POST', "$base/auth/register",        0],
+    'me'            => ['GET',  "$base/account/me",           0],
+    'logout'        => ['POST', "$base/auth/logout",          0],
+    'acc-stats'     => ['GET',  "$base/account/stats",        0],
+    'acc-tickets'   => ['GET',  "$base/account/tickets",      0],
+    'acc-orders'    => ['GET',  "$base/account/orders",       0],
 ];
+
+// Forward the browser's Authorization header (Bearer token) for account calls.
+$fwd = [];
+$auth = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+if ($auth) $fwd[] = 'Authorization: ' . $auth;
 
 if (!isset($ACTIONS[$action])) {
     http_response_code(404);
@@ -68,13 +81,18 @@ $endpoint = preg_replace_callback('/\{(\w+)\}/', function ($m) use (&$params) {
     return rawurlencode((string)$v);
 }, $endpoint);
 
-// Forward.
-if ($verb === 'GET') {
+// Forward. Cacheable public GETs go through the cache; everything else (auth,
+// mutations) is a direct request that also forwards the Bearer token.
+if ($verb === 'GET' && $ttl > 0 && !$fwd) {
     $resp = kit_api_get($endpoint, $params, $ttl);
 } else {
-    $body = json_decode((string)file_get_contents('php://input'), true) ?: $params;
-    $resp = kit_api_request($verb, rtrim(Kit::get('api_base'), '/') . $endpoint
-        . ($params ? '?' . http_build_query($params) : ''), is_array($body) ? $body : []);
+    // tenant scoping for direct requests too
+    if ($isTenant && strpos($endpoint, '/tenant-client/') !== false && !isset($params['tenant'])) {
+        $params['tenant'] = Kit::get('tenant_id');
+    }
+    $url = rtrim(Kit::get('api_base'), '/') . $endpoint . ($params ? '?' . http_build_query($params) : '');
+    $body = $verb === 'GET' ? [] : (json_decode((string)file_get_contents('php://input'), true) ?: []);
+    $resp = kit_api_request($verb, $url, is_array($body) ? $body : [], $fwd);
 }
 
 http_response_code($resp['status'] ?? ($resp['success'] ? 200 : 502));

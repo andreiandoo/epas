@@ -62,14 +62,19 @@ function kit_api_post(string $path, array $data = []): array {
     return kit_api_request('POST', $url, $data);
 }
 
-/** cURL request, normalized to ['success','status','data','meta','error','raw']. */
-function kit_api_request(string $method, string $url, array $body = []): array {
+/**
+ * cURL request, normalized to ['success','status','data','meta','error','raw'].
+ * $extraHeaders lets the proxy forward a browser's Authorization: Bearer token
+ * for authenticated account calls.
+ */
+function kit_api_request(string $method, string $url, array $body = [], array $extraHeaders = []): array {
     $cfg = Kit::config();
     $headers = ['Accept: application/json'];
     if ($cfg['profile'] === 'marketplace' && !empty($cfg['api_key'])) {
         $headers[] = 'X-API-Key: ' . $cfg['api_key'];
     }
     if ($body) $headers[] = 'Content-Type: application/json';
+    foreach ($extraHeaders as $h) $headers[] = $h;
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [

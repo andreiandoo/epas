@@ -5,8 +5,9 @@ platformei Tixello. Un singur kit, două profile. Un template nou = doi
 fișieri (`site.config.php` + `theme.css`) + pagini scurte care cheamă
 componente. Datele și normalizarea se cablează **o singură dată**, în kit.
 
-> **Citește `docs/STARTER-KIT.md`** pentru ghidul complet de operare (arhitectură,
-> rețete, convenții, deploy). `docs/COMPONENTS.md` = catalogul de componente.
+> - `docs/STARTER-KIT.md` — ghid complet de operare a FRAMEWORK-ului (arhitectură, rețete, convenții, deploy).
+> - `docs/TEMPLATE-AUTHORING.md` — spec pentru sesiunea care **produce template-uri** (ce/cum, plug&play).
+> - `docs/COMPONENTS.md` — catalogul de componente + input-uri.
 
 ## De ce
 Skin-urile actuale fuzionează în fiecare fișier: aducerea datelor + markup +

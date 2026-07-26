@@ -59,14 +59,100 @@
     };
   };
 
+  /* ---- auth (localStorage) --------------------------------------------- */
+  var AUTHKEY = CFG.authKey || 'kit_auth';
+  var Auth = {
+    get: function () { try { return JSON.parse(localStorage.getItem(AUTHKEY)) || null; } catch (e) { return null; } },
+    set: function (blob) { localStorage.setItem(AUTHKEY, JSON.stringify(blob)); },
+    clear: function () { localStorage.removeItem(AUTHKEY); },
+    token: function () { var a = this.get(); return a && a.token; }
+  };
+  window.KitAuth = Auth;
+
+  window.kitAuthWidget = function () {
+    return {
+      user: null, firstName: '', initials: '',
+      init: function () {
+        var a = Auth.get();
+        if (a && a.user) {
+          var u = a.user;
+          this.user = u;
+          var fn = (u.first_name || u.firstName || (u.name || '').trim().split(/\s+/)[0] || '').trim();
+          this.firstName = fn || 'Cont';
+          var full = (u.name || ((u.first_name || '') + ' ' + (u.last_name || ''))).trim() || u.email || '?';
+          this.initials = (full.split(/\s+/).map(function (p) { return p[0]; }).slice(0, 2).join('') || '?').toUpperCase();
+        }
+      }
+    };
+  };
+
+  /* Account shell: gate a cont/* page on auth; redirect to login if absent. */
+  window.kitAccountShell = function (loginUrl) {
+    return {
+      ready: false,
+      init: function () {
+        if (!Auth.token()) { window.location.href = (loginUrl || '/autentificare') + '?next=' + encodeURIComponent(location.pathname); return; }
+        this.ready = true;
+      },
+      logout: function () { proxy('logout', {}, { method: 'POST' }).finally(function () { Auth.clear(); window.location.href = '/'; }); }
+    };
+  };
+
+  /* ---- Alpine: calendar ------------------------------------------------- */
+  window.kitCalendar = function (events, firstDate) {
+    var f = new Date(firstDate || Date.now());
+    return {
+      events: events || [], selected: null,
+      month: f.getMonth(), year: f.getFullYear(),
+      monthNames: ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'],
+      get cells() {
+        var first = new Date(this.year, this.month, 1);
+        var last = new Date(this.year, this.month + 1, 0);
+        var pad = (first.getDay() + 6) % 7, out = [], self = this;
+        for (var i = 0; i < pad; i++) out.push({ key: 'p' + i, day: 0, date: null });
+        for (var d = 1; d <= last.getDate(); d++) {
+          var ds = self.year + '-' + String(self.month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+          out.push({ key: ds, day: d, date: ds, hasEvent: self.events.some(function (e) { return e.date === ds; }) });
+        }
+        return out;
+      },
+      get filtered() {
+        var self = this;
+        if (this.selected) return this.events.filter(function (e) { return e.date === self.selected; });
+        return this.events.filter(function (e) { var d = new Date(e.date); return d.getMonth() === self.month && d.getFullYear() === self.year; });
+      },
+      prev() { if (this.month === 0) { this.month = 11; this.year--; } else this.month--; this.selected = null; },
+      next() { if (this.month === 11) { this.month = 0; this.year++; } else this.month++; this.selected = null; },
+      select(d) { this.selected = this.selected === d ? null : d; }
+    };
+  };
+
+  /* ---- QR modal --------------------------------------------------------- */
+  window.kitQR = {
+    show: function (code, title) {
+      var m = document.getElementById('kit-qr'); if (!m) return;
+      document.getElementById('kit-qr-title').textContent = title || 'Bilet';
+      document.getElementById('kit-qr-code').textContent = code;
+      var c = document.getElementById('kit-qr-canvas'); c.innerHTML = '';
+      if (window.QRCode) { new window.QRCode(c, { text: String(code), width: 200, height: 200 }); }
+      else { c.innerHTML = '<div class="kit-qr__fallback">' + String(code) + '</div>'; }
+      m.hidden = false;
+    },
+    hide: function () { var m = document.getElementById('kit-qr'); if (m) m.hidden = true; }
+  };
+
   /* ---- proxy helper ----------------------------------------------------- */
   function proxy(action, params, opts) {
     opts = opts || {};
     var url = PROXY + '?action=' + encodeURIComponent(action);
     Object.keys(params || {}).forEach(function (k) { url += '&' + k + '=' + encodeURIComponent(params[k]); });
+    var headers = { 'Accept': 'application/json' };
+    var tok = window.KitAuth && window.KitAuth.token && window.KitAuth.token();
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    if (opts.body) headers['Content-Type'] = 'application/json';
     return fetch(url, {
       method: opts.method || 'GET',
-      headers: { 'Accept': 'application/json' },
+      headers: headers,
       credentials: 'include',
       body: opts.body ? JSON.stringify(opts.body) : undefined
     }).then(function (r) { return r.json(); });

@@ -236,28 +236,26 @@ Integrarea cu `deploy-*.bat` existente: în loc să copieze
 ## 9. Starea curentă (ce e construit vs. ce urmează)
 
 **Construit și verificat (randează cu fixtures + screenshot):**
-- Core complet: config, http (+cache SWR +fixtures), data, view, viewmodel,
-  ambele adaptoare.
-- Token contract + `layout(public)` + `kit.js` (cart, ticket-selector, seat-map
-  hydrate, img fallback).
-- Componente: `event-card` (variante), `event-grid`, `empty-state`,
-  `breadcrumb`, `pagination`, `hero`, `stat-tile`, `artist-card`, `venue-card`,
-  `category-card`, `subscription-card`, `event-hero`, `ticket-selector`,
-  `seat-map`, `filters`, `cta`, `cart-line`.
-- Exemple: teatru (`repertoire`, `show`), ambilet (`events`) — profile diferite,
-  aceleași componente, look-uri complet diferite doar din `theme.css`.
-- Generator + build + front controller + proxy — pipeline end-to-end verificat.
+- Core complet: config, http (+cache SWR +fixtures +forward Bearer), data,
+  view, viewmodel, ambele adaptoare.
+- Token contract + `layout('public')` + `layout('account')` (gated pe auth) +
+  `kit.js` (cart, auth, ticket-selector, calendar, seat-map hydrate, QR modal,
+  account shell, img fallback).
+- **26 componente** — vezi `docs/COMPONENTS.md` pentru lista + input-uri.
+- Proxy client cu allow-list (public + auth + account, forward Bearer).
+- Exemple: teatru (`index`, `repertoire`, `schedule`, `subscriptions`, `show`,
+  `cont-index`) + ambilet (`events`) — profile diferite, aceleași componente,
+  look complet diferit doar din `theme.css`.
+- Generator + build + front controller + `routes.php` — pipeline end-to-end verificat.
 
 **De adăugat (aceeași rețetă, mecanic — nu necesită arhitectură nouă):**
-- Componente rămase din inventar: `schedule-row`, `calendar`, `ticket-card`,
-  `qr-modal`, `order-summary`, `review-card`, `step-indicator`, `search-bar`,
-  `auth-widget`, `nav mega-menu`.
-- Zona de cont (`cont/*`) ca un al doilea layout (`layout('account')`) + endpoints
-  autentificate (bearer token) în data layer.
-- Portarea completă a paginilor rămase din fiecare skin.
+- Portarea completă a paginilor rămase din fiecare skin (auth, cart/checkout,
+  restul zonei `cont/*`, listări venue/artist).
 - Extinderea `$ACTIONS` din proxy la întreaga suprafață (legacy: ~357 acțiuni
   marketplace, ~40 tenant) — de adăugat pe măsură ce portezi.
+- Câteva componente de nișă rămase (ex. `nav-megamenu`), după `docs/COMPONENTS.md`.
 
-Ordinea recomandată de continuare: (1) completează componentele listate, (2)
-portează paginile publice ale unui skin întreg ca dovadă de paritate, (3)
-adaugă `layout('account')` + auth, (4) integrează `build.php` în `deploy-*.bat`.
+**Producerea de template-uri** se face acum după `docs/TEMPLATE-AUTHORING.md`
+(spec-ul de pasat sesiunii care face template-uri). Ordinea de continuare a
+FRAMEWORK-ului: (1) portează un skin întreg ca dovadă de paritate, (2) extinde
+proxy `$ACTIONS`, (3) integrează `build.php` în `deploy-*.bat`.
