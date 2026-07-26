@@ -13,14 +13,14 @@ function () { ?>
 
     <div x-show="!loading && ok" x-cloak style="text-align:center">
       <div style="font-size:3rem">✅</div>
-      <h1 class="kit-display" style="font-size:clamp(1.8rem,4vw,2.6rem);margin:.5rem 0">Mulțumim!</h1>
-      <p class="kit-muted">Comanda <strong x-text="'#'+orderId"></strong> a fost confirmată. Ți-am trimis biletele pe email.</p>
+      <h1 class="kit-display" style="font-size:clamp(1.8rem,4vw,2.6rem);margin:.5rem 0"><?= e(t('confirm.thanks')) ?></h1>
+      <p class="kit-muted" x-text="L.confirmed.replace('{id}', '#'+orderId)"></p>
 
       <div class="kit-ordersum" style="text-align:left;margin-top:2rem">
         <template x-for="(l,i) in (order.items||[])" :key="i">
           <div class="kit-ordersum__row"><span class="kit-muted" x-text="l.title"></span><span x-text="fmt(l.price)"></span></div>
         </template>
-        <div class="kit-ordersum__row kit-ordersum__row--total"><span>Total</span><strong x-text="fmt(order.total)"></strong></div>
+        <div class="kit-ordersum__row kit-ordersum__row--total"><span><?= e(t('common.total')) ?></span><strong x-text="fmt(order.total)"></strong></div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:1.5rem" x-show="(order.tickets||[]).length">
@@ -34,17 +34,18 @@ function () { ?>
           </div>
         </template>
       </div>
-      <a href="/cont/bilete" class="kit-btn kit-btn--primary" style="margin-top:1.5rem">Vezi biletele mele</a>
+      <a href="/cont/bilete" class="kit-btn kit-btn--primary" style="margin-top:1.5rem"><?= e(t('confirm.my_tickets')) ?></a>
     </div>
 
     <div x-show="!loading && !ok" x-cloak class="kit-empty">
-      Nu am găsit comanda. <a href="/" class="kit-btn kit-btn--outline" style="margin-top:1rem">Acasă</a>
+      <?= e(t('confirm.not_found')) ?> <a href="/" class="kit-btn kit-btn--outline" style="margin-top:1rem"><?= e(t('common.home')) ?></a>
     </div>
   </div></section>
   <?php component('qr-modal'); ?>
   <script>
   function kitConfirm(orderId){ return {
     orderId, loading:true, ok:false, order:{},
+    L: <?= json_encode(['confirmed' => t('confirm.confirmed')], JSON_UNESCAPED_UNICODE) ?>,
     fmt(v){ return new Intl.NumberFormat('ro-RO').format(v||0)+' '+(this.order.currency||(window.KIT&&KIT.currency)||'RON'); },
     async init(){
       try{ localStorage.removeItem((window.KIT&&KIT.cartKey)||'kit_cart'); }catch(e){}

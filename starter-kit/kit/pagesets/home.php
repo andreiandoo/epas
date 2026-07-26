@@ -13,7 +13,7 @@ function () use ($events, $hero) {
         'subtitle' => $hero['short_description'] ?: ('Bine ai venit la ' . kit_cfg('site_name') . '.'),
         'image'    => $hero['hero_image_url'],
         'actions'  => [
-            ['label' => kit_cfg('cta_label', 'Bilete'), 'url' => $hero['url'], 'style' => 'primary'],
+            ['label' => kit_term('buy', kit_cfg('cta_label', t('common.tickets'))), 'url' => $hero['url'], 'style' => 'primary'],
             ['label' => kit_term('events_cap', 'Vezi tot'), 'url' => kit_cfg('cta_url', '/'), 'style' => 'outline'],
         ],
     ]);

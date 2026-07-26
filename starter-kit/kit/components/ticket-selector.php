@@ -24,9 +24,9 @@ $soldOut = !empty($event['is_sold_out']);
     ], $types),
 ], JSON_UNESCAPED_UNICODE)) ?>)'>
   <?php if ($soldOut): ?>
-    <p class="kit-badge kit-badge--soldout" style="font-size:.85rem">Sold Out</p>
+    <p class="kit-badge kit-badge--soldout" style="font-size:.85rem"><?= e(t('common.sold_out')) ?></p>
   <?php elseif (!$types): ?>
-    <a href="<?= e($event['url']) ?>" class="kit-btn kit-btn--primary" style="width:100%">Bilete</a>
+    <a href="<?= e($event['url']) ?>" class="kit-btn kit-btn--primary" style="width:100%"><?= e(t('common.tickets')) ?></a>
   <?php else: ?>
     <template x-for="(t,i) in types" :key="i">
       <div class="kit-ticket-row">
@@ -41,7 +41,7 @@ $soldOut = !empty($event['is_sold_out']);
         </div>
       </div>
     </template>
-    <div class="kit-ticket-total"><span>Total</span><strong x-text="fmt(total())"></strong></div>
-    <button type="button" class="kit-btn kit-btn--primary" style="width:100%" :disabled="total()<=0" @click="addToCart()">Adaugă în coș</button>
+    <div class="kit-ticket-total"><span><?= e(t('common.total')) ?></span><strong x-text="fmt(total())"></strong></div>
+    <button type="button" class="kit-btn kit-btn--primary" style="width:100%" :disabled="total()<=0" @click="addToCart()"><?= e(t('common.add_to_cart')) ?></button>
   <?php endif; ?>
 </div>

@@ -21,6 +21,15 @@ return [
         'seating' => true, 'subscriptions' => true, 'gamification' => true,
         'reviews' => true, 'gift_cards' => true,
     ],
+    // Per-locale noun overrides (kit_term picks the active locale).
+    'terms_i18n' => [
+        'en' => ['event' => 'show', 'events' => 'shows', 'events_cap' => 'Shows', 'event_cap' => 'Show',
+                 'venue' => 'hall', 'artist' => 'actor', 'artists' => 'troupe', 'artists_cap' => 'Troupe',
+                 'buy' => 'Buy tickets', 'buy_short' => 'Tickets'],
+        'hu' => ['event' => 'előadás', 'events' => 'előadások', 'events_cap' => 'Előadások', 'event_cap' => 'Előadás',
+                 'venue' => 'terem', 'artist' => 'színész', 'artists' => 'társulat', 'artists_cap' => 'Társulat',
+                 'buy' => 'Jegyvásárlás', 'buy_short' => 'Jegyek'],
+    ],
 
     'event_url_pattern'    => '/spectacol/{slug}',
     'artist_url_pattern'   => '/actor/{slug}',

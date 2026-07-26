@@ -260,6 +260,10 @@ Integrarea cu `deploy-*.bat` existente: în loc să copieze
   pagini de eroare 403/500/503, `robots.txt` + `sitemap.xml` la build,
   promo code / card cadou la checkout. **Fully self-contained** — fără CDN
   (Alpine vendorizat, Tailwind oprit implicit; kit-* acoperă tot).
+- **Multi-locale (i18n)**: `t()` + dicționare `kit/lang/{ro,en,hu}.php`,
+  `kit_term()` locale-aware (kind `terms_i18n`), switcher în header, `hreflang`
+  în SEO, `locale=` trimis automat la API. Activezi cu `locales` în config.
+  Vezi `docs/I18N.md`.
 - **Ergonomie**: `bash tools/verify.sh` (lint + render + generate/build toate
   kind-urile) și `CLAUDE.md` pentru orientarea sesiunilor viitoare.
 - **Al treilea layer `kind`** (6 tipuri de tenant) cu manifest de capabilități +

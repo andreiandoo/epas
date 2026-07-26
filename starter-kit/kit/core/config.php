@@ -35,7 +35,10 @@ final class Kit {
             'site_city'          => '',
             'logo_text'          => '',
             'site_url'           => '',
-            'locale'             => 'ro',
+            'locale'             => 'ro',    // DEFAULT/base locale
+            'locales'            => null,    // enabled locales, e.g. ['ro','en','hu']; null → [locale]
+            'lang'               => [],      // per-locale UI string overrides: ['en'=>['cart.title'=>'Cart']]
+            'terms_i18n'         => [],      // per-locale term overrides (kind supplies these)
             'currency'           => 'RON',
             'event_url_pattern'  => '/spectacol/{slug}',
             'artist_url_pattern' => '/artist/{slug}',
@@ -99,8 +102,37 @@ final class Kit {
         $merged['terms']    = array_replace($defaults['terms'],    $kind['terms']    ?? [], $cfg['terms']    ?? []);
         $merged['features'] = array_replace($defaults['features'], $kind['features'] ?? [], $cfg['features'] ?? []);
 
+        // Per-locale term overrides (deep): terms_i18n[locale] = [term => value]
+        $ti = [];
+        foreach ([$kind['terms_i18n'] ?? [], $cfg['terms_i18n'] ?? []] as $src) {
+            foreach ($src as $loc => $map) $ti[$loc] = array_replace($ti[$loc] ?? [], $map);
+        }
+        $merged['terms_i18n'] = $ti;
+
+        // Resolve the ACTIVE locale for this request.
+        $merged['locales'] = $merged['locales'] ?: [$merged['locale']];
+        $merged['active_locale'] = self::resolveLocale($merged['locale'], $merged['locales']);
+
         self::$cfg = $merged;
         self::$booted = true;
+    }
+
+    /** Pick the active locale: ?lang= (persisted) → cookie → Accept-Language → default. */
+    private static function resolveLocale(string $default, array $enabled): string {
+        if (count($enabled) <= 1) return $default;
+        if (isset($_GET['lang']) && in_array($_GET['lang'], $enabled, true)) {
+            if (!headers_sent()) @setcookie('kit_locale', $_GET['lang'], time() + 31536000, '/');
+            return $_GET['lang'];
+        }
+        if (isset($_COOKIE['kit_locale']) && in_array($_COOKIE['kit_locale'], $enabled, true)) {
+            return $_COOKIE['kit_locale'];
+        }
+        $accept = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
+        foreach (explode(',', $accept) as $part) {
+            $code = strtolower(substr(trim($part), 0, 2));
+            if (in_array($code, $enabled, true)) return $code;
+        }
+        return $default;
     }
 
     public static function booted(): bool {
@@ -131,9 +163,26 @@ final class Kit {
         return !empty(self::$cfg['features'][$name]);
     }
 
-    /** A UI noun for this kind, e.g. term('events_cap') → 'Spectacole'. */
+    /**
+     * A UI noun for this kind, in the ACTIVE locale.
+     * e.g. term('events_cap') → 'Spectacole' (ro) / 'Shows' (en).
+     * Falls back: active-locale override → default-locale terms → $fallback.
+     */
     public static function term(string $key, string $fallback = ''): string {
+        $active  = self::$cfg['active_locale'] ?? self::$cfg['locale'];
+        $default = self::$cfg['locale'] ?? 'ro';
+        if ($active !== $default && isset(self::$cfg['terms_i18n'][$active][$key])) {
+            return self::$cfg['terms_i18n'][$active][$key];
+        }
         return self::$cfg['terms'][$key] ?? $fallback;
+    }
+
+    public static function activeLocale(): string {
+        return self::$cfg['active_locale'] ?? self::$cfg['locale'] ?? 'ro';
+    }
+
+    public static function locales(): array {
+        return self::$cfg['locales'] ?? [self::$cfg['locale'] ?? 'ro'];
     }
 }
 
@@ -163,8 +212,20 @@ function kit_kind(): ?string { return Kit::kind(); }
 /** True if a capability is enabled for this site's kind. */
 function kit_feature(string $name): bool { return Kit::feature($name); }
 
-/** A kind-specific UI noun. e.g. kit_term('events_cap', 'Evenimente'). */
+/** A kind-specific UI noun in the active locale. e.g. kit_term('events_cap'). */
 function kit_term(string $key, string $fallback = ''): string { return Kit::term($key, $fallback); }
+
+/** The active locale code (e.g. 'ro' | 'en'). */
+function kit_locale(): string { return Kit::activeLocale(); }
+
+/** Enabled locales for this site. */
+function kit_locales(): array { return Kit::locales(); }
+
+/** Human label for a locale code (for the switcher). */
+function kit_locale_name(string $code): string {
+    static $names = ['ro' => 'Română', 'en' => 'English', 'hu' => 'Magyar', 'de' => 'Deutsch', 'fr' => 'Français', 'it' => 'Italiano', 'es' => 'Español'];
+    return $names[$code] ?? strtoupper($code);
+}
 
 /** List available kinds (from kit/kinds/*.php) with their labels. */
 function kit_kinds(): array {

@@ -17,6 +17,7 @@ return [
         'seating' => true, 'subscriptions' => true, 'reviews' => true, 'gift_cards' => true,
     ],
 
+    'terms_i18n' => ['en' => ['event' => 'concert', 'events' => 'concerts', 'events_cap' => 'Concerts', 'event_cap' => 'Concert', 'venue' => 'hall', 'artist' => 'soloist', 'artists' => 'orchestra', 'artists_cap' => 'Orchestra', 'buy' => 'Buy tickets', 'buy_short' => 'Tickets']],
     'event_url_pattern'    => '/concert/{slug}',
     'artist_url_pattern'   => '/solist/{slug}',
     'category_url_pattern' => '/program?gen={slug}',

@@ -22,7 +22,7 @@ $navActive   = $nav ?? '';
 $menu        = $__cfg['menu'] ?? [];
 $useTailwind = $__cfg['use_tailwind'] ?? false;
 ?><!DOCTYPE html>
-<html lang="<?= e($__cfg['locale']) ?>">
+<html lang="<?= e(kit_locale()) ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -47,13 +47,18 @@ $useTailwind = $__cfg['use_tailwind'] ?? false;
         </span>
       </a>
       <nav class="kit-site-nav">
-        <?php foreach ($menu as $item): ?>
-          <a href="<?= e($item['url']) ?>" class="kit-site-nav__link<?= ($item['key'] ?? '') === $navActive ? ' is-active' : '' ?>"><?= e($item['label']) ?></a>
+        <?php foreach ($menu as $item):
+          // Prefer a nav.<key> translation; fall back to the kind's label.
+          $navKey = 'nav.' . ($item['key'] ?? '');
+          $label = t($navKey); if ($label === $navKey) $label = $item['label'];
+        ?>
+          <a href="<?= e($item['url']) ?>" class="kit-site-nav__link<?= ($item['key'] ?? '') === $navActive ? ' is-active' : '' ?>"><?= e($label) ?></a>
         <?php endforeach; ?>
       </nav>
       <div class="kit-site-header__actions">
-        <a href="<?= e($__cfg['cart_url'] ?? '/cos') ?>" class="kit-site-nav__link" aria-label="Coș">🛒</a>
-        <a href="<?= e($__cfg['cta_url'] ?? ($menu[0]['url'] ?? '/')) ?>" class="kit-btn kit-btn--primary"><?= e($__cfg['cta_label'] ?? 'Bilete') ?></a>
+        <?php component('locale-switcher'); ?>
+        <a href="<?= e($__cfg['cart_url'] ?? '/cos') ?>" class="kit-site-nav__link" aria-label="<?= e(t('nav.cart')) ?>">🛒</a>
+        <a href="<?= e($__cfg['cta_url'] ?? ($menu[0]['url'] ?? '/')) ?>" class="kit-btn kit-btn--primary"><?= e(kit_term('buy', $__cfg['cta_label'] ?? t('common.tickets'))) ?></a>
       </div>
     </div>
   </header>
@@ -64,12 +69,12 @@ $useTailwind = $__cfg['use_tailwind'] ?? false;
     <?php if ($__cfg['newsletter'] ?? true): ?>
       <div class="kit-container kit-newsletter" x-data="kitNewsletter()">
         <div>
-          <h3 class="kit-display" style="font-size:1.15rem">Abonează-te la newsletter</h3>
-          <p class="kit-muted" style="font-size:.85rem">Primești primul veștile despre <?= e(kit_term('events', 'evenimente')) ?>.</p>
+          <h3 class="kit-display" style="font-size:1.15rem"><?= e(t('newsletter.title')) ?></h3>
+          <p class="kit-muted" style="font-size:.85rem"><?= e(t('newsletter.subtitle', ['events' => kit_term('events', 'evenimente')])) ?></p>
         </div>
         <form class="kit-search" @submit.prevent="submit()">
-          <input class="kit-search" style="max-width:none" type="email" x-model="email" placeholder="Email" required>
-          <button class="kit-btn kit-btn--primary" :disabled="busy"><span x-text="done ? 'Mulțumim ✓' : 'Abonează-te'"></span></button>
+          <input class="kit-search" style="max-width:none" type="email" x-model="email" placeholder="<?= e(t('checkout.email')) ?>" required>
+          <button class="kit-btn kit-btn--primary" :disabled="busy"><span x-text="done ? <?= e(json_encode(t('newsletter.done'))) ?> : <?= e(json_encode(t('newsletter.cta'))) ?>"></span></button>
         </form>
       </div>
     <?php endif; ?>

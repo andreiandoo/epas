@@ -16,6 +16,7 @@ return [
         'epk' => true, 'booking' => true, 'tours' => true, 'merch' => true, 'fan_crm' => true,
     ],
 
+    'terms_i18n' => ['en' => ['event' => 'concert', 'events' => 'concerts', 'events_cap' => 'Concerts', 'event_cap' => 'Concert', 'venue' => 'venue', 'artist' => 'member', 'artists' => 'band', 'artists_cap' => 'Band', 'buy' => 'Tickets', 'buy_short' => 'Tickets']],
     'event_url_pattern'    => '/concert/{slug}',
     'category_url_pattern' => '/concerte?an={slug}',
 

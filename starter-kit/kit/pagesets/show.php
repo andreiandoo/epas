@@ -33,7 +33,7 @@ function () use ($event, $related, $rail) {
     ?>
     <section class="kit-section"><div class="kit-container">
       <?php component('breadcrumb', ['items' => [
-          ['label' => 'Acasă', 'url' => '/'],
+          ['label' => t('common.home'), 'url' => '/'],
           ['label' => kit_term('events_cap', 'Evenimente'), 'url' => kit_cfg('cta_url', '/')],
           ['label' => $event['title']],
       ]]); ?>
@@ -45,7 +45,7 @@ function () use ($event, $related, $rail) {
         </div>
       <?php endif; ?>
       <?php if ($related): ?>
-        <h2 class="kit-display" style="font-size:1.4rem;margin:2.5rem 0 1rem">Vezi și</h2>
+        <h2 class="kit-display" style="font-size:1.4rem;margin:2.5rem 0 1rem"><?= e(t('common.see_also')) ?></h2>
         <?php component('event-grid', ['events' => $related]); ?>
       <?php endif; ?>
     </div></section>

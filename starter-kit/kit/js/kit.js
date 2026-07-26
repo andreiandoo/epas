@@ -186,6 +186,7 @@
     opts = opts || {};
     var url = PROXY + '?action=' + encodeURIComponent(action);
     Object.keys(params || {}).forEach(function (k) { url += '&' + k + '=' + encodeURIComponent(params[k]); });
+    if (CFG.locale && !(params && params.locale)) url += '&locale=' + encodeURIComponent(CFG.locale);
     var headers = { 'Accept': 'application/json' };
     var tok = window.KitAuth && window.KitAuth.token && window.KitAuth.token();
     if (tok) headers['Authorization'] = 'Bearer ' + tok;

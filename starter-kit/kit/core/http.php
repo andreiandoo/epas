@@ -24,6 +24,12 @@ function kit_api_get(string $path, array $params = [], ?int $cacheTtl = null): a
         $params['tenant'] = $cfg['tenant_id'];
     }
 
+    // Multi-locale sites ask the API for content in the active locale (and the
+    // locale becomes part of the cache key, so each language caches separately).
+    if (count($cfg['locales'] ?? []) > 1 && !isset($params['locale'])) {
+        $params['locale'] = $cfg['active_locale'] ?? $cfg['locale'];
+    }
+
     // Fixtures short-circuit (offline dev / CI / this PoC).
     if (!empty($cfg['fixtures'])) {
         $fx = kit_fixture_load($cfg['fixtures'], $path, $params);

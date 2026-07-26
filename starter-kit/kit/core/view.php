@@ -19,6 +19,33 @@ function e(?string $s): string {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Translate a UI string key for the active locale.
+ *   t('cart.title')            → "Coșul meu" (ro) / "My cart" (en)
+ *   t('cart.count', ['n'=>3])  → replaces {n}
+ * Resolution: site config `lang[locale]` override → kit/lang/<locale>.php →
+ * kit/lang/<default>.php → the key itself (so a missing key is visible in dev).
+ */
+function t(string $key, array $vars = []): string {
+    $s = kit_lang_dict()[$key] ?? $key;
+    foreach ($vars as $k => $v) $s = str_replace('{' . $k . '}', (string)$v, $s);
+    return $s;
+}
+
+/** Load + memoize the merged dictionary for the active locale. */
+function kit_lang_dict(): array {
+    static $cache = [];
+    $cfg    = Kit::config();
+    $active = $cfg['active_locale'] ?? $cfg['locale'];
+    if (isset($cache[$active])) return $cache[$active];
+    $dir     = __DIR__ . '/../lang';
+    $default = $cfg['locale'] ?? 'ro';
+    $base = is_file("$dir/$default.php") ? (require "$dir/$default.php") : [];
+    $loc  = ($active !== $default && is_file("$dir/$active.php")) ? (require "$dir/$active.php") : [];
+    $site = $cfg['lang'][$active] ?? [];
+    return $cache[$active] = array_replace($base, $loc, $site);
+}
+
 /** Format a price in major units with the site/currency convention. */
 function kit_price(?float $amount, string $currency = null): string {
     if ($amount === null) return '';
@@ -103,6 +130,16 @@ function kit_seo_tags(array $seo = []): string {
     $t[] = '<meta name="twitter:card" content="' . ($img ? 'summary_large_image' : 'summary') . '">';
     if (!empty($cfg['twitter'])) $t[] = '<meta name="twitter:site" content="' . e($cfg['twitter']) . '">';
 
+    // hreflang alternates for multi-locale sites (query-param strategy).
+    $locales = $cfg['locales'] ?? [$cfg['locale']];
+    if (count($locales) > 1) {
+        $sep = strpos($canon, '?') === false ? '?' : '&';
+        foreach ($locales as $lc) {
+            $t[] = '<link rel="alternate" hreflang="' . e($lc) . '" href="' . e($canon . $sep . 'lang=' . $lc) . '">';
+        }
+        $t[] = '<link rel="alternate" hreflang="x-default" href="' . e($canon) . '">';
+    }
+
     // JSON-LD: Organization (always) + Event (on event pages).
     $ld = [
         '@context' => 'https://schema.org',
@@ -159,6 +196,7 @@ function kit_head_scripts(): string {
         'authKey'  => $cfg['auth_key'] ?? 'kit_auth',
         'cartUrl'  => $cfg['cart_url'] ?? '/cos',
         'currency' => $cfg['currency'] ?? 'RON',
+        'locale'   => Kit::activeLocale(),
     ], JSON_UNESCAPED_SLASHES);
     $out  = "<script>window.KIT = {$kitCfg};</script>\n";
     $out .= '<script defer src="' . e($cfg['kit_js_href'] ?? '/kit/kit.js') . '"></script>' . "\n";

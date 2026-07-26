@@ -36,6 +36,7 @@ Legendă: **canonic** = view-model din `viewmodel.php` (produs de `kit_*` din
 | `stat-tile` | `num`,`label`,`hint` | Tile de statistică (dashboard/cont). |
 | `empty-state` | `message`,`icon`,`action`={label,url} | Stare goală / negăsit. |
 | `cookie-consent` | — (render o dată de layout) | Banner GDPR; analytics se încarcă doar după Accept (kit.js). |
+| `locale-switcher` | — (auto în header) | Comutator de limbă (`?lang=xx` + cookie); nimic dacă site-ul e mono-locale. Vezi `docs/I18N.md`. |
 
 ## Layout-uri
 | Layout | Vars | Note |

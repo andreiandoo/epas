@@ -15,17 +15,17 @@ $navActive = $nav ?? '';
 // Default account menu is feature-gated: subscription/gift-card entries appear
 // only for kinds that enable them.
 $menu = $__cfg['account_menu'] ?? array_values(array_filter([
-    ['key' => 'dashboard', 'label' => 'Panou',        'url' => '/cont',              'icon' => '🏠'],
-    ['key' => 'tickets',   'label' => 'Bilete',       'url' => '/cont/bilete',       'icon' => '🎫'],
-    ['key' => 'orders',    'label' => 'Comenzi',      'url' => '/cont/comenzi',      'icon' => '🧾'],
-    kit_feature('subscriptions') ? ['key' => 'subscriptions', 'label' => 'Abonamente', 'url' => '/cont/abonamente', 'icon' => '🎟️'] : null,
-    kit_feature('gift_cards')    ? ['key' => 'giftcards',     'label' => 'Carduri cadou', 'url' => '/cont/carduri-cadou', 'icon' => '🎁'] : null,
-    ['key' => 'settings',  'label' => 'Setări',       'url' => '/cont/setari',       'icon' => '⚙️'],
+    ['key' => 'dashboard', 'label' => t('menu.dashboard'), 'url' => '/cont',            'icon' => '🏠'],
+    ['key' => 'tickets',   'label' => t('menu.tickets'),   'url' => '/cont/bilete',     'icon' => '🎫'],
+    ['key' => 'orders',    'label' => t('menu.orders'),    'url' => '/cont/comenzi',    'icon' => '🧾'],
+    kit_feature('subscriptions') ? ['key' => 'subscriptions', 'label' => t('menu.subscriptions'), 'url' => '/cont/abonamente', 'icon' => '🎟️'] : null,
+    kit_feature('gift_cards')    ? ['key' => 'giftcards',     'label' => t('menu.giftcards'),     'url' => '/cont/carduri-cadou', 'icon' => '🎁'] : null,
+    ['key' => 'settings',  'label' => t('menu.settings'),  'url' => '/cont/setari',     'icon' => '⚙️'],
 ]));
 $loginUrl = $__cfg['login_url'] ?? '/autentificare';
 $demo = !empty($__cfg['fixtures']);  // dev preview: skip auth gate when using fixtures
 ?><!DOCTYPE html>
-<html lang="<?= e($__cfg['locale']) ?>">
+<html lang="<?= e(kit_locale()) ?>">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= e($title) ?></title>
@@ -46,7 +46,7 @@ $demo = !empty($__cfg['fixtures']);  // dev preview: skip auth gate when using f
             <span><?= $it['icon'] ?? '' ?></span> <?= e($it['label']) ?>
           </a>
         <?php endforeach; ?>
-        <button class="kit-account__link" @click="logout()" style="width:100%;text-align:left;background:none;border:none;cursor:pointer">↩ Ieșire</button>
+        <button class="kit-account__link" @click="logout()" style="width:100%;text-align:left;background:none;border:none;cursor:pointer">↩ <?= e(t('menu.logout')) ?></button>
       </nav>
     </aside>
     <main class="kit-account__main"><?= $slot ?></main>

@@ -16,6 +16,7 @@ return [
         'booking' => true, 'rentals' => true, 'gift_cards' => true, 'reviews' => true,
     ],
 
+    'terms_i18n' => ['en' => ['event' => 'activity', 'events' => 'activities', 'events_cap' => 'Activities', 'event_cap' => 'Activity', 'venue' => 'venue', 'artist' => 'host', 'artists' => 'team', 'artists_cap' => 'Team', 'buy' => 'Book', 'buy_short' => 'Book']],
     'event_url_pattern'    => '/activitate/{slug}',
     'category_url_pattern' => '/activitati?cat={slug}',
 

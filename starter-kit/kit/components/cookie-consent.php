@@ -6,9 +6,9 @@
  */
 ?>
 <div class="kit-consent" x-data="kitConsent()" x-init="init()" x-show="show" x-cloak>
-  <p>Folosim cookie-uri pentru a îmbunătăți experiența și pentru statistici. Poți accepta sau refuza cookie-urile opționale.</p>
+  <p><?= e(t('consent.text')) ?></p>
   <div class="kit-consent__actions">
-    <button class="kit-btn kit-btn--outline" @click="reject()">Refuz</button>
-    <button class="kit-btn kit-btn--primary" @click="accept()">Accept</button>
+    <button class="kit-btn kit-btn--outline" @click="reject()"><?= e(t('consent.reject')) ?></button>
+    <button class="kit-btn kit-btn--primary" @click="accept()"><?= e(t('consent.accept')) ?></button>
   </div>
 </div>

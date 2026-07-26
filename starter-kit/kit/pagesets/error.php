@@ -5,12 +5,11 @@
  */
 $PAGE = $PAGE ?? [];
 $code = (int)($PAGE['code'] ?? 500);
-$map = [
-    403 => ['⛔', 'Acces interzis', 'Nu ai permisiunea de a accesa această pagină.'],
-    500 => ['⚠️', 'Eroare de server', 'Ceva n-a mers bine. Încearcă din nou în câteva momente.'],
-    503 => ['🛠️', 'Mentenanță', 'Site-ul este temporar în mentenanță. Revenim imediat.'],
-];
-[$icon, $title, $msg] = $map[$code] ?? $map[500];
+$icons = [403 => '⛔', 500 => '⚠️', 503 => '🛠️'];
+$c = in_array($code, [403, 500, 503], true) ? $code : 500;
+$icon  = $icons[$c];
+$title = t("error.$c.title");
+$msg   = t("error.$c.msg");
 http_response_code($code);
 layout('public', ['title' => $code . ' — ' . $title], function () use ($icon, $title, $msg) { ?>
   <section class="kit-section"><div class="kit-container" style="text-align:center;padding:4rem 1rem">

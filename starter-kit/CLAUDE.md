@@ -40,6 +40,8 @@ Merged at boot: `defaults ← kind ← site` (deep-merge for `terms`/`features`)
 3. No `if (profile)` / `if (kind)` for DATA in pages. Use `kit_feature()` to
    show/hide feature areas and `kit_term()` for nouns.
 4. A component **never fetches data** and **never emits `<style>`** (styles → tokens.css).
+   Wrap user-facing UI strings in `t('key')` and nouns in `kit_term('key')` —
+   never hard-code copy (see `docs/I18N.md`).
 5. Watch the docblock trap: `*/` inside a PHP comment closes it early.
 6. Dates: use `vm_date()` (avoids timezone drift).
 7. Script order matters: `kit_head_scripts()` emits window.KIT → kit.js → Alpine

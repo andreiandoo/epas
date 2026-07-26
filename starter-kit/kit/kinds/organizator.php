@@ -16,6 +16,7 @@ return [
         'multi_venue' => true, 'tours' => true, 'gift_cards' => true, 'reviews' => true,
     ],
 
+    'terms_i18n' => ['en' => ['event' => 'event', 'events' => 'events', 'events_cap' => 'Events', 'event_cap' => 'Event', 'venue' => 'venue', 'artist' => 'artist', 'artists' => 'artists', 'artists_cap' => 'Artists', 'buy' => 'Buy tickets', 'buy_short' => 'Tickets']],
     'event_url_pattern'    => '/eveniment/{slug}',
     'venue_url_pattern'    => '/locatie/{slug}',
     'category_url_pattern' => '/evenimente?cat={slug}',

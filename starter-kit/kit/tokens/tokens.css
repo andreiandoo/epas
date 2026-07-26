@@ -305,3 +305,14 @@
   box-shadow:var(--kit-shadow-lg); padding:1.1rem 1.25rem; display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 .kit-consent p { font-size:.85rem; margin:0; flex:1; min-width:220px; }
 .kit-consent__actions { display:flex; gap:.5rem; }
+
+/* Locale switcher --------------------------------------------------------- */
+.kit-locale { position:relative; }
+.kit-locale summary { list-style:none; cursor:pointer; font-size:.85rem; color:var(--kit-text-muted); padding:.35rem .5rem; border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); }
+.kit-locale summary::-webkit-details-marker { display:none; }
+.kit-locale[open] summary { color:var(--kit-primary); border-color:var(--kit-primary); }
+.kit-locale__menu { position:absolute; right:0; top:calc(100% + .35rem); z-index:60; background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius-sm); box-shadow:var(--kit-shadow-lg); min-width:9rem; overflow:hidden; }
+.kit-locale__menu a { display:block; padding:.5rem .75rem; text-decoration:none; color:var(--kit-text); font-size:.9rem; }
+.kit-locale__menu a:hover { background:var(--kit-surface-2); }
+.kit-locale__menu a.is-active { color:var(--kit-primary); font-weight:600; }

@@ -18,15 +18,15 @@ if (empty($event) || !is_array($event)) return;
 
 $badge = kit_date_badge($event['date'] ?? '', Kit::get('locale', 'ro'));
 $price = $event['price_from'] !== null
-    ? 'de la ' . kit_price((float)$event['price_from'], $event['currency'])
+    ? t('common.from') . ' ' . kit_price((float)$event['price_from'], $event['currency'])
     : '';
 $img = $event['poster_url'] ?: $event['hero_image_url'] ?: 'https://placehold.co/600x900?text=' . rawurlencode($event['title']);
 
 $statusBadges = '';
-if ($event['is_cancelled'])      $statusBadges .= '<span class="kit-badge kit-badge--cancelled">Anulat</span>';
-elseif ($event['is_postponed'])  $statusBadges .= '<span class="kit-badge kit-badge--postponed">Reprogramat</span>';
-elseif ($event['is_sold_out'])   $statusBadges .= '<span class="kit-badge kit-badge--soldout">Sold Out</span>';
-if ($event['is_promoted'])       $statusBadges .= '<span class="kit-badge kit-badge--promoted">Recomandat</span>';
+if ($event['is_cancelled'])      $statusBadges .= '<span class="kit-badge kit-badge--cancelled">' . e(t('common.cancelled')) . '</span>';
+elseif ($event['is_postponed'])  $statusBadges .= '<span class="kit-badge kit-badge--postponed">' . e(t('common.postponed')) . '</span>';
+elseif ($event['is_sold_out'])   $statusBadges .= '<span class="kit-badge kit-badge--soldout">' . e(t('common.sold_out')) . '</span>';
+if ($event['is_promoted'])       $statusBadges .= '<span class="kit-badge kit-badge--promoted">' . e(t('common.recommended')) . '</span>';
 
 $cls = 'kit-event-card kit-event-card--' . e($variant);
 ?>

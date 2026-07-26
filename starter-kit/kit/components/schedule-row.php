@@ -24,7 +24,7 @@ $img = $event['poster_url'] ?: $event['hero_image_url'] ?: 'https://placehold.co
     <p class="kit-event-card__meta"><?= e(implode(' • ', array_filter([$event['time'], $event['venue_name']]))) ?></p>
   </div>
   <div class="kit-schedule-row__cta">
-    <?php if ($event['price_from'] !== null): ?><span class="kit-muted" style="font-size:.85rem">de la <?= e(kit_price((float)$event['price_from'], $event['currency'])) ?></span><?php endif; ?>
-    <a href="<?= e($event['url']) ?>" class="kit-btn <?= $event['is_sold_out'] ? 'kit-btn--outline' : 'kit-btn--primary' ?>"><?= $event['is_sold_out'] ? 'Sold Out' : 'Bilete' ?></a>
+    <?php if ($event['price_from'] !== null): ?><span class="kit-muted" style="font-size:.85rem"><?= e(t('common.from')) ?> <?= e(kit_price((float)$event['price_from'], $event['currency'])) ?></span><?php endif; ?>
+    <a href="<?= e($event['url']) ?>" class="kit-btn <?= $event['is_sold_out'] ? 'kit-btn--outline' : 'kit-btn--primary' ?>"><?= e($event['is_sold_out'] ? t('common.sold_out') : t('common.tickets')) ?></a>
   </div>
 </div>

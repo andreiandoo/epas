@@ -8,6 +8,7 @@ componente. Datele și normalizarea se cablează **o singură dată**, în kit.
 > - `docs/STARTER-KIT.md` — ghid complet de operare a FRAMEWORK-ului (arhitectură, rețete, convenții, deploy).
 > - `docs/TEMPLATE-AUTHORING.md` — spec pentru sesiunea care **produce template-uri** (ce/cum, plug&play).
 > - `docs/TENANT-KINDS.md` — al treilea layer: tipurile de tenant (teatru, filarmonică, agenție, leisure, artist, organizator).
+> - `docs/I18N.md` — multi-locale (t(), dicționare, kind terms per limbă, hreflang).
 > - `docs/COMPONENTS.md` — catalogul de componente + input-uri.
 
 ## Trei layere
