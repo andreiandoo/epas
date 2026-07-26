@@ -37,6 +37,7 @@ Legendă: **canonic** = view-model din `viewmodel.php` (produs de `kit_*` din
 | `empty-state` | `message`,`icon`,`action`={label,url} | Stare goală / negăsit. |
 | `cookie-consent` | — (render o dată de layout) | Banner GDPR; analytics se încarcă doar după Accept (kit.js). |
 | `locale-switcher` | — (auto în header) | Comutator de limbă (`?lang=xx` + cookie); nimic dacă site-ul e mono-locale. Vezi `docs/I18N.md`. |
+| `favorite-button` | `type` ('event'\|'artist'), `id` | Heart toggle; localStorage + sync `fav-toggle` la login. |
 
 ## Layout-uri
 | Layout | Vars | Note |

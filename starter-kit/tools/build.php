@@ -42,10 +42,10 @@ rcopy("$src/pages",    "$out/pages");
 rcopy("$root/kit", "$out/kit");
 copy("$root/kit/js/kit.js", "$out/kit/kit.js");           // flat path for /kit/kit.js
 
-// 3) theme dir: contract + overrides
+// 3) theme dir: contract + overrides (minified)
 mkdir("$out/theme", 0775, true);
-copy("$root/kit/tokens/tokens.css", "$out/theme/tokens.css");
-copy("$src/theme.css", "$out/theme/theme.css");
+file_put_contents("$out/theme/tokens.css", css_min((string)file_get_contents("$root/kit/tokens/tokens.css")));
+file_put_contents("$out/theme/theme.css",  css_min((string)file_get_contents("$src/theme.css")));
 
 // 4) deploy chrome
 copy("$root/kit/deploy/index.php", "$out/index.php");
@@ -72,6 +72,40 @@ $xml .= "</urlset>\n";
 file_put_contents("$out/sitemap.xml", $xml);
 file_put_contents("$out/robots.txt", "User-agent: *\nAllow: /\n" . ($base ? "Sitemap: $base/sitemap.xml\n" : ""));
 
+// 7) PWA (opt-in): manifest + service worker
+if (!empty($cfg['pwa'])) {
+    $icons = $cfg['pwa_icons'] ?: [['src' => $cfg['favicon'] ?? '/favicon.svg', 'sizes' => 'any', 'type' => 'image/svg+xml']];
+    $manifest = [
+        'name'             => $cfg['site_name'] ?? 'Site',
+        'short_name'       => $cfg['logo_text'] ?: ($cfg['site_name'] ?? 'Site'),
+        'start_url'        => '/',
+        'display'          => 'standalone',
+        'background_color' => $cfg['pwa_background'] ?? '#ffffff',
+        'theme_color'      => $cfg['pwa_theme_color'] ?? '#000000',
+        'icons'            => $icons,
+    ];
+    file_put_contents("$out/manifest.webmanifest", json_encode($manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+    $sw = <<<'JS'
+/* kit service worker — cache-first for static, network-first for pages. */
+var CACHE = 'kit-v1';
+var SHELL = ['/', '/theme/tokens.css', '/theme/theme.css', '/kit/kit.js', '/manifest.webmanifest'];
+self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL).catch(function(){}); }).then(function(){ return self.skipWaiting(); })); });
+self.addEventListener('activate', function (e) { e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function(){ return self.clients.claim(); })); });
+self.addEventListener('fetch', function (e) {
+  var req = e.request;
+  if (req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).catch(function () { return caches.match('/'); }));
+  } else if (/\.(css|js|svg|png|webp|woff2?)$/.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (resp) { var cp = resp.clone(); caches.open(CACHE).then(function (c) { c.put(req, cp); }); return resp; }); }));
+  }
+});
+JS;
+    file_put_contents("$out/service-worker.js", $sw);
+}
+
 echo "Built $site → $out\n";
 echo "Serve locally:  php -S 127.0.0.1:8080 -t " . escapeshellarg($out) . " " . escapeshellarg($out . '/index.php') . "\n";
 
@@ -84,6 +118,15 @@ function rcopy($s, $d) {
         is_dir("$s/$f") ? rcopy("$s/$f", "$d/$f") : copy("$s/$f", "$d/$f");
     }
 }
+/** Minimal, safe CSS minifier: strip comments + collapse whitespace. */
+function css_min(string $css): string {
+    $css = preg_replace('#/\*.*?\*/#s', '', $css);          // comments
+    $css = preg_replace('/\s+/', ' ', $css);                // collapse whitespace
+    $css = preg_replace('/\s*([{}:;,>])\s*/', '$1', $css);  // around separators
+    $css = str_replace(';}', '}', $css);                    // trailing semicolons
+    return trim($css);
+}
+
 function rrmdir($d) {
     if (!is_dir($d)) return;
     foreach (scandir($d) as $f) {

@@ -5,6 +5,7 @@
  * Kind-specific NOUNS live in the kind manifest (terms / terms_i18n), not here.
  */
 return [
+    'a11y.skip' => 'Sari la conținut',
     'nav.search' => 'Căutare',
     'search.title' => 'Căutare',
     'search.results' => 'Rezultate pentru „{q}”',

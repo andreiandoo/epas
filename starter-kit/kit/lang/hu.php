@@ -1,6 +1,7 @@
 <?php
 /** Hungarian UI strings. Mirror the keys in ro.php. */
 return [
+    'a11y.skip' => 'Ugrás a tartalomra',
     'nav.search' => 'Keresés',
     'search.title' => 'Keresés',
     'search.results' => 'Találatok: „{q}”',

@@ -5,6 +5,7 @@
    Recreates the teatru "gold / burgundy / midnight" look.
    ========================================================================== */
 :root {
+  color-scheme: dark;              /* native controls (scrollbars, inputs) match the dark theme */
   --kit-primary:        #722F37;   /* burgundy */
   --kit-primary-dark:   #5C262E;
   --kit-primary-light:  #8B3A44;

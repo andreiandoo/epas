@@ -28,6 +28,11 @@ $useTailwind = $__cfg['use_tailwind'] ?? false;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= e($title) ?></title>
   <?php if (!empty($__cfg['favicon'])): ?><link rel="icon" href="<?= e($__cfg['favicon']) ?>"><?php endif; ?>
+  <?php if (!empty($__cfg['pwa'])): ?>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="<?= e($__cfg['pwa_theme_color']) ?>">
+  <script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/service-worker.js').catch(function(){})})}</script>
+  <?php endif; ?>
   <?= kit_seo_tags(['title' => $title, 'description' => $description, 'image' => $image ?? null, 'og_type' => $og_type ?? 'website', 'event' => $event ?? null, 'canonical' => $canonical ?? null]) ?>
   <?php if (!empty($__cfg['fonts_href'])): ?><link href="<?= e($__cfg['fonts_href']) ?>" rel="stylesheet"><?php endif; ?>
   <?php if ($useTailwind): ?><script src="https://cdn.tailwindcss.com"></script><?php endif; ?>
@@ -38,6 +43,7 @@ $useTailwind = $__cfg['use_tailwind'] ?? false;
   <?= $extra_head ?? '' ?>
 </head>
 <body class="kit-body">
+  <a href="#main" class="kit-skip"><?= e(t('a11y.skip')) ?></a>
   <header class="kit-site-header">
     <div class="kit-container kit-site-header__inner">
       <a href="/" class="kit-logo">
@@ -63,7 +69,7 @@ $useTailwind = $__cfg['use_tailwind'] ?? false;
     </div>
   </header>
 
-  <main class="kit-main"><?= $slot ?></main>
+  <main class="kit-main" id="main"><?= $slot ?></main>
 
   <footer class="kit-site-footer">
     <?php if ($__cfg['newsletter'] ?? true): ?>

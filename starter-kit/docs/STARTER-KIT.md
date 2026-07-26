@@ -264,8 +264,18 @@ Integrarea cu `deploy-*.bat` existente: în loc să copieze
   `kit_term()` locale-aware (kind `terms_i18n`), switcher în header, `hreflang`
   în SEO, `locale=` trimis automat la API. Activezi cu `locales` în config.
   Vezi `docs/I18N.md`.
-- **Ergonomie**: `bash tools/verify.sh` (lint + render + generate/build toate
-  kind-urile) și `CLAUDE.md` pentru orientarea sesiunilor viitoare.
+- **Conținut**: pageset `page` (legal + custom din API `/pages/{slug}`),
+  `blog`+`post` (feature `blog`), cu `.kit-prose` pentru HTML din CMS.
+- **Comerț extins**: căutare (`/cauta`), favorite (buton + `cont/favorite`),
+  recenzii pe pagina de eveniment (feature `reviews`), filtre din categorii,
+  „adaugă în calendar" (ICS via `kit_ics_link`).
+- **Perf/PWA/a11y**: minificare CSS la build + `mod_deflate`/cache în `.htaccess`;
+  PWA opt-in (`pwa=>true` → manifest + service worker); skip-link, focus-visible,
+  `prefers-reduced-motion`, `color-scheme`, auto-dark documentat.
+- **Calitate/DX**: `/styleguide` (toate componentele+tokenii în tema activă),
+  `tools/i18n-audit.php` (chei lipsă/nefolosite) + gardă anti-hardcode în verify.
+- **Ergonomie**: `bash tools/verify.sh` (lint + gărzi + i18n + render +
+  generate/build toate kind-urile) și `CLAUDE.md` pentru sesiunile viitoare.
 - **Al treilea layer `kind`** (6 tipuri de tenant) cu manifest de capabilități +
   merge la boot (`defaults ← kind ← site`), helper-e `kit_kind/kit_feature/kit_term/kit_kinds`,
   și generator care acceptă kind. Vezi `docs/TENANT-KINDS.md`.

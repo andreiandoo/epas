@@ -69,6 +69,11 @@ final class Kit {
             'cookie_consent'     => true,   // show the GDPR banner
             'newsletter'         => true,   // show the footer newsletter form
             'favicon'            => '/favicon.svg',
+            // PWA (opt-in). When true, build generates manifest + service worker.
+            'pwa'                => false,
+            'pwa_theme_color'    => '#A51C30',
+            'pwa_background'     => '#ffffff',
+            'pwa_icons'          => [],     // [['src'=>'/icon-192.png','sizes'=>'192x192','type'=>'image/png'], …]
             // Nouns the UI uses; a kind overrides these so generic pages read
             // "Spectacole" for a theatre, "Activități" for a leisure venue, etc.
             'terms' => [

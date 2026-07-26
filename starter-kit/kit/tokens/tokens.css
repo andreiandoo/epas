@@ -342,3 +342,15 @@
 .kit-stars-input { display:inline-flex; gap:.15rem; font-size:1.4rem; cursor:pointer; }
 .kit-stars-input span { color:var(--kit-border); }
 .kit-stars-input span.on { color:var(--kit-accent); }
+
+/* Accessibility ----------------------------------------------------------- */
+:root { color-scheme: light; }                 /* native controls match theme; a dark theme sets `dark` */
+:focus-visible { outline: 2px solid var(--kit-primary); outline-offset: 2px; border-radius: 2px; }
+.kit-skip { position: absolute; left: -999px; top: 0; z-index: 300; background: var(--kit-primary);
+  color: var(--kit-on-primary); padding: .6rem 1rem; border-radius: 0 0 var(--kit-radius-sm) 0; }
+.kit-skip:focus { left: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  .kit-skeleton { animation: none; }
+}

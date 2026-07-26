@@ -1,6 +1,7 @@
 <?php
 /** English UI strings. Mirror the keys in ro.php. */
 return [
+    'a11y.skip' => 'Skip to content',
     'nav.search' => 'Search',
     'search.title' => 'Search',
     'search.results' => 'Results for „{q}”',
