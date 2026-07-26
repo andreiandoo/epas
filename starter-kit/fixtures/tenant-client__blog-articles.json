@@ -1,0 +1,5 @@
+{"success":true,"data":[
+ {"id":1,"slug":"noua-stagiune","title":"Noua stagiune 2026","excerpt":"Descoperă premierele și evenimentele speciale ale acestei stagiuni.","image_url":"https://images.unsplash.com/photo-1503095396549-807759245b35?w=600&q=80","published_at":"2026-08-01","author":"Redacția"},
+ {"id":2,"slug":"interviu-regizor","title":"Interviu cu regizorul","excerpt":"O discuție despre viziunea din spatele noii producții.","image_url":"https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=600&q=80","published_at":"2026-07-20","author":"Redacția"},
+ {"id":3,"slug":"culise","title":"În culise","excerpt":"Cum se pregătește o premieră, pas cu pas.","image_url":"https://images.unsplash.com/photo-1470019693664-1d202d2c0907?w=600&q=80","published_at":"2026-07-05","author":"Redacția"}
+]}

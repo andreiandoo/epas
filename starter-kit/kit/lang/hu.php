@@ -1,6 +1,9 @@
 <?php
 /** Hungarian UI strings. Mirror the keys in ro.php. */
 return [
+    'nav.blog' => 'Blog',
+    'nav.terms' => 'Feltételek',
+    'nav.privacy' => 'Adatvédelem',
     'nav.repertoire' => 'Repertoár',
     'nav.schedule' => 'Műsor',
     'nav.subscriptions' => 'Bérletek',

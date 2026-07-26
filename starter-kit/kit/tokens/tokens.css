@@ -316,3 +316,17 @@
 .kit-locale__menu a { display:block; padding:.5rem .75rem; text-decoration:none; color:var(--kit-text); font-size:.9rem; }
 .kit-locale__menu a:hover { background:var(--kit-surface-2); }
 .kit-locale__menu a.is-active { color:var(--kit-primary); font-weight:600; }
+
+/* Blog post cards + prose (CMS/article body) ------------------------------ */
+.kit-post-card { display:flex; flex-direction:column; text-decoration:none; color:inherit; }
+.kit-post-card__media { aspect-ratio:5/3; overflow:hidden; background:var(--kit-surface-2); }
+.kit-post-card__media img { width:100%; height:100%; object-fit:cover; }
+.kit-post-card__body { padding:.9rem 1rem 1.1rem; display:flex; flex-direction:column; gap:.3rem; }
+.kit-prose { line-height:1.7; color:var(--kit-text); }
+.kit-prose h2 { font-family:var(--kit-font-display); font-weight:var(--kit-font-weight-display); font-size:1.4rem; margin:1.5rem 0 .5rem; }
+.kit-prose h3 { font-family:var(--kit-font-display); font-size:1.15rem; margin:1.25rem 0 .4rem; }
+.kit-prose p { margin:0 0 1rem; }
+.kit-prose a { color:var(--kit-primary); }
+.kit-prose ul, .kit-prose ol { margin:0 0 1rem 1.25rem; display:flex; flex-direction:column; gap:.35rem; }
+.kit-prose img { max-width:100%; border-radius:var(--kit-radius); }
+.kit-prose blockquote { border-left:3px solid var(--kit-primary); padding-left:1rem; margin:1rem 0; color:var(--kit-text-muted); }

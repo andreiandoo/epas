@@ -80,6 +80,10 @@ $useTailwind = $__cfg['use_tailwind'] ?? false;
     <?php endif; ?>
     <div class="kit-container kit-site-footer__inner">
       <p><?= e($__cfg['site_name']) ?><?php if (!empty($__cfg['site_city'])): ?> · <?= e($__cfg['site_city']) ?><?php endif; ?></p>
+      <p class="kit-footer-social">
+        <a href="/termeni"><?= e(t('nav.terms')) ?></a>
+        <a href="/confidentialitate"><?= e(t('nav.privacy')) ?></a>
+      </p>
       <?php if (!empty($__cfg['social'])): ?>
         <p class="kit-footer-social">
           <?php foreach ($__cfg['social'] as $net => $url): ?><a href="<?= e($url) ?>" rel="noopener" target="_blank"><?= e(ucfirst($net)) ?></a><?php endforeach; ?>

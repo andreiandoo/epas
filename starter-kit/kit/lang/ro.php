@@ -5,6 +5,9 @@
  * Kind-specific NOUNS live in the kind manifest (terms / terms_i18n), not here.
  */
 return [
+    'nav.blog' => 'Blog',
+    'nav.terms' => 'Termeni',
+    'nav.privacy' => 'Confidențialitate',
     'checkout.seats' => 'locuri',
     'checkout.promo_applied' => 'Cod aplicat',
     'step.cart' => 'Coș',

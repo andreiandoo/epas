@@ -107,6 +107,9 @@ Comerț/cont (auto-adăugate pentru orice kind `tenant`): `login`, `register`,
 `confirmare`, `account-dashboard`, `account-tickets`, `account-orders`,
 `account-subscriptions` (dacă `feature('subscriptions')`), `account-giftcards`
 (dacă `feature('gift_cards')`), `account-settings`.
+Conținut (auto): `page` (legal — `/termeni`, `/confidentialitate` — din API
+`/pages/{slug}`); `blog` + `post` dacă `feature('blog')` (din `/blog-articles`).
+Pagini de eroare: `error` (403/500/503) + `404`.
 Un `kind` mapează numele paginii la pageset în `manifest['pages']`:
 `'repertoire' => ['set'=>'listing','nav'=>'repertoire']`.
 

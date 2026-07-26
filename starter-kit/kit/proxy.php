@@ -45,6 +45,9 @@ $ACTIONS = [
     'artist'        => ['GET',  "$base/artists/{slug}",      3600],
     'subscriptions' => ['GET',  "$base/subscriptions",       300],
     'payment-methods'=>['GET',  "$base/payment-methods",     300],
+    'page'          => ['GET',  "$base/pages/{slug}",        600],
+    'blog'          => ['GET',  "$base/blog-articles",       300],
+    'post'          => ['GET',  "$base/blog-articles/{slug}",300],
     // seating (session-based, never cache)
     'seating'       => ['GET',  '/public/events/{event}/seating', 0],
     'seats'         => ['GET',  '/public/events/{event}/seats',   0],

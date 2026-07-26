@@ -1,6 +1,9 @@
 <?php
 /** English UI strings. Mirror the keys in ro.php. */
 return [
+    'nav.blog' => 'Blog',
+    'nav.terms' => 'Terms',
+    'nav.privacy' => 'Privacy',
     'nav.repertoire' => 'Repertoire',
     'nav.schedule' => 'Schedule',
     'nav.subscriptions' => 'Subscriptions',

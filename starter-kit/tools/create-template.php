@@ -89,6 +89,25 @@ if ($kind) {
         }
     }
 
+    // Content pages: legal (all tenant kinds) + blog (kinds with feature 'blog').
+    // [pageset, route, vars]
+    $extraCapture = [];
+    if ($profile === 'tenant') {
+        $content = [
+            'termeni'           => ['page', '/termeni',            ['slug' => 'terms',   'nav' => 'terms']],
+            'confidentialitate' => ['page', '/confidentialitate',  ['slug' => 'privacy', 'nav' => 'privacy']],
+        ];
+        if (!empty(($manifest['features'] ?? [])['blog'])) {
+            $content['blog'] = ['blog', '/blog', ['nav' => 'blog']];
+            $content['post'] = ['post', null, []];         // reached via capture, not an exact route
+            $extraCapture['blog'] = 'post';
+        }
+        foreach ($content as $pname => [$set, $route, $vars]) {
+            $pages[$pname] = ['set' => $set] + ($vars ? ['vars' => $vars] : []);
+            if ($route) $extraExact[$route] = $pname;
+        }
+    }
+
     // Error pages (all kinds). 404 comes from the kind's own pageset.
     foreach ([403, 500, 503] as $code) {
         $pages[(string)$code] = ['set' => 'error', 'vars' => ['code' => $code]];
@@ -106,7 +125,7 @@ if ($kind) {
         $generated[] = $pname;
     }
 
-    file_put_contents("$dst/routes.php", derive_routes($manifest, $extraExact));
+    file_put_contents("$dst/routes.php", derive_routes($manifest, $extraExact, $extraCapture));
 }
 
 echo "Created templates/$slug" . ($kind ? " (kind: $kind)" : " (profile: $profile)") . "\n";
@@ -118,7 +137,7 @@ echo "  3. (optional) customize any pages/*.php — they wrap kit/pagesets/*\n";
 echo "  4. php tools/build.php $slug\n";
 
 /* ---- routes derivation ---- */
-function derive_routes(array $m, array $extraExact = []): string {
+function derive_routes(array $m, array $extraExact = [], array $extraCapture = []): string {
     $pages = $m['pages'] ?? [];
     $menu  = $m['menu'] ?? [];
     $urlByKey = [];
@@ -140,6 +159,7 @@ function derive_routes(array $m, array $extraExact = []): string {
     if (isset($pages['show']) && preg_match('#^/([^/{]+)/#', $m['event_url_pattern'] ?? '', $mm)) {
         $capture[$mm[1]] = 'show';
     }
+    foreach ($extraCapture as $prefix => $target) $capture[$prefix] = $target;
 
     $fmt = function (array $a): string {
         $out = [];
