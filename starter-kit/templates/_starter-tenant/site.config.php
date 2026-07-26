@@ -1,10 +1,13 @@
 <?php
 /**
- * SITE CONFIG — __SITE_NAME__ (TENANT profile)
- * Fill the TODOs, then edit theme.css. Those two files ARE the site.
+ * SITE CONFIG — __SITE_NAME__ (TENANT profile, kind: __KIND__)
+ *
+ * The `kind` supplies menu, terminology, features and URL patterns (see
+ * kit/kinds/__KIND__.php). Here you only set IDENTITY + brand hooks. Uncomment
+ * any inherited key below to override it for this specific site.
  */
 return [
-    'profile'   => 'tenant',
+    'kind'      => '__KIND__',   // teatru | filarmonica | agentie | leisure | artist | organizator
     'api_base'  => 'https://core.tixello.com/api',
     'core_url'  => 'https://core.tixello.com',
     'tenant_id' => 0, // TODO: this tenant's ID in Tixello
@@ -16,21 +19,12 @@ return [
     'locale'    => 'ro',
     'currency'  => 'RON',
 
-    'event_url_pattern'    => '/spectacol/{slug}',
-    'artist_url_pattern'   => '/artist/{slug}',
-    'category_url_pattern' => '/repertoriu?cat={slug}',
+    // Inherited from the kind — uncomment to override:
+    // 'menu' => [ ... ],
+    // 'event_url_pattern' => '/…/{slug}',
+    // 'cta_label' => '…', 'cta_url' => '/…',
 
-    'menu' => [
-        ['key' => 'repertoire',    'label' => 'Repertoriu', 'url' => '/repertoriu'],
-        ['key' => 'schedule',      'label' => 'Program',    'url' => '/program'],
-        ['key' => 'subscriptions', 'label' => 'Abonamente', 'url' => '/abonamente'],
-        ['key' => 'about',         'label' => 'Despre',     'url' => '/despre'],
-    ],
-    'cta_label' => 'Cumpără bilete',
-    'cta_url'   => '/program',
-    'cart_url'  => '/cos',
-
-    'fonts_href' => '', // optional Google Fonts URL for this theme
+    'fonts_href'  => '', // optional Google Fonts URL for this theme
     'tokens_href' => '/theme/tokens.css',
     'theme_href'  => '/theme/theme.css',
     'kit_js_href' => '/kit/kit.js',

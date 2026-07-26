@@ -26,6 +26,7 @@ final class Kit {
     public static function boot(array $cfg): void {
         $defaults = [
             'profile'            => 'tenant',
+            'kind'               => null,          // tenant sub-type (see kit/kinds/)
             'api_base'           => 'https://core.tixello.com/api',
             'core_url'           => 'https://core.tixello.com',
             'api_key'            => '',
@@ -49,8 +50,40 @@ final class Kit {
             'fixtures'           => null,
             'tokens_href'        => '/theme/tokens.css',
             'theme_href'         => '/theme/theme.css',
+            // Nouns the UI uses; a kind overrides these so generic pages read
+            // "Spectacole" for a theatre, "Activități" for a leisure venue, etc.
+            'terms' => [
+                'event'      => 'eveniment',  'events'     => 'evenimente',
+                'events_cap' => 'Evenimente', 'event_cap'  => 'Eveniment',
+                'venue'      => 'locație',     'artist'     => 'artist',
+                'artists'    => 'artiști',     'artists_cap'=> 'Artiști',
+                'buy'        => 'Cumpără bilete', 'buy_short' => 'Bilete',
+            ],
+            // Capability switches; a kind turns on what it supports.
+            'features' => [
+                'seating' => false, 'subscriptions' => false, 'gamification' => false,
+                'reviews' => false, 'gift_cards' => false, 'tours' => false,
+                'multi_venue' => false, 'epk' => false, 'booking' => false,
+                'rentals' => false, 'merch' => false, 'fan_crm' => false,
+            ],
         ];
-        self::$cfg = array_replace($defaults, $cfg);
+
+        // Load the kind manifest (if any) and layer it BETWEEN defaults and the
+        // site config: defaults ← kind ← site. `terms` and `features` deep-merge
+        // so a site can override a single noun/flag without redeclaring the map.
+        $kind = [];
+        $kindName = $cfg['kind'] ?? null;
+        if ($kindName) {
+            $file = __DIR__ . '/../kinds/' . preg_replace('/[^a-z0-9_-]/', '', (string)$kindName) . '.php';
+            if (is_file($file)) { $kind = require $file; }
+            elseif (!empty($cfg['debug'])) { error_log("Kit: unknown kind '{$kindName}'"); }
+        }
+
+        $merged = array_replace($defaults, $kind, $cfg);
+        $merged['terms']    = array_replace($defaults['terms'],    $kind['terms']    ?? [], $cfg['terms']    ?? []);
+        $merged['features'] = array_replace($defaults['features'], $kind['features'] ?? [], $cfg['features'] ?? []);
+
+        self::$cfg = $merged;
         self::$booted = true;
     }
 
@@ -67,6 +100,20 @@ final class Kit {
 
     public static function isProfile(string $p): bool {
         return (self::$cfg['profile'] ?? '') === $p;
+    }
+
+    public static function kind(): ?string {
+        return self::$cfg['kind'] ?? null;
+    }
+
+    /** Is a capability enabled for this site's kind? */
+    public static function feature(string $name): bool {
+        return !empty(self::$cfg['features'][$name]);
+    }
+
+    /** A UI noun for this kind, e.g. term('events_cap') → 'Spectacole'. */
+    public static function term(string $key, string $fallback = ''): string {
+        return self::$cfg['terms'][$key] ?? $fallback;
     }
 }
 
@@ -88,6 +135,26 @@ function kit_boot(array $siteConfig): void {
 /** Shorthand config accessor for templates/components. */
 function kit_cfg(string $key = null, $default = null) {
     return $key === null ? Kit::config() : Kit::get($key, $default);
+}
+
+/** Active tenant kind (teatru, filarmonica, …) or null. */
+function kit_kind(): ?string { return Kit::kind(); }
+
+/** True if a capability is enabled for this site's kind. */
+function kit_feature(string $name): bool { return Kit::feature($name); }
+
+/** A kind-specific UI noun. e.g. kit_term('events_cap', 'Evenimente'). */
+function kit_term(string $key, string $fallback = ''): string { return Kit::term($key, $fallback); }
+
+/** List available kinds (from kit/kinds/*.php) with their labels. */
+function kit_kinds(): array {
+    $out = [];
+    foreach (glob(__DIR__ . '/../kinds/*.php') as $file) {
+        $name = basename($file, '.php');
+        $m = require $file;
+        $out[$name] = $m['label'] ?? ucfirst($name);
+    }
+    return $out;
 }
 
 /**

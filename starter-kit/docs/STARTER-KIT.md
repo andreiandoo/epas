@@ -54,6 +54,9 @@ starter-kit/
       adapters/
         tenant.php       # raw tenant-client  → canonic
         marketplace.php  # raw marketplace-client → canonic
+    kinds/             # AL TREILEA LAYER: manifest per tip de tenant (teatru,
+                       # filarmonica, agentie, leisure, artist, organizator)
+                       # → menu, terms, features, url-patterns, page-set. Vezi docs/TENANT-KINDS.md
     components/        # partial-uri pure: date in → HTML out (vezi docs/COMPONENTS.md)
     layouts/public.php # <head> + header + footer, token-driven
     tokens/tokens.css  # CONTRACTUL de variabile + stilurile de bază .kit-*
@@ -242,6 +245,9 @@ Integrarea cu `deploy-*.bat` existente: în loc să copieze
   `kit.js` (cart, auth, ticket-selector, calendar, seat-map hydrate, QR modal,
   account shell, img fallback).
 - **26 componente** — vezi `docs/COMPONENTS.md` pentru lista + input-uri.
+- **Al treilea layer `kind`** (6 tipuri de tenant) cu manifest de capabilități +
+  merge la boot (`defaults ← kind ← site`), helper-e `kit_kind/kit_feature/kit_term/kit_kinds`,
+  și generator care acceptă kind. Vezi `docs/TENANT-KINDS.md`.
 - Proxy client cu allow-list (public + auth + account, forward Bearer).
 - Exemple: teatru (`index`, `repertoire`, `schedule`, `subscriptions`, `show`,
   `cont-index`) + ambilet (`events`) — profile diferite, aceleași componente,

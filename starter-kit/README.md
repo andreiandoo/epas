@@ -7,7 +7,14 @@ componente. Datele și normalizarea se cablează **o singură dată**, în kit.
 
 > - `docs/STARTER-KIT.md` — ghid complet de operare a FRAMEWORK-ului (arhitectură, rețete, convenții, deploy).
 > - `docs/TEMPLATE-AUTHORING.md` — spec pentru sesiunea care **produce template-uri** (ce/cum, plug&play).
+> - `docs/TENANT-KINDS.md` — al treilea layer: tipurile de tenant (teatru, filarmonică, agenție, leisure, artist, organizator).
 > - `docs/COMPONENTS.md` — catalogul de componente + input-uri.
+
+## Trei layere
+`profile` (marketplace | tenant) → `kind` (teatru | filarmonica | agentie |
+leisure | artist | organizator) → `site` (config + theme). Kind-ul aduce meniul,
+vocabularul, capabilitățile și URL-urile; „10 template-uri per tip” = același
+kind, `theme.css` + copy diferite. Vezi `docs/TENANT-KINDS.md`.
 
 ## De ce
 Skin-urile actuale fuzionează în fiecare fișier: aducerea datelor + markup +
@@ -24,8 +31,8 @@ KIT_SITE=teatru KIT_FIXTURES="$(pwd)/fixtures" php -S 127.0.0.1:8899 tools/dev-r
 KIT_SITE=ambilet KIT_FIXTURES="$(pwd)/fixtures" php -S 127.0.0.1:8898 tools/dev-router.php
 #   → http://127.0.0.1:8898/evenimente
 
-# site nou
-php tools/create-template.php tenant opera-cluj "Opera Națională Cluj"
+# site nou — dă tipul (kind)
+php tools/create-template.php teatru opera-cluj "Opera Națională Cluj"
 #   editează templates/opera-cluj/{site.config.php, theme.css}
 php tools/build.php opera-cluj          # → build/opera-cluj (deployabil)
 ```

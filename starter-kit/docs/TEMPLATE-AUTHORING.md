@@ -45,33 +45,48 @@ după rețeta din STARTER-KIT.md §5.1. Doar așa rămâne plug&play și refolos
 
 ---
 
-## 2. Cele două profile
+## 2. Profile ȘI kind (două layere de tip)
+
+**Profile** = modelul de auth/API:
 
 | | `tenant` | `marketplace` |
 |---|---|---|
-| Cine | un singur organizator/teatru | agregator multi-organizator |
+| Cine | un singur organizator | agregator multi-organizator |
 | Config cheie | `tenant_id` | `api_key` |
-| URL eveniment tipic | `/spectacol/{slug}` | `/bilete/{slug}` |
-| Are cont/abonamente/seating | da (bogat) | parțial |
 | Starter | `_starter-tenant` | `_starter-marketplace` |
 
-**Paginile sunt identice ca structură între profile.** Alegi profilul în
-`site.config.php`; data layer-ul se ocupă de rest. Nu pune `if (profil)` în pagini.
+**Kind** = sub-tipul unui `tenant` (`teatru`, `filarmonica`, `agentie`,
+`leisure`, `artist`, `organizator`). Un kind aduce automat meniul, vocabularul
+(`kit_term`), capabilitățile (`kit_feature`), URL-urile și setul de pagini
+recomandat. **Detalii complete: `docs/TENANT-KINDS.md`.**
+
+În pagini, fă-le kind-aware în loc să hard-codezi:
+```php
+<h1><?= e(kit_term('events_cap', 'Evenimente')) ?></h1>   <!-- „Spectacole” / „Activități” -->
+<?php if (kit_feature('seating')) component('seat-map', ['event'=>$event]);
+      else component('ticket-selector', ['event'=>$event]); ?>
+```
+
+**Paginile sunt identice ca structură între profile și kind-uri.** Nu pune
+`if (profil)` / `if (kind)` în pagini pentru DATE — doar `kit_feature()` pentru
+a afișa/ascunde zone specifice, și `kit_term()` pentru text.
 
 ---
 
 ## 3. Pasul cu pasul — producerea unui template
 
 ```bash
-# 1. schelet
-php tools/create-template.php <tenant|marketplace> <slug> "Nume Site"
+# 1. schelet — dă un KIND (recomandat) sau un profile brut
+php tools/create-template.php <kind|profile> <slug> "Nume Site"
+#   kind:    teatru | filarmonica | agentie | leisure | artist | organizator
+#   profile: tenant | marketplace   (fără kind)
+# Kind-ul setează deja menu, terms, features, URL-uri și lista de pagini.
 
-# 2. IDENTITATE + DATE  → editează templates/<slug>/site.config.php
-#    - profile, tenant_id / api_key
+# 2. IDENTITATE  → editează templates/<slug>/site.config.php
+#    - tenant_id (kind) / api_key (marketplace)
 #    - site_name, site_city, logo_text, currency, locale
-#    - menu[], cta_label/url, cart_url
-#    - *_url_pattern (trebuie să corespundă cu routes.php)
 #    - fonts_href (Google Fonts pt. fonturile temei)
+#    - (menu/url/cta vin din kind; suprascrie-le aici DOAR dacă e nevoie)
 
 # 3. ASPECT  → editează templates/<slug>/theme.css   (vezi §5)
 
