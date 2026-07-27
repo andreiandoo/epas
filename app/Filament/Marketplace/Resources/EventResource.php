@@ -349,6 +349,10 @@ class EventResource extends Resource
                                             ->label('Slug')
                                             ->maxLength(190)
                                             ->rule('alpha_dash')
+                                            // Slugs must be lowercase — the ambilet /bilete/{slug}
+                                            // route only matches [a-z0-9-]+, so an uppercase slug
+                                            // (alpha_dash allows caps) 404s the public + preview page.
+                                            ->dehydrateStateUsing(fn (?string $state) => $state !== null ? \Illuminate\Support\Str::lower($state) : $state)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('ID-ul se generează automat din titlu', 'ID is auto-generated from title')),
                                         Forms\Components\TextInput::make('event_series')
                                             ->label($t('Serie eveniment', 'Event series'))
