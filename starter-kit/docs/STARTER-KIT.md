@@ -175,9 +175,29 @@ Editează AMBELE `kit/core/adapters/{tenant,marketplace}.php` + default-ul în
 `viewmodel.php`. Testează cu un fixture care conține câmpul.
 
 ### 5.6 Adaugă o acțiune în proxy (pentru hidratare client)
-Editează `$ACTIONS` în `kit/proxy.php`: `'nume' => [VERB, '/endpoint/{param}', ttl]`.
+`kit/proxy.php` are **două** tabele `$ACTIONS`, unul per profil, pentru că cele
+două API-uri nu împart aproape nicio rută dincolo de `/public/*` (seating).
+Formatul: `'nume' => [VERB_CLIENT, '/endpoint/{param}', ttl, $opts]`, cu
+`$opts` opțional:
+
+| cheie | efect |
+|---|---|
+| `upstream` | verbul trimis în amonte, când diferă de cel al clientului (ex. `PUT`) |
+| `scope => 'host'` | adaugă `?hostname=` + `X-Tenant-Domain` (auth-ul tenant se rezolvă DOAR pe hostname) |
+| `session => true` | trimite `X-Session-Id` (sesiunea de hold-uri `/public/*`) |
+| `req` | normalizator de body/query: `fn($body,$params,$isTenant) → [$body,$params]` |
+| `res` | normalizator de răspuns: `fn($decoded,$isTenant) → $decoded` |
+
 Placeholder-ele `{param}` se umplu din query. Cheam-o din JS cu
 `KitProxy('nume', {param: …})`.
+
+O acțiune fără corespondent pe un profil se trece în `$UNSUPPORTED`, nu se
+omite: proxy-ul răspunde 501 cu motivul, deci pagina generică degradează în loc
+să pară că scrierea a reușit.
+
+**Regula de aur #2 în practică:** dacă un răspuns real diferă de ce citește
+pagina, corectezi în `req`/`res` din proxy (client) sau în
+`kit/core/adapters/*` (server) — niciodată în pagină.
 
 ---
 

@@ -24,13 +24,17 @@ function tenant_adapt_event(array $e, array $cfg): array {
     $startTime = $sched['start_time'] ?? $e['start_time'] ?? '';
     $date      = vm_date($startDate);
 
-    // price: explicit price_from, else min of ticket_types
+    // price: explicit price_from, else min of ticket_types.
+    // formatEventDetail() sends `price` = list price (price_max) and
+    // `sale_price` = the discounted one, which is already the canonical order.
     $tickets = [];
     foreach (($e['ticket_types'] ?? []) as $t) {
         $tickets[] = [
+            'id'         => $t['id'] ?? null,
             'name'       => $t['name'] ?? '',
             'price'      => isset($t['price']) ? (float)$t['price'] : null,
             'sale_price' => isset($t['sale_price']) ? (float)$t['sale_price'] : null,
+            'available'  => $t['available'] ?? $t['available_quantity'] ?? null,
             'currency'   => $t['currency'] ?? ($e['currency'] ?? 'RON'),
         ];
     }
@@ -73,7 +77,9 @@ function tenant_adapt_event(array $e, array $cfg): array {
         'is_postponed'  => (bool)($e['is_postponed'] ?? false),
         'is_promoted'   => (bool)($e['is_promoted'] ?? false),
         'url'           => vm_url($cfg['event_url_pattern'] ?? '/spectacol/{slug}', ['slug' => $slug, 'id' => $e['id'] ?? 0]),
-        'short_description' => $e['short_description'] ?? '',
+        // formatEvent() (list) puts the teaser in `description`; only
+        // formatEventDetail() adds a separate `short_description`.
+        'short_description' => $e['short_description'] ?? $e['description'] ?? '',
         'description'   => $e['description'] ?? '',
         'ticket_types'  => $tickets,
         'artists'       => $artists,

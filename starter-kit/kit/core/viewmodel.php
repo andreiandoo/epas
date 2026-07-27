@@ -40,7 +40,8 @@ function vm_event_defaults(): array {
         'url'           => '#',       // permalink within THIS site (built from config pattern)
         'short_description' => '',
         'description'   => '',
-        'ticket_types'  => [],        // [{name, price, sale_price, currency}]
+        'ticket_types'  => [],        // [{id, name, price, sale_price, available, currency}]
+                                      // id is the backend ticket_type_id — checkout needs it
         'artists'       => [],        // [{name, slug, image}]
         'tags'          => [],
     ];

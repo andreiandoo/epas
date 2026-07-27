@@ -119,6 +119,14 @@ final class Kit {
         }
         $merged['terms_i18n'] = $ti;
 
+        // Offline preview is a DEV switch, not site identity: KIT_FIXTURES points
+        // the HTTP layer at canned JSON. Keeping it here (instead of in each
+        // site.config.php) means every shipped config reads `fixtures => null`
+        // and the build guard can trust it. Never set in production.
+        if (empty($merged['fixtures']) && ($fx = getenv('KIT_FIXTURES'))) {
+            $merged['fixtures'] = $fx;
+        }
+
         // Resolve the ACTIVE locale for this request.
         $merged['locales'] = $merged['locales'] ?: [$merged['locale']];
         $merged['active_locale'] = self::resolveLocale($merged['locale'], $merged['locales']);

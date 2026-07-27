@@ -37,5 +37,5 @@ return [
 
     'cache_ttl' => 120,
     'debug'     => false,
-    'fixtures'  => getenv('KIT_FIXTURES') ?: null,
+    'fixtures'  => null,   // live API; export KIT_FIXTURES=<dir> for offline preview
 ];

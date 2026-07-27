@@ -50,7 +50,7 @@
         var self = this, lines = [];
         this.types.forEach(function (ty, i) {
           var q = self.qty[i] || 0;
-          if (q > 0) lines.push({ event_id: data.event_id, title: data.title, url: data.url, image: data.image, ticket: ty.name, price: Number(ty.price), qty: q, currency: data.currency });
+          if (q > 0) lines.push({ event_id: data.event_id, ticket_type_id: ty.id, title: data.title, url: data.url, image: data.image, ticket: ty.name, price: Number(ty.price), qty: q, currency: data.currency });
         });
         if (!lines.length) return;
         lines.forEach(function (l) { Cart.add(l); });
@@ -168,7 +168,11 @@
       email: '', busy: false, done: false,
       async submit() {
         if (!this.email) return; this.busy = true;
-        try { await proxy('newsletter', {}, { method: 'POST', body: { email: this.email } }); this.done = true; this.email = ''; }
+        try {
+          var r = await proxy('newsletter', {}, { method: 'POST', body: { email: this.email } });
+          if (r && r.success === false) return;   // profile has no endpoint, or upstream refused
+          this.done = true; this.email = '';
+        }
         catch (e) {} finally { this.busy = false; }
       }
     };
@@ -221,13 +225,17 @@
   window.KitProxy = proxy;
 
   /* ---- vanilla: seat-map hydration with LIVE holds ---------------------
-     Contract with /api/public (forwarded by the site proxy):
-       GET  seating?event=ID  → { data: { event_seating_id, seats:[
-              { seat_uid, row_label, seat_label, status, price_cents, section_name } ] } }
-       POST hold    { event, event_seating_id, seat_uid }  → holds the seat (session)
-       DELETE release { event, event_seating_id, seat_uid }
-     Selecting a free seat holds it; the hold timer (default 10 min) counts down;
-     "Continuă" writes the held seats to the cart and goes to checkout. */
+     Contract with /api/public (forwarded by the site proxy). Verified against
+     App\Http\Controllers\Api\PublicApi\SeatingController:
+       GET  seats?event=ID   → { event_seating_id, seats:[ { seat_uid, row_label,
+              seat_label, status, price_cents, price_tier_id, section_name } ], total }
+              (`seating` returns the GEOMETRY — canvas/sections/price_tiers — and
+               carries NO seats, so the flat map loads from `seats`.)
+       POST   hold    { event_seating_id, seat_uids: [uid] } → { held, failed, expires_at }
+       DELETE release { event_seating_id, seat_uids: [uid] }
+     Seat status values are available | held | sold | blocked | disabled.
+     Selecting an available seat holds it; the hold timer (default 10 min) counts
+     down; "Continuă" writes the held seats to the cart and goes to checkout. */
   function hydrateSeatMap(el) {
     var eventId  = el.getAttribute('data-event-id');
     var checkout = el.getAttribute('data-checkout') || (CFG.cartUrl || '/cos');
@@ -245,8 +253,10 @@
     var deadline = 0, ticking = null;
     var meta = { title: el.getAttribute('data-title') || 'Bilet', image: el.getAttribute('data-image') || '' };
 
-    proxy('seating', { event: eventId }).then(function (res) {
-      var d = (res && res.data) || {};
+    function seatFree(s) { var st = s.status || 'available'; return st === 'available' || st === 'free'; }
+
+    proxy('seats', { event: eventId, limit: 5000 }).then(function (res) {
+      var d = (res && res.data) || res || {};
       esid = d.event_seating_id || d.id || null;
       var seats = d.seats || (Array.isArray(d) ? d : []);
       if (!Array.isArray(seats) || !seats.length) {
@@ -259,9 +269,9 @@
       seats.forEach(function (s) {
         var b = document.createElement('button');
         b.className = 'kit-seat'; b.type = 'button';
-        b.setAttribute('data-status', s.status || 'free');
+        b.setAttribute('data-status', seatFree(s) ? 'free' : (s.status === 'held' ? 'held' : 'sold'));
         b.title = (s.section_name ? s.section_name + ' · ' : '') + (s.row_label || '') + (s.seat_label || '');
-        if ((s.status || 'free') === 'free') b.addEventListener('click', function () { toggle(s, b); });
+        if (seatFree(s)) b.addEventListener('click', function () { toggle(s, b); });
         grid.appendChild(b);
       });
       canvas.appendChild(grid);
@@ -273,12 +283,18 @@
       var uid = seat.seat_uid || (seat.row_label + seat.seat_label);
       btn.disabled = true;
       if (selected[uid]) {
-        proxy('release', {}, { method: 'DELETE', body: { event: eventId, event_seating_id: esid, seat_uid: uid } })
+        proxy('release', {}, { method: 'DELETE', body: { event_seating_id: esid, seat_uids: [uid] } })
           .finally(function () { delete selected[uid]; btn.classList.remove('is-selected'); btn.disabled = false; render(); });
       } else {
-        proxy('hold', {}, { method: 'POST', body: { event: eventId, event_seating_id: esid, seat_uid: uid } })
+        proxy('hold', {}, { method: 'POST', body: { event_seating_id: esid, seat_uids: [uid] } })
           .then(function (r) {
-            if (r && r.success === false) { alert(r.error || 'Locul nu mai este disponibil.'); btn.setAttribute('data-status', 'sold'); return; }
+            // holdSeats answers { held:[…], failed:[{seat_uid,reason}] }, HTTP 409
+            // when it could hold nothing.
+            var held = r && (r.held || (r.data && r.data.held));
+            if ((r && r.success === false) || (held && !held.length)) {
+              alert('Locul nu mai este disponibil.');
+              btn.setAttribute('data-status', 'held'); return;
+            }
             selected[uid] = seat; btn.classList.add('is-selected'); startTimer();
           })
           .catch(function () { alert('Eroare la rezervarea locului.'); })

@@ -67,6 +67,17 @@ builds every kind. Green means safe.
   `/styleguide`.
 
 ## Offline note
-This repo can't reach `core.tixello.com`; `fixtures/` back GET requests so pages
-render offline. In production set `fixtures => null` in `site.config.php`. The
-proxy's assumed request/response contracts are documented in `kit/proxy.php`.
+`fixtures/` back GET requests so pages render with no backend. Every shipped
+`site.config.php` has `fixtures => null`; export `KIT_FIXTURES=<dir>` to switch
+a dev run to canned JSON (`kit_boot` picks it up — it is a dev switch, not site
+identity, and `tools/build.php` refuses to ship a config that sets it).
+
+## The proxy contract
+`kit/proxy.php` holds TWO `$ACTIONS` tables (one per profile) reconciled
+action-by-action against `routes/api.php` and the real controllers, plus
+`$UNSUPPORTED` for actions a profile genuinely lacks (answered 501, never a fake
+success). Per-action `req`/`res` hooks reconcile field names and envelopes so
+the two backends look identical to a page. Gotchas that bite: tenant AUTH
+resolves only by `?hostname=`; seating needs a numeric event id, `seat_uids[]`,
+and the `X-Session-Id` the proxy keeps in a first-party cookie; `checkout` is
+tenant `demo-checkout` because `checkout/submit` is still an upstream stub.

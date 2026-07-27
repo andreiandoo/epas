@@ -2,7 +2,11 @@
 /**
  * PAGESET: checkout — LIVE. Loads cart + payment methods, submits to the proxy.
  *   POST proxy 'checkout' { items, contact:{name,email,phone}, payment_method }
- *     → { data: { order_id, payment_url? } }
+ *     → { data: { order_id, payment_url?, payment_required? } }
+ *   Some backends create the order and initiate payment in one call (payment_url
+ *   comes back straight away); others need a second `checkout-pay` call. The
+ *   proxy reports which via payment_required, so this flow covers both without
+ *   knowing the profile.
  *   payment_url → redirect to PSP; else → /confirmare?order=order_id (cart cleared).
  */
 layout('public', ['title' => t('checkout.title') . ' — ' . kit_cfg('site_name'), 'nav' => ''],
@@ -82,7 +86,8 @@ function () { ?>
     async applyPromo(){
       if(!this.promo){ return; } this.promoBusy=true; this.promoMsg='';
       try{
-        const r = await KitProxy('promo-validate',{},{method:'POST',body:{code:this.promo, subtotal:this.subtotal()}});
+        const ev = (this.items.find(l=>l.event_id)||{}).event_id;
+        const r = await KitProxy('promo-validate',ev?{event:ev}:{},{method:'POST',body:{code:this.promo, subtotal:this.subtotal()}});
         const d=(r&&r.data)||{};
         if(r&&r.success && (d.discount||d.amount)){
           this.discount = Number(d.discount||d.amount); this.promoCode=this.promo;
@@ -95,8 +100,13 @@ function () { ?>
       this.error=''; this.submitting=true;
       try{
         const r = await KitProxy('checkout',{},{method:'POST',body:{ items:this.items, contact:this.contact, payment_method:this.method, promo_code:this.promoCode }});
-        const d = (r&&r.data)||{};
-        if(d.payment_url){ window.location.href=d.payment_url; return; }
+        let d = (r&&r.data)||{};
+        // Backends that only create the order need a second call to get the PSP url.
+        if(!d.payment_url && d.order_id && d.payment_required){
+          const p = await KitProxy('checkout-pay',{order:d.order_id},{method:'POST',body:{}});
+          d = Object.assign({}, d, (p&&p.data)||{});
+        }
+        if(d.payment_url){ localStorage.removeItem((window.KIT&&KIT.cartKey)||'kit_cart'); window.location.href=d.payment_url; return; }
         if(d.order_id||d.id){ localStorage.removeItem((window.KIT&&KIT.cartKey)||'kit_cart'); window.location.href='/confirmare?order='+(d.order_id||d.id); return; }
         this.error = (r&&r.error) || this.L.pay_fail;
       }catch(e){ this.error=this.L.net; }

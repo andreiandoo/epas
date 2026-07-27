@@ -125,9 +125,25 @@ show → seat-map (hold/release live + timer 10 min) SAU ticket-selector
 cont/* : login/register (proxy) → Bearer în localStorage → acc-* hidratate
 ```
 Endpoint-urile din proxy (`kit/proxy.php`, allow-list): `seating/seats/hold/
-release`, `checkout`, `order-summary`, `payment-methods`, `login/register/me/
-me-update/logout`, `acc-stats/tickets/orders/subscriptions/giftcards`,
-`acc-giftcard-redeem`. Extinde lista pe măsură ce conectezi mai mult din API.
+release/seats-confirm`, `checkout`, `order-summary`, `payment-methods`,
+`login/register/me/me-update/logout`, `acc-stats/tickets/orders/subscriptions/
+giftcards`, `acc-giftcard-redeem`. Extinde lista pe măsură ce conectezi mai
+mult din API.
+
+Trei lucruri care NU sunt evidente din API (verificate contra controllerelor):
+- **Seating cere id numeric de eveniment**, nu slug (`SeatingController` tipează
+  `int $eventId`), iar hold/release iau `{event_seating_id, seat_uids[]}` — la
+  plural. Sesiunea de hold-uri e ținută de proxy printr-un cookie first-party
+  retrimis ca `X-Session-Id`; fără el fiecare apel ar cădea în altă sesiune și
+  niciun loc n-ar mai putea fi eliberat sau confirmat.
+- **Auth-ul tenant nu acceptă `?tenant=ID`.** `TenantClient\AuthController`
+  rezolvă tenantul exclusiv din `?hostname=` / `X-Tenant-Domain` (restul
+  endpoint-urilor tenant acceptă `?tenant=`). Proxy-ul trimite ambele.
+- **`checkout` merge pe `/tenant-client/demo-checkout`** pentru că
+  `/tenant-client/checkout/submit` e încă un stub în amonte (nu creează Order —
+  vezi TODO-urile din `CheckoutController`). demo-checkout scrie comandă +
+  bilete reale și întoarce URL-ul de plată; e ce folosește și skin-ul teatru
+  live. Se mută pe endpoint-ul real când acesta e implementat.
 
 ## 6. Cum adaugi un kind nou
 

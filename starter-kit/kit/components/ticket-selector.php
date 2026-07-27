@@ -19,6 +19,9 @@ $soldOut = !empty($event['is_sold_out']);
     "image"    => $event["poster_url"],
     "currency" => $event["currency"],
     "types"    => array_map(fn($t) => [
+        // `id` is the backend ticket_type_id; the cart line carries it through
+        // to checkout, which addresses tickets by type rather than by name.
+        "id"    => $t["id"] ?? null,
         "name"  => $t["name"],
         "price" => $t["sale_price"] ?? $t["price"],
     ], $types),
