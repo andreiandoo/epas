@@ -1,0 +1,247 @@
+/* ============================================================================
+   AmBilet Scan — Redesign Design System
+   Shared stylesheet for all screen mockups.
+
+   Purpose: translate the current Tixello dark/purple theme into the AmBilet
+   red/white brand system shown in the marketing mockups. Every token below
+   maps 1:1 onto a token in the app's src/theme/colors.js so an implementing
+   session can port styles directly. See MOCKUPS_README.md for the mapping.
+   ============================================================================ */
+
+:root {
+  /* ---- Brand red (replaces `purple` family) ---- */
+  --red:            #9A1B22;   /* primary actions, active tab, icons  (was purple #8B5CF6) */
+  --red-700:        #7A141A;   /* pressed / gradient bottom */
+  --red-600:        #9A1B22;
+  --red-accent:     #C1121F;   /* links, +Adaugă, Editează, logo text (bright) */
+  --red-tint:       #FBEAEB;   /* icon chip bg, light red surfaces   (was purpleBg) */
+  --red-tint-2:     #F6DDDE;   /* segmented "la ușă" fill */
+  --red-border:     rgba(154,27,34,0.22);
+
+  /* ---- Neutrals (light theme — inverted from dark app) ---- */
+  --bg:             #F6F2F2;   /* app background (was #0A0A0F) */
+  --surface:        #FFFFFF;   /* cards (was rgba(255,255,255,0.03)) */
+  --surface-2:      #FBF8F8;   /* nested / subtle rows */
+  --border:         #ECE6E6;   /* hairline (was rgba(255,255,255,0.06)) */
+  --border-strong:  #E0D8D8;
+
+  --text:           #1C1B1F;   /* primary text (was #FFFFFF) */
+  --text-2:         #6B7280;   /* secondary   (was rgba(255,255,255,0.5)) */
+  --text-3:         #9CA3AF;   /* tertiary    (was rgba(255,255,255,0.4)) */
+  --text-4:         #C0C4CC;   /* quaternary  */
+
+  /* ---- Semantic (kept, retuned for light bg) ---- */
+  --green:          #16A34A;   --green-tint: #E7F6EC;  --green-border: rgba(22,163,74,0.25);
+  --amber:          #D97706;   --amber-tint: #FDF0DD;  --amber-border: rgba(217,119,6,0.25);
+  --danger:         #DC2626;   --danger-tint:#FCE9E9;  --danger-border:rgba(220,38,38,0.25);
+  --cyan:           #0E7490;   --cyan-tint:  #E1F3F7;  --cyan-border: rgba(14,116,144,0.25);
+
+  /* ---- Role pills ---- */
+  --role-admin-bg:  #FCE8E9;   --role-admin-fg: #B0212B;
+  --role-mgr-bg:    #E7F6EC;   --role-mgr-fg:   #15803D;
+  --role-staff-bg:  #EEF1F4;   --role-staff-fg: #5B6472;
+
+  /* ---- Avatar palette (multi-color initials) ---- */
+  --av-red-bg:#FBE4E5; --av-red-fg:#B0212B;
+  --av-blue-bg:#E3ECFB; --av-blue-fg:#1D4ED8;
+  --av-amber-bg:#FBEFD8; --av-amber-fg:#B45309;
+  --av-purple-bg:#EEE7FB; --av-purple-fg:#6D28D9;
+
+  --radius:     16px;
+  --radius-lg:  20px;
+  --radius-sm:  10px;
+  --shadow:     0 1px 2px rgba(20,10,10,.04), 0 6px 20px rgba(20,10,10,.05);
+  --shadow-sm:  0 1px 2px rgba(20,10,10,.05);
+  --shadow-btn: 0 6px 16px rgba(154,27,34,.28);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Inter, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: #2b1516;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 36px;
+  justify-content: center;
+  padding: 40px 24px 80px;
+}
+
+/* ---- Phone frame ---- */
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 46px;
+  border: 10px solid #100a0b;
+  box-shadow: 0 30px 70px rgba(0,0,0,.5), inset 0 0 0 2px #2a1c1d;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.phone .notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 150px; height: 30px; background: #100a0b;
+  border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; z-index: 60;
+}
+.statusbar {
+  height: 44px; flex: 0 0 44px; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 26px; font-size: 13px;
+  font-weight: 600; color: var(--text); z-index: 50;
+}
+.statusbar .dots { display:flex; gap:5px; align-items:center; }
+
+/* screen scroll area */
+.screen { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.screen::-webkit-scrollbar { width: 0; }
+.pad { padding: 16px; }
+.stack > * + * { margin-top: 12px; }
+
+/* caption under each phone */
+.caption {
+  width: 390px; text-align: center; color: #f3dede; margin-top: 14px;
+}
+.caption b { display:block; font-size: 15px; color:#fff; margin-bottom: 3px; }
+.caption span { font-size: 12.5px; color: #d9b7b7; line-height: 1.4; }
+.caption .src { display:inline-block; margin-top:6px; font-size:11px; color:#c98f8f;
+  font-family: ui-monospace, Menlo, monospace; }
+
+/* ---- App top header (logo + live pill + bell) ---- */
+.appbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 6px 16px 12px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display:flex; align-items:center; gap:8px; }
+.brand-logo {
+  font-weight: 800; font-size: 17px; letter-spacing:-.3px;
+  color:#fff; background: var(--red); padding: 5px 10px; border-radius: 8px;
+  border: 2px solid #fff; box-shadow: 0 0 0 2px var(--red);
+}
+.brand-scan { font-size: 15px; font-weight: 700; color: var(--text); }
+.appbar-right { display:flex; align-items:center; gap:10px; }
+.pill {
+  display:inline-flex; align-items:center; gap:6px; padding:5px 10px;
+  border-radius: 999px; font-size:12px; font-weight:700;
+}
+.pill .dot { width:7px; height:7px; border-radius:50%; }
+.pill-live { background: var(--green-tint); color: var(--green); }
+.pill-live .dot { background: var(--green); box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+.pill-off  { background: var(--danger-tint); color: var(--danger); }
+.iconbtn {
+  width:38px; height:38px; border-radius:50%; background: var(--surface-2);
+  border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+  position:relative; color: var(--text-2);
+}
+.iconbtn .badge {
+  position:absolute; top:-3px; right:-3px; background: var(--red-accent);
+  color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px;
+  border-radius:9px; display:flex; align-items:center; justify-content:center;
+  border:2px solid var(--surface); padding:0 4px;
+}
+
+/* ---- Section title ---- */
+.h1 { font-size: 22px; font-weight: 800; letter-spacing:-.4px; }
+.h2 { font-size: 17px; font-weight: 700; }
+.sub { font-size: 13px; color: var(--text-2); }
+.section-head { display:flex; align-items:center; justify-content:space-between; margin: 4px 0 10px; }
+.section-head h3 { font-size:15px; font-weight:700; }
+.link { color: var(--red-accent); font-size:13px; font-weight:700; }
+
+/* ---- Card ---- */
+.card {
+  background: var(--surface); border:1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-sm);
+}
+.card.pad { padding:16px; }
+
+/* ---- Icon chip ---- */
+.chip {
+  width:38px; height:38px; border-radius:11px; display:flex;
+  align-items:center; justify-content:center; flex:0 0 auto;
+}
+.chip-red   { background: var(--red-tint);   color: var(--red); }
+.chip-green { background: var(--green-tint); color: var(--green); }
+.chip-amber { background: var(--amber-tint); color: var(--amber); }
+.chip-cyan  { background: var(--cyan-tint);  color: var(--cyan); }
+.chip svg { width:20px; height:20px; }
+
+/* ---- List row ---- */
+.row {
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  background: var(--surface); border:1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow-sm);
+}
+.row + .row { margin-top:8px; }
+.row .grow { flex:1; min-width:0; }
+.row .name { font-size:14.5px; font-weight:600; }
+.row .meta { font-size:12px; color: var(--text-3); margin-top:2px; }
+.chev { color: var(--text-3); }
+
+/* ---- Avatar ---- */
+.avatar {
+  width:38px; height:38px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-size:13px; font-weight:800; flex:0 0 auto;
+}
+
+/* ---- Role / status pills ---- */
+.tag { font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; }
+.tag-admin { background:var(--role-admin-bg); color:var(--role-admin-fg); }
+.tag-mgr   { background:var(--role-mgr-bg);   color:var(--role-mgr-fg); }
+.tag-staff { background:var(--role-staff-bg); color:var(--role-staff-fg); }
+.tag-active { color:var(--green); font-size:12.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; }
+.tag-active::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--green); }
+
+/* ---- Stat tile ---- */
+.stat {
+  background: var(--surface); border:1px solid var(--border);
+  border-radius: 16px; padding:14px; box-shadow: var(--shadow-sm);
+}
+.stat .top { display:flex; align-items:center; justify-content:space-between; }
+.stat .label { font-size:12.5px; color: var(--text-2); font-weight:600; }
+.stat .value { font-size:26px; font-weight:800; letter-spacing:-.5px; margin-top:4px; }
+.stat .unit  { font-size:12px; color: var(--text-3); font-weight:600; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.grid4 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* ---- Progress bar ---- */
+.bar { height:8px; background:#EFE7E7; border-radius:999px; overflow:hidden; }
+.bar > span { display:block; height:100%; background:var(--red); border-radius:999px; }
+.bar.green > span { background: var(--green); }
+
+/* segmented online / at-door */
+.seg { display:flex; height:40px; border-radius:12px; overflow:hidden; font-size:12.5px; font-weight:700; }
+.seg .on { background:var(--red); color:#fff; display:flex; align-items:center; padding:0 12px; }
+.seg .door { background:var(--red-tint-2); color:var(--red-700); display:flex; align-items:center; justify-content:flex-end; padding:0 12px; flex:1; }
+
+/* ---- Buttons ---- */
+.btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  border:none; border-radius:14px; font-family:var(--font); font-size:15px;
+  font-weight:700; padding:15px; width:100%; cursor:pointer;
+}
+.btn-primary { background: var(--red); color:#fff; box-shadow: var(--shadow-btn); }
+.btn-ghost   { background: var(--surface); color: var(--text); border:1px solid var(--border); }
+.btn-danger-text { background:none; color:var(--red-accent); font-weight:700; }
+.btn-green { background: var(--green); color:#fff; }
+
+/* ---- Bottom tab bar ---- */
+.tabbar {
+  flex:0 0 auto; display:flex; background:var(--surface);
+  border-top:1px solid var(--border); padding: 8px 6px 22px;
+}
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--text-3); }
+.tab.active { color: var(--red); }
+.tab svg { width:22px; height:22px; }
+.tab span { font-size:11px; font-weight:600; }
+
+/* ---- misc ---- */
+.muted { color: var(--text-2); }
+.center { text-align:center; }
+.divider { height:1px; background:var(--border); margin:14px 0; }
+.pull-hint { text-align:center; font-size:12px; color:var(--text-3); padding:10px 0; }

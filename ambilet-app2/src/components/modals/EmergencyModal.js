@@ -1,0 +1,692 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  Animated,
+  Dimensions,
+} from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { colors } from '../../theme/colors';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
+import { reportEmergency } from '../../api/notifications';
+import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { Image, Alert as RNAlert } from 'react-native';
+
+// Optional Expo modules — silent no-op if not linked yet (dev without
+// prebuild). Photo picker: `expo-image-picker`. Recording: `expo-av`.
+let ImagePicker = null;
+let AudioLib = null;
+try { ImagePicker = require('expo-image-picker'); } catch {}
+try { AudioLib = require('expo-av').Audio; } catch {}
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const EMERGENCY_OPTIONS = [
+  {
+    id: 'medical',
+    label: 'Urgență Medicală',
+    severity: 'high',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 8v4m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'fire',
+    label: 'Incendiu / Evacuare',
+    severity: 'high',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 2c.5 3.5-1.5 6-1.5 6 2 1.5 3.5 3.5 3.5 6.5 0 3-2.5 5.5-5.5 5.5S3 17.5 3 14.5c0-2 .5-3.5 1.5-5C5.5 8 7 6 7 3.5c0 0 2.5 1 3 3 .5-2 2-4.5 2-4.5z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'security',
+    label: 'Problemă de Securitate',
+    severity: 'high',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'technical',
+    label: 'Problemă Tehnică',
+    severity: 'medium',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'crowd',
+    label: 'Control Mulțime',
+    severity: 'medium',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'equipment',
+    label: 'Defecțiune Echipament',
+    severity: 'medium',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'weather',
+    label: 'Alertă Meteo',
+    severity: 'low',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+  {
+    id: 'other',
+    label: 'Altele',
+    severity: 'low',
+    icon: (color) => (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ),
+  },
+];
+
+const SEVERITY_CONFIGS = {
+  high: {
+    bg: colors.redBg,
+    border: colors.redBorder,
+    color: colors.red,
+    iconColor: colors.red,
+  },
+  medium: {
+    bg: colors.amberBg,
+    border: colors.amberBorder,
+    color: colors.amber,
+    iconColor: colors.amber,
+  },
+  low: {
+    bg: 'rgba(20,10,10,0.05)',
+    border: 'rgba(20,10,10,0.08)',
+    color: colors.textSecondary,
+    iconColor: colors.textTertiary,
+  },
+};
+
+function SuccessState() {
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scaleAnim, opacityAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.successState,
+        {
+          opacity: opacityAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
+      <View style={styles.successCircle}>
+        <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            stroke={colors.green}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </View>
+      <Text style={styles.successTitle}>Alertă Trimisă!</Text>
+      <Text style={styles.successSubtitle}>Supervizorii au fost notificați</Text>
+    </Animated.View>
+  );
+}
+
+export default function EmergencyModal({ visible, onClose }) {
+  const [sent, setSent] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [attachedPhoto, setAttachedPhoto] = useState(null); // { uri, name, type }
+  const [attachedAudio, setAttachedAudio] = useState(null); // { uri, name, type, duration }
+  const [recording, setRecording] = useState(false);
+  const recordingRef = useRef(null);
+  const recordingStartRef = useRef(0);
+  const { addNotification } = useApp();
+  const { user, userRole } = useAuth();
+
+  // Reporter identity — team member name if the operator is on a shift
+  // account, otherwise fall back to the owner-side user name. Gate label
+  // may be a string (assigned_gate) or an id — surface either.
+  const reporterName = user?.team_member?.name || user?.name || 'Operator';
+  const reporterRoleLabel = userRole === 'owner' ? 'Proprietar'
+    : userRole === 'admin' ? 'Admin'
+    : userRole === 'manager' ? 'Manager'
+    : userRole === 'staff' ? 'Staff'
+    : userRole;
+  const reporterGate = user?.assigned_gate || user?.team_member?.gate_name || null;
+  const reporterSuffix = [
+    reporterName,
+    reporterGate ? `poarta ${reporterGate}` : null,
+  ].filter(Boolean).join(' · ');
+  const closeTimerRef = useRef(null);
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
+
+  useEffect(() => {
+    if (!visible) {
+      setSent(false);
+      setAttachedPhoto(null);
+      setAttachedAudio(null);
+      if (recordingRef.current) {
+        try { recordingRef.current.stopAndUnloadAsync(); } catch {}
+        recordingRef.current = null;
+      }
+      setRecording(false);
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    }
+  }, [visible]);
+
+  const handleAttachPhoto = async () => {
+    if (!ImagePicker) {
+      RNAlert.alert('Modul lipsă', 'Modulul foto nu e disponibil. Rebuild cu ultimele dependințe.');
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        RNAlert.alert('Permisiune necesară', 'Permite accesul la cameră pentru a atașa poză.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+        allowsEditing: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset) return;
+      setAttachedPhoto({
+        uri: asset.uri,
+        name: asset.fileName || `emergency_${Date.now()}.jpg`,
+        type: asset.mimeType || 'image/jpeg',
+      });
+    } catch (e) {
+      RNAlert.alert('Eroare', 'Nu am putut deschide camera.');
+    }
+  };
+
+  const startRecording = async () => {
+    if (!AudioLib) {
+      RNAlert.alert('Modul lipsă', 'Modulul audio nu e disponibil.');
+      return;
+    }
+    try {
+      const perm = await AudioLib.requestPermissionsAsync();
+      if (!perm.granted) {
+        RNAlert.alert('Permisiune necesară', 'Permite accesul la microfon pentru notă vocală.');
+        return;
+      }
+      await AudioLib.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const rec = new AudioLib.Recording();
+      // LOW_QUALITY = 32kbps mono AAC — ~120KB for 30s, plenty for voice.
+      await rec.prepareToRecordAsync(AudioLib.RecordingOptionsPresets?.LOW_QUALITY || AudioLib.RECORDING_OPTIONS_PRESET_LOW_QUALITY);
+      await rec.startAsync();
+      recordingRef.current = rec;
+      recordingStartRef.current = Date.now();
+      setRecording(true);
+    } catch (e) {
+      RNAlert.alert('Eroare', 'Nu am putut porni înregistrarea.');
+    }
+  };
+
+  const stopRecording = async () => {
+    const rec = recordingRef.current;
+    if (!rec) return;
+    setRecording(false);
+    try {
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
+      const duration = Math.round((Date.now() - recordingStartRef.current) / 1000);
+      if (uri && duration >= 1) {
+        setAttachedAudio({
+          uri,
+          name: `emergency_${Date.now()}.m4a`,
+          type: 'audio/m4a',
+          duration,
+        });
+      }
+    } catch {}
+    recordingRef.current = null;
+  };
+
+  const handleReport = async (option) => {
+    if (reporting) return;
+    setReporting(true);
+
+    // Local notification for immediate feedback in the reporter's own
+    // panel — happens regardless of network. The `type: 'alert'` matches
+    // NotificationsPanel's icon map so it renders with the red alert icon.
+    try {
+      addNotification({
+        type: 'alert',
+        message: `${option.label} — raportat de ${reporterSuffix}`,
+      });
+    } catch {}
+
+    // Server: creates a MarketplaceNotification row for the current
+    // organizer so admin/owner staff on other devices see the alert too.
+    // Reporter identity is embedded in the message so the notifications
+    // panel (which just renders `title`/`message`) surfaces who raised
+    // the alert and from which gate without a schema change.
+    reportEmergency({
+      type: option.id,
+      title: `Urgență: ${option.label}`,
+      message: `Raportat de ${reporterName} (${reporterRoleLabel})${reporterGate ? ` — poarta ${reporterGate}` : ''}.`,
+      severity: option.severity === 'low' ? 'info' : option.severity,
+      photo: attachedPhoto,
+      audio: attachedAudio,
+    }).catch(() => {
+      // Silent — the reporter already got local feedback + the emergency
+      // sheet closes on the timeout below. The alert isn't LOST — they can
+      // re-report from a different device or reach admin directly.
+    });
+
+    setSent(true);
+    closeTimerRef.current = setTimeout(() => {
+      setReporting(false);
+      if (onClose) {
+        onClose();
+      }
+    }, 2000);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+          {/* Header */}
+          <View style={styles.header} {...panResponder.panHandlers}>
+            <View style={styles.handle} />
+            {!sent && (
+              <>
+                <View style={styles.headerRow}>
+                  <View style={styles.titleRow}>
+                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"
+                        stroke={colors.red}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <Text style={styles.title}>Raportează Problemă</Text>
+                  </View>
+                  <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M18 6L6 18M6 6l12 12"
+                        stroke={colors.textSecondary}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.description}>Selectează o problemă pentru a notifica supervizorii</Text>
+              </>
+            )}
+          </View>
+
+          {/* Content */}
+          {sent ? (
+            <SuccessState />
+          ) : (
+            <View style={styles.gridContainer}>
+              {/* Attach zone — photo + voice note. Optional. Firing an
+                  option below sends whatever's attached (or nothing). */}
+              <View style={styles.attachRow}>
+                {attachedPhoto ? (
+                  <View style={styles.attachedThumbWrap}>
+                    <Image source={{ uri: attachedPhoto.uri }} style={styles.attachedThumb} />
+                    <TouchableOpacity
+                      onPress={() => setAttachedPhoto(null)}
+                      style={styles.attachedRemove}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.attachedRemoveText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={handleAttachPhoto}
+                    style={styles.attachBtn}
+                    activeOpacity={0.7}
+                    disabled={reporting}
+                  >
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                      <Path d="M12 13m-4 0a4 4 0 1 0 8 0 4 4 0 1 0 -8 0" stroke={colors.textSecondary} strokeWidth={1.8} />
+                    </Svg>
+                    <Text style={styles.attachBtnText}>Foto</Text>
+                  </TouchableOpacity>
+                )}
+
+                {attachedAudio ? (
+                  <View style={styles.attachedAudioWrap}>
+                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                      <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={colors.purple} strokeWidth={1.8} />
+                      <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke={colors.purple} strokeWidth={1.8} strokeLinecap="round" />
+                    </Svg>
+                    <Text style={styles.attachedAudioText}>Notă {attachedAudio.duration}s</Text>
+                    <TouchableOpacity onPress={() => setAttachedAudio(null)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                      <Text style={styles.attachedRemoveInline}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPressIn={startRecording}
+                    onPressOut={stopRecording}
+                    style={[styles.attachBtn, recording && styles.attachBtnActive]}
+                    activeOpacity={0.7}
+                    disabled={reporting}
+                  >
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={recording ? colors.red : colors.textSecondary} strokeWidth={1.8} />
+                      <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke={recording ? colors.red : colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" />
+                    </Svg>
+                    <Text style={[styles.attachBtnText, recording && { color: colors.red }]}>
+                      {recording ? '● Înregistrare…' : 'Ține pentru notă'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.grid}>
+                {EMERGENCY_OPTIONS.map((option) => {
+                  const config = SEVERITY_CONFIGS[option.severity];
+                  return (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.gridItem,
+                        {
+                          backgroundColor: config.bg,
+                          borderColor: config.border,
+                        },
+                      ]}
+                      onPress={() => handleReport(option)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.gridItemIcon}>
+                        {option.icon(config.iconColor)}
+                      </View>
+                      <Text style={[styles.gridItemLabel, { color: config.color }]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(20,10,10,0.35)',
+    justifyContent: 'flex-end',
+  },
+  overlayTouchable: {
+    flex: 1,
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 34,
+    shadowColor: '#140A0A',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(20,10,10,0.15)',
+    marginBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+  description: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    alignSelf: 'flex-start',
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  attachRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  attachBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  attachBtnActive: {
+    backgroundColor: colors.redLight,
+    borderColor: colors.redBorder,
+    borderStyle: 'solid',
+  },
+  attachBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  attachedThumbWrap: {
+    position: 'relative',
+    width: 68,
+    height: 68,
+  },
+  attachedThumb: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    backgroundColor: colors.border,
+  },
+  attachedRemove: {
+    position: 'absolute',
+    top: -6, right: -6,
+    width: 22, height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachedRemoveText: {
+    color: colors.white,
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  attachedAudioWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    backgroundColor: colors.purpleBg,
+  },
+  attachedAudioText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.purple,
+  },
+  attachedRemoveInline: {
+    color: colors.textSecondary,
+    fontSize: 18,
+    fontWeight: '700',
+    paddingHorizontal: 4,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  gridItem: {
+    width: '48%',
+    flexGrow: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  gridItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(20,10,10,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridItemLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  successState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  successCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.greenLight,
+    borderWidth: 2,
+    borderColor: colors.greenBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.green,
+    marginBottom: 6,
+  },
+  successSubtitle: {
+    fontSize: 14,
+    color: colors.textTertiary,
+  },
+});

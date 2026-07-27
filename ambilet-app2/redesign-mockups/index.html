@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AmBilet Scan — Redesign Mockups</title>
+<style>
+/* ==== inlined from design-system.css (self-contained for preview) ==== */
+:root{
+  --red:#9A1B22;--red-700:#7A141A;--red-600:#9A1B22;--red-accent:#C1121F;
+  --red-tint:#FBEAEB;--red-tint-2:#F6DDDE;--red-border:rgba(154,27,34,.22);
+  --bg:#F6F2F2;--surface:#FFFFFF;--surface-2:#FBF8F8;--border:#ECE6E6;--border-strong:#E0D8D8;
+  --text:#1C1B1F;--text-2:#6B7280;--text-3:#9CA3AF;--text-4:#C0C4CC;
+  --green:#16A34A;--green-tint:#E7F6EC;--green-border:rgba(22,163,74,.25);
+  --amber:#D97706;--amber-tint:#FDF0DD;--amber-border:rgba(217,119,6,.25);
+  --danger:#DC2626;--danger-tint:#FCE9E9;--danger-border:rgba(220,38,38,.25);
+  --cyan:#0E7490;--cyan-tint:#E1F3F7;--cyan-border:rgba(14,116,144,.25);
+  --role-admin-bg:#FCE8E9;--role-admin-fg:#B0212B;
+  --role-mgr-bg:#E7F6EC;--role-mgr-fg:#15803D;
+  --role-staff-bg:#EEF1F4;--role-staff-fg:#5B6472;
+  --av-red-bg:#FBE4E5;--av-red-fg:#B0212B;--av-blue-bg:#E3ECFB;--av-blue-fg:#1D4ED8;
+  --av-amber-bg:#FBEFD8;--av-amber-fg:#B45309;--av-purple-bg:#EEE7FB;--av-purple-fg:#6D28D9;
+  --radius:16px;--radius-lg:20px;--radius-sm:10px;
+  --shadow:0 1px 2px rgba(20,10,10,.04),0 6px 20px rgba(20,10,10,.05);
+  --shadow-sm:0 1px 2px rgba(20,10,10,.05);--shadow-btn:0 6px 16px rgba(154,27,34,.28);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#2b1516;color:var(--text);-webkit-font-smoothing:antialiased;
+  display:flex;flex-wrap:wrap;gap:40px;justify-content:center;padding:44px 24px 90px}
+.intro{width:100%;max-width:1100px;color:#f4e6e6;text-align:center;margin-bottom:12px}
+.intro h1{font-size:30px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.intro p{font-size:15px;color:#e0bdbd;margin-top:10px;line-height:1.6}
+.intro .legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+.intro .legend span{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  padding:6px 12px;border-radius:999px;font-size:12.5px;color:#f0d9d9}
+.group-label{width:100%;max-width:1100px;color:#f0d0d0;font-size:13px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;border-top:1px solid rgba(255,255,255,.1);
+  padding-top:26px;margin-top:10px}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:46px;border:10px solid #100a0b;
+  box-shadow:0 30px 70px rgba(0,0,0,.5),inset 0 0 0 2px #2a1c1d;position:relative;overflow:hidden;
+  display:flex;flex-direction:column}
+.phone .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:30px;
+  background:#100a0b;border-bottom-left-radius:18px;border-bottom-right-radius:18px;z-index:60}
+.statusbar{height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;font-size:13px;font-weight:600;color:var(--text);z-index:50}
+.statusbar .dots{display:flex;gap:5px;align-items:center}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden}
+.screen::-webkit-scrollbar{width:0}
+.pad{padding:16px}
+.stack>*+*{margin-top:12px}
+.caption{width:390px;text-align:center;color:#f3dede;margin-top:14px}
+.caption b{display:block;font-size:15px;color:#fff;margin-bottom:3px}
+.caption span{font-size:12.5px;color:#d9b7b7;line-height:1.45}
+.caption .src{display:inline-block;margin-top:7px;font-size:11px;color:#cf9a9a;
+  font-family:ui-monospace,Menlo,monospace}
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;
+  background:var(--surface);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-logo{font-weight:800;font-size:15px;letter-spacing:-.3px;color:#fff;background:var(--red);
+  padding:5px 9px;border-radius:7px;box-shadow:inset 0 0 0 2px #fff,0 0 0 1.5px var(--red)}
+.brand-scan{font-size:15px;font-weight:700;color:var(--text)}
+.appbar-right{display:flex;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill .dot{width:7px;height:7px;border-radius:50%}
+.pill-live{background:var(--green-tint);color:var(--green)}
+.pill-live .dot{background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,.15)}
+.pill-off{background:var(--danger-tint);color:var(--danger)}
+.iconbtn{width:38px;height:38px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;position:relative;color:var(--text-2)}
+.iconbtn .badge{position:absolute;top:-3px;right:-3px;background:var(--red-accent);color:#fff;font-size:10px;
+  font-weight:800;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;border:2px solid var(--surface);padding:0 4px}
+.h1{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.h2{font-size:17px;font-weight:700}
+.sub{font-size:13px;color:var(--text-2)}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px}
+.section-head h3{font-size:15px;font-weight:700}
+.link{color:var(--red-accent);font-size:13px;font-weight:700}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+.card.pad{padding:16px}
+.chip{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.chip-red{background:var(--red-tint);color:var(--red)}
+.chip-green{background:var(--green-tint);color:var(--green)}
+.chip-amber{background:var(--amber-tint);color:var(--amber)}
+.chip-cyan{background:var(--cyan-tint);color:var(--cyan)}
+.chip svg{width:20px;height:20px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm)}
+.row+.row{margin-top:8px}
+.row .grow{flex:1;min-width:0}
+.row .name{font-size:14.5px;font-weight:600}
+.row .meta{font-size:12px;color:var(--text-3);margin-top:2px}
+.chev{color:var(--text-3)}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;flex:0 0 auto}
+.tag{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px}
+.tag-admin{background:var(--role-admin-bg);color:var(--role-admin-fg)}
+.tag-mgr{background:var(--role-mgr-bg);color:var(--role-mgr-fg)}
+.tag-staff{background:var(--role-staff-bg);color:var(--role-staff-fg)}
+.tag-active{color:var(--green);font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.tag-active::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow-sm)}
+.stat .top{display:flex;align-items:center;justify-content:space-between}
+.stat .label{font-size:12.5px;color:var(--text-2);font-weight:600}
+.stat .value{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:4px}
+.stat .unit{font-size:12px;color:var(--text-3);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.bar{height:8px;background:#EFE7E7;border-radius:999px;overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--red);border-radius:999px}
+.bar.green>span{background:var(--green)}
+.seg{display:flex;height:40px;border-radius:12px;overflow:hidden;font-size:12.5px;font-weight:700}
+.seg .on{background:var(--red);color:#fff;display:flex;align-items:center;padding:0 12px}
+.seg .door{background:var(--red-tint-2);color:var(--red-700);display:flex;align-items:center;justify-content:flex-end;padding:0 12px;flex:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:14px;
+  font-family:var(--font);font-size:15px;font-weight:700;padding:15px;width:100%;cursor:pointer}
+.btn-primary{background:var(--red);color:#fff;box-shadow:var(--shadow-btn)}
+.btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-danger-text{background:none;color:var(--red-accent);font-weight:700}
+.btn-green{background:var(--green);color:#fff}
+.tabbar{flex:0 0 auto;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:8px 6px 22px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-3)}
+.tab.active{color:var(--red)}
+.tab svg{width:22px;height:22px}
+.tab span{font-size:11px;font-weight:600}
+.muted{color:var(--text-2)}
+.center{text-align:center}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.pull-hint{text-align:center;font-size:12px;color:var(--text-3);padding:10px 0}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--red-accent)}
+.seat{width:19px;height:19px;border-radius:5px;display:inline-block;background:#D9D2D2}
+.seat.g{background:var(--green)}
+.seat.sel{background:var(--red);box-shadow:inset 0 0 0 2px #fff,0 0 0 1.5px var(--red)}
+.seat.a{background:#D9D2D2}
+.seat.d{background:transparent}
+.tgl{width:44px;height:26px;border-radius:999px;background:#DDD6D6;position:relative;flex:0 0 auto}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s}
+.tgl.on{background:var(--red)}
+.tgl.on::after{left:20px}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>AmBilet Scan — Redesign Mockups</h1>
+  <p>Fiecare ecran al aplicației mobile <b>tixello-app</b> (AmBilet Scan), redesenat în identitatea vizuală
+  roșu/alb din materialele de marketing. Nicio funcție existentă nu a fost eliminată — este strict un
+  redesign vizual (temă întunecată mov → temă deschisă roșu de brand). Sub fiecare telefon este notat
+  fișierul-sursă din aplicație pe care îl reprezintă.</p>
+  <div class="legend">
+    <span>🎨 Primary <b style="color:#f0a0a0">#9A1B22</b></span>
+    <span>🔗 Accent <b style="color:#f0a0a0">#C1121F</b></span>
+    <span>✅ Success #16A34A</span>
+    <span>⬜ Card #FFFFFF · BG #F6F2F2</span>
+    <span>◾ Text #1C1B1F / #6B7280</span>
+  </div>
+</div>
+
+<!-- ============ ICON DEFS ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <g id="i-bell"><path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9zM13.7 21a2 2 0 0 1-3.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-scan"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-cart"><circle cx="9" cy="21" r="1.6" fill="currentColor"/><circle cx="19" cy="21" r="1.6" fill="currentColor"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-grid"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></g>
+  <g id="i-chart"><path d="M18 20V10M12 20V4M6 20v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-cog"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H2a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 3.2 6l-.1-.1A2 2 0 1 1 5.9 3l.1.1A1.6 1.6 0 0 0 8.6 4.2V4a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 15.4 5l.1-.1A2 2 0 1 1 18.3 8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.6"/></g>
+  <g id="i-cal"><rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-people"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-ticket"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 5v2M13 17v2M13 11v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-cash"><line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-card"><rect x="1" y="4" width="22" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" stroke-width="2"/></g>
+  <g id="i-check"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-checkc"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-x"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></g>
+  <g id="i-plus"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></g>
+  <g id="i-clock"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-chev"><path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-back"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-star"><path d="M12 2l3 6.5 7 .8-5 4.8 1.3 7L12 18l-6.3 3.1L7 14.1 2 9.3l7-.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></g>
+  <g id="i-door"><path d="M13 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 12h.01M13 3v18M9 8l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-in"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-alert"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></g>
+  <g id="i-search"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-mail"><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="m2 6 10 7 10-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+  <g id="i-pin"><path d="M12 21s-7-5.7-7-11a7 7 0 0 1 14 0c0 5.3-7 11-7 11z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></g>
+  <g id="i-logout"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-trend"><path d="M23 6l-9.5 9.5-5-5L1 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-nfc"><path d="M6 8.7A9 9 0 0 1 18 8.7M9 11.5a5 5 0 0 1 6 0M12 14.3v.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></g>
+</defs></svg>
+
+<!-- ================= GROUP: LANSARE & AUTENTIFICARE ================= -->
+<div class="group-label">Lansare &amp; autentificare</div>
+
+<!-- ---------- SPLASH ---------- -->
+<div>
+<div class="phone" style="background:linear-gradient(160deg,#7A1016,#4B080C 70%)">
+  <div class="notch"></div>
+  <div class="statusbar" style="color:#fff"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
+    <div style="width:96px;height:96px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <div style="width:58px;height:44px;border:4px solid var(--red);border-radius:9px;position:relative">
+        <div style="position:absolute;top:-4px;bottom:-4px;left:50%;width:0;border-left:3px dashed var(--red)"></div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:34px;font-weight:800;letter-spacing:-1px"><span style="color:#fff">Am</span><span style="color:#F6B4B4">Bilet</span> <span style="color:#fff;font-weight:700">Scan</span></div>
+      <div style="color:#f0cccc;font-size:14px;margin-top:6px">Scanare &amp; Vânzare Bilete</div>
+    </div>
+    <div style="width:60%;height:5px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden">
+      <div style="width:66%;height:100%;background:#fff;border-radius:3px"></div>
+    </div>
+  </div>
+  <div style="text-align:center;color:#e6b3b3;font-size:12px;padding-bottom:26px">Powered by AmBilet</div>
+</div>
+<div class="caption"><b>Splash</b><span>Logo animat, glow radial, bară de încărcare. Brand unificat „AmBilet Scan".</span><span class="src">src/screens/SplashScreen.js</span></div>
+</div>
+
+<!-- ---------- LOGIN ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="screen" style="display:flex;flex-direction:column;justify-content:center;padding:28px">
+    <div style="text-align:center;margin-bottom:30px">
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:22px">
+        <span class="brand-logo" style="font-size:20px;padding:7px 12px">AmBilet</span>
+        <span style="font-size:20px;font-weight:700">Scan</span>
+      </div>
+      <div class="h1" style="font-size:24px">Bine ai revenit</div>
+      <div class="sub" style="margin-top:6px">Conectează-te pentru a gestiona evenimentele</div>
+    </div>
+    <label style="font-size:13px;font-weight:600;color:var(--text-2)">Email</label>
+    <div class="card" style="padding:14px 16px;margin:6px 0 16px;color:var(--text-3);font-size:15px">tu@exemplu.com</div>
+    <label style="font-size:13px;font-weight:600;color:var(--text-2)">Parolă</label>
+    <div class="card" style="padding:14px 16px;margin:6px 0 22px;display:flex;justify-content:space-between;align-items:center">
+      <span style="letter-spacing:3px;color:var(--text)">••••••••</span>
+      <span class="link">Arată</span>
+    </div>
+    <button class="btn btn-primary">Conectare</button>
+  </div>
+</div>
+<div class="caption"><b>Autentificare</b><span>Email + parolă, arată/ascunde parola, stări de eroare. Buton primar roșu de brand.</span><span class="src">src/screens/LoginScreen.js</span></div>
+</div>
+
+<!-- ================= GROUP: ECRANE PRINCIPALE (ORGANIZATOR) ================= -->
+<div class="group-label">Tab-uri principale · organizator</div>
+
+<!-- ---------- DASHBOARD (ADMIN) ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <!-- appbar -->
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right">
+      <span class="pill pill-live"><span class="dot"></span>Live</span>
+      <div class="iconbtn"><svg viewBox="0 0 24 24" width="20" height="20"><use href="#i-bell"/></svg><span class="badge">3</span></div>
+    </div>
+  </div>
+  <!-- event selector -->
+  <div style="background:var(--red-tint);border-bottom:1px solid var(--border);padding:11px 16px;display:flex;align-items:center;justify-content:space-between">
+    <div style="min-width:0">
+      <div style="font-size:14.5px;font-weight:700"><span style="color:var(--red-accent)">14 Iul</span>&nbsp; Wild Experience Fest 2026</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:2px">Arenele Romane, București</div>
+    </div>
+    <span class="pill pill-live" style="flex:0 0 auto"><span class="dot"></span>LIVE</span>
+  </div>
+  <!-- shift bar -->
+  <div style="background:var(--surface-2);border-bottom:1px solid var(--border);padding:9px 16px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg viewBox="0 0 24 24" width="15" height="15" style="color:var(--text-3)"><use href="#i-clock"/></svg>
+      <b style="font-size:15px;font-variant-numeric:tabular-nums">02:14:53</b>
+      <span style="font-size:12px;color:var(--green);margin-left:6px">◆ 28.560 Lei</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <span style="background:var(--amber);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px">Pauză</span>
+      <span style="background:var(--danger);color:#fff;font-weight:700;padding:6px 11px;border-radius:8px;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="15" height="15"><use href="#i-alert"/></svg></span>
+    </div>
+  </div>
+
+  <div class="screen pad stack">
+    <!-- primary stat: Intrați + capacity -->
+    <div class="card pad" style="border-color:var(--red-border)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div class="chip chip-red"><svg viewBox="0 0 24 24"><use href="#i-people"/></svg></div>
+        <span style="flex:1;font-size:14px;font-weight:600;color:var(--text-2)">Intrați</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;background:var(--green-tint);color:var(--green);font-size:12px;font-weight:700;padding:4px 9px;border-radius:8px"><svg viewBox="0 0 24 24" width="12" height="12"><use href="#i-trend"/></svg>69,3%</span>
+      </div>
+      <div style="font-size:30px;font-weight:800;letter-spacing:-.5px">1.248<span style="font-size:20px;font-weight:500;color:var(--text-3)"> / 1.800</span></div>
+      <div class="bar" style="margin-top:12px"><span style="width:69%"></span></div>
+    </div>
+    <!-- 2x2 stat tiles (tappable → breakdown modals) -->
+    <div class="grid2">
+      <div class="stat" style="border-color:var(--green-border)"><div class="chip chip-green" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 24 24" width="16"><use href="#i-ticket"/></svg></div><div class="value" style="font-size:22px">1.486</div><div class="label">Vânzări</div></div>
+      <div class="stat" style="border-color:var(--cyan-border)"><div class="chip chip-cyan" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 24 24" width="16"><use href="#i-cash"/></svg></div><div class="value" style="font-size:22px">128.450<span class="unit"> lei</span></div><div class="label">Venituri</div></div>
+      <div class="stat" style="border-color:var(--amber-border)"><div class="chip chip-amber" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 24 24" width="16"><use href="#i-clock"/></svg></div><div class="value" style="font-size:22px">314</div><div class="label">Rămase</div></div>
+      <div class="stat" style="border-color:var(--red-border)"><div class="chip chip-red" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 24 24" width="16"><use href="#i-chart"/></svg></div><div class="value" style="font-size:22px">81%</div><div class="label">Capacitate</div></div>
+    </div>
+    <!-- online vs door -->
+    <div class="card pad">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">Online vs. la ușă</div>
+      <div class="seg"><div class="on" style="flex:0 0 73%">Online 1.086 (73%)</div><div class="door">La ușă 400 (27%)</div></div>
+    </div>
+    <!-- quick actions -->
+    <div>
+      <div class="section-head"><h3>Acțiuni rapide</h3></div>
+      <div class="grid2">
+        <div class="card" style="padding:15px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--red-tint);border-color:var(--red-border);color:var(--red)"><svg viewBox="0 0 24 24" width="24"><use href="#i-scan"/></svg><b style="font-size:12px">Scanare</b></div>
+        <div class="card" style="padding:15px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--green-tint);border-color:var(--green-border);color:var(--green)"><svg viewBox="0 0 24 24" width="24"><use href="#i-cart"/></svg><b style="font-size:12px">Vânzare</b></div>
+        <div class="card" style="padding:15px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--cyan-tint);border-color:var(--cyan-border);color:var(--cyan)"><svg viewBox="0 0 24 24" width="24"><use href="#i-people"/></svg><b style="font-size:12px">Listă Invitați</b></div>
+        <div class="card" style="padding:15px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--amber-tint);border-color:var(--amber-border);color:var(--amber)"><svg viewBox="0 0 24 24" width="24"><use href="#i-people"/></svg><b style="font-size:12px">Echipă</b></div>
+      </div>
+    </div>
+    <!-- recent activity -->
+    <div>
+      <div class="section-head"><h3>Activitate recentă</h3></div>
+      <div class="card pad" style="padding:6px 14px">
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span><div style="flex:1"><div style="font-size:14px;font-weight:600">Andrei Popescu</div><div style="font-size:12px;color:var(--text-3)">Abonament General · acum</div></div><svg viewBox="0 0 24 24" width="18" style="color:var(--green)"><use href="#i-checkc"/></svg></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span><div style="flex:1"><div style="font-size:14px;font-weight:600">Maria Ionescu</div><div style="font-size:12px;color:var(--text-3)">Acces 1 zi · acum 1 min</div></div><svg viewBox="0 0 24 24" width="18" style="color:var(--green)"><use href="#i-checkc"/></svg></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 0"><span style="width:8px;height:8px;border-radius:50%;background:var(--danger)"></span><div style="flex:1"><div style="font-size:14px;font-weight:600">Bilet #4821</div><div style="font-size:12px;color:var(--text-3)">Deja scanat · acum 2 min</div></div><svg viewBox="0 0 24 24" width="18" style="color:var(--danger)"><use href="#i-x"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <!-- tabbar -->
+  <div class="tabbar">
+    <div class="tab active"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg><span>Panou</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg><span>Scanare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg><span>Vânzare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg><span>Rapoarte</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cog"/></svg><span>Setări</span></div>
+  </div>
+</div>
+<div class="caption"><b>Panou · Admin (live)</b><span>Header live + selector eveniment + bară de tură. „Intrați" cu bară capacitate, 4 dale de statistici (tap→detalii), Online vs ușă, acțiuni rapide, activitate recentă, buton Închide tura.</span><span class="src">src/screens/DashboardScreen.js → AdminDashboard</span></div>
+</div>
+
+<!-- ---------- DASHBOARD (SCANNER / STAFF) ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><span class="pill pill-live"><span class="dot"></span>Live</span><div class="iconbtn"><svg viewBox="0 0 24 24" width="20" height="20"><use href="#i-bell"/></svg></div></div>
+  </div>
+  <div class="screen pad stack">
+    <div style="margin-bottom:2px"><div style="font-size:12px;font-weight:700;color:var(--red-accent);letter-spacing:.5px">14.07.2026 · 20:00</div><div class="h1" style="font-size:20px;margin-top:3px">Wild Experience Fest 2026</div></div>
+    <!-- turnover card -->
+    <div class="card pad" style="border-color:var(--green-border)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">Încasări</div>
+      <div style="display:flex;align-items:center">
+        <div style="flex:1;display:flex;align-items:center;gap:12px"><div class="chip chip-green" style="width:40px;height:40px"><svg viewBox="0 0 24 24"><use href="#i-cash"/></svg></div><div><div style="font-size:12px;color:var(--text-2)">Numerar</div><div style="font-size:18px;font-weight:800;color:var(--green)">1.240 lei</div></div></div>
+        <div style="width:1px;height:38px;background:var(--border);margin:0 12px"></div>
+        <div style="flex:1;display:flex;align-items:center;gap:12px"><div class="chip chip-cyan" style="width:40px;height:40px"><svg viewBox="0 0 24 24"><use href="#i-card"/></svg></div><div><div style="font-size:12px;color:var(--text-2)">Card</div><div style="font-size:18px;font-weight:800;color:var(--cyan)">3.180 lei</div></div></div>
+      </div>
+    </div>
+    <!-- 3 stat tiles -->
+    <div class="grid3">
+      <div class="stat" style="align-items:center;text-align:center;background:var(--red-tint);border-color:var(--red-border)"><svg viewBox="0 0 24 24" width="20" style="color:var(--red);margin:0 auto"><use href="#i-scan"/></svg><div class="value" style="font-size:18px;color:var(--red)">247</div><div class="label" style="font-size:11px">Scanările Mele</div></div>
+      <div class="stat" style="align-items:center;text-align:center;background:var(--green-tint);border-color:var(--green-border)"><svg viewBox="0 0 24 24" width="20" style="color:var(--green);margin:0 auto"><use href="#i-cart"/></svg><div class="value" style="font-size:18px;color:var(--green)">36</div><div class="label" style="font-size:11px">Vânzările Mele</div></div>
+      <div class="stat" style="align-items:center;text-align:center;background:var(--amber-tint);border-color:var(--amber-border)"><svg viewBox="0 0 24 24" width="20" style="color:var(--amber);margin:0 auto"><use href="#i-clock"/></svg><div class="value" style="font-size:18px;color:var(--amber)">2h 14m</div><div class="label" style="font-size:11px">Durata Turei</div></div>
+    </div>
+    <button class="btn btn-primary" style="padding:19px"><svg viewBox="0 0 24 24" width="26"><use href="#i-scan"/></svg> Începe Scanarea</button>
+    <button class="btn btn-green" style="padding:19px"><svg viewBox="0 0 24 24" width="26"><use href="#i-cart"/></svg> Începe Vânzarea</button>
+    <button class="btn btn-ghost" style="color:var(--danger);border-color:var(--danger-border)"><svg viewBox="0 0 24 24" width="20"><use href="#i-x"/></svg> Închide Tura</button>
+  </div>
+  <div class="tabbar">
+    <div class="tab active"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg><span>Panou</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg><span>Scanare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg><span>Vânzare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cog"/></svg><span>Setări</span></div>
+  </div>
+</div>
+<div class="caption"><b>Panou · Scanner/Staff</b><span>Varianta pentru operator: card Încasări (numerar/card), statistici personale (scanări, vânzări, durată tură), butoane mari Scanare / Vânzare + Închide tura.</span><span class="src">src/screens/DashboardScreen.js → ScannerDashboard</span></div>
+</div>
+
+<!-- ---------- CHECK-IN / SCANARE ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><span class="pill pill-live"><span class="dot"></span>Online</span><div class="iconbtn"><svg viewBox="0 0 24 24" width="20"><use href="#i-bell"/></svg></div></div>
+  </div>
+  <div class="screen pad stack">
+    <!-- scanner viewport -->
+    <div style="height:270px;border-radius:22px;background:#161016;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(120,20,20,.18)">
+      <div style="position:absolute;inset:26px;border-radius:14px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.08)"></div>
+      <!-- corner brackets -->
+      <div style="position:absolute;top:22px;left:22px;width:40px;height:40px;border-top:4px solid var(--green);border-left:4px solid var(--green);border-radius:8px 0 0 0"></div>
+      <div style="position:absolute;top:22px;right:22px;width:40px;height:40px;border-top:4px solid var(--green);border-right:4px solid var(--green);border-radius:0 8px 0 0"></div>
+      <div style="position:absolute;bottom:22px;left:22px;width:40px;height:40px;border-bottom:4px solid var(--green);border-left:4px solid var(--green);border-radius:0 0 0 8px"></div>
+      <div style="position:absolute;bottom:22px;right:22px;width:40px;height:40px;border-bottom:4px solid var(--green);border-right:4px solid var(--green);border-radius:0 0 8px 0"></div>
+      <!-- fake QR -->
+      <div style="width:118px;height:118px;background:#fff;border-radius:8px;padding:9px">
+        <div style="width:100%;height:100%;background-image:linear-gradient(90deg,#000 50%,transparent 0),linear-gradient(#000 50%,transparent 0);background-size:14px 14px;opacity:.85"></div>
+      </div>
+    </div>
+    <!-- result card: valid -->
+    <div class="card pad" style="background:var(--green-tint);border-color:var(--green-border)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="24"><use href="#i-check"/></svg></div>
+        <div><div style="font-size:16px;font-weight:800;color:var(--green);letter-spacing:.3px">ACCES APROBAT</div><div style="font-size:12px;color:var(--text-2)">Bilet valid</div></div>
+      </div>
+      <div style="background:var(--surface);border-radius:12px;padding:12px 14px">
+        <div style="font-size:15px;font-weight:700">Andrei Popescu</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:2px">Abonament General · #12587</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">Secțiune A · Rând 4 · Loc 12</div>
+      </div>
+    </div>
+    <!-- live stats -->
+    <div class="grid3">
+      <div class="card" style="padding:12px;text-align:center"><div style="font-size:20px;font-weight:800">42</div><div style="font-size:11px;color:var(--text-2)">scanări/min</div></div>
+      <div class="card" style="padding:12px;text-align:center"><div style="font-size:20px;font-weight:800">3s</div><div style="font-size:11px;color:var(--text-2)">așteptare</div></div>
+      <div class="card" style="padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--green)">1.248</div><div style="font-size:11px;color:var(--text-2)">intrați</div></div>
+    </div>
+    <button class="btn btn-primary"><svg viewBox="0 0 24 24" width="22"><use href="#i-scan"/></svg> Scanează Următorul</button>
+    <button class="btn btn-ghost">Cod Manual</button>
+  </div>
+  <div class="tabbar">
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg><span>Panou</span></div>
+    <div class="tab active"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg><span>Scanare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg><span>Vânzare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg><span>Rapoarte</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cog"/></svg><span>Setări</span></div>
+  </div>
+</div>
+<div class="caption"><b>Scanare · Check-in</b><span>Cameră QR cu colțuri verzi + linie de scanare. Card rezultat pe stări: <b style="color:#7ee0a0">ACCES APROBAT</b> / DEJA SCANAT (chihlimbar) / BILET INVALID (roșu). Statistici live, Cod Manual.</span><span class="src">src/screens/CheckInScreen.js</span></div>
+</div>
+
+<!-- ---------- SALES / VÂNZARE (POS) ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><span class="pill pill-live"><span class="dot"></span>Live</span><div class="iconbtn"><svg viewBox="0 0 24 24" width="20"><use href="#i-bell"/></svg></div></div>
+  </div>
+  <div class="screen pad stack">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="18" style="color:var(--red)"><use href="#i-cart"/></svg><b style="font-size:16px">Coș de bilete</b><span style="background:var(--red);color:#fff;font-size:11px;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">2</span></div>
+      <span class="link">Editează</span>
+    </div>
+    <!-- cart items -->
+    <div class="card" style="padding:6px 14px">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)"><span style="width:4px;height:34px;border-radius:2px;background:var(--red)"></span><div style="flex:1"><div style="font-size:14.5px;font-weight:700">Bilet adult</div><div style="font-size:12px;color:var(--text-3)">1 × 50,00 lei</div></div><b style="font-size:14px">50,00 lei</b></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 0"><span style="width:4px;height:34px;border-radius:2px;background:var(--amber)"></span><div style="flex:1"><div style="font-size:14.5px;font-weight:700">Bilet copil (7–14 ani)</div><div style="font-size:12px;color:var(--text-3)">1 × 25,00 lei</div></div><b style="font-size:14px">25,00 lei</b></div>
+    </div>
+    <!-- seat map -->
+    <div class="card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:14px">Selectare loc pe hartă <span style="color:var(--text-3);font-weight:500">(opțional)</span></b><svg viewBox="0 0 24 24" width="16" style="color:var(--text-3);transform:rotate(90deg)"><use href="#i-chev"/></svg></div>
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:center">
+        <div style="display:flex;gap:5px">
+          <span class="seat a"></span><span class="seat a"></span><span class="seat d"></span><span class="seat a"></span><span class="seat a"></span><span class="seat a"></span><span class="seat d"></span><span class="seat a"></span>
+        </div>
+        <div style="display:flex;gap:5px">
+          <span class="seat g"></span><span class="seat g"></span><span class="seat g"></span><span class="seat sel"></span><span class="seat g"></span><span class="seat g"></span><span class="seat g"></span><span class="seat g"></span>
+        </div>
+        <div style="display:flex;gap:5px">
+          <span class="seat g"></span><span class="seat sel"></span><span class="seat g"></span><span class="seat g"></span><span class="seat g"></span><span class="seat d"></span><span class="seat g"></span><span class="seat g"></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--text-2)">
+        <span style="display:inline-flex;align-items:center;gap:5px"><span class="seat g" style="width:11px;height:11px"></span>Disponibil</span>
+        <span style="display:inline-flex;align-items:center;gap:5px"><span class="seat sel" style="width:11px;height:11px"></span>Selectat</span>
+        <span style="display:inline-flex;align-items:center;gap:5px"><span class="seat a" style="width:11px;height:11px"></span>Indisponibil</span>
+      </div>
+    </div>
+    <!-- payment methods -->
+    <div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">Metodă de plată</div>
+      <div class="grid3" style="grid-template-columns:1fr 1fr">
+        <div class="card" style="padding:14px;display:flex;flex-direction:column;align-items:center;gap:7px;border-color:var(--red-border)"><div class="chip chip-green" style="width:34px;height:34px"><svg viewBox="0 0 24 24" width="18"><use href="#i-cash"/></svg></div><b style="font-size:13px">Numerar</b></div>
+        <div class="card" style="padding:14px;display:flex;flex-direction:column;align-items:center;gap:7px"><div class="chip chip-cyan" style="width:34px;height:34px"><svg viewBox="0 0 24 24" width="18"><use href="#i-card"/></svg></div><b style="font-size:13px">Card / POS</b></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">Total</b><b style="font-size:22px;color:var(--red)">75,00 lei</b></div>
+    <button class="btn btn-primary">Încasează plata</button>
+    <div class="center"><span class="btn-danger-text" style="font-size:13px">Anulează vânzarea</span></div>
+  </div>
+</div>
+<div class="caption"><b>Vânzare · POS la ușă</b><span>Coș cu tipuri de bilete + comision, selectare loc pe hartă (WebView seating), metode: Numerar / Card POS / Card NFC (Stripe). Total, Încasează plata, livrare bilet prin QR pe email.</span><span class="src">src/screens/SalesScreen.js + SeatingMapScreen.js</span></div>
+</div>
+
+<!-- ================= GROUP: ECHIPĂ & PORȚI ================= -->
+<div class="group-label">Echipă &amp; porți · management</div>
+
+<!-- ---------- ECHIPĂ & PORȚI (combined overview, mirrors marketing #1) ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><div class="iconbtn"><svg viewBox="0 0 24 24" width="20"><use href="#i-bell"/></svg></div><div class="iconbtn"><svg viewBox="0 0 24 24" width="20"><use href="#i-cog"/></svg></div></div>
+  </div>
+  <div class="screen pad">
+    <div class="h1">Echipă &amp; porți</div>
+    <div class="sub" style="margin-bottom:16px">Gestionează echipa, porțile și tura activă</div>
+
+    <!-- members -->
+    <div class="section-head"><h3>Membri echipă</h3><span class="link">+ Adaugă membru</span></div>
+    <div style="margin-bottom:18px">
+      <div class="row"><div class="avatar" style="background:var(--av-red-bg);color:var(--av-red-fg)">MC</div><div class="grow"><div class="name">Mihai Coman</div></div><span class="tag tag-admin">Administrator</span><svg class="chev" viewBox="0 0 24 24" width="18"><use href="#i-chev"/></svg></div>
+      <div class="row"><div class="avatar" style="background:var(--av-blue-bg);color:var(--av-blue-fg)">AD</div><div class="grow"><div class="name">Alexandra Dinu</div></div><span class="tag tag-mgr">Manager</span><svg class="chev" viewBox="0 0 24 24" width="18"><use href="#i-chev"/></svg></div>
+      <div class="row"><div class="avatar" style="background:var(--av-amber-bg);color:var(--av-amber-fg)">IB</div><div class="grow"><div class="name">Ioan Barbu</div></div><span class="tag tag-staff">Staff</span><svg class="chev" viewBox="0 0 24 24" width="18"><use href="#i-chev"/></svg></div>
+      <div class="row"><div class="avatar" style="background:var(--av-purple-bg);color:var(--av-purple-fg)">RB</div><div class="grow"><div class="name">Raluca Bălan</div></div><span class="tag tag-staff">Staff</span><svg class="chev" viewBox="0 0 24 24" width="18"><use href="#i-chev"/></svg></div>
+    </div>
+
+    <!-- gates -->
+    <div class="section-head"><h3>Porți</h3><span class="link">+ Adaugă poartă</span></div>
+    <div style="margin-bottom:18px">
+      <div class="row"><div class="chip chip-green"><svg viewBox="0 0 24 24"><use href="#i-in"/></svg></div><div class="grow"><div class="name">Intrare</div><div class="meta">Poarta 1 · Intrare</div></div><span class="tag-active">Activă</span></div>
+      <div class="row"><div class="chip chip-amber"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></div><div class="grow"><div class="name">VIP</div><div class="meta">Poarta 2 · VIP</div></div><span class="tag-active">Activă</span></div>
+      <div class="row"><div class="chip chip-cyan"><svg viewBox="0 0 24 24"><use href="#i-card"/></svg></div><div class="grow"><div class="name">POS</div><div class="meta">Poarta 3 · POS</div></div><span class="tag-active">Activă</span></div>
+      <div class="row"><div class="chip chip-red"><svg viewBox="0 0 24 24"><use href="#i-door"/></svg></div><div class="grow"><div class="name">Ieșire</div><div class="meta">Poarta 4 · Ieșire</div></div><span class="tag-active">Activă</span></div>
+    </div>
+
+    <!-- shift summary -->
+    <div class="section-head"><h3>Rezumat tură</h3><span class="pill pill-live" style="font-size:11px"><span class="dot"></span>Tura activă</span></div>
+    <div class="grid2" style="margin-bottom:16px">
+      <div class="card pad" style="display:flex;align-items:center;gap:12px"><div class="chip chip-red"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg></div><div><div style="font-size:12px;color:var(--text-2)">Scanări</div><div style="font-size:20px;font-weight:800">1.247</div><div style="font-size:11px;color:var(--text-3)">Total astăzi</div></div></div>
+      <div class="card pad" style="display:flex;align-items:center;gap:12px"><div class="chip chip-green"><svg viewBox="0 0 24 24"><use href="#i-cash"/></svg></div><div><div style="font-size:12px;color:var(--text-2)">Încasări</div><div style="font-size:20px;font-weight:800">28.560</div><div style="font-size:11px;color:var(--text-3)">Lei (RON)</div></div></div>
+    </div>
+    <button class="btn btn-primary">Închide tura</button>
+  </div>
+</div>
+<div class="caption"><b>Echipă &amp; porți</b><span>Corespunde reclamei #1. Membri cu roluri (Administrator/Manager/Staff), porți cu status Activă (Intrare/VIP/POS/Ieșire), rezumat tură + Închide tura. Consolidează StaffAssignment + GateManager.</span><span class="src">modals/StaffAssignmentModal.js + GateManagerModal.js</span></div>
+</div>
+
+<!-- ---------- MEMBER DETAIL / EDIT (StaffAssignment expanded) ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+    <b style="font-size:17px">Echipă &amp; Personal</b>
+    <div class="iconbtn"><svg viewBox="0 0 24 24" width="18"><use href="#i-x"/></svg></div>
+  </div>
+  <div class="screen pad">
+    <div class="section-head"><h3>Echipă Existentă</h3><span style="background:var(--red-tint);color:var(--red);font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px">4</span></div>
+    <!-- expanded member card -->
+    <div class="card pad" style="border-color:var(--red-border);margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="avatar" style="background:var(--av-blue-bg);color:var(--av-blue-fg)">AD</div>
+        <div style="flex:1"><div style="font-size:15px;font-weight:700">Alexandra Dinu</div><div style="font-size:12px;color:var(--text-3)">alexandra@ambilet.ro</div></div>
+        <div class="iconbtn" style="width:30px;height:30px;color:var(--danger)"><svg viewBox="0 0 24 24" width="15"><use href="#i-x"/></svg></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <span class="tag-active" style="background:var(--green-tint);padding:5px 11px;border-radius:999px">Activ</span>
+        <span style="background:var(--cyan-tint);color:var(--cyan);font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px">Poarta 1</span>
+        <span class="tag tag-mgr">Manager</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div><div style="font-size:12px;color:var(--text-2)">Acces la evenimente</div><div style="font-size:13px;font-weight:600;margin-top:2px">Toate evenimentele</div></div>
+        <span class="link">Modifică</span>
+      </div>
+      <div style="margin-top:12px"><div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Alocă la poartă:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border)">Niciuna</span>
+          <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:10px;background:var(--red);color:#fff">Poarta 1</span>
+          <span style="font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border)">Poarta 2</span>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <!-- add form -->
+    <b style="font-size:15px">Adaugă Personal Nou</b>
+    <div class="card" style="padding:14px 16px;margin:12px 0;color:var(--text-3);font-size:14px">Nume</div>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;color:var(--text-3);font-size:14px">Prenume</div>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;color:var(--text-3);font-size:14px">adresa@email.com</div>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;color:var(--text-3);font-size:14px">Parola (minim 8 caractere)</div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Rol</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <span class="tag tag-staff">Admin</span><span class="tag tag-staff">Manager</span><span style="font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:999px;background:var(--red);color:#fff">Staff</span>
+    </div>
+    <button class="btn btn-primary"><svg viewBox="0 0 24 24" width="18"><use href="#i-plus"/></svg> Adaugă în echipă</button>
+  </div>
+</div>
+<div class="caption"><b>Editare membru + Adaugă personal</b><span>Card membru extins: activare, alocare poartă (chips), acces la evenimente (whitelist), eliminare. Formular „Adaugă Personal Nou" cu rol Admin/Manager/Staff.</span><span class="src">modals/StaffAssignmentModal.js</span></div>
+</div>
+
+<!-- ---------- GATE MANAGER ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+    <b style="font-size:17px">Administrare Porți</b>
+    <div class="iconbtn"><svg viewBox="0 0 24 24" width="18"><use href="#i-x"/></svg></div>
+  </div>
+  <div class="screen pad">
+    <!-- venue info -->
+    <div class="card pad" style="display:flex;align-items:center;gap:12px;border-color:var(--red-border);margin-bottom:16px">
+      <div class="chip chip-red"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg></div>
+      <div><div style="font-size:15px;font-weight:700">Arenele Romane</div><div style="font-size:12px;color:var(--text-2)">București · Str. Cutitul de Argint 3</div></div>
+    </div>
+    <!-- add gate -->
+    <b style="font-size:15px">Adaugă Poartă Nouă</b>
+    <div class="card" style="padding:14px 16px;margin:12px 0;color:var(--text-3);font-size:14px">Numele porții</div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Tip</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:10px;background:var(--green-tint);color:var(--green)">Intrare</span>
+      <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:10px;background:var(--amber-tint);color:var(--amber)">VIP</span>
+      <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:10px;background:var(--cyan-tint);color:var(--cyan)">POS</span>
+      <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:10px;background:var(--danger-tint);color:var(--danger)">Ieșire</span>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;color:var(--text-3);font-size:14px">Locație</div>
+    <button class="btn btn-primary" style="margin-bottom:20px"><svg viewBox="0 0 24 24" width="18"><use href="#i-plus"/></svg> Adaugă Poartă</button>
+    <div class="divider"></div>
+    <div class="section-head"><h3>Porți Curente</h3><span style="background:var(--red-tint);color:var(--red);font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px">4</span></div>
+    <!-- gate card with toggle -->
+    <div class="card pad" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px"><div class="chip chip-green"><svg viewBox="0 0 24 24"><use href="#i-in"/></svg></div><div style="flex:1"><div style="font-size:15px;font-weight:700">Intrare Principală</div><div style="font-size:12px;color:var(--text-3)">Nord</div></div><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--green-tint);color:var(--green)">Intrare</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;font-weight:600">Activă</span><span style="width:42px;height:24px;border-radius:999px;background:var(--green);position:relative"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span></div>
+        <div style="display:flex;gap:8px"><span style="font-size:12px;font-weight:700;color:var(--red);border:1px solid var(--red-border);padding:6px 12px;border-radius:10px">Asignează-mă</span><span class="iconbtn" style="width:32px;height:32px;color:var(--danger);background:var(--danger-tint);border-color:var(--danger-border)"><svg viewBox="0 0 24 24" width="15"><use href="#i-x"/></svg></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="caption"><b>Administrare porți</b><span>Card venue, formular adăugare poartă cu tip (Intrare/VIP/POS/Ieșire codate cromatic), listă porți cu comutator Activă/Inactivă, Asignează-mă, ștergere.</span><span class="src">modals/GateManagerModal.js</span></div>
+</div>
+
+<!-- ================= GROUP: RAPOARTE & SETĂRI ================= -->
+<div class="group-label">Rapoarte &amp; setări</div>
+
+<!-- ---------- REPORTS ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><span class="pill pill-live"><span class="dot"></span>Live</span><div class="iconbtn"><svg viewBox="0 0 24 24" width="20"><use href="#i-bell"/></svg></div></div>
+  </div>
+  <div class="screen pad stack">
+    <div><div class="h1">Rapoarte</div><div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span style="width:7px;height:7px;border-radius:50%;background:var(--green)"></span><span class="sub" style="color:var(--green)">Actualizat acum</span></div></div>
+    <!-- past event selector -->
+    <div class="row"><svg viewBox="0 0 24 24" width="18" style="color:var(--red)"><use href="#i-clock"/></svg><div class="grow"><div class="name">Eveniment trecut</div></div><span class="muted" style="font-size:13px">Selectează</span><svg class="chev" viewBox="0 0 24 24" width="16" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></div>
+    <!-- checkin rate -->
+    <div class="card pad">
+      <div class="label" style="font-size:13px;color:var(--text-2);font-weight:600">Rata Check-in</div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:-1px">69,3<span style="font-size:20px;color:var(--text-3)">%</span></div>
+      <svg viewBox="0 0 300 40" style="width:100%;height:38px;margin-top:6px"><polyline points="0,30 40,26 80,28 120,18 160,22 200,12 240,16 300,8" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="grid2">
+      <div class="card pad"><div class="label" style="font-size:12.5px;color:var(--text-2);font-weight:600">Total Vândute</div><div style="font-size:26px;font-weight:800">1.486</div></div>
+      <div class="card pad"><div class="label" style="font-size:12.5px;color:var(--text-2);font-weight:600">Ora de Vârf</div><div style="font-size:26px;font-weight:800">20:00</div></div>
+    </div>
+    <!-- gate performance -->
+    <div class="card pad">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">Performanța Porților</div>
+      <div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:600">Abonament General</span><span><b style="color:var(--red)">72%</b> <span style="color:var(--text-3)">842 intrați</span></span></div><div class="bar"><span style="width:72%"></span></div></div>
+      <div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:600">Acces 1 zi</span><span><b style="color:var(--red)">54%</b> <span style="color:var(--text-3)">436 intrați</span></span></div><div class="bar"><span style="width:54%"></span></div></div>
+      <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:600">VIP</span><span><b style="color:var(--red)">88%</b> <span style="color:var(--text-3)">52 intrați</span></span></div><div class="bar"><span style="width:88%"></span></div></div>
+    </div>
+    <!-- hourly -->
+    <div class="card pad">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">Distribuție Orară</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:90px">
+        <div style="flex:1;text-align:center"><div style="height:30px;background:var(--red-tint);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">16</div></div>
+        <div style="flex:1;text-align:center"><div style="height:44px;background:var(--red-tint);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">17</div></div>
+        <div style="flex:1;text-align:center"><div style="height:56px;background:var(--red);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">18</div></div>
+        <div style="flex:1;text-align:center"><div style="height:72px;background:var(--red);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">19</div></div>
+        <div style="flex:1;text-align:center"><div style="height:80px;background:var(--red);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">20</div></div>
+        <div style="flex:1;text-align:center"><div style="height:50px;background:var(--red-tint);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">21</div></div>
+        <div style="flex:1;text-align:center"><div style="height:26px;background:var(--red-tint);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-3);margin-top:4px">22</div></div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" style="color:var(--red);border-color:var(--red-border)"><svg viewBox="0 0 24 24" width="18"><use href="#i-chart"/></svg> Exportă Raport</button>
+  </div>
+  <div class="tabbar">
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg><span>Panou</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg><span>Scanare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg><span>Vânzare</span></div>
+    <div class="tab active"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg><span>Rapoarte</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cog"/></svg><span>Setări</span></div>
+  </div>
+</div>
+<div class="caption"><b>Rapoarte</b><span>Analytics read-only: rata check-in cu sparkline, total vândute, ora de vârf, performanța porților, detalii venituri, distribuție orară, selector eveniment trecut, Exportă Raport.</span><span class="src">src/screens/ReportsScreen.js</span></div>
+</div>
+
+<!-- ---------- SETTINGS ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><span class="pill pill-live"><span class="dot"></span>Live</span><div class="iconbtn"><svg viewBox="0 0 24 24" width="20"><use href="#i-bell"/></svg></div></div>
+  </div>
+  <div class="screen pad stack">
+    <div class="h1">Setări</div>
+    <div class="eyebrow">Cont</div>
+    <div class="card" style="padding:4px 16px">
+      <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)"><span class="muted">Nume</span><b style="font-size:14px">Mihai Coman</b></div>
+      <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)"><span class="muted">Rol</span><b style="font-size:14px">Administrator</b></div>
+      <div style="display:flex;justify-content:space-between;padding:13px 0"><span class="muted">Poartă Asignată</span><b style="font-size:14px">Poarta 1</b></div>
+    </div>
+    <div class="eyebrow">Scanner</div>
+    <div class="card" style="padding:4px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px;font-weight:600">Vibrație</span><span class="tgl on"></span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px;font-weight:600">Efecte Sonore</span><span class="tgl on"></span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0"><span style="font-size:14px;font-weight:600">Auto-confirmare Valide</span><span class="tgl"></span></div>
+    </div>
+    <div class="eyebrow">Vânzare POS</div>
+    <div class="card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:600">Card prin NFC (Stripe Tap)</span><span class="tgl on"></span></div>
+      <div style="display:flex;gap:10px;background:var(--cyan-tint);border-radius:12px;padding:12px;margin-top:12px"><svg viewBox="0 0 24 24" width="18" style="color:var(--cyan);flex:0 0 auto"><use href="#i-nfc"/></svg><span style="font-size:12px;color:var(--text-2);line-height:1.4">Adaugă în ecranul Vânzare un buton „Card prin NFC" (plată Stripe Tap). Dezactivat = doar Numerar și Card POS.</span></div>
+    </div>
+    <div class="eyebrow">Comenzi Admin</div>
+    <div class="card" style="padding:4px 16px">
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--border)"><svg viewBox="0 0 24 24" width="16" style="color:var(--red)"><use href="#i-cog"/></svg><span style="font-size:12px;font-weight:700;color:var(--red)">Acces Administrator</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px;font-weight:600">Administrare Porți</span><div style="display:flex;align-items:center;gap:8px"><span style="background:var(--red-tint);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px">4</span><svg class="chev" viewBox="0 0 24 24" width="16"><use href="#i-chev"/></svg></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0"><span style="font-size:14px;font-weight:600">Asignare Personal</span><svg class="chev" viewBox="0 0 24 24" width="16"><use href="#i-chev"/></svg></div>
+    </div>
+    <button class="btn btn-ghost" style="color:var(--danger);border-color:var(--danger-border)"><svg viewBox="0 0 24 24" width="18"><use href="#i-logout"/></svg> Încheie Tura &amp; Deconectare</button>
+    <div class="center muted" style="font-size:12px">AmBilet Scan v1.6.9</div>
+  </div>
+  <div class="tabbar">
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg><span>Panou</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg><span>Scanare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg><span>Vânzare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg><span>Rapoarte</span></div>
+    <div class="tab active"><svg viewBox="0 0 24 24"><use href="#i-cog"/></svg><span>Setări</span></div>
+  </div>
+</div>
+<div class="caption"><b>Setări</b><span>Cont, Scanner (vibrație/sunet/auto-confirmare), Vânzare POS (NFC Stripe), Mod Offline, Hardware, Comenzi Admin (porți/personal), Deconectare. Secțiuni în funcție de rol.</span><span class="src">src/screens/SettingsScreen.js</span></div>
+</div>
+
+<!-- ================= GROUP: MODALE ================= -->
+<div class="group-label">Modale &amp; panouri</div>
+
+<!-- ---------- EVENTS PICKER ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="screen" style="display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,10,10,.35)">
+    <div style="background:var(--surface);border-radius:24px 24px 0 0;padding:12px 16px 22px;max-height:88%">
+      <div style="width:40px;height:4px;border-radius:2px;background:var(--border-strong);margin:2px auto 14px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><b style="font-size:18px">Selectează Eveniment</b><div class="iconbtn"><svg viewBox="0 0 24 24" width="18"><use href="#i-x"/></svg></div></div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px"><span style="width:9px;height:9px;border-radius:50%;background:var(--green)"></span><b style="font-size:13px;color:var(--green)">În desfășurare</b></div>
+      <div class="card pad" style="border-left:3px solid var(--green);margin-bottom:8px"><div style="display:flex;justify-content:space-between"><div><div style="font-size:12px;color:var(--red-accent);font-weight:700">14.07.2026 · 20:00</div><div style="font-size:15px;font-weight:700;margin-top:2px">Wild Experience Fest 2026</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">Arenele Romane, București</div></div><span class="pill pill-live" style="height:fit-content"><span class="dot"></span>LIVE</span></div></div>
+      <div style="display:flex;align-items:center;gap:7px;margin:14px 0 10px"><span style="width:9px;height:9px;border-radius:50%;background:var(--amber)"></span><b style="font-size:13px;color:var(--amber)">Astăzi</b></div>
+      <div class="card pad" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><div><div style="font-size:12px;color:var(--red-accent);font-weight:700">14.07.2026 · 22:00</div><div style="font-size:15px;font-weight:700;margin-top:2px">Late Night Session</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">Club Control, București</div></div><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--amber-tint);color:var(--amber)">Azi</span></div></div>
+      <div style="display:flex;align-items:center;gap:7px;margin:14px 0 10px"><span style="width:9px;height:9px;border-radius:50%;background:var(--red)"></span><b style="font-size:13px;color:var(--text-2)">Viitoare</b></div>
+      <div class="card pad"><div style="display:flex;justify-content:space-between"><div><div style="font-size:12px;color:var(--red-accent);font-weight:700">20.07.2026 · 19:00</div><div style="font-size:15px;font-weight:700;margin-top:2px">Summer Vibes Festival</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">Arenele Romane, București</div></div><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--red-tint);color:var(--red)">Viitor</span></div></div>
+    </div>
+  </div>
+</div>
+<div class="caption"><b>Selector eveniment</b><span>Bottom-sheet grupat pe categorii (LIVE / Azi / Viitor) cu swipe-to-dismiss. Badge status + dată colorate roșu de brand.</span><span class="src">modals/EventsModal.js + EventSelector.js</span></div>
+</div>
+
+<!-- ---------- NOTIFICATIONS + EMERGENCY ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div class="appbar">
+    <div class="brand"><span class="brand-logo">AmBilet</span><span class="brand-scan">Scan</span></div>
+    <div class="appbar-right"><span class="pill pill-live"><span class="dot"></span>Live</span><div class="iconbtn" style="border-color:var(--red-border);color:var(--red)"><svg viewBox="0 0 24 24" width="20"><use href="#i-bell"/></svg><span class="badge">3</span></div></div>
+  </div>
+  <div class="screen" style="background:rgba(20,10,10,.15);padding:10px 12px">
+    <div class="card" style="padding:14px 16px;box-shadow:var(--shadow)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:16px">Notificări</b><span style="background:var(--red-accent);color:#fff;font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px">3</span></div><span class="link">Marchează toate citite</span></div>
+      <div style="display:flex;gap:11px;padding:11px;border-radius:12px;background:var(--red-tint);margin-bottom:8px"><svg viewBox="0 0 24 24" width="18" style="color:var(--danger);flex:0 0 auto"><use href="#i-alert"/></svg><div style="flex:1"><div style="font-size:13px;font-weight:600">Capacitate la 90% pentru poarta VIP</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">acum 2 min</div></div><span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex:0 0 auto;margin-top:5px"></span></div>
+      <div style="display:flex;gap:11px;padding:11px;border-radius:12px;background:var(--red-tint);margin-bottom:8px"><svg viewBox="0 0 24 24" width="18" style="color:var(--green);flex:0 0 auto"><use href="#i-checkc"/></svg><div style="flex:1"><div style="font-size:13px;font-weight:600">Ioan Barbu și-a început tura</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">acum 12 min</div></div><span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex:0 0 auto;margin-top:5px"></span></div>
+      <div style="display:flex;gap:11px;padding:11px;border-radius:12px"><svg viewBox="0 0 24 24" width="18" style="color:var(--cyan);flex:0 0 auto"><use href="#i-checkc"/></svg><div style="flex:1"><div style="font-size:13px;font-weight:600">Sincronizare offline finalizată</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">acum 30 min</div></div></div>
+    </div>
+  </div>
+  <!-- emergency sheet peeking -->
+  <div style="background:var(--surface);border-top:1px solid var(--border);padding:16px;box-shadow:0 -6px 20px rgba(20,10,10,.06)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><svg viewBox="0 0 24 24" width="20" style="color:var(--danger)"><use href="#i-alert"/></svg><b style="font-size:16px">Raportează Problemă</b></div>
+    <div class="grid2">
+      <div class="card" style="padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--danger-tint);border-color:var(--danger-border);color:var(--danger)"><svg viewBox="0 0 24 24" width="20"><use href="#i-alert"/></svg><b style="font-size:12px">Urgență Medicală</b></div>
+      <div class="card" style="padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--amber-tint);border-color:var(--amber-border);color:var(--amber)"><svg viewBox="0 0 24 24" width="20"><use href="#i-alert"/></svg><b style="font-size:12px">Problemă Tehnică</b></div>
+    </div>
+  </div>
+</div>
+<div class="caption"><b>Notificări + Urgențe</b><span>Panou dropdown notificări (tipuri alert/success/info, citite/necitite) + sheet „Raportează Problemă" cu 8 opțiuni codate pe severitate (roșu/chihlimbar/neutru).</span><span class="src">modals/NotificationsPanel.js + EmergencyModal.js</span></div>
+</div>
+
+<!-- ---------- GUEST LIST ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px"><b style="font-size:17px">Listă Invitați</b><span style="background:var(--red-tint);color:var(--red);font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px">18/42</span></div>
+    <div class="iconbtn"><svg viewBox="0 0 24 24" width="18"><use href="#i-x"/></svg></div>
+  </div>
+  <div class="pad" style="padding-bottom:0"><div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:10px;color:var(--text-3)"><svg viewBox="0 0 24 24" width="18"><use href="#i-search"/></svg><span style="font-size:14px">Caută invitați...</span></div></div>
+  <div class="screen pad" style="padding-top:12px">
+    <div class="row"><div class="avatar" style="background:var(--av-red-bg);color:var(--av-red-fg)">AP</div><div class="grow"><div class="name">Andrei Popescu</div></div><span class="tag tag-admin" style="background:var(--av-purple-bg);color:var(--av-purple-fg)">VIP</span><span style="font-size:12px;font-weight:700;color:#fff;background:var(--red);padding:7px 14px;border-radius:10px">Check-in</span></div>
+    <div class="row" style="opacity:.6"><div class="avatar" style="background:var(--green-tint);color:var(--green)">MI</div><div class="grow"><div class="name">Maria Ionescu</div></div><span class="tag tag-mgr">Artist</span><svg viewBox="0 0 24 24" width="24" style="color:var(--green)"><use href="#i-checkc"/></svg></div>
+    <div class="row"><div class="avatar" style="background:var(--av-amber-bg);color:var(--av-amber-fg)">RG</div><div class="grow"><div class="name">Radu Georgescu</div></div><span style="font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--cyan-tint);color:var(--cyan)">Press</span><span style="font-size:12px;font-weight:700;color:#fff;background:var(--red);padding:7px 14px;border-radius:10px">Check-in</span></div>
+    <div class="row"><div class="avatar" style="background:var(--av-blue-bg);color:var(--av-blue-fg)">EV</div><div class="grow"><div class="name">Elena Vasile</div></div><span class="tag tag-staff">Guest</span><span style="font-size:12px;font-weight:700;color:#fff;background:var(--red);padding:7px 14px;border-radius:10px">Check-in</span></div>
+  </div>
+</div>
+<div class="caption"><b>Listă invitați</b><span>Invitații (VIP/Artist/Press/Guest) cu căutare, contor intrați/total și check-in inline. Rânduri bifate → avatar verde + opacitate redusă.</span><span class="src">modals/GuestListModal.js</span></div>
+</div>
+
+<!-- ================= GROUP: VENUE OWNER ================= -->
+<div class="group-label">Proprietar locație (venue owner)</div>
+
+<!-- ---------- VENUE EVENTS LIST ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between">
+    <div><div class="h2">Arenele Romane</div><div class="sub" style="margin-top:2px">Evenimente la locația ta</div></div>
+    <span style="font-size:13px;font-weight:700;color:var(--red-accent)">Ieșire</span>
+  </div>
+  <div class="pad" style="padding-bottom:0"><div style="display:flex;gap:8px">
+    <span style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:9px;border-radius:11px;background:var(--red);color:#fff">Viitor</span>
+    <span style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:9px;border-radius:11px;background:var(--surface);border:1px solid var(--border);color:var(--text-2)">Trecut</span>
+    <span style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:9px;border-radius:11px;background:var(--surface);border:1px solid var(--border);color:var(--text-2)">Toate</span>
+  </div></div>
+  <div class="screen pad" style="padding-top:12px">
+    <div class="card pad" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start"><b style="font-size:15.5px;max-width:80%">Wild Experience Fest 2026</b><svg class="chev" viewBox="0 0 24 24" width="18"><use href="#i-chev"/></svg></div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;color:var(--text-2)"><svg viewBox="0 0 24 24" width="15" style="color:var(--red)"><use href="#i-cal"/></svg>14 iul. 2026 · 20:00</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Organizator: AmBilet Live</div>
+      <div style="display:flex;gap:18px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px"><svg viewBox="0 0 24 24" width="15" style="color:var(--red)"><use href="#i-ticket"/></svg><b>1.486 / 1.800</b> <span class="muted">vândute</span></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px"><svg viewBox="0 0 24 24" width="15" style="color:var(--green)"><use href="#i-checkc"/></svg><b>1.248</b> <span class="muted">check-in</span></div>
+      </div>
+    </div>
+    <div class="card pad" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start"><b style="font-size:15.5px;max-width:70%">Summer Vibes Festival</b><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--amber-tint);color:var(--amber)">Reprogramat</span></div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;color:var(--text-2)"><svg viewBox="0 0 24 24" width="15" style="color:var(--red)"><use href="#i-cal"/></svg>20 iul. 2026 · 19:00</div>
+      <div style="display:flex;gap:18px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px"><svg viewBox="0 0 24 24" width="15" style="color:var(--red)"><use href="#i-ticket"/></svg><b>642</b> <span class="muted">vândute</span></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px"><svg viewBox="0 0 24 24" width="15" style="color:var(--green)"><use href="#i-checkc"/></svg><b>0</b> <span class="muted">check-in</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tab active"><svg viewBox="0 0 24 24"><use href="#i-cal"/></svg><span>Evenimente</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg><span>Scanare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg><span>Vânzare</span></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><use href="#i-cog"/></svg><span>Setări</span></div>
+  </div>
+</div>
+<div class="caption"><b>Evenimente locație</b><span>Landing pentru venue owner: taburi Viitor/Trecut/Toate, carduri eveniment cu vândute/check-in, badge-uri Anulat/Reprogramat, pull-to-refresh.</span><span class="src">src/screens/VenueEventsScreen.js</span></div>
+</div>
+
+<!-- ---------- VENUE EVENT DETAIL ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px">
+    <div class="iconbtn"><svg viewBox="0 0 24 24" width="18"><use href="#i-back"/></svg></div><b style="font-size:16px">Wild Experience Fest 2026</b>
+  </div>
+  <div class="screen pad stack">
+    <div><div style="font-size:12px;color:var(--red-accent);font-weight:700">14 iul. 2026 · 20:00</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">Organizator: AmBilet Live</div></div>
+    <div style="display:flex;gap:10px">
+      <div class="card pad" style="flex:1"><div class="muted" style="font-size:12px">Vândute</div><div style="font-size:20px;font-weight:800">1.486<span style="font-size:13px;color:var(--text-3)">/1.800</span></div></div>
+      <div class="card pad" style="flex:1"><div class="muted" style="font-size:12px">Check-in</div><div style="font-size:20px;font-weight:800">1.248</div></div>
+      <div class="card pad" style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--red);gap:4px"><svg viewBox="0 0 24 24" width="20"><use href="#i-chart"/></svg><span style="font-size:11px;font-weight:700">Export CSV</span></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1"><svg viewBox="0 0 24 24" width="20"><use href="#i-scan"/></svg> Scanare</button>
+      <button class="btn btn-green" style="flex:1"><svg viewBox="0 0 24 24" width="20"><use href="#i-cart"/></svg> Vânzare</button>
+    </div>
+    <div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:10px;color:var(--text-3)"><svg viewBox="0 0 24 24" width="18"><use href="#i-search"/></svg><span style="font-size:13.5px">Caută după nume, telefon sau nr. comandă</span></div>
+    <!-- attendee rows -->
+    <div class="card" style="padding:4px 14px">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)"><div style="flex:1"><div style="font-size:14px;font-weight:600">Andrei Popescu</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">Abonament General · #12587 · CMD-4821</div></div><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--green-tint);color:var(--green)">CHECKED-IN</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)"><svg viewBox="0 0 24 24" width="15" style="color:var(--amber)"><use href="#i-alert"/></svg><div style="flex:1"><div style="font-size:14px;font-weight:600">Maria Ionescu</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">Acces 1 zi · #12588 · CMD-4822</div></div><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--cyan-tint);color:var(--cyan)">VALID</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 0"><div style="flex:1"><div style="font-size:14px;font-weight:600">Radu Georgescu</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">VIP · Secțiune A · rând 4 · loc 12</div></div><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--amber-tint);color:var(--amber)">ÎN AȘTEPTARE</span></div>
+    </div>
+  </div>
+</div>
+<div class="caption"><b>Detaliu eveniment locație</b><span>Sumar (vândute/check-in + Export CSV), butoane Scanare/Vânzare, listă participanți cu căutare, paginare, status pill-uri (Checked-in/Valid/Anulat...), export download/email.</span><span class="src">src/screens/VenueEventDetailScreen.js</span></div>
+</div>
+
+<!-- ---------- VENUE TICKET DETAIL ---------- -->
+<div>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span class="dots">▄▆█ 5G ▮</span></div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px">
+    <div class="iconbtn"><svg viewBox="0 0 24 24" width="18"><use href="#i-back"/></svg></div><b style="font-size:16px">Detalii bilet</b>
+  </div>
+  <div class="screen pad stack">
+    <div class="card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:15px">#12587</b><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--green-tint);color:var(--green)">UTILIZAT</span></div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span class="muted" style="font-size:13px">Cod</span><b style="font-size:13px;font-family:ui-monospace,monospace">WXF-8A21-QK</b></div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span class="muted" style="font-size:13px">Tip bilet</span><b style="font-size:13px">Abonament General</b></div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span class="muted" style="font-size:13px">Preț</span><b style="font-size:13px">150,00 RON</b></div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0"><span class="muted" style="font-size:13px">Check-in</span><b style="font-size:13px;color:var(--green)">14 iul. 2026, 20:15</b></div>
+    </div>
+    <div class="card pad">
+      <div class="eyebrow" style="margin-bottom:8px">Client</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">Andrei Popescu</div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--border)"><span class="muted" style="font-size:13px">Telefon</span><b style="font-size:13px">0722 123 456</b></div>
+    </div>
+    <div class="card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="eyebrow">Mențiuni (1)</div></div>
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px">
+        <div style="display:flex;justify-content:space-between"><b style="font-size:13px">Mihai Coman</b><div style="display:flex;gap:8px;color:var(--text-3)"><svg viewBox="0 0 24 24" width="14"><use href="#i-cog"/></svg><svg viewBox="0 0 24 24" width="14" style="color:var(--danger)"><use href="#i-x"/></svg></div></div>
+        <div style="font-size:11px;color:var(--text-3);margin:3px 0 8px">14 iul. 2026, 19:40 · Bilet</div>
+        <div style="font-size:13px;color:var(--text)">Client fidel, acces prioritar la zona VIP.</div>
+      </div>
+      <div class="card" style="padding:12px;margin-top:12px;color:var(--text-3);font-size:13px">Adaugă o mențiune nouă...</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><span style="width:20px;height:20px;border-radius:6px;border:2px solid var(--red);background:var(--red);display:flex;align-items:center;justify-content:center;color:#fff"><svg viewBox="0 0 24 24" width="12"><use href="#i-check"/></svg></span><span style="font-size:13px;font-weight:600">Grupează biletele</span></div>
+      <button class="btn btn-primary" style="margin-top:12px">Adaugă</button>
+    </div>
+  </div>
+</div>
+<div class="caption"><b>Detaliu bilet</b><span>Info bilet/client/comandă/eveniment + CRUD mențiuni (creare/editare/ștergere), opțiune „Grupează biletele" pentru a aplica nota tuturor biletelor clientului.</span><span class="src">src/screens/VenueTicketDetailScreen.js</span></div>
+</div>
+
+</body>
+</html>
