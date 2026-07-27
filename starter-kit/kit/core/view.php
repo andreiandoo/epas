@@ -20,6 +20,66 @@ function e(?string $s): string {
 }
 
 /**
+ * Sanitize "rich text" HTML coming from the API/CMS (event descriptions, blog
+ * bodies, pages) before echoing it. Allowlist of tags + attributes; strips
+ * script/style/iframe/form, on* handlers, and unsafe URL schemes.
+ * A deployment that fully trusts its content can set config trust_api_html=true.
+ */
+function kit_html(?string $html): string {
+    if ($html === null || $html === '') return '';
+    if (Kit::get('trust_api_html')) return $html;
+    if (!class_exists('DOMDocument')) return e($html); // no ext-dom → escape rather than trust
+
+    static $allowed = [
+        'p'=>[], 'br'=>[], 'strong'=>[], 'b'=>[], 'em'=>[], 'i'=>[], 'u'=>[], 's'=>[], 'small'=>[],
+        'ul'=>[], 'ol'=>[], 'li'=>[], 'h2'=>[], 'h3'=>[], 'h4'=>[], 'h5'=>[], 'blockquote'=>[], 'hr'=>[],
+        'a'=>['href','title','target','rel'], 'img'=>['src','alt','width','height'],
+        'span'=>[], 'figure'=>[], 'figcaption'=>[], 'table'=>[], 'thead'=>[], 'tbody'=>[], 'tr'=>[], 'td'=>[], 'th'=>[],
+    ];
+    $doc = new DOMDocument('1.0', 'UTF-8');
+    libxml_use_internal_errors(true);
+    $ok = $doc->loadHTML('<?xml encoding="UTF-8"><div id="kit-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+    if (!$ok) return '';
+    $root = $doc->getElementById('kit-root');
+    if (!$root) return '';
+    $xp = new DOMXPath($doc);
+    // Remove dangerous elements entirely (with their content).
+    foreach (iterator_to_array($xp->query('.//script|.//style|.//iframe|.//object|.//embed|.//form|.//link|.//meta|.//base', $root)) as $el) {
+        if ($el->parentNode) $el->parentNode->removeChild($el);
+    }
+    // Walk remaining elements: unwrap unknown tags, filter attributes/URLs.
+    foreach (iterator_to_array($xp->query('.//*', $root)) as $el) {
+        if (!$el instanceof DOMElement || !$el->parentNode) continue;
+        $tag = strtolower($el->tagName);
+        if (!isset($allowed[$tag])) {
+            while ($el->firstChild) $el->parentNode->insertBefore($el->firstChild, $el);
+            $el->parentNode->removeChild($el);
+            continue;
+        }
+        foreach (iterator_to_array($el->attributes) as $attr) {
+            $an = strtolower($attr->name);
+            if (strpos($an, 'on') === 0 || !in_array($an, $allowed[$tag], true)) { $el->removeAttribute($attr->name); continue; }
+            if (($an === 'href' || $an === 'src') && !kit_safe_url(trim($attr->value), $tag)) $el->removeAttribute($attr->name);
+        }
+        if ($tag === 'a' && $el->getAttribute('target') === '_blank') $el->setAttribute('rel', 'noopener noreferrer');
+    }
+    $out = '';
+    foreach ($root->childNodes as $c) $out .= $doc->saveHTML($c);
+    return $out;
+}
+
+/** Whitelist URL schemes for sanitized HTML (relative/anchor/http(s)/mailto; data:image only on <img>). */
+function kit_safe_url(string $v, string $tag): bool {
+    if ($v === '') return false;
+    if (preg_match('#^(https?:|mailto:|tel:)#i', $v)) return true;
+    if ($v[0] === '/' || $v[0] === '#' || $v[0] === '.' || $v[0] === '?') return true;
+    if ($tag === 'img' && preg_match('#^data:image/(png|jpe?g|gif|webp|svg\+xml);#i', $v)) return true;
+    if (preg_match('#^[a-z][a-z0-9+.\-]*:#i', $v)) return false; // any other explicit scheme → reject
+    return true; // schemeless relative
+}
+
+/**
  * Translate a UI string key for the active locale.
  *   t('cart.title')            → "Coșul meu" (ro) / "My cart" (en)
  *   t('cart.count', ['n'=>3])  → replaces {n}

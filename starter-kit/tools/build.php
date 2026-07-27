@@ -31,6 +31,22 @@ $out = $argv[2] ?? "$root/build/$site";
 rrmdir($out);
 mkdir($out, 0775, true);
 
+// 0) PRODUCTION-SAFETY GUARD — never ship a dev config.
+//    Set KIT_ALLOW_UNSAFE=1 only for a deliberate non-production build.
+$siteCfg = @include "$src/site.config.php";
+if (is_array($siteCfg) && !getenv('KIT_ALLOW_UNSAFE')) {
+    $bad = [];
+    if (!empty($siteCfg['fixtures']))       $bad[] = "fixtures is set (would serve local JSON instead of the live API)";
+    if (!empty($siteCfg['debug']))          $bad[] = "debug is on";
+    if (!empty($siteCfg['trust_api_html'])) $bad[] = "trust_api_html is on (skips XSS sanitizer)";
+    if (strpos((string)($siteCfg['api_key'] ?? ''), 'mpc_TODO') !== false) $bad[] = "api_key is the placeholder";
+    if ($bad) {
+        fwrite(STDERR, "REFUSING to build '$site' for production:\n  - " . implode("\n  - ", $bad)
+            . "\nFix site.config.php, or set KIT_ALLOW_UNSAFE=1 for a deliberate dev build.\n");
+        exit(2);
+    }
+}
+
 // 1) template files
 foreach (['site.config.php', 'theme.css', 'routes.php'] as $f) {
     if (is_file("$src/$f")) copy("$src/$f", "$out/$f");

@@ -47,6 +47,7 @@ final class Kit {
             'cache_ttl'          => 120,
             'api_timeout'        => 15,
             'debug'              => false,
+            'trust_api_html'     => false,  // if true, API/CMS HTML is output raw (skip sanitizer) — only for fully-trusted content
             'cart_key'           => 'kit_cart',   // localStorage key for the cart
             'auth_key'           => 'kit_auth',   // localStorage key for {token,user}
             'proxy_url'          => '/api/proxy.php',

@@ -17,7 +17,7 @@ layout('public', [
   <section class="kit-section"><div class="kit-container" style="max-width:48rem">
     <?php if ($page && ($page['html'] || $page['title'])): ?>
       <h1 class="kit-display" style="font-size:clamp(2rem,5vw,3rem);margin-bottom:1.5rem"><?= e($page['title']) ?></h1>
-      <div class="kit-prose"><?= $page['html'] /* trusted HTML from the CMS */ ?></div>
+      <div class="kit-prose"><?= kit_html($page['html']) ?></div>
     <?php else: ?>
       <?php component('empty-state', ['icon' => '📄', 'message' => 'Această pagină nu este disponibilă momentan.', 'action' => ['label' => t('common.home'), 'url' => '/']]); ?>
     <?php endif; ?>

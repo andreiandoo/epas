@@ -21,6 +21,6 @@ layout('public', [
     <h1 class="kit-display" style="font-size:clamp(1.8rem,4vw,2.6rem);margin:1rem 0 .5rem"><?= e($post['title']) ?></h1>
     <p class="kit-muted" style="font-size:.85rem;margin-bottom:1.5rem"><?= e(trim(($post['author'] ? $post['author'] . ' · ' : '') . $post['date'], ' ·')) ?></p>
     <?php if ($post['image']): ?><img src="<?= e($post['image']) ?>" alt="<?= e($post['title']) ?>" style="width:100%;border-radius:var(--kit-radius);margin-bottom:1.5rem"><?php endif; ?>
-    <div class="kit-prose"><?= $post['html'] /* trusted HTML from the CMS */ ?></div>
+    <div class="kit-prose"><?= kit_html($post['html']) ?></div>
   </div></article>
 <?php });

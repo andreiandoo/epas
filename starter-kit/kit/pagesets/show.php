@@ -45,7 +45,7 @@ function () use ($event, $related, $rail) {
         <?php endif; ?>
       </div>
 
-      <?php if ($event['description']): ?><div style="max-width:48rem;margin:1.5rem 0"><?= $event['description'] ?></div><?php endif; ?>
+      <?php if ($event['description']): ?><div style="max-width:48rem;margin:1.5rem 0"><?= kit_html($event['description']) ?></div><?php endif; ?>
       <?php if ($event['artists']): ?>
         <h2 class="kit-display" style="font-size:1.4rem;margin:2rem 0 1rem"><?= e(kit_term('artists_cap', 'Distribuție')) ?></h2>
         <div class="kit-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">

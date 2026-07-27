@@ -44,7 +44,7 @@ for k in teatru filarmonica agentie leisure artist organizator; do
     err=$(KIT_SITE="_verify-$k" php "$pg" 2>&1 >/dev/null)
     [ -n "$err" ] && { echo "  PAGE FAIL ${pg}: $err"; fail=1; }
   done
-  php tools/build.php "_verify-$k" "/tmp/_verify-build-$k" >/dev/null 2>&1 \
+  KIT_ALLOW_UNSAFE=1 php tools/build.php "_verify-$k" "/tmp/_verify-build-$k" >/dev/null 2>&1 \
     && echo "  $k: OK ($(ls templates/_verify-$k/pages | wc -l) pages)" \
     || { echo "  $k: BUILD FAIL"; fail=1; }
   rm -rf "templates/_verify-$k" "/tmp/_verify-build-$k"

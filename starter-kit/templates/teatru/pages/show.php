@@ -40,7 +40,7 @@ layout('public', [
             ['label' => $event['title']],
         ]]); ?>
         <?php if ($event['description']): ?>
-          <div style="max-width:48rem;margin:1.5rem 0"><?= $event['description'] /* trusted HTML from API */ ?></div>
+          <div style="max-width:48rem;margin:1.5rem 0"><?= kit_html($event['description']) ?></div>
         <?php endif; ?>
 
         <?php if ($event['artists']): ?>

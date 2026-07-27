@@ -91,6 +91,39 @@ if (!isset($ACTIONS[$action])) {
 
 [$verb, $endpoint, $ttl] = $ACTIONS[$action];
 
+// ---- Request-method enforcement -----------------------------------------
+// The client must use the action's HTTP method (prevents a GET action being
+// triggered by a form POST and vice versa).
+if ($method !== $verb) {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    exit;
+}
+
+// ---- CSRF / same-origin check for state-changing calls -------------------
+// POST/DELETE must originate from this site. A cross-site page cannot forge a
+// matching Origin, so this blocks classic CSRF while allowing same-origin JS.
+if ($verb !== 'GET') {
+    $host   = $_SERVER['HTTP_HOST'] ?? '';
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? ($_SERVER['HTTP_REFERER'] ?? '');
+    $ohost  = $origin ? parse_url($origin, PHP_URL_HOST) : '';
+    if ($host === '' || $ohost === '' || strcasecmp($ohost, parse_url('http://' . $host, PHP_URL_HOST) ?: $host) !== 0) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Cross-origin request blocked']);
+        exit;
+    }
+}
+
+// ---- Rate limiting for sensitive actions ---------------------------------
+$SENSITIVE = ['login' => 10, 'register' => 5, 'checkout' => 15, 'review-submit' => 10,
+              'newsletter' => 8, 'promo-validate' => 20, 'fav-toggle' => 60, 'me-update' => 20,
+              'acc-giftcard-redeem' => 10];
+if (isset($SENSITIVE[$action]) && !kit_rate_ok($action, (int)$SENSITIVE[$action])) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'error' => 'Too many requests. Please slow down.']);
+    exit;
+}
+
 // Fill {placeholders} from query params, then drop them from the forwarded set.
 $params = $_GET;
 unset($params['action']);
@@ -118,3 +151,22 @@ if ($verb === 'GET' && ($useFixtures || ($ttl > 0 && !$fwd))) {
 
 http_response_code($resp['status'] ?? ($resp['success'] ? 200 : 502));
 echo json_encode($resp['raw'] ?? $resp);
+
+/**
+ * Basic per-IP+action rate limit, fixed 1-minute window, file-backed.
+ * Fail-open (returns true) if the filesystem is unavailable, so a broken cache
+ * dir never takes the site down. For heavy scale, back this with Redis/the API.
+ */
+function kit_rate_ok(string $action, int $max): bool {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'cli';
+    $window = (int)floor(time() / 60);
+    $file = sys_get_temp_dir() . '/kit_rl_' . md5($ip . '|' . $action) . '.json';
+    $fh = @fopen($file, 'c+');
+    if (!$fh) return true;
+    @flock($fh, LOCK_EX);
+    $cur = json_decode((string)stream_get_contents($fh), true);
+    $n = (is_array($cur) && ($cur['w'] ?? -1) === $window) ? (int)($cur['n'] ?? 0) + 1 : 1;
+    @ftruncate($fh, 0); @rewind($fh); @fwrite($fh, json_encode(['w' => $window, 'n' => $n]));
+    @flock($fh, LOCK_UN); @fclose($fh);
+    return $n <= $max;
+}
