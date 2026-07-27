@@ -66,6 +66,7 @@ file_put_contents("$out/theme/theme.css",  css_min((string)file_get_contents("$s
 // 4) deploy chrome
 copy("$root/kit/deploy/index.php", "$out/index.php");
 copy("$root/kit/deploy/htaccess",  "$out/.htaccess");
+copy("$root/kit/deploy/_webhook-deploy.php", "$out/_webhook-deploy.php");
 
 // 5) api proxy shim
 mkdir("$out/api", 0775, true);

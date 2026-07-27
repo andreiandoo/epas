@@ -70,6 +70,10 @@ final class Kit {
             'cookie_consent'     => true,   // show the GDPR banner
             'newsletter'         => true,   // show the footer newsletter form
             'favicon'            => '/favicon.svg',
+            // Deploy (used by tools/deploy.sh; can also be passed as args).
+            'deploy_branch'      => null,   // e.g. 'teatru' (the host's git branch)
+            'deploy_remote'      => 'https://github.com/andreiandoo/epas.git',
+            'deploy_webhook'     => null,   // e.g. 'https://teatru.tixello.ro/_webhook-deploy.php'
             // PWA (opt-in). When true, build generates manifest + service worker.
             'pwa'                => false,
             'pwa_theme_color'    => '#A51C30',

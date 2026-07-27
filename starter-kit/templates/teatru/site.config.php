@@ -12,6 +12,7 @@ return [
     'api_base'  => 'https://core.tixello.com/api',
     'core_url'  => 'https://core.tixello.com',
     'tenant_id' => 17,
+    'deploy_branch' => 'teatru', 'deploy_webhook' => 'https://teatru.tixello.ro/_webhook-deploy.php',
 
     'site_name' => 'Teatrul Național',
     'site_city' => 'BUCUREȘTI',
