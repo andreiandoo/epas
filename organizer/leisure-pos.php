@@ -79,39 +79,39 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
 
-        <!-- Raport X: bani in casa (cash + card) de la deschiderea sesiunii curente. POS-only. -->
-        <div id="lv-cash-xreport-panel" class="hidden mb-4 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl print:hidden" role="region" aria-labelledby="lv-cash-xreport-title">
-            <div class="flex items-start gap-3">
-                <div class="w-9 h-9 bg-indigo-200 rounded-full flex items-center justify-center flex-shrink-0 text-lg">📊</div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <div>
-                            <p id="lv-cash-xreport-title" class="font-bold text-base text-indigo-900">Raport X — bani în casă acum</p>
-                            <p class="text-xs text-indigo-800 mt-0.5">Încasări POS de la deschiderea sesiunii <span id="lv-cash-xreport-since" class="font-semibold"></span>. Nu include vânzări online.</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span id="lv-cash-xreport-updated" class="text-[10px] text-indigo-700"></span>
-                            <button id="lv-cash-xreport-refresh" type="button" class="px-2 py-1 text-[11px] font-semibold bg-white border border-indigo-300 text-indigo-800 rounded hover:bg-indigo-100">🔄 Refresh</button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3 mt-3">
-                        <div class="p-3 bg-white border border-indigo-200 rounded-lg">
-                            <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">💵 Cash</p>
-                            <p id="lv-cash-xreport-cash" class="text-xl font-extrabold text-indigo-900 tabular-nums mt-1">— <span class="text-xs text-indigo-600">RON</span></p>
-                        </div>
-                        <div class="p-3 bg-white border border-indigo-200 rounded-lg">
-                            <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">💳 Card</p>
-                            <p id="lv-cash-xreport-card" class="text-xl font-extrabold text-indigo-900 tabular-nums mt-1">— <span class="text-xs text-indigo-600">RON</span></p>
-                        </div>
-                        <div class="p-3 bg-indigo-100 border border-indigo-300 rounded-lg">
-                            <p class="text-[10px] uppercase tracking-wider text-indigo-800 font-bold">Total POS</p>
-                            <p id="lv-cash-xreport-total" class="text-xl font-extrabold text-indigo-900 tabular-nums mt-1">— <span class="text-xs text-indigo-700">RON</span></p>
-                            <p id="lv-cash-xreport-orders" class="text-[10px] text-indigo-700 mt-0.5">— comenzi</p>
-                        </div>
-                    </div>
+        <!-- Raport X: bani in casa (cash + card) de la deschiderea sesiunii curente. Casa-only. -->
+        <!-- Design aliniat 1:1 cu sectiunea CASA din leisure-dashboard.php -->
+        <section id="lv-cash-xreport-panel" class="hidden mb-4 overflow-hidden border-2 shadow-sm rounded-2xl border-emerald-300 bg-emerald-50 print:hidden" role="region" aria-labelledby="lv-cash-xreport-title">
+            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-emerald-200 bg-emerald-100/60">
+                <div>
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Casă · <span id="lv-cash-xreport-operator">InfoPoint</span></p>
+                    <p id="lv-cash-xreport-title" class="text-lg font-extrabold text-emerald-900">🟢 Deschisă de <span id="lv-cash-xreport-since-rel">—</span></p>
+                    <p class="text-xs text-emerald-700/80">Deschisă la <span id="lv-cash-xreport-opened-at">—</span> · doar vânzările din locație (online-ul nu intră în casă)</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="lv-cash-xreport-updated" class="text-[10px] text-emerald-700"></span>
+                    <button id="lv-cash-xreport-refresh" type="button" class="px-3 py-2 text-sm font-bold rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50">🔄 Refresh</button>
                 </div>
             </div>
-        </div>
+            <div class="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
+                <div class="p-3 bg-white border-2 rounded-xl border-amber-300">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-amber-700">💵 Cash de predat</p>
+                    <p id="lv-cash-xreport-cash" class="text-2xl font-extrabold text-amber-800 tabular-nums">— <span class="text-xs">RON</span></p>
+                </div>
+                <div class="p-3 bg-white border-2 rounded-xl border-sky-200">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-sky-700">💳 Card încasat</p>
+                    <p id="lv-cash-xreport-card" class="text-2xl font-extrabold text-sky-800 tabular-nums">— <span class="text-xs">RON</span></p>
+                </div>
+                <div class="p-3 bg-white rounded-xl">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-muted">Total în casă</p>
+                    <p id="lv-cash-xreport-total" class="text-2xl font-extrabold text-emerald-800 tabular-nums">— <span class="text-xs">RON</span></p>
+                </div>
+                <div class="p-3 bg-white rounded-xl">
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-muted">Comenzi în sesiune</p>
+                    <p id="lv-cash-xreport-orders" class="text-2xl font-extrabold text-secondary tabular-nums">—</p>
+                </div>
+            </div>
+        </section>
 
         <!-- Banner: Casa este INCHISA (blocheaza vizibil orice vanzare) -->
         <div id="lv-cash-locked-banner" class="hidden mb-4 p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-sm text-rose-900 print:hidden">
@@ -899,20 +899,44 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // care returneaza deja `session.live` = { cash, card, total, orders } POS-only.
     let xReportPollTimer = null;
 
+    // Helper: "de 2h 15m" din opened_at
+    function xrSinceLabel(iso) {
+        if (!iso) return '—';
+        try {
+            const then = new Date(iso).getTime();
+            const now = Date.now();
+            const mins = Math.max(0, Math.floor((now - then) / 60000));
+            if (mins < 60) return mins + ' min';
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return h + 'h ' + m + 'm';
+        } catch { return '—'; }
+    }
+
+    // Helper: "25.07 08:15"
+    function xrFmtDateTime(iso) {
+        if (!iso) return '—';
+        try {
+            const d = new Date(iso);
+            const dt = d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' });
+            const tm = d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+            return `${dt} ${tm}`;
+        } catch { return '—'; }
+    }
+
     function paintXReport(session) {
         if (!session) return;
         const live = session.live || { cash: 0, card: 0, total: 0, orders: 0 };
-        const since = $('lv-cash-xreport-since');
-        if (since) since.textContent = fmtTime(session.opened_at);
-        const cashEl = $('lv-cash-xreport-cash');
-        const cardEl = $('lv-cash-xreport-card');
-        const totalEl = $('lv-cash-xreport-total');
-        const ordersEl = $('lv-cash-xreport-orders');
+        const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+        const setHTML = (id, val) => { const el = $(id); if (el) el.innerHTML = val; };
+        setText('lv-cash-xreport-operator', session.opened_label || 'InfoPoint');
+        setText('lv-cash-xreport-since-rel', xrSinceLabel(session.opened_at));
+        setText('lv-cash-xreport-opened-at', xrFmtDateTime(session.opened_at));
+        setHTML('lv-cash-xreport-cash', `${fmtMoney(live.cash)} <span class="text-xs">RON</span>`);
+        setHTML('lv-cash-xreport-card', `${fmtMoney(live.card)} <span class="text-xs">RON</span>`);
+        setHTML('lv-cash-xreport-total', `${fmtMoney(live.total)} <span class="text-xs">RON</span>`);
+        setText('lv-cash-xreport-orders', String(live.orders || 0));
         const updatedEl = $('lv-cash-xreport-updated');
-        if (cashEl) cashEl.innerHTML = `${fmtMoney(live.cash)} <span class="text-xs text-indigo-600">RON</span>`;
-        if (cardEl) cardEl.innerHTML = `${fmtMoney(live.card)} <span class="text-xs text-indigo-600">RON</span>`;
-        if (totalEl) totalEl.innerHTML = `${fmtMoney(live.total)} <span class="text-xs text-indigo-700">RON</span>`;
-        if (ordersEl) ordersEl.textContent = `${live.orders || 0} comenz${(live.orders || 0) === 1 ? 'i' : 'i'}`;
         if (updatedEl) {
             const now = new Date();
             updatedEl.textContent = `actualizat ${now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
