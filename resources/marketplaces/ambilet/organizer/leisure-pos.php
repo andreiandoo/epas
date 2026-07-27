@@ -37,6 +37,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     🔒 Închidere casă
                     <span id="lv-cash-open-since" class="ml-1 opacity-80 text-[10px]"></span>
                 </button>
+                <!-- Raport X: mid-shift snapshot, vizibil doar cand casa e deschisa. Toggle panou dedesubt. -->
+                <button id="lv-cash-xreport" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" aria-expanded="false" aria-controls="lv-cash-xreport-panel">
+                    📊 Raport X
+                </button>
             <!-- Panou imprimantă termică (WebUSB) — collapsible -->
             <details id="lv-printer-panel" class="bg-white border border-border rounded-xl text-sm min-w-[320px]">
                 <summary class="px-4 py-2.5 cursor-pointer font-semibold text-secondary flex items-center gap-2">
@@ -74,6 +78,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
+
+        <!-- Raport X: bani in casa (cash + card) de la deschiderea sesiunii curente. POS-only. -->
+        <div id="lv-cash-xreport-panel" class="hidden mb-4 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl print:hidden" role="region" aria-labelledby="lv-cash-xreport-title">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 bg-indigo-200 rounded-full flex items-center justify-center flex-shrink-0 text-lg">📊</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div>
+                            <p id="lv-cash-xreport-title" class="font-bold text-base text-indigo-900">Raport X — bani în casă acum</p>
+                            <p class="text-xs text-indigo-800 mt-0.5">Încasări POS de la deschiderea sesiunii <span id="lv-cash-xreport-since" class="font-semibold"></span>. Nu include vânzări online.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="lv-cash-xreport-updated" class="text-[10px] text-indigo-700"></span>
+                            <button id="lv-cash-xreport-refresh" type="button" class="px-2 py-1 text-[11px] font-semibold bg-white border border-indigo-300 text-indigo-800 rounded hover:bg-indigo-100">🔄 Refresh</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mt-3">
+                        <div class="p-3 bg-white border border-indigo-200 rounded-lg">
+                            <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">💵 Cash</p>
+                            <p id="lv-cash-xreport-cash" class="text-xl font-extrabold text-indigo-900 tabular-nums mt-1">— <span class="text-xs text-indigo-600">RON</span></p>
+                        </div>
+                        <div class="p-3 bg-white border border-indigo-200 rounded-lg">
+                            <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">💳 Card</p>
+                            <p id="lv-cash-xreport-card" class="text-xl font-extrabold text-indigo-900 tabular-nums mt-1">— <span class="text-xs text-indigo-600">RON</span></p>
+                        </div>
+                        <div class="p-3 bg-indigo-100 border border-indigo-300 rounded-lg">
+                            <p class="text-[10px] uppercase tracking-wider text-indigo-800 font-bold">Total POS</p>
+                            <p id="lv-cash-xreport-total" class="text-xl font-extrabold text-indigo-900 tabular-nums mt-1">— <span class="text-xs text-indigo-700">RON</span></p>
+                            <p id="lv-cash-xreport-orders" class="text-[10px] text-indigo-700 mt-0.5">— comenzi</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Banner: Casa este INCHISA (blocheaza vizibil orice vanzare) -->
         <div id="lv-cash-locked-banner" class="hidden mb-4 p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-sm text-rose-900 print:hidden">
@@ -807,6 +845,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function renderCashierButtons() {
         const openBtn = $('lv-cash-open');
         const closeBtn = $('lv-cash-close');
+        const xreportBtn = $('lv-cash-xreport');
+        const xreportPanel = $('lv-cash-xreport-panel');
         const banner = $('lv-cash-locked-banner');
         const overlay = $('lv-cash-locked-overlay');
         const cartPanel = $('lv-cart-panel');
@@ -822,14 +862,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const since = $('lv-cash-open-since');
                 if (since) since.textContent = `· deschisă de la ${fmtTime(cashierSession.opened_at)}`;
             }
+            if (xreportBtn) xreportBtn.hidden = false;
             if (banner) banner.classList.add('hidden');
             if (overlay) overlay.classList.add('hidden');
             // Casa deschisa: cart vizibil, timeline ascuns
             if (cartPanel) { cartPanel.classList.remove('hidden'); cartPanel.style.display = ''; }
             if (timelinePanel) { timelinePanel.classList.add('hidden'); timelinePanel.classList.remove('flex'); }
+            // Daca X-report e vizibil, populeaza-l cu datele proaspete din session.live
+            if (xreportPanel && !xreportPanel.classList.contains('hidden')) {
+                paintXReport(cashierSession);
+            }
         } else {
             if (openBtn) openBtn.hidden = false;
             if (closeBtn) closeBtn.hidden = true;
+            if (xreportBtn) {
+                xreportBtn.hidden = true;
+                xreportBtn.setAttribute('aria-expanded', 'false');
+            }
+            // Casa inchisa: ascunde panoul X-report + opreste polling-ul
+            if (xreportPanel) xreportPanel.classList.add('hidden');
+            stopXReportPolling();
             if (banner) banner.classList.remove('hidden');
             if (overlay) overlay.classList.remove('hidden');
             // Casa inchisa: cart ascuns, timeline vizibil + populate
@@ -840,6 +892,71 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Blocheaza checkout cand casa e inchisa (chiar daca cart are produse).
         if (checkoutBtn) checkoutBtn.disabled = !isOpen || Object.keys(cart).length === 0;
         if (checkoutTestBtn) checkoutTestBtn.disabled = !isOpen;
+    }
+
+    // ============ Raport X — mid-shift live drawer snapshot ============
+    // Toggle panou + polling la 10s cand e vizibil. Reutilizeaza `/cashier/current`
+    // care returneaza deja `session.live` = { cash, card, total, orders } POS-only.
+    let xReportPollTimer = null;
+
+    function paintXReport(session) {
+        if (!session) return;
+        const live = session.live || { cash: 0, card: 0, total: 0, orders: 0 };
+        const since = $('lv-cash-xreport-since');
+        if (since) since.textContent = fmtTime(session.opened_at);
+        const cashEl = $('lv-cash-xreport-cash');
+        const cardEl = $('lv-cash-xreport-card');
+        const totalEl = $('lv-cash-xreport-total');
+        const ordersEl = $('lv-cash-xreport-orders');
+        const updatedEl = $('lv-cash-xreport-updated');
+        if (cashEl) cashEl.innerHTML = `${fmtMoney(live.cash)} <span class="text-xs text-indigo-600">RON</span>`;
+        if (cardEl) cardEl.innerHTML = `${fmtMoney(live.card)} <span class="text-xs text-indigo-600">RON</span>`;
+        if (totalEl) totalEl.innerHTML = `${fmtMoney(live.total)} <span class="text-xs text-indigo-700">RON</span>`;
+        if (ordersEl) ordersEl.textContent = `${live.orders || 0} comenz${(live.orders || 0) === 1 ? 'i' : 'i'}`;
+        if (updatedEl) {
+            const now = new Date();
+            updatedEl.textContent = `actualizat ${now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        }
+    }
+
+    async function refreshXReport() {
+        if (!currentEventId || !cashierSession) return;
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/cashier/current`);
+            const s = res.data?.session || null;
+            if (s) {
+                cashierSession = s;
+                paintXReport(s);
+            }
+        } catch (e) { /* fail silent - panoul pastreaza cifrele precedente */ }
+    }
+
+    function startXReportPolling() {
+        stopXReportPolling();
+        // Refresh imediat + apoi la 10s cat e panoul deschis
+        refreshXReport();
+        xReportPollTimer = setInterval(refreshXReport, 10000);
+    }
+
+    function stopXReportPolling() {
+        if (xReportPollTimer) { clearInterval(xReportPollTimer); xReportPollTimer = null; }
+    }
+
+    function toggleXReport() {
+        const panel = $('lv-cash-xreport-panel');
+        const btn = $('lv-cash-xreport');
+        if (!panel || !cashierSession) return;
+        const willShow = panel.classList.contains('hidden');
+        if (willShow) {
+            panel.classList.remove('hidden');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+            paintXReport(cashierSession); // pictor initial cu ce avem cache-uit
+            startXReportPolling();
+        } else {
+            panel.classList.add('hidden');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+            stopXReportPolling();
+        }
     }
 
     async function loadCashTimeline() {
@@ -1572,6 +1689,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-cash-modal-cancel')?.addEventListener('click', hideCloseCashierModal);
         $('lv-cash-modal-confirm')?.addEventListener('click', confirmCloseCashier);
         $('lv-cash-timeline-refresh')?.addEventListener('click', loadCashTimeline);
+        // Raport X — toggle + refresh manual
+        $('lv-cash-xreport')?.addEventListener('click', toggleXReport);
+        $('lv-cash-xreport-refresh')?.addEventListener('click', refreshXReport);
         // Export CSV al vanzarilor din ziua curenta. Folosim AmbiletAPI.request cu
         // rawResponse=true (proxy-ul returneaza CSV binar direct + Content-Type text/csv).
         // Trebuie sa mearga prin AmbiletAPI ca sa includem Authorization header;
