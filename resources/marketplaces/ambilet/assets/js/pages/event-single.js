@@ -148,8 +148,14 @@ const EventPage = {
 
         await this.loadEvent();
         this.updateHeaderCart();
-        this.trackView();
-        this.loadInterestStatus();
+        // Skip analytics / interest calls in preview mode. They're meaningless for
+        // an admin preview and — since preview bypasses the proxy cache — every
+        // extra call hits the shared-IP backend rate limit (60/min) and can 429
+        // the whole page, including the critical event load.
+        if (!this.isPreview) {
+            this.trackView();
+            this.loadInterestStatus();
+        }
         this.setupClickOutside();
         this.setupBfcacheSync();
     },
@@ -848,6 +854,9 @@ const EventPage = {
     },
 
     async loadErrorRecommendations() {
+        // Don't spend backend rate-limit budget on "recommended events" while
+        // previewing — it's the featured list, irrelevant to an admin preview.
+        if (this.isPreview) return;
         try {
             const response = await AmbiletAPI.getFeaturedEvents(8);
             const events = response?.data?.events || response?.data || [];
