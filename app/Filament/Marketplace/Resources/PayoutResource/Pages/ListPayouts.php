@@ -46,6 +46,26 @@ class ListPayouts extends ListRecords
             ->label('Crează Decont Manual')
             ->icon('heroicon-o-plus-circle')
             ->color('primary')
+            // Option A (2026-07-28): the "Generează decont" button in the
+            // Evenimente încheiate modal now mounts THIS action with an
+            // event_id argument instead of running a second, refund-blind
+            // pipeline (generateEventDecont). fillForm pre-populates the whole
+            // form from the same buildRemainingTicketsItems the manual select
+            // uses, so there is a SINGLE canonical pipeline and the operator
+            // still reviews qty + selects refunds before saving. Called with
+            // no arguments (direct header-button click) it returns [] and the
+            // form starts empty as before.
+            ->fillForm(function (array $arguments): array {
+                $eventId = (int) ($arguments['event_id'] ?? 0);
+                if ($eventId <= 0) {
+                    return [];
+                }
+                $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                if (!$event || !$event->marketplace_organizer_id) {
+                    return [];
+                }
+                return $this->buildCreatePayoutInitialState($event);
+            })
             ->form([
                 Forms\Components\Select::make('marketplace_organizer_id')
                     ->label('Organizator')
@@ -1229,7 +1249,9 @@ class ListPayouts extends ListRecords
             return;
         }
 
-        // Check if payout already exists
+        // Guard: don't open the create modal if an active payout already
+        // exists (the finished-events list already hides the button in this
+        // case, but keep the defence in depth).
         $existing = MarketplacePayout::where('event_id', $event->id)
             ->where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
@@ -1244,122 +1266,14 @@ class ListPayouts extends ListRecords
             return;
         }
 
-        // Build ticket breakdown using the same logic as the manual flow.
-        $event->loadMissing('ticketTypes');
-        $items = $this->buildTicketBreakdownForEvent($event);
-
-        // Count refunds for the admin_notes annotation below. The
-        // operator can now create a 0-net decont even with no items
-        // and no refunds (per user request 2026-06-29) — useful for
-        // documenting events with no sales.
-        $refundCount = \DB::table('marketplace_refund_requests as rr')
-            ->join('orders as o', 'rr.order_id', '=', 'o.id')
-            ->where(function ($q) use ($event) {
-                $q->where('o.event_id', $event->id)
-                    ->orWhere('o.marketplace_event_id', $event->id);
-            })
-            ->whereIn('rr.status', ['refunded', 'partially_refunded'])
-            ->count();
-
-        // Delegate to the same canonical pipeline the manual create modal
-        // uses (PayoutResource\Pages\ListPayouts second action ~line 824).
-        // buildBreakdownFromSelection enriches each row with discount /
-        // net / tiers and threads totals through every pass — without this
-        // delegation, payouts created via the "Evenimente încheiate" modal
-        // saved a minimal breakdown (qty + unit_price + commission only),
-        // and the PDF renderer fell back to gross × qty for 1a/1c.
-        // Payout 3069 was the surfaced case.
-        if (!empty($items)) {
-            $built = MarketplacePayout::buildBreakdownFromSelection($items, $event, null);
-            $ticketBreakdown = $built['rows'];
-            $grossAmount = $built['totals']['gross'];
-            $commissionAmount = $built['totals']['commission'];
-            $discountAmount = (float) ($built['totals']['discount'] ?? 0);
-            $netAmount = $built['totals']['net']; // already nets gross − commission − discount
-            $commissionMode = $built['commission_mode'];
-        } else {
-            // Refund-only flow — no tickets in this slice, just a 0-net
-            // record so the refund history has somewhere to land.
-            $ticketBreakdown = [];
-            $grossAmount = 0;
-            $commissionAmount = 0;
-            $discountAmount = 0;
-            $netAmount = 0;
-            $commissionMode = $event->getEffectiveCommissionMode() ?? 'included';
-        }
-
-        // 0-net deconts are allowed (per user request 2026-06-29). Useful
-        // when an event needs a formal "no payout" record — e.g. event
-        // cancelled before sales, or entirely refunded. The downstream
-        // payout creation below handles amount=0 cleanly.
-
-        // Get bank account
-        $bankAccount = $organizer->bankAccounts()->where('is_primary', true)->first()
-            ?? $organizer->bankAccounts()->first();
-
-        $payoutMethod = $bankAccount ? [
-            'type' => 'bank_transfer',
-            'bank_account_id' => $bankAccount->id,
-            'bank_name' => $bankAccount->bank_name,
-            'iban' => $bankAccount->iban,
-            'account_holder' => $bankAccount->account_holder,
-        ] : ($organizer->payout_details ?? []);
-
-        // Period
-        $lastPayout = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-            ->where('event_id', $event->id)
-            ->where('status', 'completed')
-            ->orderByDesc('period_end')
-            ->first();
-
-        $periodStart = $lastPayout
-            ? $lastPayout->period_end->addDay()->toDateString()
-            : $event->created_at->toDateString();
-
-        $payout = MarketplacePayout::create([
-            'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
-            'marketplace_organizer_id' => $organizer->id,
-            'event_id' => $event->id,
-            'amount' => round($netAmount, 2),
-            'currency' => 'RON',
-            'period_start' => $periodStart,
-            'period_end' => now()->toDateString(),
-            'gross_amount' => round($grossAmount, 2),
-            'commission_amount' => round($commissionAmount, 2),
-            'discount_amount' => round($discountAmount, 2),
-            'fees_amount' => 0,
-            'adjustments_amount' => 0,
-            // Triggered by an admin clicking "Generează decont" in the
-            // Evenimente încheiate modal — treat it as admin-approved on
-            // creation so it doesn't sit in pending waiting for a second
-            // click. Source is 'manual' (not 'automated') because a human
-            // clicks the button — there is no cron creating payouts here;
-            // the auto-decont schedule is disabled in routes/console.php.
-            'status' => 'approved',
-            'source' => 'manual',
-            'approved_by' => $marketplaceAdmin->id,
-            'approved_at' => now(),
-            'payout_method' => $payoutMethod,
-            // Annotate 0-net deconts so anyone looking at the record
-            // later understands why it exists (no sales vs all-refunded
-            // vs normal payout).
-            'admin_notes' => match (true) {
-                empty($items) && $refundCount > 0 => "Decont generat din lista evenimente încheiate. Eveniment cu {$refundCount} bilet(e) rambursat(e) integral; net 0.",
-                empty($items) && $refundCount === 0 => 'Decont generat din lista evenimente încheiate. Eveniment fără vânzări; net 0 (documentare).',
-                default => 'Decont generat din lista evenimente încheiate.',
-            },
-            'ticket_breakdown' => $ticketBreakdown,
-            'commission_mode' => $commissionMode,
-            'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',
-        ]);
-
-        \Filament\Notifications\Notification::make()
-            ->title('Decont generat')
-            ->body("Decontul {$payout->reference} (" . number_format($netAmount, 2) . " RON) a fost creat.")
-            ->success()
-            ->send();
-
-        $this->redirect(PayoutResource::getUrl('index'));
+        // Option A (2026-07-28): instead of creating the payout directly here
+        // (a SECOND pipeline that ignored refunds and gave the operator no
+        // chance to review qty — the source of the "complet diferite" reports),
+        // open the canonical "Crează Decont Manual" modal pre-filled for this
+        // event. Now there is a SINGLE pipeline: the operator reviews the
+        // ticket breakdown, selects refunds, then saves. fillForm() reads the
+        // event_id argument and calls buildCreatePayoutInitialState().
+        $this->mountAction('create_payout', ['event_id' => $event->id]);
     }
 
     /**
@@ -1384,6 +1298,94 @@ class ListPayouts extends ListRecords
         // reflect promo-code reductions on initial event pick.
         $discountTotal = MarketplacePayout::sumDiscountFromItems($items);
         $set('discount_amount', number_format($discountTotal, 2, '.', ''));
+    }
+
+    /**
+     * Build the FULL initial form state for the "Crează Decont Manual" modal
+     * when it is opened pre-filled for a specific event (Option A — the
+     * "Generează decont" button in the Evenimente încheiate modal mounts
+     * create_payout with an event_id argument).
+     *
+     * Faithfully reproduces the end-state the event_id Select's
+     * afterStateUpdated callback produces on a manual pick — organizer, primary
+     * bank account, ticket repeater (from buildRemainingTicketsItems, the same
+     * source the manual flow uses) and the preview gross/commission/net — so
+     * both entry points land the operator on IDENTICAL form state. The final
+     * saved amounts still come from buildBreakdownFromSelection at submit, so
+     * there is exactly one calculation pipeline.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildCreatePayoutInitialState(Event $event): array
+    {
+        $fin = self::calculateEventFinancials($event);
+        $eventDiscount = (float) ($fin['discount'] ?? 0);
+        $eventExtras = (float) ($fin['extras'] ?? 0);
+
+        $primary = MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $event->marketplace_organizer_id)
+            ->where('is_primary', true)->first()
+            ?? MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $event->marketplace_organizer_id)->first();
+
+        $state = [
+            'marketplace_organizer_id' => $event->marketplace_organizer_id,
+            'bank_account_id' => $primary?->id,
+            'event_id' => $event->id,
+            'has_balance' => true,
+        ];
+
+        // Zero / fully-paid balance: keep the form reachable for a formal
+        // 0-net decont, mirroring the afterStateUpdated branch.
+        if (($fin['balance'] ?? 0) <= 0) {
+            $state['zero_reason'] = ($fin['gross'] ?? 0) > 0 ? 'fully_paid' : 'no_sales';
+            $state['payout_tickets'] = [];
+            $state['gross_amount'] = '0.00';
+            $state['commission_amount'] = '0.00';
+            $state['discount_amount'] = '0.00';
+            $state['fees_amount'] = '0.00';
+            $state['net_amount'] = '0.00';
+            $state['desired_net_amount'] = null;
+            return $state;
+        }
+
+        $state['zero_reason'] = null;
+
+        // Same items the manual populate + auto path both use.
+        $items = MarketplacePayout::buildRemainingTicketsItems($event, null, null);
+        foreach ($items as &$item) {
+            $item['available'] = $item['qty'];
+        }
+        unset($item);
+        $state['payout_tickets'] = $items;
+
+        // discount_amount mirrors populatePayoutTicketsFromEvent (item-sum).
+        $discountTotal = MarketplacePayout::sumDiscountFromItems($items);
+        $state['discount_amount'] = number_format($discountTotal, 2, '.', '');
+        $state['fees_amount'] = number_format($eventExtras, 2, '.', '');
+
+        $hasTickets = collect($items)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
+        if ($hasTickets) {
+            $ticketGross = 0;
+            $ticketComm = 0;
+            foreach ($items as $t) {
+                $qty = (int) ($t['qty'] ?? 0);
+                $ticketGross += $qty * ((float) ($t['unit_price'] ?? 0) + (float) ($t['commission_per_ticket'] ?? 0));
+                $ticketComm += $qty * (float) ($t['commission_per_ticket'] ?? 0);
+            }
+            $state['gross_amount'] = number_format($ticketGross, 2, '.', '');
+            $state['commission_amount'] = number_format($ticketComm, 2, '.', '');
+            // Net preview uses the event-level discount, exactly as the
+            // afterStateUpdated hasTickets branch does (line ~157).
+            $state['net_amount'] = number_format(max(0, $ticketGross - $ticketComm - $eventDiscount - $eventExtras), 2, '.', '');
+        } else {
+            // Remainder-only payout — balance already nets discount/extras/refunds.
+            $state['gross_amount'] = number_format($fin['balance'], 2, '.', '');
+            $state['commission_amount'] = '0.00';
+            $state['discount_amount'] = '0.00';
+            $state['fees_amount'] = '0.00';
+            $state['net_amount'] = number_format($fin['balance'], 2, '.', '');
+        }
+
+        return $state;
     }
 
     /**
