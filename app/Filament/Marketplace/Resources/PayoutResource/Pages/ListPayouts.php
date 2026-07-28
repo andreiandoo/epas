@@ -1101,17 +1101,29 @@ class ListPayouts extends ListRecords
         // OR fallback included drafts with NULL event_date that were >3
         // months old, which (combined with PG's NULLS-FIRST default for
         // DESC) pushed ancient stale rows to the top of "Ultimele 10".
+        // "Finished" = the event's EFFECTIVE END is in the past, across every
+        // duration_mode (same logic as Event::scopePast). The old filter used
+        // event_date only, which (a) dropped festival/range events entirely
+        // (their end is range_end_date; event_date is the START or NULL) and
+        // (b) ordered the rest by their START, so a festival that ended
+        // yesterday but started 3 days ago sank below older single-day events —
+        // the ~1-day lag. Ordering by this same effective-end fixes both.
+        $endExpr = "(CASE WHEN events.duration_mode = 'range' THEN events.range_end_date "
+            . "WHEN events.duration_mode = 'single_day' THEN events.event_date "
+            . "ELSE COALESCE(events.event_date, events.range_end_date) END)";
+        $today = now()->toDateString();
+
         $query = Event::where('marketplace_client_id', $marketplaceClientId)
             ->whereNotNull('marketplace_organizer_id')
-            ->whereNotNull('event_date')
-            ->where('event_date', '<', now())
-            ->orderByDesc('event_date');
+            ->whereRaw("$endExpr IS NOT NULL")
+            ->whereRaw("$endExpr < ?", [$today])
+            ->orderByRaw("$endExpr DESC");
 
         if ($dateFrom) {
-            $query->where('event_date', '>=', $dateFrom);
+            $query->whereRaw("$endExpr >= ?", [$dateFrom]);
         }
         if ($dateTo) {
-            $query->where('event_date', '<=', $dateTo . ' 23:59:59');
+            $query->whereRaw("$endExpr <= ?", [$dateTo]);
         }
 
         if ($limit) {
@@ -1151,6 +1163,9 @@ class ListPayouts extends ListRecords
             $organizer = $event->marketplaceOrganizer;
             $organizerName = $organizer?->name ?? '-';
             $eventDate = $event->event_date?->format('d.m.Y') ?? '-';
+            // Human date/period label (range festivals get "24–26 iul 2026",
+            // single days get the day). Shown under the event name in the modal.
+            $eventPeriod = $event->displayDateLabel() ?: $eventDate;
 
             $existingPayout = MarketplacePayout::where('event_id', $event->id)
                 ->where('marketplace_client_id', $marketplaceClientId)
@@ -1166,6 +1181,7 @@ class ListPayouts extends ListRecords
                 'title' => $title,
                 'organizer_name' => $organizerName,
                 'event_date' => $eventDate,
+                'event_period' => $eventPeriod,
                 'balance' => $balance,
                 'existing_payout' => $existingPayout,
                 'refund_count' => (int) ($refundInfo?->refund_count ?? 0),

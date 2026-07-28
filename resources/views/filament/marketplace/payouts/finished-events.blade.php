@@ -10,8 +10,7 @@
                     <tr class="border-b border-gray-200 dark:border-white/10 text-left">
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Eveniment</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Organizator</th>
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Data</th>
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Sold disponibil</th>
+                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Sold</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Retururi</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Acțiuni</th>
                     </tr>
@@ -21,9 +20,9 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
                             <td class="px-3 py-2">
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $row['title'] }}</div>
+                                <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $row['event_period'] }}</div>
                             </td>
                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $row['organizer_name'] }}</td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $row['event_date'] }}</td>
                             <td class="px-3 py-2 text-right font-mono">
                                 @if($row['balance'] > 0)
                                     <span class="text-emerald-600 dark:text-emerald-400 font-medium">{{ number_format($row['balance'], 2) }} RON</span>
