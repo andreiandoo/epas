@@ -337,7 +337,215 @@
     });
   }
 
-  var HYDRATORS = { 'seat-map': hydrateSeatMap };
+  /* ---- vanilla: leisure booking widget --------------------------------
+     The leisure counterpart of the seat map. Contract with the proxy:
+       GET availability?ticket_type=&month=YYYY-MM
+           → { data: { dates: { 'YYYY-MM-DD': {status, remaining,
+                                min_price_cents, slot_count} } } }
+       GET slots?ticket_type=&date=YYYY-MM-DD
+           → { data: { slots: [{id, time_slot_start, time_slot_end,
+                                status, remaining, price_cents}] } }
+     Nothing is held while browsing: a leisure place is taken at checkout, under
+     a row lock, using the capacity_id carried on the cart line. That is why the
+     cart line must keep capacity_id / visit_date / slot_time / duration_minutes.
+     Day statuses: available | limited | sold_out | closed | unavailable. */
+  function hydrateBooking(el) {
+    var types = [];
+    try { types = JSON.parse(el.getAttribute('data-bookables') || '[]'); } catch (e) {}
+    if (!types.length) return;
+
+    var typeSel  = el.querySelector('[data-booking-type]');
+    var monthEl  = el.querySelector('[data-booking-month]');
+    var daysEl   = el.querySelector('[data-booking-days]');
+    var slotsWrap= el.querySelector('[data-booking-slots-wrap]');
+    var slotsEl  = el.querySelector('[data-booking-slots]');
+    var varsWrap = el.querySelector('[data-booking-variants-wrap]');
+    var varsEl   = el.querySelector('[data-booking-variants]');
+    var qtyEl    = el.querySelector('[data-booking-qty]');
+    var totalEl  = el.querySelector('[data-booking-total]');
+    var errEl    = el.querySelector('[data-booking-error]');
+    var addBtn   = el.querySelector('[data-booking-add]');
+
+    var MONTHS = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie',
+                  'Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+    var now = new Date();
+    var state = {
+      type: types[0], month: now.getMonth(), year: now.getFullYear(),
+      dates: {}, date: null, slot: null, variant: null, qty: 1
+    };
+
+    function typeById(id) {
+      for (var i = 0; i < types.length; i++) if (String(types[i].id) === String(id)) return types[i];
+      return types[0];
+    }
+    function ymd(y, m, d) {
+      return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    }
+    function fail(msg) { if (!errEl) return; errEl.textContent = msg || ''; errEl.hidden = !msg; }
+
+    function loadMonth() {
+      fail('');
+      var key = state.year + '-' + String(state.month + 1).padStart(2, '0');
+      if (monthEl) monthEl.textContent = MONTHS[state.month] + ' ' + state.year;
+      daysEl.innerHTML = '<p class="kit-muted">…</p>';
+      proxy('availability', { ticket_type: state.type.id, month: key }).then(function (r) {
+        state.dates = (r && r.data && r.data.dates) || {};
+        renderDays();
+      }).catch(function () {
+        state.dates = {}; renderDays();
+        fail('Nu am putut încărca disponibilitatea.');
+      });
+    }
+
+    function renderDays() {
+      daysEl.innerHTML = '';
+      var first = new Date(state.year, state.month, 1);
+      var last  = new Date(state.year, state.month + 1, 0);
+      var pad   = (first.getDay() + 6) % 7;               // week starts Monday
+      for (var p = 0; p < pad; p++) daysEl.appendChild(document.createElement('span'));
+      for (var d = 1; d <= last.getDate(); d++) {
+        var ds  = ymd(state.year, state.month, d);
+        var inf = state.dates[ds];
+        var st  = inf ? inf.status : 'unavailable';
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'kit-booking__day';
+        b.setAttribute('data-status', st);
+        b.textContent = d;
+        if (inf && inf.min_price_cents != null) {
+          var tag = document.createElement('small');
+          tag.textContent = Math.round(inf.min_price_cents / 100);
+          b.appendChild(tag);
+        }
+        if (st === 'available' || st === 'limited') {
+          (function (ds2, btn) {
+            btn.addEventListener('click', function () { pickDate(ds2, btn); });
+          })(ds, b);
+        } else { b.disabled = true; }
+        daysEl.appendChild(b);
+      }
+    }
+
+    function pickDate(ds, btn) {
+      state.date = ds; state.slot = null;
+      el.querySelectorAll('.kit-booking__day.is-selected')
+        .forEach(function (x) { x.classList.remove('is-selected'); });
+      btn.classList.add('is-selected');
+      slotsEl.innerHTML = '<p class="kit-muted">…</p>';
+      slotsWrap.hidden = false;
+      proxy('slots', { ticket_type: state.type.id, date: ds }).then(function (r) {
+        renderSlots((r && r.data && r.data.slots) || []);
+      }).catch(function () { renderSlots([]); });
+      renderVariants();
+      render();
+    }
+
+    function renderSlots(list) {
+      slotsEl.innerHTML = '';
+      // A venue without time slots still returns one capacity row for the day;
+      // treat it as a single implicit "whole day" option.
+      if (!list.length) { slotsWrap.hidden = true; state.slot = null; render(); return; }
+      slotsWrap.hidden = false;
+      list.forEach(function (s) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'kit-booking__chip';
+        b.textContent = s.time_slot_start
+          ? (s.time_slot_start + (s.time_slot_end ? '–' + s.time_slot_end : ''))
+          : 'Toată ziua';
+        if (s.status !== 'available' && s.status !== 'limited') { b.disabled = true; }
+        b.addEventListener('click', function () {
+          state.slot = s;
+          el.querySelectorAll('[data-booking-slots] .is-selected')
+            .forEach(function (x) { x.classList.remove('is-selected'); });
+          b.classList.add('is-selected');
+          render();
+        });
+        slotsEl.appendChild(b);
+      });
+      if (list.length === 1 && !list[0].time_slot_start) {
+        state.slot = list[0];
+        slotsEl.firstChild.classList.add('is-selected');
+      }
+      render();
+    }
+
+    function renderVariants() {
+      var vs = state.type.variants || [];
+      varsEl.innerHTML = ''; state.variant = null;
+      if (!vs.length) { varsWrap.hidden = true; return; }
+      varsWrap.hidden = false;
+      vs.forEach(function (v, i) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'kit-booking__chip';
+        b.textContent = v.label + ' · ' + fmt(v.price);
+        b.addEventListener('click', function () {
+          state.variant = v;
+          el.querySelectorAll('[data-booking-variants] .is-selected')
+            .forEach(function (x) { x.classList.remove('is-selected'); });
+          b.classList.add('is-selected');
+          render();
+        });
+        varsEl.appendChild(b);
+        if (i === 0) { state.variant = v; b.classList.add('is-selected'); }
+      });
+    }
+
+    function unitPrice() {
+      if (state.variant && state.variant.price != null) return Number(state.variant.price);
+      if (state.slot && state.slot.price_cents != null) return state.slot.price_cents / 100;
+      return Number(state.type.price || 0);
+    }
+    function render() {
+      if (qtyEl) qtyEl.textContent = state.qty;
+      var ok = !!state.date && (slotsWrap.hidden || !!state.slot);
+      if (totalEl) totalEl.textContent = ok ? fmt(unitPrice() * state.qty) : '—';
+      if (addBtn) addBtn.disabled = !ok;
+    }
+
+    if (typeSel) typeSel.addEventListener('change', function () {
+      state.type = typeById(typeSel.value);
+      state.date = null; state.slot = null;
+      slotsWrap.hidden = true; renderVariants(); loadMonth(); render();
+    });
+    el.querySelector('[data-booking-prev]').addEventListener('click', function () {
+      if (state.month === 0) { state.month = 11; state.year--; } else state.month--;
+      loadMonth();
+    });
+    el.querySelector('[data-booking-next]').addEventListener('click', function () {
+      if (state.month === 11) { state.month = 0; state.year++; } else state.month++;
+      loadMonth();
+    });
+    el.querySelector('[data-booking-minus]').addEventListener('click', function () {
+      state.qty = Math.max(1, state.qty - 1); render();
+    });
+    el.querySelector('[data-booking-plus]').addEventListener('click', function () {
+      state.qty = state.qty + 1; render();
+    });
+
+    if (addBtn) addBtn.addEventListener('click', function () {
+      if (addBtn.disabled) return;
+      Cart.add({
+        event_id: state.type.event_id,
+        ticket_type_id: state.type.id,
+        capacity_id: state.slot ? state.slot.id : null,
+        visit_date: state.date,
+        slot_time: state.slot ? state.slot.time_slot_start : null,
+        duration_minutes: state.variant ? state.variant.minutes : null,
+        title: state.type.title,
+        ticket: state.type.name + (state.variant ? ' · ' + state.variant.label : ''),
+        url: location.pathname,
+        price: unitPrice(),
+        qty: state.qty,
+        currency: state.type.currency || CURRENCY
+      });
+      window.location.href = CFG.cartUrl || '/cos';
+    });
+
+    renderVariants();
+    loadMonth();
+    render();
+  }
+
+  var HYDRATORS = { 'seat-map': hydrateSeatMap, 'booking': hydrateBooking };
 
   /* ---- graceful image fallback (no network) ----------------------------
      If a poster/hero fails to load, swap it for an inline SVG tile using the

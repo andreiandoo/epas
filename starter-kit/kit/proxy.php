@@ -69,6 +69,12 @@ $ACTIONS = $isTenant ? [
     'release'        => ['DELETE','/public/seats/hold',             0, ['session' => true, 'req' => 'kit_req_seats']],
     'seats-confirm'  => ['POST',  '/public/seats/confirm',          0, ['session' => true, 'req' => 'kit_req_seats']],
 
+    // ---- leisure (kind `leisure`; 404 upstream for any other tenant) ----
+    'bookables'      => ['GET',  '/tenant-client/leisure/bookables',     60],
+    'availability'   => ['GET',  '/tenant-client/leisure/availability',  60],
+    'slots'          => ['GET',  '/tenant-client/leisure/slots',         30],
+    'rentals'        => ['GET',  '/tenant-client/leisure/rentals',      120],
+
     // ---- checkout (never cache) ----
     // NOTE: /tenant-client/checkout/submit is still a stub upstream (it creates
     // no Order). demo-checkout is the only tenant endpoint that really writes an
@@ -155,6 +161,10 @@ $UNSUPPORTED = $isTenant ? [
     'subscriptions'   => 'subscriptions are a tenant-only feature',
     'acc-subscriptions' => 'subscriptions are a tenant-only feature',
     'page'            => 'marketplace-client has no CMS pages endpoint',
+    'bookables'       => 'leisure booking is a tenant-only feature',
+    'availability'    => 'leisure booking is a tenant-only feature',
+    'slots'           => 'leisure booking is a tenant-only feature',
+    'rentals'         => 'leisure booking is a tenant-only feature',
 ];
 
 // Forward the browser's Authorization header (Bearer token) for account calls.
@@ -364,7 +374,16 @@ function kit_req_checkout_tenant(array $b, array $p, bool $t): array {
             $seats[] = ['seat_uid' => $s['seat_uid'] ?? '', 'price' => (float)($s['price'] ?? 0), 'label' => $s['label'] ?? ''];
         }
         if (empty($l['seats']) && !empty($l['ticket_type_id'])) {
-            $lines[] = ['ticket_type_id' => (int)$l['ticket_type_id'], 'quantity' => max(1, (int)($l['qty'] ?? 1))];
+            // Leisure lines carry the day/slot they were booked for; demo-checkout
+            // prices them through LeisurePricingResolver and holds the capacity.
+            $lines[] = array_filter([
+                'ticket_type_id'   => (int)$l['ticket_type_id'],
+                'quantity'         => max(1, (int)($l['qty'] ?? 1)),
+                'capacity_id'      => isset($l['capacity_id']) ? (int)$l['capacity_id'] : null,
+                'visit_date'       => $l['visit_date'] ?? null,
+                'slot_time'        => $l['slot_time'] ?? null,
+                'duration_minutes' => isset($l['duration_minutes']) ? (int)$l['duration_minutes'] : null,
+            ], fn ($v) => $v !== null);
         }
     }
 

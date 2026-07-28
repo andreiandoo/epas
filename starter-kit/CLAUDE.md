@@ -17,7 +17,7 @@ Merged at boot: `defaults ← kind ← site` (deep-merge for `terms`/`features`)
   + fixtures), `data` (kit_events/kit_event/kit_artists/kit_venues → canonical),
   `viewmodel` (canonical shapes + adapters map here), `view` (component/layout/
   seo/head-scripts), `adapters/{tenant,marketplace}`.
-- `kit/components/` — 27 pure partials (data in → HTML out). Catalog: `docs/COMPONENTS.md`.
+- `kit/components/` — 31 pure partials (data in → HTML out). Catalog: `docs/COMPONENTS.md`.
 - `kit/pagesets/` — generic, kind-aware full pages the generator instantiates.
 - `kit/layouts/` — `public`, `account` (auth-gated).
 - `kit/kinds/` — one manifest per tenant kind (terms, features, menu, pages).

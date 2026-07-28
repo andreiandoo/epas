@@ -141,4 +141,20 @@ return [
     'error.503.title'     => 'Karbantartás',
     'error.503.msg'       => 'Az oldal átmenetileg karbantartás alatt áll. Hamarosan visszatérünk.',
     'error.404.msg'       => 'A keresett oldal nem található.',
+
+    // Leisure booking
+    'booking.title'       => 'Foglalás',
+    'booking.choose_type' => 'Válassz típust',
+    'booking.choose_date' => 'Válassz napot',
+    'booking.choose_slot' => 'Válassz idősávot',
+    'booking.choose_duration'=> 'Válassz időtartamot',
+    'booking.people'      => 'Személyek',
+    'booking.free'        => 'szabad',
+    'booking.limited'     => 'utolsó helyek',
+    'booking.sold_out'    => 'elfogyott',
+    'booking.all_out'     => 'Nem elérhető',
+    'booking.available_now'=> '{n} elérhető',
+    'booking.rentals_title'=> 'Kölcsönzés',
+    'booking.rentals_intro'=> 'Foglalj idősávra. Kiválasztod, fizetsz, megjelensz a recepción.',
+    'common.next'         => 'Tovább',
 ];

@@ -1,0 +1,12 @@
+{"success":true,"data":{"rentals":[
+  {"id":11,"slug":"caiac","name":"Caiac","description":"Caiace 1 și 2 locuri, vestă inclusă.","icon":"🛶","image_url":null,"available":12,"total":16,
+   "options":[{"ticket_type_id":9002,"name":"Caiac 2 locuri","description":"","service_category":"rental","price_cents":4000,"currency":"RON","available":12,
+     "duration_variants":[{"duration_minutes":30,"label":"30 min","price_cents":4000},{"duration_minutes":60,"label":"1 h","price_cents":7000},{"duration_minutes":120,"label":"2 h","price_cents":12000}],
+     "overtime":{"surcharge_cents":1500,"interval_minutes":15},
+     "event":{"id":101,"slug":"hamlet","title":"Acces parc","venue":"Parcul Lacul Verde","city":"Brașov"}}]},
+  {"id":12,"slug":"bicicleta-mtb","name":"Bicicletă MTB","description":"Trasee marcate în jurul lacului.","icon":"🚲","image_url":null,"available":0,"total":10,
+   "options":[{"ticket_type_id":9004,"name":"MTB adult","description":"","service_category":"rental","price_cents":3500,"currency":"RON","available":0,
+     "duration_variants":[{"duration_minutes":60,"label":"1 h","price_cents":3500},{"duration_minutes":240,"label":"4 h","price_cents":10000}],
+     "overtime":null,
+     "event":{"id":101,"slug":"hamlet","title":"Acces parc","venue":"Parcul Lacul Verde","city":"Brașov"}}]}
+]}}

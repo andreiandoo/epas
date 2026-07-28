@@ -251,3 +251,133 @@ function kit_categories(?int $ttl = null): array {
     }
     return $out;
 }
+
+/* ==========================================================================
+   Leisure (kind `leisure`, tenant profile only).
+
+   A leisure venue does not sell "an event" — it sells a day pass, a rental or
+   a guided activity, all of which are ticket TYPES carrying the leisure pricing
+   model. The backend resolves price (weekday rules, seasons, duration
+   multipliers) server-side, so nothing here recomputes it.
+
+   Backed by /tenant-client/leisure/*, which 404s for non-leisure tenants; every
+   function below degrades to an empty result rather than throwing.
+   ========================================================================== */
+
+/** True when the active site can talk to the leisure endpoints at all. */
+function kit_is_leisure(): bool {
+    return Kit::isProfile('tenant') && Kit::feature('booking');
+}
+
+/**
+ * Bookables → canonical bookable[].
+ * @param string|null $category  access | rental | activity (null = all)
+ */
+function kit_bookables(?string $category = null, ?int $ttl = null): array {
+    if (!kit_is_leisure()) return [];
+    $resp = kit_api_get('/tenant-client/leisure/bookables', $category ? ['category' => $category] : [], $ttl ?? 60);
+    $list = $resp['data']['bookables'] ?? [];
+    if (!is_array($list)) return [];
+    $cfg = Kit::config();
+    return array_values(array_map(fn ($b) => is_array($b) ? kit_map_bookable($b, $cfg) : null, $list));
+}
+
+/**
+ * Availability for a month → ['YYYY-MM-DD' => [status, remaining, price, slots]].
+ * `status` is one of available | limited | sold_out | closed | unavailable.
+ */
+function kit_availability(?int $ticketTypeId = null, ?string $month = null, ?int $ttl = null): array {
+    if (!kit_is_leisure()) return [];
+    $params = ['month' => $month ?: date('Y-m')];
+    if ($ticketTypeId) $params['ticket_type'] = $ticketTypeId;
+    $resp = kit_api_get('/tenant-client/leisure/availability', $params, $ttl ?? 60);
+    $dates = $resp['data']['dates'] ?? [];
+    if (!is_array($dates)) return [];
+    $out = [];
+    foreach ($dates as $date => $d) {
+        $out[$date] = [
+            'status'    => $d['status'] ?? 'unavailable',
+            'remaining' => $d['remaining'] ?? null,
+            'price'     => isset($d['min_price_cents']) ? $d['min_price_cents'] / 100 : null,
+            'slots'     => (int) ($d['slot_count'] ?? 0),
+        ];
+    }
+    return $out;
+}
+
+/** Slots inside one day → [{capacity_id, start, end, status, remaining, price}]. */
+function kit_slots(int $ticketTypeId, string $date, ?int $ttl = null): array {
+    if (!kit_is_leisure()) return [];
+    $resp = kit_api_get('/tenant-client/leisure/slots', ['ticket_type' => $ticketTypeId, 'date' => $date], $ttl ?? 30);
+    $list = $resp['data']['slots'] ?? [];
+    if (!is_array($list)) return [];
+    return array_values(array_map(fn ($s) => [
+        'capacity_id' => $s['id'] ?? 0,
+        'start'       => $s['time_slot_start'] ?? '',
+        'end'         => $s['time_slot_end'] ?? '',
+        'status'      => $s['status'] ?? 'available',
+        'remaining'   => $s['remaining'] ?? null,
+        'price'       => isset($s['price_cents']) ? $s['price_cents'] / 100 : null,
+    ], $list));
+}
+
+/** Rental catalogue → canonical rental[]. */
+function kit_rentals(?int $ttl = null): array {
+    if (!kit_is_leisure()) return [];
+    $resp = kit_api_get('/tenant-client/leisure/rentals', [], $ttl ?? 120);
+    $list = $resp['data']['rentals'] ?? [];
+    if (!is_array($list)) return [];
+    $cfg = Kit::config();
+    $out = [];
+    foreach ($list as $r) {
+        if (!is_array($r)) continue;
+        $options = array_values(array_map(fn ($o) => kit_map_bookable($o, $cfg), $r['options'] ?? []));
+        $prices = array_filter(array_column($options, 'price'), fn ($p) => $p !== null);
+        $out[] = vm_fill([
+            'id'          => $r['id'] ?? 0,
+            'slug'        => $r['slug'] ?? '',
+            'name'        => $r['name'] ?? '',
+            'description' => $r['description'] ?? '',
+            'icon'        => $r['icon'] ?? '',
+            'image_url'   => kit_asset_url($r['image_url'] ?? null, $cfg),
+            'available'   => $r['available'] ?? null,
+            'total'       => $r['total'] ?? null,
+            'options'     => $options,
+            'price_from'  => $prices ? min($prices) : null,
+            'currency'    => $options[0]['currency'] ?? ($cfg['currency'] ?? 'RON'),
+        ], vm_rental_defaults());
+    }
+    return $out;
+}
+
+/** Raw leisure bookable → canonical. Cents → major units happens HERE, once. */
+function kit_map_bookable(array $b, array $cfg): array {
+    $ev = $b['event'] ?? [];
+    $slug = $ev['slug'] ?? '';
+    return vm_fill([
+        'ticket_type_id' => $b['ticket_type_id'] ?? 0,
+        'name'           => $b['name'] ?? '',
+        'description'    => $b['description'] ?? '',
+        'category'       => $b['service_category'] ?? 'access',
+        'price'          => isset($b['price_cents']) ? $b['price_cents'] / 100 : null,
+        'currency'       => $b['currency'] ?? ($cfg['currency'] ?? 'RON'),
+        'available'      => $b['available'] ?? null,
+        'variants'       => array_values(array_map(fn ($v) => [
+            'minutes' => $v['duration_minutes'] ?? null,
+            'label'   => $v['label'] ?? '',
+            'price'   => isset($v['price_cents']) ? $v['price_cents'] / 100 : null,
+        ], $b['duration_variants'] ?? [])),
+        'overtime'    => isset($b['overtime']) && is_array($b['overtime']) ? [
+            'surcharge'        => ($b['overtime']['surcharge_cents'] ?? 0) / 100,
+            'interval_minutes' => $b['overtime']['interval_minutes'] ?? 0,
+        ] : null,
+        'event_id'    => $ev['id'] ?? 0,
+        'event_slug'  => $slug,
+        'event_title' => $ev['title'] ?? '',
+        'venue_name'  => $ev['venue'] ?? '',
+        'city'        => $ev['city'] ?? '',
+        'url'         => $slug
+            ? vm_url($cfg['event_url_pattern'] ?? '/activitate/{slug}', ['slug' => $slug, 'id' => $ev['id'] ?? 0])
+            : '#',
+    ], vm_bookable_defaults());
+}

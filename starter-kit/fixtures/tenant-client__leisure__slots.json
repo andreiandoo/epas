@@ -1,0 +1,6 @@
+{"success":true,"data":{"date":"2026-08-01","ticket_type_id":9002,"slots":[
+  {"id":7001,"time_slot_start":"10:00","time_slot_end":"11:00","status":"available","remaining":10,"price_cents":4000},
+  {"id":7002,"time_slot_start":"11:00","time_slot_end":"12:00","status":"limited","remaining":2,"price_cents":4000},
+  {"id":7003,"time_slot_start":"12:00","time_slot_end":"13:00","status":"sold_out","remaining":0,"price_cents":4000},
+  {"id":7004,"time_slot_start":"13:00","time_slot_end":"14:00","status":"available","remaining":10,"price_cents":5000}
+]}}

@@ -14,6 +14,8 @@ Legendă: **canonic** = view-model din `viewmodel.php` (produs de `kit_*` din
 | `event-hero` | `event` (canonic, req), `slot` (HTML, ex. ticket-selector) | Header de pagină single-event. |
 | `ticket-selector` | `event` (canonic cu `ticket_types[]`, req) | Alpine (`kitTicketSelector`); adaugă în cart. GA, nu seating. |
 | `seat-map` | `event` (canonic, req), `checkout_url` | Mount `data-component="seat-map"`; hidratat de `kit.js` via proxy. |
+| `booking-widget` | `bookables` (bookable canonic[], req), `title` | **Leisure.** Corespondentul lui `seat-map`: zi → interval → durată → nr. persoane. Mount `data-component="booking"`; hidratat de `kit.js` prin acțiunile `availability` + `slots`. Linia de coș duce `capacity_id`/`visit_date`/`slot_time`/`duration_minutes`. |
+| `rental-card` | `rental` (rental canonic, req) | **Leisure.** Un pool de unități identice (caiace, biciclete): disponibilitate live, variantele de durată, preț „de la". |
 | `artist-card` | `artist` (canonic, req) | Portret + rol + nume. |
 | `venue-card` | `venue` (canonic, req) | Imagine + oraș + nr. evenimente. |
 | `category-card` | `item` (taxonomy canonic, req) | Refolosit pentru genuri/orașe. Suportă imagine de fundal sau icon. |

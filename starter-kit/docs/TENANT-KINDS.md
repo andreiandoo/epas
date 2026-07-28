@@ -145,6 +145,45 @@ Trei lucruri care NU sunt evidente din API (verificate contra controllerelor):
   bilete reale și întoarce URL-ul de plată; e ce folosește și skin-ul teatru
   live. Se mută pe endpoint-ul real când acesta e implementat.
 
+### Leisure — fluxul de rezervare (kind `leisure`)
+
+O locație de agrement nu vinde „un eveniment", ci **o zi și un interval**.
+Modelul de date reflectă asta: activitatea rămâne un `Event`, dar lucrurile
+vandabile sunt **ticket type-uri** care poartă modelul de preț leisure
+(variante de durată, reguli pe zi de săptămână, sezoane, depășire).
+
+```
+/activitati            listing        → kit_events()
+/inchirieri            rentals        → kit_rentals()  → rental-card
+/activitate/{slug}     show           → booking-widget (când kit_feature('booking'))
+     zi → interval → durată → nr. persoane
+     → linie de coș cu capacity_id + visit_date + slot_time + duration_minutes
+/cos → /finalizare     checkout       → demo-checkout ține locul sub row lock
+/confirmare?order=ID   order-summary
+```
+
+Date (server, `kit/core/data.php`):
+`kit_bookables($category)` · `kit_availability($ticketTypeId, $month)` ·
+`kit_slots($ticketTypeId, $date)` · `kit_rentals()` · `kit_is_leisure()`.
+
+Acțiuni proxy (client, pentru hidratarea calendarului):
+`bookables` · `availability` · `slots` · `rentals`.
+
+Backend: `/tenant-client/leisure/{bookables,availability,slots,rentals}`.
+Toate întorc **404 dacă tenantul nu e `tenant_type=leisure`**, iar
+`kit_is_leisure()` scurtcircuitează înainte de apel, deci un kind non-leisure nu
+plătește nimic.
+
+Trei lucruri de reținut:
+- **Prețul vine întotdeauna de la server** (`LeisurePricingResolver`): zi de
+  săptămână, sezon și multiplicatorul de durată sunt deja aplicate. Un template
+  nu recalculează niciodată prețul — doar îl afișează.
+- **Nu se ține nimic în timpul navigării.** Spre deosebire de seating (hold de
+  10 min), locul leisure se ia abia la checkout, sub row lock, folosind
+  `capacity_id` de pe linia de coș. De aceea linia TREBUIE să-l păstreze.
+- **Statusurile zilei** sunt `available | limited | sold_out | closed |
+  unavailable`. `closed` ≠ `sold_out`: prima înseamnă „în afara programului".
+
 ## 6. Cum adaugi un kind nou
 
 1. `kit/kinds/<nume>.php` cu manifestul (profile, label, terms, features, menu,

@@ -141,4 +141,20 @@ return [
     'error.503.title'     => 'Maintenance',
     'error.503.msg'       => 'The site is temporarily under maintenance. We will be back shortly.',
     'error.404.msg'       => 'The page you are looking for does not exist.',
+
+    // Leisure booking
+    'booking.title'       => 'Book',
+    'booking.choose_type' => 'Choose type',
+    'booking.choose_date' => 'Choose a day',
+    'booking.choose_slot' => 'Choose a time',
+    'booking.choose_duration'=> 'Choose duration',
+    'booking.people'      => 'People',
+    'booking.free'        => 'free',
+    'booking.limited'     => 'few left',
+    'booking.sold_out'    => 'sold out',
+    'booking.all_out'     => 'Unavailable',
+    'booking.available_now'=> '{n} available',
+    'booking.rentals_title'=> 'Rentals',
+    'booking.rentals_intro'=> 'Book by time slot. Pick, pay, show up at the desk.',
+    'common.next'         => 'Next',
 ];

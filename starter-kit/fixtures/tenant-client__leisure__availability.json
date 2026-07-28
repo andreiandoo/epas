@@ -1,0 +1,7 @@
+{"success":true,"data":{"month":"2026-08","ticket_type_id":9002,"dates":{
+  "2026-08-01":{"status":"available","remaining":40,"min_price_cents":4000,"slot_count":4},
+  "2026-08-02":{"status":"limited","remaining":6,"min_price_cents":4000,"slot_count":4},
+  "2026-08-03":{"status":"sold_out","remaining":0,"min_price_cents":4000,"slot_count":4},
+  "2026-08-04":{"status":"closed","remaining":0,"min_price_cents":null,"slot_count":0},
+  "2026-08-05":{"status":"available","remaining":38,"min_price_cents":4000,"slot_count":4}
+}}}

@@ -203,6 +203,53 @@
 .kit-seat.is-selected { background:var(--kit-seat-selected); outline:2px solid var(--kit-on-primary); }
 .kit-seatmap__summary { display:flex; align-items:center; gap:1rem; justify-content:space-between; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--kit-border); }
 
+/* Booking widget (leisure) — the seat-map's counterpart ------------------- */
+.kit-booking { background:var(--kit-surface); border:1px solid var(--kit-border); border-radius:var(--kit-radius); padding:1.25rem; display:flex; flex-direction:column; gap:1.1rem; }
+.kit-booking__title { font-size:1.15rem; margin:0; }
+.kit-booking__field { display:flex; flex-direction:column; gap:.5rem; }
+.kit-booking__label { font-size:.82rem; text-transform:uppercase; letter-spacing:.08em; color:var(--kit-text-muted); }
+.kit-booking__select { padding:.6rem .75rem; border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); background:var(--kit-bg); color:var(--kit-text); font:inherit; }
+.kit-booking__cal { border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); padding:.75rem; }
+.kit-booking__calhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:.6rem; }
+.kit-booking__nav { border:none; background:transparent; color:var(--kit-text); font-size:1.3rem; line-height:1; cursor:pointer; padding:0 .5rem; }
+.kit-booking__grid { display:grid; grid-template-columns:repeat(7,1fr); gap:.25rem; }
+.kit-booking__day { position:relative; aspect-ratio:1; border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); background:var(--kit-bg); color:var(--kit-text); font:inherit; font-size:.9rem; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.kit-booking__day small { font-size:.6rem; color:var(--kit-text-muted); }
+.kit-booking__day[data-status="limited"] { border-color:var(--kit-warning); }
+.kit-booking__day[data-status="sold_out"],
+.kit-booking__day[data-status="closed"],
+.kit-booking__day[data-status="unavailable"] { opacity:.35; cursor:not-allowed; }
+.kit-booking__day.is-selected { background:var(--kit-primary); color:var(--kit-on-primary); border-color:var(--kit-primary); }
+.kit-booking__day.is-selected small { color:var(--kit-on-primary); }
+.kit-booking__legend { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; font-size:.75rem; margin:.6rem 0 0; }
+.kit-booking__dot { display:inline-block; width:.7rem; height:.7rem; border-radius:3px; border:1px solid var(--kit-border); margin-left:.6rem; }
+.kit-booking__dot[data-status="available"] { background:var(--kit-success); border-color:var(--kit-success); }
+.kit-booking__dot[data-status="limited"] { background:var(--kit-warning); border-color:var(--kit-warning); }
+.kit-booking__dot[data-status="sold_out"] { background:var(--kit-surface-2); }
+.kit-booking__slots { display:flex; flex-wrap:wrap; gap:.4rem; }
+.kit-booking__chip { padding:.45rem .8rem; border:1px solid var(--kit-border); border-radius:999px; background:var(--kit-bg); color:var(--kit-text); font:inherit; font-size:.85rem; cursor:pointer; }
+.kit-booking__chip:disabled { opacity:.35; cursor:not-allowed; }
+.kit-booking__chip.is-selected { background:var(--kit-primary); color:var(--kit-on-primary); border-color:var(--kit-primary); }
+.kit-booking__total { display:flex; justify-content:space-between; align-items:center; padding-top:.9rem; border-top:1px solid var(--kit-border); }
+.kit-booking__error { color:var(--kit-error); font-size:.85rem; margin:0; }
+.kit-booking__cta { width:100%; }
+
+/* Rental card (leisure) --------------------------------------------------- */
+.kit-rental { background:var(--kit-surface); border:1px solid var(--kit-border); border-radius:var(--kit-radius); overflow:hidden; display:flex; flex-direction:column; }
+.kit-rental.is-unavailable { opacity:.55; }
+.kit-rental__media { position:relative; display:flex; align-items:center; justify-content:center; aspect-ratio:4/3; background:var(--kit-surface-2); }
+.kit-rental__media img { width:100%; height:100%; object-fit:cover; }
+.kit-rental__icon { font-size:2.5rem; }
+.kit-rental__stock { position:absolute; top:.6rem; left:.6rem; }
+.kit-rental__body { padding:1rem; display:flex; flex-direction:column; gap:.5rem; flex:1; }
+.kit-rental__title { font-family:var(--kit-font-display); font-size:1.05rem; margin:0; }
+.kit-rental__title a { color:inherit; text-decoration:none; }
+.kit-rental__desc { font-size:.85rem; margin:0; }
+.kit-rental__opts { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.25rem; font-size:.85rem; }
+.kit-rental__opts li { display:flex; justify-content:space-between; gap:1rem; }
+.kit-rental__from { margin:auto 0 0; font-size:.9rem; }
+.kit-rental__cta { width:100%; }
+
 /* CTA band ---------------------------------------------------------------- */
 .kit-cta { padding:3.5rem 0; background:var(--kit-surface); border-top:1px solid var(--kit-border); border-bottom:1px solid var(--kit-border); }
 

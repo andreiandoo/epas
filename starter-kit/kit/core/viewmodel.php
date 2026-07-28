@@ -63,6 +63,44 @@ function vm_artist_defaults(): array {
     ];
 }
 
+/**
+ * Canonical BOOKABLE (leisure) — one buyable thing at a leisure venue: a day
+ * pass, a rental, a guided activity. Backed by a ticket type, not an event, so
+ * it carries the leisure pricing model (duration variants + overtime).
+ * Prices are MAJOR units, already resolved server-side for the chosen date.
+ */
+function vm_bookable_defaults(): array {
+    return [
+        'ticket_type_id' => 0,
+        'name'           => '',
+        'description'    => '',
+        'category'       => 'access',   // access | rental | activity
+        'price'          => null,       // float, major units
+        'currency'       => 'RON',
+        'available'      => null,
+        'variants'       => [],         // [{minutes, label, price}]
+        'overtime'       => null,       // {surcharge, interval_minutes} or null
+        'event_id'       => 0,
+        'event_slug'     => '',
+        'event_title'    => '',
+        'venue_name'     => '',
+        'city'           => '',
+        'url'            => '#',
+    ];
+}
+
+/** Canonical RENTAL type — a pool of identical units (kayaks, bikes, lockers). */
+function vm_rental_defaults(): array {
+    return [
+        'id' => 0, 'slug' => '', 'name' => '', 'description' => '',
+        'icon' => '', 'image_url' => '',
+        'available' => null, 'total' => null,
+        'options' => [],                // canonical bookable[]
+        'price_from' => null,
+        'currency' => 'RON',
+    ];
+}
+
 /** Canonical CATEGORY / GENRE / CITY chip. */
 function vm_taxonomy_defaults(): array {
     return [

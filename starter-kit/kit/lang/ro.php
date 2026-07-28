@@ -135,4 +135,20 @@ return [
     'error.503.title'     => 'Mentenanță',
     'error.503.msg'       => 'Site-ul este temporar în mentenanță. Revenim imediat.',
     'error.404.msg'       => 'Pagina căutată nu există.',
+
+    // Leisure booking
+    'booking.title'       => 'Rezervă',
+    'booking.choose_type' => 'Alege tipul',
+    'booking.choose_date' => 'Alege ziua',
+    'booking.choose_slot' => 'Alege intervalul',
+    'booking.choose_duration'=> 'Alege durata',
+    'booking.people'      => 'Persoane',
+    'booking.free'        => 'liber',
+    'booking.limited'     => 'ultimele locuri',
+    'booking.sold_out'    => 'epuizat',
+    'booking.all_out'     => 'Indisponibil',
+    'booking.available_now'=> '{n} disponibile',
+    'booking.rentals_title'=> 'Închirieri',
+    'booking.rentals_intro'=> 'Rezervă pe intervale orare. Alegi, plătești, te prezinți la recepție.',
+    'common.next'         => 'Înainte',
 ];

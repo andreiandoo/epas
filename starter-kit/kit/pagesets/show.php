@@ -16,9 +16,23 @@ if (!$event) {
 }
 
 $related = array_values(array_filter(kit_events(['per_page' => 4]), fn($e) => $e['id'] !== $event['id']));
-$rail = kit_feature('seating')
-    ? component_html('seat-map', ['event' => $event])
-    : component_html('ticket-selector', ['event' => $event]);
+
+// The buy rail, by capability: a reserved-seating venue picks seats, a leisure
+// venue picks a day + slot + duration, everything else picks quantities.
+if (kit_feature('seating')) {
+    $rail = component_html('seat-map', ['event' => $event]);
+} elseif (kit_feature('booking')) {
+    // Only this event's bookables — a leisure venue can run several in parallel.
+    $bookables = array_values(array_filter(
+        kit_bookables(),
+        fn ($b) => (int) $b['event_id'] === (int) $event['id']
+    ));
+    $rail = $bookables
+        ? component_html('booking-widget', ['bookables' => $bookables])
+        : component_html('ticket-selector', ['event' => $event]);
+} else {
+    $rail = component_html('ticket-selector', ['event' => $event]);
+}
 
 layout('public', [
     'title'       => $event['title'] . ' — ' . kit_cfg('site_name'),

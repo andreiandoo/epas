@@ -74,7 +74,7 @@ KIT_SITE=<slug> KIT_FIXTURES="$PWD/fixtures" php -S 127.0.0.1:8899 tools/dev-rou
 > pornește PHP cu bundle-ul de CA:
 > `php -d curl.cainfo="I:\xampp\apache\bin\curl-ca-bundle.crt" -S 127.0.0.1:8899 tools/dev-router.php`
 
-Deschide `/styleguide` în dev-router: vezi **toate cele 29 de componente**
+Deschide `/styleguide` în dev-router: vezi **toate cele 31 de componente**
 randate în tema activă. Fă asta înainte să compui prima pagină.
 
 ---
@@ -233,14 +233,14 @@ Artiști (`artist-card`) · Locații (`venue-card`) · Căutare (`search-bar`,
 Panou (`stat-tile`, `ticket-card`) · Bilete (`ticket-card`, `qr-modal`) ·
 Comenzi (`order-summary`) · Favorite (`favorite-button`) · Setări.
 
-### Cele 29 de componente
+### Cele 31 de componente
 `event-card` · `event-grid` · `event-hero` · `ticket-selector` · `seat-map` ·
 `schedule-row` · `calendar` · `artist-card` · `venue-card` · `category-card` ·
 `subscription-card` · `cart-line` · `order-summary` · `ticket-card` ·
 `qr-modal` · `review-card` · `filters` · `pagination` · `breadcrumb` ·
 `search-bar` · `auth-widget` · `locale-switcher` · `favorite-button` ·
 `step-indicator` · `hero` · `cta` · `stat-tile` · `empty-state` ·
-`cookie-consent`
+`cookie-consent` · `booking-widget` (leisure) · `rental-card` (leisure)
 
 **Input-ul exact al fiecăreia: `docs/COMPONENTS.md`.** Nu ghici cheile.
 

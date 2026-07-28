@@ -1,0 +1,13 @@
+{"success":true,"data":{"bookables":[
+  {"ticket_type_id":9001,"name":"Acces zilnic — adult","description":"Acces la toate zonele parcului, toată ziua.","service_category":"access","price_cents":6000,"currency":"RON","available":180,"duration_variants":[],"overtime":null,
+   "event":{"id":101,"slug":"hamlet","title":"Acces parc","venue":"Parcul Lacul Verde","city":"Brașov"}},
+  {"ticket_type_id":9002,"name":"Caiac 2 locuri","description":"Vestă de salvare inclusă.","service_category":"rental","price_cents":4000,"currency":"RON","available":12,
+   "duration_variants":[
+     {"duration_minutes":30,"label":"30 min","price_cents":4000},
+     {"duration_minutes":60,"label":"1 h","price_cents":7000},
+     {"duration_minutes":120,"label":"2 h","price_cents":12000}],
+   "overtime":{"surcharge_cents":1500,"interval_minutes":15},
+   "event":{"id":101,"slug":"hamlet","title":"Acces parc","venue":"Parcul Lacul Verde","city":"Brașov"}},
+  {"ticket_type_id":9003,"name":"Tur ghidat cu barca","description":"45 de minute pe lac, cu ghid.","service_category":"activity","price_cents":9000,"currency":"RON","available":8,"duration_variants":[],"overtime":null,
+   "event":{"id":102,"slug":"o-scrisoare-pierduta","title":"Tur ghidat","venue":"Parcul Lacul Verde","city":"Brașov"}}
+]}}
