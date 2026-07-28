@@ -256,6 +256,27 @@ function clearCityFilters() {
 }
 </script>
 
+<!-- City Featured Events Section (is_city_featured — paid city-page promotion) -->
+<section id="cityFeaturedSection" class="relative hidden overflow-hidden">
+    <!-- Premium gradient background -->
+    <div class="absolute inset-0 bg-gradient-to-b from-primary to-primary/80"></div>
+    <!-- Decorative elements -->
+    <div class="absolute top-0 left-0 w-64 h-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl"></div>
+    <div class="absolute bottom-0 right-0 rounded-full w-96 h-96 bg-secondary/10 translate-x-1/3 translate-y-1/3 blur-3xl"></div>
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] opacity-30"></div>
+
+    <div class="relative px-4 py-10 mx-auto md:py-14 max-w-7xl">
+        <!-- Section Header -->
+        <div class="mb-8 text-center">
+            <h2 class="mb-2 text-3xl font-extrabold text-white md:text-4xl">Evenimente Promovate în <?= htmlspecialchars($cityConfig['name'], ENT_QUOTES, 'UTF-8') ?></h2>
+        </div>
+        <!-- Featured events grid -->
+        <div id="cityFeaturedEvents" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- City featured events loaded dynamically -->
+        </div>
+    </div>
+</section>
+
 <!-- Events Grid -->
 <main class="px-4 py-12 mx-auto max-w-7xl mobile:py-6">
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="eventsGrid">
