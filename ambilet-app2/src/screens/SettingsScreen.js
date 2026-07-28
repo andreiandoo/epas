@@ -252,7 +252,7 @@ function AdminRow({ label, badgeCount, onPress }) {
   );
 }
 
-export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment, appVersion }) {
+export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment, onShowManual, appVersion }) {
   const { user, userRole, isTeamMember, isVenueOwner, venueOwner, logout } = useAuth();
   const { selectedEvent } = useEvent();
   const {
@@ -512,6 +512,39 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         <AutoLogoutPicker />
       </View>
 
+      {/* Ghid de utilizare — deschide manualul in-app cu 28 capitole,
+          search, chapter navigation și „Testează pe viu" deep-links
+          către tab-urile relevante. */}
+      <SectionHeader title="Ghid" />
+      <View style={styles.sectionCard}>
+        <TouchableOpacity
+          style={styles.manualRow}
+          onPress={() => onShowManual?.()}
+          activeOpacity={0.7}
+        >
+          <View style={styles.manualIconWrap}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15zM4 19.5A2.5 2.5 0 0 1 6.5 17H20"
+                stroke={colors.purple}
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.manualRowTitle}>Ghid AmBilet Scan</Text>
+            <Text style={styles.manualRowSub}>
+              Manual complet — 28 capitole, cu instrucțiuni pas cu pas
+            </Text>
+          </View>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+            <Path d="M9 18l6-6-6-6" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </TouchableOpacity>
+      </View>
+
       {/* Contact Urgențe — numere apelate de butoanele din panoul de Notificări. */}
       <SectionHeader title="Contact Urgențe" />
       <View style={styles.sectionCard}>
@@ -595,7 +628,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.2.0-dev'}</Text>
+      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.2.0-dev.2'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -686,6 +719,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textTertiary,
     marginTop: 2,
+  },
+
+  // Manual row (Ghid AmBilet)
+  manualRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  manualIconWrap: {
+    width: 36, height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.purpleBg,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualRowTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  manualRowSub: {
+    fontSize: 12,
+    color: colors.textTertiary,
   },
 
   // Auto-logout picker chips

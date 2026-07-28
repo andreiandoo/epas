@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, StatusBar, Platform, Modal, TouchableOpacity, Linking, AppState } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+
+// Global navigation ref — lets non-screen components (ManualModal deep-links,
+// crash reporter, notification handlers) navigate without needing React
+// Navigation's `useNavigation` hook (which only works inside screens).
+export const navigationRef = createNavigationContainerRef();
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,7 +17,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.2.0-dev';
+const APP_VERSION = '2.2.0-dev.2';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -46,6 +51,7 @@ import StaffModal from './src/components/modals/StaffModal';
 import GuestListModal from './src/components/modals/GuestListModal';
 import GateManagerModal from './src/components/modals/GateManagerModal';
 import StaffAssignmentModal from './src/components/modals/StaffAssignmentModal';
+import ManualModal from './src/components/modals/ManualModal';
 
 import { colors } from './src/theme/colors';
 import { initCrashReporter, wrapRootApp } from './src/services/crashReporter';
@@ -204,6 +210,7 @@ function MainTabs() {
   const [showGuestList, setShowGuestList] = useState(false);
   const [showGateManager, setShowGateManager] = useState(false);
   const [showStaffAssignment, setShowStaffAssignment] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   // Callbacks fired when the respective modal closes — used by Settings to
   // refresh its counter badges without waiting for a tab switch.
   const gateManagerOnCloseRef = useRef(null);
@@ -223,6 +230,7 @@ function MainTabs() {
     || !!showStaff
     || !!showGuestList
     || !!showEventsModal
+    || !!showManual
   );
   const { bumpActivity } = useInactivityTimer({
     timeoutMs: (autoLogoutMinutes || 0) * 60_000,
@@ -410,6 +418,7 @@ function MainTabs() {
                     staffAssignmentOnCloseRef.current = refetchCounter || null;
                     setShowStaffAssignment(true);
                   } : null}
+                  onShowManual={() => setShowManual(true)}
                 />
               </React.Suspense>
             </ScreenErrorBoundary>
@@ -465,6 +474,22 @@ function MainTabs() {
               try { staffAssignmentOnCloseRef.current(); } catch {}
               staffAssignmentOnCloseRef.current = null;
             }
+          }}
+        />
+      )}
+      {showManual && (
+        <ManualModal
+          visible={showManual}
+          onClose={() => setShowManual(false)}
+          // Deep-links inside chapters use the global navigation ref so
+          // "Testează pe viu →" links can switch to the target tab even
+          // though the modal itself lives outside the tab navigator tree.
+          navigation={{
+            navigate: (route) => {
+              try {
+                if (navigationRef.isReady()) navigationRef.navigate(route);
+              } catch {}
+            },
           }}
         />
       )}
@@ -780,6 +805,7 @@ function App() {
           <AppProvider>
             <EventProvider>
               <NavigationContainer
+                ref={navigationRef}
                 theme={{
                   dark: true,
                   colors: {
