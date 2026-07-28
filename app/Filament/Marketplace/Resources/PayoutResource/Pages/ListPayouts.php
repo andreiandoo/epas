@@ -1273,7 +1273,15 @@ class ListPayouts extends ListRecords
         // event. Now there is a SINGLE pipeline: the operator reviews the
         // ticket breakdown, selects refunds, then saves. fillForm() reads the
         // event_id argument and calls buildCreatePayoutInitialState().
-        $this->mountAction('create_payout', ['event_id' => $event->id]);
+        //
+        // replaceMountedAction (NOT mountAction): this method is called while
+        // the Evenimente încheiate modal is still mounted. mountAction would
+        // try to resolve create_payout as a NESTED action of finished_events,
+        // fail to find it, and silently do nothing (observed: "nu s-a
+        // întâmplat nimic"). replaceMountedAction unmounts the current modal
+        // and mounts create_payout as a fresh top-level action, resolving it
+        // from the page's header actions.
+        $this->replaceMountedAction('create_payout', ['event_id' => $event->id]);
     }
 
     /**
