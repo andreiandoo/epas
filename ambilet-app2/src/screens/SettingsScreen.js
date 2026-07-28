@@ -534,7 +534,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             </Svg>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.manualRowTitle}>Ghid AmBilet Scan</Text>
+            <Text style={styles.manualRowTitle}>Ghid AmBilet</Text>
             <Text style={styles.manualRowSub}>
               Manual complet — 28 capitole, cu instrucțiuni pas cu pas
             </Text>
@@ -628,7 +628,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet Scan v{appVersion || '2.2.0-dev.4'}</Text>
+      <Text style={styles.versionText}>AmBilet v{appVersion || '2.2.0-dev.5'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>

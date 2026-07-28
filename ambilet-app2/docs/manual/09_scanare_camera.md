@@ -178,7 +178,7 @@ Dacă clientul are un **cod tipărit** fără QR (doar text, ex.
 - Verifică că codul biletului nu e mototolit / imprimat prost
 
 **„Cere mereu permisiunea camerei"**
-- Setări telefon → Aplicații → AmBilet Scan → Permisiuni → Cameră →
+- Setări telefon → Aplicații → AmBilet → Permisiuni → Cameră →
   Permite mereu
 
 **„Cadrul e negru, nu apare camera"**

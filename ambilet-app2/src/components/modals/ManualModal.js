@@ -207,7 +207,7 @@ export default function ManualModal({ visible, onClose, navigation }) {
             </Svg>
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {currentChapter ? currentChapter.title : 'Ghid AmBilet Scan'}
+            {currentChapter ? currentChapter.title : 'Ghid AmBilet'}
           </Text>
           {currentId ? (
             <TouchableOpacity

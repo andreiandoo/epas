@@ -1,8 +1,8 @@
-# AmBilet Scan NEXT — ce e nou
+# AmBilet — ce e nou (v2.2)
 
 **Versiune**: 2.2 (numită „NEXT")
 **Ce trebuie să faceți**: instalați noul APK. Se instalează **alături** de aplicația veche (nu o înlocuiește) — le puteți folosi pe ambele în paralel până când decideți să treceți definitiv pe cea nouă.
-**Iconă**: pe ecranul telefonului veți vedea „AmBilet Scan NEXT" (versiunea veche rămâne „AmBilet Scan").
+**Iconă**: pe ecranul telefonului veți vedea „AmBilet" (versiunea veche rămâne „AmBilet Scan" — le puteți folosi în paralel).
 
 ---
 
@@ -156,7 +156,7 @@ Cu alte cuvinte, doar dacă chiar nu atingi nimic timp de 5 minute + niciun proc
 **Cum se instalează**:
 1. Ține apăsat pe un spațiu gol de pe ecranul principal Android
 2. Selectează „Widgets" (Widget-uri)
-3. Caută „AmBilet Scan NEXT"
+3. Caută „AmBilet"
 4. Trage widget-ul unde vrei (mărime 4×2)
 
 **Ce afișează**:

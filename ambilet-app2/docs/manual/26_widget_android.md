@@ -11,17 +11,25 @@ Timp de citit: **~2 minute**.
 
 ## 1. Ce e widget-ul
 
-Un dreptunghi 4×2 celule pe home screen cu:
+Un dreptunghi 4×3 celule pe home screen cu **panou compact** al
+evenimentului selectat + branding AmBilet + status live/azi/urmează.
 
-- **Numele evenimentului** activ (sus)
-- **Cifra mare**: bilete vândute azi
-- **Etichetă**: „bilete vândute azi"
-- **Timestamp update**: „actualizat acum 2 min"
+**Conținut**:
+- Rând 1: **🎫 AmBilet** (branding stânga) + **pill status** dreapta
+  („LIVE" / „AZI" / „URMEAZĂ" / „TRECUT")
+- Rând 2: **Numele evenimentului** (bold, o singură linie)
+- Rând 3: **Cifra mare** — total bilete vândute + „din N · bilete
+  vândute" (N = capacitatea)
+- Rând 4: **🎟 X scanate · Y disponibile** (checked-in + rămase)
+- Rând 5: **🌐 X online · 🏛 Y la ușă** (split pe canal vânzare)
+- Rând 6: **💰 X.XXX RON încasări** (total încasat)
+- Rând 7 (footer): **N evenim. active** + **timestamp update** („acum 2 min")
 
 <!-- SCREENSHOT: widget AmBilet pe home screen cu numere -->
 ![Widget Android](./screenshots/26-widget.png)
 
-**Design**: gradient roșu (identitate AmBilet), colțuri rotunjite.
+**Design**: gradient roșu bordo (identitate AmBilet), colțuri rotunjite,
+pill status subliniat.
 
 ---
 
@@ -31,11 +39,11 @@ Un dreptunghi 4×2 celule pe home screen cu:
 
 1. **Ține apăsat** pe un spațiu gol
 2. Din meniul de jos, alege **Widgets** (Widget-uri)
-3. Caută „**AmBilet Scan NEXT**"
+3. Caută „**AmBilet**"
 4. Trage widget-ul unde vrei
 5. Îl poți redimensiona (2×2, 4×2, sau mai mare)
 
-<!-- SCREENSHOT: meniul Android Widgets cu AmBilet Scan NEXT evidențiat -->
+<!-- SCREENSHOT: meniul Android Widgets cu AmBilet evidențiat -->
 ![Instalare widget](./screenshots/26-install.png)
 
 ---
@@ -80,7 +88,7 @@ deschide app-ul → forțează sync → widget preia în ~30s.
 - Etichetă: „fără date"
 
 **Fix rapid**:
-1. Deschide **AmBilet Scan NEXT**
+1. Deschide **AmBilet**
 2. Loghează-te (dacă nu ești)
 3. Selectează un eveniment activ (bara roșie sus)
 4. Așteaptă ~30 secunde — widget-ul se completează
@@ -167,7 +175,7 @@ dispare, aplicația AmBilet rămâne.
 **„Widget arată alt eveniment decât cel selectat curent"**
 - Cache 30 min. Va prinde următorul refresh.
 
-**„Nu găsesc AmBilet Scan NEXT în lista de widgets"**
+**„Nu găsesc AmBilet în lista de widgets"**
 - Verifică versiunea aplicației (min 2.2)
 - Restart Android
 - Reinstalează aplicația
@@ -181,7 +189,7 @@ dispare, aplicația AmBilet rămâne.
 
 1. **Home screen Android** → long-press pe spațiu gol
 2. Alege **Widgets** din meniu
-3. Caută „AmBilet Scan NEXT"
+3. Caută „AmBilet"
 4. Trage widget-ul pe home screen
 5. Vezi cifrele (sau `—` la prima instalare)
 6. **Deschide aplicația** o dată → logat + selectat eveniment

@@ -12,6 +12,7 @@ import {
   Platform,
   PermissionsAndroid,
   Image,
+  Pressable,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -144,10 +145,11 @@ function MiniAudioPlayer({ uri, duration }) {
   );
 }
 
-function NotificationItem({ notification }) {
+function NotificationItem({ notification, onOpenPhoto }) {
   const isUnread = notification.unread;
   const hasPhoto = !!(notification.photo_uri || notification.photo_url);
   const hasAudio = !!(notification.audio_uri || notification.audio_url);
+  const photoUri = notification.photo_uri || notification.photo_url;
 
   return (
     <View style={[styles.notifItem, isUnread && styles.notifItemUnread]}>
@@ -159,11 +161,27 @@ function NotificationItem({ notification }) {
         {(hasPhoto || hasAudio) && (
           <View style={styles.notifMediaRow}>
             {hasPhoto && (
-              <Image
-                source={{ uri: notification.photo_uri || notification.photo_url }}
-                style={styles.notifThumb}
-                resizeMode="cover"
-              />
+              <TouchableOpacity
+                onPress={() => onOpenPhoto?.(photoUri)}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={{ uri: photoUri }}
+                  style={styles.notifThumb}
+                  resizeMode="cover"
+                />
+                <View style={styles.notifThumbHint}>
+                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"
+                      stroke={colors.white}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </View>
+              </TouchableOpacity>
             )}
             {hasAudio && (
               <MiniAudioPlayer
@@ -177,6 +195,33 @@ function NotificationItem({ notification }) {
       </View>
       {isUnread && <View style={styles.unreadDot} />}
     </View>
+  );
+}
+
+// Full-screen tap-to-close photo viewer for notification attachments.
+// Renders on top of the notifications panel so admins can inspect the
+// photo without leaving the modal flow.
+function PhotoViewerOverlay({ uri, onClose }) {
+  if (!uri) return null;
+  return (
+    <TouchableOpacity
+      style={styles.photoViewerOverlay}
+      onPress={onClose}
+      activeOpacity={1}
+    >
+      <Image source={{ uri }} style={styles.photoViewerImage} resizeMode="contain" />
+      <TouchableOpacity style={styles.photoViewerClose} onPress={onClose} activeOpacity={0.7}>
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M18 6L6 18M6 6l12 12"
+            stroke={colors.white}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 }
 
@@ -208,6 +253,13 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
   const { emergencyContacts } = useApp();
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(insets.bottom, 8) + 64 + 12;
+  const [viewingPhoto, setViewingPhoto] = useState(null);
+
+  // Reset the photo viewer whenever the whole panel is closed so we don't
+  // silently pop the viewer back open next time the operator opens the bell.
+  useEffect(() => {
+    if (!visible) setViewingPhoto(null);
+  }, [visible]);
 
   const callEmergency = async (label, phone) => {
     if (!phone) {
@@ -231,7 +283,7 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
           PermissionsAndroid.PERMISSIONS.CALL_PHONE,
           {
             title: 'Apel de urgență',
-            message: `AmBilet Scan trebuie să apeleze direct ${label} în caz de urgență.`,
+            message: `AmBilet trebuie să apeleze direct ${label} în caz de urgență.`,
             buttonPositive: 'Permite',
             buttonNegative: 'Refuză',
           }
@@ -266,7 +318,11 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
         onPress={onClose}
         activeOpacity={1}
       >
-        <View style={[styles.panel, { bottom: bottomOffset }]}>
+        {/* Pressable with no-op onPress absorbs taps inside the panel so
+            they don't bubble up to the overlay and close it. Without this,
+            tapping empty space between notifications (or a non-interactive
+            child like an <Image>) would close the whole panel. */}
+        <Pressable style={[styles.panel, { bottom: bottomOffset }]} onPress={() => {}}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -312,6 +368,7 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
                 <NotificationItem
                   key={notification.id || index}
                   notification={notification}
+                  onOpenPhoto={setViewingPhoto}
                 />
               ))
             )}
@@ -377,8 +434,13 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
             </View>
             <EmergencyReporter compact />
           </View>
-        </View>
+        </Pressable>
       </TouchableOpacity>
+
+      {/* Full-screen photo viewer — mounted at the Modal root so it sits
+          above the notifications panel and its own tap-to-close doesn't
+          bubble into the notification list. */}
+      <PhotoViewerOverlay uri={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </Modal>
   );
 }
@@ -519,6 +581,39 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 8,
     backgroundColor: colors.border,
+  },
+  notifThumbHint: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(20,10,10,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoViewerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  photoViewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoViewerClose: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   audioPlayer: {
     flexDirection: 'row',

@@ -98,6 +98,12 @@ export function EventProvider({ children }) {
     setIsLoadingEvents(false);
   }, []);
 
+  // Mirror `events` into a ref so widget-snapshot code (which runs
+  // inside applyEventPayload, a stable useCallback) can read the current
+  // list without forcing that callback to re-create on every fetch.
+  const eventsRef = useRef([]);
+  useEffect(() => { eventsRef.current = events; }, [events]);
+
   // Per-event cache — dedupe fetches within a 30s window. Reverb push
   // events (order.confirmed) call `invalidateEventCache` to force fresh
   // reads immediately after a real state change. `refreshStats` also
@@ -173,10 +179,26 @@ export function EventProvider({ children }) {
     // Push current snapshot to the Android home-screen widget. No-op on
     // iOS + on Android builds where the native module isn't linked yet.
     try {
-      pushWidgetSnapshot(
-        eventData,
-        { total_sold: eventData.tickets_sold ?? rawStats.total ?? 0 }
-      );
+      // Read fresh events list from the ref so we count live/today/future
+      // events without recreating this callback on every events change.
+      const evList = eventsRef.current || [];
+      const activeCount = evList.filter(e =>
+        e?.timeCategory === 'live'
+        || e?.timeCategory === 'today'
+        || e?.timeCategory === 'future'
+      ).length;
+      pushWidgetSnapshot({
+        event: eventData,
+        stats: {
+          total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,
+          capacity: rawStats.capacity ?? eventData.capacity ?? 0,
+          checked_in: rawStats.checked_in ?? 0,
+          online_count: rawStats.online_count ?? 0,
+          door_count: rawStats.door_count ?? 0,
+          revenue: eventData.revenue ?? rawStats.revenue ?? 0,
+        },
+        activeEventsCount: activeCount,
+      });
     } catch {}
   }, []);
 

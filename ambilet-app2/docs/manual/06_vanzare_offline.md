@@ -2,7 +2,7 @@
 
 > *„Semnalul cade tocmai când vine coada mare. Ce fac?"*
 
-Din **AmBilet Scan NEXT** poți încasa bilete fără internet. Vânzările se
+Din **AmBilet** poți încasa bilete fără internet. Vânzările se
 salvează pe telefon și se trimit la server automat când revine semnalul.
 Casierul nu se blochează niciodată — coada continuă să curgă.
 

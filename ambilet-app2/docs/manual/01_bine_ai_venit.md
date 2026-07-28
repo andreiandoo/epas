@@ -8,7 +8,7 @@ Timp de citit: **~3 minute**.
 
 ## 1. Instalarea
 
-Aplicația se numește **AmBilet Scan** (sau **AmBilet Scan NEXT** dacă
+Aplicația se numește **AmBilet** (sau **AmBilet** dacă
 testezi versiunea nouă). O găsești ca APK trimis pe email sau prin
 link WhatsApp de la echipa AmBilet.
 
@@ -18,7 +18,7 @@ După instalare, deschide aplicația — vei vedea un scurt splash animat,
 apoi ecranul de login.
 
 <!-- SCREENSHOT: splash screen animat cu efectul QR-scan + logo AmBilet -->
-![Splash AmBilet Scan](./screenshots/01-splash.png)
+![Splash AmBilet](./screenshots/01-splash.png)
 
 ---
 

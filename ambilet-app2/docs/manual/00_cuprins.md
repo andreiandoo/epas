@@ -1,6 +1,6 @@
-# Manual AmBilet Scan — cuprins
+# Manual AmBilet — cuprins
 
-Manualul complet al aplicației mobile AmBilet Scan pentru organizatori și
+Manualul complet al aplicației mobile AmBilet pentru organizatori și
 personal. Fiecare capitol e scurt (3-8 minute de citit) și se poate
 folosi și separat. La final, aproape fiecare are o secțiune „Testează pe
 viu" cu link care te duce direct în ecranul respectiv al aplicației.
