@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { login as apiLogin, logout as apiLogout, getMe, switchOrganizer as apiSwitchOrganizer } from '../api/auth';
 import { setCrashUser } from '../services/crashReporter';
 import { setToken, initApiClient, getToken } from '../api/client';
+import { markSessionActive, clearSessionActive } from '../hooks/useInactivityTimer';
 
 const AuthContext = createContext(null);
 
@@ -49,6 +50,11 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const response = await apiLogin(email, password);
     if (response?.success && response.data) {
+      // Fresh explicit login = real user activity. Reset the inactivity
+      // timestamp before MainTabs mounts so the cold-start check in
+      // useInactivityTimer doesn't see a stale value from a prior session
+      // and expire the operator instantly.
+      markSessionActive();
       applyLoginPayload(response.data);
     }
     return response;
@@ -56,6 +62,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     await apiLogout();
+    clearSessionActive();
     setUser(null);
     setVenueOwner(null);
     setAvailableOrganizers([]);

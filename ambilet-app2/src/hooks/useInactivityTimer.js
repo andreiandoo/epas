@@ -17,6 +17,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'last_activity_ts';
 
+// Explicit helpers for the auth layer. `markSessionActive` MUST be called on
+// every fresh explicit login (not on silent token-restore) so the cold-start
+// check in this hook doesn't inherit a stale timestamp from a prior session
+// and expire the operator instantly. `clearSessionActive` MUST be called on
+// logout so a reinstall / re-login on the same device starts from a clean
+// slate (AsyncStorage survives some upgrade paths).
+export function markSessionActive() {
+  try { AsyncStorage.setItem(STORAGE_KEY, String(Date.now())).catch(() => {}); } catch {}
+}
+
+export function clearSessionActive() {
+  try { AsyncStorage.removeItem(STORAGE_KEY).catch(() => {}); } catch {}
+}
+
 export function useInactivityTimer({ timeoutMs, enabled, onExpire, pauseWhen }) {
   const timerRef = useRef(null);
   const pausedRef = useRef(false);
