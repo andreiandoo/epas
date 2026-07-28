@@ -1114,6 +1114,7 @@ class ListPayouts extends ListRecords
         $today = now()->toDateString();
 
         $query = Event::where('marketplace_client_id', $marketplaceClientId)
+            ->with('venue')
             ->whereNotNull('marketplace_organizer_id')
             ->whereRaw("$endExpr IS NOT NULL")
             ->whereRaw("$endExpr < ?", [$today])
@@ -1166,6 +1167,11 @@ class ListPayouts extends ListRecords
             // Human date/period label (range festivals get "24–26 iul 2026",
             // single days get the day). Shown under the event name in the modal.
             $eventPeriod = $event->displayDateLabel() ?: $eventDate;
+            // Venue + city under the name (columns first, venue relation fallback).
+            $venueCity = trim(implode(', ', array_filter([
+                $event->venue_name ?: ($event->venue?->name ?? null),
+                $event->city ?: ($event->venue?->city ?? null),
+            ])));
 
             $existingPayout = MarketplacePayout::where('event_id', $event->id)
                 ->where('marketplace_client_id', $marketplaceClientId)
@@ -1180,8 +1186,10 @@ class ListPayouts extends ListRecords
                 'event' => $event,
                 'title' => $title,
                 'organizer_name' => $organizerName,
+                'organizer_id' => $organizer?->id,
                 'event_date' => $eventDate,
                 'event_period' => $eventPeriod,
+                'venue_city' => $venueCity,
                 'balance' => $balance,
                 'existing_payout' => $existingPayout,
                 'refund_count' => (int) ($refundInfo?->refund_count ?? 0),

@@ -19,10 +19,23 @@
                     @foreach($rows as $row)
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
                             <td class="px-3 py-2">
-                                <div class="font-medium text-gray-900 dark:text-white">{{ $row['title'] }}</div>
+                                <a href="{{ \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $row['event']->id]) }}"
+                                   target="_blank"
+                                   class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $row['title'] }}</a>
                                 <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $row['event_period'] }}</div>
+                                @if(!empty($row['venue_city']))
+                                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ $row['venue_city'] }}</div>
+                                @endif
                             </td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $row['organizer_name'] }}</td>
+                            <td class="px-3 py-2">
+                                @if($row['organizer_id'])
+                                    <a href="{{ \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('view', ['record' => $row['organizer_id']]) }}"
+                                       target="_blank"
+                                       class="text-xs text-primary-600 hover:underline dark:text-primary-400">{{ $row['organizer_name'] }}</a>
+                                @else
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $row['organizer_name'] }}</span>
+                                @endif
+                            </td>
                             <td class="px-3 py-2 text-right font-mono">
                                 @if($row['balance'] > 0)
                                     <span class="text-emerald-600 dark:text-emerald-400 font-medium">{{ number_format($row['balance'], 2) }} RON</span>
@@ -42,14 +55,12 @@
                             </td>
                             <td class="px-3 py-2 text-right">
                                 @if($row['existing_payout'])
-                                    <div class="flex items-center justify-end gap-2">
-                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $row['existing_payout']->reference }}</span>
-                                        <a href="{{ \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $row['existing_payout']->id]) }}"
-                                           class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-500/10">
-                                            <x-heroicon-m-eye class="w-3.5 h-3.5" />
-                                            Vezi decont
-                                        </a>
-                                    </div>
+                                    {{-- The decont series itself is the link, styled as a button. --}}
+                                    <a href="{{ \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $row['existing_payout']->id]) }}"
+                                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white rounded-lg bg-primary-600 hover:bg-primary-500 whitespace-nowrap">
+                                        <x-heroicon-m-eye class="w-3.5 h-3.5 shrink-0" />
+                                        {{ $row['existing_payout']->reference }}
+                                    </a>
                                 @else
                                     {{-- Button shows for every finished event without an
                                          existing payout — including sold=0 cases. The
