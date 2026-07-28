@@ -33,6 +33,7 @@ class MarketplacePayout extends Model
         'refund_amount',
         'fees_amount',
         'adjustments_amount',
+        'net_override',
         'adjustments_note',
         'status',
         'source',
@@ -595,6 +596,7 @@ class MarketplacePayout extends Model
         'refund_amount' => 'decimal:2',
         'fees_amount' => 'decimal:2',
         'adjustments_amount' => 'decimal:2',
+        'net_override' => 'decimal:2',
         'period_start' => 'date',
         'period_end' => 'date',
         'payout_method' => 'array',
@@ -640,6 +642,15 @@ class MarketplacePayout extends Model
     public function getFinalNetAmountAttribute(): float
     {
         if ($this->finalNetAmountCache !== null) {
+            return $this->finalNetAmountCache;
+        }
+
+        // Admin net-payable override. Set only on the rare payout whose automatic
+        // net is wrong (e.g. a fraud-adjusted decont). NULL on every existing
+        // payout, so this branch is inert unless an admin explicitly pins a value
+        // — behaviour for all other payouts is completely unchanged.
+        if ($this->net_override !== null) {
+            $this->finalNetAmountCache = round((float) $this->net_override, 2);
             return $this->finalNetAmountCache;
         }
 

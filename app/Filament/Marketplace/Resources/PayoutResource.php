@@ -733,6 +733,41 @@ class PayoutResource extends Resource
                                 ])->fullWidth(),
 
                                 \Filament\Schemas\Components\Actions::make([
+                                    \Filament\Actions\Action::make('set_net_override')
+                                        ->label('Ajustare manuală net')
+                                        ->icon('heroicon-o-adjustments-horizontal')
+                                        ->color('warning')
+                                        ->modalHeading('Ajustare manuală a netului de plată')
+                                        ->modalDescription('Setează manual suma netă de plată când calculul automat e greșit (ex. decont ajustat pentru fraudă). Lasă gol pentru a reveni la calculul automat din bilete.')
+                                        ->form([
+                                            \Filament\Forms\Components\TextInput::make('net_override')
+                                                ->label('Net de plată (override)')
+                                                ->numeric()
+                                                ->step('0.01')
+                                                ->suffix('RON')
+                                                ->default(fn ($record) => $record->net_override)
+                                                ->helperText('Gol = calcul automat din bilete.'),
+                                            \Filament\Forms\Components\Textarea::make('override_reason')
+                                                ->label('Motiv (se adaugă la notele admin)')
+                                                ->rows(2),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $val = ($data['net_override'] === null || $data['net_override'] === '')
+                                                ? null
+                                                : round((float) $data['net_override'], 2);
+                                            $note = trim(($record->admin_notes ?? '') . "\n[" . now()->format('Y-m-d') . '] Net override '
+                                                . ($val === null ? 'eliminat' : ('setat la ' . $val))
+                                                . (!empty($data['override_reason']) ? (': ' . $data['override_reason']) : ''));
+                                            $record->update(['net_override' => $val, 'admin_notes' => $note]);
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Ajustare aplicată')
+                                                ->success()
+                                                ->send();
+                                            $livewire->refreshFormData(['net_override', 'admin_notes']);
+                                        }),
+                                ])->fullWidth(),
+
+                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('delete_payout')
                                         ->label('Șterge decont')
                                         ->icon('heroicon-o-trash')
