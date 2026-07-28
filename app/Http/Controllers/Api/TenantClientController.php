@@ -477,8 +477,16 @@ class TenantClientController extends Controller
         }
         $tenantId = $resolved['tenant']->id;
 
+        // Look up by slug, and by id only when the segment is numeric: on
+        // PostgreSQL comparing the integer `id` column against a slug aborts the
+        // whole query (22P02 invalid input syntax), so /artists/{slug} used to 500.
         $artist = TenantArtist::where('tenant_id', $tenantId)
-            ->where(fn ($q) => $q->where('slug', $slug)->orWhere('id', $slug))
+            ->where(function ($q) use ($slug) {
+                $q->where('slug', $slug);
+                if (ctype_digit((string) $slug)) {
+                    $q->orWhere('id', (int) $slug);
+                }
+            })
             ->where('status', 'active')
             ->first();
 

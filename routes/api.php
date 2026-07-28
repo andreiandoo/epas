@@ -2366,19 +2366,24 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.settings.update');
 
         // Account
-        Route::get('/orders', [TenantAccountController::class, 'orders'])
+        // NOTE: these MUST stay on CustomerAccountController (the MarketplaceClient
+        // one). TenantAccountController is the tenant-client controller: it has no
+        // upcomingTickets/allTickets/ticketDetail/pastEvents at all, and its
+        // orders/deleteAccount resolve a TENANT from ?tenant=/hostname, which a
+        // marketplace request never sends.
+        Route::get('/orders', [CustomerAccountController::class, 'orders'])
             ->name('api.marketplace-client.customer.orders');
-        Route::get('/orders/{order}', [TenantAccountController::class, 'orderDetail'])
+        Route::get('/orders/{order}', [CustomerAccountController::class, 'orderDetail'])
             ->name('api.marketplace-client.customer.orders.show');
-        Route::get('/tickets', [TenantAccountController::class, 'upcomingTickets'])
+        Route::get('/tickets', [CustomerAccountController::class, 'upcomingTickets'])
             ->name('api.marketplace-client.customer.tickets');
-        Route::get('/tickets/all', [TenantAccountController::class, 'allTickets'])
+        Route::get('/tickets/all', [CustomerAccountController::class, 'allTickets'])
             ->name('api.marketplace-client.customer.tickets.all');
-        Route::get('/tickets/{ticket}', [TenantAccountController::class, 'ticketDetail'])
+        Route::get('/tickets/{ticket}', [CustomerAccountController::class, 'ticketDetail'])
             ->name('api.marketplace-client.customer.tickets.show');
-        Route::get('/past-events', [TenantAccountController::class, 'pastEvents'])
+        Route::get('/past-events', [CustomerAccountController::class, 'pastEvents'])
             ->name('api.marketplace-client.customer.past-events');
-        Route::delete('/account', [TenantAccountController::class, 'deleteAccount'])
+        Route::delete('/account', [CustomerAccountController::class, 'deleteAccount'])
             ->name('api.marketplace-client.customer.account.delete');
 
         // Avatar
