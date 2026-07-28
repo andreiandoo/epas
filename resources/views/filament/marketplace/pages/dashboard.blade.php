@@ -534,6 +534,100 @@
                     {!! $stat('Vânzări azi', $money($fes['sales_today']), '', 'blue') !!}
                     {!! $stat('Comision azi', $money($fes['comm_today']), '', 'blue') !!}
                 </div>
+
+                {{-- Decontare (compensare) — perioada in derulare (jumatate-de-luna).
+                     Mirror 1:1 al /organizator/deconturi -> sectiunea "Decontare (compensare)"
+                     pentru admin AmBilet, ca sa vada balanta zilnic fara sa se logheze in cont. --}}
+                @if(!empty($fes['settlement']))
+                @php
+                    $stl = $fes['settlement'];
+                    $bal = $stl['balance'];
+                    $on = $stl['online'];
+                    $po = $stl['pos'];
+                    $pFrom = \Carbon\Carbon::parse($stl['period_from'])->locale('ro')->translatedFormat('j M');
+                    $pTo = \Carbon\Carbon::parse($stl['period_to'])->locale('ro')->translatedFormat('j M Y');
+                    // Clase statice per-directie (Tailwind JIT nu detecteaza `bg-{{ var }}`).
+                    $dirClasses = [
+                        'ambilet_to_venue' => [
+                            'wrap' => 'border-emerald-200 dark:border-emerald-800/40',
+                            'head' => 'bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800/40',
+                            'headLabel' => 'text-emerald-800 dark:text-emerald-200',
+                            'headSub' => 'text-emerald-700/80 dark:text-emerald-300/80',
+                            'balBox' => 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700/60',
+                            'balLbl' => 'text-emerald-800 dark:text-emerald-300',
+                            'balMain' => 'text-emerald-900 dark:text-emerald-100',
+                            'balSub' => 'text-emerald-700/80 dark:text-emerald-300/80',
+                        ],
+                        'venue_to_ambilet' => [
+                            'wrap' => 'border-amber-200 dark:border-amber-800/40',
+                            'head' => 'bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/40',
+                            'headLabel' => 'text-amber-800 dark:text-amber-200',
+                            'headSub' => 'text-amber-700/80 dark:text-amber-300/80',
+                            'balBox' => 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/60',
+                            'balLbl' => 'text-amber-800 dark:text-amber-300',
+                            'balMain' => 'text-amber-900 dark:text-amber-100',
+                            'balSub' => 'text-amber-700/80 dark:text-amber-300/80',
+                        ],
+                        'settled' => [
+                            'wrap' => 'border-gray-200 dark:border-gray-700/40',
+                            'head' => 'bg-gray-50 dark:bg-gray-900/20 border-b border-gray-100 dark:border-gray-700/40',
+                            'headLabel' => 'text-gray-800 dark:text-gray-200',
+                            'headSub' => 'text-gray-700/80 dark:text-gray-300/80',
+                            'balBox' => 'bg-gray-50 dark:bg-gray-900/20 border-gray-300 dark:border-gray-700/60',
+                            'balLbl' => 'text-gray-800 dark:text-gray-300',
+                            'balMain' => 'text-gray-900 dark:text-gray-100',
+                            'balSub' => 'text-gray-700/80 dark:text-gray-300/80',
+                        ],
+                    ];
+                    $cls = $dirClasses[$bal['direction']] ?? $dirClasses['settled'];
+                    $dirLabel = $bal['direction'] === 'ambilet_to_venue' ? 'AmBilet → Locație'
+                        : ($bal['direction'] === 'venue_to_ambilet' ? 'Locație → AmBilet' : 'Sold zero');
+                    $dirIcon = $bal['direction'] === 'ambilet_to_venue' ? '→'
+                        : ($bal['direction'] === 'venue_to_ambilet' ? '←' : '=');
+                @endphp
+                <div class="mt-3 border rounded-lg overflow-hidden {{ $cls['wrap'] }}">
+                    <div class="flex items-center justify-between px-3 py-2 {{ $cls['head'] }}">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">⚖️</span>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-wide font-bold {{ $cls['headLabel'] }}">Decontare (compensare) · perioada în derulare</p>
+                                <p class="text-xs {{ $cls['headSub'] }}">{{ $pFrom }} – {{ $pTo }} · online încasat de AmBilet, POS încasat în locație · se compensează comisioanele</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 p-3 lg:grid-cols-3">
+                        {{-- Online (AmBilet incaseaza) --}}
+                        <div class="p-3 border rounded-md bg-sky-50/50 dark:bg-sky-900/10 border-sky-200 dark:border-sky-800/40">
+                            <p class="text-[10px] uppercase font-bold text-sky-800 dark:text-sky-300 mb-1">🌐 Online · încasat de AmBilet</p>
+                            <div class="space-y-1 text-xs">
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Brut</span><span class="font-semibold tabular-nums">{{ $money($on['gross']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Comision AmBilet</span><span class="font-semibold tabular-nums text-amber-700 dark:text-amber-400">−{{ $money($on['commission']) }}</span></div>
+                                <div class="flex justify-between pt-1 border-t border-sky-200/60"><span class="font-bold text-sky-800 dark:text-sky-200">Net (către locație)</span><span class="font-bold tabular-nums text-sky-900 dark:text-sky-100">{{ $money($on['net']) }}</span></div>
+                            </div>
+                        </div>
+                        {{-- POS (locatia incaseaza fizic) --}}
+                        <div class="p-3 border rounded-md bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40">
+                            <p class="text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300 mb-1">🏪 POS · încasat în locație</p>
+                            <div class="space-y-1 text-xs">
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Brut</span><span class="font-semibold tabular-nums">{{ $money($po['gross']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">💵 Cash</span><span class="font-semibold tabular-nums">{{ $money($po['cash']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">💳 Card</span><span class="font-semibold tabular-nums">{{ $money($po['card']) }}</span></div>
+                                <div class="flex justify-between pt-1 border-t border-amber-200/60"><span class="font-bold text-amber-800 dark:text-amber-200">Comision datorat</span><span class="font-bold tabular-nums text-amber-900 dark:text-amber-100">{{ $money($po['commission']) }}</span></div>
+                            </div>
+                        </div>
+                        {{-- Balanta compensare --}}
+                        <div class="p-3 border-2 rounded-md {{ $cls['balBox'] }} flex flex-col justify-center">
+                            <p class="text-[10px] uppercase font-bold {{ $cls['balLbl'] }}">De achitat, prin compensare</p>
+                            <p class="mt-1 text-sm font-bold {{ $cls['balMain'] }}">{{ $dirIcon }} {{ $dirLabel }}</p>
+                            <p class="text-2xl font-extrabold {{ $cls['balMain'] }} tabular-nums">{{ $money($bal['amount']) }}</p>
+                            <p class="text-[10px] {{ $cls['balSub'] }} mt-1">
+                                AmBilet → Locație: <span class="tabular-nums font-semibold">{{ $money($bal['ambilet_owes_venue']) }}</span><br>
+                                Locație → AmBilet: <span class="tabular-nums font-semibold">{{ $money($bal['venue_owes_ambilet']) }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
         @endif

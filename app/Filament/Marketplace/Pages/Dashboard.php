@@ -1565,7 +1565,7 @@ class Dashboard extends Page
         }
 
         return Cache::remember(
-            'mp_event_stats_v6_' . self::FEATURED_EVENT_ID,
+            'mp_event_stats_v7_' . self::FEATURED_EVENT_ID,
             300,
             function () use ($event) {
                 $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
@@ -1650,6 +1650,51 @@ class Dashboard extends Page
                     $cursor->addDay();
                 }
 
+                // Settlement (compensare) pentru perioada in derulare (jumatate-de-luna
+                // 1-15 sau 16-end). Mirror 1:1 al endpointului /leisure/settlement +
+                // al algoritmului din leisure-deconturi.php buildSettlePeriods(): sare
+                // perioadele care au inceput inainte de PROJECT_START (partiale).
+                $projectStart = Carbon::parse('2026-07-15', $tz)->startOfDay();
+                $now = Carbon::now($tz);
+                $period = $this->resolveCurrentHalfMonthPeriod($now, $projectStart, $tz);
+                $settlement = null;
+                if ($period !== null) {
+                    $sFrom = $period['from'];
+                    $sTo = $period['to'];
+                    // Foloseste EXACT aceleasi flag-uri ca /leisure/settlement (dateColumn: paid_at)
+                    $sOnline = $svc->build($event, $sFrom, $sTo, excludePos: true, dateColumn: 'paid_at');
+                    $sPos    = $svc->build($event, $sFrom, $sTo, onlyPos: true,   dateColumn: 'paid_at');
+                    $gO = round((float) $sOnline['total_revenue'], 2);
+                    $cO = round((float) $sOnline['total_commission'], 2);
+                    $nO = round($gO - $cO, 2);
+                    $gP = round((float) $sPos['total_revenue'], 2);
+                    $cP = round((float) $sPos['total_commission'], 2);
+                    // Cash/card physical: mirror endpoint (POS orders, filter meta payment_method)
+                    $posOrders = Order::where('event_id', $event->id)
+                        ->whereIn('status', ['paid', 'completed'])
+                        ->where('source', 'pos')
+                        ->whereBetween('paid_at', [$sFrom->copy()->utc(), $sTo->copy()->utc()]);
+                    $cash = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'cash'")->sum('total'), 2);
+                    $card = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'card'")->sum('total'), 2);
+                    // Compensare: AmBilet datoreaza net-ul online; locatia datoreaza comisionul POS
+                    $ambiletOwes = $nO;
+                    $venueOwes = $cP;
+                    $net = round($ambiletOwes - $venueOwes, 2);
+                    $settlement = [
+                        'period_from' => $sFrom->toDateString(),
+                        'period_to'   => $sTo->toDateString(),
+                        'online' => ['gross' => $gO, 'commission' => $cO, 'net' => $nO],
+                        'pos'    => ['gross' => $gP, 'commission' => $cP, 'cash' => $cash, 'card' => $card],
+                        'balance' => [
+                            'ambilet_owes_venue' => $ambiletOwes,
+                            'venue_owes_ambilet' => $venueOwes,
+                            'net' => $net,
+                            'direction' => $net > 0 ? 'ambilet_to_venue' : ($net < 0 ? 'venue_to_ambilet' : 'settled'),
+                            'amount' => abs($net),
+                        ],
+                    ];
+                }
+
                 return [
                     'event_id' => $event->id,
                     'daily_labels' => $dailyLabels,
@@ -1668,9 +1713,47 @@ class Dashboard extends Page
                     'comm_total' => $comm($full), 'comm_online' => $comm($online), 'comm_pos' => $comm($pos),
                     'days' => $days,
                     'tickets_today' => $tk($today), 'sales_today' => (float) $today['total_revenue'], 'comm_today' => $comm($today),
+                    'settlement' => $settlement,
                 ];
             }
         );
+    }
+
+    /**
+     * Determina perioada jumatate-de-luna in derulare azi (sau proxima urmatoare
+     * daca azi este inainte de PROJECT_START). Mirror JS in leisure-deconturi.php.
+     *
+     * Regula: sare perioadele care ar fi inceput inainte de PROJECT_START (partiale).
+     * Ex: project=15.07.2026 → prima perioada valida e 16-31 iulie (1-15 iul e sarita).
+     *
+     * @return array{from: Carbon, to: Carbon}|null
+     */
+    private function resolveCurrentHalfMonthPeriod(Carbon $today, Carbon $projectStart, string $tz): ?array
+    {
+        $year = (int) $projectStart->year;
+        $month = (int) $projectStart->month;
+        $sd = (int) $projectStart->day;
+        $half = 1;
+        if ($sd === 1) { $half = 1; }
+        elseif ($sd === 16) { $half = 2; }
+        elseif ($sd < 16) { $half = 2; }
+        else { $half = 1; $month++; if ($month > 12) { $month = 1; $year++; } }
+
+        for ($i = 0; $i < 500; $i++) {
+            $fromDay = $half === 1 ? 1 : 16;
+            $from = Carbon::create($year, $month, $fromDay, 0, 0, 0, $tz)->startOfDay();
+            $to = $half === 1
+                ? Carbon::create($year, $month, 15, 0, 0, 0, $tz)->endOfDay()
+                : $from->copy()->endOfMonth()->endOfDay();
+
+            // Azi cade in interval? (or before it — take the next upcoming)
+            if ($today->lte($to)) {
+                return ['from' => $from, 'to' => $to];
+            }
+            if ($half === 1) { $half = 2; }
+            else { $half = 1; $month++; if ($month > 12) { $month = 1; $year++; } }
+        }
+        return null;
     }
 
     private function computeDailyEventReport(int $marketplaceId, string $date): array
