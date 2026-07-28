@@ -31,8 +31,11 @@ Sus:
 **Sub**: listă notificări în ordine cronologică descendentă (cele mai
 recente sus).
 
-**Jos**: secțiunea **„Raportează Problemă"** cu butoanele de apel
-rapid ([cap. 19](./19_contact_urgente.md)).
+**Jos, două secțiuni**:
+- **„Sună la Contact Urgență"** — 3 butoane pentru apel telefonic
+  ([cap. 19](./19_contact_urgente.md))
+- **„Alertă în aplicație (către admini)"** — trimite raport in-app cu
+  opțiune de foto + notă vocală ([cap. 18](./18_raportare_urgente.md))
 
 <!-- SCREENSHOT: panou notificări complet cu listă + butoane apel jos -->
 ![Panou notificări](./screenshots/20-panel.png)
@@ -95,15 +98,17 @@ Dacă un coleg de echipă raportează urgență ([cap. 18](./18_raportare_urgent
 tu (admin/proprietar) primești în panou:
 
 ```
-Urgență: Problemă Tehnică
-Raportat de Ion Popescu (Manager) — poarta VIP1.
-acum 30 sec.
+[⚠️] Urgență: Problemă Tehnică
+     Raportat de Ion Popescu (Manager) — poarta VIP1.
+     [thumbnail 56×56] [▶ Redă · 12s]
+     acum 30 sec
 ```
 
 Cu iconă roșie alert. Include:
 - Cine a raportat + rolul
 - De la ce poartă
-- (dacă e wire-uit renderer) — thumbnail foto + play audio
+- **Thumbnail foto** (dacă atașat) — 56×56 px, click pentru mărire
+- **Buton Redă** pentru nota vocală (dacă atașată) — cu durata în secunde
 
 ---
 

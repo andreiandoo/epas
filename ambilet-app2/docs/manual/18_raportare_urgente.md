@@ -1,14 +1,33 @@
 # Capitolul 18 — Raportarea unei urgențe (foto + notă vocală)
 
-Ceva merge prost la eveniment? Buton mare roșu în bara turei — alertezi
-instant proprietarul și administratorii, cu poză și/sau notă vocală
-opțional atașate.
+Ceva merge prost la eveniment? Alertezi instant proprietarul și
+administratorii, cu poză și/sau notă vocală opțional atașate.
+
+**Accesibil din 2 locuri**: panoul de notificări (mereu disponibil,
+nu ai nevoie de tură activă) SAU bara turei (dacă lucrezi în tură).
 
 Timp de citit: **~4 minute**.
 
 ---
 
-## 1. Cum ajungi la sheet-ul de urgențe
+## 1. Cum ajungi la formularul de raport
+
+### Metoda 1 — din Notificări (recomandat, mereu disponibil)
+
+**Tap pe clopoțelul din header** → se deschide panoul de notificări.
+Jos, sub secțiunea de apeluri telefonice, e o zonă titrată
+**„Alertă în aplicație (către admini)"** cu butoane de atașament +
+grid de tipuri de urgențe.
+
+<!-- SCREENSHOT: panoul de notificări cu Alertă în aplicație vizibilă jos -->
+![Alertă în aplicație din Notificări](./screenshots/18-notif-panel.png)
+
+**Avantaje**:
+- Merge chiar dacă nu ai tură activă
+- Un singur tap pe clopoțel → ești acolo
+- Poți raporta imediat, indiferent de tab-ul unde te afli
+
+### Metoda 2 — din bara turei
 
 **Doar când tura ta e pornită**, sus, în bara turei, ai un buton **⚠️
 roșu** lângă cronometrul turei:
@@ -16,7 +35,8 @@ roșu** lângă cronometrul turei:
 <!-- SCREENSHOT: bara turei cu cronometru + Pauză + ⚠️ evidențiat -->
 ![Bara turei cu buton urgență](./screenshots/18-shift-bar.png)
 
-**Tap** → se deschide sheet-ul **„Raportează Problemă"** de jos.
+**Tap** → se deschide sheet-ul „Raportează Problemă" de jos, cu același
+conținut ca Metoda 1.
 
 ---
 
@@ -114,13 +134,15 @@ notificarea:
 - În **panoul de notificări** al aplicației lor (cap. 20)
 - Cu **iconă alertă roșie** (severity high) sau amber (medium)
 - Cu **numele tău** ca reporter și **poarta ta** (dacă e asignată)
-- Cu **poza + nota** atașate (dacă le-ai atașat)
+- Cu **poza (thumbnail)** și **butonul Play** pentru nota vocală (dacă
+  le-ai atașat) — vizibile direct în notificare
 
 Ex. text notificare primită de admin:
 ```
 Urgență: Problemă Tehnică
 Raportat de Ion Popescu (Manager) — poarta VIP1.
-[thumbnail foto] [play notă audio]
+[thumbnail foto 56x56] [▶ Redă · 12s]
+acum 30 sec
 ```
 
 ---
@@ -162,9 +184,13 @@ aibă app-ul deschis pe fundal.
 
 ## 10. Probleme frecvente
 
-**„Butonul ⚠️ nu apare"**
-- Nu ai tura pornită. Deschide tura din Panou.
-- Nu ai permisiunea? Contactează admin.
+**„Butonul ⚠️ din bara turei nu apare"**
+- Nu ai tura pornită. Deschide tura din Panou. **SAU** folosește
+  Metoda 1 (din Notificări) — merge fără tură.
+
+**„Nu văd secțiunea Alertă în aplicație în Notificări"**
+- Panoul de notificări e scurt? Trebuie să faci scroll în jos.
+- Verifică că build-ul e v2.2 sau mai recent.
 
 **„Camera nu deschide când tap Foto"**
 - Verifică permisiunea camerei din Setări Android → Aplicații → AmBilet

@@ -51,13 +51,24 @@ Deep-link către evenimentul specific = feature viitor.
 
 ## 4. Când se actualizează
 
-**La fiecare 30 de minute** — Android impune un minim (nu putem update
-la fiecare 5s ca să economisim baterie).
+**Două ritmuri**:
+
+**A) Aplicația e deschisă** (chiar și în fundal): widget-ul se
+actualizează **în ~30 secunde** de la fiecare sync al aplicației. Când
+tu ai app-ul pornit, cifrele din widget sunt aproape live — sub un
+minut de întârziere.
+
+**B) Aplicația e complet închisă** (swipe out din task manager): widget
+merge pe **ritmul Android de 30 min** — limită de sistem impusă pentru
+a proteja bateria. Nu putem coborî sub 30 min din config.
 
 **Timp update afișat**: „acum 2 min" / „acum 15 min" / „acum 1 h" / etc.
 
-**Refresh manual**: nu există momentan. Deschizi aplicația → se
-sincronizează → widget preia la următoarea actualizare.
+**Refresh manual**: nu există buton explicit. Cea mai bună metodă:
+deschide app-ul → forțează sync → widget preia în ~30s.
+
+**Recomandare**: la evenimente active, lasă app-ul deschis pe device
+(nu-l închide) — widget-ul rămâne live.
 
 ---
 
@@ -68,21 +79,35 @@ sincronizează → widget preia la următoarea actualizare.
 - Cifră: `—`
 - Etichetă: „fără date"
 
-**Fix**: deschide o dată AmBilet Scan NEXT + logat + selectează un
-eveniment → widget se completează la următorul refresh.
+**Fix rapid**:
+1. Deschide **AmBilet Scan NEXT**
+2. Loghează-te (dacă nu ești)
+3. Selectează un eveniment activ (bara roșie sus)
+4. Așteaptă ~30 secunde — widget-ul se completează
+
+Dacă widget-ul rămâne „fără date" mai mult de 1 minut chiar cu app-ul
+deschis, e semn că sync-ul cu serverul n-a mers — verifică
+conexiunea la internet.
 
 ---
 
-## 6. Cifra „bilete vândute azi"
+## 6. Cifra „bilete vândute"
+
+Widget-ul arată **total bilete vândute la evenimentul selectat**
+(cumulativ, nu doar azi).
 
 Cum se calculează:
-- Suma vânzărilor de azi (din ora 00:00 până acum)
+- Total_sold de la server (agregat pe eveniment)
 - Include atât vânzări online (website) cât și la ușă (POS)
 - Se actualizează la fiecare sync al aplicației
 
 Nu include:
 - Vânzări anulate / refundate
 - Bilete de test
+
+**Notă**: eticheta „bilete vândute" e generică — arată totalul, nu
+diferențiază între „azi" și „istoric". Pentru cifre specifice pe zi,
+deschide Rapoartele ([cap. 15](./15_rapoarte.md)).
 
 ---
 

@@ -5,6 +5,7 @@ import { categorizeEvent, groupEventsByCategory } from '../utils/eventCategories
 import { createReverbConnection } from '../api/reverb';
 import { useAuth } from './AuthContext';
 import { pickString } from '../utils/pickString';
+import { pushWidgetSnapshot } from '../services/widgetBridge';
 
 const EventContext = createContext(null);
 
@@ -168,6 +169,15 @@ export function EventProvider({ children }) {
     setTicketTypes(posTypes.length > 0 ? posTypes.map(enrichTicketType) : []);
 
     setLastSyncAt(Date.now());
+
+    // Push current snapshot to the Android home-screen widget. No-op on
+    // iOS + on Android builds where the native module isn't linked yet.
+    try {
+      pushWidgetSnapshot(
+        eventData,
+        { total_sold: eventData.tickets_sold ?? rawStats.total ?? 0 }
+      );
+    } catch {}
   }, []);
 
   // Single load path: parallel fetch of participants + event details,

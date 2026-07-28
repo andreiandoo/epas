@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,18 @@ import {
   Alert,
   Platform,
   PermissionsAndroid,
+  Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useApp } from '../../context/AppContext';
+import EmergencyReporter from '../EmergencyReporter';
+
+// expo-av lazy — for the mini audio player attached to voice-note
+// notifications. Silent no-op if module isn't linked.
+let AudioLib = null;
+try { AudioLib = require('expo-av').Audio; } catch {}
 
 // Direct-dial helper — bypasses the Android intent chooser so an emergency
 // button places the call in one tap. iOS falls through to Linking(tel:)
@@ -77,8 +84,70 @@ function NotificationIcon({ type }) {
   }
 }
 
+// Mini audio player — play/pause a local m4a URI (or remote URL).
+// Managed state (loading, playing) so the button label reflects reality.
+function MiniAudioPlayer({ uri, duration }) {
+  const [state, setState] = useState('idle'); // 'idle' | 'loading' | 'playing'
+  const soundRef = useRef(null);
+
+  useEffect(() => () => {
+    if (soundRef.current) {
+      try { soundRef.current.unloadAsync(); } catch {}
+      soundRef.current = null;
+    }
+  }, []);
+
+  const toggle = async () => {
+    if (!AudioLib) {
+      Alert.alert('Modul audio lipsă', 'Rebuild aplicația cu ultimele dependințe.');
+      return;
+    }
+    if (state === 'playing') {
+      try { await soundRef.current?.pauseAsync(); } catch {}
+      setState('idle');
+      return;
+    }
+    setState('loading');
+    try {
+      if (!soundRef.current) {
+        const { sound } = await AudioLib.Sound.createAsync({ uri }, { shouldPlay: false });
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status?.didJustFinish) {
+            setState('idle');
+            try { sound.setPositionAsync(0); } catch {}
+          }
+        });
+        soundRef.current = sound;
+      }
+      await soundRef.current.playAsync();
+      setState('playing');
+    } catch {
+      setState('idle');
+      Alert.alert('Eroare', 'Nu am putut porni redarea.');
+    }
+  };
+
+  return (
+    <TouchableOpacity style={styles.audioPlayer} onPress={toggle} activeOpacity={0.7}>
+      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+        {state === 'playing' ? (
+          <Path d="M6 4h4v16H6zM14 4h4v16h-4z" fill={colors.purple} />
+        ) : (
+          <Path d="M8 5v14l11-7-11-7z" fill={colors.purple} />
+        )}
+      </Svg>
+      <Text style={styles.audioPlayerText}>
+        {state === 'playing' ? 'Pauză' : state === 'loading' ? 'Se încarcă…' : 'Redă'}
+        {duration ? ` · ${duration}s` : ''}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function NotificationItem({ notification }) {
   const isUnread = notification.unread;
+  const hasPhoto = !!(notification.photo_uri || notification.photo_url);
+  const hasAudio = !!(notification.audio_uri || notification.audio_url);
 
   return (
     <View style={[styles.notifItem, isUnread && styles.notifItemUnread]}>
@@ -87,6 +156,23 @@ function NotificationItem({ notification }) {
         <Text style={[styles.notifMessage, isUnread && styles.notifMessageUnread]} numberOfLines={2}>
           {notification.message}
         </Text>
+        {(hasPhoto || hasAudio) && (
+          <View style={styles.notifMediaRow}>
+            {hasPhoto && (
+              <Image
+                source={{ uri: notification.photo_uri || notification.photo_url }}
+                style={styles.notifThumb}
+                resizeMode="cover"
+              />
+            )}
+            {hasAudio && (
+              <MiniAudioPlayer
+                uri={notification.audio_uri || notification.audio_url}
+                duration={notification.audio_duration}
+              />
+            )}
+          </View>
+        )}
         <Text style={styles.notifTime}>{notification.time}</Text>
       </View>
       {isUnread && <View style={styles.unreadDot} />}
@@ -231,20 +317,19 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
             )}
           </ScrollView>
 
-          {/* Raportează Problemă — one-tap dial for the three configured contacts.
-              Numbers live in Settings → Contact Urgențe (stored locally). */}
+          {/* Two-part bottom bar:
+              1) SUNĂ — apel telefonic direct la numerele configurate în
+                 Settings → Contact Urgențe (pentru 112 / pază / tehnic)
+              2) ALERTĂ ÎN APLICAȚIE — trimite raport (opțional cu foto +
+                 notă vocală) către toți admin/proprietari — accesibil
+                 fără tură activă */}
           <View style={styles.emergencySection}>
             <View style={styles.emergencyHeader}>
               <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"
-                  stroke={colors.danger}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <Path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.37 1.9.72 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.35 1.85.59 2.81.72a2 2 0 011.72 2z"
+                  stroke={colors.danger} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
-              <Text style={styles.emergencyHeaderText}>Raportează Problemă</Text>
+              <Text style={styles.emergencyHeaderText}>Sună la Contact Urgență</Text>
             </View>
             <View style={styles.emergencyGrid}>
               <EmergencyButton
@@ -275,6 +360,22 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
                 onPressCall={callEmergency}
               />
             </View>
+          </View>
+
+          <View style={styles.reporterSection}>
+            <View style={styles.emergencyHeader}>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"
+                  stroke={colors.danger}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.emergencyHeaderText}>Alertă în aplicație (către admini)</Text>
+            </View>
+            <EmergencyReporter compact />
           </View>
         </View>
       </TouchableOpacity>
@@ -404,6 +505,44 @@ const styles = StyleSheet.create({
   notifTime: {
     fontSize: 11,
     color: colors.textTertiary,
+  },
+  notifMediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  notifThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: colors.border,
+  },
+  audioPlayer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    backgroundColor: colors.purpleBg,
+  },
+  audioPlayerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.purple,
+  },
+  reporterSection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 14,
+    gap: 8,
   },
   unreadDot: {
     width: 8,

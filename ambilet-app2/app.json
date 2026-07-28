@@ -2,7 +2,7 @@
   "expo": {
     "name": "AmBilet Scan NEXT",
     "slug": "ambilet-scan-next",
-    "version": "2.2.0-dev.2",
+    "version": "2.2.0-dev.3",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
