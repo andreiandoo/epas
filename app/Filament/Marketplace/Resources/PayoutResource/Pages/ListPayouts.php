@@ -1168,10 +1168,17 @@ class ListPayouts extends ListRecords
             // single days get the day). Shown under the event name in the modal.
             $eventPeriod = $event->displayDateLabel() ?: $eventDate;
             // Venue + city under the name (columns first, venue relation fallback).
-            $venueCity = trim(implode(', ', array_filter([
-                $event->venue_name ?: ($event->venue?->name ?? null),
-                $event->city ?: ($event->venue?->city ?? null),
-            ])));
+            // venue/city may be translatable JSON (array) — resolve to a string
+            // before joining, or implode() throws "Array to string conversion".
+            $toStr = function ($v): string {
+                if (is_array($v)) {
+                    return (string) ($v['ro'] ?? $v['en'] ?? (reset($v) ?: ''));
+                }
+                return (string) ($v ?? '');
+            };
+            $venueName = $toStr($event->venue_name ?: ($event->venue?->name ?? null));
+            $cityName = $toStr($event->city ?: ($event->venue?->city ?? null));
+            $venueCity = trim(implode(', ', array_filter([$venueName, $cityName])));
 
             $existingPayout = MarketplacePayout::where('event_id', $event->id)
                 ->where('marketplace_client_id', $marketplaceClientId)
