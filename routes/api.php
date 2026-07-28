@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\TenantClient\AccountController;
 use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\DemoCheckoutController;
+use App\Http\Controllers\Api\TenantClient\LeisureController;
 use App\Http\Controllers\Api\TenantClient\SubscriptionController;
 use App\Http\Controllers\Api\TenantClient\CustomerAccountController as TenantAccountController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
@@ -129,6 +130,18 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/account/gift-cards', [TenantAccountController::class, 'giftCards'])->name('api.tenant-client-public.account.gift-cards');
     Route::post('/account/gift-cards/redeem', [TenantAccountController::class, 'redeemGiftCard'])->name('api.tenant-client-public.account.gift-cards.redeem');
     Route::post('/account/gift-cards/purchase', [TenantAccountController::class, 'purchaseGiftCard'])->name('api.tenant-client-public.account.gift-cards.purchase');
+
+    // Leisure public (tenant_type=leisure). 404 pentru orice alt tenant, deci
+    // nu schimbă nimic pentru tenanții existenți. Consumate de storefront-ul
+    // starter-kit (kind `leisure`): catalog, calendar, slot-uri, închirieri.
+    Route::get('/leisure/bookables', [LeisureController::class, 'bookables'])
+        ->name('api.tenant-client-public.leisure.bookables');
+    Route::get('/leisure/availability', [LeisureController::class, 'availability'])
+        ->name('api.tenant-client-public.leisure.availability');
+    Route::get('/leisure/slots', [LeisureController::class, 'slots'])
+        ->name('api.tenant-client-public.leisure.slots');
+    Route::get('/leisure/rentals', [LeisureController::class, 'rentals'])
+        ->name('api.tenant-client-public.leisure.rentals');
 
     // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.

@@ -9,7 +9,10 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use App\Services\Leisure\CapacityAvailabilityService;
+use App\Services\Leisure\LeisurePricingResolver;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +45,12 @@ class DemoCheckoutController extends Controller
             'items'             => 'nullable|array',
             'items.*.ticket_type_id' => 'required_with:items|integer',
             'items.*.quantity'  => 'required_with:items|integer|min:1',
+            // Leisure booking (tenant_type=leisure). All nullable: a non-leisure
+            // checkout never sends them and behaves exactly as before.
+            'items.*.capacity_id'      => 'nullable|integer',
+            'items.*.visit_date'       => 'nullable|date_format:Y-m-d',
+            'items.*.slot_time'        => 'nullable|date_format:H:i',
+            'items.*.duration_minutes' => 'nullable|integer|min:1',
             'beneficiaries'     => 'nullable|array',
             'beneficiaries.*.name'  => 'nullable|string|max:190',
             'beneficiaries.*.email' => 'nullable|email|max:190',
@@ -110,6 +119,7 @@ class DemoCheckoutController extends Controller
                 $totalCents = 0;
                 $ticketRows = [];       // [ticket_type_id, price_cents, meta]
                 $seatUids = [];
+                $reservedCapacity = []; // [[capacity_id, qty], …] — leisure day/slot holds
                 $eventSeatingId = $validated['event_seating_id'] ?? null;
 
                 $beneficiaries = $validated['beneficiaries'] ?? [];
@@ -136,13 +146,42 @@ class DemoCheckoutController extends Controller
                 } else {
                     foreach ($items as $item) {
                         $tt = $ticketTypes->firstWhere('id', $item['ticket_type_id']) ?? TicketType::find($item['ticket_type_id']);
-                        $priceCents = (int) ($tt?->price_cents ?: (($tt?->price_max ?? 0) * 100));
-                        for ($i = 0; $i < $item['quantity']; $i++) {
+                        $qty = (int) $item['quantity'];
+
+                        // Leisure: price through the resolver (weekday rules,
+                        // seasons, duration variant) instead of the flat price,
+                        // and hold the day/slot so the venue cannot oversell.
+                        $isLeisure = ! empty($item['visit_date']) || ! empty($item['capacity_id']);
+                        if ($isLeisure && $tt) {
+                            $visitDate = CarbonImmutable::parse($item['visit_date'] ?? 'today');
+                            $priceCents = app(LeisurePricingResolver::class)->resolvePrice(
+                                $tt,
+                                $visitDate,
+                                isset($item['duration_minutes']) ? (int) $item['duration_minutes'] : null,
+                            );
+                            if (! empty($item['capacity_id'])) {
+                                $ok = app(CapacityAvailabilityService::class)
+                                    ->reserve((int) $item['capacity_id'], $qty);
+                                if (! $ok) {
+                                    throw new \RuntimeException('Intervalul ales nu mai are locuri disponibile.');
+                                }
+                                $reservedCapacity[] = [(int) $item['capacity_id'], $qty];
+                            }
+                        } else {
+                            $priceCents = (int) ($tt?->price_cents ?: (($tt?->price_max ?? 0) * 100));
+                        }
+
+                        for ($i = 0; $i < $qty; $i++) {
                             $totalCents += $priceCents;
                             $ticketRows[] = [
                                 'ticket_type_id' => $tt?->id ?? $fallbackTtId,
                                 'price_cents'    => $priceCents,
-                                'meta'           => [],
+                                'meta'           => array_filter([
+                                    'visit_date'       => $item['visit_date'] ?? null,
+                                    'slot_time'        => $item['slot_time'] ?? null,
+                                    'duration_minutes' => $item['duration_minutes'] ?? null,
+                                    'capacity_id'      => $item['capacity_id'] ?? null,
+                                ], fn ($v) => $v !== null),
                             ];
                         }
                     }
@@ -185,6 +224,9 @@ class DemoCheckoutController extends Controller
                         'surcharge_cents' => $surchargeCents,
                         'newsletter'     => (bool) ($validated['newsletter'] ?? false),
                         'seated_items'   => $seatedItems,
+                        // Leisure holds, so a cancel/expire can hand the places
+                        // back with CapacityAvailabilityService::release().
+                        'leisure_capacity' => $reservedCapacity,
                     ],
                 ]);
 

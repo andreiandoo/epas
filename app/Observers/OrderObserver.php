@@ -120,6 +120,28 @@ class OrderObserver
                         ]);
                     }
                 });
+
+                // Leisure: move the day/slot holds taken at checkout from
+                // reserved → sold. No-op for every non-leisure order, which
+                // never carries meta.leisure_capacity.
+                DB::afterCommit(function () use ($order) {
+                    foreach ((array) ($order->meta['leisure_capacity'] ?? []) as $hold) {
+                        [$capacityId, $qty] = array_pad((array) $hold, 2, null);
+                        if (! $capacityId || ! $qty) {
+                            continue;
+                        }
+                        try {
+                            app(\App\Services\Leisure\CapacityAvailabilityService::class)
+                                ->confirm((int) $capacityId, (int) $qty);
+                        } catch (\Throwable $e) {
+                            Log::warning('Leisure capacity confirm failed', [
+                                'order_id' => $order->id,
+                                'capacity_id' => $capacityId,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                });
             }
 
             // Status moved into / out of the success set on the same customer
