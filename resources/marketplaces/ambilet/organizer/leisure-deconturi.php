@@ -43,7 +43,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Decontare (compensare AmBilet <-> locație) pe perioade de 2 săptămâni -->
+        <!-- Decontare (compensare AmBilet <-> locație) pe jumătăți de lună: 1-15 și 16-ultima_zi -->
         <section class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
             <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border bg-slate-50">
                 <div>
@@ -263,7 +263,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('dc-refresh').addEventListener('click', loadPayouts);
         loadPayouts();
 
-        // Settlement: build the 2-week period selector (from 2026-07-15) and load.
+        // Settlement: build half-month period selector (1-15 & 16-end, din 2026-07-15) and load.
         buildSettlePeriods();
         const sel = $('dc-settle-period');
         if (sel) {
@@ -286,20 +286,59 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return new Date(s + 'T00:00:00').toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
     }
 
+    // Genereaza perioade jumatati-de-luna: [1-15] si [16-ultima_zi].
+    // Regula: sarim perioada care a inceput INAINTE de PROJECT_START (ex: proiectul
+    // incepe 15 iulie -> jumatatea 1-15 iulie a inceput pe 1 iulie -> skip; prima
+    // afisata devine 16-31 iulie).
     function buildSettlePeriods() {
         const sel = $('dc-settle-period');
         if (!sel) return;
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const start = new Date(PROJECT_START + 'T00:00:00');
         const periods = [];
-        let cur = new Date(start);
-        while (cur <= today && periods.length < 200) {
-            const from = new Date(cur);
-            const to = new Date(cur); to.setDate(to.getDate() + 13);
+
+        // Determina jumatatea de start (1 = 1-15, 2 = 16-end):
+        //   startDay=1  -> half 1 (incepe fix pe 1)
+        //   startDay=16 -> half 2 (incepe fix pe 16)
+        //   startDay 2..15 -> half 1 a inceput pe 1, e partiala -> sarim la half 2
+        //   startDay >16 -> half 2 a inceput pe 16, e partiala -> sarim la half 1 luna urmatoare
+        let year = start.getFullYear();
+        let month = start.getMonth(); // 0-indexed
+        let half = 1;
+        const sd = start.getDate();
+        if (sd === 1) { half = 1; }
+        else if (sd === 16) { half = 2; }
+        else if (sd < 16) { half = 2; }
+        else { half = 1; month++; if (month > 11) { month = 0; year++; } }
+
+        let safety = 0;
+        while (safety++ < 500) {
+            const fromDay = (half === 1) ? 1 : 16;
+            const from = new Date(year, month, fromDay);
+            // half 1: pana pe 15; half 2: ultima zi din luna curenta (day 0 din luna urmatoare)
+            const to = (half === 1)
+                ? new Date(year, month, 15)
+                : new Date(year, month + 1, 0);
+            if (from > today) break;
             periods.push({ from: ymd(from), to: ymd(to) });
-            cur.setDate(cur.getDate() + 14);
+            // avanseaza
+            if (half === 1) {
+                half = 2;
+            } else {
+                half = 1;
+                month++;
+                if (month > 11) { month = 0; year++; }
+            }
         }
-        if (!periods.length) periods.push({ from: PROJECT_START, to: ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 13)) });
+
+        if (!periods.length) {
+            // Fallback defensiv: jumatatea curenta a lunii
+            const now = new Date();
+            const d = now.getDate() <= 15
+                ? { from: new Date(now.getFullYear(), now.getMonth(), 1), to: new Date(now.getFullYear(), now.getMonth(), 15) }
+                : { from: new Date(now.getFullYear(), now.getMonth(), 16), to: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
+            periods.push({ from: ymd(d.from), to: ymd(d.to) });
+        }
         // Newest first
         periods.reverse();
         sel.innerHTML = periods.map((p, i) =>
