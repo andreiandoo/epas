@@ -89,53 +89,7 @@ class MarketplaceEventsController extends BaseController
         }
 
         if ($request->has('city')) {
-            $cityParam = $request->city;
-
-            // Try to resolve city slug to a MarketplaceCity record
-            $marketplaceCity = MarketplaceCity::where('marketplace_client_id', $client->id)
-                ->where('slug', $cityParam)
-                ->first();
-
-            // Diacritic-insensitive city pattern. The /events/cities
-            // endpoint groups venue.city values after stripping
-            // diacritics (so "București" + "Bucuresti" + "BUCUREȘTI"
-            // collapse into one bucket), so the events list MUST do
-            // the same comparison or its count diverges from what the
-            // city-filter dropdown advertises. Postgres LIKE / ILIKE
-            // are accent-sensitive, so we strip diacritics on both
-            // sides via translate().
-            $needle = static::normalizeCityNeedle($cityParam);
-
-            if ($marketplaceCity) {
-                $cityName = $marketplaceCity->getTranslation('name', $language)
-                    ?: (is_array($marketplaceCity->name)
-                        ? ($marketplaceCity->name['ro'] ?? $marketplaceCity->name['en'] ?? reset($marketplaceCity->name))
-                        : $marketplaceCity->name);
-                $needle = static::normalizeCityNeedle($cityName);
-
-                $query->where(function ($q) use ($marketplaceCity, $needle) {
-                    $q->where('marketplace_city_id', $marketplaceCity->id)
-                        ->orWhereHas('venue', function ($vq) use ($needle) {
-                            $vq->whereRaw(static::cityMatchSql(), ['%' . $needle . '%']);
-                        });
-                });
-            } else {
-                // Fallback: hyphen-to-space slug variant + diacritic-stripped
-                // name. The marketplaceCity name comparison still uses ilike on
-                // JSON (case-insensitive but accent-sensitive) — fine for the
-                // canonical seed cities; venue.city is the source of truth and
-                // gets the full translate()-based match.
-                $cityNameLoose = str_replace('-', ' ', $cityParam);
-                $query->where(function ($q) use ($cityParam, $cityNameLoose, $needle) {
-                    $q->whereHas('marketplaceCity', function ($mq) use ($cityParam, $cityNameLoose) {
-                        $mq->where('name->ro', 'ilike', "%{$cityNameLoose}%")
-                            ->orWhere('name->en', 'ilike', "%{$cityNameLoose}%")
-                            ->orWhere('slug', $cityParam);
-                    })->orWhereHas('venue', function ($vq) use ($needle) {
-                        $vq->whereRaw(static::cityMatchSql(), ['%' . $needle . '%']);
-                    });
-                });
-            }
+            $this->applyCityFilter($query, $request->city, $client, $language);
         }
 
         if ($request->has('from_date')) {
@@ -611,6 +565,59 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
+     * Apply the canonical diacritic-insensitive city filter, shared by the
+     * main events listing and the featured() endpoint. Matches on the resolved
+     * MarketplaceCity (marketplace_city_id) OR a translate()-normalized
+     * venue.city LIKE, so a slug like "bucuresti" matches events in
+     * "București". Kept as one method so the city-promotion carousel
+     * (type=city) and the listing never diverge in how they resolve a slug.
+     */
+    protected function applyCityFilter($query, string $cityParam, $client, string $language): void
+    {
+        // Try to resolve city slug to a MarketplaceCity record
+        $marketplaceCity = MarketplaceCity::where('marketplace_client_id', $client->id)
+            ->where('slug', $cityParam)
+            ->first();
+
+        // Diacritic-insensitive city pattern. The /events/cities endpoint
+        // groups venue.city values after stripping diacritics (so "București"
+        // + "Bucuresti" + "BUCUREȘTI" collapse into one bucket), so this MUST
+        // do the same comparison. Postgres LIKE / ILIKE are accent-sensitive,
+        // so we strip diacritics on both sides via translate().
+        $needle = static::normalizeCityNeedle($cityParam);
+
+        if ($marketplaceCity) {
+            $cityName = $marketplaceCity->getTranslation('name', $language)
+                ?: (is_array($marketplaceCity->name)
+                    ? ($marketplaceCity->name['ro'] ?? $marketplaceCity->name['en'] ?? reset($marketplaceCity->name))
+                    : $marketplaceCity->name);
+            $needle = static::normalizeCityNeedle($cityName);
+
+            $query->where(function ($q) use ($marketplaceCity, $needle) {
+                $q->where('marketplace_city_id', $marketplaceCity->id)
+                    ->orWhereHas('venue', function ($vq) use ($needle) {
+                        $vq->whereRaw(static::cityMatchSql(), ['%' . $needle . '%']);
+                    });
+            });
+        } else {
+            // Fallback: hyphen-to-space slug variant + diacritic-stripped
+            // name. marketplaceCity name comparison uses ilike on JSON
+            // (case-insensitive but accent-sensitive) — fine for canonical
+            // seed cities; venue.city gets the full translate()-based match.
+            $cityNameLoose = str_replace('-', ' ', $cityParam);
+            $query->where(function ($q) use ($cityParam, $cityNameLoose, $needle) {
+                $q->whereHas('marketplaceCity', function ($mq) use ($cityParam, $cityNameLoose) {
+                    $mq->where('name->ro', 'ilike', "%{$cityNameLoose}%")
+                        ->orWhere('name->en', 'ilike', "%{$cityNameLoose}%")
+                        ->orWhere('slug', $cityParam);
+                })->orWhereHas('venue', function ($vq) use ($needle) {
+                    $vq->whereRaw(static::cityMatchSql(), ['%' . $needle . '%']);
+                });
+            });
+        }
+    }
+
+    /**
      * Get featured events
      */
     public function featured(Request $request): JsonResponse
@@ -636,10 +643,12 @@ class MarketplaceEventsController extends BaseController
             $query->where('is_category_featured', true);
         } elseif ($featuredType === 'city') {
             $query->where('is_city_featured', true);
-            // Optionally filter by a specific city slug/name
+            // Filter by a specific city slug via the canonical matcher
+            // (marketplace_city_id + diacritic-insensitive venue.city) so
+            // "bucuresti" matches events in "București" — a raw slug LIKE
+            // against venue.city misses accented names on Postgres.
             if ($request->has('city')) {
-                $city = $request->input('city');
-                $query->whereHas('venue', fn ($q) => $q->where('city', 'like', "%{$city}%"));
+                $this->applyCityFilter($query, $request->input('city'), $client, $language);
             }
         } else {
             $query->where(function ($q) {

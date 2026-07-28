@@ -42,8 +42,10 @@ const FeaturedCarousel = {
         this.container = track.parentElement;
 
         try {
+            // City pages request city-featured events (paid city promotion,
+            // is_city_featured); everywhere else keeps general featured.
             const params = new URLSearchParams({
-                type: 'general',
+                type: options.city ? 'city' : 'general',
                 limit: 12
             });
 
