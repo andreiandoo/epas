@@ -150,6 +150,9 @@
             rowNumberingMode: 'alpha',
             rowStartNumber: 1,
             rowNumberingDirection: 'ltr',
+            rowNumberingOrder: 'per_row',      // per_row | continuous (multiple rows only)
+            rowNumberingAxis: 'top_bottom',    // top_bottom | bottom_top (multiple rows only)
+            seatStartNumber: 1,                // start value for the continuous seat counter
             customRowLabel: '',
             seatNumberingType: 'numeric',
             currentDrawingShape: null,
@@ -2906,6 +2909,9 @@
                                 startNumber: this.rowStartNumber,
                                 seatNumberingType: this.seatNumberingType,
                                 seatNumberingDirection: this.rowNumberingDirection,
+                                numberingOrder: this.rowNumberingOrder,
+                                numberingAxis: this.rowNumberingAxis,
+                                seatStartNumber: this.seatStartNumber,
                                 seatSize: this.rowSeatSize,
                                 seatSpacing: this.rowSeatSpacing,
                                 rowSpacing: this.rowSpacing,
@@ -4243,6 +4249,30 @@
                                     <option value="rtl">Dreapta → Stânga</option>
                                 </select>
                             </div>
+
+                            {{-- Ordine + Axă numerotare — se aplică DOAR la "Multiple rânduri" --}}
+                            <template x-if="drawMode === 'drawMultiRows'">
+                                <div class="pt-2 mt-1 space-y-2 border-t border-blue-200">
+                                    <div>
+                                        <label class="block text-xs text-blue-600">Ordine numerotare</label>
+                                        <select x-model="rowNumberingOrder" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                            <option value="per_row">Per rând (fiecare rând începe de la capăt)</option>
+                                            <option value="continuous">Continuu (numere neîntrerupte pe secțiune)</option>
+                                        </select>
+                                    </div>
+                                    <div x-show="rowNumberingOrder === 'continuous'">
+                                        <label class="block text-xs text-blue-600">Start locuri</label>
+                                        <input type="number" x-model.number="seatStartNumber" min="1" max="9999" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-blue-600">Axă numerotare</label>
+                                        <select x-model="rowNumberingAxis" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                            <option value="top_bottom">Sus → Jos (de la primul rând spre ultimul)</option>
+                                            <option value="bottom_top">Jos → Sus (de la ultimul rând spre primul)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
 
                         {{-- Instructions --}}

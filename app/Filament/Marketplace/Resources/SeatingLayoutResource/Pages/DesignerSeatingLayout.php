@@ -1257,6 +1257,16 @@ class DesignerSeatingLayout extends Page
         $startNumber = $settings['startNumber'] ?? 1;
         $seatNumberingType = $settings['seatNumberingType'] ?? 'numeric';
         $seatNumberingDirection = $settings['seatNumberingDirection'] ?? 'ltr';
+        // Multiple-rows only: seat numbering order + row axis.
+        //  - numberingOrder: 'per_row' (each row restarts) | 'continuous' (one
+        //    running number across the whole section, starting at seatStartNumber)
+        //  - numberingAxis: 'top_bottom' (topmost row first) | 'bottom_top'
+        //    (bottommost row first) — affects both the row label and the
+        //    continuous seat counter order.
+        $numberingOrder = $settings['numberingOrder'] ?? 'per_row';
+        $numberingAxis = $settings['numberingAxis'] ?? 'top_bottom';
+        $seatStartNumber = (int) ($settings['seatStartNumber'] ?? 1);
+        $continuousSeatNumber = $seatStartNumber;
         $existingRowCount = $section->rows()->count();
 
         $totalSeats = 0;
@@ -1278,8 +1288,13 @@ class DesignerSeatingLayout extends Page
             }
         }
 
-        // Sort rows by Y position (top to bottom)
-        usort($normalizedRows, fn($a, $b) => $a['y'] <=> $b['y']);
+        // Sort rows for labeling + numbering. Axis decides which row is "first":
+        // top_bottom = topmost first (default); bottom_top = bottommost first.
+        if ($numberingAxis === 'bottom_top') {
+            usort($normalizedRows, fn($a, $b) => $b['y'] <=> $a['y']);
+        } else {
+            usort($normalizedRows, fn($a, $b) => $a['y'] <=> $b['y']);
+        }
 
         foreach ($normalizedRows as $rowIndex => $rowData) {
             // Generate row label
@@ -1307,11 +1322,14 @@ class DesignerSeatingLayout extends Page
             }
 
             foreach ($seats as $seatIndex => $seatData) {
-                $seatNum = $seatIndex + 1;
-                if ($seatNumberingType === 'alpha') {
+                if ($numberingOrder === 'continuous') {
+                    // One running number across all rows of the section.
+                    $seatLabel = (string) $continuousSeatNumber;
+                    $continuousSeatNumber++;
+                } elseif ($seatNumberingType === 'alpha') {
                     $seatLabel = chr(ord('A') + $seatIndex);
                 } else {
-                    $seatLabel = (string) $seatNum;
+                    $seatLabel = (string) ($seatIndex + 1);
                 }
 
                 SeatingSeat::create([
