@@ -1,5 +1,9 @@
 # Arhitectura de template-uri — spec pentru sesiunea care produce template-uri
 
+> **Vrei doar să produci un template?** Pasează `docs/BRIEF-NEW-TEMPLATE.md` —
+> e varianta autonomă, pas-cu-pas, a acestui document. Cel de față rămâne
+> referința de arhitectură din spate.
+
 > **Cui i se adresează:** unei sesiuni (Claude sau om) care produce **template-uri**
 > peste `starter-kit`. Citind acest document trebuie să știi exact **ce** fișiere
 > produci, **cum** le compui și **ce reguli** respecti, astfel încât rezultatul să
