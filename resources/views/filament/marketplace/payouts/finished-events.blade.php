@@ -9,7 +9,6 @@
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-white/10 text-left">
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Eveniment</th>
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Organizator</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Sold</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Retururi</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Acțiuni</th>
@@ -21,20 +20,20 @@
                             <td class="px-3 py-2">
                                 <a href="{{ \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $row['event']->id]) }}"
                                    target="_blank"
-                                   class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $row['title'] }}</a>
+                                   class="font-medium text-gray-900 hover:underline dark:text-white">{{ $row['title'] }}</a>
                                 <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $row['event_period'] }}</div>
                                 @if(!empty($row['venue_city']))
                                     <div class="text-xs text-gray-400 dark:text-gray-500">{{ $row['venue_city'] }}</div>
                                 @endif
-                            </td>
-                            <td class="px-3 py-2">
-                                @if($row['organizer_id'])
-                                    <a href="{{ \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('view', ['record' => $row['organizer_id']]) }}"
-                                       target="_blank"
-                                       class="text-xs text-primary-600 hover:underline dark:text-primary-400">{{ $row['organizer_name'] }}</a>
-                                @else
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $row['organizer_name'] }}</span>
-                                @endif
+                                <div class="mt-0.5">
+                                    @if($row['organizer_id'])
+                                        <a href="{{ \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('view', ['record' => $row['organizer_id']]) }}"
+                                           target="_blank"
+                                           class="text-xs text-primary-600 hover:underline dark:text-primary-400">{{ $row['organizer_name'] }}</a>
+                                    @else
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $row['organizer_name'] }}</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-3 py-2 text-right font-mono">
                                 @if($row['balance'] > 0)
