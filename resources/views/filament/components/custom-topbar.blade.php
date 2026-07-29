@@ -97,11 +97,13 @@
 <div class="sticky top-0 z-20 px-4 py-3 mb-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700">
     <div class="flex items-center justify-between max-w-full gap-4">
         {{-- Sidebar toggle. Mobile: open the drawer. Desktop: collapse/expand the
-             sidebar to an icon-only rail (Filament's isOpenDesktop state). --}}
+             sidebar to an icon-only rail. Filament's native isOpenDesktop state is
+             inert in this build, so we drive a custom `ep-rail-collapsed` class on
+             <html> (persisted, CSS below). --}}
         <button
             type="button"
             x-data
-            x-on:click="window.matchMedia('(min-width: 1024px)').matches ? ($store.sidebar.isOpenDesktop = !$store.sidebar.isOpenDesktop) : $store.sidebar.open()"
+            x-on:click="window.matchMedia('(min-width: 1024px)').matches ? window.epToggleSidebarRail() : $store.sidebar.open()"
             class="flex items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg shrink-0 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="Toggle sidebar"
         >
@@ -469,3 +471,64 @@
 })();
 </script>
 @endif
+
+{{-- Desktop icon-rail sidebar collapse (custom). Filament's native
+     sidebarCollapsibleOnDesktop() is inert in this build, so the hamburger in
+     the topbar toggles the `ep-rail-collapsed` class on <html>. The sidebar
+     width is driven by the `--sidebar-width` CSS var + a flex layout, so
+     shrinking it lets the page content expand automatically. Shared by the
+     admin, marketplace and tenant panels (this partial renders on all three). --}}
+@verbatim
+<style>
+    @media (min-width: 1024px) {
+        html.ep-rail-collapsed {
+            --sidebar-width: 5rem;
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar {
+            width: 5rem !important;
+            transition: width .2s ease;
+        }
+        /* Hide text, keep icons — the icon-only rail. */
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-label,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-group-label,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-grouped-border,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .ep-trigger-arrow {
+            display: none !important;
+        }
+        /* Center the icons in the narrow rail. */
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-btn {
+            justify-content: center !important;
+            padding-left: .5rem !important;
+            padding-right: .5rem !important;
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-group {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        /* Keep the brand/header from spilling out of the narrow rail. */
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-header {
+            overflow: hidden !important;
+        }
+    }
+</style>
+@endverbatim
+<script>
+    (function () {
+        // Toggle + persist the desktop icon-rail state.
+        window.epToggleSidebarRail = function () {
+            var on = document.documentElement.classList.toggle('ep-rail-collapsed');
+            try { localStorage.setItem('ep-rail-collapsed', on ? '1' : '0'); } catch (e) {}
+            // Nudge the custom secondary-sidebar flyout to reposition against the
+            // new sidebar width, if it is currently open.
+            try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+        };
+        // Restore on load (desktop only), as early as this partial parses to
+        // minimise any flash of the full-width sidebar.
+        try {
+            if (window.matchMedia('(min-width: 1024px)').matches &&
+                localStorage.getItem('ep-rail-collapsed') === '1') {
+                document.documentElement.classList.add('ep-rail-collapsed');
+            }
+        } catch (e) {}
+    })();
+</script>
