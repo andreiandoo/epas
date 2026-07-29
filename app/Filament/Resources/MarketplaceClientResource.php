@@ -496,8 +496,8 @@ class MarketplaceClientResource extends Resource
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'active' && auth()->user()?->isSuperAdmin())
                     ->action(function ($record) {
-                        // Delegates to switchSuperAdminToMarketplace() (defined
-                        // in routes/web.php) so all three admin entry points +
+                        // Delegates to \App\Support\SuperAdminMarketplaceSwitcher::switchTo()
+                        // so all three admin entry points +
                         // the /marketplace/switch-client/{id} route share the
                         // same no-migrate session manipulation.
                         $user = auth('web')->user();
@@ -518,7 +518,7 @@ class MarketplaceClientResource extends Resource
                             ]);
                         }
 
-                        switchSuperAdminToMarketplace($admin, (int) $record->id, $user);
+                        \App\Support\SuperAdminMarketplaceSwitcher::switchTo($admin, (int) $record->id, $user);
                     })
                     ->successRedirectUrl('/marketplace'),
                 ViewAction::make(),

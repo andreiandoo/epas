@@ -70,11 +70,12 @@ class ExchangeRateService
                 return null;
             }
 
-            // SECURITY FIX: Disable external entity loading to prevent XXE attacks
-            $previousValue = libxml_disable_entity_loader(true);
+            // External entity loading is disabled by default since PHP 8.0
+            // (libxml_disable_entity_loader() is deprecated / a no-op), and
+            // LIBXML_NONET below blocks network access — so XXE is covered
+            // without the deprecated toggle.
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
-            libxml_disable_entity_loader($previousValue);
 
             if (!$xml) {
                 return null;
@@ -110,11 +111,12 @@ class ExchangeRateService
                 return null;
             }
 
-            // SECURITY FIX: Disable external entity loading to prevent XXE attacks
-            $previousValue = libxml_disable_entity_loader(true);
+            // External entity loading is disabled by default since PHP 8.0
+            // (libxml_disable_entity_loader() is deprecated / a no-op), and
+            // LIBXML_NONET below blocks network access — so XXE is covered
+            // without the deprecated toggle.
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
-            libxml_disable_entity_loader($previousValue);
 
             if (!$xml) {
                 return null;

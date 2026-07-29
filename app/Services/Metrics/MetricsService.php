@@ -161,7 +161,7 @@ class MetricsService
     /**
      * Clean up old metrics data
      */
-    public function cleanup(int $retentionDays = null): int
+    public function cleanup(?int $retentionDays = null): int
     {
         $retentionDays = $retentionDays ?? config('microservices.metrics.retention_days', 90);
 

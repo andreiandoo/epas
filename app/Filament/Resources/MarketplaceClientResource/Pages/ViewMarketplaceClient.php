@@ -19,8 +19,8 @@ class ViewMarketplaceClient extends ViewRecord
                 ->color('success')
                 ->visible(fn () => $this->record->status === 'active' && auth()->user()?->isSuperAdmin())
                 ->action(function () {
-                    // Delegates to switchSuperAdminToMarketplace() (defined in
-                    // routes/web.php). See that function for why we avoid
+                    // Delegates to \App\Support\SuperAdminMarketplaceSwitcher::switchTo().
+                    // See that method for why we avoid
                     // auth->login() — TL;DR Session::migrate(true) breaks the
                     // browser cookie under our session config.
                     $user = auth('web')->user();
@@ -41,7 +41,7 @@ class ViewMarketplaceClient extends ViewRecord
                         ]);
                     }
 
-                    switchSuperAdminToMarketplace($admin, (int) $this->record->id, $user);
+                    \App\Support\SuperAdminMarketplaceSwitcher::switchTo($admin, (int) $this->record->id, $user);
 
                     return redirect('/marketplace');
                 }),
