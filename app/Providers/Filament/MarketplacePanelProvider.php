@@ -379,25 +379,30 @@ class MarketplacePanelProvider extends PanelProvider
                     }
                 });
 
-                // Bind click handlers and add arrow icon to all trigger items
+                // Mark trigger items + add arrow (click handling is delegated below).
                 for (const [panel, item] of Object.entries(triggerItems)) {
                     item.setAttribute('data-ep-sidebar-trigger', panel);
-
                     const btn = item.querySelector('a.fi-sidebar-item-btn') || item.querySelector('[data-ep-trigger-btn]');
-                    if (btn && !btn.dataset.epSecondaryBound) {
-                        btn.dataset.epSecondaryBound = 'true';
-                        btn.addEventListener('click', (e) => {
-                            // On mobile the flyout becomes a full-screen overlay (see CSS),
-                            // so let the trigger open it here too (no early return).
-                            e.preventDefault();
-                            e.stopPropagation();
-                            Alpine.store('secondarySidebar').togglePanel(panel);
-                        });
-                        // Append right arrow indicator
-                        if (!btn.querySelector('.ep-trigger-arrow')) {
-                            btn.insertAdjacentHTML('beforeend', EP_TRIGGER_ARROW);
-                        }
+                    if (btn && !btn.querySelector('.ep-trigger-arrow')) {
+                        btn.insertAdjacentHTML('beforeend', EP_TRIGGER_ARROW);
                     }
+                }
+
+                // Single delegated handler (capture phase) so triggers open the
+                // flyout on BOTH desktop and mobile — survives sidebar re-renders
+                // (the mobile drawer re-renders its items, dropping per-element
+                // listeners). On mobile the flyout is a full-screen overlay (CSS).
+                if (!window.__epMarketplaceTriggerDelegated) {
+                    window.__epMarketplaceTriggerDelegated = true;
+                    document.addEventListener('click', (e) => {
+                        const triggerItem = e.target.closest('[data-ep-sidebar-trigger]');
+                        if (!triggerItem) return;
+                        const panel = triggerItem.getAttribute('data-ep-sidebar-trigger');
+                        if (!panel) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        Alpine.store('secondarySidebar').togglePanel(panel);
+                    }, true);
                 }
 
                 // Add CSS class to hide non-trigger items and Communications/Gamification groups
