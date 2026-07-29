@@ -1222,7 +1222,7 @@ export default function CheckInScreen({ navigation }) {
 
               {/* Path A — tastare cod bilet */}
               <Text style={styles.modalDescription}>
-                Tastați codul biletului, codul de bare sau URL-ul de verificare
+                Caută după cod bilet
               </Text>
               <TextInput
                 style={styles.codeInput}
@@ -1251,8 +1251,7 @@ export default function CheckInScreen({ navigation }) {
                 <View style={styles.nameSearchDividerLine} />
               </View>
               <Text style={styles.modalDescription}>
-                Caută după emailul cumpărătorului sau al beneficiarului{'\n'}
-                (emailul e unic — 2 clienți pot avea același nume)
+                Caută după email
               </Text>
               <TextInput
                 style={styles.codeInput}

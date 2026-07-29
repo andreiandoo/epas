@@ -53,11 +53,39 @@ function Toggle({ value, onPress }) {
   );
 }
 
-function SettingRow({ label, description, right }) {
+// `info` — when set, an (i) icon appears next to the label; tap opens an
+// Alert with `info.title` + `info.body`. Keeps the row visually compact
+// (no more info-box eating vertical space) while the explanation is
+// still one tap away.
+function SettingRow({ label, description, right, info }) {
+  const openInfo = () => {
+    if (!info?.body) return;
+    Alert.alert(info.title || label, info.body);
+  };
   return (
     <View style={styles.settingRow}>
       <View style={styles.settingRowLeft}>
-        <Text style={styles.settingLabel}>{label}</Text>
+        <View style={styles.settingLabelRow}>
+          <Text style={styles.settingLabel}>{label}</Text>
+          {info?.body ? (
+            <TouchableOpacity
+              onPress={openInfo}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              activeOpacity={0.6}
+              style={styles.settingInfoBtn}
+            >
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01"
+                  stroke={colors.cyan}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+          ) : null}
+        </View>
         {description ? (
           <Text style={styles.settingDescription}>{description}</Text>
         ) : null}
@@ -465,21 +493,11 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             <SettingRow
               label="Scanner Bluetooth (portabil)"
               right={<Toggle value={bluetoothScannerEnabled} onPress={handleToggleBluetoothScanner} />}
+              info={{
+                title: 'Scanner Bluetooth',
+                body: 'Activează pentru scanere Bluetooth (Zebra, Symbol, Honeywell). Pornește Bluetooth-ul telefonului și împerechează scanner-ul. Dezactivat = doar cameră + cod manual.',
+              }}
             />
-            <View style={styles.offlineInfoBox}>
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M6 3l12 9-12 9V3zM12 12l6-9M12 12l6 9"
-                  stroke={colors.cyan}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              <Text style={styles.offlineInfoText}>
-                Activează pentru scanere Bluetooth (Zebra, Symbol, Honeywell). Pornește Bluetooth-ul telefonului și împerechează scanner-ul. Dezactivat = doar cameră + cod manual.
-              </Text>
-            </View>
           </>
         )}
       </View>
@@ -493,22 +511,11 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             <SettingRow
               label="Card prin NFC (Stripe Tap)"
               right={<Toggle value={nfcEnabled} onPress={handleToggleNfc} />}
+              info={{
+                title: 'Card prin NFC (Stripe Tap)',
+                body: 'Adaugă în ecranul Vânzare un buton „Card prin NFC" (plată Stripe Tap). Dezactivat = doar Numerar și Card POS.',
+              }}
             />
-            <View style={styles.divider} />
-            <View style={styles.offlineInfoBox}>
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01"
-                  stroke={colors.cyan}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              <Text style={styles.offlineInfoText}>
-                Adaugă în ecranul Vânzare un buton „Card prin NFC" (plată Stripe Tap). Dezactivat = doar Numerar și Card POS.
-              </Text>
-            </View>
           </View>
         </>
       )}
@@ -684,7 +691,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet v{appVersion || '2.2.0-dev.6'}</Text>
+      <Text style={styles.versionText}>AmBilet v{appVersion || '2.2.0-dev.7'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -765,6 +772,14 @@ const styles = StyleSheet.create({
   settingRowLeft: {
     flex: 1,
     marginRight: 12,
+  },
+  settingLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  settingInfoBtn: {
+    padding: 2,
   },
   settingLabel: {
     fontSize: 15,

@@ -11,25 +11,26 @@ Timp de citit: **~2 minute**.
 
 ## 1. Ce e widget-ul
 
-Un dreptunghi 4×3 celule pe home screen cu **panou compact** al
-evenimentului selectat + branding AmBilet + status live/azi/urmează.
+Un dreptunghi **5×2 celule** (compact, orizontal) pe home screen. **Se
+poate redimensiona mai mic** (până la ~3×2) prin ținere apăsată + drag
+de la muchii, dacă vrei să economisești spațiu.
 
-**Conținut**:
-- Rând 1: **🎫 AmBilet** (branding stânga) + **pill status** dreapta
-  („LIVE" / „AZI" / „URMEAZĂ" / „TRECUT")
-- Rând 2: **Numele evenimentului** (bold, o singură linie)
-- Rând 3: **Cifra mare** — total bilete vândute + „din N · bilete
-  vândute" (N = capacitatea)
-- Rând 4: **🎟 X scanate · Y disponibile** (checked-in + rămase)
-- Rând 5: **🌐 X online · 🏛 Y la ușă** (split pe canal vânzare)
-- Rând 6: **💰 X.XXX RON încasări** (total încasat)
-- Rând 7 (footer): **N evenim. active** + **timestamp update** („acum 2 min")
+**Conținut** (două coloane):
+- **Rând 1 (header, subțire)**: 🎫 **AmBilet** · pill **LIVE / AZI /
+  URMEAZĂ / TRECUT** · **Numele evenimentului** (trunchiat cu „…")
+- **Coloana stânga (cifra mare)**: total bilete vândute · „din N" (N =
+  capacitatea)
+- **Coloana dreapta (3 rânduri dense)**:
+  - **🎟 X · 🌐 Y · 🏛 Z** (scanate · online · la ușă)
+  - **💰 X.XXX RON** (total încasări)
+  - **N active · acum 2 min** (evenimente active + timestamp update)
 
 <!-- SCREENSHOT: widget AmBilet pe home screen cu numere -->
 ![Widget Android](./screenshots/26-widget.png)
 
 **Design**: gradient roșu bordo (identitate AmBilet), colțuri rotunjite,
-pill status subliniat.
+pill status subliniat. Font-uri mai mici decât în versiunea inițială
+pentru densitate mare a informației într-un tile compact.
 
 ---
 
@@ -41,7 +42,7 @@ pill status subliniat.
 2. Din meniul de jos, alege **Widgets** (Widget-uri)
 3. Caută „**AmBilet**"
 4. Trage widget-ul unde vrei
-5. Îl poți redimensiona (2×2, 4×2, sau mai mare)
+5. Îl poți redimensiona (min ~3×2, target 5×2, sau mai mare)
 
 <!-- SCREENSHOT: meniul Android Widgets cu AmBilet evidențiat -->
 ![Instalare widget](./screenshots/26-install.png)
