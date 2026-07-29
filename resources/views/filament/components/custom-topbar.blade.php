@@ -520,33 +520,32 @@
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-footer {
             display: none !important;
         }
-        /* Collapsed-rail scrollbar: invisible until you hover the menu, and with
-           symmetric gutters (both-edges) so it never adds space only on the right
-           — the icons stay centered whether or not the scrollbar is showing.
-           Applied to both the nav scroller and the sidebar itself so it works
-           regardless of which element actually scrolls. */
+        /* Collapsed-rail scrollbar: fully hidden by default (NO reserved gutter, so
+           the icons stay centered under the logo), revealed as a thin 6px bar only
+           while hovering the menu. No scrollbar-gutter — that reserved a left gutter
+           and pushed the icons off-centre. Applied to the nav scroller and the
+           sidebar itself so it works regardless of which element scrolls. */
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar,
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav {
-            scrollbar-gutter: stable both-edges;
-            scrollbar-width: thin;                       /* Firefox */
-            scrollbar-color: transparent transparent;    /* Firefox: hidden by default */
+            scrollbar-width: none;                       /* Firefox: hidden */
         }
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar:hover,
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav:hover {
-            scrollbar-color: rgba(156, 163, 175, .55) transparent;   /* Firefox: on hover */
+            scrollbar-width: thin;                                    /* Firefox: on hover */
+            scrollbar-color: rgba(156, 163, 175, .55) transparent;
         }
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar::-webkit-scrollbar,
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav::-webkit-scrollbar {
-            width: 6px;
+            width: 0 !important;                         /* hidden by default */
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar:hover::-webkit-scrollbar,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav:hover::-webkit-scrollbar {
+            width: 6px !important;                       /* on hover */
         }
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar::-webkit-scrollbar-thumb,
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav::-webkit-scrollbar-thumb {
-            background-color: transparent;               /* hidden by default */
+            background-color: rgba(156, 163, 175, .55);
             border-radius: 3px;
-        }
-        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar:hover::-webkit-scrollbar-thumb,
-        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav:hover::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, .55); /* show on hover */
         }
     }
 </style>
