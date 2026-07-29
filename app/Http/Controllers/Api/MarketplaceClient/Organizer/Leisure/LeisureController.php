@@ -4036,7 +4036,7 @@ class LeisureController extends BaseController
             $out = fopen('php://output', 'w');
             // UTF-8 BOM pentru Excel (afiseaza diacritice corect)
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, $columns, ';');
+            fputcsv($out, $columns, ';', escape: '\\');
 
             foreach ($orders as $o) {
                 $paidAtRo = $o->paid_at?->copy()->setTimezone('Europe/Bucharest');
@@ -4073,7 +4073,7 @@ class LeisureController extends BaseController
                         $o->customer_name, $o->customer_email, $o->customer_phone,
                         $companyName, $companyCui, $companyReg, $companyAddr,
                         number_format($total, 2, '.', ''), $withInvoice, $invoiceNumber,
-                    ], ';');
+                    ], ';', escape: '\\');
                     continue;
                 }
 
@@ -4099,7 +4099,7 @@ class LeisureController extends BaseController
                         $t->attendee_name ?: $o->customer_name, $t->attendee_email ?: $o->customer_email, $o->customer_phone,
                         $companyName, $companyCui, $companyReg, $companyAddr,
                         number_format($total, 2, '.', ''), $withInvoice, $invoiceNumber,
-                    ], ';');
+                    ], ';', escape: '\\');
                 }
             }
             fclose($out);
