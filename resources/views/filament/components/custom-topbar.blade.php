@@ -488,18 +488,25 @@
             width: 5rem !important;
             transition: width .2s ease;
         }
-        /* Hide text, keep icons — the icon-only rail. */
+        /* Hide text + counters, keep icons — the icon-only rail. */
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-label,
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-group-label,
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-grouped-border,
-        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .ep-trigger-arrow {
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .ep-trigger-arrow,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-badge,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-badge-ctn,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-badge {
             display: none !important;
         }
-        /* Center the icons in the narrow rail. */
+        /* Center the icon and make it the only thing in the narrow rail. */
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-btn {
             justify-content: center !important;
             padding-left: .5rem !important;
             padding-right: .5rem !important;
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-item-icon {
+            margin-left: auto !important;
+            margin-right: auto !important;
         }
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-group {
             padding-left: 0 !important;
