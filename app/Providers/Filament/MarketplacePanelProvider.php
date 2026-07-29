@@ -681,9 +681,18 @@ class MarketplacePanelProvider extends PanelProvider
                     color: #ef4444 !important;
                 }
                 /* Mobile (<lg): secondary flyout becomes a full-screen overlay so
-                   its cloned sub-menu items are reachable (overrides JS left/width). */
+                   its cloned sub-menu items are reachable. Visibility is driven off
+                   the body.ep-secondary-sidebar-open class (set directly by the store
+                   in togglePanel/close), NOT x-show/x-cloak — on mobile those left the
+                   flyout stuck at display:none even when open=true. The !important
+                   display beats [x-cloak] and any x-show inline style. */
                 @media (max-width: 1023.98px) {
                     #ep-secondary-sidebar.ep-secondary-sidebar {
+                        display: none !important;
+                    }
+                    body.ep-secondary-sidebar-open #ep-secondary-sidebar.ep-secondary-sidebar {
+                        display: flex !important;
+                        flex-direction: column !important;
                         position: fixed !important;
                         inset: 0 !important;
                         left: 0 !important;
@@ -691,6 +700,7 @@ class MarketplacePanelProvider extends PanelProvider
                         max-width: 100% !important;
                         height: 100% !important;
                         z-index: 9999 !important;
+                        overflow-y: auto !important;
                     }
                 }
             </style>')
