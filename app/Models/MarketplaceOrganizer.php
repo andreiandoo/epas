@@ -439,8 +439,10 @@ class MarketplaceOrganizer extends Authenticatable
             return (float) $this->commission_rate;
         }
 
-        // Fall back to marketplace client's rate
-        return (float) $this->marketplaceClient->commission_rate;
+        // Fall back to marketplace client's rate. Null-safe: an organizer whose
+        // marketplaceClient relation is missing/unloaded (or a client row with
+        // no rate) resolves to 0 instead of throwing "commission_rate on null".
+        return (float) ($this->marketplaceClient?->commission_rate ?? 0);
     }
 
     /**
@@ -454,8 +456,8 @@ class MarketplaceOrganizer extends Authenticatable
             return $this->default_commission_mode;
         }
 
-        // Fall back to marketplace client's mode
-        return $this->marketplaceClient->commission_mode ?? 'included';
+        // Fall back to marketplace client's mode (null-safe on the relation)
+        return $this->marketplaceClient?->commission_mode ?? 'included';
     }
 
     // =========================================

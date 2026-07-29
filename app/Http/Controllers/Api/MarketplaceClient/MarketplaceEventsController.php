@@ -106,7 +106,12 @@ class MarketplaceEventsController extends BaseController
                 $q->where("title->{$language}", 'like', "%{$search}%")
                     ->orWhere("description->{$language}", 'like', "%{$search}%")
                     ->orWhereHas('venue', function ($vq) use ($search) {
-                        $vq->where('name->ro', 'like', "%{$search}%")
+                        // venues.name is a plain TEXT column on some marketplaces
+                        // (schema drift) and translatable jsonb on others. Casting
+                        // to text and LIKE-matching works for both — a raw `name->ro`
+                        // (->>) errors with "operator does not exist: text ->> text"
+                        // wherever the column is text.
+                        $vq->whereRaw('CAST(name AS TEXT) LIKE ?', ['%' . $search . '%'])
                             ->orWhere('city', 'like', "%{$search}%");
                     })
                     ->orWhereHas('marketplaceOrganizer', function ($oq) use ($search) {

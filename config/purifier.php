@@ -100,7 +100,7 @@ return [
         ],
         'custom_definition' => [
             'id'  => 'html5-definitions',
-            'rev' => 1,
+            'rev' => 2,
             'debug' => false,
             'elements' => [
                 // http://developers.whatwg.org/sections.html
@@ -148,6 +148,12 @@ return [
             ],
             'attributes' => [
                 ['iframe', 'allowfullscreen', 'Bool'],
+                // Feature-policy attr on YouTube/Vimeo embeds (autoplay;
+                // encrypted-media; fullscreen; ...). Whitelisted in the
+                // thank_you_message / system_update profiles' HTML.Allowed, so
+                // it MUST be a known attribute here or HTMLPurifier throws
+                // "Attribute 'allow' in element 'iframe' not supported".
+                ['iframe', 'allow', 'Text'],
                 ['table', 'height', 'Text'],
                 ['td', 'border', 'Text'],
                 ['th', 'border', 'Text'],

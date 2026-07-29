@@ -186,8 +186,6 @@ class ViewSystemError extends ViewRecord
             ->count();
 
         return <<<PROMPT
-I have a production error in EventPilot/Tixello that I'd like you to debug.
-
 ## Error metadata
 - Time:                 {$r->created_at}
 - Severity:             {$r->level_name} (level={$r->level})
@@ -221,13 +219,6 @@ I have a production error in EventPilot/Tixello that I'd like you to debug.
 - User ID:      {$r->request_user_id}
 - Marketplace client ID: {$r->marketplace_client_id}
 - Tenant ID:    {$r->tenant_id}
-
-## Task
-Please:
-1. Identify the root cause of this error.
-2. Locate the file/code likely responsible (use the stack trace + request URL).
-3. Propose a fix and, if you have repo access, apply it. Match the project's style.
-4. Tell me whether to acknowledge this error in /admin/system-errors or whether the same fix will fully resolve all {$similarCount} similar occurrences.
 
 PROMPT;
     }
