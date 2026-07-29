@@ -8,6 +8,8 @@ import {
   Animated,
   TextInput,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { persistThemeMode } from '../theme/bootstrapTheme';
@@ -253,13 +255,15 @@ function AdminRow({ label, badgeCount, onPress }) {
 }
 
 export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment, onShowManual, appVersion }) {
-  const { user, userRole, isTeamMember, isVenueOwner, venueOwner, logout } = useAuth();
+  const { user, userRole, isTeamMember, isVenueOwner, venueOwner, logout, signOut } = useAuth();
   const { selectedEvent } = useEvent();
   const {
     vibrationFeedback,
     soundEffects,
     autoConfirmValid,
     offlineMode,
+    bluetoothScannerEnabled,
+    toggleBluetoothScanner,
     toggleVibration,
     toggleSound,
     toggleAutoConfirm,
@@ -378,7 +382,40 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
   const venueName = venueOwner?.venues?.[0]?.name || venueOwner?.tenant?.public_name || '—';
 
   const handleEndShift = async () => {
-    await logout();
+    // Explicit user-initiated sign-out — clears saved credentials too,
+    // so the login form is blank next time (real operator handover).
+    await signOut();
+  };
+
+  const handleToggleBluetoothScanner = () => {
+    const willEnable = !bluetoothScannerEnabled;
+    toggleBluetoothScanner();
+    if (!willEnable) return;
+    // On enable — remind the operator to actually turn on Bluetooth on
+    // the device; we don't have a native permission-request path that
+    // powers Bluetooth on directly. „Deschide Setări" opens Android's
+    // Bluetooth settings so they can flip it in two taps.
+    Alert.alert(
+      'Scanner Bluetooth activat',
+      'Asigură-te că Bluetooth-ul telefonului e pornit și că scanner-ul portabil e împerecheat. AmBilet va prelua automat scanările lui.',
+      [
+        { text: 'OK', style: 'default' },
+        {
+          text: 'Deschide Setări Bluetooth',
+          onPress: () => {
+            if (Platform.OS === 'android') {
+              Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => {
+                Linking.openSettings().catch(() => {});
+              });
+            } else {
+              Linking.openURL('App-Prefs:Bluetooth').catch(() => {
+                Linking.openSettings().catch(() => {});
+              });
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -424,6 +461,25 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
               label="Auto-confirmare Valide"
               right={<Toggle value={autoConfirmValid} onPress={toggleAutoConfirm} />}
             />
+            <View style={styles.divider} />
+            <SettingRow
+              label="Scanner Bluetooth (portabil)"
+              right={<Toggle value={bluetoothScannerEnabled} onPress={handleToggleBluetoothScanner} />}
+            />
+            <View style={styles.offlineInfoBox}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M6 3l12 9-12 9V3zM12 12l6-9M12 12l6 9"
+                  stroke={colors.cyan}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.offlineInfoText}>
+                Activează pentru scanere Bluetooth (Zebra, Symbol, Honeywell). Pornește Bluetooth-ul telefonului și împerechează scanner-ul. Dezactivat = doar cameră + cod manual.
+              </Text>
+            </View>
           </>
         )}
       </View>
@@ -628,7 +684,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>AmBilet v{appVersion || '2.2.0-dev.5'}</Text>
+      <Text style={styles.versionText}>AmBilet v{appVersion || '2.2.0-dev.6'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>

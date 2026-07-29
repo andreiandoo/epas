@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { getSavedCredentials } from '../services/credentialStore';
 
 export default function LoginScreen({ onLoginSuccess }) {
   const { login } = useAuth();
@@ -23,6 +24,18 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Prefill last-used credentials so an inactivity auto-logout only needs
+  // one tap to get back in. Explicit sign-out from Settings clears these.
+  useEffect(() => {
+    let alive = true;
+    getSavedCredentials().then(({ email: savedEmail, password: savedPassword }) => {
+      if (!alive) return;
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPassword) setPassword(savedPassword);
+    });
+    return () => { alive = false; };
+  }, []);
 
   const handleLogin = async () => {
     setError('');

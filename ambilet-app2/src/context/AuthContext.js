@@ -3,6 +3,7 @@ import { login as apiLogin, logout as apiLogout, getMe, switchOrganizer as apiSw
 import { setCrashUser } from '../services/crashReporter';
 import { setToken, initApiClient, getToken } from '../api/client';
 import { markSessionActive, clearSessionActive } from '../hooks/useInactivityTimer';
+import { saveCredentials, clearSavedCredentials } from '../services/credentialStore';
 
 const AuthContext = createContext(null);
 
@@ -55,11 +56,16 @@ export function AuthProvider({ children }) {
       // useInactivityTimer doesn't see a stale value from a prior session
       // and expire the operator instantly.
       markSessionActive();
+      // Remember creds so a subsequent auto-logout only requires the
+      // operator to tap Autentificare. Explicit sign-out wipes these.
+      saveCredentials(email, password);
       applyLoginPayload(response.data);
     }
     return response;
   }, [applyLoginPayload]);
 
+  // Soft logout — used by inactivity timer + internal flows. Keeps saved
+  // credentials so the operator can re-authenticate with one tap.
   const logout = useCallback(async () => {
     await apiLogout();
     clearSessionActive();
@@ -70,6 +76,14 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(false);
     setCrashUser(null);
   }, []);
+
+  // Hard sign-out — used by the explicit „Încheie Tura & Deconectare"
+  // button in Settings. Wipes stored credentials too, so a real handover
+  // between operators works as expected.
+  const signOut = useCallback(async () => {
+    await clearSavedCredentials();
+    await logout();
+  }, [logout]);
 
   const switchOrganizer = useCallback(async (organizerId) => {
     setIsSwitching(true);
@@ -121,6 +135,7 @@ export function AuthProvider({ children }) {
       isSwitching,
       login,
       logout,
+      signOut,
       checkAuth,
 
       // Organizer flow

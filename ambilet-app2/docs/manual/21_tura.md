@@ -98,6 +98,13 @@ Butonul `Logout` (Setări, jos, roșu) are text:
 **Închide Tura & Deconectare**: face automat pașii **închidere tură +
 logout**. Convenabil la finalul zilei.
 
+**Efect asupra credentialelor**: acest buton **șterge emailul și parola
+salvate** pe telefon. Data viitoare când deschizi aplicația, form-ul de
+login e gol — util la predarea telefonului către un alt operator.
+
+Auto-logout după inactivitate ([cap. 23](./23_securitate.md)) NU șterge
+credentialele — le păstrează pentru re-login rapid.
+
 ---
 
 ## 7. Tura și auto-logout

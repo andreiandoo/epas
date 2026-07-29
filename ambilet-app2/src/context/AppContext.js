@@ -28,6 +28,11 @@ export function AppProvider({ children }) {
   const [soundEffects, setSoundEffects] = useState(true);
   const [autoConfirmValid, setAutoConfirmValid] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
+  // Bluetooth HID scanner (Zebra/Symbol/Honeywell etc.). Default ON —
+  // pre-existing behaviour before the toggle existed. Turn OFF to stop
+  // the invisible input from listening to keystrokes on devices where
+  // the operator uses only the camera / manual entry.
+  const [bluetoothScannerEnabled, setBluetoothScannerEnabled] = useState(true);
 
   // Auto-logout after N minutes of inactivity. Default 5min. Configurable
   // in Settings (5/10/15/30 minutes, or off).
@@ -103,6 +108,7 @@ export function AppProvider({ children }) {
         setSoundEffects(parsed.soundEffects ?? true);
         setAutoConfirmValid(parsed.autoConfirmValid ?? false);
         setOfflineMode(parsed.offlineMode ?? false);
+        setBluetoothScannerEnabled(parsed.bluetoothScannerEnabled ?? true);
         // Guard: 0 disables, valid values in [5,10,15,30].
         const al = parsed.autoLogoutMinutes;
         setAutoLogoutMinutes(typeof al === 'number' && al >= 0 ? al : 5);
@@ -144,6 +150,7 @@ export function AppProvider({ children }) {
         autoConfirmValid,
         offlineMode,
         autoLogoutMinutes,
+        bluetoothScannerEnabled,
         ...updates,
       };
       await AsyncStorage.setItem('app_settings', JSON.stringify(current));
@@ -161,6 +168,12 @@ export function AppProvider({ children }) {
     const newVal = !vibrationFeedback;
     setVibrationFeedback(newVal);
     saveSettings({ vibrationFeedback: newVal });
+  };
+
+  const toggleBluetoothScanner = () => {
+    const newVal = !bluetoothScannerEnabled;
+    setBluetoothScannerEnabled(newVal);
+    saveSettings({ bluetoothScannerEnabled: newVal });
   };
 
   const toggleSound = () => {
@@ -345,6 +358,11 @@ export function AppProvider({ children }) {
   const markAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
+
+  const markOneRead = (id) => {
+    if (id == null) return;
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, unread: false } : n)));
+  };
  
  // Offline: download all participants for offline check-in
   const downloadParticipantsForOffline = useCallback(async (eventId) => {
@@ -517,6 +535,8 @@ export function AppProvider({ children }) {
       autoConfirmValid,
       offlineMode,
       autoLogoutMinutes,
+      bluetoothScannerEnabled,
+      toggleBluetoothScanner,
       toggleVibration,
       toggleSound,
       toggleAutoConfirm,
@@ -547,6 +567,7 @@ export function AppProvider({ children }) {
       notifications,
       addNotification,
       markAllRead,
+      markOneRead,
 
       // Connection
       isOnline,

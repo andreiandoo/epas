@@ -92,7 +92,14 @@ function GuestItem({ guest, onCheckIn, isCheckingIn }) {
   );
 }
 
-export default function GuestListModal({ visible, onClose }) {
+/**
+ * @param {'invitations'|'checked_in'} mode
+ *   'invitations' (default) — shows only invitation-type tickets, with
+ *   a Check-in button per row (original behavior, opened from QuickActions).
+ *   'checked_in' — shows only participants who have already been scanned,
+ *   as a read-only audit list (opened from the Dashboard „Scanați" card).
+ */
+export default function GuestListModal({ visible, onClose, mode = 'invitations' }) {
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
   const { selectedEvent, refreshStats, refreshTicketTypes, incrementCheckedIn } = useEvent();
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,13 +107,15 @@ export default function GuestListModal({ visible, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
   const [checkingInId, setCheckingInId] = useState(null);
   const [showingAll, setShowingAll] = useState(false);
+  const isCheckedInMode = mode === 'checked_in';
 
-  // Fetch participants when modal opens
+  // Fetch participants when modal opens (also re-run when the mode
+  // switches so the invitation list doesn't leak into the scanned view).
   useEffect(() => {
     if (visible && selectedEvent) {
       fetchGuests();
     }
-  }, [visible, selectedEvent?.id]);
+  }, [visible, selectedEvent?.id, isCheckedInMode]);
 
   const isInvitation = (p) => {
     if (p.is_invitation) return true;
@@ -133,9 +142,21 @@ export default function GuestListModal({ visible, onClose }) {
         _raw: p,
       }));
 
-      // Show ONLY invitations — never fall back to all tickets
-      const invitations = mapped.filter(g => isInvitation(g._raw));
-      setGuests(invitations);
+      // Two lists share this modal: invitations (with check-in) or
+      // scanned participants (audit-only). Filter accordingly.
+      const filtered = isCheckedInMode
+        ? mapped.filter(g => g.checkedIn)
+        : mapped.filter(g => isInvitation(g._raw));
+      // Newest-scanned first when in checked-in mode; keeps the operator
+      // looking at what just happened at the door.
+      if (isCheckedInMode) {
+        filtered.sort((a, b) => {
+          const ta = a.checkedInAt ? new Date(a.checkedInAt).getTime() : 0;
+          const tb = b.checkedInAt ? new Date(b.checkedInAt).getTime() : 0;
+          return tb - ta;
+        });
+      }
+      setGuests(filtered);
       setShowingAll(false);
     } catch (e) {
       console.error('Failed to fetch guests:', e);
@@ -197,9 +218,13 @@ export default function GuestListModal({ visible, onClose }) {
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={styles.titleRow}>
-                <Text style={styles.title}>Listă Invitați</Text>
+                <Text style={styles.title}>
+                  {isCheckedInMode ? 'Participanți Scanați' : 'Listă Invitați'}
+                </Text>
                 <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{checkedCount}/{guests.length}</Text>
+                  <Text style={styles.countBadgeText}>
+                    {isCheckedInMode ? guests.length : `${checkedCount}/${guests.length}`}
+                  </Text>
                 </View>
               </View>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
@@ -230,7 +255,7 @@ export default function GuestListModal({ visible, onClose }) {
               </Svg>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Caută invitați..."
+                placeholder={isCheckedInMode ? 'Caută participanți scanați...' : 'Caută invitați...'}
                 placeholderTextColor={colors.textQuaternary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}

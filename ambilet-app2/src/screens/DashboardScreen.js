@@ -234,7 +234,7 @@ function ReportsStatsGrid({ stats }) {
   );
 }
 
-function AdminLiveStats({ stats, loading, onShowSales, onShowTicketSales, onShowRemaining, onShowGuestList }) {
+function AdminLiveStats({ stats, loading, onShowSales, onShowTicketSales, onShowRemaining, onShowGuestList, onShowScannedList }) {
   // "loading" is only meaningful on the FIRST load (no stats cached yet).
   // On refresh we keep the previous values on screen — flipping them to
   // skeletons would flicker and mask that we already have real data.
@@ -256,7 +256,7 @@ function AdminLiveStats({ stats, loading, onShowSales, onShowTicketSales, onShow
   // matching lucide equivalents already registered above; each card
   // reuses the same rose+red palette so the grid reads as one unit.
   const cards = [
-    { key: 'scanned', label: 'Scanați', unit: 'persoane', value: checkedIn.toLocaleString(), icon: 'people',    onPress: onShowGuestList },
+    { key: 'scanned', label: 'Scanați', unit: 'persoane', value: checkedIn.toLocaleString(), icon: 'people',    onPress: onShowScannedList || onShowGuestList },
     { key: 'sold',    label: 'Vândute', unit: 'bilete',   value: totalSold.toLocaleString(), icon: 'ticket',    onPress: onShowTicketSales },
     { key: 'revenue', label: 'Încasări', unit: 'total',   value: formatCurrency(revenue),    icon: 'cash',      onPress: onShowSales },
     { key: 'avail',   label: 'Disponibile', unit: 'bilete', value: available !== null ? available.toLocaleString() : '—', icon: 'hourglass', onPress: hasCapacity ? onShowRemaining : null },
@@ -557,7 +557,7 @@ function PullHint() {
   );
 }
 
-function AdminDashboard({ navigation, eventStats, isLoadingStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff, onShowSales, onShowTicketSales, onShowRemaining, onCloseShift }) {
+function AdminDashboard({ navigation, eventStats, isLoadingStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowScannedList, onShowStaff, onShowSales, onShowTicketSales, onShowRemaining, onCloseShift }) {
   return (
     <>
       {isReportsOnlyMode && <ReportsOnlyBanner />}
@@ -573,6 +573,7 @@ function AdminDashboard({ navigation, eventStats, isLoadingStats, isReportsOnlyM
             onShowTicketSales={onShowTicketSales}
             onShowRemaining={onShowRemaining}
             onShowGuestList={onShowGuestList}
+            onShowScannedList={onShowScannedList}
           />
           <CapacitySection stats={eventStats} />
           <SalesRateCard />
@@ -1147,7 +1148,7 @@ function useEventCountdown(startsAt) {
   return `${seconds}s`;
 }
 
-export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList }) {
+export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList, onShowScannedList }) {
   const { userRole } = useAuth();
   const { selectedEvent, eventStats, ticketTypes, allTicketTypes, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
   const startsAt = selectedEvent?.starts_at || selectedEvent?.event_date || selectedEvent?.date || null;
@@ -1281,6 +1282,7 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
             isReportsOnlyMode={isReportsOnlyMode}
             recentScans={recentScans}
             onShowGuestList={onShowGuestList}
+            onShowScannedList={onShowScannedList}
             onShowStaff={onShowStaff}
             onShowSales={() => setShowSalesBreakdown(true)}
             onShowTicketSales={() => setShowTicketSales(true)}

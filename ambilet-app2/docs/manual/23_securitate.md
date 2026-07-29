@@ -36,6 +36,26 @@ folosești app-ul activ, nu se scurge.
 - Deconectare automată → redirect la ecranul de login
 - Cifrele turei rămân salvate — nu pierzi date
 - La next login, tura se reia de unde a rămas (dacă era activă)
+- **Emailul și parola rămân completate pe ecranul de login** — apeși
+  doar `Autentificare` și continui. Nu retasti nimic.
+
+---
+
+## 3. Diferență între auto-logout și „Deconectare"
+
+| Ce faci | Ce se întâmplă cu credentialele |
+|---|---|
+| **Auto-logout** (după 5-30 min inactivitate) | Rămân salvate în telefon — pre-fill la next login |
+| **Setări → „Încheie Tura & Deconectare"** | Sunt **șterse complet** — form-ul e gol data viitoare |
+
+Auto-logout e pentru **pauze scurte** (mergi la baie, ai lăsat telefonul
+pe masă). „Încheie Tura" e pentru **predare de tură** către alt operator
+sau **sfârșit de eveniment** — credențialele tale nu mai trebuie să
+zacă pe device.
+
+Credentialele sunt salvate în **SecureStore** (Android Keystore /
+iOS Keychain) — criptate la nivelul sistemului, nu ies niciodată din
+telefon.
 
 ---
 

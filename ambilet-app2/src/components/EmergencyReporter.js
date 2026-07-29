@@ -1,26 +1,23 @@
-// Shared emergency reporter — used by both EmergencyModal (opened from
-// the shift bar) AND NotificationsPanel (always accessible, no shift
-// required). Encapsulates the 3 pieces of reporting UX:
+// Shared emergency reporter — used by both EmergencyModal (shift bar)
+// AND NotificationsPanel (always available). Two-step flow:
 //
-//   1. Optional photo attachment (expo-image-picker)
-//   2. Optional voice-note attachment (expo-av, hold-to-record ≤30s)
-//   3. 8 severity-tagged report buttons that submit + close
+//   STEP 1 — Severity grid (8 predefined types). Tap picks the type.
+//   STEP 2 — Form: free-form text + optional Foto + optional „Mesaj
+//            vocal" + „Trimite notificare" primary button.
 //
 // Behaviour:
-// - On any severity tap → local addNotification (immediate feedback) +
-//   fire-and-forget POST to /organizer/notifications/emergency-report
+// - On „Trimite notificare" → local addNotification (immediate feedback,
+//   passes media URIs so the reporter's own panel renders thumb + player)
+//   + fire-and-forget POST /organizer/notifications/emergency-report
 // - Photo/voice attachments (if any) go along with the POST (multipart)
 // - Reporter identity (name + role + gate) embedded in server message
-// - Local notification also gets the media URIs so the reporter's own
-//   NotificationsPanel can render thumbnail + play button
 //
 // Props:
-//   onSent?()      — callback fired after a successful submit (parent can
-//                    close its containing modal / collapse UI)
-//   compact?       — reduces vertical padding for tight containers
-//                    (NotificationsPanel uses this)
+//   onSent?()     — callback fired after a successful submit
+//   compact?      — reduces vertical padding for tight containers
+//                   (NotificationsPanel uses this)
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Image, StyleSheet, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { reportEmergency } from '../api/notifications';
@@ -62,11 +59,14 @@ const SEVERITY_STYLES = {
 };
 
 export default function EmergencyReporter({ onSent, compact = false }) {
+  // 2-step wizard state.
+  const [activeOption, setActiveOption] = useState(null); // null = grid view; else = detail form
+  const [note, setNote] = useState('');
   const [attachedPhoto, setAttachedPhoto] = useState(null); // { uri, name, type }
   const [attachedAudio, setAttachedAudio] = useState(null); // { uri, name, type, duration }
   const [recording, setRecording] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const [sentFlash, setSentFlash] = useState(null); // { label } for a 1.5s confirmation banner
+  const [sentFlash, setSentFlash] = useState(null); // { label } for the 1.5s confirmation banner
   const recordingRef = useRef(null);
   const recordingStartRef = useRef(0);
   const { addNotification } = useApp();
@@ -91,6 +91,23 @@ export default function EmergencyReporter({ onSent, compact = false }) {
     reporterName,
     reporterGate ? `poarta ${reporterGate}` : null,
   ].filter(Boolean).join(' · ');
+
+  const resetForm = () => {
+    setNote('');
+    setAttachedPhoto(null);
+    setAttachedAudio(null);
+    setRecording(false);
+  };
+
+  const openForm = (option) => {
+    resetForm();
+    setActiveOption(option);
+  };
+
+  const cancelForm = () => {
+    resetForm();
+    setActiveOption(null);
+  };
 
   const handleAttachPhoto = async () => {
     if (!ImagePicker) {
@@ -129,7 +146,7 @@ export default function EmergencyReporter({ onSent, compact = false }) {
     try {
       const perm = await AudioLib.requestPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('Permisiune necesară', 'Permite accesul la microfon pentru notă vocală.');
+        Alert.alert('Permisiune necesară', 'Permite accesul la microfon pentru mesaj vocal.');
         return;
       }
       await AudioLib.setAudioModeAsync({
@@ -170,17 +187,27 @@ export default function EmergencyReporter({ onSent, compact = false }) {
     recordingRef.current = null;
   };
 
-  const submit = (option) => {
-    if (reporting) return;
+  const submit = () => {
+    const option = activeOption;
+    if (!option || reporting) return;
     setReporting(true);
+
+    const trimmedNote = (note || '').trim();
+    const serverMessage = [
+      `Raportat de ${reporterName} (${reporterRoleLabel})${reporterGate ? ` — poarta ${reporterGate}` : ''}.`,
+      trimmedNote,
+    ].filter(Boolean).join('\n');
 
     // Local feedback — passes media URIs so the reporter's own panel can
     // render the thumbnail + audio play button. NotificationItem already
     // knows how to render these (see NotificationsPanel).
     try {
+      const localMsg = trimmedNote
+        ? `${option.label} — ${trimmedNote}`
+        : `${option.label} — raportat de ${reporterSuffix}`;
       addNotification({
         type: 'alert',
-        message: `${option.label} — raportat de ${reporterSuffix}`,
+        message: localMsg,
         photo_uri: attachedPhoto?.uri || null,
         audio_uri: attachedAudio?.uri || null,
         audio_duration: attachedAudio?.duration || null,
@@ -190,17 +217,18 @@ export default function EmergencyReporter({ onSent, compact = false }) {
     reportEmergency({
       type: option.id,
       title: `Urgență: ${option.label}`,
-      message: `Raportat de ${reporterName} (${reporterRoleLabel})${reporterGate ? ` — poarta ${reporterGate}` : ''}.`,
+      message: serverMessage,
       severity: option.severity === 'low' ? 'info' : option.severity,
       photo: attachedPhoto,
       audio: attachedAudio,
+      note: trimmedNote,
     }).catch(() => {
       // Silent — the reporter already got local feedback. Alert isn't lost.
     });
 
     setSentFlash({ label: option.label });
-    setAttachedPhoto(null);
-    setAttachedAudio(null);
+    resetForm();
+    setActiveOption(null);
     setTimeout(() => {
       setReporting(false);
       setSentFlash(null);
@@ -220,68 +248,113 @@ export default function EmergencyReporter({ onSent, compact = false }) {
     );
   }
 
+  // STEP 2 — Detail form (text + optional photo + optional voice + submit)
+  if (activeOption) {
+    const s = SEVERITY_STYLES[activeOption.severity];
+    return (
+      <View style={[styles.container, compact && styles.containerCompact]}>
+        <View style={[styles.formHeader, { backgroundColor: s.bg, borderColor: s.border }]}>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            {activeOption.icon(s.color)}
+          </Svg>
+          <Text style={[styles.formHeaderLabel, { color: s.color }]} numberOfLines={1}>
+            {activeOption.label}
+          </Text>
+          <TouchableOpacity onPress={cancelForm} hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}>
+            <Text style={[styles.formHeaderClose, { color: s.color }]}>×</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TextInput
+          style={styles.noteInput}
+          value={note}
+          onChangeText={setNote}
+          placeholder="Descrie ce se întâmplă (opțional)…"
+          placeholderTextColor={colors.textTertiary}
+          multiline
+          numberOfLines={3}
+          maxLength={500}
+          editable={!reporting}
+          textAlignVertical="top"
+        />
+
+        {/* Attach row */}
+        <View style={styles.attachRow}>
+          {attachedPhoto ? (
+            <View style={styles.attachedThumbWrap}>
+              <Image source={{ uri: attachedPhoto.uri }} style={styles.attachedThumb} />
+              <TouchableOpacity
+                onPress={() => setAttachedPhoto(null)}
+                style={styles.attachedRemove}
+                activeOpacity={0.7}
+                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+              >
+                <Text style={styles.attachedRemoveText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleAttachPhoto}
+              style={styles.attachBtn}
+              activeOpacity={0.7}
+              disabled={reporting}
+            >
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M12 13a4 4 0 100-8 4 4 0 000 8z" stroke={colors.textSecondary} strokeWidth={1.8} />
+              </Svg>
+              <Text style={styles.attachBtnText}>Atașează poză</Text>
+            </TouchableOpacity>
+          )}
+
+          {attachedAudio ? (
+            <View style={styles.attachedAudioWrap}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={colors.purple} strokeWidth={1.8} />
+                <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke={colors.purple} strokeWidth={1.8} strokeLinecap="round" />
+              </Svg>
+              <Text style={styles.attachedAudioText}>Mesaj vocal {attachedAudio.duration}s</Text>
+              <TouchableOpacity onPress={() => setAttachedAudio(null)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                <Text style={styles.attachedRemoveInline}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPressIn={startRecording}
+              onPressOut={stopRecording}
+              style={[styles.attachBtn, recording && styles.attachBtnActive]}
+              activeOpacity={0.7}
+              disabled={reporting}
+            >
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={recording ? colors.red : colors.textSecondary} strokeWidth={1.8} />
+                <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke={recording ? colors.red : colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" />
+              </Svg>
+              <Text style={[styles.attachBtnText, recording && { color: colors.red }]}>
+                {recording ? '● Înregistrare…' : 'Mesaj vocal'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.submitBtn, reporting && styles.submitBtnDisabled]}
+          onPress={submit}
+          disabled={reporting}
+          activeOpacity={0.85}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke={colors.white} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+          <Text style={styles.submitBtnText}>Trimite notificare</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // STEP 1 — Severity grid (default view). Tap opens the detail form.
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
-      {/* Attach row */}
-      <View style={styles.attachRow}>
-        {attachedPhoto ? (
-          <View style={styles.attachedThumbWrap}>
-            <Image source={{ uri: attachedPhoto.uri }} style={styles.attachedThumb} />
-            <TouchableOpacity
-              onPress={() => setAttachedPhoto(null)}
-              style={styles.attachedRemove}
-              activeOpacity={0.7}
-              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-            >
-              <Text style={styles.attachedRemoveText}>×</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={handleAttachPhoto}
-            style={styles.attachBtn}
-            activeOpacity={0.7}
-            disabled={reporting}
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-              <Path d="M12 13a4 4 0 100-8 4 4 0 000 8z" stroke={colors.textSecondary} strokeWidth={1.8} />
-            </Svg>
-            <Text style={styles.attachBtnText}>Foto</Text>
-          </TouchableOpacity>
-        )}
-
-        {attachedAudio ? (
-          <View style={styles.attachedAudioWrap}>
-            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-              <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={colors.purple} strokeWidth={1.8} />
-              <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke={colors.purple} strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-            <Text style={styles.attachedAudioText}>Notă {attachedAudio.duration}s</Text>
-            <TouchableOpacity onPress={() => setAttachedAudio(null)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-              <Text style={styles.attachedRemoveInline}>×</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPressIn={startRecording}
-            onPressOut={stopRecording}
-            style={[styles.attachBtn, recording && styles.attachBtnActive]}
-            activeOpacity={0.7}
-            disabled={reporting}
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={recording ? colors.red : colors.textSecondary} strokeWidth={1.8} />
-              <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke={recording ? colors.red : colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-            <Text style={[styles.attachBtnText, recording && { color: colors.red }]}>
-              {recording ? '● Înregistrare…' : 'Ține pentru notă'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Severity grid — 4x2 */}
       <View style={styles.grid}>
         {OPTIONS.map((option) => {
           const s = SEVERITY_STYLES[option.severity];
@@ -292,7 +365,7 @@ export default function EmergencyReporter({ onSent, compact = false }) {
                 styles.gridItem,
                 { backgroundColor: s.bg, borderColor: s.border },
               ]}
-              onPress={() => submit(option)}
+              onPress={() => openForm(option)}
               activeOpacity={0.7}
               disabled={reporting}
             >
@@ -316,6 +389,57 @@ const styles = StyleSheet.create({
   },
   containerCompact: {
     gap: 8,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  formHeaderLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  formHeaderClose: {
+    fontSize: 22,
+    lineHeight: 22,
+    fontWeight: '700',
+    paddingHorizontal: 4,
+  },
+  noteInput: {
+    minHeight: 80,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: colors.textPrimary,
+    lineHeight: 18,
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.danger || colors.red,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: 0.2,
   },
   attachRow: {
     flexDirection: 'row',

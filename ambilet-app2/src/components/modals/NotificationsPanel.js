@@ -87,16 +87,23 @@ function NotificationIcon({ type }) {
 
 // Mini audio player — play/pause a local m4a URI (or remote URL).
 // Managed state (loading, playing) so the button label reflects reality.
+//
+// Loop-prevention: expo-av can re-fire play if you setPositionAsync while
+// the sound is still in a "just finished" state. We explicitly pause +
+// unload after each play so the next tap re-creates the Sound fresh.
 function MiniAudioPlayer({ uri, duration }) {
   const [state, setState] = useState('idle'); // 'idle' | 'loading' | 'playing'
   const soundRef = useRef(null);
 
-  useEffect(() => () => {
-    if (soundRef.current) {
-      try { soundRef.current.unloadAsync(); } catch {}
-      soundRef.current = null;
-    }
-  }, []);
+  const teardown = async () => {
+    const s = soundRef.current;
+    soundRef.current = null;
+    if (!s) return;
+    try { await s.stopAsync(); } catch {}
+    try { await s.unloadAsync(); } catch {}
+  };
+
+  useEffect(() => () => { teardown(); }, []);
 
   const toggle = async () => {
     if (!AudioLib) {
@@ -104,25 +111,31 @@ function MiniAudioPlayer({ uri, duration }) {
       return;
     }
     if (state === 'playing') {
-      try { await soundRef.current?.pauseAsync(); } catch {}
+      // Explicit user pause — stop + unload so a subsequent tap starts fresh.
+      await teardown();
       setState('idle');
       return;
     }
     setState('loading');
     try {
-      if (!soundRef.current) {
-        const { sound } = await AudioLib.Sound.createAsync({ uri }, { shouldPlay: false });
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status?.didJustFinish) {
-            setState('idle');
-            try { sound.setPositionAsync(0); } catch {}
-          }
-        });
-        soundRef.current = sound;
-      }
-      await soundRef.current.playAsync();
+      await teardown();
+      const { sound } = await AudioLib.Sound.createAsync(
+        { uri },
+        { shouldPlay: false, isLooping: false }
+      );
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status?.didJustFinish) {
+          // Fully unload on finish — prevents expo-av's replay-after-seek
+          // race that made the note loop forever until the modal closed.
+          teardown();
+          setState('idle');
+        }
+      });
+      soundRef.current = sound;
+      await sound.playAsync();
       setState('playing');
     } catch {
+      await teardown();
       setState('idle');
       Alert.alert('Eroare', 'Nu am putut porni redarea.');
     }
@@ -145,14 +158,22 @@ function MiniAudioPlayer({ uri, duration }) {
   );
 }
 
-function NotificationItem({ notification, onOpenPhoto }) {
+function NotificationItem({ notification, onOpenPhoto, onMarkOneRead }) {
   const isUnread = notification.unread;
   const hasPhoto = !!(notification.photo_uri || notification.photo_url);
   const hasAudio = !!(notification.audio_uri || notification.audio_url);
   const photoUri = notification.photo_uri || notification.photo_url;
 
+  const handleRowPress = () => {
+    if (isUnread && notification.id != null) onMarkOneRead?.(notification.id);
+  };
+
   return (
-    <View style={[styles.notifItem, isUnread && styles.notifItemUnread]}>
+    <TouchableOpacity
+      style={[styles.notifItem, isUnread && styles.notifItemUnread]}
+      onPress={handleRowPress}
+      activeOpacity={0.7}
+    >
       <NotificationIcon type={notification.type} />
       <View style={styles.notifContent}>
         <Text style={[styles.notifMessage, isUnread && styles.notifMessageUnread]} numberOfLines={2}>
@@ -194,7 +215,7 @@ function NotificationItem({ notification, onOpenPhoto }) {
         <Text style={styles.notifTime}>{notification.time}</Text>
       </View>
       {isUnread && <View style={styles.unreadDot} />}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -248,7 +269,7 @@ function EmergencyButton({ label, phone, bg, border, color, iconPath, onPressCal
   );
 }
 
-export default function NotificationsPanel({ visible, onClose, notifications = [], onMarkAllRead }) {
+export default function NotificationsPanel({ visible, onClose, notifications = [], onMarkAllRead, onMarkOneRead }) {
   const unreadCount = notifications.filter(n => n.unread).length;
   const { emergencyContacts } = useApp();
   const insets = useSafeAreaInsets();
@@ -313,16 +334,14 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        onPress={onClose}
-        activeOpacity={1}
-      >
-        {/* Pressable with no-op onPress absorbs taps inside the panel so
-            they don't bubble up to the overlay and close it. Without this,
-            tapping empty space between notifications (or a non-interactive
-            child like an <Image>) would close the whole panel. */}
-        <Pressable style={[styles.panel, { bottom: bottomOffset }]} onPress={() => {}}>
+      {/* Backdrop + panel are SIBLINGS (not parent/child) so taps inside
+          the panel — including ScrollView drag gestures — never propagate
+          to the backdrop's onPress. Previously the backdrop wrapped the
+          panel via a TouchableOpacity and captured the drag start, so the
+          list couldn't scroll and stray taps closed the panel. */}
+      <View style={styles.root} pointerEvents="box-none">
+        <Pressable style={styles.overlay} onPress={onClose} />
+        <View style={[styles.panel, { bottom: bottomOffset }]}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -369,6 +388,7 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
                   key={notification.id || index}
                   notification={notification}
                   onOpenPhoto={setViewingPhoto}
+                  onMarkOneRead={onMarkOneRead}
                 />
               ))
             )}
@@ -434,8 +454,8 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
             </View>
             <EmergencyReporter compact />
           </View>
-        </Pressable>
-      </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Full-screen photo viewer — mounted at the Modal root so it sits
           above the notifications panel and its own tap-to-close doesn't
@@ -446,8 +466,11 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  root: {
     flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(20,10,10,0.15)',
   },
   panel: {

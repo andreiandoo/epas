@@ -228,6 +228,7 @@ export default function CheckInScreen({ navigation }) {
     vibrationFeedback,
     soundEffects,
     autoConfirmValid,
+    bluetoothScannerEnabled,
     addScan,
     recentScans,
     myScans,
@@ -241,14 +242,20 @@ export default function CheckInScreen({ navigation }) {
     }
   }, [selectedEvent?.id]);
 
-  // Debounced name search — kicks in only when the manual entry modal is
-  // open and query is at least 2 chars. Results include check-in status
-  // so the operator sees "Deja scanat" instead of triggering a duplicate.
+  // Debounced EMAIL search — kicks in when the manual entry modal is open
+  // and the query is at least 3 chars. Email is used (instead of name)
+  // because multiple buyers can share a name — the email is unique and
+  // deterministic. We send `search`/`q`/`email` params so whichever the
+  // backend recognises kicks in; then we do a defensive client-side
+  // filter on the response so results always match the typed email even
+  // if the server-side filter was a no-op. Results include check-in
+  // status so the operator sees "Deja scanat" instead of triggering a
+  // duplicate.
   useEffect(() => {
     if (!showManualEntry || !selectedEvent?.id) return;
     if (nameSearchDebounceRef.current) clearTimeout(nameSearchDebounceRef.current);
-    const q = nameQuery.trim();
-    if (q.length < 2) {
+    const q = nameQuery.trim().toLowerCase();
+    if (q.length < 3) {
       setNameResults([]);
       setNameSearching(false);
       return;
@@ -256,9 +263,29 @@ export default function CheckInScreen({ navigation }) {
     setNameSearching(true);
     nameSearchDebounceRef.current = setTimeout(async () => {
       try {
-        const resp = await getParticipants(selectedEvent.id, { search: q, per_page: 15 });
-        const rows = resp?.data?.participants || (Array.isArray(resp?.data) ? resp.data : []);
-        setNameResults(Array.isArray(rows) ? rows : []);
+        const resp = await getParticipants(selectedEvent.id, {
+          search: q,
+          q,
+          email: q,
+          per_page: 50,
+        });
+        const rows = resp?.data?.participants
+          || (Array.isArray(resp?.data) ? resp.data : [])
+          || (Array.isArray(resp?.data?.data) ? resp.data.data : []);
+        const arr = Array.isArray(rows) ? rows : [];
+        // Client-side filter over 50 rows — cheap and guarantees the
+        // operator only sees rows whose email actually contains the query.
+        const filtered = arr.filter(p => {
+          const email = String(
+            p.attendee?.email
+            || p.customer?.email
+            || p.buyer?.email
+            || p.email
+            || ''
+          ).toLowerCase();
+          return email && email.includes(q);
+        });
+        setNameResults(filtered);
       } catch (e) {
         setNameResults([]);
       } finally {
@@ -924,7 +951,7 @@ export default function CheckInScreen({ navigation }) {
           catches fast HID keyboard sequences ending in Enter and routes
           them through the same handleCheckIn as camera scans. */}
       <HardwareScannerInput
-        enabled={!isShiftPaused && !showManualEntry}
+        enabled={bluetoothScannerEnabled && !isShiftPaused && !showManualEntry}
         onScan={(code) => handleCheckIn(code)}
       />
 
@@ -1224,24 +1251,26 @@ export default function CheckInScreen({ navigation }) {
                 <View style={styles.nameSearchDividerLine} />
               </View>
               <Text style={styles.modalDescription}>
-                Caută după numele participantului sau al cumpărătorului
+                Caută după emailul cumpărătorului sau al beneficiarului{'\n'}
+                (emailul e unic — 2 clienți pot avea același nume)
               </Text>
               <TextInput
                 style={styles.codeInput}
-                placeholder="ex. Ion Popescu"
+                placeholder="ex. ion@example.ro"
                 placeholderTextColor={colors.textQuaternary}
                 value={nameQuery}
                 onChangeText={setNameQuery}
-                autoCapitalize="words"
+                autoCapitalize="none"
                 autoCorrect={false}
+                keyboardType="email-address"
                 returnKeyType="search"
               />
-              {nameQuery.trim().length >= 2 ? (
+              {nameQuery.trim().length >= 3 ? (
                 <View style={styles.nameResultsBox}>
                   {nameSearching ? (
                     <Text style={styles.nameResultsEmpty}>Se caută…</Text>
                   ) : nameResults.length === 0 ? (
-                    <Text style={styles.nameResultsEmpty}>Nimic găsit</Text>
+                    <Text style={styles.nameResultsEmpty}>Niciun email nu se potrivește</Text>
                   ) : (
                     nameResults.slice(0, 8).map((p, idx) => {
                       const alreadyChecked = !!p.checked_in_at || p.status === 'checked_in';
@@ -1250,6 +1279,11 @@ export default function CheckInScreen({ navigation }) {
                         || p.name
                         || p.full_name
                         || 'Necunoscut';
+                      const email = p.attendee?.email
+                        || p.customer?.email
+                        || p.buyer?.email
+                        || p.email
+                        || '';
                       const ttName = p.ticket_type || p.ticket_type_name || '';
                       const code = p.barcode || p.code || p.ticket_code || '';
                       return (
@@ -1269,9 +1303,9 @@ export default function CheckInScreen({ navigation }) {
                           disabled={alreadyChecked}
                         >
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.nameResultPrimary} numberOfLines={1}>{displayName}</Text>
+                            <Text style={styles.nameResultPrimary} numberOfLines={1}>{email || displayName}</Text>
                             <Text style={styles.nameResultSecondary} numberOfLines={1}>
-                              {ttName ? `${ttName} · ` : ''}{code}
+                              {displayName}{ttName ? ` · ${ttName}` : ''}{code ? ` · ${code}` : ''}
                             </Text>
                           </View>
                           {alreadyChecked ? (

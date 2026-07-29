@@ -40,6 +40,13 @@ reseta parola direct din aplicație, capitolul [16. Personal](./16_personal.md).
 asociat la mai multe conturi, aplicația îți afișează un selector.
 Detalii în [capitolul 28](./28_comutare_organizatori.md).
 
+**La deschiderile următoare**, aplicația **completează automat email +
+parolă** din prima ta autentificare — apeși direct `Autentificare` și
+intri. Credentialele sunt criptate în telefon (SecureStore), nu se
+transmit nicăieri. Se șterg doar când apeși explicit *„Încheie Tura &
+Deconectare"* din Setări — util pentru predare de tură. Vezi
+[capitolul 23](./23_securitate.md) pentru detalii.
+
 ---
 
 ## 3. Prima privire asupra ecranului

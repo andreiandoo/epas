@@ -17,7 +17,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.2.0-dev.5';
+const APP_VERSION = '2.2.0-dev.6';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -191,7 +191,7 @@ function MainTabs() {
   const { userRole, userPermissions, user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode, selectedEvent } = useEvent();
-  const { notifications, markAllRead, shiftStartTime, autoConfirmValid, setAutoConfirm, autoLogoutMinutes } = useApp();
+  const { notifications, markAllRead, markOneRead, shiftStartTime, autoConfirmValid, setAutoConfirm, autoLogoutMinutes } = useApp();
 
   // Rule: never auto-confirm scans for a future event — that would let the
   // operator pass through tickets before the event is open. When the picker
@@ -208,6 +208,7 @@ function MainTabs() {
   const [showEmergency, setShowEmergency] = useState(false);
   const [showStaff, setShowStaff] = useState(false);
   const [showGuestList, setShowGuestList] = useState(false);
+  const [showScannedList, setShowScannedList] = useState(false);
   const [showGateManager, setShowGateManager] = useState(false);
   const [showStaffAssignment, setShowStaffAssignment] = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -229,6 +230,7 @@ function MainTabs() {
     || !!showStaffAssignment
     || !!showStaff
     || !!showGuestList
+    || !!showScannedList
     || !!showEventsModal
     || !!showManual
   );
@@ -368,6 +370,7 @@ function MainTabs() {
                     {...props}
                     onShowStaff={() => setShowStaff(true)}
                     onShowGuestList={() => setShowGuestList(true)}
+                    onShowScannedList={() => setShowScannedList(true)}
                   />
                 </React.Suspense>
               </ScreenErrorBoundary>
@@ -442,6 +445,7 @@ function MainTabs() {
           onClose={() => setShowNotifications(false)}
           notifications={notifications}
           onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
         />
       )}
       {showEmergency && (
@@ -452,6 +456,13 @@ function MainTabs() {
       )}
       {showGuestList && (
         <GuestListModal visible={showGuestList} onClose={() => setShowGuestList(false)} />
+      )}
+      {showScannedList && (
+        <GuestListModal
+          visible={showScannedList}
+          onClose={() => setShowScannedList(false)}
+          mode="checked_in"
+        />
       )}
       {showGateManager && (
         <GateManagerModal
