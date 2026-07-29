@@ -702,6 +702,13 @@ class MarketplacePanelProvider extends PanelProvider
                         z-index: 9999 !important;
                         overflow-y: auto !important;
                     }
+                    /* Filament hides .fi-sidebar-item-label when the primary sidebar
+                       is collapsed (isOpen=false); on mobile that also blanks the
+                       cloned labels in the flyout, leaving icon-only rows. Force them
+                       back so the sub-menu items are readable in the overlay. */
+                    body.ep-secondary-sidebar-open #ep-secondary-sidebar .fi-sidebar-item-label {
+                        display: block !important;
+                    }
                 }
             </style>')
 
