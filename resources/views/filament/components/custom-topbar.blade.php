@@ -539,3 +539,55 @@
         } catch (e) {}
     })();
 </script>
+
+{{-- Fast hover tooltip for the collapsed desktop icon-rail. Labels are hidden
+     (display:none) in the rail, so on hover we read the item's label text and
+     show it as a fixed-position pill to the right of the icon — instant, and it
+     never widens the sidebar (fixed positioning escapes the sidebar overflow). --}}
+<script>
+    (function () {
+        var tip = null;
+        function railActive() {
+            return document.documentElement.classList.contains('ep-rail-collapsed') &&
+                   window.matchMedia('(min-width: 1024px)').matches;
+        }
+        function ensureTip() {
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.className = 'ep-rail-tooltip';
+                tip.style.cssText = 'position:fixed;z-index:100000;pointer-events:none;' +
+                    'background:#1f2937;color:#fff;padding:4px 10px;border-radius:6px;' +
+                    'font-size:13px;line-height:1.2;white-space:nowrap;' +
+                    'box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;transition:opacity .06s ease;';
+                document.body.appendChild(tip);
+            }
+            return tip;
+        }
+        document.addEventListener('mouseover', function (e) {
+            if (!railActive()) return;
+            var item = e.target.closest('.fi-main-sidebar .fi-sidebar-item');
+            if (!item) return;
+            var label = item.querySelector('.fi-sidebar-item-label');
+            var text = label ? label.textContent.trim() : '';
+            if (!text) return;
+            var btn = item.querySelector('.fi-sidebar-item-btn') || item;
+            var r = btn.getBoundingClientRect();
+            var t = ensureTip();
+            t.textContent = text;
+            t.style.top = (r.top + r.height / 2) + 'px';
+            t.style.left = (r.right + 8) + 'px';
+            t.style.transform = 'translateY(-50%)';
+            t.style.opacity = '1';
+        });
+        document.addEventListener('mouseout', function (e) {
+            if (!tip) return;
+            if (e.target.closest('.fi-main-sidebar .fi-sidebar-item')) {
+                tip.style.opacity = '0';
+            }
+        });
+        // Hide immediately if the rail is toggled/expanded while a tip is showing.
+        document.addEventListener('click', function () {
+            if (tip && !railActive()) tip.style.opacity = '0';
+        }, true);
+    })();
+</script>
