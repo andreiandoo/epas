@@ -15,7 +15,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, ActivityIndicator, Modal, Linking, Alert,
+  StyleSheet, ActivityIndicator, Modal, Linking, Alert, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -63,6 +63,48 @@ const CHAPTERS = [
   { id: '27', file: require('../../../docs/manual/27_landscape_tablete.md'), title: 'Tabletă — landscape mode', section: '🎁 Extras' },
   { id: '28', file: require('../../../docs/manual/28_comutare_organizatori.md'), title: 'Comutarea între organizatori', section: '🎁 Extras' },
 ];
+
+// Screenshot registry — Metro nu poate rezolva dinamic path-uri relative
+// din markdown-uri bundled, asa ca fiecare imagine referita din .md trebuie
+// mentionata explicit aici (require rezolvat la bundle time). Chei = filename
+// din markdown (ex. src='./screenshots/01-splash.png' -> key '01-splash.png').
+//
+// Adaugare screenshot nou: pune fisierul in docs/manual/screenshots/ +
+// adauga un rand aici. Screenshot-uri lipsa afiseaza silent nimic (nu
+// crash), astfel incat placeholder-ele `![...](./screenshots/XX.png)` din
+// capitolele in lucru nu strica capitolul.
+const SCREENSHOTS = {
+  '01-splash.png':          require('../../../docs/manual/screenshots/01-splash.png'),
+  '01-login.png':           require('../../../docs/manual/screenshots/01-login.png'),
+  '01-dashboard-tour.png':  require('../../../docs/manual/screenshots/01-dashboard-tour.png'),
+};
+
+// Custom markdown rules — override the default image renderer so relative
+// ./screenshots/*.png paths resolve to bundled require() sources instead
+// of being treated as remote URIs (which fail with no error, invisible).
+const markdownRules = {
+  image: (node, children, parent, styles) => {
+    const src = node?.attributes?.src || '';
+    const alt = node?.attributes?.alt || '';
+    const filename = src.split('/').pop();
+    const source = SCREENSHOTS[filename];
+    if (!source) {
+      // Missing screenshot — return null to render nothing (no visual
+      // break). Alt-text conservat pentru screen readers / a11y in
+      // dev logging daca vom activa vreodata.
+      return null;
+    }
+    return (
+      <Image
+        key={node.key}
+        source={source}
+        style={{ width: '100%', maxWidth: 380, aspectRatio: undefined, marginVertical: 8, borderRadius: 8, alignSelf: 'center' }}
+        resizeMode="contain"
+        accessibilityLabel={alt}
+      />
+    );
+  },
+};
 
 async function loadChapterContent(chapter) {
   if (!Asset || !FileSystem) {
@@ -300,6 +342,7 @@ export default function ManualModal({ visible, onClose, navigation }) {
               <Markdown
                 onLinkPress={handleLinkPress}
                 style={markdownStyles}
+                rules={markdownRules}
               >
                 {content}
               </Markdown>
