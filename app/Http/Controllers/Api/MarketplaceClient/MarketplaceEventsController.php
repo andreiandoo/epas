@@ -2205,6 +2205,20 @@ class MarketplaceEventsController extends BaseController
                 $sectionData['icon_label'] = $iconDefinitions[$iconKey]['label'] ?? $section->name;
             }
 
+            // For General Access (seatless) sections, expose the capacity and the
+            // ticket types assigned to the zone (isolated GA pivot). The frontend
+            // draws the zone and routes a click to whichever of these ticket types
+            // it actually knows (it intersects with its own ticketTypes list), so
+            // exposing all linked ids here is safe.
+            if (($section->section_type ?? null) === \App\Models\Seating\SeatingSection::TYPE_GENERAL) {
+                $sectionData['max_capacity'] = $section->max_capacity;
+                $sectionData['general_access_ticket_type_ids'] = $section->generalAccessTicketTypes()
+                    ->pluck('ticket_types.id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all();
+            }
+
             $sections[] = $sectionData;
         }
 

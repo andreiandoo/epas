@@ -29,6 +29,24 @@ class MarketplaceEventSeatingService
      * @param int $marketplaceEventId
      * @return EventSeatingLayout|null
      */
+    /**
+     * Does the given layout have any actual seats (rows→seats)? A layout made up
+     * only of General Access sections legitimately has none. Used to avoid the
+     * "0 seats ⇒ stale ⇒ recreate" loop for seatless layouts.
+     */
+    protected function layoutHasSeats(?int $layoutId): bool
+    {
+        if (!$layoutId) {
+            return false;
+        }
+
+        return DB::table('seating_seats')
+            ->join('seating_rows', 'seating_seats.row_id', '=', 'seating_rows.id')
+            ->join('seating_sections', 'seating_rows.section_id', '=', 'seating_sections.id')
+            ->where('seating_sections.layout_id', $layoutId)
+            ->exists();
+    }
+
     public function getOrCreateEventSeating(int $marketplaceEventId): ?EventSeatingLayout
     {
         // Check if event seating already exists
@@ -37,9 +55,12 @@ class MarketplaceEventSeatingService
             ->first();
 
         if ($existing) {
-            // If event seating exists but has no seats, delete and recreate
-            // This handles cases where the base layout had no seats when first created
-            if ($existing->seats()->count() === 0) {
+            // If event seating exists but has no seats, delete and recreate — this
+            // handles an incomplete build where the base layout DID have seats.
+            // Guard with layoutHasSeats(): a legitimately seatless layout (only
+            // General Access sections) has 0 seats by design, so recreating it
+            // would loop forever on every request.
+            if ($existing->seats()->count() === 0 && $this->layoutHasSeats($existing->layout_id)) {
                 Log::warning('MarketplaceEventSeatingService: EventSeatingLayout has 0 seats, deleting to recreate', [
                     'marketplace_event_id' => $marketplaceEventId,
                     'event_seating_id' => $existing->id,
@@ -205,9 +226,12 @@ class MarketplaceEventSeatingService
 
         if ($existing) {
             $seatCount = $existing->seats()->count();
-            // Stale if either: has no seats (incomplete build) OR its source layout_id
-            // no longer matches the event's currently selected seating_layout_id.
-            $isStale = $seatCount === 0
+            // Stale if either: has no seats WHILE the layout actually has seats
+            // (incomplete build) OR its source layout_id no longer matches the
+            // event's currently selected seating_layout_id. A legitimately seatless
+            // layout (only General Access sections) has 0 seats by design and must
+            // NOT be treated as stale, else it is recreated on every request.
+            $isStale = ($seatCount === 0 && $this->layoutHasSeats($existing->layout_id))
                 || ($event->seating_layout_id && $existing->layout_id !== $event->seating_layout_id);
 
             if ($isStale) {
