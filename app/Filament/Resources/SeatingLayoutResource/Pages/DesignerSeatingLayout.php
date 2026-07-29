@@ -856,6 +856,35 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Mark/unmark a section as General Access (capacity-only, seatless) and set
+     * its (informational) maximum capacity. GA sections have no seats/rows; they
+     * get ticket types assigned at the event level. Non-destructive: toggling off
+     * just restores section_type='standard' and clears the capacity.
+     */
+    public function setSectionGeneralAccess($sectionId, bool $isGeneral, $maxCapacity = null): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $section->section_type = $isGeneral
+            ? SeatingSection::TYPE_GENERAL
+            : 'standard';
+
+        $section->max_capacity = ($isGeneral && $maxCapacity !== null && $maxCapacity !== '')
+            ? max(0, (int) $maxCapacity)
+            : null;
+
+        $section->save();
+
+        $this->reloadSections();
+        $this->skipRender();
+        $this->dispatch('layout-updated', sections: $this->sections);
+    }
+
+    /**
      * Create a new section from canvas drawing (called from Konva.js)
      */
     public function createSection(array $data): void

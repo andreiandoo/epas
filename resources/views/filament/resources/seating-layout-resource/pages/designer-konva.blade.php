@@ -91,6 +91,8 @@
             showSectionLabel: true,
             sectionLabelPosition: 'inside',
             sectionAutoShowRowLabels: true,
+            sectionIsGeneralAccess: false,
+            sectionMaxCapacity: '',
             addSeatsMode: false,
             savedViewState: null,
             rowSeatSize: 15,
@@ -1340,6 +1342,10 @@
                         this.editColorHex = section.color_hex || '#3B82F6';
                         this.editSeatColor = section.seat_color || '#22C55E';
 
+                        // General Access (capacity-only, seatless) section state
+                        this.sectionIsGeneralAccess = section.section_type === 'general';
+                        this.sectionMaxCapacity = (section.max_capacity ?? '') === null ? '' : (section.max_capacity ?? '');
+
                         // Initialize label visibility and position from metadata
                         const metadata = section.metadata || {};
                         this.showSectionLabel = metadata.show_label !== false;
@@ -2424,6 +2430,35 @@
             applySectionChanges() {
                 // Alias for backwards compatibility
                 this.saveSectionChanges();
+            },
+            // General Access: toggle the section between 'standard' and 'general'
+            // (capacity-only, no seats/rows). Persists immediately so the seat
+            // tools show/hide right away.
+            toggleGeneralAccess() {
+                if (!this.selectedSection) return;
+                const wire = this.getWire();
+                if (!wire) return;
+                const isGa = !!this.sectionIsGeneralAccess;
+                // Reflect locally so the seat-tool buttons (which key on
+                // section_type === 'standard') hide/show immediately.
+                const section = this.getSelectedSectionData();
+                if (section) section.section_type = isGa ? 'general' : 'standard';
+                if (isGa) {
+                    this.addSeatsMode = false;
+                    this.rowSelectMode = false;
+                    this.seatSelectMode = false;
+                }
+                const cap = (this.sectionMaxCapacity === '' || this.sectionMaxCapacity === null)
+                    ? null : parseInt(this.sectionMaxCapacity);
+                wire.setSectionGeneralAccess(this.selectedSection, isGa, cap);
+            },
+            saveGeneralAccessCapacity() {
+                if (!this.selectedSection || !this.sectionIsGeneralAccess) return;
+                const wire = this.getWire();
+                if (!wire) return;
+                const cap = (this.sectionMaxCapacity === '' || this.sectionMaxCapacity === null)
+                    ? null : parseInt(this.sectionMaxCapacity);
+                wire.setSectionGeneralAccess(this.selectedSection, true, cap);
             },
             showSectionContextMenu(e, section) {
                 const containerRect = this.stage.container().getBoundingClientRect();
@@ -4438,6 +4473,23 @@
                                 :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'">
                                 Locuri
                             </button>
+                        </div>
+
+                        {{-- General Access (capacity-only section, no seats/rows) --}}
+                        <div class="p-2 space-y-2 border rounded border-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-800">
+                            <label class="flex items-center gap-2 text-xs font-semibold text-indigo-800 cursor-pointer dark:text-indigo-200">
+                                <input type="checkbox" x-model="sectionIsGeneralAccess" x-on:change="toggleGeneralAccess()" class="w-3.5 h-3.5">
+                                Secțiune General Access (fără locuri)
+                            </label>
+                            <p class="text-[11px] leading-tight text-indigo-700/80 dark:text-indigo-300/80" x-show="!sectionIsGeneralAccess">
+                                Marcheaz-o dacă vinzi acces general (fără locuri/rânduri). Îi poți aloca tipuri de bilete la nivel de eveniment.
+                            </p>
+                            <div x-show="sectionIsGeneralAccess" x-transition class="flex items-center gap-2">
+                                <label class="text-xs text-indigo-700 dark:text-indigo-300 whitespace-nowrap">Capacitate max:</label>
+                                <input type="number" min="0" x-model="sectionMaxCapacity" x-on:change="saveGeneralAccessCapacity()"
+                                    class="w-24 px-1 py-0.5 text-xs text-gray-900 bg-white border border-indigo-300 rounded"
+                                    placeholder="ex: 500">
+                            </div>
                         </div>
 
                         {{-- Mode Info --}}

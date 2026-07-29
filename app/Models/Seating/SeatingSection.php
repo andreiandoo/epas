@@ -23,6 +23,7 @@ class SeatingSection extends Model
         'width',
         'height',
         'rotation',
+        'max_capacity',
         'display_order',
         'color_hex',
         'seat_color',
@@ -41,9 +42,17 @@ class SeatingSection extends Model
         'width' => 'integer',
         'height' => 'integer',
         'rotation' => 'integer',
+        'max_capacity' => 'integer',
         'display_order' => 'integer',
         'corner_radius' => 'integer',
     ];
+
+    /**
+     * section_type value for a General Access section: no seats/rows, sells via
+     * assigned ticket types (per-ticket-type quota) with an informational
+     * max_capacity. See the seating "General Access" feature.
+     */
+    public const TYPE_GENERAL = 'general';
 
     protected $attributes = [
         'color_hex' => '#3B82F6',
@@ -91,6 +100,14 @@ class SeatingSection extends Model
             'seating_section_id',
             'ticket_type_id'
         )->withTimestamps();
+    }
+
+    /**
+     * Whether this is a General Access (capacity-only, seatless) section.
+     */
+    public function isGeneralAccess(): bool
+    {
+        return $this->section_type === self::TYPE_GENERAL;
     }
 
     /**
