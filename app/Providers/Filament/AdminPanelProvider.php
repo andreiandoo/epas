@@ -34,6 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->sidebarCollapsibleOnDesktop()
             ->login()
             ->profile()
             ->authGuard('web')
@@ -118,6 +119,20 @@ class AdminPanelProvider extends PanelProvider
             body.ep-secondary-sidebar-ready [data-group-label="Operational"],
             body.ep-secondary-sidebar-ready [data-group-label="Taxonomies"] {
                 display: none !important;
+            }
+            /* Mobile (<lg): the secondary flyout becomes a full-screen overlay so
+               its cloned sub-menu items are reachable (the JS-set left/width are
+               overridden here). */
+            @media (max-width: 1023.98px) {
+                #ep-secondary-sidebar.ep-secondary-sidebar {
+                    position: fixed !important;
+                    inset: 0 !important;
+                    left: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    height: 100% !important;
+                    z-index: 9999 !important;
+                }
             }
             </style>
             <script>
@@ -318,7 +333,8 @@ class AdminPanelProvider extends PanelProvider
                     if (btn && !btn.dataset.epSecondaryBound) {
                         btn.dataset.epSecondaryBound = 'true';
                         btn.addEventListener('click', (e) => {
-                            if (window.matchMedia('(max-width: 63.99rem)').matches) return;
+                            // On mobile the flyout becomes a full-screen overlay (see CSS),
+                            // so let the trigger open it here too (no early return).
                             e.preventDefault();
                             e.stopPropagation();
                             Alpine.store('secondarySidebar').togglePanel(panel);

@@ -68,6 +68,7 @@ class TenantPanelProvider extends PanelProvider
         return $panel
             ->id('tenant')
             ->path('tenant')
+            ->sidebarCollapsibleOnDesktop()
             ->login()
             ->authGuard('web')
             ->colors([

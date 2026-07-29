@@ -69,6 +69,7 @@ class MarketplacePanelProvider extends PanelProvider
         return $panel
             ->id('marketplace')
             ->path('marketplace')
+            ->sidebarCollapsibleOnDesktop()
             ->login()
             ->authGuard('marketplace_admin')
             ->colors([
@@ -386,7 +387,8 @@ class MarketplacePanelProvider extends PanelProvider
                     if (btn && !btn.dataset.epSecondaryBound) {
                         btn.dataset.epSecondaryBound = 'true';
                         btn.addEventListener('click', (e) => {
-                            if (window.matchMedia('(max-width: 63.99rem)').matches) return;
+                            // On mobile the flyout becomes a full-screen overlay (see CSS),
+                            // so let the trigger open it here too (no early return).
                             e.preventDefault();
                             e.stopPropagation();
                             Alpine.store('secondarySidebar').togglePanel(panel);
@@ -672,6 +674,19 @@ class MarketplacePanelProvider extends PanelProvider
                     text-decoration: line-through !important;
                     opacity: 0.45 !important;
                     color: #ef4444 !important;
+                }
+                /* Mobile (<lg): secondary flyout becomes a full-screen overlay so
+                   its cloned sub-menu items are reachable (overrides JS left/width). */
+                @media (max-width: 1023.98px) {
+                    #ep-secondary-sidebar.ep-secondary-sidebar {
+                        position: fixed !important;
+                        inset: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: 100% !important;
+                        z-index: 9999 !important;
+                    }
                 }
             </style>')
 
