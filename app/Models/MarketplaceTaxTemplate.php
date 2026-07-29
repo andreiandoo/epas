@@ -1959,6 +1959,25 @@ class MarketplaceTaxTemplate extends Model
                 ? $payout->computeOrganizerNetFromTickets()
                 : max(0.0, $payoutAmount - $totalDiscountAmount);
 
+            // Targeted reconciliation (payout 3208, 2026-07-29): when an
+            // operator has set an explicit net_override on this payout, THAT is
+            // the authoritative final net (E). The live computeOrganizerNetFromTickets
+            // recompute can drift a few lei from the saved ticket_breakdown net
+            // (getEffectivePrice picks the latest-N tickets per type, which no
+            // longer matches the frozen breakdown after tickets were cancelled/
+            // regenerated) — which made the PDF's A/E totals (29,253) contradict
+            // the 1a row rendered from the breakdown (29,175). Reverse the
+            // downstream formulas so E resolves to net_override exactly:
+            //   payout_amount     (E)      = organizerNet − advance  = net_override
+            //   payout_net_amount (A / 1a) = organizerNet + refund   = net_override + advance + refund
+            // Only payouts WITH a net_override are touched; every other payout
+            // (net_override IS NULL) keeps the exact prior behaviour — no global
+            // impact. Mirrors the same override branch already in
+            // MarketplacePayout::getFinalNetAmountAttribute (page display).
+            if ($payout->net_override !== null) {
+                $organizerNetFromTickets = (float) $payout->net_override + $advanceDeduction;
+            }
+
             // Row 1a — gross sold incl. refunded tickets nominally added back.
             $variables['payout_net_amount'] = number_format(
                 max(0.0, $organizerNetFromTickets + $refundDeduction),
