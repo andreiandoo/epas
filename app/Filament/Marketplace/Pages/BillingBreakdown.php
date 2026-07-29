@@ -6,10 +6,12 @@ use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\Order;
 use App\Models\ServiceOrder;
+use App\Services\Marketplace\SalesBreakdownService;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
 
@@ -129,6 +131,37 @@ class BillingBreakdown extends Page
         return round($total, 2);
     }
 
+    /**
+     * Per-event marketplace commission via the authoritative SalesBreakdownService
+     * (floor/leisure/per-type aware). Returns [event_id => commission].
+     *
+     * Needed because orders.commission_amount is 0 for POS/leisure sales, so
+     * summing that column (as the raw SQL does) undercounts commission badly for
+     * leisure events — e.g. Sf. Ana is ~93% POS, giving 1,032.70 instead of the
+     * real ~13,451. Mirrors Dashboard::monthCommissionViaService.
+     */
+    public static function commissionByEventViaService(array $eventIds, $periodStart = null, $periodEnd = null): array
+    {
+        $eventIds = array_values(array_unique(array_filter(array_map('intval', $eventIds))));
+        if (empty($eventIds)) {
+            return [];
+        }
+
+        $svc = app(SalesBreakdownService::class);
+        $events = Event::whereIn('id', $eventIds)->get()->keyBy('id');
+        $map = [];
+        foreach ($eventIds as $eid) {
+            $event = $events->get($eid);
+            if (! $event) {
+                continue;
+            }
+            $bd = $svc->build($event, $periodStart, $periodEnd, exactBounds: $periodStart !== null && $periodEnd !== null);
+            $map[$eid] = round((float) ($bd['total_commission'] ?? 0) + (float) ($bd['total_commission_kept_from_refunds'] ?? 0), 2);
+        }
+
+        return $map;
+    }
+
     public function getViewData(): array
     {
         $marketplace = $this->marketplace;
@@ -245,19 +278,35 @@ class BillingBreakdown extends Page
                 ->toArray();
         }
 
-        $events = $eventBreakdown->map(function ($row) use ($eventDetails, $ticketCounts, $commissionRate, $marketplace) {
+        // Per-event marketplace commission via the authoritative
+        // SalesBreakdownService (floor/leisure/per-type aware), cached like the
+        // Dashboard. orders.commission_amount is 0 for POS/leisure, so the raw
+        // SQL sum (marketplace_commission column above) undercounts badly for
+        // leisure events; this is the number the Dashboard already shows.
+        $isPastMonth = $monthDate->copy()->endOfMonth()->lt(Carbon::now($tz)->startOfMonth());
+        $serviceCommissionByEvent = Cache::remember(
+            "mp_billing_comm_svc_{$marketplaceId}_{$this->month}",
+            $isPastMonth ? 86400 : 900,
+            fn () => self::commissionByEventViaService($eventIds, $monthStart, $monthEnd)
+        );
+
+        $events = $eventBreakdown->map(function ($row) use ($eventDetails, $ticketCounts, $commissionRate, $marketplace, $serviceCommissionByEvent) {
             $eventId = $row->resolved_event_id;
             $revenue = (float) $row->revenue; // excludes refunded
             $revenueAll = (float) $row->revenue_with_refunds; // order.total incl refunded (informational only)
-            $marketplaceCommission = (float) ($row->marketplace_commission ?? 0);
             $details = $eventDetails[$eventId] ?? null;
 
-            // If SQL couldn't calculate commission (both commission_amount and commission_rate are 0/null),
-            // fall back to event's commission_rate or marketplace default
-            // Commission is calculated from ALL orders including refunded
-            if ($marketplaceCommission <= 0 && $revenueAll > 0) {
-                $eventCommRate = $details['commission_rate'] ?? $marketplace->commission_rate ?? 5;
-                $marketplaceCommission = round($revenueAll * ((float) $eventCommRate / 100), 2);
+            // Prefer the authoritative SalesBreakdownService value (leisure/POS
+            // aware). Fall back to the raw commission_amount / rate estimate only
+            // if the service returned nothing for this event.
+            if (array_key_exists((int) $eventId, $serviceCommissionByEvent)) {
+                $marketplaceCommission = (float) $serviceCommissionByEvent[(int) $eventId];
+            } else {
+                $marketplaceCommission = (float) ($row->marketplace_commission ?? 0);
+                if ($marketplaceCommission <= 0 && $revenueAll > 0) {
+                    $eventCommRate = $details['commission_rate'] ?? $marketplace->commission_rate ?? 5;
+                    $marketplaceCommission = round($revenueAll * ((float) $eventCommRate / 100), 2);
+                }
             }
 
             return [
