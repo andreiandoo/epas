@@ -217,6 +217,11 @@ class EditEvent extends EditRecord
                     // venue is switched. Force a clean start; admin re-picks if
                     // needed.
                     'seating_layout_id', 'seating_performance_id',
+                    // Fiscal directorate: don't inherit the source's stored value.
+                    // Re-derived from the (copied) venue below, so the duplicate
+                    // reflects its own venue's tax registry — not the original's,
+                    // which stuck around even after the operator changed location.
+                    'marketplace_tax_registry_id',
                 ]);
 
                 $titleArray = $record->title ?? [];
@@ -241,6 +246,12 @@ class EditEvent extends EditRecord
                 $newEvent->is_published = false;
                 $newEvent->views_count = 0;
                 $newEvent->interested_count = 0;
+                // Derive the fiscal directorate from the copied venue rather than
+                // inheriting the source event's value (shared matcher with the form).
+                $newEvent->marketplace_tax_registry_id = \App\Models\MarketplaceTaxRegistry::matchForVenue(
+                    $newEvent->venue,
+                    $newEvent->marketplace_client_id
+                )?->id;
                 $newEvent->save();
 
                 // Clear M2M relationships that may have been carried over by replicate

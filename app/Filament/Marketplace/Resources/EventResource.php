@@ -1410,27 +1410,10 @@ class EventResource extends Resource
                                                     }
                                                 }
 
-                                                // Try to auto-match tax registry by country/county/city
-                                                $normalize = fn ($s) => strtolower(trim(\Illuminate\Support\Str::ascii($s ?? '')));
-                                                $vCountry = $normalize($venue->country);
-                                                $vCounty = $normalize($venue->state);
-                                                $vCity = $normalize($venue->city);
-
-                                                $matchedRegistry = \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)
-                                                    ->where('is_active', true)
-                                                    ->get()
-                                                    ->first(function ($r) use ($normalize, $vCountry, $vCounty, $vCity) {
-                                                        $rCountry = $normalize($r->country);
-                                                        $rCounty = $normalize($r->county);
-                                                        $rCity = $normalize($r->city);
-
-                                                        $countryMatch = !$rCountry || !$vCountry || str_contains($rCountry, $vCountry) || str_contains($vCountry, $rCountry);
-                                                        $countyMatch = !$rCounty || !$vCounty || str_contains($rCounty, $vCounty) || str_contains($vCounty, $rCounty);
-                                                        $cityMatch = !$rCity || !$vCity || str_contains($rCity, $vCity) || str_contains($vCity, $rCity);
-
-                                                        return $countryMatch && $countyMatch && $cityMatch && ($vCity || $vCounty);
-                                                    });
-
+                                                // Auto-match the fiscal directorate from the venue's
+                                                // location. Shared with the Duplicate action so both
+                                                // derive the registry identically.
+                                                $matchedRegistry = \App\Models\MarketplaceTaxRegistry::matchForVenue($venue, $marketplace?->id);
                                                 $set('marketplace_tax_registry_id', $matchedRegistry?->id);
                                             }
                                         }

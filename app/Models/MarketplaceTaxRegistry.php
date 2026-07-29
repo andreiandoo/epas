@@ -63,6 +63,44 @@ class MarketplaceTaxRegistry extends Model
     // =========================================
 
     /**
+     * Find the active fiscal directorate (tax registry) whose location loosely
+     * matches a venue's country/county/city. Shared by the event form's venue
+     * afterStateUpdated handler and the event Duplicate action so both derive
+     * the registry the exact same way. Returns null when nothing matches or the
+     * venue has neither a city nor a county to match on.
+     */
+    public static function matchForVenue(?Venue $venue, ?int $marketplaceClientId): ?self
+    {
+        if (! $venue) {
+            return null;
+        }
+
+        $normalize = fn ($s) => strtolower(trim(\Illuminate\Support\Str::ascii($s ?? '')));
+        $vCountry = $normalize($venue->country);
+        $vCounty = $normalize($venue->state);
+        $vCity = $normalize($venue->city);
+
+        if (! $vCity && ! $vCounty) {
+            return null;
+        }
+
+        return static::where('marketplace_client_id', $marketplaceClientId)
+            ->where('is_active', true)
+            ->get()
+            ->first(function ($r) use ($normalize, $vCountry, $vCounty, $vCity) {
+                $rCountry = $normalize($r->country);
+                $rCounty = $normalize($r->county);
+                $rCity = $normalize($r->city);
+
+                $countryMatch = ! $rCountry || ! $vCountry || str_contains($rCountry, $vCountry) || str_contains($vCountry, $rCountry);
+                $countyMatch = ! $rCounty || ! $vCounty || str_contains($rCounty, $vCounty) || str_contains($vCounty, $rCounty);
+                $cityMatch = ! $rCity || ! $vCity || str_contains($rCity, $vCity) || str_contains($vCity, $rCity);
+
+                return $countryMatch && $countyMatch && $cityMatch;
+            });
+    }
+
+    /**
      * Get display name with subname
      */
     public function getFullNameAttribute(): string
