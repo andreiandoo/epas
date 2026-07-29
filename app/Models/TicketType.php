@@ -218,6 +218,23 @@ class TicketType extends Model
     }
 
     /**
+     * General Access sections assigned to this ticket type.
+     *
+     * SEPARATE from seatingSections(): GA sections have no seats and sell via this
+     * ticket type's own quota, so they are intentionally kept out of the seat-picker
+     * `has_seating` flow. See ticket_type_general_sections migration.
+     */
+    public function generalAccessSections(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            SeatingSection::class,
+            'ticket_type_general_sections',
+            'ticket_type_id',
+            'seating_section_id'
+        )->withTimestamps();
+    }
+
+    /**
      * Get total capacity from assigned seating sections
      */
     public function getSeatingCapacityAttribute(): int

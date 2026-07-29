@@ -932,6 +932,40 @@ class EditEvent extends EditRecord
     }
 
     /**
+     * Toggle a ticket type's assignment to a General Access (seatless) section.
+     * Uses the isolated `ticket_type_general_sections` pivot so it never touches
+     * the seat-based `has_seating` flow — the ticket type keeps selling via its own
+     * quota. Called from the "Secțiuni General Access" panel in the seating editor.
+     */
+    public function toggleSeatingSectionAssignment(int $ticketTypeId, int $sectionId): bool
+    {
+        $this->skipRender();
+
+        $ticketType = \App\Models\TicketType::where('id', $ticketTypeId)
+            ->where('event_id', $this->record->id)
+            ->first();
+
+        if (!$ticketType) return false;
+
+        // Only allow General Access sections that belong to this event's layout.
+        $section = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
+            ->where('id', $sectionId)
+            ->where('layout_id', $this->record->seating_layout_id)
+            ->where('section_type', \App\Models\Seating\SeatingSection::TYPE_GENERAL)
+            ->first();
+
+        if (!$section) return false;
+
+        if ($ticketType->generalAccessSections()->where('seating_sections.id', $sectionId)->exists()) {
+            $ticketType->generalAccessSections()->detach($sectionId);
+        } else {
+            $ticketType->generalAccessSections()->attach($sectionId);
+        }
+
+        return true;
+    }
+
+    /**
      * Manual seat → ticket allocation flow (from harta tab, "Aloc&259; loc" mode).
      * Steps below return data to populate cascading selects in the modal.
      */

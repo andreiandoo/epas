@@ -74,6 +74,27 @@
         }
     }
 
+    // General Access sections (seatless). Their assigned ticket types live in the
+    // isolated `ticket_type_general_sections` pivot — never the seat-based path —
+    // so a GA zone can carry ticket types without touching seat inventory/checkout.
+    $gaSections = collect();
+    $gaAssignments = []; // sectionId => [ticketTypeId, ...]
+    if ($layout) {
+        $gaSections = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
+            ->where('layout_id', $layout->id)
+            ->where('section_type', 'general')
+            ->orderBy('display_order')
+            ->get(['id', 'name', 'max_capacity']);
+
+        if ($eventId && $gaSections->isNotEmpty()) {
+            foreach (\Illuminate\Support\Facades\DB::table('ticket_type_general_sections')
+                ->whereIn('seating_section_id', $gaSections->pluck('id'))
+                ->get(['ticket_type_id', 'seating_section_id']) as $link) {
+                $gaAssignments[(int) $link->seating_section_id][] = (int) $link->ticket_type_id;
+            }
+        }
+    }
+
     // Load event-level seat statuses (blocked/sold/held) for display
     $eventSeatStatuses = [];
     $invitationOrgSeatUids = [];
@@ -167,7 +188,75 @@
     $invitationOrgSeatUidsJson = json_encode($invitationOrgSeatUids);
     $invitationAdminSeatUidsJson = json_encode($invitationAdminSeatUids);
     $firstTTId = !empty($ticketTypesData) ? $ticketTypesData[0]['id'] : 'null';
+    $gaAssignmentsJson = json_encode((object) $gaAssignments);
 @endphp
+
+{{-- General Access sections: assign which ticket types are sold in each seatless
+     zone. Independent of the seat map below (works even if there are no standard
+     sections). Persists via the isolated ticket_type_general_sections pivot. --}}
+@if($layout && $gaSections->isNotEmpty())
+<div class="mb-3" x-data="{
+        saving: false,
+        A: {{ $gaAssignmentsJson }},
+        isOn(secId, ttId) { const a = this.A[secId] || []; return a.map(Number).includes(Number(ttId)); },
+        toggle(secId, ttId) {
+            secId = Number(secId); ttId = Number(ttId);
+            if (!Array.isArray(this.A[secId])) this.A[secId] = [];
+            const i = this.A[secId].map(Number).indexOf(ttId);
+            if (i > -1) this.A[secId].splice(i, 1); else this.A[secId].push(ttId);
+            this.saving = true;
+            const done = () => { this.saving = false; };
+            try {
+                const el = this.$el.closest('[wire\\:id]');
+                const wid = el ? el.getAttribute('wire:id') : null;
+                if (wid && window.Livewire) {
+                    const lw = window.Livewire.find(wid);
+                    if (lw) {
+                        const p = (typeof lw.call === 'function')
+                            ? lw.call('toggleSeatingSectionAssignment', ttId, secId)
+                            : lw.toggleSeatingSectionAssignment(ttId, secId);
+                        if (p && p.then) p.then(done).catch(done); else done();
+                    } else done();
+                } else done();
+            } catch (e) { done(); }
+        }
+    }">
+    <div class="p-3 border rounded-lg border-indigo-700/40 bg-indigo-900/20">
+        <div class="flex items-center gap-2 mb-1">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"/></svg>
+            <span class="text-sm font-semibold text-indigo-100">Secțiuni General Access</span>
+            <span x-show="saving" x-cloak class="ml-1 text-xs text-yellow-400 animate-pulse">Salvare...</span>
+        </div>
+        <p class="mb-2 text-xs text-indigo-300/80">Bifează ce tipuri de bilete se vând în fiecare zonă General Access (fără locuri — se vând pe cota fiecărui tip de bilet).</p>
+
+        @foreach($gaSections as $ga)
+            <div class="py-2 border-t border-indigo-800/40 first:border-t-0">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-sm font-medium text-white">{{ $ga->name }}</span>
+                    @if($ga->max_capacity)
+                        <span class="text-xs text-indigo-300">capacitate: {{ $ga->max_capacity }}</span>
+                    @endif
+                </div>
+                @if(empty($ticketTypesData))
+                    <p class="text-xs text-gray-400">Nu există tipuri de bilete pentru acest eveniment.</p>
+                @else
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach($ticketTypesData as $tt)
+                            <button type="button"
+                                x-on:click="toggle({{ $ga->id }}, {{ $tt['id'] }})"
+                                :class="isOn({{ $ga->id }}, {{ $tt['id'] }}) ? 'ring-2 ring-offset-1 ring-offset-gray-900' : 'opacity-50 hover:opacity-90'"
+                                class="px-3 py-1 text-xs font-medium text-white transition-all rounded-full"
+                                :style="`background:{{ $tt['color'] }}; --tw-ring-color:{{ $tt['color'] }}`">
+                                {{ $tt['name'] }}
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endforeach
+    </div>
+</div>
+@endif
 
 @if($layout && $sections->isNotEmpty())
 <div
@@ -1319,7 +1408,9 @@
         </div>
     </div>
 </div>
-@else
+@elseif(!($layout && $gaSections->isNotEmpty()))
+{{-- Only show the "no map" notice when there are neither standard sections nor
+     General Access sections (the GA panel above already renders in that case). --}}
 <div class="p-4 text-center text-gray-500 text-sm">
     Nu exist&#259; o hart&#259; de locuri configurat&#259; sau salvat&#259; pentru acest eveniment.
 </div>

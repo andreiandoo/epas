@@ -103,6 +103,20 @@ class SeatingSection extends Model
     }
 
     /**
+     * Ticket types assigned to this section when it is a General Access section
+     * (separate pivot from the seat-based ticketTypes()). See the GA feature.
+     */
+    public function generalAccessTicketTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            TicketType::class,
+            'ticket_type_general_sections',
+            'seating_section_id',
+            'ticket_type_id'
+        )->withTimestamps();
+    }
+
+    /**
      * Whether this is a General Access (capacity-only, seatless) section.
      */
     public function isGeneralAccess(): bool
