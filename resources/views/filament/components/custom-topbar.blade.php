@@ -520,6 +520,34 @@
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-footer {
             display: none !important;
         }
+        /* Collapsed-rail scrollbar: invisible until you hover the menu, and with
+           symmetric gutters (both-edges) so it never adds space only on the right
+           — the icons stay centered whether or not the scrollbar is showing.
+           Applied to both the nav scroller and the sidebar itself so it works
+           regardless of which element actually scrolls. */
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav {
+            scrollbar-gutter: stable both-edges;
+            scrollbar-width: thin;                       /* Firefox */
+            scrollbar-color: transparent transparent;    /* Firefox: hidden by default */
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar:hover,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav:hover {
+            scrollbar-color: rgba(156, 163, 175, .55) transparent;   /* Firefox: on hover */
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar::-webkit-scrollbar,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav::-webkit-scrollbar {
+            width: 6px;
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar::-webkit-scrollbar-thumb,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav::-webkit-scrollbar-thumb {
+            background-color: transparent;               /* hidden by default */
+            border-radius: 3px;
+        }
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar:hover::-webkit-scrollbar-thumb,
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-nav:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, .55); /* show on hover */
+        }
     }
 </style>
 @endverbatim
