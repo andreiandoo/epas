@@ -516,6 +516,10 @@
         html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-header {
             overflow: hidden !important;
         }
+        /* Hide the "Need Help?" footer block — it can't fit the narrow rail. */
+        html.ep-rail-collapsed .fi-sidebar.fi-main-sidebar .fi-sidebar-footer {
+            display: none !important;
+        }
     }
 </style>
 @endverbatim
