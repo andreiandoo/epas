@@ -4679,6 +4679,21 @@ const EventPage = {
                 return;
             }
 
+            // Handle GENERAL ACCESS sections (seatless, capacity-only): draw a
+            // clickable zone. Clicking it routes to the linked ticket type in the
+            // list, which sells via the normal quantity stepper + quota checkout
+            // (no seat inventory involved).
+            if (section.section_type === 'general') {
+                var gaFill = section.color_hex || '#6366F1';
+                var gaCx = section.x + section.width / 2;
+                var gaCy = section.y + section.height / 2;
+                svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" rx="' + (section.corner_radius || 8) + '" fill="' + gaFill + '" fill-opacity="0.16" stroke="' + gaFill + '" stroke-width="2" stroke-dasharray="6 4" style="cursor:pointer" onclick="EventPage.openGeneralAccessZone(' + section.id + ')"/>';
+                svg += '<text x="' + gaCx + '" y="' + (gaCy - 3) + '" text-anchor="middle" font-size="14" font-weight="700" fill="' + gaFill + '" style="pointer-events:none;">' + (section.name || 'General Access') + '</text>';
+                svg += '<text x="' + gaCx + '" y="' + (gaCy + 15) + '" text-anchor="middle" font-size="10" font-weight="500" fill="' + gaFill + '" style="pointer-events:none;">Acces general — click pentru bilete</text>';
+                svg += '</g>';
+                return;
+            }
+
             // Seat size from section metadata (matching admin designer)
             var sectionMeta = section.metadata || {};
             var seatSize = parseInt(sectionMeta.seat_size) || 15;
@@ -5173,6 +5188,35 @@ const EventPage = {
         this.updateCheckoutButton();
 
         console.log('[EventPage] Modal closed, quantities synced:', this.quantities);
+    },
+
+    /**
+     * General Access zone clicked on the seat map. GA sections have no seats — they
+     * sell via the linked ticket type's normal quantity stepper + quota checkout.
+     * So we close the seat map and jump to that ticket in the list (the proven,
+     * non-seated purchase path). No seat/hold state is touched.
+     */
+    openGeneralAccessZone(sectionId) {
+        var layout = this.seatingLayout;
+        var sections = (layout && layout.sections) || [];
+        var section = sections.find(function (s) { return Number(s.id) === Number(sectionId); });
+        var ids = ((section && section.general_access_ticket_type_ids) || []).map(Number);
+
+        // First linked ticket type that this event actually offers.
+        var tt = (this.ticketTypes || []).find(function (t) { return ids.indexOf(Number(t.id)) !== -1; });
+
+        // Close the seat map so the ticket list (with its quantity stepper) is visible.
+        this.closeSeatSelection();
+
+        if (!tt) return;
+
+        setTimeout(function () {
+            var card = document.querySelector('[data-ticket="' + tt.id + '"]');
+            if (!card) return;
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+            setTimeout(function () { card.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'); }, 2200);
+        }, 200);
     },
 
     /**
