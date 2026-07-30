@@ -84,7 +84,7 @@
             ->where('layout_id', $layout->id)
             ->where('section_type', 'general')
             ->orderBy('display_order')
-            ->get(['id', 'name', 'max_capacity']);
+            ->get();
 
         if ($eventId && $gaSections->isNotEmpty()) {
             foreach (\Illuminate\Support\Facades\DB::table('ticket_type_general_sections')
@@ -195,7 +195,7 @@
      zone. Independent of the seat map below (works even if there are no standard
      sections). Persists via the isolated ticket_type_general_sections pivot. --}}
 @if($layout && $gaSections->isNotEmpty())
-<div class="mb-3" x-data="{
+<div class="mb-3" id="ep-ga-panel" x-data="{
         saving: false,
         A: {{ $gaAssignmentsJson }},
         isOn(secId, ttId) { const a = this.A[secId] || []; return a.map(Number).includes(Number(ttId)); },
@@ -1061,6 +1061,35 @@
                             @endif
                         </g>
                     @endforeach
+                </g>
+            @endforeach
+
+            {{-- General Access (seatless) zones — drawn so they are visible on the
+                 map. They have no seats to click, so clicking a zone jumps to the
+                 "Secțiuni General Access" panel above where ticket types are assigned. --}}
+            @foreach($gaSections as $ga)
+                @php
+                    $gX = $ga->x_position ?? 0;
+                    $gY = $ga->y_position ?? 0;
+                    $gW = $ga->width ?? 200;
+                    $gH = $ga->height ?? 150;
+                    $gRot = $ga->rotation ?? 0;
+                    $gcx = $gX + $gW / 2;
+                    $gcy = $gY + $gH / 2;
+                    $gRadius = $ga->corner_radius ?? 8;
+                    $gColor = $ga->color_hex ?: '#6366F1';
+                    $gAssignedCount = count($gaAssignments[$ga->id] ?? []);
+                @endphp
+                <g @if($gRot != 0) transform="rotate({{ $gRot }} {{ $gcx }} {{ $gcy }})" @endif
+                   style="cursor:pointer"
+                   onclick="document.getElementById('ep-ga-panel')?.scrollIntoView({behavior:'smooth',block:'center'});">
+                    <rect x="{{ $gX }}" y="{{ $gY }}" width="{{ $gW }}" height="{{ $gH }}" rx="{{ $gRadius }}"
+                          fill="{{ $gColor }}" fill-opacity="0.14"
+                          stroke="{{ $gColor }}" stroke-width="2" stroke-dasharray="6 4"/>
+                    <text x="{{ $gcx }}" y="{{ $gcy - 2 }}" text-anchor="middle" font-size="14" font-weight="700"
+                          fill="{{ $gColor }}" class="select-none">{{ $ga->name }}</text>
+                    <text x="{{ $gcx }}" y="{{ $gcy + 16 }}" text-anchor="middle" font-size="10" font-weight="500"
+                          fill="#6b7280" class="select-none">General Access@if($ga->max_capacity) · cap. {{ $ga->max_capacity }}@endif · {{ $gAssignedCount }} {{ $gAssignedCount === 1 ? 'bilet' : 'bilete' }}</text>
                 </g>
             @endforeach
 
