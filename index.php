@@ -10,6 +10,21 @@
 $root   = __DIR__;
 $routes = is_file($root . '/routes.php') ? require $root . '/routes.php' : [];
 
+// Apache's ErrorDocument does an INTERNAL redirect: REQUEST_URI still holds the
+// URL that failed, and the status lands in REDIRECT_STATUS. Without this the
+// `ErrorDocument 403 /403` lines in .htaccess were dead — a denied path fell
+// through to the name-based fallback below and rendered the 404 page with a 404
+// status, so a blocked resource looked merely missing.
+$redirectStatus = (int) ($_SERVER['REDIRECT_STATUS'] ?? 0);
+if (in_array($redirectStatus, [403, 500, 503], true)) {
+    $errPage = $root . '/pages/' . $redirectStatus . '.php';
+    if (is_file($errPage)) {
+        http_response_code($redirectStatus);
+        require $errPage;
+        exit;
+    }
+}
+
 $uri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = trim($uri, '/');
 
