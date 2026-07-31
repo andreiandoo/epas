@@ -1,0 +1,84 @@
+# nordvale.tixello.ro — Apache + PHP 8.x (tenant leisure)
+
+DirectoryIndex index.php index.html
+
+# ---- URL-uri SEO-friendly (RO) ----
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Redirect .php -> rută curată (canonicalizare, 301) — doar cereri directe
+    RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.php[?\s]
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteCond %{REQUEST_URI} !_webhook-deploy\.php
+    RewriteRule ^ /%1 [R=301,L,NE]
+
+    # Rute cu parametru
+    RewriteRule ^experienta/([^/]+)/?$ experience.php?slug=$1 [L,QSA]
+    RewriteRule ^noutati/([^/]+)/?$ news-detail.php?slug=$1 [L,QSA]
+
+    # Cont client (design nou, sub /cont)
+    RewriteRule ^cont/?$ cont/index.php [L,QSA]
+    RewriteCond %{DOCUMENT_ROOT}/cont/$1.php -f
+    RewriteRule ^cont/([a-z0-9-]+)/?$ cont/$1.php [L,QSA]
+
+    # Alias-uri simple (rută RO -> fișier)
+    RewriteRule ^experiente/?$ experiences.php [L,QSA]
+    RewriteRule ^calendar/?$ calendar.php [L,QSA]
+    RewriteRule ^planifica/?$ planifica.php [L,QSA]
+    RewriteRule ^bilete/?$ bilete.php [L,QSA]
+    RewriteRule ^abonamente/?$ abonamente.php [L,QSA]
+    RewriteRule ^grupuri/?$ grupuri.php [L,QSA]
+    RewriteRule ^card-cadou/?$ gift-card.php [L,QSA]
+    RewriteRule ^card-cadou-confirmare/?$ gift-card-confirmation.php [L,QSA]
+    RewriteRule ^cos/?$ cart.php [L,QSA]
+    RewriteRule ^finalizare/?$ checkout.php [L,QSA]
+    RewriteRule ^confirmare/?$ confirmare.php [L,QSA]
+    RewriteRule ^voucher/?$ voucher-verify.php [L,QSA]
+    RewriteRule ^autentificare/?$ login.php [L,QSA]
+    RewriteRule ^inregistrare/?$ register.php [L,QSA]
+    RewriteRule ^recuperare-parola/?$ forgot-password.php [L,QSA]
+    RewriteRule ^reseteaza-parola/?$ reset-password.php [L,QSA]
+    RewriteRule ^verifica-email/?$ verify-email.php [L,QSA]
+    RewriteRule ^despre/?$ about.php [L,QSA]
+    RewriteRule ^contact/?$ contact.php [L,QSA]
+    RewriteRule ^faq/?$ faq.php [L,QSA]
+    RewriteRule ^noutati/?$ news.php [L,QSA]
+    RewriteRule ^termeni/?$ terms.php [L,QSA]
+    RewriteRule ^confidentialitate/?$ privacy.php [L,QSA]
+
+    # Fallback: /pagina -> pagina.php (dacă fișierul .php există)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+    RewriteRule ^([^/]+)/?$ $1.php [L,QSA]
+</IfModule>
+
+# Securitate: blochează accesul direct la include-uri, cache, logs, config local
+<FilesMatch "\.(log|md)$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 /includes/
+RedirectMatch 404 /cont/_inc/
+RedirectMatch 404 /cache/
+<Files "config.local.php">
+    Require all denied
+</Files>
+
+# Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Compresie
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# Cache assets statice
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/svg+xml "access plus 7 days"
+    ExpiresByType text/css "access plus 1 day"
+</IfModule>
