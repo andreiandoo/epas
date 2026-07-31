@@ -74,15 +74,27 @@ export function EventProvider({ children }) {
         }));
         setEvents(enriched);
 
-        // Auto-select: live > today > future > past > first.
+        // Auto-select: live > today > future (nearest) > past (most recent) > first.
+        // Sort explicitly per category so backend ordering never matters:
+        //   - future = ascending (nearest upcoming first)
+        //   - past   = descending (most recent past first)
         // Also warm the cache for the SECOND most-likely event so
         // switching from the picker is instant on the common case
         // ("live event + one soon after"), before that switch happens.
         if (!selectedEvent) {
+          const ts = (e) => {
+            const raw = e?.starts_at || e?.event_date || e?.start_date || e?.date;
+            const t = raw ? new Date(raw).getTime() : NaN;
+            return Number.isFinite(t) ? t : 0;
+          };
           const live = enriched.find(e => e.timeCategory === 'live');
           const today = enriched.find(e => e.timeCategory === 'today');
-          const future = enriched.find(e => e.timeCategory === 'future');
-          const past = enriched.find(e => e.timeCategory === 'past');
+          const future = enriched
+            .filter(e => e.timeCategory === 'future')
+            .sort((a, b) => ts(a) - ts(b))[0]; // nearest upcoming
+          const past = enriched
+            .filter(e => e.timeCategory === 'past')
+            .sort((a, b) => ts(b) - ts(a))[0]; // most recent
           const primary = live || today || future || past || enriched[0];
           selectEvent(primary);
           const runnersUp = [live, today, future].filter(Boolean).filter(e => e.id !== primary?.id);

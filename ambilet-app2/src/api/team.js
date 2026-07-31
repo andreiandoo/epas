@@ -1,7 +1,11 @@
 import { apiGet, apiPost } from './client';
 
-export function getTeamMembers() {
-  return apiGet('/organizer/team');
+export function getTeamMembers(params = {}) {
+  // Params (all optional):
+  //   event_id — future-proof: when the backend enriches /organizer/team
+  //     to return per-event stats (scans, sales, cash, card), the modal
+  //     already passes this so results scope to the selected event.
+  return apiGet('/organizer/team', params);
 }
 
 export function inviteTeamMember(data) {

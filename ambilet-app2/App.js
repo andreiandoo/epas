@@ -17,7 +17,7 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 // Version bumped to 2.0.0 so update-check surfaces the redesign to older
 // installs and the marketplace-side latest_version poll can differentiate
 // legacy dark UI from the new brand.
-const APP_VERSION = '2.2.0-dev.8';
+const APP_VERSION = '2.2.0-dev.9';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -191,7 +191,7 @@ function MainTabs() {
   const { userRole, userPermissions, user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode, selectedEvent } = useEvent();
-  const { notifications, markAllRead, markOneRead, shiftStartTime, autoConfirmValid, setAutoConfirm, autoLogoutMinutes } = useApp();
+  const { notifications, markAllRead, markOneRead, shiftStartTime, isShiftPaused, autoConfirmValid, setAutoConfirm, autoLogoutMinutes } = useApp();
 
   // Rule: never auto-confirm scans for a future event — that would let the
   // operator pass through tickets before the event is open. When the picker
@@ -233,6 +233,9 @@ function MainTabs() {
     || !!showScannedList
     || !!showEventsModal
     || !!showManual
+    // While a shift is on pause the operator is deliberately on break —
+    // freezing the countdown so they don't come back to a logged-out app.
+    || !!isShiftPaused
   );
   const { bumpActivity } = useInactivityTimer({
     timeoutMs: (autoLogoutMinutes || 0) * 60_000,

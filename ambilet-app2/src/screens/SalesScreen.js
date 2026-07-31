@@ -364,7 +364,7 @@ function RecentSaleItem({ sale, onShowQR }) {
 
 // ─── Cart Item Row ────────────────────────────────────────────────────────────
 
-function CartItemRow({ item, onUpdateQuantity, hideControls, seats }) {
+function CartItemRow({ item, onUpdateQuantity, seats }) {
   // When the order has seats, list each seat's section / row / number
   // under the ticket type so the operator knows exactly what's in the
   // cart. `seats` is the subset of selectedSeatDetails for this row's
@@ -372,13 +372,18 @@ function CartItemRow({ item, onUpdateQuantity, hideControls, seats }) {
   const seatsForRow = Array.isArray(seats)
     ? seats.filter(s => String(s.ticket_type_id) === String(item.id))
     : [];
+  // A row is "seated" iff at least one seat is bound to this ticket
+  // type. Non-seated rows in the same cart (e.g. general-admission
+  // tickets added after picking seats) keep their +/- controls so the
+  // operator can still adjust quantity before payment.
+  const isSeatedRow = seatsForRow.length > 0;
   return (
     <View style={styles.cartItem}>
       <View style={[styles.cartItemColorBar, { backgroundColor: item.color }]} />
       <View style={styles.cartItemInfo}>
         <Text style={styles.cartItemName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.cartItemPrice}>
-          {hideControls ? `${item.quantity} ${item.quantity === 1 ? 'loc' : 'locuri'}` : `${formatCurrency(item.price)} fiecare`}
+          {isSeatedRow ? `${item.quantity} ${item.quantity === 1 ? 'loc' : 'locuri'}` : `${formatCurrency(item.price)} fiecare`}
         </Text>
         {seatsForRow.length > 0 && (
           <View style={styles.cartSeatList}>
@@ -392,7 +397,7 @@ function CartItemRow({ item, onUpdateQuantity, hideControls, seats }) {
           </View>
         )}
       </View>
-      {!hideControls && (
+      {!isSeatedRow && (
         <View style={styles.quantityControls}>
           <TouchableOpacity
             style={styles.quantityButton}
@@ -423,7 +428,7 @@ function CartItemRow({ item, onUpdateQuantity, hideControls, seats }) {
 export default function SalesScreen({ navigation }) {
   const { ticketTypes, allTicketTypes, isReportsOnlyMode, selectedEvent, refreshStats, refreshTicketTypes, eventCommission } = useEvent();
   const { user } = useAuth();
-  const { recentSales, addSale, addScan, loadSaleHistory, autoConfirmValid, isOnline, enqueueOfflineSale, pendingOfflineSalesCount } = useApp();
+  const { recentSales, addSale, addScan, loadSaleHistory, autoConfirmValid, isOnline, enqueueOfflineSale, pendingOfflineSalesCount, isShiftPaused, shiftStartTime } = useApp();
 
   // State
   const [showTicketList, setShowTicketList] = useState(false);
@@ -891,22 +896,18 @@ export default function SalesScreen({ navigation }) {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => {
-              if (selectedSeatUids.length > 0) {
-                // Go back to seating map for seated events
-                setCartItems([]);
-                setSelectedSeatUids([]);
-                setSelectedSeatDetails([]);
-                setShowSeatingMap(true);
-              }
+              // Back returns to the ticket list WITHOUT touching cart
+              // state — the operator can add more ticket types on top
+              // of the already-picked seats and come back to pay.
+              // Seats stay held; operator can still tap the seated
+              // ticket type again to open the map and adjust.
               setActiveView('tickets');
             }}
             activeOpacity={0.7}
           >
             <ArrowLeftIcon size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.cartTitle}>
-            {selectedSeatUids.length > 0 ? 'Locuri Selectate' : 'Coș'}
-          </Text>
+          <Text style={styles.cartTitle}>Coș</Text>
           <View style={styles.cartCountBadge}>
             <Text style={styles.cartCountBadgeText}>{cartCount}</Text>
           </View>
@@ -923,12 +924,22 @@ export default function SalesScreen({ navigation }) {
               <CartItemRow
                 key={item.id}
                 item={item}
-                onUpdateQuantity={selectedSeatUids.length > 0 ? () => {} : updateQuantity}
-                hideControls={selectedSeatUids.length > 0}
+                onUpdateQuantity={updateQuantity}
                 seats={selectedSeatDetails}
               />
             ))}
           </View>
+
+          {/* Add-more button — lets the operator layer additional
+              ticket types on top of the current cart (works whether
+              the cart already contains seats, GA tickets, or both). */}
+          <TouchableOpacity
+            style={styles.addMoreButton}
+            onPress={() => setActiveView('tickets')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.addMoreButtonText}>+ Adaugă mai multe bilete</Text>
+          </TouchableOpacity>
 
           {/* Cart Summary */}
           <View style={styles.summarySection}>
@@ -1323,14 +1334,17 @@ export default function SalesScreen({ navigation }) {
           </View>
         )}
 
-        {/* Bottom spacer for FAB */}
-        {cartCount > 0 && <View style={{ height: 100 }} />}
+        {/* Bottom spacer so the sticky "Continuă la plată" bar never
+            overlaps the last ticket card. */}
+        {cartCount > 0 && <View style={{ height: 96 }} />}
       </ScrollView>
 
-      {/* Cart FAB */}
+      {/* Cart CTA — full-width primary button anchored to the bottom.
+          Replaces the tiny FAB with a clear labelled call-to-action so
+          operators (and screen readers) know what it does. */}
       <Animated.View
         style={[
-          styles.fab,
+          styles.cartCtaBar,
           {
             transform: [{ scale: fabScale }],
             opacity: fabScale,
@@ -1339,26 +1353,16 @@ export default function SalesScreen({ navigation }) {
         pointerEvents={cartCount > 0 ? 'auto' : 'none'}
       >
         <TouchableOpacity
-          style={styles.fabTouchable}
+          style={styles.cartCtaButton}
           onPress={() => setActiveView('cart')}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Svg width={56} height={56} viewBox="0 0 56 56" style={styles.fabBg}>
-            <Defs>
-              <LinearGradient id="fabGrad" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor="#8B5CF6" />
-                <Stop offset="1" stopColor="#6366F1" />
-              </LinearGradient>
-            </Defs>
-            <Rect width={56} height={56} rx={28} fill="url(#fabGrad)" />
-          </Svg>
-          <View style={styles.fabContent}>
-            <View style={styles.fabBadge}>
-              <Text style={styles.fabBadgeText}>{cartCount}</Text>
-            </View>
-            <CartIcon size={22} color={colors.white} />
-            <Text style={styles.fabAmountText}>{formatCurrency(cartTotal)}</Text>
+          <View style={styles.cartCtaBadge}>
+            <Text style={styles.cartCtaBadgeText}>{cartCount}</Text>
           </View>
+          <CartIcon size={20} color={colors.white} />
+          <Text style={styles.cartCtaLabel}>Continuă la plată</Text>
+          <Text style={styles.cartCtaAmount}>{formatCurrency(cartTotal)}</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -1449,6 +1453,23 @@ export default function SalesScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Shift-paused blocker — sits above the whole Sales screen so no
+          tap can add-to-cart / confirm payment while the operator is on
+          break. Same visual language as CheckInScreen's paused overlay. */}
+      {isShiftPaused && shiftStartTime ? (
+        <View style={styles.salesPausedOverlay}>
+          <View style={styles.salesPausedIconWrap}>
+            <Svg width={44} height={44} viewBox="0 0 24 24" fill="none">
+              <Path d="M6 4h4v16H6zM14 4h4v16h-4z" fill={colors.purple} />
+            </Svg>
+          </View>
+          <Text style={styles.salesPausedTitle}>Tură Întreruptă</Text>
+          <Text style={styles.salesPausedDescription}>
+            Vânzările sunt oprite cât timp tura e pe pauză. Reia tura pentru a continua.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1518,6 +1539,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+
+  // ── Shift-paused overlay ─────────────────────────────────────────────────
+  salesPausedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,10,15,0.94)',
+    zIndex: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  salesPausedIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.purpleBg,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  salesPausedTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 10,
+  },
+  salesPausedDescription: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 
   // ── Ticket List Bar ──────────────────────────────────────────────────────
@@ -1790,50 +1844,72 @@ const styles = StyleSheet.create({
   },
 
   // ── Cart FAB ──────────────────────────────────────────────────────────────
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    alignItems: 'center',
-  },
-  fabTouchable: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabBg: {
-    position: 'absolute',
-  },
-  fabContent: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: colors.red,
+  // Cart — "Adaugă mai multe bilete" pill inside the scroll view
+  addMoreButton: {
+    marginTop: 8,
+    paddingVertical: 12,
     borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.purpleBorder,
+    backgroundColor: colors.purpleBg,
+    alignItems: 'center',
+  },
+  addMoreButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.purple,
+    letterSpacing: 0.2,
+  },
+
+  // ── Cart CTA (sticky bottom bar with labelled "Continuă la plată") ──────
+  cartCtaBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 20,
+    alignItems: 'stretch',
+  },
+  cartCtaButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: colors.background,
-    zIndex: 1,
+    gap: 10,
+    backgroundColor: colors.purple,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  fabBadgeText: {
-    fontSize: 11,
+  cartCtaBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  cartCtaBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
     color: colors.white,
   },
-  fabAmountText: {
-    fontSize: 9,
+  cartCtaLabel: {
+    fontSize: 16,
     fontWeight: '700',
     color: colors.white,
-    marginTop: 1,
+    letterSpacing: 0.2,
+  },
+  cartCtaAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.white,
+    marginLeft: 'auto',
   },
 
   // ── Cart View ─────────────────────────────────────────────────────────────

@@ -14,6 +14,8 @@ import Svg, { Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getTeamMembers } from '../../api/team';
+import { getVenueGates } from '../../api/gates';
+import { useEvent } from '../../context/EventContext';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -64,7 +66,21 @@ function SummaryCard({ label, value, color }) {
   );
 }
 
-function StaffCard({ member }) {
+// Prefer explicit backend fields, fall back to null-safe formatting. Any
+// field the backend hasn't wired yet renders as an em-dash so it's clear
+// the number isn't a real zero.
+const DASH = '—';
+const dashOr = (v, fmt = (x) => String(x)) => (v == null || v === '' ? DASH : fmt(v));
+
+function StaffCard({ member, gateName }) {
+  const scansRaw = member.scans ?? member.scans_count ?? member.stats?.scans;
+  const salesRaw = member.sales ?? member.sales_count ?? member.stats?.sales;
+  const cashRaw = member.cashAmount ?? member.cash_amount ?? member.stats?.cash_amount;
+  const cardRaw = member.cardAmount ?? member.card_amount ?? member.stats?.card_amount;
+  const gate = member.gate || member.gate_name || gateName || null;
+  const shiftStart = member.shiftStart || member.shift_started_at || null;
+  const lastActive = member.lastActive || member.last_active_at || null;
+
   return (
     <View style={styles.staffCard}>
       {/* Top row: Avatar + Name + Status */}
@@ -79,38 +95,61 @@ function StaffCard({ member }) {
 
       {/* Details grid */}
       <View style={styles.detailsGrid}>
-        <DetailItem label="Poartă" value={member.gate || '--'} />
-        <DetailItem label="Început Tură" value={member.shiftStart || '--'} />
-        <DetailItem label="Ultima Activitate" value={member.lastActive || '--'} />
-        <DetailItem label="Scanări" value={member.scans != null ? String(member.scans) : '0'} />
-        <DetailItem label="Vânzări" value={member.sales != null ? String(member.sales) : '0'} />
-        <DetailItem label="Numerar" value={member.cashAmount != null ? formatCurrency(member.cashAmount) : formatCurrency(0)} />
-        <DetailItem label="Card" value={member.cardAmount != null ? formatCurrency(member.cardAmount) : formatCurrency(0)} />
+        <DetailItem label="Poartă" value={dashOr(gate)} />
+        <DetailItem label="Început Tură" value={dashOr(shiftStart)} />
+        <DetailItem label="Ultima Activitate" value={dashOr(lastActive)} />
+        <DetailItem label="Scanări" value={dashOr(scansRaw)} />
+        <DetailItem label="Vânzări" value={dashOr(salesRaw)} />
+        <DetailItem label="Numerar" value={dashOr(cashRaw, formatCurrency)} />
+        <DetailItem label="Card" value={dashOr(cardRaw, formatCurrency)} />
       </View>
     </View>
   );
 }
 
 export default function StaffModal({ visible, onClose }) {
+  const { selectedEvent } = useEvent();
   const [staffMembers, setStaffMembers] = useState([]);
   const [loading, setLoading] = useState(false);
+  // gate_id → name map. Team endpoint returns only gate_id today; we
+  // resolve the human-readable name from /organizer/venues/{v}/gates so
+  // each StaffCard can show "Poarta Nord" instead of the raw numeric id.
+  const [gatesById, setGatesById] = useState({});
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await getTeamMembers();
+      // Pass event_id so the day the backend starts returning per-event
+      // scan / sale / cash / card stats, this call already scopes them.
+      const resp = await getTeamMembers({ event_id: selectedEvent?.id });
       const members = resp.data?.members || resp.members || [];
-      // Only show active members
       setStaffMembers(members.filter(m => m.status === 'active'));
     } catch (e) {
       console.error('Failed to fetch team members:', e);
     }
     setLoading(false);
-  }, []);
+  }, [selectedEvent?.id]);
+
+  const fetchGates = useCallback(async () => {
+    const venueId = selectedEvent?.venue_id || selectedEvent?.venue?.id;
+    if (!venueId) { setGatesById({}); return; }
+    try {
+      const resp = await getVenueGates(venueId);
+      const list = resp?.data?.gates || resp?.data || resp?.gates || [];
+      const map = {};
+      list.forEach(g => { if (g?.id != null) map[String(g.id)] = g.name || g.label || `Poartă ${g.id}`; });
+      setGatesById(map);
+    } catch {
+      setGatesById({});
+    }
+  }, [selectedEvent?.venue_id, selectedEvent?.venue?.id]);
 
   useEffect(() => {
-    if (visible) fetchMembers();
-  }, [visible]);
+    if (visible) {
+      fetchMembers();
+      fetchGates();
+    }
+  }, [visible, selectedEvent?.id]);
 
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
 
@@ -178,9 +217,31 @@ export default function StaffModal({ visible, onClose }) {
                 <Text style={styles.emptyText}>Niciun membru al echipei asignat</Text>
               </View>
             ) : (
-              staffMembers.map((member, index) => (
-                <StaffCard key={member.id || index} member={member} />
-              ))
+              <>
+                {staffMembers.map((member, index) => (
+                  <StaffCard
+                    key={member.id || index}
+                    member={member}
+                    gateName={member.gate_id != null ? gatesById[String(member.gate_id)] : null}
+                  />
+                ))}
+                <View style={styles.pendingNote}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01"
+                      stroke={colors.textTertiary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.pendingNoteText}>
+                    Cifrele per-membru (scanări, vânzări, numerar, card, tură)
+                    apar când backend-ul le raportează pentru evenimentul
+                    selectat. „—" = date necunoscute (nu zero real).
+                  </Text>
+                </View>
+              </>
             )}
           </ScrollView>
         </Animated.View>
@@ -375,6 +436,23 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
+    color: colors.textTertiary,
+  },
+  pendingNote: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(20,10,10,0.03)',
+  },
+  pendingNoteText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
     color: colors.textTertiary,
   },
 });

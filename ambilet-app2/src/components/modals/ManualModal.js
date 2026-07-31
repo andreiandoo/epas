@@ -83,6 +83,19 @@ const SCREENSHOTS = {
 // ./screenshots/*.png paths resolve to bundled require() sources instead
 // of being treated as remote URIs (which fail with no error, invisible).
 const markdownRules = {
+  // Skip the marginBottom pe paragrafe care contin DOAR o imagine (comm)
+  // — imaginile deja au propriul spatiu vizual + paragraph spacing dubleaza
+  // gap-ul si arata prost.
+  paragraph: (node, children, parent, styles) => {
+    const isImageOnly = Array.isArray(node?.children)
+      && node.children.filter(c => c?.type !== 'text' || (c?.content || '').trim() !== '').length === 1
+      && node.children.some(c => c?.type === 'image');
+    return (
+      <View key={node.key} style={isImageOnly ? { marginBottom: 0 } : styles.paragraph}>
+        {children}
+      </View>
+    );
+  },
   image: (node, children, parent, styles) => {
     const src = node?.attributes?.src || '';
     const alt = node?.attributes?.alt || '';
@@ -98,7 +111,7 @@ const markdownRules = {
       <Image
         key={node.key}
         source={source}
-        style={{ width: '100%', maxWidth: 380, aspectRatio: undefined, marginVertical: 8, borderRadius: 8, alignSelf: 'center' }}
+        style={{ width: '100%', maxWidth: 380, aspectRatio: undefined, borderRadius: 8, alignSelf: 'center' }}
         resizeMode="contain"
         accessibilityLabel={alt}
       />
@@ -522,5 +535,5 @@ const markdownStyles = StyleSheet.create({
   th: { padding: 8, fontWeight: '700', color: colors.textPrimary },
   tr: { borderBottomColor: colors.border, borderBottomWidth: 1 },
   td: { padding: 8, color: colors.textPrimary },
-  image: { marginVertical: 8 },
+  image: { marginVertical: 0 },
 });

@@ -206,31 +206,77 @@ function HourlyChart({ data }) {
   );
 }
 
-function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
+// Category taxonomy shared between the selector label + the tab strip.
+// "Curente" bucket collapses live+today+future so the operator has a
+// single "what's next / what's on now" filter — reports are useful for
+// ALL these, not just past events.
+const CATEGORY_TAB_ORDER = ['current', 'draft', 'past'];
+const CATEGORY_META = {
+  current: { label: 'Curente', match: (c) => c === 'live' || c === 'today' || c === 'future' },
+  draft:   { label: 'Ciornă',  match: (c, e) => c === 'unpublished' || (e?.status === 'draft') },
+  past:    { label: 'Trecute', match: (c) => c === 'past' },
+};
+
+// Human label for the selector row — reflects the ACTUAL time category
+// of the selected event so a future event isn't mislabeled as "trecut".
+function labelForSelected(event) {
+  const c = event?.timeCategory;
+  if (event?.status === 'draft') return 'Eveniment ciornă';
+  if (c === 'live') return 'Eveniment live';
+  if (c === 'today') return 'Eveniment azi';
+  if (c === 'future') return 'Eveniment viitor';
+  if (c === 'past') return 'Eveniment trecut';
+  return 'Eveniment';
+}
+
+function bucketFor(event) {
+  const c = event?.timeCategory;
+  for (const key of CATEGORY_TAB_ORDER) {
+    if (CATEGORY_META[key].match(c, event)) return key;
+  }
+  return null;
+}
+
+function PastEventSelector({ allEvents, selectedEvent, onSelect }) {
   const [showModal, setShowModal] = useState(false);
   const [query, setQuery] = useState('');
+  // Default the tab to whichever category the currently-selected event
+  // belongs to — so a future event opens the selector already scoped to
+  // "Curente" instead of dumping the operator into an empty "Trecute" tab.
+  const [tab, setTab] = useState(() => bucketFor(selectedEvent) || 'current');
   useEffect(() => { if (!showModal) setQuery(''); }, [showModal]);
+  useEffect(() => {
+    if (showModal) setTab(bucketFor(selectedEvent) || 'current');
+  }, [showModal, selectedEvent?.id]);
 
-  if (!pastEvents || pastEvents.length === 0) return null;
+  const events = Array.isArray(allEvents) ? allEvents : [];
+  if (events.length === 0) return null;
 
-  // Sort descending by date so the most recent event is at the top —
-  // operators reach for "yesterday's show" far more often than "last year's".
-  // Backend also returns null-date rows first (Postgres NULLS FIRST on DESC),
-  // this normalizes ordering so those sink to the bottom.
-  const sortedPast = [...pastEvents].sort((a, b) => {
-    const aRaw = a.starts_at || a.event_date || a.start_date;
-    const bRaw = b.starts_at || b.event_date || b.start_date;
-    const at = aRaw ? new Date(aRaw).getTime() : 0;
-    const bt = bRaw ? new Date(bRaw).getTime() : 0;
-    return bt - at;
+  // Categorised buckets — computed each render, cheap for <100 events.
+  const buckets = { current: [], draft: [], past: [] };
+  events.forEach(e => {
+    const b = bucketFor(e);
+    if (b) buckets[b].push(e);
   });
+
+  // Sort each bucket sensibly:
+  //   - past: descending (most recent first — yesterday's show wins)
+  //   - future/current: ascending (nearest upcoming first)
+  //   - draft: keep API order (usually creation-descending)
+  const ts = (e) => {
+    const raw = e.starts_at || e.event_date || e.start_date;
+    const t = raw ? new Date(raw).getTime() : NaN;
+    return Number.isFinite(t) ? t : 0;
+  };
+  buckets.past.sort((a, b) => ts(b) - ts(a));
+  buckets.current.sort((a, b) => ts(a) - ts(b));
 
   // Case-insensitive substring match over name + venue + city — same fields
   // the Dashboard picker searches, so the operator's mental model stays
   // consistent across the two selectors.
   const needle = query.trim().toLowerCase();
-  const filteredPast = needle
-    ? sortedPast.filter(e => {
+  const filterFn = (arr) => (needle
+    ? arr.filter(e => {
         const hay = [
           pickString(e.name), pickString(e.title),
           pickString(e.venue_name), pickString(e.venue?.name),
@@ -238,12 +284,15 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
         ].filter(Boolean).join(' ').toLowerCase();
         return hay.includes(needle);
       })
-    : sortedPast;
+    : arr);
+  const visible = filterFn(buckets[tab] || []);
 
   const handleSelect = (event) => {
     onSelect(event);
     setShowModal(false);
   };
+
+  const selectorLabel = labelForSelected(selectedEvent);
 
   return (
     <>
@@ -262,7 +311,7 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
               strokeLinejoin="round"
             />
           </Svg>
-          <Text style={pastEventStyles.selectorLabel}>Eveniment trecut</Text>
+          <Text style={pastEventStyles.selectorLabel}>{selectorLabel}</Text>
         </View>
         <View style={pastEventStyles.selectorRight}>
           <Text style={pastEventStyles.selectorValue} numberOfLines={1}>
@@ -295,7 +344,29 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
           <View style={pastEventStyles.sheet}>
             <View style={pastEventStyles.sheetHeader}>
               <View style={pastEventStyles.handle} />
-              <Text style={pastEventStyles.sheetTitle}>Evenimente Trecute</Text>
+              <Text style={pastEventStyles.sheetTitle}>Selectează evenimentul</Text>
+              {/* Category tabs — Curente / Ciornă / Trecute. Count next
+                  to each label so the operator can tell at a glance
+                  which bucket has content. */}
+              <View style={pastEventStyles.tabRow}>
+                {CATEGORY_TAB_ORDER.map((key) => {
+                  const meta = CATEGORY_META[key];
+                  const count = (buckets[key] || []).length;
+                  const active = tab === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      onPress={() => setTab(key)}
+                      style={[pastEventStyles.tabBtn, active && pastEventStyles.tabBtnActive]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[pastEventStyles.tabBtnText, active && pastEventStyles.tabBtnTextActive]}>
+                        {meta.label} · {count}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
               {/* Search — free-text over name + venue + city. Cleared on close. */}
               <View style={pastEventStyles.searchWrap}>
                 <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -325,14 +396,14 @@ function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
               </View>
             </View>
             <ScrollView style={pastEventStyles.sheetScroll} showsVerticalScrollIndicator={false}>
-              {filteredPast.length === 0 ? (
+              {visible.length === 0 ? (
                 <View style={{ paddingVertical: 32, alignItems: 'center' }}>
                   <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
-                    {needle ? `Nimic pentru „${query.trim()}"` : 'Niciun eveniment'}
+                    {needle ? `Nimic pentru „${query.trim()}"` : 'Niciun eveniment în această categorie'}
                   </Text>
                 </View>
               ) : null}
-              {filteredPast.map((event, index) => {
+              {visible.map((event, index) => {
                 const isSelected = selectedEvent?.id === event.id;
                 let formattedDate = '';
                 // API returns `starts_at` (ISO) for most events, `event_date`
@@ -428,6 +499,35 @@ const pastEventStyles = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: Dimensions.get('window').height * 0.6,
     paddingBottom: 34,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignSelf: 'stretch',
+    paddingHorizontal: 4,
+    marginTop: 12,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+  },
+  tabBtnActive: {
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
+  },
+  tabBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  tabBtnTextActive: {
+    color: colors.white,
   },
   sheetHeader: {
     alignItems: 'center',
@@ -679,9 +779,16 @@ export default function ReportsScreen() {
         <Text style={styles.headerSubText}>Actualizat acum</Text>
       </View>
 
-      {/* Past Event Selector */}
+      {/* Event Selector — 3 tabs (Curente / Ciornă / Trecute). Reports
+          work for all categories, not just past events. */}
       <PastEventSelector
-        pastEvents={groupedEvents?.past || []}
+        allEvents={[
+          ...(groupedEvents?.live || []),
+          ...(groupedEvents?.today || []),
+          ...(groupedEvents?.future || []),
+          ...(groupedEvents?.unpublished || groupedEvents?.draft || []),
+          ...(groupedEvents?.past || []),
+        ]}
         selectedEvent={selectedEvent}
         onSelect={selectEvent}
       />

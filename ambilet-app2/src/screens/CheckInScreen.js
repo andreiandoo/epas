@@ -225,6 +225,7 @@ export default function CheckInScreen({ navigation }) {
   const {
     isShiftPaused,
     setIsShiftPaused,
+    shiftStartTime,
     vibrationFeedback,
     soundEffects,
     autoConfirmValid,
@@ -241,6 +242,15 @@ export default function CheckInScreen({ navigation }) {
       loadScanHistory(selectedEvent.id);
     }
   }, [selectedEvent?.id]);
+
+  // Force-close the camera whenever the shift is paused OR ended. Without
+  // this the CameraView could remain mounted (from a prior "Începe
+  // Scanarea" tap) and keep firing onBarcodeScanned in the background.
+  useEffect(() => {
+    if (isShiftPaused || !shiftStartTime) {
+      setCameraActive(false);
+    }
+  }, [isShiftPaused, shiftStartTime]);
 
   // Debounced EMAIL search — kicks in when the manual entry modal is open
   // and the query is at least 3 chars. Email is used (instead of name)
@@ -454,6 +464,12 @@ export default function CheckInScreen({ navigation }) {
 
   const handleCheckIn = useCallback(async (inputCode) => {
     if (!selectedEvent || !inputCode) return;
+
+    // Hard-block scan while shift is paused (camera can technically still
+    // fire an onBarcodeScanned mid-transition, and hardware scanners may
+    // send a final keystroke sequence after pause). No API call, no state
+    // update, no toast — just drop it silently so nothing counts.
+    if (isShiftPaused) return;
 
     const code = extractTicketCode(inputCode);
     if (!code) return;
@@ -686,7 +702,7 @@ export default function CheckInScreen({ navigation }) {
         }, 3000);
       }
     }
-  }, [selectedEvent, vibrationFeedback, autoConfirmValid, addScan, refreshStats, incrementCheckedIn, startScanLineAnimation, stopScanLineAnimation]);
+  }, [selectedEvent, isShiftPaused, vibrationFeedback, autoConfirmValid, addScan, refreshStats, incrementCheckedIn, startScanLineAnimation, stopScanLineAnimation]);
 
   const handleBarcodeScan = useCallback(({ data }) => {
     if (scannedLock || isScanning) return;
@@ -969,8 +985,10 @@ export default function CheckInScreen({ navigation }) {
               getScannerGlowStyle(),
             ]}
           >
-            {/* Camera or placeholder */}
-            {cameraActive && permission?.granted ? (
+            {/* Camera or placeholder. Camera is UNMOUNTED (not just
+                overlaid) while shift is paused OR ended so it releases
+                the sensor + can't fire onBarcodeScanned mid-transition. */}
+            {cameraActive && !isShiftPaused && permission?.granted ? (
               <CameraView
                 style={StyleSheet.absoluteFillObject}
                 facing="back"
