@@ -170,10 +170,10 @@
             $tix = $breakdown['tixello'] ?? [];
             $tot = $breakdown['total'] ?? [];
             $rows = [
-                ['Comenzi', number_format($imp['orders'] ?? 0), number_format($tix['orders'] ?? 0), number_format($tot['orders'] ?? 0)],
-                ['Bilete', number_format($imp['tickets'] ?? 0), number_format($tix['tickets'] ?? 0), number_format($tot['tickets'] ?? 0)],
-                ['Clienți', number_format($imp['customers'] ?? 0), number_format($tix['customers'] ?? 0), number_format($tot['customers'] ?? 0)],
-                ['Încasări ('.$currency.')', number_format($imp['revenue'] ?? 0, 2), number_format($tix['revenue'] ?? 0, 2), number_format($tot['revenue'] ?? 0, 2)],
+                ['label' => 'Comenzi',                  'imp' => $imp['orders'] ?? 0,    'tix' => $tix['orders'] ?? 0,    'tot' => $tot['orders'] ?? 0,    'dec' => 0],
+                ['label' => 'Bilete',                   'imp' => $imp['tickets'] ?? 0,   'tix' => $tix['tickets'] ?? 0,   'tot' => $tot['tickets'] ?? 0,   'dec' => 0],
+                ['label' => 'Clienți',                  'imp' => $imp['customers'] ?? 0, 'tix' => $tix['customers'] ?? 0, 'tot' => $tot['customers'] ?? 0, 'dec' => 0],
+                ['label' => 'Încasări ('.$currency.')', 'imp' => $imp['revenue'] ?? 0,   'tix' => $tix['revenue'] ?? 0,   'tot' => $tot['revenue'] ?? 0,   'dec' => 2],
             ];
         @endphp
         <div class="mb-5">
@@ -203,10 +203,10 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700/60">
                         @foreach($rows as $r)
                         <tr class="text-gray-700 dark:text-gray-300">
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ $r[0] }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums text-indigo-600 dark:text-indigo-400">{{ $r[1] }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ $r[2] }}</td>
-                            <td class="px-4 py-3 font-semibold text-right tabular-nums text-gray-900 dark:text-white">{{ $r[3] }}</td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ $r['label'] }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums text-indigo-600 dark:text-indigo-400">{{ number_format($r['imp'], $r['dec']) }}@if($r['tot'] > 0)<span class="ml-1 text-xs text-gray-400 dark:text-gray-500">({{ number_format($r['imp'] / $r['tot'] * 100, 1) }}%)</span>@endif</td>
+                            <td class="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ number_format($r['tix'], $r['dec']) }}@if($r['tot'] > 0)<span class="ml-1 text-xs text-gray-400 dark:text-gray-500">({{ number_format($r['tix'] / $r['tot'] * 100, 1) }}%)</span>@endif</td>
+                            <td class="px-4 py-3 font-semibold text-right tabular-nums text-gray-900 dark:text-white">{{ number_format($r['tot'], $r['dec']) }}</td>
                         </tr>
                         @endforeach
                     </tbody>

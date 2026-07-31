@@ -378,7 +378,7 @@
                             <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300">{{ number_format($event['ticket_count']) }}</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ number_format($event['revenue'], 2) }} {{ $d['currency'] }}</td>
                             <td class="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ number_format($event['marketplace_commission'], 2) }} {{ $d['currency'] }}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($event['tixello_commission'], 2) }} {{ $d['currency'] }}@if(($event['marketplace_commission'] ?? 0) != 0)<span class="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">({{ number_format($event['tixello_commission'] / $event['marketplace_commission'] * 100, 1) }}%)</span>@endif</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($event['tixello_commission'], 2) }} {{ $d['currency'] }}@if(($event['marketplace_commission'] ?? 0) != 0)<span class="inline-flex align-middle ml-1 text-gray-400 dark:text-gray-500 cursor-help" title="{{ number_format($event['tixello_commission'] / $event['marketplace_commission'] * 100, 1) }}% din comision marketplace"><x-heroicon-m-information-circle class="w-4 h-4" /></span>@endif</td>
                         </tr>
                         @endforeach
                     </tbody>
