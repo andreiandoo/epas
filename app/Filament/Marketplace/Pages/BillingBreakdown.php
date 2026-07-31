@@ -41,7 +41,14 @@ class BillingBreakdown extends Page
         $admin = Auth::guard('marketplace_admin')->user();
         $this->marketplace = $admin?->marketplaceClient;
 
-        if (empty($this->month)) {
+        // Read the month from the URL explicitly — don't rely solely on #[Url]
+        // hydration on this Filament page. Validate the YYYY-MM format and default
+        // to the current month. Month navigation is URL-based (see prev_url/next_url).
+        $requested = request()->query('month');
+        if (is_string($requested) && preg_match('/^\d{4}-\d{2}$/', $requested)) {
+            $this->month = $requested;
+        }
+        if (!preg_match('/^\d{4}-\d{2}$/', (string) $this->month)) {
             $this->month = Carbon::now()->format('Y-m');
         }
     }
@@ -715,6 +722,12 @@ class BillingBreakdown extends Page
             'data' => [
                 'month_label' => $monthDate->translatedFormat('F Y'),
                 'month' => $this->month,
+                // URL-based month navigation (robust even if wire:click actions
+                // are not firing). next_url is null in the current month.
+                'prev_url' => static::getUrl(['month' => $monthDate->copy()->subMonth()->format('Y-m')]),
+                'next_url' => $monthDate->format('Y-m') === Carbon::now()->format('Y-m')
+                    ? null
+                    : static::getUrl(['month' => $monthDate->copy()->addMonth()->format('Y-m')]),
                 'currency' => $currency,
                 'commission_rate' => $commissionRate,
                 'events' => $events,
