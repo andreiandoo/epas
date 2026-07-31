@@ -1,0 +1,46 @@
+<?php
+/**
+ * KIND: artist  (single artist / band official site)
+ * Tour dates, EPK, booking/contact, merch, fan CRM. No seating/subscriptions.
+ */
+return [
+    'profile' => 'tenant',
+    'label'   => 'Artist / Trupă',
+
+    'terms' => [
+        'event' => 'concert', 'events' => 'concerte', 'events_cap' => 'Concerte',
+        'event_cap' => 'Concert', 'venue' => 'locație', 'artist' => 'membru',
+        'artists' => 'formație', 'artists_cap' => 'Formația', 'buy' => 'Bilete', 'buy_short' => 'Bilete',
+    ],
+    'features' => [
+        'epk' => true, 'booking' => true, 'tours' => true, 'merch' => true, 'fan_crm' => true,
+    ],
+
+    'terms_i18n' => ['en' => ['event' => 'concert', 'events' => 'concerts', 'events_cap' => 'Concerts', 'event_cap' => 'Concert', 'venue' => 'venue', 'artist' => 'member', 'artists' => 'band', 'artists_cap' => 'Band', 'buy' => 'Tickets', 'buy_short' => 'Tickets']],
+    'event_url_pattern'    => '/concert/{slug}',
+    'category_url_pattern' => '/concerte?an={slug}',
+
+    'menu' => [
+        ['key' => 'tour',    'label' => 'Turneu',  'url' => '/concerte'],
+        ['key' => 'music',   'label' => 'Muzică',  'url' => '/muzica'],
+        ['key' => 'gallery', 'label' => 'Galerie', 'url' => '/galerie'],
+        ['key' => 'epk',     'label' => 'Press',   'url' => '/epk'],
+        ['key' => 'contact', 'label' => 'Contact / Booking', 'url' => '/contact'],
+    ],
+    'cta_label' => 'Vezi concertele',
+    'cta_url'   => '/concerte',
+    'cart_url'  => '/cos',
+
+    'pages' => [
+        'index'    => ['set' => 'home'],
+        'tour'     => ['set' => 'tours',    'nav' => 'tour'],
+        'music'    => ['set' => 'music',    'nav' => 'music'],
+        'gallery'  => ['set' => 'gallery',  'nav' => 'gallery'],
+        'epk'      => ['set' => 'epk',      'nav' => 'epk'],
+        'contact'  => ['set' => 'contact',  'nav' => 'contact'],
+        'show'     => ['set' => 'show'],
+        'cart'     => ['set' => 'cart'],
+        'checkout' => ['set' => 'checkout'],
+        '404'      => ['set' => '404'],
+    ],
+];
