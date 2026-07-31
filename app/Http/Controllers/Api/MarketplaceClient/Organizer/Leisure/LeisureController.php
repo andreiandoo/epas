@@ -4110,6 +4110,150 @@ class LeisureController extends BaseController
     }
 
     /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/sales/range-csv?from=YYYY-MM-DD&to=YYYY-MM-DD
+     *
+     * Streamuieste CSV cu vanzarile pe un interval (from-to). Cate o LINIE per
+     * bilet cu absolut toate campurile cerute: canal, metoda plata, tip, cod,
+     * pret, comision, net, id comanda, email, status comanda, status bilet, data
+     * achizitie, data validare, operator POS.
+     *
+     * Folosit din butonul "Export CSV" din leisure-sales.php (per range custom).
+     *
+     * Commission per ticket: mediu per (ticket_type, canal). Provine din
+     * SalesBreakdownService care aplica logica de leisure (issuing_company
+     * SC1/SC2) + commission_mode per tip. Ruleaza 2 build-uri (online, POS)
+     * pentru ca aceleasi tip poate avea rate diferite in cele 2 canale.
+     */
+    public function salesRangeCsv(Request $request, int $event): mixed
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tz = 'Europe/Bucharest';
+        $from = $request->filled('from')
+            ? Carbon::parse($request->input('from'), $tz)->startOfDay()
+            : Carbon::now($tz)->startOfDay();
+        $to = $request->filled('to')
+            ? Carbon::parse($request->input('to'), $tz)->endOfDay()
+            : Carbon::now($tz)->endOfDay();
+        if ($to->lt($from)) { [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()]; }
+        $fromUtc = $from->copy()->utc();
+        $toUtc = $to->copy()->utc();
+
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        /** @var \App\Services\Marketplace\SalesBreakdownService $svc */
+        $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        // 2 build-uri separate: rate/mode pot diferi intre online si POS.
+        $onlineBd = $svc->build($eventModel, $from, $to, excludePos: true, dateColumn: 'paid_at');
+        $posBd    = $svc->build($eventModel, $from, $to, onlyPos: true,   dateColumn: 'paid_at');
+        $commOnlineByType = [];
+        foreach ($onlineBd['per_type'] ?? [] as $row) {
+            $commOnlineByType[(int) $row['ticket_type_id']] = (float) ($row['commission_per_ticket'] ?? 0);
+        }
+        $commPosByType = [];
+        foreach ($posBd['per_type'] ?? [] as $row) {
+            $commPosByType[(int) $row['ticket_type_id']] = (float) ($row['commission_per_ticket'] ?? 0);
+        }
+
+        // Orders in interval (toate sursele + toate statusurile relevante ca CSV
+        // sa reflecte si comenzi anulate/refundate). Pentru raportare filtram
+        // biletele cancelled/refunded din output? User cere "TOATE datele" - deci
+        // lasam si biletele anulate cu status marcat clar.
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed', 'refunded', 'cancelled', 'pending'])
+            ->whereBetween('paid_at', [$fromUtc, $toUtc])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta,code,barcode,attendee_name,attendee_email,checked_in_at,created_at', 'tickets.ticketType:id,name,service_category,issuing_company'])
+            ->orderBy('paid_at')
+            ->get(['id', 'order_number', 'customer_name', 'customer_email', 'status', 'total', 'source', 'paid_at', 'meta']);
+
+        // Preload team members (operatori POS)
+        $tmIds = [];
+        foreach ($orders as $o) {
+            $tmId = $o->meta['cashier_team_member_id'] ?? null;
+            if ($tmId) $tmIds[(int) $tmId] = true;
+        }
+        $tmNames = [];
+        if (!empty($tmIds)) {
+            \App\Models\MarketplaceOrganizerTeamMember::query()
+                ->whereIn('id', array_keys($tmIds))
+                ->get(['id', 'name'])
+                ->each(function ($tm) use (&$tmNames) { $tmNames[$tm->id] = $tm->name; });
+        }
+
+        $filename = 'vanzari-' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '-event-' . $eventModel->id . '.csv';
+        $columns = [
+            'Canal', 'Metoda plata', 'Tip bilet', 'Cod bilet',
+            'Valoare bilet (RON)', 'Comision AmBilet (RON)', 'Valoare neta (RON)',
+            'ID comanda', 'Nr. comanda', 'Email comanda', 'Status comanda', 'Status bilet',
+            'Data si ora achizitie', 'Data si ora validare', 'Operator POS',
+        ];
+
+        return response()->streamDownload(function () use ($orders, $tmNames, $columns, $commOnlineByType, $commPosByType) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM pentru Excel
+            fputcsv($out, $columns, ';', escape: '\\');
+
+            foreach ($orders as $o) {
+                $paidAtRo = $o->paid_at?->copy()->setTimezone('Europe/Bucharest');
+                $dtBuy = $paidAtRo ? $paidAtRo->format('d.m.Y H:i:s') : '';
+                $isPos = $o->source === 'pos';
+                $pmRaw = $o->meta['payment_method'] ?? null;
+                if ($isPos && $pmRaw === 'cash') $pmLabel = 'Cash';
+                elseif ($isPos && $pmRaw === 'card') $pmLabel = 'Card';
+                elseif ($isPos && $pmRaw === 'invoice') $pmLabel = 'Link email (POS)';
+                else $pmLabel = 'Online';
+                $canal = $isPos ? 'POS' : 'Online';
+                $tmId = $o->meta['cashier_team_member_id'] ?? null;
+                $operatorPos = $isPos
+                    ? ($tmId ? ($tmNames[(int) $tmId] ?? ('Angajat #' . $tmId)) : 'InfoPoint')
+                    : '';
+
+                foreach ($o->tickets as $t) {
+                    $tt = $t->ticketType;
+                    $ttName = $tt->name ?? 'Bilet';
+                    if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+                    if (is_array($t->meta ?? null) && !empty($t->meta['label_override'])) {
+                        $ttName = $t->meta['label_override'];
+                    }
+                    $ttId = (int) ($t->ticket_type_id ?? 0);
+                    $price = (float) ($t->price ?? 0);
+                    // Commission per ticket: lookup din per_type[ttId] al canalului
+                    // corect. Fallback la 0 daca tipul nu apare (bilete pachet cu
+                    // pret 0 nu contribuie la comision).
+                    $comm = $isPos
+                        ? (float) ($commPosByType[$ttId] ?? 0)
+                        : (float) ($commOnlineByType[$ttId] ?? 0);
+                    $net = $price - $comm;
+                    $checkedRo = $t->checked_in_at?->copy()->setTimezone('Europe/Bucharest');
+                    $dtValid = $checkedRo ? $checkedRo->format('d.m.Y H:i:s') : '';
+
+                    fputcsv($out, [
+                        $canal, $pmLabel, $ttName, $t->code ?: $t->barcode,
+                        number_format($price, 2, '.', ''),
+                        number_format($comm, 2, '.', ''),
+                        number_format($net, 2, '.', ''),
+                        $o->id, $o->order_number, $t->attendee_email ?: $o->customer_email,
+                        $o->status, $t->status,
+                        $dtBuy, $dtValid, $operatorPos,
+                    ], ';', escape: '\\');
+                }
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    /**
      * GET /marketplace-client/organizer/events/{event}/leisure/payouts
      *
      * Lista deconturi (MarketplacePayout) pentru event-ul cerut + document PDF

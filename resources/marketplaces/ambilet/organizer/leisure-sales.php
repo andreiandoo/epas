@@ -17,28 +17,52 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <!-- Date range -->
-        <div class="bg-white border rounded-2xl border-border p-4 mb-6 flex flex-wrap items-end gap-2">
-            <div class="flex-1 min-w-[200px]">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-2">Filtru perioadă</p>
-                <div class="flex flex-wrap gap-2">
-                    <button data-range="7" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">7 zile</button>
-                    <button data-range="14" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">14 zile</button>
-                    <button data-range="30" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">1 lună</button>
-                    <button data-range="90" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">3 luni</button>
-                    <button data-range="180" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">6 luni</button>
+        <div class="bg-white border rounded-2xl border-border p-4 mb-6 space-y-3">
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="flex-1 min-w-[200px]">
+                    <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-2">Filtru perioadă</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button data-range="7" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">7 zile</button>
+                        <button data-range="14" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">14 zile</button>
+                        <button data-range="30" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">1 lună</button>
+                        <button data-range="90" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">3 luni</button>
+                        <button data-range="180" class="lv-range-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-slate-50">6 luni</button>
+                    </div>
+                </div>
+                <div class="flex items-end gap-2">
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted">Grupare</span>
+                        <select id="lv-groupby" class="block mt-1 px-3 py-1.5 text-sm border border-border rounded-lg">
+                            <option value="day">Pe zi</option>
+                            <option value="week">Pe săptămână</option>
+                            <option value="month">Pe lună</option>
+                        </select>
+                    </label>
                 </div>
             </div>
-            <div class="flex items-end gap-2">
-                <label class="block">
-                    <span class="text-xs font-semibold text-muted">Grupare</span>
-                    <select id="lv-groupby" class="block mt-1 px-3 py-1.5 text-sm border border-border rounded-lg">
-                        <option value="day">Pe zi</option>
-                        <option value="week">Pe săptămână</option>
-                        <option value="month">Pe lună</option>
-                    </select>
-                </label>
+            <!-- Row 2: perioada custom + export CSV -->
+            <div class="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100">
+                <div class="flex flex-wrap items-end gap-2">
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted">De la data</span>
+                        <input id="lv-date-from" type="date" class="block mt-1 px-3 py-1.5 text-sm border border-border rounded-lg">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted">Până la data</span>
+                        <input id="lv-date-to" type="date" class="block mt-1 px-3 py-1.5 text-sm border border-border rounded-lg">
+                    </label>
+                    <button id="lv-apply-custom" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-primary bg-primary text-white hover:opacity-90">
+                        Aplică
+                    </button>
+                </div>
+                <div class="flex items-end gap-2 ml-auto">
+                    <button id="lv-export-csv" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1">
+                        <span>📥</span>
+                        <span>Export CSV vânzări</span>
+                    </button>
+                </div>
+                <span id="lv-range-label" class="text-xs text-muted w-full">Ultimele 7 zile</span>
             </div>
-            <span id="lv-range-label" class="text-xs text-muted">Ultimele 7 zile</span>
         </div>
 
         <!-- Stats -->
@@ -229,7 +253,57 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const from = new Date(Date.now() - parseInt(days, 10) * 86400000);
         currentFrom = from.toISOString().slice(0, 10);
         currentTo = to.toISOString().slice(0, 10);
+        // Sync inputs date pentru vizibilitate + ca export CSV sa functioneze cu presetul curent
+        const dfEl = $('lv-date-from'); if (dfEl) dfEl.value = currentFrom;
+        const dtEl = $('lv-date-to');   if (dtEl) dtEl.value = currentTo;
         loadTimeline();
+    }
+
+    // Interval custom: iau valorile din inputs, valideaza, aplica.
+    function applyCustomRange() {
+        const df = $('lv-date-from').value;
+        const dt = $('lv-date-to').value;
+        if (!df || !dt) { alert('Selectează ambele date (de la / până la).'); return; }
+        if (df > dt) { alert('„De la" trebuie să fie înainte de „Până la".'); return; }
+        // Deselecteaza toate presetele - suntem in custom
+        document.querySelectorAll('.lv-range-btn').forEach(b => b.classList.remove('bg-primary', 'text-white', 'border-primary'));
+        currentDays = null;
+        currentFrom = df;
+        currentTo = dt;
+        const fmt = s => { try { return new Date(s + 'T00:00:00').toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return s; } };
+        $('lv-range-label').textContent = 'Interval custom · ' + fmt(df) + ' – ' + fmt(dt);
+        loadTimeline();
+    }
+
+    // Descarca CSV cu vanzarile din intervalul curent (currentFrom - currentTo).
+    // Foloseste AmBiletAPI cu Authorization header (endpointul e proteged).
+    async function exportCsv() {
+        if (!currentEventId) { alert('Nu e configurat evenimentul.'); return; }
+        if (!currentFrom || !currentTo) { alert('Selectează perioada înainte de export.'); return; }
+        const btn = $('lv-export-csv');
+        const orig = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span>⏳</span><span>Se generează...</span>';
+        try {
+            const proxyBase = (window.AMBILET && window.AMBILET.apiUrl) || '/api/proxy.php';
+            const csvUrl = proxyBase + '?action=organizer.event.leisure.sales.range-csv'
+                + '&event=' + encodeURIComponent(currentEventId)
+                + '&from=' + encodeURIComponent(currentFrom)
+                + '&to=' + encodeURIComponent(currentTo);
+            const token = localStorage.getItem('ambilet_organizer_token') || localStorage.getItem('organizer_token') || '';
+            const resp = await fetch(csvUrl, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'vanzari-' + currentFrom + '_' + currentTo + '.csv';
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+        } catch (e) {
+            alert('Eroare la export CSV: ' + (e?.message || 'necunoscut'));
+        } finally {
+            btn.disabled = false; btn.innerHTML = orig;
+        }
     }
 
     async function loadTimeline() {
@@ -279,6 +353,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         document.querySelectorAll('.lv-range-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
         $('lv-groupby').addEventListener('change', (e) => { currentGroupBy = e.target.value; loadTimeline(); });
+        $('lv-apply-custom')?.addEventListener('click', applyCustomRange);
+        $('lv-export-csv')?.addEventListener('click', exportCsv);
         setRange('7');
     });
 })();
