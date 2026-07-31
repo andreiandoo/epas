@@ -401,3 +401,122 @@
     transition-duration: .001ms !important; scroll-behavior: auto !important; }
   .kit-skeleton { animation: none; }
 }
+
+/* ==========================================================================
+   Operator panel (venue staff, /operator) — tablet-first.
+   Larger targets than the storefront, higher contrast, no marketing chrome.
+   Brand comes from the same tokens, so a theme.css restyles this too.
+   ========================================================================== */
+.kit-op { background:var(--kit-surface-2); min-height:100vh; }
+.kit-op__wrap { max-width:1200px; margin:0 auto; padding-bottom:3rem; }
+
+.kit-op__bar { display:flex; align-items:center; gap:1rem; padding:.9rem 1rem;
+  background:var(--kit-primary); color:var(--kit-on-primary); }
+.kit-op__brand { display:flex; align-items:center; gap:.6rem; color:inherit; text-decoration:none; font-weight:600; }
+.kit-op__who { margin-left:auto; text-align:right; line-height:1.2; }
+.kit-op__who small { display:block; opacity:.75; color:inherit; }
+.kit-op__out { border-color:currentColor; color:inherit; }
+
+.kit-op__nav { display:flex; gap:.4rem; padding:.6rem 1rem; overflow-x:auto;
+  background:var(--kit-surface); border-bottom:1px solid var(--kit-border); }
+.kit-op__tab { display:flex; align-items:center; gap:.5rem; padding:.7rem 1.1rem; border-radius:999px;
+  text-decoration:none; color:var(--kit-text-muted); white-space:nowrap; font-weight:500; min-height:48px; }
+.kit-op__tab.is-active { background:var(--kit-primary); color:var(--kit-on-primary); }
+.kit-op__tabicon { font-size:1.15rem; }
+
+.kit-op__main { padding:1.25rem 1rem; }
+.kit-op__h3 { font-family:var(--kit-font-display); font-size:1.05rem; margin:1.75rem 0 .6rem; }
+
+.kit-op__card { background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius); padding:1.1rem; }
+
+.kit-op__label { display:block; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--kit-text-muted); margin:.75rem 0 .3rem; }
+.kit-op__input { width:100%; min-height:48px; padding:.7rem .9rem; font:inherit; font-size:1rem;
+  color:var(--kit-text); background:var(--kit-bg); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius-sm); }
+.kit-op__input--sm { max-width:9rem; }
+.kit-op__input--big { font-size:1.35rem; min-height:60px; letter-spacing:.06em; }
+.kit-op__submit { width:100%; min-height:52px; font-size:1.05rem; margin-top:1rem; }
+
+/* Login ------------------------------------------------------------------ */
+.kit-op__login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.25rem; }
+.kit-op__login .kit-op__card { width:100%; max-width:24rem; }
+.kit-op__loginhead { display:flex; align-items:center; gap:.75rem; margin-bottom:1rem; }
+.kit-op__hint { font-size:.8rem; text-align:center; margin:.9rem 0 0; }
+
+/* Denied ----------------------------------------------------------------- */
+.kit-op__denied { min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:.5rem; text-align:center; padding:2rem; }
+.kit-op__deniedicon { font-size:3rem; margin:0; }
+
+/* Dashboard -------------------------------------------------------------- */
+.kit-op__hello { margin-bottom:1.25rem; }
+.kit-op__stats { display:grid; gap:.75rem; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+.kit-op__stat { background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius); padding:1rem; display:flex; flex-direction:column; gap:.2rem; }
+.kit-op__statnum { font-family:var(--kit-font-display); font-size:1.6rem; line-height:1.1; }
+.kit-op__shiftcard { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1.25rem; }
+.kit-op__shiftcard .kit-btn { margin-left:auto; }
+
+/* POS -------------------------------------------------------------------- */
+.kit-op__shift { margin-bottom:1rem; }
+.kit-op__shiftbar { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
+  background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius); padding:.9rem 1.1rem; }
+.kit-op__shiftbar .kit-btn { margin-left:auto; }
+
+.kit-op__pos { display:grid; gap:1.25rem; grid-template-columns:1fr; align-items:start; }
+@media (min-width:900px){ .kit-op__pos { grid-template-columns:1fr 22rem; } }
+
+.kit-op__cats { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.9rem; }
+.kit-op__grid { display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+.kit-op__prod { min-height:88px; padding:.8rem; text-align:left; cursor:pointer;
+  display:flex; flex-direction:column; justify-content:space-between; gap:.4rem;
+  background:var(--kit-surface); color:var(--kit-text);
+  border:1px solid var(--kit-border); border-radius:var(--kit-radius-sm); font:inherit; }
+.kit-op__prod:hover:not(:disabled) { border-color:var(--kit-primary); }
+.kit-op__prod:disabled { opacity:.45; cursor:not-allowed; }
+.kit-op__prodname { font-size:.92rem; line-height:1.25; }
+
+.kit-op__basket { background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius); padding:1.1rem; position:sticky; top:1rem; }
+.kit-op__line { display:grid; grid-template-columns:1fr auto auto; gap:.75rem; align-items:center;
+  padding:.6rem 0; border-bottom:1px solid var(--kit-border); }
+.kit-op__total { display:flex; justify-content:space-between; align-items:center;
+  padding-top:.9rem; margin-top:.5rem; font-size:1.15rem; }
+.kit-op__pay { display:flex; gap:.4rem; margin-top:.75rem; }
+
+/* Receipt / confirmation overlay ----------------------------------------- */
+.kit-op__receipt { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex;
+  align-items:center; justify-content:center; padding:1.25rem; z-index:50; }
+.kit-op__receipt .kit-op__card { width:100%; max-width:22rem; }
+.kit-op__codes { list-style:none; margin:0 0 1rem; padding:0; display:flex; flex-direction:column; gap:.3rem; font-size:.9rem; }
+.kit-op__codes code { font-size:1rem; letter-spacing:.06em; }
+
+/* Check-in --------------------------------------------------------------- */
+.kit-op__scanbar { display:flex; gap:.6rem; align-items:stretch; }
+.kit-op__scanbar .kit-btn { min-height:60px; padding-inline:1.5rem; }
+.kit-op__result { text-align:center; padding:2rem 1rem; margin-top:1.25rem;
+  border-radius:var(--kit-radius); border:2px solid var(--kit-border); background:var(--kit-surface); }
+.kit-op__result[data-result="ok"] { border-color:var(--kit-success); }
+.kit-op__result[data-result="already_scanned"] { border-color:var(--kit-warning); }
+.kit-op__result[data-result="not_found"],
+.kit-op__result[data-result="invalid"] { border-color:var(--kit-error); }
+.kit-op__resulticon { font-size:3rem; margin:0 0 .5rem; }
+.kit-op__log { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.3rem; }
+.kit-op__log li { display:grid; grid-template-columns:auto auto 1fr auto; gap:.6rem; align-items:center;
+  padding:.55rem .8rem; background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius-sm); font-size:.9rem; }
+.kit-op__log li[data-result="ok"] { border-left:3px solid var(--kit-success); }
+.kit-op__log li[data-result="already_scanned"] { border-left:3px solid var(--kit-warning); }
+
+/* Rentals ---------------------------------------------------------------- */
+.kit-op__startgrid { display:grid; gap:.75rem; grid-template-columns:1fr; align-items:end; }
+@media (min-width:760px){ .kit-op__startgrid { grid-template-columns:1fr 1fr auto; } }
+.kit-op__rentals { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.5rem; }
+.kit-op__rentals li { display:grid; grid-template-columns:1fr auto auto; gap:1rem; align-items:center;
+  background:var(--kit-surface); border:1px solid var(--kit-border);
+  border-radius:var(--kit-radius-sm); padding:.8rem 1rem; }
+.kit-op__rentals li[data-overdue="1"] { border-left:4px solid var(--kit-error); }
+.kit-op__rentals li small { display:block; }

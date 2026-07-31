@@ -8,4 +8,9 @@
   <url><loc>https://parc.tixello.ro/cauta</loc></url>
   <url><loc>https://parc.tixello.ro/termeni</loc></url>
   <url><loc>https://parc.tixello.ro/confidentialitate</loc></url>
+  <url><loc>https://parc.tixello.ro/operator</loc></url>
+  <url><loc>https://parc.tixello.ro/operator/login</loc></url>
+  <url><loc>https://parc.tixello.ro/operator/pos</loc></url>
+  <url><loc>https://parc.tixello.ro/operator/checkin</loc></url>
+  <url><loc>https://parc.tixello.ro/operator/inchirieri</loc></url>
 </urlset>

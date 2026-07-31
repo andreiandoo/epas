@@ -254,6 +254,8 @@ function kit_head_scripts(): string {
         'proxy'    => $cfg['proxy_url'] ?? '/api/proxy.php',
         'cartKey'  => $cfg['cart_key'] ?? 'kit_cart',
         'authKey'  => $cfg['auth_key'] ?? 'kit_auth',
+        // Operator identity is deliberately separate from the customer one.
+        'operatorKey' => $cfg['operator_key'] ?? 'kit_operator',
         'cartUrl'  => $cfg['cart_url'] ?? '/cos',
         'currency' => $cfg['currency'] ?? 'RON',
         'locale'   => Kit::activeLocale(),

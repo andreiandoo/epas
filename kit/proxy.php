@@ -75,6 +75,23 @@ $ACTIONS = $isTenant ? [
     'slots'          => ['GET',  '/tenant-client/leisure/slots',         30],
     'rentals'        => ['GET',  '/tenant-client/leisure/rentals',      120],
 
+    // ---- operator panel (venue staff, /operator on this site) ----
+    // Never cached and never tenant-guessable: op-login is scoped by hostname,
+    // everything after it is identified by the operator's own bearer token.
+    'op-login'         => ['POST',  '/tenant-client/operator/login',    0, ['scope' => 'host']],
+    'op-me'            => ['GET',   '/tenant-client/operator/me',       0],
+    'op-logout'        => ['POST',  '/tenant-client/operator/logout',   0],
+    'op-dashboard'     => ['GET',   '/tenant-client/operator/dashboard',0],
+    'op-cashier'       => ['GET',   '/tenant-client/operator/cashier',  0],
+    'op-cashier-open'  => ['POST',  '/tenant-client/operator/cashier/open',  0],
+    'op-cashier-close' => ['POST',  '/tenant-client/operator/cashier/close', 0],
+    'op-catalog'       => ['GET',   '/tenant-client/operator/catalog',  0],
+    'op-sale'          => ['POST',  '/tenant-client/operator/sale',     0],
+    'op-scan'          => ['POST',  '/tenant-client/operator/scan',     0],
+    'op-rentals'       => ['GET',   '/tenant-client/operator/rentals',  0],
+    'op-rental-start'  => ['POST',  '/tenant-client/operator/rentals/start', 0],
+    'op-rental-end'    => ['POST',  '/tenant-client/operator/rentals/{rental}/end', 0],
+
     // ---- checkout (never cache) ----
     // NOTE: /tenant-client/checkout/submit is still a stub upstream (it creates
     // no Order). demo-checkout is the only tenant endpoint that really writes an
@@ -165,6 +182,12 @@ $UNSUPPORTED = $isTenant ? [
     'availability'    => 'leisure booking is a tenant-only feature',
     'slots'           => 'leisure booking is a tenant-only feature',
     'rentals'         => 'leisure booking is a tenant-only feature',
+    'op-login'        => 'the operator panel is a tenant-only feature',
+    'op-me'           => 'the operator panel is a tenant-only feature',
+    'op-dashboard'    => 'the operator panel is a tenant-only feature',
+    'op-catalog'      => 'the operator panel is a tenant-only feature',
+    'op-sale'         => 'the operator panel is a tenant-only feature',
+    'op-scan'         => 'the operator panel is a tenant-only feature',
 ];
 
 // Forward the browser's Authorization header (Bearer token) for account calls.
@@ -214,7 +237,9 @@ if ($verb !== 'GET') {
 // ---- Rate limiting for sensitive actions ---------------------------------
 $SENSITIVE = ['login' => 10, 'register' => 5, 'checkout' => 15, 'review-submit' => 10,
               'newsletter' => 8, 'promo-validate' => 20, 'fav-toggle' => 60, 'me-update' => 20,
-              'acc-giftcard-redeem' => 10, 'hold' => 60, 'release' => 60, 'seats-confirm' => 15];
+              'acc-giftcard-redeem' => 10, 'hold' => 60, 'release' => 60, 'seats-confirm' => 15,
+              // A till legitimately fires fast; only the login is worth throttling hard.
+              'op-login' => 10, 'op-sale' => 120, 'op-scan' => 600];
 if (isset($SENSITIVE[$action]) && !kit_rate_ok($action, (int)$SENSITIVE[$action])) {
     http_response_code(429);
     echo json_encode(['success' => false, 'error' => 'Too many requests. Please slow down.']);
