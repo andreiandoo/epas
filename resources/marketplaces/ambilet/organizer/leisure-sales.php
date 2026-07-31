@@ -65,25 +65,83 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Total vândut</p>
-                <p class="text-2xl font-bold text-secondary"><span id="lv-stat-total">0</span> <span class="text-sm text-muted">RON</span></p>
+        <!-- Stats principale: Total vandut / Comision / Net (cu split online-vs-POS) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <div class="p-4 bg-white border-2 rounded-2xl border-emerald-200">
+                <p class="text-xs uppercase tracking-wider text-emerald-700 font-bold mb-1">💰 Total vândut</p>
+                <p class="text-2xl font-extrabold text-emerald-900"><span id="lv-stat-total">0</span> <span class="text-sm text-emerald-700">RON</span></p>
+                <div class="mt-2 pt-2 border-t border-emerald-100 text-xs space-y-0.5">
+                    <div class="flex justify-between"><span class="text-muted">🌐 Online</span><span class="tabular-nums font-semibold" id="lv-rev-online">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted">🏪 POS</span><span class="tabular-nums font-semibold" id="lv-rev-pos">0</span></div>
+                </div>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Produse vândute</p>
-                <p class="text-2xl font-bold text-secondary"><span id="lv-stat-tickets">0</span></p>
-                <p class="mt-1 text-[10px] leading-tight text-muted">tranzacții — un pachet = 1 (nu persoane)</p>
+            <div class="p-4 bg-white border-2 rounded-2xl border-amber-200">
+                <p class="text-xs uppercase tracking-wider text-amber-700 font-bold mb-1">🧾 Comision ticketing</p>
+                <p class="text-2xl font-extrabold text-amber-900"><span id="lv-stat-comm">0</span> <span class="text-sm text-amber-700">RON</span></p>
+                <div class="mt-2 pt-2 border-t border-amber-100 text-xs space-y-0.5">
+                    <div class="flex justify-between"><span class="text-muted">🌐 Online</span><span class="tabular-nums font-semibold" id="lv-comm-online">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted">🏪 POS</span><span class="tabular-nums font-semibold" id="lv-comm-pos">0</span></div>
+                </div>
             </div>
+            <div class="p-4 bg-white border-2 rounded-2xl border-sky-200">
+                <p class="text-xs uppercase tracking-wider text-sky-700 font-bold mb-1">✅ Total net (după comision)</p>
+                <p class="text-2xl font-extrabold text-sky-900"><span id="lv-stat-net">0</span> <span class="text-sm text-sky-700">RON</span></p>
+                <div class="mt-2 pt-2 border-t border-sky-100 text-xs space-y-0.5">
+                    <div class="flex justify-between"><span class="text-muted">🌐 Online</span><span class="tabular-nums font-semibold" id="lv-net-online">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted">🏪 POS</span><span class="tabular-nums font-semibold" id="lv-net-pos">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats secundare: Comenzi / Cos mediu / Bilete fizice / Bilete tranzactii + breakdown categorii -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Comenzi</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🧾 Comenzi</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-orders">0</span></p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Coș mediu</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🛒 Coș mediu</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-avg">0</span> <span class="text-sm text-muted">RON</span></p>
             </div>
+            <div class="p-4 bg-white border rounded-2xl border-border">
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🎟️ Bilete emise</p>
+                <p class="text-2xl font-bold text-secondary"><span id="lv-stat-tickets-physical">0</span></p>
+                <p class="mt-1 text-[10px] leading-tight text-muted"><span id="lv-stat-tickets-transactions">0</span> tranzacții cu valoare (pachet = 1)</p>
+            </div>
+            <div class="p-4 bg-white border rounded-2xl border-border">
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">📂 Pe categorie</p>
+                <div id="lv-cat-breakdown" class="text-xs space-y-0.5">
+                    <p class="text-muted">—</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cash / Card POS (brut) + sesiuni operatori POS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div class="p-4 bg-white border rounded-2xl border-border">
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💵 Cash POS (brut)</p>
+                <p class="text-xl font-bold text-secondary"><span id="lv-stat-cash">0</span> <span class="text-xs text-muted">RON</span></p>
+            </div>
+            <div class="p-4 bg-white border rounded-2xl border-border">
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💳 Card POS (brut)</p>
+                <p class="text-xl font-bold text-secondary"><span id="lv-stat-card">0</span> <span class="text-xs text-muted">RON</span></p>
+            </div>
+            <div class="p-4 bg-white border rounded-2xl border-border">
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">👤 Sesiuni casă POS</p>
+                <p class="text-xl font-bold text-secondary" id="lv-sessions-count">0</p>
+                <p class="mt-1 text-[10px] leading-tight text-muted" id="lv-sessions-hint">tură deschidere / închidere · operator</p>
+            </div>
+        </div>
+
+        <!-- Lista de sesiuni POS (colapsabila) - detalii tura + operator + cash/card -->
+        <div id="lv-sessions-wrap" class="mb-6 hidden">
+            <details class="bg-white border rounded-2xl border-border" open>
+                <summary class="px-4 py-3 cursor-pointer font-semibold text-secondary flex items-center gap-2">
+                    <span>👤 Detalii ture casă POS</span>
+                    <span class="ml-auto text-xs text-muted" id="lv-sessions-detail-count"></span>
+                </summary>
+                <div id="lv-sessions-list" class="p-4 space-y-2 border-t border-border"></div>
+            </details>
         </div>
 
         <!-- Chart + breakdown grid -->
@@ -320,11 +378,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 group_by: currentGroupBy,
             });
             const data = res.data || {};
-            const totals = data.totals || {};
-            $('lv-stat-total').textContent = fmtMoney(totals.revenue);
-            $('lv-stat-tickets').textContent = totals.tickets || 0;
-            $('lv-stat-orders').textContent = totals.orders || 0;
-            $('lv-stat-avg').textContent = fmtMoney(totals.avg_order);
             renderChart(data.rows || [], data.group_by || 'day');
             renderCategories(data.by_category || {});
             renderPaymentMethods(data.by_payment_method || []);
@@ -334,6 +387,111 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-error').textContent = 'Eroare la încărcarea datelor: ' + (e?.message || 'necunoscut');
             $('lv-error').classList.remove('hidden');
         }
+        // Load summary in paralel (cifre pentru toate cardurile)
+        loadSummary();
+    }
+
+    // Populare carduri Total/Comision/Net (cu split online-POS) + comenzi/cos/bilete
+    // + cash/card POS + sesiuni operatori. Endpoint dedicat sales-summary.
+    async function loadSummary() {
+        if (!currentEventId || !currentFrom || !currentTo) return;
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/sales/summary`, {
+                from: currentFrom, to: currentTo,
+            });
+            const d = res.data || {}; const t = d.totals || {}; const pos = d.pos || {};
+            // Row 1: Total vandut / Comision / Net (cu split online + POS)
+            $('lv-stat-total').textContent = fmtMoney(t.revenue_total);
+            $('lv-rev-online').textContent = fmtMoney(t.revenue_online) + ' RON';
+            $('lv-rev-pos').textContent    = fmtMoney(t.revenue_pos) + ' RON';
+            $('lv-stat-comm').textContent  = fmtMoney(t.commission_total);
+            $('lv-comm-online').textContent = fmtMoney(t.commission_online) + ' RON';
+            $('lv-comm-pos').textContent    = fmtMoney(t.commission_pos) + ' RON';
+            $('lv-stat-net').textContent   = fmtMoney(t.net_total);
+            $('lv-net-online').textContent = fmtMoney(t.net_online) + ' RON';
+            $('lv-net-pos').textContent    = fmtMoney(t.net_pos) + ' RON';
+            // Row 2: Comenzi / Cos mediu / Bilete / Categorii
+            $('lv-stat-orders').textContent = t.orders || 0;
+            $('lv-stat-avg').textContent = fmtMoney(t.avg_order);
+            $('lv-stat-tickets-physical').textContent = t.tickets_physical || 0;
+            $('lv-stat-tickets-transactions').textContent = t.tickets_transactions || 0;
+            const cat = t.tickets_by_category || {};
+            const catWrap = $('lv-cat-breakdown');
+            if (Object.keys(cat).length === 0) {
+                catWrap.innerHTML = '<p class="text-muted">—</p>';
+            } else {
+                catWrap.innerHTML = Object.entries(cat)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([c, n]) => `<div class="flex justify-between"><span style="color:${categoryColor(c)}">${categoryLabel(c)}</span><span class="tabular-nums font-semibold">${n}</span></div>`)
+                    .join('');
+            }
+            // Row 3: Cash / Card / Sesiuni POS
+            $('lv-stat-cash').textContent = fmtMoney(pos.cash_gross);
+            $('lv-stat-card').textContent = fmtMoney(pos.card_gross);
+            const sessions = Array.isArray(d.sessions) ? d.sessions : [];
+            $('lv-sessions-count').textContent = sessions.length;
+            $('lv-sessions-hint').textContent = sessions.length === 1
+                ? '1 tură · ' + (sessions[0].operator || '—')
+                : sessions.length + ' ture · click jos pentru detalii';
+            renderSessions(sessions);
+        } catch (e) {
+            console.warn('[leisure-sales] summary failed', e);
+        }
+    }
+
+    function renderSessions(sessions) {
+        const wrap = $('lv-sessions-wrap');
+        const list = $('lv-sessions-list');
+        const countEl = $('lv-sessions-detail-count');
+        if (!wrap || !list) return;
+        if (!sessions || !sessions.length) {
+            wrap.classList.add('hidden');
+            return;
+        }
+        wrap.classList.remove('hidden');
+        if (countEl) countEl.textContent = sessions.length + ' tur' + (sessions.length === 1 ? 'ă' : 'e');
+        const fmtDT = iso => {
+            if (!iso) return '—';
+            try {
+                const d = new Date(iso);
+                return d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' }) + ' ' +
+                       d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+            } catch { return iso; }
+        };
+        const esc = s => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        list.innerHTML = sessions.map(s => {
+            const status = s.is_open
+                ? '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
+                : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
+            return `
+            <div class="border border-border rounded-xl p-3">
+                <div class="flex flex-wrap items-center gap-2 justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-secondary">👤 ${esc(s.operator || 'Operator')}</p>
+                        <p class="text-[11px] text-muted">${fmtDT(s.opened_at)} → ${s.closed_at ? fmtDT(s.closed_at) : '⏳ în desfășurare'}</p>
+                    </div>
+                    ${status}
+                </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-2 text-xs">
+                    <div class="p-2 bg-amber-50 border border-amber-200 rounded">
+                        <p class="text-[10px] text-amber-700 uppercase font-semibold">💵 Cash</p>
+                        <p class="text-sm font-bold text-amber-900 tabular-nums">${fmtMoney(s.cash)} RON</p>
+                    </div>
+                    <div class="p-2 bg-sky-50 border border-sky-200 rounded">
+                        <p class="text-[10px] text-sky-700 uppercase font-semibold">💳 Card</p>
+                        <p class="text-sm font-bold text-sky-900 tabular-nums">${fmtMoney(s.card)} RON</p>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded">
+                        <p class="text-[10px] text-slate-600 uppercase font-semibold">🧾 Comenzi</p>
+                        <p class="text-sm font-bold text-slate-900 tabular-nums">${s.orders || 0}</p>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded">
+                        <p class="text-[10px] text-slate-600 uppercase font-semibold">🎟️ Bilete</p>
+                        <p class="text-sm font-bold text-slate-900 tabular-nums">${s.tickets_sold || 0}${s.tickets_visitors && s.tickets_visitors !== s.tickets_sold ? ' <span class="text-[9px] text-muted">/ '+s.tickets_visitors+' viz.</span>' : ''}</p>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     window.addEventListener('load', async () => {

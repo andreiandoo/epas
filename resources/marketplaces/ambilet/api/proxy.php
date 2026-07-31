@@ -1920,6 +1920,17 @@ switch ($action) {
         $rawResponse = true; // download binar
         break;
 
+    case 'organizer.event.leisure.sales.summary':
+        // GET /organizer/events/{id}/leisure/sales/summary?from=&to= → JSON snapshot
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        if (isset($_GET['from'])) $q['from'] = $_GET['from'];
+        if (isset($_GET['to']))   $q['to']   = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/sales/summary' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.scans':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }

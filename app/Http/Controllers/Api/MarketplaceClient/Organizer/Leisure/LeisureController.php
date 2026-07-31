@@ -4110,6 +4110,153 @@ class LeisureController extends BaseController
     }
 
     /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/sales/summary?from=&to=
+     *
+     * Snapshot bogat pentru cardurile din /organizator/leisure-sales:
+     *   - revenue / comision / net cu split online-vs-POS (via SalesBreakdownService)
+     *   - orders, tickets_transactions (386-style), tickets_physical (570-style)
+     *   - tickets_by_category (breakdown service_category peste biletele fizice)
+     *   - cash_gross / card_gross pe POS (brut, nu net)
+     *   - sesiuni casa POS din interval cu operator + open/close + cash/card
+     */
+    public function salesSummary(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tz = 'Europe/Bucharest';
+        $from = $request->filled('from')
+            ? Carbon::parse($request->input('from'), $tz)->startOfDay()
+            : Carbon::now($tz)->subDays(7)->startOfDay();
+        $to = $request->filled('to')
+            ? Carbon::parse($request->input('to'), $tz)->endOfDay()
+            : Carbon::now($tz)->endOfDay();
+        if ($to->lt($from)) { [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()]; }
+        $fromUtc = $from->copy()->utc();
+        $toUtc = $to->copy()->utc();
+
+        $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
+
+        // === Revenue + commission (autoritative, via SalesBreakdownService) ===
+        /** @var \App\Services\Marketplace\SalesBreakdownService $svc */
+        $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $onlineBd = $svc->build($eventModel, $from, $to, excludePos: true, dateColumn: 'paid_at');
+        $posBd    = $svc->build($eventModel, $from, $to, onlyPos: true,   dateColumn: 'paid_at');
+        $revOnline  = round((float) ($onlineBd['total_revenue'] ?? 0), 2);
+        $revPos     = round((float) ($posBd['total_revenue'] ?? 0), 2);
+        $commOnline = round((float) ($onlineBd['total_commission'] ?? 0), 2);
+        $commPos    = round((float) ($posBd['total_commission'] ?? 0), 2);
+        $revTotal   = round($revOnline + $revPos, 2);
+        $commTotal  = round($commOnline + $commPos, 2);
+
+        // === Orders + tickets count + by_category (per-order iterate) ===
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$fromUtc, $toUtc])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,service_category'])
+            ->get(['id', 'source', 'meta', 'total', 'paid_at']);
+
+        $ordersTotal = $orders->count();
+        $ticketsTransactions = 0;   // 386-style: umbrella pachet + bilete individuale (cu pret)
+        $ticketsPhysical = 0;        // 570-style: bilete fizice scanabile (componente + individuale + bonus, EXCL umbrella)
+        $ticketsByCategory = [];     // service_category => count (peste fizice)
+        $cashGross = 0.0;
+        $cardGross = 0.0;
+        foreach ($orders as $o) {
+            $isPos = $o->source === 'pos';
+            $pm = $o->meta['payment_method'] ?? null;
+            if ($isPos && $pm === 'cash') $cashGross += (float) ($o->total ?? 0);
+            elseif ($isPos && $pm === 'card') $cardGross += (float) ($o->total ?? 0);
+
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $meta = is_array($t->meta ?? null) ? $t->meta : [];
+                $isFromPackage = !empty($meta['from_package']);
+                $isUmbrella = !empty($meta['is_package_umbrella']);
+                $tp = (float) ($t->price ?? 0);
+                // Fizic scanabil = tot ce NU e umbrella parent
+                if (!$isUmbrella) {
+                    $ticketsPhysical++;
+                    $cat = $t->ticketType->service_category ?? 'access';
+                    $ticketsByCategory[$cat] = ($ticketsByCategory[$cat] ?? 0) + 1;
+                }
+                // Tranzactie cu valoare = umbrella + individuale cu pret > 0 (EXCL componente / bonus / invitatii)
+                if (!$isFromPackage && $tp > 0) {
+                    $ticketsTransactions++;
+                }
+            }
+        }
+        $cashGross = round($cashGross, 2);
+        $cardGross = round($cardGross, 2);
+
+        // === Sesiuni casa POS in interval (opened_at SAU closed_at cad in range) ===
+        $sessions = \App\Models\LeisureCashierSession::query()
+            ->where('marketplace_organizer_id', $eventOrganizerId)
+            ->where('event_id', $eventModel->id)
+            ->where(function ($q) use ($fromUtc, $toUtc) {
+                $q->whereBetween('opened_at', [$fromUtc, $toUtc])
+                  ->orWhereBetween('closed_at', [$fromUtc, $toUtc]);
+            })
+            ->orderBy('opened_at')
+            ->get(['id', 'opened_at', 'closed_at', 'opened_label', 'closing_snapshot']);
+        $sessionsOut = $sessions->map(function ($s) {
+            $t = is_array($s->closing_snapshot ?? null) ? ($s->closing_snapshot['totals'] ?? []) : [];
+            $bp = is_array($s->closing_snapshot ?? null) ? ($s->closing_snapshot['by_payment'] ?? []) : [];
+            $cash = 0.0; $card = 0.0;
+            foreach ($bp as $row) {
+                if (($row['method'] ?? '') === 'cash') $cash += (float) ($row['revenue'] ?? 0);
+                if (($row['method'] ?? '') === 'card') $card += (float) ($row['revenue'] ?? 0);
+            }
+            return [
+                'id' => $s->id,
+                'operator' => $s->opened_label ?: 'InfoPoint',
+                'opened_at' => $s->opened_at?->toIso8601String(),
+                'closed_at' => $s->closed_at?->toIso8601String(),
+                'is_open' => $s->closed_at === null,
+                'cash' => round($cash, 2),
+                'card' => round($card, 2),
+                'orders' => (int) ($t['orders'] ?? 0),
+                'tickets_sold' => (int) ($t['tickets_sold'] ?? $t['tickets'] ?? 0),
+                'tickets_visitors' => (int) ($t['tickets_visitors'] ?? 0),
+                'revenue' => round((float) ($t['revenue'] ?? 0), 2),
+            ];
+        })->values();
+
+        return $this->success([
+            'period' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
+            'currency' => $marketplace->currency ?? 'RON',
+            'totals' => [
+                'revenue_total'  => $revTotal,
+                'revenue_online' => $revOnline,
+                'revenue_pos'    => $revPos,
+                'commission_total'  => $commTotal,
+                'commission_online' => $commOnline,
+                'commission_pos'    => $commPos,
+                'net_total'  => round($revTotal - $commTotal, 2),
+                'net_online' => round($revOnline - $commOnline, 2),
+                'net_pos'    => round($revPos - $commPos, 2),
+                'orders' => $ordersTotal,
+                'avg_order' => $ordersTotal > 0 ? round($revTotal / $ordersTotal, 2) : 0.0,
+                'tickets_transactions' => $ticketsTransactions,
+                'tickets_physical' => $ticketsPhysical,
+                'tickets_by_category' => $ticketsByCategory,
+            ],
+            'pos' => [
+                'cash_gross' => $cashGross,
+                'card_gross' => $cardGross,
+            ],
+            'sessions' => $sessionsOut,
+        ]);
+    }
+
+    /**
      * GET /marketplace-client/organizer/events/{event}/leisure/sales/range-csv?from=YYYY-MM-DD&to=YYYY-MM-DD
      *
      * Streamuieste CSV cu vanzarile pe un interval (from-to). Cate o LINIE per
