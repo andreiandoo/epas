@@ -153,13 +153,49 @@ function layout(string $name, array $vars, callable $body): void {
 }
 
 /**
+ * Append a content version to a same-origin asset URL: /kit/kit.js → …?v=1a2b3c.
+ *
+ * The deploy .htaccess caches css/js for seven days, so without this a new
+ * kit.js or theme.css stays invisible for a week — and behind a CDN it is worse:
+ * Cloudflare kept serving a stale /kit/kit.js after a deploy, which is exactly
+ * how the operator panel shipped with its JS missing. The stamp is the file's
+ * mtime, so it changes on every deploy and never on a normal request.
+ *
+ * External URLs and anything already carrying a query are returned untouched.
+ */
+function kit_asset_v(?string $href): string
+{
+    $href = (string) $href;
+    if ($href === '' || $href[0] !== '/' || strpos($href, '?') !== false) {
+        return $href;
+    }
+    static $cache = [];
+    if (isset($cache[$href])) {
+        return $cache[$href];
+    }
+    // Assets live next to the front controller in a build, and under kit/ in dev.
+    $roots = array_filter([
+        defined('KIT_SITE_ROOT') ? KIT_SITE_ROOT : null,
+        $_SERVER['DOCUMENT_ROOT'] ?? null,
+        dirname(__DIR__, 2),
+    ]);
+    foreach ($roots as $root) {
+        $file = rtrim((string) $root, '/') . $href;
+        if (is_file($file) && ($m = @filemtime($file))) {
+            return $cache[$href] = $href . '?v=' . base_convert((string) $m, 10, 36);
+        }
+    }
+    return $cache[$href] = $href;
+}
+
+/**
  * Emit the <head> asset tags for tokens + theme. Called by layouts.
  * tokens.css defines the contract + defaults; theme.css overrides variables.
  */
 function kit_theme_links(): string {
     $cfg = Kit::config();
-    $tokens = e($cfg['tokens_href']);
-    $theme  = e($cfg['theme_href']);
+    $tokens = e(kit_asset_v($cfg['tokens_href']));
+    $theme  = e(kit_asset_v($cfg['theme_href']));
     return "<link rel=\"stylesheet\" href=\"{$tokens}\">\n<link rel=\"stylesheet\" href=\"{$theme}\">";
 }
 
@@ -261,9 +297,9 @@ function kit_head_scripts(): string {
         'locale'   => Kit::activeLocale(),
     ], JSON_UNESCAPED_SLASHES);
     $out  = "<script>window.KIT = {$kitCfg};</script>\n";
-    $out .= '<script defer src="' . e($cfg['kit_js_href'] ?? '/kit/kit.js') . '"></script>' . "\n";
+    $out .= '<script defer src="' . e(kit_asset_v($cfg['kit_js_href'] ?? '/kit/kit.js')) . '"></script>' . "\n";
     if ($cfg['use_alpine'] ?? true) {
-        $out .= '<script defer src="' . e($cfg['alpine_href']) . '"></script>';
+        $out .= '<script defer src="' . e(kit_asset_v($cfg['alpine_href'])) . '"></script>';
     }
     return $out;
 }
