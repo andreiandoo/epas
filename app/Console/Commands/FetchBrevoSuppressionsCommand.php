@@ -61,7 +61,9 @@ class FetchBrevoSuppressionsCommand extends Command
 
     public function handle(): int
     {
-        $this->apiKey = (string) ($this->option('api-key') ?: env('BREVO_API_KEY'));
+        // config() (not env()) so it resolves under config:cache in production —
+        // otherwise the scheduled sync silently gets a null key and does nothing.
+        $this->apiKey = (string) ($this->option('api-key') ?: config('services.brevo.api_key') ?: env('BREVO_API_KEY'));
         if (!$this->apiKey) {
             $this->error('No API key — pass --api-key=xkeysib-... or set BREVO_API_KEY in .env');
             return self::FAILURE;

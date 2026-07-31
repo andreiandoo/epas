@@ -44,7 +44,8 @@ class SyncBrevoEmailLogCommand extends Command
             return self::FAILURE;
         }
 
-        $apiKey = (string) ($this->option('api-key') ?: env('BREVO_API_KEY'));
+        // config() (not env()) so it resolves under config:cache in production.
+        $apiKey = (string) ($this->option('api-key') ?: config('services.brevo.api_key') ?: env('BREVO_API_KEY'));
         if (!$apiKey) {
             $this->error('No API key — pass --api-key=xkeysib-... or set BREVO_API_KEY.');
             return self::FAILURE;

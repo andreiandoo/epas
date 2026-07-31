@@ -41,7 +41,8 @@ class ReclaimBrevoUnsubscribesCommand extends Command
 
     public function handle(): int
     {
-        $apiKey = (string) ($this->option('api-key') ?: env('BREVO_API_KEY'));
+        // config() (not env()) so it resolves under config:cache in production.
+        $apiKey = (string) ($this->option('api-key') ?: config('services.brevo.api_key') ?: env('BREVO_API_KEY'));
         $dry = (bool) $this->option('dry-run');
         $mcId = (int) $this->option('marketplace');
         $max = (int) $this->option('limit');
