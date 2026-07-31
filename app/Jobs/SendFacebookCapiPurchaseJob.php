@@ -101,12 +101,31 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
     protected function buildCustomData(Order $order): array
     {
         $contentIds = [];
+        $contents = [];
         $numItems = 0;
         try {
             $tickets = $order->tickets;
             if ($tickets) {
                 $contentIds = $tickets->pluck('ticket_type_id')->filter()->unique()->values()->all();
                 $numItems = $tickets->count();
+
+                // Per-ticket-type quantities (+ unit price) so Meta receives HOW
+                // MANY tickets of each type were bought, not just the order total.
+                // Marketplace tickets may store the type in marketplace_ticket_type_id.
+                foreach ($tickets->groupBy(fn ($t) => $t->ticket_type_id ?? $t->marketplace_ticket_type_id) as $cid => $group) {
+                    if (!$cid) {
+                        continue;
+                    }
+                    $entry = [
+                        'id' => (string) $cid,
+                        'quantity' => $group->count(),
+                    ];
+                    $avgPrice = $group->avg('price');
+                    if ($avgPrice !== null && $avgPrice > 0) {
+                        $entry['item_price'] = round((float) $avgPrice, 2);
+                    }
+                    $contents[] = $entry;
+                }
             }
         } catch (\Throwable $e) {
             // tickets relation/data unavailable — fall back to header values
@@ -123,6 +142,9 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
             'order_id' => (string) $order->id,
         ];
 
+        if (!empty($contents)) {
+            $data['contents'] = $contents;
+        }
         if (!empty($contentIds)) {
             $data['content_ids'] = array_map('strval', $contentIds);
         }
