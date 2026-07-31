@@ -131,6 +131,15 @@ class BrevoWebhookController extends Controller
             // status change; we only keep them in the metadata trail above.
         }
 
+        // Capture WHY it failed/bounced onto the log itself, so the error
+        // dashboard (MarketplaceEmailLogObserver) shows the reason instead of a
+        // null error_message. Mirrors what we already store on the newsletter
+        // recipient below.
+        if (in_array($event, ['hard_bounce', 'soft_bounce', 'blocked', 'invalid_email', 'error', 'spam', 'complaint'], true)) {
+            $reason = $request->input('reason');
+            $updates['error_message'] = 'brevo:' . $event . ($reason ? ':' . $reason : '');
+        }
+
         $log->update($updates);
 
         // Mirror bounces onto the linked newsletter recipient so (a) the
