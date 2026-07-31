@@ -11,7 +11,12 @@ ErrorDocument 503 /503
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Serve real files/dirs directly (theme/, kit/, api/, favicon, images, css, js)
+    # Dotfiles FIRST — must precede the -f passthrough below, whose [L] would
+    # otherwise end the round and serve them. .deploy-token is the shared secret
+    # that triggers a deploy; .git and .env would be worse.
+    RewriteRule "(^|/)\.(?!well-known)" - [F,L]
+
+    # Serve real files/dirs directly (theme/, kit/js, api/, favicon, images, css)
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
@@ -42,9 +47,14 @@ ErrorDocument 503 /503
     </FilesMatch>
 </IfModule>
 
-# Never serve source/config to the browser
+# Never serve source/config to the browser -------------------------------
+# The site root doubles as its own source tree, and the rewrite above serves
+# any real file directly — so everything that is not an entry point has to be
+# denied explicitly. Entry points: index.php, api/proxy.php, _webhook-deploy.php.
 <FilesMatch "^(site\.config|routes)\.php$">
     Require all denied
 </FilesMatch>
 RedirectMatch 403 ^/includes/
-RedirectMatch 403 ^/kit/(core|components|layouts)/
+RedirectMatch 403 ^/pages/
+RedirectMatch 403 ^/kit/(core|components|layouts|pagesets|kinds|tokens|deploy)/
+RedirectMatch 403 ^/kit/proxy\.php$
