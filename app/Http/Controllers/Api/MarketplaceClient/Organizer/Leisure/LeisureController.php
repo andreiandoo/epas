@@ -4141,9 +4141,15 @@ class LeisureController extends BaseController
         $svc = app(\App\Services\Leisure\WeatherService::class);
         $forecast = $svc->getForecast((float) $venue->lat, (float) $venue->lng, 7);
 
+        // Venue.name este JSON translatable via Translatable trait -> extract RO
+        // (fallback EN, apoi prima cheie). Fara asta UI-ul afiseaza "[object Object]".
+        $venueName = $venue->getTranslation('name', 'ro')
+            ?: $venue->getTranslation('name', 'en')
+            ?: (is_array($venue->name) ? (reset($venue->name) ?: '') : (string) $venue->name);
+
         return $this->success([
             'forecast' => $forecast,
-            'venue' => ['id' => $venue->id, 'name' => $venue->name, 'city' => $venue->city],
+            'venue' => ['id' => $venue->id, 'name' => $venueName, 'city' => $venue->city],
         ]);
     }
 
@@ -4189,20 +4195,33 @@ class LeisureController extends BaseController
         foreach ($periods as $key => $day) {
             // Azi cache scurt (60s), istorice cache lung 24h (imutabile)
             $ttl = $key === 'today' ? 60 : 86400;
-            $cacheKey = "leisure_compare_v1_{$eventModel->id}_{$key}_" . $day->format('Y-m-d');
-            $result[$key] = Cache::remember($cacheKey, $ttl, function () use ($eventModel, $day, $tz) {
-                return $this->buildDaySnapshot($eventModel->id, $day, $tz);
-            });
+            $cacheKey = "leisure_compare_v2_{$eventModel->id}_{$key}_" . $day->format('Y-m-d');
+            try {
+                $result[$key] = Cache::remember($cacheKey, $ttl, function () use ($eventModel, $day, $tz) {
+                    return $this->buildDaySnapshot($eventModel->id, $day, $tz);
+                });
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[LeisureCompare] snapshot failed', [
+                    'key' => $key, 'date' => $day->format('Y-m-d'), 'error' => $e->getMessage(),
+                    'file' => $e->getFile(), 'line' => $e->getLine(),
+                ]);
+                // Fallback safe: zero-uri, ca sa nu picam tot endpointul dintr-o zi problematica
+                $result[$key] = [
+                    'date' => $day->format('Y-m-d'),
+                    'revenue' => 0.0, 'orders' => 0, 'tickets_sold' => 0, 'checkins' => 0,
+                    'error' => true,
+                ];
+            }
         }
 
         // Delta computed vs today pentru fiecare cheie (pentru UI convenienta)
         $t = $result['today'];
         foreach (['yesterday', 'last_week', 'last_month', 'last_year'] as $k) {
             $result[$k]['delta_vs_today'] = [
-                'revenue' => $this->pctDelta($t['revenue'], $result[$k]['revenue']),
-                'orders' => $this->pctDelta($t['orders'], $result[$k]['orders']),
-                'tickets_sold' => $this->pctDelta($t['tickets_sold'], $result[$k]['tickets_sold']),
-                'checkins' => $this->pctDelta($t['checkins'], $result[$k]['checkins']),
+                'revenue' => $this->pctDelta((float) $t['revenue'], (float) $result[$k]['revenue']),
+                'orders' => $this->pctDelta((int) $t['orders'], (int) $result[$k]['orders']),
+                'tickets_sold' => $this->pctDelta((int) $t['tickets_sold'], (int) $result[$k]['tickets_sold']),
+                'checkins' => $this->pctDelta((int) $t['checkins'], (int) $result[$k]['checkins']),
             ];
         }
 
