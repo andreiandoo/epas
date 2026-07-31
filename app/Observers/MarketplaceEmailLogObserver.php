@@ -26,8 +26,15 @@ class MarketplaceEmailLogObserver
             return;
         }
 
+        // A failed TRANSACTIONAL email (order confirmation, tickets, password
+        // reset, invoice…) means a real user is stuck — surface it as ERROR.
+        // A newsletter/marketing bounce is expected list hygiene → WARNING, so
+        // the genuinely urgent ones don't drown in normal bounce noise.
+        $isMarketing = str_starts_with((string) $log->template_slug, 'newsletter');
+        $level = $isMarketing ? 300 : 400;
+
         $this->recorder->record([
-            'level' => 400,
+            'level' => $level,
             'channel' => 'marketplace',
             'source' => 'marketplace_email_log',
             'message' => sprintf(
