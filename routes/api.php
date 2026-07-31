@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\DemoCheckoutController;
 use App\Http\Controllers\Api\TenantClient\LeisureController;
+use App\Http\Controllers\Api\TenantClient\OperatorController;
 use App\Http\Controllers\Api\TenantClient\SubscriptionController;
 use App\Http\Controllers\Api\TenantClient\CustomerAccountController as TenantAccountController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
@@ -142,6 +143,52 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->name('api.tenant-client-public.leisure.slots');
     Route::get('/leisure/rentals', [LeisureController::class, 'rentals'])
         ->name('api.tenant-client-public.leisure.rentals');
+
+    // Operator panel for a leisure tenant's OWN site (parc.tixello.ro/operator),
+    // the tenant-scoped counterpart of Ambilet's /organizator/leisure-*. Login is
+    // public and tenant-scoped; everything after it needs the Sanctum token it
+    // returns, and the tenant is derived from that token, never from a param.
+    Route::post('/operator/login', [OperatorController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('api.tenant-client-public.operator.login');
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/operator/me', [OperatorController::class, 'me'])
+            ->name('api.tenant-client-public.operator.me');
+        Route::post('/operator/logout', [OperatorController::class, 'logout'])
+            ->name('api.tenant-client-public.operator.logout');
+        Route::get('/operator/dashboard', [OperatorController::class, 'dashboard'])
+            ->name('api.tenant-client-public.operator.dashboard');
+
+        // Cashier shift — every POS sale is stamped with the open one.
+        Route::get('/operator/cashier', [OperatorController::class, 'cashierCurrent'])
+            ->name('api.tenant-client-public.operator.cashier');
+        Route::post('/operator/cashier/open', [OperatorController::class, 'cashierOpen'])
+            ->name('api.tenant-client-public.operator.cashier.open');
+        Route::post('/operator/cashier/close', [OperatorController::class, 'cashierClose'])
+            ->name('api.tenant-client-public.operator.cashier.close');
+
+        // POS
+        Route::get('/operator/catalog', [OperatorController::class, 'catalog'])
+            ->name('api.tenant-client-public.operator.catalog');
+        Route::post('/operator/sale', [OperatorController::class, 'sale'])
+            ->middleware('throttle:120,1')
+            ->name('api.tenant-client-public.operator.sale');
+
+        // Check-in
+        Route::post('/operator/scan', [OperatorController::class, 'scan'])
+            ->middleware('throttle:600,1')
+            ->name('api.tenant-client-public.operator.scan');
+
+        // Rentals
+        Route::get('/operator/rentals', [OperatorController::class, 'rentals'])
+            ->name('api.tenant-client-public.operator.rentals');
+        Route::post('/operator/rentals/start', [OperatorController::class, 'rentalStart'])
+            ->name('api.tenant-client-public.operator.rentals.start');
+        Route::post('/operator/rentals/{rental}/end', [OperatorController::class, 'rentalEnd'])
+            ->whereNumber('rental')
+            ->name('api.tenant-client-public.operator.rentals.end');
+    });
 
     // Sold puncte pentru skin-ul demo (auth via CustomerToken) — path distinct
     // ca să nu intre în conflict cu /gamification/balance (api_token) din grupul SPA.
