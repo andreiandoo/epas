@@ -2225,13 +2225,22 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.services.orders');
         Route::post('/services/orders', [OrganizerServiceOrderController::class, 'store'])
             ->name('api.marketplace-client.organizer.services.orders.store');
+        // Alias so /services/orders/stats resolves to stats() instead of being
+        // captured by the {uuid} route (which fed "stats" into a Postgres uuid
+        // cast → 22P02 500). Must stay BEFORE the {uuid} routes.
+        Route::get('/services/orders/stats', [OrganizerServiceOrderController::class, 'stats'])
+            ->name('api.marketplace-client.organizer.services.orders.stats');
         Route::get('/services/orders/{uuid}', [OrganizerServiceOrderController::class, 'show'])
+            ->whereUuid('uuid')
             ->name('api.marketplace-client.organizer.services.orders.show');
         Route::post('/services/orders/{uuid}/cancel', [OrganizerServiceOrderController::class, 'cancel'])
+            ->whereUuid('uuid')
             ->name('api.marketplace-client.organizer.services.orders.cancel');
         Route::post('/services/orders/{uuid}/pay', [OrganizerServiceOrderController::class, 'pay'])
+            ->whereUuid('uuid')
             ->name('api.marketplace-client.organizer.services.orders.pay');
         Route::post('/services/orders/{uuid}/tracking-pixels', [OrganizerServiceOrderController::class, 'updateTrackingPixels'])
+            ->whereUuid('uuid')
             ->name('api.marketplace-client.organizer.services.orders.tracking-pixels');
 
         // Notifications

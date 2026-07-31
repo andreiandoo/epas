@@ -541,6 +541,15 @@ class EventActivityLog extends Page
             return 'actualizat';
         }
 
+        // Any other array value (malformed data, or a JSON field without a
+        // dedicated handler) — resolve to text/note HERE so the scalar `(string)`
+        // casts below (status/duration_mode/commission_mode matches) can never
+        // hit "Array to string conversion".
+        if (is_array($value)) {
+            $text = $this->extractTranslatableText($value);
+            return $text !== '' ? $this->limit($text) : 'actualizat';
+        }
+
         // Foreign keys we can name
         if ($field === 'marketplace_organizer_id') {
             return $this->resolveName('organizer', $value);

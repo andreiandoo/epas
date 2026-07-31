@@ -1632,6 +1632,9 @@ class MarketplaceEventsController extends BaseController
         $geoIpService = app(GeoIpService::class);
         $location = $geoIpService->getLocation($request->ip());
 
+        // Analytics tracking must never break the page-view request (e.g. a value
+        // too long for a column, or a transient DB error). Best-effort insert.
+        try {
         CoreCustomerEvent::create([
             'marketplace_client_id' => $client->id,
             'marketplace_event_id' => $event->id, // Use marketplace_event_id for analytics queries
@@ -1672,6 +1675,12 @@ class MarketplaceEventsController extends BaseController
             'os' => $this->detectOS($request),
             'occurred_at' => now(),
         ]);
+        } catch (\Throwable $e) {
+            Log::warning('trackView: analytics insert skipped', [
+                'event_id' => $event->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // INSTANT: Write to Redis for real-time analytics (globe, live visitors)
         try {
