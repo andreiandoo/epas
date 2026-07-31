@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\TenantClient;
 use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\Leisure\PhysicalResource;
 use App\Models\Leisure\PhysicalResourceType;
 use App\Models\TicketType;
 use App\Services\Leisure\CapacityAvailabilityService;
@@ -187,6 +188,16 @@ class LeisureController extends Controller
             ->orderBy('name')
             ->get();
 
+        // A venue can own units without ever defining a type row (the units
+        // carry a free-text `resource_type` instead). Synthesize the catalogue
+        // from those so the storefront is not empty for such a tenant.
+        if ($types->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => ['rentals' => $this->rentalsFromUnits($tenant->id, $pricing, $today)],
+            ])->header('Cache-Control', 'public, max-age=60');
+        }
+
         // Collect every linked ticket type once, then hand them out per resource.
         $linkedIds = $types->flatMap(fn ($t) => (array) ($t->linked_ticket_type_ids ?? []))
             ->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
@@ -222,6 +233,53 @@ class LeisureController extends Controller
 
         return response()->json(['success' => true, 'data' => ['rentals' => $data]])
             ->header('Cache-Control', 'public, max-age=60');
+    }
+
+    /**
+     * Fallback catalogue for venues that track units but no type rows: group
+     * PhysicalResource by its free-text `resource_type`, count what is
+     * available, and attach whatever ticket types those units are linked to.
+     */
+    private function rentalsFromUnits(int $tenantId, LeisurePricingResolver $pricing, CarbonImmutable $today): array
+    {
+        $units = PhysicalResource::where('tenant_id', $tenantId)
+            ->whereIn('status', [PhysicalResource::STATUS_AVAILABLE, PhysicalResource::STATUS_IN_USE])
+            ->get();
+        if ($units->isEmpty()) {
+            return [];
+        }
+
+        $linkedIds = $units->flatMap(fn ($u) => (array) ($u->linked_ticket_type_ids ?? []))
+            ->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $ticketTypes = $linkedIds
+            ? TicketType::whereIn('id', $linkedIds)->where('status', 'active')
+                ->with('event:id,tenant_id,slug')->get()
+                ->filter(fn ($tt) => $tt->event?->tenant_id === $tenantId)->keyBy('id')
+            : collect();
+
+        $out = [];
+        foreach ($units->groupBy('resource_type') as $type => $group) {
+            $options = collect($group)
+                ->flatMap(fn ($u) => (array) ($u->linked_ticket_type_ids ?? []))
+                ->unique()
+                ->map(fn ($id) => $ticketTypes->get((int) $id))
+                ->filter()
+                ->map(fn ($tt) => $this->formatBookable($tt, $tt->event, $pricing, $today))
+                ->values()->all();
+
+            $out[] = [
+                'id'          => 0,
+                'slug'        => \Illuminate\Support\Str::slug((string) $type),
+                'name'        => \Illuminate\Support\Str::title(str_replace(['_', '-'], ' ', (string) $type)),
+                'description' => null,
+                'icon'        => null,
+                'image_url'   => null,
+                'available'   => $group->where('status', PhysicalResource::STATUS_AVAILABLE)->count(),
+                'total'       => $group->count(),
+                'options'     => $options,
+            ];
+        }
+        return $out;
     }
 
     /**
