@@ -30,8 +30,8 @@ echo "== i18n audit =="
 php tools/i18n-audit.php || fail=1
 
 echo "== Render example pages =="
-for f in templates/teatru/pages/*.php templates/ambilet/pages/*.php; do
-  err=$(php "$f" 2>&1 >/dev/null)
+for f in templates/teatru/pages/*.php templates/ambilet/pages/*.php templates/parc/pages/*.php; do
+  err=$(KIT_SITE="$(basename "$(dirname "$(dirname "$f")")")" php "$f" 2>&1 >/dev/null)
   [ -n "$err" ] && { echo "  RENDER FAIL $f: $err"; fail=1; }
 done
 echo "  done"

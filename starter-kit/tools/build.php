@@ -40,6 +40,14 @@ if (is_array($siteCfg) && !getenv('KIT_ALLOW_UNSAFE')) {
     if (!empty($siteCfg['debug']))          $bad[] = "debug is on";
     if (!empty($siteCfg['trust_api_html'])) $bad[] = "trust_api_html is on (skips XSS sanitizer)";
     if (strpos((string)($siteCfg['api_key'] ?? ''), 'mpc_TODO') !== false) $bad[] = "api_key is the placeholder";
+    // Credentials the site cannot fetch a single row without.
+    $profile = $siteCfg['profile'] ?? (isset($siteCfg['kind']) ? 'tenant' : null);
+    if ($profile !== 'marketplace' && empty($siteCfg['tenant_id'])) {
+        $bad[] = "tenant_id is 0/empty (every API call would resolve no tenant)";
+    }
+    if ($profile === 'marketplace' && empty($siteCfg['api_key'])) {
+        $bad[] = "api_key is empty (every API call would 401)";
+    }
     if ($bad) {
         fwrite(STDERR, "REFUSING to build '$site' for production:\n  - " . implode("\n  - ", $bad)
             . "\nFix site.config.php, or set KIT_ALLOW_UNSAFE=1 for a deliberate dev build.\n");
