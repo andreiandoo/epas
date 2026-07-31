@@ -17,7 +17,7 @@ return [
     'kind'      => 'leisure',
     'api_base'  => 'https://core.tixello.com/api',
     'core_url'  => 'https://core.tixello.com',
-    'tenant_id' => 0,   // TODO: paste the id printed by NordvaleParcSeeder
+    'tenant_id' => 36,
 
     'site_name' => 'Nordvale',
     'site_city' => 'ZĂRNEȘTI',
