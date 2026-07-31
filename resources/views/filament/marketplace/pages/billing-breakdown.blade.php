@@ -1,4 +1,10 @@
 <x-filament-panels::page>
+    {{-- TEMP DEBUG — remove once month nav is confirmed --}}
+    <div style="padding:8px;margin-bottom:8px;background:#fee2e2;border:1px solid #ef4444;font-size:12px;font-family:monospace;color:#7f1d1d">
+        DEBUG → url_month=<b>{{ request()->query('month') ?? 'NULL' }}</b>
+        | this-&gt;month=<b>{{ $this->month }}</b>
+        | fullUrl={{ request()->fullUrl() }}
+    </div>
     @if(!$marketplace)
         <div class="p-6 text-center border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
             <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found.</p>
