@@ -19,7 +19,8 @@ Merged at boot: `defaults ← kind ← site` (deep-merge for `terms`/`features`)
   seo/head-scripts), `adapters/{tenant,marketplace}`.
 - `kit/components/` — 31 pure partials (data in → HTML out). Catalog: `docs/COMPONENTS.md`.
 - `kit/pagesets/` — generic, kind-aware full pages the generator instantiates.
-- `kit/layouts/` — `public`, `account` (auth-gated).
+- `kit/layouts/` — `public`, `account` (customer, auth-gated), `operator`
+  (venue staff, token-gated — a separate identity from the customer session).
 - `kit/kinds/` — one manifest per tenant kind (terms, features, menu, pages).
 - `kit/tokens/tokens.css` — the design-token contract + all `.kit-*` base styles.
 - `kit/js/kit.js` (+ vendored `vendor/alpine.min.js`) — client runtime (cart,

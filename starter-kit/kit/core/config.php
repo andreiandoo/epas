@@ -50,6 +50,7 @@ final class Kit {
             'trust_api_html'     => false,  // if true, API/CMS HTML is output raw (skip sanitizer) — only for fully-trusted content
             'cart_key'           => 'kit_cart',   // localStorage key for the cart
             'auth_key'           => 'kit_auth',   // localStorage key for {token,user}
+            'operator_key'       => 'kit_operator', // localStorage key for the venue-staff session
             'proxy_url'          => '/api/proxy.php',
             'fixtures'           => null,
             'tokens_href'        => '/theme/tokens.css',

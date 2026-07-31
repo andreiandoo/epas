@@ -212,7 +212,11 @@
     Object.keys(params || {}).forEach(function (k) { url += '&' + k + '=' + encodeURIComponent(params[k]); });
     if (CFG.locale && !(params && params.locale)) url += '&locale=' + encodeURIComponent(CFG.locale);
     var headers = { 'Accept': 'application/json' };
-    var tok = window.KitAuth && window.KitAuth.token && window.KitAuth.token();
+    // opts.token overrides the customer token — the operator area carries its
+    // own identity and must never ride on a visitor's session, or vice versa.
+    var tok = opts.token !== undefined
+      ? opts.token
+      : (window.KitAuth && window.KitAuth.token && window.KitAuth.token());
     if (tok) headers['Authorization'] = 'Bearer ' + tok;
     if (opts.body) headers['Content-Type'] = 'application/json';
     return fetch(url, {
@@ -223,6 +227,78 @@
     }).then(function (r) { return r.json(); });
   }
   window.KitProxy = proxy;
+
+  /* ---- operator area ----------------------------------------------------
+     Venue staff working the counter, on the venue's OWN site. Deliberately a
+     separate identity from the customer session: its own localStorage key and
+     its own token, so signing a visitor in or out never touches the till.
+     Backed by /tenant-client/operator/* via the op-* proxy actions. */
+  var OPKEY = CFG.operatorKey || 'kit_operator';
+  var Operator = {
+    get: function () { try { return JSON.parse(localStorage.getItem(OPKEY)) || null; } catch (e) { return null; } },
+    set: function (b) { localStorage.setItem(OPKEY, JSON.stringify(b)); },
+    clear: function () { localStorage.removeItem(OPKEY); },
+    token: function () { var a = this.get(); return (a && a.token) || null; },
+    profile: function () { var a = this.get(); return (a && a.operator) || null; },
+    can: function (what) { var p = this.profile(); return !!(p && p.can && p.can[what]); },
+    /** Every operator call goes through here so the token is never forgotten. */
+    api: function (action, params, opts) {
+      opts = Object.assign({}, opts || {}, { token: Operator.token() });
+      return proxy(action, params, opts);
+    }
+  };
+  window.KitOperator = Operator;
+
+  /** Login screen. On success stores {token, operator} and enters the panel. */
+  window.kitOperatorLogin = function (homeUrl) {
+    return {
+      email: '', password: '', busy: false, error: '',
+      async submit() {
+        if (this.busy) return;
+        this.error = ''; this.busy = true;
+        try {
+          var r = await proxy('op-login', {}, { method: 'POST', token: null,
+            body: { email: this.email, password: this.password } });
+          var d = (r && r.data) || {};
+          if (d.token) { Operator.set({ token: d.token, operator: d.operator || {} });
+            window.location.href = homeUrl || '/operator'; return; }
+          this.error = (r && r.error) || 'Date de autentificare incorecte.';
+        } catch (e) { this.error = 'Eroare de conexiune.'; }
+        finally { this.busy = false; }
+      }
+    };
+  };
+
+  /**
+   * Shell for every operator page: gates on a token, re-validates it against
+   * the server (a token deleted server-side must not leave a usable panel), and
+   * exposes the capability flags the nav hides items with.
+   */
+  window.kitOperatorShell = function (loginUrl, required) {
+    return {
+      ready: false, op: null,
+      async init() {
+        if (!Operator.token()) { window.location.href = loginUrl || '/operator/login'; return; }
+        try {
+          var r = await Operator.api('op-me');
+          if (!r || r.success === false || !r.data) throw new Error('unauthenticated');
+          this.op = r.data;
+          Operator.set({ token: Operator.token(), operator: r.data });
+        } catch (e) {
+          Operator.clear(); window.location.href = loginUrl || '/operator/login'; return;
+        }
+        if (required && !(this.op.can && this.op.can[required])) {
+          this.denied = true; this.ready = true; return;
+        }
+        this.ready = true;
+      },
+      denied: false,
+      logout() {
+        Operator.api('op-logout', {}, { method: 'POST' })
+          .finally(function () { Operator.clear(); window.location.href = loginUrl || '/operator/login'; });
+      }
+    };
+  };
 
   /* ---- vanilla: seat-map hydration with LIVE holds ---------------------
      Contract with /api/public (forwarded by the site proxy). Verified against

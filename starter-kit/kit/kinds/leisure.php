@@ -40,5 +40,23 @@ return [
         'cart'       => ['set' => 'cart'],
         'checkout'   => ['set' => 'checkout'],
         '404'        => ['set' => '404'],
+
+        // Operator panel — venue staff work on the venue's OWN site, never in
+        // the platform admin. Auth-gated on the client; the API is scoped by
+        // the operator's token, so these pages are safe to ship publicly.
+        'operator-login'    => ['set' => 'operator-login'],
+        'operator-index'    => ['set' => 'operator-dashboard'],
+        'operator-pos'      => ['set' => 'operator-pos'],
+        'operator-checkin'  => ['set' => 'operator-checkin'],
+        'operator-rentals'  => ['set' => 'operator-rentals'],
+    ],
+
+    // Clean URLs for the operator area (the generator maps page => route).
+    'routes_extra' => [
+        '/operator'             => 'operator-index',
+        '/operator/login'       => 'operator-login',
+        '/operator/pos'         => 'operator-pos',
+        '/operator/checkin'     => 'operator-checkin',
+        '/operator/inchirieri'  => 'operator-rentals',
     ],
 ];

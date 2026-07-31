@@ -184,6 +184,35 @@ Trei lucruri de reținut:
 - **Statusurile zilei** sunt `available | limited | sold_out | closed |
   unavailable`. `closed` ≠ `sold_out`: prima înseamnă „în afara programului".
 
+### Panoul de operator (kind `leisure`)
+
+Personalul locației lucrează pe site-ul locației, nu în adminul platformei:
+
+```
+/operator/login       autentificare cu email+parolă → token Sanctum propriu
+/operator             panou: încasări, comenzi, bilete scanate, echipamente afară
+/operator/pos         casa: catalog + coș + numerar/card + bon
+/operator/checkin     scanare la poartă
+/operator/inchirieri  predare/primire echipament, cu depășire calculată pe server
+```
+
+Identitatea operatorului e **separată** de sesiunea clientului: alt token, altă
+cheie de localStorage (`kit_operator`), alt layout. Autentificarea unui vizitator
+nu atinge casa și invers. `KitOperator.api()` trimite tokenul de operator;
+`KitProxy` normal trimite tokenul de client.
+
+Meniul se filtrează după `leisure_role` folosind flag-urile `can` întoarse de
+`/tenant-client/operator/me` — un casier nu vede check-in-ul. Layout-ul
+revalidează tokenul la fiecare pagină, deci un token revocat pe server nu lasă
+o casă utilizabilă deschisă.
+
+Acțiuni proxy: `op-login` · `op-me` · `op-logout` · `op-dashboard` ·
+`op-cashier{,-open,-close}` · `op-catalog` · `op-sale` · `op-scan` ·
+`op-rentals` · `op-rental-start` · `op-rental-end`.
+
+Vânzarea la casă cere o tură deschisă — tura e baza reconcilierii de la
+închidere, iar fiecare comandă e ștampilată cu ea.
+
 ## 6. Cum adaugi un kind nou
 
 1. `kit/kinds/<nume>.php` cu manifestul (profile, label, terms, features, menu,

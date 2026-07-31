@@ -110,6 +110,12 @@ if ($kind) {
         }
     }
 
+    // A kind may declare clean URLs of its own — the operator panel's pages are
+    // not reachable from the public menu, so they cannot be derived from it.
+    foreach (($manifest['routes_extra'] ?? []) as $route => $pname) {
+        $extraExact[$route] = $pname;
+    }
+
     // Error pages (all kinds). 404 comes from the kind's own pageset.
     foreach ([403, 500, 503] as $code) {
         $pages[(string)$code] = ['set' => 'error', 'vars' => ['code' => $code]];
