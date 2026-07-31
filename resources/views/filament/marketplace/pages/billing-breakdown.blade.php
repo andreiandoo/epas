@@ -8,13 +8,16 @@
 
         <!-- Month Navigation -->
         <div class="flex items-center justify-between p-4 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <a href="{{ $d['prev_url'] }}" wire:navigate class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            {{-- Plain full-page links (NOT wire:navigate): SPA navigation re-runs
+                 the panel's inline scripts which redeclare `const EP_PANELS` and
+                 throw "already declared", aborting the navigation. --}}
+            <a href="{{ $d['prev_url'] }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 <x-heroicon-o-chevron-left class="w-4 h-4" />
                 Luna anterioară
             </a>
             <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $d['month_label'] }}</h2>
             @if(!$d['is_current_month'] && $d['next_url'])
-            <a href="{{ $d['next_url'] }}" wire:navigate class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <a href="{{ $d['next_url'] }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 Luna următoare
                 <x-heroicon-o-chevron-right class="w-4 h-4" />
             </a>
