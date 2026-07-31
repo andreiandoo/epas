@@ -79,7 +79,12 @@
     // so a GA zone can carry ticket types without touching seat inventory/checkout.
     $gaSections = collect();
     $gaAssignments = []; // sectionId => [ticketTypeId, ...]
-    if ($layout) {
+    // Guard the whole GA feature on schema readiness so a code deploy that lands
+    // BEFORE `php artisan migrate` (missing max_capacity column / pivot table)
+    // degrades gracefully instead of 500-ing the event edit page.
+    $gaSchemaReady = \Illuminate\Support\Facades\Schema::hasColumn('seating_sections', 'max_capacity')
+        && \Illuminate\Support\Facades\Schema::hasTable('ticket_type_general_sections');
+    if ($layout && $gaSchemaReady) {
         $gaSections = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
             ->where('layout_id', $layout->id)
             ->where('section_type', 'general')
@@ -1079,6 +1084,9 @@
                     $gRadius = $ga->corner_radius ?? 8;
                     $gColor = $ga->color_hex ?: '#6366F1';
                     $gAssignedCount = count($gaAssignments[$ga->id] ?? []);
+                    $gaSubLabel = 'General Access';
+                    if ($ga->max_capacity) { $gaSubLabel .= ' · cap. ' . $ga->max_capacity; }
+                    $gaSubLabel .= ' · ' . $gAssignedCount . ' ' . ($gAssignedCount === 1 ? 'bilet' : 'bilete');
                 @endphp
                 <g @if($gRot != 0) transform="rotate({{ $gRot }} {{ $gcx }} {{ $gcy }})" @endif
                    style="cursor:pointer"
@@ -1089,7 +1097,7 @@
                     <text x="{{ $gcx }}" y="{{ $gcy - 2 }}" text-anchor="middle" font-size="14" font-weight="700"
                           fill="{{ $gColor }}" class="select-none">{{ $ga->name }}</text>
                     <text x="{{ $gcx }}" y="{{ $gcy + 16 }}" text-anchor="middle" font-size="10" font-weight="500"
-                          fill="#6b7280" class="select-none">General Access@if($ga->max_capacity) · cap. {{ $ga->max_capacity }}@endif · {{ $gAssignedCount }} {{ $gAssignedCount === 1 ? 'bilet' : 'bilete' }}</text>
+                          fill="#6b7280" class="select-none">{{ $gaSubLabel }}</text>
                 </g>
             @endforeach
 
