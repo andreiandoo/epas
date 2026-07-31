@@ -58,3 +58,4 @@ RedirectMatch 403 ^/includes/
 RedirectMatch 403 ^/pages/
 RedirectMatch 403 ^/kit/(core|components|layouts|pagesets|kinds|tokens|deploy)/
 RedirectMatch 403 ^/kit/proxy\.php$
+RedirectMatch 403 ^/nginx\.conf$

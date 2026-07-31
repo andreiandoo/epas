@@ -75,6 +75,11 @@ file_put_contents("$out/theme/theme.css",  css_min((string)file_get_contents("$s
 copy("$root/kit/deploy/index.php", "$out/index.php");
 copy("$root/kit/deploy/htaccess",  "$out/.htaccess");
 copy("$root/kit/deploy/_webhook-deploy.php", "$out/_webhook-deploy.php");
+// Pure-PHP puller for hosts with no SSH and no exec() — it ships inside the
+// build so that, once uploaded by hand the first time, it updates itself.
+copy("$root/kit/deploy/deploy.php", "$out/deploy.php");
+// nginx counterpart of .htaccess: reference only, never auto-applied.
+copy("$root/kit/deploy/nginx.conf", "$out/nginx.conf");
 
 // 5) api proxy shim
 mkdir("$out/api", 0775, true);
