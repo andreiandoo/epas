@@ -4153,13 +4153,24 @@ class LeisureController extends BaseController
         // 2 build-uri separate: rate/mode pot diferi intre online si POS.
         $onlineBd = $svc->build($eventModel, $from, $to, excludePos: true, dateColumn: 'paid_at');
         $posBd    = $svc->build($eventModel, $from, $to, onlyPos: true,   dateColumn: 'paid_at');
+
+        // Salvez per_type ca [gross, commission] pt fiecare canal. Atribuirea per
+        // bilet se face PROPORTIONAL cu pretul (nu media commission_per_ticket din
+        // service — aceea distribuie porTia si peste componentele pachet / bonusuri
+        // ghid / invitatii cu pret 0, gresit).
         $commOnlineByType = [];
         foreach ($onlineBd['per_type'] ?? [] as $row) {
-            $commOnlineByType[(int) $row['ticket_type_id']] = (float) ($row['commission_per_ticket'] ?? 0);
+            $commOnlineByType[(int) $row['ticket_type_id']] = [
+                'gross' => (float) ($row['gross'] ?? 0),
+                'commission' => (float) ($row['commission_amount'] ?? 0),
+            ];
         }
         $commPosByType = [];
         foreach ($posBd['per_type'] ?? [] as $row) {
-            $commPosByType[(int) $row['ticket_type_id']] = (float) ($row['commission_per_ticket'] ?? 0);
+            $commPosByType[(int) $row['ticket_type_id']] = [
+                'gross' => (float) ($row['gross'] ?? 0),
+                'commission' => (float) ($row['commission_amount'] ?? 0),
+            ];
         }
 
         // Orders in interval (toate sursele + toate statusurile relevante ca CSV
@@ -4225,13 +4236,24 @@ class LeisureController extends BaseController
                     }
                     $ttId = (int) ($t->ticket_type_id ?? 0);
                     $price = (float) ($t->price ?? 0);
-                    // Commission per ticket: lookup din per_type[ttId] al canalului
-                    // corect. Fallback la 0 daca tipul nu apare (bilete pachet cu
-                    // pret 0 nu contribuie la comision).
-                    $comm = $isPos
-                        ? (float) ($commPosByType[$ttId] ?? 0)
-                        : (float) ($commOnlineByType[$ttId] ?? 0);
-                    $net = $price - $comm;
+                    // Comision per bilet: PROPORTIONAL cu pretul in cadrul tipului.
+                    // Bilete cu pret 0 (componenta pachet from_package, bonus ghid,
+                    // invitatii) primesc 0 - umbrella pachet plateste comisionul intreg.
+                    // Bilete cancelled/refunded sunt EXCLUSE din SalesBreakdownService,
+                    // deci ele nu vor gasi tipul in per_type -> primesc 0 automat.
+                    $tStatusExcluded = in_array($t->status, ['cancelled', 'refunded'], true);
+                    if ($price <= 0 || $tStatusExcluded) {
+                        $comm = 0.0;
+                    } else {
+                        $typeStats = $isPos ? ($commPosByType[$ttId] ?? null) : ($commOnlineByType[$ttId] ?? null);
+                        $typeGross = (float) ($typeStats['gross'] ?? 0);
+                        $typeComm  = (float) ($typeStats['commission'] ?? 0);
+                        // Ratio comision/gross al tipului × pretul biletului. Suma pe
+                        // toate biletele cu pret > 0 dintr-un tip = commission_amount
+                        // (pt ca gross include exact aceleasi bilete).
+                        $comm = $typeGross > 0 ? round($price * $typeComm / $typeGross, 2) : 0.0;
+                    }
+                    $net = round($price - $comm, 2);
                     $checkedRo = $t->checked_in_at?->copy()->setTimezone('Europe/Bucharest');
                     $dtValid = $checkedRo ? $checkedRo->format('d.m.Y H:i:s') : '';
 
