@@ -3757,3 +3757,48 @@ Route::prefix('leisure')->middleware(['throttle:60,1'])->group(function () {
         [App\Http\Controllers\Api\Leisure\AvailabilityController::class, 'slots'])
         ->name('api.leisure.availability.slots');
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tenant mobile-app API (Tixello Mobile — tenant white-label management).
+// Auth: Sanctum token on a tenant-staff User + `tenant.app.auth` which
+// resolves the Tenant and gates actions by TenantTeamMember permissions.
+// Every controller scopes queries by tenant_id (marketplace-independent).
+// ─────────────────────────────────────────────────────────────────────────
+Route::prefix('tenant-app')->group(function () {
+    // Public
+    Route::post('/login', [\App\Http\Controllers\Api\TenantApp\AuthController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('api.tenant-app.login');
+
+    // Protected
+    Route::middleware(['auth:sanctum', 'tenant.app.auth', 'throttle:120,1'])->group(function () {
+        Route::get('/me', [\App\Http\Controllers\Api\TenantApp\AuthController::class, 'me'])
+            ->name('api.tenant-app.me');
+        Route::post('/logout', [\App\Http\Controllers\Api\TenantApp\AuthController::class, 'logout'])
+            ->name('api.tenant-app.logout');
+
+        Route::get('/dashboard', [\App\Http\Controllers\Api\TenantApp\DashboardController::class, 'index'])
+            ->name('api.tenant-app.dashboard');
+
+        Route::get('/events', [\App\Http\Controllers\Api\TenantApp\EventsController::class, 'index'])
+            ->name('api.tenant-app.events');
+        Route::get('/events/{event}', [\App\Http\Controllers\Api\TenantApp\EventsController::class, 'show'])
+            ->whereNumber('event')->name('api.tenant-app.events.show');
+        Route::get('/events/{event}/statistics', [\App\Http\Controllers\Api\TenantApp\EventsController::class, 'statistics'])
+            ->whereNumber('event')->name('api.tenant-app.events.statistics');
+
+        Route::get('/orders', [\App\Http\Controllers\Api\TenantApp\OrdersController::class, 'index'])
+            ->name('api.tenant-app.orders');
+        Route::get('/orders/{order}', [\App\Http\Controllers\Api\TenantApp\OrdersController::class, 'show'])
+            ->whereNumber('order')->name('api.tenant-app.orders.show');
+
+        // Check-in / validation (tenant-scoped over the shared Ticket model).
+        Route::post('/participants/checkin', [\App\Http\Controllers\Api\TenantApp\CheckInController::class, 'byCode'])
+            ->name('api.tenant-app.checkin');
+        Route::post('/events/{event}/check-in/{barcode}', [\App\Http\Controllers\Api\TenantApp\CheckInController::class, 'checkIn'])
+            ->whereNumber('event')->name('api.tenant-app.events.check-in');
+        Route::delete('/events/{event}/check-in/{barcode}', [\App\Http\Controllers\Api\TenantApp\CheckInController::class, 'undo'])
+            ->whereNumber('event')->name('api.tenant-app.events.check-in.undo');
+    });
+});
