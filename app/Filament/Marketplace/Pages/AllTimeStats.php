@@ -63,10 +63,11 @@ class AllTimeStats extends Page
             1800,
             fn () => $svc->cards($marketplaceId, $marketplace)
         );
+        // Breakdown reconciles to the cards (imported + tixello == card total).
         $breakdown = Cache::remember(
-            "mp_alltime_breakdown_{$marketplaceId}",
+            "mp_alltime_breakdown_v2_{$marketplaceId}",
             1800,
-            fn () => $svc->breakdown($marketplaceId)
+            fn () => $svc->breakdown($marketplaceId, $stats)
         );
 
         return [

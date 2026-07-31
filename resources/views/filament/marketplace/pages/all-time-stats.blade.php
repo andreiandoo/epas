@@ -166,15 +166,14 @@
 
         <!-- Legacy (importat) vs Tixello breakdown -->
         @php
-            $imp = $breakdown['imported'] ?? ['orders'=>0,'paid_orders'=>0,'revenue'=>0,'commission'=>0,'tickets'=>0,'customers'=>0];
-            $tix = $breakdown['tixello'] ?? ['orders'=>0,'paid_orders'=>0,'revenue'=>0,'commission'=>0,'tickets'=>0,'customers'=>0];
+            $imp = $breakdown['imported'] ?? [];
+            $tix = $breakdown['tixello'] ?? [];
+            $tot = $breakdown['total'] ?? [];
             $rows = [
-                ['Comenzi (total)', number_format($imp['orders']), number_format($tix['orders']), number_format($imp['orders'] + $tix['orders'])],
-                ['Comenzi plătite', number_format($imp['paid_orders']), number_format($tix['paid_orders']), number_format($imp['paid_orders'] + $tix['paid_orders'])],
-                ['Bilete vândute', number_format($imp['tickets']), number_format($tix['tickets']), number_format($imp['tickets'] + $tix['tickets'])],
-                ['Clienți', number_format($imp['customers']), number_format($tix['customers']), number_format($imp['customers'] + $tix['customers'])],
-                ['Încasări ('.$currency.')', number_format($imp['revenue'], 2), number_format($tix['revenue'], 2), number_format($imp['revenue'] + $tix['revenue'], 2)],
-                ['Comisioane ('.$currency.')', number_format($imp['commission'], 2), number_format($tix['commission'], 2), number_format($imp['commission'] + $tix['commission'], 2)],
+                ['Comenzi', number_format($imp['orders'] ?? 0), number_format($tix['orders'] ?? 0), number_format($tot['orders'] ?? 0)],
+                ['Bilete', number_format($imp['tickets'] ?? 0), number_format($tix['tickets'] ?? 0), number_format($tot['tickets'] ?? 0)],
+                ['Clienți', number_format($imp['customers'] ?? 0), number_format($tix['customers'] ?? 0), number_format($tot['customers'] ?? 0)],
+                ['Încasări ('.$currency.')', number_format($imp['revenue'] ?? 0, 2), number_format($tix['revenue'] ?? 0, 2), number_format($tot['revenue'] ?? 0, 2)],
             ];
         @endphp
         <div class="mb-5">
@@ -183,8 +182,9 @@
                 Importat (legacy) vs Procesat prin Tixello
             </h3>
             <p class="mb-3 text-xs text-gray-400 dark:text-gray-500">
-                „Importat” = comenzi migrate din sistemul anterior (surse <code>external_import</code> / <code>legacy_import</code>).
-                „Tixello” = tot ce a fost procesat prin platformă. Datele de test sunt excluse.
+                Coloana <strong>Total</strong> = exact cifrele din cardurile de mai sus (Importat + Tixello = Total).
+                „Importat” = partea provenită din migrare (surse <code>external_import</code> / <code>legacy_import</code>);
+                „Procesat prin Tixello” = restul (Total − Importat). Notă: la Încasări, importul e doar cel legacy — importurile externe nu sunt contorizate în încasări (nici în carduri).
             </p>
             <div class="overflow-x-auto bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                 <table class="min-w-full text-sm">

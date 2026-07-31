@@ -276,14 +276,16 @@
         </div>
 
         <!-- Derivare comision Tixello (transparent, breakdown pe buckets) -->
-        <div class="p-5 mb-5 bg-white border-2 border-rose-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-rose-800">
-            <div class="flex items-center gap-2 mb-1">
-                <x-heroicon-o-calculator class="w-5 h-5 text-rose-500" />
-                <h3 class="text-sm font-semibold tracking-wide text-rose-800 uppercase dark:text-rose-200">Derivare comision Tixello ({{ $d['commission_rate'] }}%)</h3>
+        <div class="pt-5 mb-5 overflow-hidden bg-white border-2 border-rose-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-rose-800">
+            <div class="px-5">
+                <div class="flex items-center gap-2 mb-1">
+                    <x-heroicon-o-calculator class="w-5 h-5 text-rose-500" />
+                    <h3 class="text-sm font-semibold tracking-wide text-rose-800 uppercase dark:text-rose-200">Derivare comision Tixello ({{ $d['commission_rate'] }}%)</h3>
+                </div>
+                <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
+                    Baza de calcul = suma valorilor de bilet (sold + returnat, incluse și cele returnate, per regula marketplace). Se aplică {{ $d['commission_rate'] }}% pe fiecare bucket și se însumează. Exclude: comenzi test, importuri externe și importuri legacy.
+                </p>
             </div>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
-                Baza de calcul = suma valorilor de bilet (sold + returnat, incluse și cele returnate, per regula marketplace). Se aplică {{ $d['commission_rate'] }}% pe fiecare bucket și se însumează. Exclude: comenzi test, importuri externe și importuri legacy.
-            </p>
 
             @php
                 $cb = $d['commission_by_bucket'];
@@ -329,10 +331,12 @@
         </div>
 
         <!-- Ticketing Breakdown per Event -->
-        <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="flex items-center gap-2 mb-4">
-                <x-heroicon-o-ticket class="w-5 h-5 text-indigo-500" />
-                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Comision ticketing per eveniment ({{ $d['commission_rate'] }}% din încasări)</h3>
+        <div class="pt-5 mb-5 overflow-hidden bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <div class="px-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <x-heroicon-o-ticket class="w-5 h-5 text-indigo-500" />
+                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Comision ticketing per eveniment ({{ $d['commission_rate'] }}% din încasări)</h3>
+                </div>
             </div>
 
             @if(count($d['events']) > 0)
@@ -374,7 +378,7 @@
                             <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300">{{ number_format($event['ticket_count']) }}</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ number_format($event['revenue'], 2) }} {{ $d['currency'] }}</td>
                             <td class="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ number_format($event['marketplace_commission'], 2) }} {{ $d['currency'] }}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($event['tixello_commission'], 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($event['tixello_commission'], 2) }} {{ $d['currency'] }}@if(($event['marketplace_commission'] ?? 0) != 0)<span class="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">({{ number_format($event['tixello_commission'] / $event['marketplace_commission'] * 100, 1) }}%)</span>@endif</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -391,7 +395,7 @@
                 </table>
             </div>
             @else
-            <p class="text-sm text-gray-400 dark:text-gray-500">Nicio comandă în această lună.</p>
+            <p class="px-5 pb-5 text-sm text-gray-400 dark:text-gray-500">Nicio comandă în această lună.</p>
             @endif
         </div>
 
@@ -460,25 +464,5 @@
         </div>
         @endforeach
 
-        <!-- Grand Total Footer -->
-        <div class="p-5 bg-white border-2 shadow-sm dark:bg-gray-800 rounded-xl border-rose-200 dark:border-rose-800">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Total de plată către Tixello</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ $d['month_label'] }}</p>
-                </div>
-                <p class="text-3xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($d['grand_total'], 2) }} <span class="text-lg">{{ $d['currency'] }}</span></p>
-            </div>
-            <div class="grid grid-cols-2 gap-4 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                <div>
-                    <p class="text-xs text-gray-500 uppercase dark:text-gray-400">Comision ticketing</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ number_format($d['ticketing_total'], 2) }} {{ $d['currency'] }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase dark:text-gray-400">Servicii extra</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ number_format($d['services_total'], 2) }} {{ $d['currency'] }}</p>
-                </div>
-            </div>
-        </div>
     @endif
 </x-filament-panels::page>

@@ -170,42 +170,36 @@ class AllTimeStatsService
     }
 
     /**
-     * Legacy-vs-Tixello breakdown of every headline metric:
-     *   - imported  = orders with source external_import / legacy_import
-     *   - tixello   = everything else (test data excluded)
-     * Returns ['imported' => [...], 'tixello' => [...]] with the same keys.
+     * Legacy-vs-Tixello breakdown that RECONCILES to the cards: for every
+     * metric, imported + tixello == the card total. "imported" is the portion
+     * coming from imported sources (external_import / legacy_import), computed
+     * with the SAME scope/filters as the matching card; "tixello" is the rest
+     * (card total − imported). Pass the already-computed cards() array.
+     *
+     * Returns ['imported'=>[...], 'tixello'=>[...], 'total'=>[...]] with keys
+     * orders / tickets / customers / revenue.
      */
-    public function breakdown(int $marketplaceId): array
+    public function breakdown(int $marketplaceId, array $cards): array
     {
         $imported = self::IMPORTED_SOURCES;
-        $impList = "'" . implode("','", $imported) . "'";
-        $paidClause = "status IN ('paid','confirmed','completed')";
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Orders + revenue + commission, split by bucket, in one pass.
-        $o = Order::where(fn ($q) => $this->scopeMarketplaceOrders($q, $marketplaceId))
-            ->whereNotIn('source', self::TEST_SOURCES)
-            ->selectRaw("SUM(CASE WHEN source IN ($impList) THEN 1 ELSE 0 END) as imp_orders")
-            ->selectRaw("SUM(CASE WHEN source NOT IN ($impList) THEN 1 ELSE 0 END) as tix_orders")
-            ->selectRaw("SUM(CASE WHEN source IN ($impList) AND $paidClause THEN 1 ELSE 0 END) as imp_paid")
-            ->selectRaw("SUM(CASE WHEN source NOT IN ($impList) AND $paidClause THEN 1 ELSE 0 END) as tix_paid")
-            ->selectRaw("SUM(CASE WHEN source IN ($impList) AND $paidClause THEN \"total\" ELSE 0 END) as imp_revenue")
-            ->selectRaw("SUM(CASE WHEN source NOT IN ($impList) AND $paidClause THEN \"total\" ELSE 0 END) as tix_revenue")
-            ->selectRaw("SUM(CASE WHEN source IN ($impList) AND $paidClause THEN COALESCE(commission_amount,0) ELSE 0 END) as imp_comm")
-            ->selectRaw("SUM(CASE WHEN source NOT IN ($impList) AND $paidClause THEN COALESCE(commission_amount,0) ELSE 0 END) as tix_comm")
-            ->first();
+        // Orders — same scope as the total_orders card (marketplace_client_id,
+        // all sources/statuses). Imported = orders from imported sources.
+        $impOrders = Order::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('source', $imported)
+            ->count();
 
-        // Tickets (valid/used) split by their order's source.
-        $t = Ticket::join('orders', 'orders.id', '=', 'tickets.order_id')
-            ->where('orders.marketplace_client_id', $marketplaceId)
-            ->whereIn('tickets.status', ['valid', 'used'])
-            ->whereNotIn('orders.source', self::TEST_SOURCES)
-            ->selectRaw("SUM(CASE WHEN orders.source IN ($impList) THEN 1 ELSE 0 END) as imp_tickets")
-            ->selectRaw("SUM(CASE WHEN orders.source NOT IN ($impList) THEN 1 ELSE 0 END) as tix_tickets")
-            ->first();
+        // Tickets — total_tickets_db counts every ticket; imported = tickets
+        // whose order came from an imported source.
+        $impTickets = Ticket::whereHas('order', fn ($q) => $q
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereIn('source', $imported))
+            ->count();
 
-        // Customers: imported = has an imported order but NO Tixello order;
-        // tixello = has at least one Tixello (non-imported, non-test) order.
-        $importedCustomers = DB::table('marketplace_customers as mc')
+        // Customers — imported-only: every order they have is from an imported
+        // source (so they exist purely because of the migration).
+        $impCustomers = DB::table('marketplace_customers as mc')
             ->where('mc.marketplace_client_id', $marketplaceId)
             ->whereExists(fn ($q) => $q->select(DB::raw(1))->from('orders')
                 ->whereColumn('orders.marketplace_customer_id', 'mc.id')
@@ -214,33 +208,40 @@ class AllTimeStatsService
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('orders')
                 ->whereColumn('orders.marketplace_customer_id', 'mc.id')
                 ->where('orders.marketplace_client_id', $marketplaceId)
-                ->whereNotIn('orders.source', array_merge($imported, self::TEST_SOURCES)))
+                ->whereNotIn('orders.source', $imported))
             ->count();
 
-        $tixelloCustomers = DB::table('marketplace_customers as mc')
-            ->where('mc.marketplace_client_id', $marketplaceId)
-            ->whereExists(fn ($q) => $q->select(DB::raw(1))->from('orders')
-                ->whereColumn('orders.marketplace_customer_id', 'mc.id')
-                ->where('orders.marketplace_client_id', $marketplaceId)
-                ->whereNotIn('orders.source', array_merge($imported, self::TEST_SOURCES)))
-            ->count();
+        // Revenue — the total_incasari card counts legacy_import but NOT
+        // external_import, so the imported slice inside that total is legacy
+        // only (external import revenue is deliberately not counted anywhere).
+        $impRevenue = (float) Order::where(fn ($q) => $this->scopeMarketplaceOrders($q, $marketplaceId))
+            ->where('source', 'legacy_import')
+            ->whereIn('status', $paidStatuses)
+            ->sum('total');
+
+        $totalOrders = (int) ($cards['total_orders'] ?? 0);
+        $totalTickets = (int) ($cards['total_tickets_db'] ?? 0);
+        $totalCustomers = (int) ($cards['total_customers'] ?? 0);
+        $totalRevenue = (float) ($cards['total_incasari'] ?? 0);
 
         return [
             'imported' => [
-                'orders' => (int) ($o->imp_orders ?? 0),
-                'paid_orders' => (int) ($o->imp_paid ?? 0),
-                'revenue' => (float) ($o->imp_revenue ?? 0),
-                'commission' => (float) ($o->imp_comm ?? 0),
-                'tickets' => (int) ($t->imp_tickets ?? 0),
-                'customers' => (int) $importedCustomers,
+                'orders' => $impOrders,
+                'tickets' => $impTickets,
+                'customers' => $impCustomers,
+                'revenue' => $impRevenue,
             ],
             'tixello' => [
-                'orders' => (int) ($o->tix_orders ?? 0),
-                'paid_orders' => (int) ($o->tix_paid ?? 0),
-                'revenue' => (float) ($o->tix_revenue ?? 0),
-                'commission' => (float) ($o->tix_comm ?? 0),
-                'tickets' => (int) ($t->tix_tickets ?? 0),
-                'customers' => (int) $tixelloCustomers,
+                'orders' => max(0, $totalOrders - $impOrders),
+                'tickets' => max(0, $totalTickets - $impTickets),
+                'customers' => max(0, $totalCustomers - $impCustomers),
+                'revenue' => $totalRevenue - $impRevenue,
+            ],
+            'total' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'customers' => $totalCustomers,
+                'revenue' => $totalRevenue,
             ],
         ];
     }
