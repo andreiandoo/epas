@@ -1908,6 +1908,18 @@ switch ($action) {
         $rawResponse = true; // download binar — nu json parse
         break;
 
+    case 'organizer.event.leisure.sales.range-csv':
+        // GET /organizer/events/{id}/leisure/sales/range-csv?from=YYYY-MM-DD&to=YYYY-MM-DD → CSV
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        if (isset($_GET['from'])) $q['from'] = $_GET['from'];
+        if (isset($_GET['to']))   $q['to']   = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/sales/range-csv' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // download binar
+        break;
+
     case 'organizer.event.leisure.scans':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
