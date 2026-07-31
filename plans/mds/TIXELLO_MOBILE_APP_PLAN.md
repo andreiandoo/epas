@@ -54,12 +54,32 @@ TIXELLO (core.tixello.com)
 - `admin_mobile` = Scanare **+** Vânzare.
 - Rolurile leisure (`rental_boats`, `validation_pontoon`, …) înlocuiesc Vânzare/Scanare cu ecranele lor specializate.
 
-### 1.2. Bară de sus (persistentă)
-Logo (branding context) · **Pastilă status** (Live / Offline / Se sincronizează — via Reverb) · buton **Refresh**.
+### 1.2. Header de aplicație (persistent — v2)
+Bară de sus prezentă pe **fiecare** ecran (din modelul template-urilor):
+- **Avatar organizator** (inițiale, colorat cu accentul contextului) — tap → deschide comutatorul de context.
+- **Nume + tip** (ex. „Teatrul Național · Cluj"), scurtat cu ellipsis.
+- **Buton comutare context** (switch) — pentru conturile cu mai multe entități.
+- **Clopoțel notificări** cu **badge** (număr necitite) sau punct roșu → deschide Centrul de notificări (ecran N, §J).
+- Pe ecranele operaționale (Scanare/Vânzare) header-ul se restrânge: buton înapoi + titlu + clopoțel; pastila **Live/Offline** (Reverb) apare lângă titlu.
 
-### 1.3. Selector eveniment / workspace
-- **Selector eveniment** sub topbar: interactiv pe Panou, read-only pe Scanare/Vânzare, ascuns pe Setări.
-- **Selector workspace** (organizator/tenant/venue) în „Mai multe" — pentru conturile cu acces la mai multe entități (`switch-organizer`, `available_organizers[]`).
+### 1.3. Accent per-context (branding)
+Fiecare tenant/organizator are un **accent** propriu (variabila `--ac`) care temează întreaga interfață (hero, KPI, butoane, badge-uri): organizator=teal, teatru=violet, venue=cyan, artist=turcoaz, agenție=mov, festival=pink. Comutarea de context schimbă accentul + logo + nume + navigația.
+
+### 1.4. Navigație pe tip de tenant (v2)
+Peste nucleul comun, tab-bar-ul de jos diferă după tipul de cont (din template-uri):
+
+| Tip cont | Tab bar |
+|---|---|
+| **Organizator** (marketplace) | Home · Evenimente · Vânzări · Scanare · Setări |
+| **Teatru** | Home · Abonamente · Vânzări · Scanare · Setări |
+| **Venue** | Home · Evenimente · **Live** (gate-uri) · Vânzări · Setări |
+| **Artist** | Home · Show-uri · Vânzări · **Fani** · Setări |
+| **Agenție** | Home · **Artiști** · Shows · **Contracte** · **Financiar** |
+| **Festival** | Home · Zile/Scene · Vânzări · Scanare · Setări |
+
+### 1.5. Selector eveniment / workspace
+- **Selector eveniment** pe Panou (interactiv), read-only pe Scanare/Vânzare.
+- **Comutator context** (organizator/tenant/venue) via avatar/switch — `switch-organizer`, `available_organizers[]`.
 
 ---
 
@@ -122,7 +142,7 @@ Logo (branding context) · **Pastilă status** (Live / Offline / Se sincronizeaz
 |---|---|---|
 | **Grid tipuri bilete** | Doar bilete de intrare (`is_entry_ticket`); preț, stoc, min/max | `GET /organizer/events/{event}` |
 | **Coș** | Cantități 1–20, subtotal | local |
-| **Selectare locuri** | Pentru evenimente cu locuri: hartă în **WebView** cu token semnat HMAC | `GET /organizer/events/{event}/seating-map`, `POST /organizer/seating/embed-token` |
+| **Selectare locuri (sub-ecran hartă)** | Sub-ecran dedicat (v2): **scenă** sus, **secțiuni** (parter/lojă/balcon), locuri cu stări **liber/selectat/vândut/VIP**, legendă, rezumat selecție (ex. „B2 · B3 · 500 lei") → confirmă. Randat în **WebView** cu token semnat HMAC; hold temporar pe locuri | `GET /organizer/events/{event}/seating-map`, `POST /organizer/seating/embed-token`, `POST /api/public/seats/{hold,release,confirm}` |
 | **Creare comandă** | `source=pos_app`; `tickets[]`, `seat_uids[]`, `customer{}` opțional, `locale` | `POST /orders` |
 | **Plată** | Bottom-sheet metodă: **Numerar** / **Card POS** / **Card NFC** (dacă `card_nfc_enabled`) / **Factură** (leisure B2B) | `POST /orders/{order}/pay`, `GET /orders/{order}/payment-status` |
 | **Finalizare POS** | `pos-complete` cu `auto_checkin` opțional (`checked_in_via='pos_app'`) | `POST /orders/{order}/pos-complete` |
@@ -183,8 +203,30 @@ Logo (branding context) · **Pastilă status** (Live / Offline / Se sincronizeaz
 
 ### I. Evenimente (admin / manager)
 - Listă & detaliu evenimente; creare/editare rapidă; submit pentru aprobare; upload imagini; goals & milestones.
+- **Detaliu eveniment cu taburi** (din template): Info · Bilete · Lineup · Invitații · Raport.
 - `GET/POST/PUT/DELETE /organizer/events`, `/events/{event}/submit`, `/cancel`, `/images`, goals/milestones.
 - *Notă:* CRUD-ul complex de eveniment poate rămâne pe web (deep-link din app); mobilul acoperă operațional (status, submit, imagini, obiective).
+
+### J. Centru de notificări (v2 — nou)
+Deschis din clopoțelul din header. Preia funcțiile pe care ambilet-app2 le avea în icoana de notificări.
+- **Feed** cu categorii + iconuri colorate + timestamp + stare necitit; „marchează tot citit".
+- **Filtre**: Toate · Vânzări · Operațional · Financiar · Sistem.
+- **Tipuri de notificări**: bilet nou vândut / comandă confirmată; capacitate &gt;80%; scan invalid / duplicat la poartă; aprobare (IGSU/ISU, eveniment); decont procesat / factură scadentă; invitație folosită; contract de semnat; actualizare app.
+- **Preferințe** (toggles, din template settings): bilet vândut, capacitate &gt;80%, scan invalid, decont, raport zilnic — plus canal (push/email).
+- **Real-time** via Reverb; **push** pe telefon (build nativ).
+- Endpoint-uri: feed derivat din `GET /organizer/dashboard/recent-orders` + evenimente Reverb (`order.confirmed`, scan-uri); preferințe în `PUT /organizer/settings`.
+
+### K. Ecrane specifice pe tip de tenant (v2 — din template-uri)
+Peste nucleul comun, fiecare tip de cont adaugă module proprii:
+
+| Tip | Ecrane / module proprii |
+|---|---|
+| **Teatru** | **Spectacole** (autor, regizor, sală, categorie), **Abonamente** (utilizare, reînnoire), **Săli configurate** + hartă locuri, **Taxe culturale** (timbru, TVA 5%, Card Cultural) |
+| **Venue** | **Live** (status gate-uri, ocupare pe zone, intrări recente în timp real), zone & capacitate, echipă acces dashboard |
+| **Artist** | **Fani** (top orașe, fideli, top cheltuieli, demografice, fidelitate), **Rider** (tehnic/hospitality/contract), Show-uri cu vânzări per oraș |
+| **Agenție** | **Artiști** (booking, comisioane per artist), **Contracte** (status, expirare), **Financiar** (fee-uri de plată către artiști, încasări) |
+| **Organizator** | Evenimente cu lineup + costuri producție, invitații, canal de vânzare (online/parteneri/ghișeu) |
+| **Festival** | Zile/scene, abonamente multi-zi, wristband/cashless |
 
 ---
 
@@ -220,14 +262,15 @@ Un singur strat de temă, cheiat pe context: logo + nume + culori + fonturi din 
 
 ---
 
-## 4. Design system (moștenit din `tixello-app/src/theme/colors.js`)
+## 4. Design system (v2 — modelul din template-uri)
 
-- **Temă întunecată**, mobile-first. Fundal `#0A0A0F`; suprafețe glass (`rgba(255,255,255,0.03)`).
-- **Accent primar:** violet `#8B5CF6` (secundar `#6366F1`).
-- **Semantice:** verde `#10B981` (succes/numerar), cyan `#06B6D4` (card/timp), ambră `#F59E0B` (avertisment/rată), roșu `#EF4444` (eroare/închide).
-- **Text:** alb + opacități (0.5 / 0.4 / 0.3).
-- Componente: carduri KPI, bare de progres, bottom-sheets, pastile status, quick-actions, toast, safe-area insets.
-- **PWA**: manifest standalone, portrait, service worker (stale-while-revalidate), iconuri 192/512 + maskable.
+- **Temă întunecată**, mobile-first. Fundal `#080c10`; suprafețe `#0e1318` / `#141c24`; borduri `rgba(255,255,255,.07–.18)`.
+- **Accent per-context** (`--ac`) care temează întreaga interfață: organizator `#00c896`, teatru `#9b60c8`, venue `#00e5ff`, artist `#1ddab4`, agenție `#9b7ff8`, festival `#f03e8f`. Comutarea contextului schimbă accentul + logo + nume + navigația.
+- **Semantice:** succes `#3ddb8a`, atenție `#f5a623`, eroare `#f04f4f`; plus tonuri pink `#f03e8f` / turcoaz `#1ddab4` / mov `#9b7ff8` pentru categorii.
+- **Text:** `#f0f4ff` + opacități (.5 / .28 / .16).
+- Componente: **header aplicație** (avatar + switch + clopoțel), hero GMV cu glow, KPI orizontale, alerte colorate, carduri eveniment cu progress, subtabs pe pastile, bottom-nav cu indicator-punct, bottom-sheets, toggles, **hartă locuri**, **feed notificări**, safe-area insets.
+- Tipografie: system UI (800/900 pe titluri, tabular-nums pe cifre); mono pentru coduri.
+- **PWA**: manifest standalone, portrait, service worker (stale-while-revalidate), iconuri 192/512 + maskable. Build nativ pentru push + NFC + print.
 
 ---
 

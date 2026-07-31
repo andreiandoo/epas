@@ -1,573 +1,605 @@
-<title>Tixello — Aplicație Mobilă · Design</title>
+<title>Tixello — Aplicație Mobilă · Design v2</title>
 <style>
   :root{
-    --bg:#0A0A0F; --bg-2:#0d0d13; --surface:#14141b; --surface-2:#1b1b24;
-    --glass:rgba(255,255,255,.03); --glass-2:rgba(255,255,255,.06);
-    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.12);
-    --txt:#fff; --txt-2:rgba(255,255,255,.55); --txt-3:rgba(255,255,255,.4); --txt-4:rgba(255,255,255,.28);
-    --violet:#8B5CF6; --violet-2:#6366F1; --violet-bg:rgba(139,92,246,.1); --violet-bd:rgba(139,92,246,.32);
-    --green:#10B981; --green-bg:rgba(16,185,129,.12); --green-bd:rgba(16,185,129,.3);
-    --cyan:#06B6D4;  --cyan-bg:rgba(6,182,212,.12);  --cyan-bd:rgba(6,182,212,.28);
-    --amber:#F59E0B; --amber-bg:rgba(245,158,11,.12); --amber-bd:rgba(245,158,11,.3);
-    --red:#EF4444;   --red-bg:rgba(239,68,68,.12);   --red-bd:rgba(239,68,68,.3);
+    --bg:#080c10; --panel:#0a1016; --sf:#0e1318; --sf2:#141c24;
+    --br:rgba(255,255,255,.07); --br2:rgba(255,255,255,.12); --br3:rgba(255,255,255,.18);
+    --tx:#f0f4ff; --mu:rgba(240,244,255,.5); --hi:rgba(240,244,255,.28); --faint:rgba(240,244,255,.16);
+    --gr:#3ddb8a; --am:#f5a623; --pk:#f03e8f; --tl:#1ddab4; --rd:#f04f4f; --pu:#9b7ff8;
+    /* default context accent — overridden per phone via inline --ac/--acb/--acbd */
+    --ac:#00c896; --acb:rgba(0,200,150,.12); --acbd:rgba(0,200,150,.30);
     --ui:"SF Pro Text",ui-sans-serif,-apple-system,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
     --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,monospace;
-    --r:18px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
   body{
     background:
-      radial-gradient(1100px 700px at 82% -8%, rgba(139,92,246,.16), transparent 60%),
-      radial-gradient(900px 640px at 6% 4%, rgba(99,102,241,.12), transparent 55%),
-      var(--bg);
-    color:var(--txt); font-family:var(--ui); line-height:1.5;
-    -webkit-font-smoothing:antialiased; letter-spacing:-.01em;
-    padding:clamp(20px,5vw,64px) clamp(16px,4vw,56px) 80px;
+      radial-gradient(1200px 720px at 84% -10%, rgba(0,200,150,.10), transparent 58%),
+      radial-gradient(900px 620px at 4% 3%, rgba(155,127,248,.10), transparent 55%),
+      #04070a;
+    color:var(--tx); font-family:var(--ui); line-height:1.5; letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased; padding:clamp(20px,5vw,60px) clamp(14px,4vw,52px) 80px;
   }
-  .wrap{max-width:1240px;margin:0 auto}
-  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--violet)}
-  h1{font-size:clamp(34px,6vw,60px);line-height:1.02;font-weight:800;letter-spacing:-.03em;text-wrap:balance;margin:14px 0 0}
-  .lede{color:var(--txt-2);font-size:clamp(15px,1.7vw,18px);max-width:60ch;margin-top:16px}
-  .wordmark{display:inline-flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.03em}
-  .wordmark .dot{width:12px;height:12px;border-radius:4px;background:linear-gradient(135deg,var(--violet),var(--violet-2));box-shadow:0 0 22px rgba(139,92,246,.65)}
-  .grad{background:linear-gradient(100deg,#fff 20%,#c9bdfb 55%,var(--violet) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .wrap{max-width:1320px;margin:0 auto}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--ac)}
+  h1{font-size:clamp(32px,5.6vw,56px);line-height:1.03;font-weight:900;letter-spacing:-.03em;text-wrap:balance;margin:14px 0 0}
+  .lede{color:var(--mu);font-size:clamp(15px,1.6vw,18px);max-width:64ch;margin-top:16px}
+  .wordmark{display:inline-flex;align-items:center;gap:9px;font-weight:900;letter-spacing:-.02em}
+  .logo-badge{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--ac),var(--tl));display:grid;place-items:center;box-shadow:0 0 20px rgba(0,200,150,.4)}
+  .grad{background:linear-gradient(100deg,#fff 30%,#8ff2d3 70%,var(--ac));-webkit-background-clip:text;background-clip:text;color:transparent}
+  code{font-family:var(--mono);font-size:.86em}
 
-  /* ---- section scaffolding ---- */
-  section{margin-top:clamp(48px,7vw,86px)}
-  .sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:26px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-  .sec-head h2{font-size:clamp(20px,3vw,27px);font-weight:700;letter-spacing:-.02em}
-  .sec-head p{color:var(--txt-3);font-size:14px;margin-left:auto;max-width:46ch}
+  section{margin-top:clamp(46px,6.5vw,84px)}
+  .sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:8px;padding-bottom:15px;border-bottom:1px solid var(--br)}
+  .sec-head h2{font-size:clamp(20px,3vw,28px);font-weight:800;letter-spacing:-.02em}
+  .sec-head .num{font-family:var(--mono);font-size:13px;color:var(--ac);font-weight:700}
+  .sec-head p{color:var(--hi);font-size:13.5px;margin-left:auto;max-width:52ch}
+  .sec-intro{color:var(--mu);font-size:14px;max-width:80ch;margin:16px 0 26px}
 
-  /* ---- tokens strip ---- */
-  .grid{display:grid;gap:16px}
-  .cols-3{grid-template-columns:repeat(3,1fr)}
-  .cols-2{grid-template-columns:repeat(2,1fr)}
-  @media(max-width:860px){.cols-3{grid-template-columns:1fr}.cols-2{grid-template-columns:1fr}}
-  .card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:20px}
-  .card h3{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-3);margin-bottom:16px}
-  .sw{display:flex;align-items:center;gap:12px;padding:9px 0}
-  .sw+.sw{border-top:1px solid var(--line)}
-  .chip{width:34px;height:34px;border-radius:10px;flex:none;border:1px solid rgba(255,255,255,.14)}
-  .sw b{font-size:13px;font-weight:600}
-  .sw code{font-family:var(--mono);font-size:11.5px;color:var(--txt-3);margin-left:auto}
-  .semrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-  .pill{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid}
-  .pill.v{color:var(--violet);background:var(--violet-bg);border-color:var(--violet-bd)}
-  .pill.g{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
-  .pill.c{color:var(--cyan);background:var(--cyan-bg);border-color:var(--cyan-bd)}
-  .pill.a{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
-  .pill.r{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
-  .typerow{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-top:1px solid var(--line)}
-  .typerow:first-of-type{border-top:0}
-  .typerow small{font-family:var(--mono);font-size:10.5px;color:var(--txt-4);letter-spacing:.08em}
+  /* callouts for the 3 new pieces */
+  .newgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:22px 0 4px}
+  .newc{background:var(--sf);border:1px solid var(--br2);border-radius:16px;padding:16px;position:relative;overflow:hidden}
+  .newc::before{content:"NOU";position:absolute;top:12px;right:12px;font-size:9px;font-weight:800;letter-spacing:.12em;color:var(--ac);background:var(--acb);border:1px solid var(--acbd);border-radius:6px;padding:2px 7px}
+  .newc .ni{width:36px;height:36px;border-radius:11px;background:var(--acb);border:1px solid var(--acbd);display:grid;place-items:center;color:var(--ac);margin-bottom:12px}
+  .newc h4{font-size:14px;font-weight:800}
+  .newc p{font-size:12px;color:var(--hi);margin-top:6px;line-height:1.5}
 
-  /* ---- device gallery ---- */
-  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:clamp(26px,3.2vw,40px);align-items:start}
-  .device-wrap{display:flex;flex-direction:column;gap:14px}
-  .dtag{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .dtag .n{font-size:15px;font-weight:700}
-  .dtag .role{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-3);border:1px solid var(--line-2);border-radius:999px;padding:3px 9px}
-  .dnote{font-size:12px;color:var(--txt-3);line-height:1.45}
-  .dnote code{font-family:var(--mono);font-size:11px;color:var(--txt-2)}
+  /* palette strip */
+  .tokrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+  .tok{background:var(--sf);border:1px solid var(--br2);border-radius:13px;padding:12px}
+  .tok .sw{height:34px;border-radius:8px;margin-bottom:9px;border:1px solid rgba(255,255,255,.1)}
+  .tok b{font-size:12px;font-weight:700;display:block}
+  .tok code{font-size:10.5px;color:var(--hi)}
+  .ctxrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .ctxpill{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid var(--br2);background:var(--sf)}
+  .ctxpill i{width:11px;height:11px;border-radius:4px;display:inline-block}
 
-  .device{border-radius:40px;background:linear-gradient(160deg,#26262f,#111117);padding:9px;border:1px solid rgba(255,255,255,.09);box-shadow:0 40px 80px -40px rgba(0,0,0,.9),0 0 0 1px rgba(0,0,0,.5),inset 0 1px 1px rgba(255,255,255,.06)}
-  .screen{position:relative;border-radius:33px;background:var(--bg);overflow:hidden;height:600px;display:flex;flex-direction:column}
-  .screen::-webkit-scrollbar{display:none}
-  /* status bar */
-  .sb{display:flex;align-items:center;justify-content:space-between;padding:11px 20px 5px;font-size:12px;font-weight:600;flex:none}
-  .sb .r{display:flex;align-items:center;gap:6px}
-  .sb svg{display:block}
-  .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:96px;height:22px;background:#000;border-radius:0 0 14px 14px;z-index:5}
-  /* app top bar */
-  .top{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 10px;flex:none}
-  .top .lg{display:flex;align-items:center;gap:7px;font-weight:800;font-size:15px;letter-spacing:-.02em}
-  .top .lg .dot{width:9px;height:9px;border-radius:3px;background:linear-gradient(135deg,var(--violet),var(--violet-2));box-shadow:0 0 12px rgba(139,92,246,.7)}
-  .live{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);border-radius:999px;padding:4px 10px}
-  .live .d{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
-  .ic{width:30px;height:30px;border-radius:9px;background:var(--glass-2);display:grid;place-items:center;color:var(--txt-2)}
-  /* scroll body */
-  .body{flex:1;overflow:hidden;padding:2px 16px 0;display:flex;flex-direction:column;gap:12px}
-  .evsel{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:11px 13px}
-  .evsel .txt{min-width:0}
-  .evsel .txt .t{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .evsel .txt .m{font-size:11px;color:var(--txt-3)}
-  .evsel .badge{margin-left:auto;font-size:10px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:5px;flex:none}
-  .evsel .chev{color:var(--txt-4);flex:none}
+  /* gallery */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:clamp(24px,3vw,40px);align-items:start}
+  .dw{display:flex;flex-direction:column;gap:13px}
+  .dtag{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .dtag .n{font-size:15px;font-weight:800}
+  .dtag .role{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--hi);border:1px solid var(--br2);border-radius:999px;padding:3px 9px}
+  .dtag .ctx{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .dnote{font-size:12px;color:var(--hi);line-height:1.5}
+  .dnote code{color:var(--mu)}
 
-  .hero{border-radius:16px;padding:15px;background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(99,102,241,.05));border:1px solid var(--violet-bd)}
-  .hero .row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--txt-2);font-weight:600}
-  .hero .cd{margin-left:auto;display:flex;align-items:center;gap:5px;color:var(--amber);font-weight:700}
-  .hero .nm{font-size:17px;font-weight:800;letter-spacing:-.02em;margin-top:7px}
-  .hero .vn{font-size:12px;color:var(--txt-3);margin-top:2px}
+  .device{border-radius:42px;background:linear-gradient(160deg,#222b33,#0c1116);padding:8px;border:1px solid rgba(255,255,255,.08);box-shadow:0 44px 90px -44px rgba(0,0,0,.92),inset 0 1px 1px rgba(255,255,255,.06)}
+  .screen{position:relative;border-radius:35px;background:var(--bg);overflow:hidden;height:632px;display:flex;flex-direction:column}
+  .di{width:112px;height:28px;background:#000;border-radius:0 0 18px 18px;position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:6}
+  .sb{display:flex;justify-content:space-between;align-items:center;padding:11px 22px 3px;font-size:12px;font-weight:700;flex:none}
+  .sb .r{display:flex;gap:6px;align-items:center}
 
-  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .kpi{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:12px}
-  .kpi .h{display:flex;align-items:center;gap:7px;color:var(--txt-2);font-size:11px;font-weight:600}
-  .kpi .h .i{width:22px;height:22px;border-radius:7px;display:grid;place-items:center}
-  .kpi .v{font-size:23px;font-weight:800;letter-spacing:-.02em;margin-top:9px;font-variant-numeric:tabular-nums}
-  .kpi .u{font-size:10.5px;color:var(--txt-4);margin-top:1px}
+  /* APP HEADER (the requested piece) */
+  .apphdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 12px;flex:none}
+  .apphdr .id{display:flex;align-items:center;gap:11px;min-width:0}
+  .apphdr .av{width:40px;height:40px;border-radius:12px;background:var(--acb);border:1.5px solid var(--acbd);display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--ac);flex:none}
+  .apphdr .nm{font-size:15px;font-weight:900;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .apphdr .sub{font-size:11px;font-weight:700;color:var(--ac);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .apphdr .acts{display:flex;gap:8px;flex:none}
+  .hbtn{width:38px;height:38px;border-radius:12px;background:var(--sf2);border:1px solid var(--br2);display:grid;place-items:center;color:var(--mu);position:relative}
+  .hbtn .badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--rd);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;border:2px solid var(--bg)}
+  .hbtn .dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--rd);border:2px solid var(--bg)}
 
-  .block{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:13px}
-  .block .lab{font-size:11px;font-weight:700;color:var(--txt-2);display:flex;justify-content:space-between;align-items:center}
-  .bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:9px}
-  .bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--violet),var(--violet-2))}
-  .bsub{font-size:10.5px;color:var(--txt-3);margin-top:7px;font-variant-numeric:tabular-nums}
-  .seg{display:flex;height:26px;border-radius:8px;overflow:hidden;margin-top:9px;font-size:10px;font-weight:700}
-  .seg>i{display:grid;place-items:center;color:#04121a}
-  .seg .on{background:var(--cyan)}
-  .seg .dr{background:var(--violet);color:#0c0716}
+  .body{flex:1;overflow:hidden;padding:0 15px;display:flex;flex-direction:column;gap:12px}
+  .body::-webkit-scrollbar{display:none}
+  .stitle{font-size:11px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.5px}
+  .row-h{display:flex;align-items:center;justify-content:space-between}
+  .row-h .lnk{font-size:12px;font-weight:800;color:var(--ac)}
 
-  .qa{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .qa a{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--txt-2);text-decoration:none;padding:11px 4px;border-radius:12px;border:1px solid var(--line);background:var(--glass)}
+  /* hero + kpi */
+  .hero{border-radius:20px;padding:18px;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(0,200,150,.16),rgba(0,200,150,.02));border:1px solid var(--acbd)}
+  .hero .glow{position:absolute;top:-40px;right:-30px;width:150px;height:150px;border-radius:50%;background:var(--ac);opacity:.09;filter:blur(6px)}
+  .hero .lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mu)}
+  .hero .big{font-size:29px;font-weight:900;letter-spacing:-1px;margin:3px 0 13px;font-variant-numeric:tabular-nums}
+  .hero .stats{display:flex;gap:16px}
+  .hero .stats .v{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
+  .hero .stats .l{font-size:9.5px;color:var(--hi);text-transform:uppercase;margin-top:1px}
+  .kpis{display:flex;gap:9px;overflow:hidden}
+  .kpi{flex:1;background:var(--sf);border:1px solid var(--br2);border-radius:14px;padding:11px 10px;text-align:center}
+  .kpi .v{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:8.5px;font-weight:700;color:var(--faint);text-transform:uppercase;margin-top:2px;letter-spacing:.3px}
+
+  .alert{border-radius:13px;padding:11px 13px;display:flex;align-items:center;gap:10px;border:1px solid}
+  .alert .t{font-size:12.5px;font-weight:800}
+  .alert .s{font-size:11px;color:var(--hi);margin-top:1px}
+  .alert.am{background:rgba(245,166,35,.06);border-color:rgba(245,166,35,.2)}
+  .alert.rd{background:rgba(240,79,79,.06);border-color:rgba(240,79,79,.2)}
+  .alert.tl{background:rgba(29,218,180,.05);border-color:rgba(29,218,180,.16)}
+
+  .card{background:var(--sf);border:1px solid var(--br2);border-radius:16px;overflow:hidden}
+  .evc{background:var(--sf);border:1px solid var(--br2);border-radius:16px;padding:13px 14px}
+  .evc .top{display:flex;justify-content:space-between;gap:10px;margin-bottom:9px}
+  .evc .nm{font-size:14px;font-weight:800}
+  .evc .meta{font-size:11.5px;color:var(--mu);margin-top:2px}
+  .evc .rt{text-align:right;flex:none}
+  .evc .rt .s{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums}
+  .evc .rt .c{font-size:9px;color:var(--faint)}
+  .evc .rt .rev{font-size:11.5px;font-weight:800;color:var(--ac);margin-top:3px;font-variant-numeric:tabular-nums}
+  .trk{height:5px;background:var(--sf2);border-radius:3px;overflow:hidden}
+  .trk>i{display:block;height:100%;border-radius:3px;background:var(--ac)}
+  .badge{font-size:9.5px;font-weight:800;border-radius:7px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
+  .b-ac{background:var(--acb);color:var(--ac);border:1px solid var(--acbd)}
+  .b-am{background:rgba(245,166,35,.1);color:var(--am);border:1px solid rgba(245,166,35,.22)}
+  .b-mu{background:var(--sf2);color:var(--hi);border:1px solid var(--br2)}
+  .b-gr{background:rgba(61,219,138,.1);color:var(--gr);border:1px solid rgba(61,219,138,.22)}
+  .b-rd{background:rgba(240,79,79,.1);color:var(--rd);border:1px solid rgba(240,79,79,.22)}
+
+  .qa{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .qa .q{background:var(--sf);border:1px solid var(--br2);border-radius:14px;padding:13px;display:flex;flex-direction:column;gap:8px}
   .qa .qi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+  .qa .ql{font-size:12.5px;font-weight:800}
 
-  .slab{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--txt-3);text-transform:uppercase;margin:2px 0 -2px}
-  .act{display:flex;align-items:center;gap:11px;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
-  .act .ai{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
-  .act .at{font-size:12.5px;font-weight:600}
-  .act .as{font-size:10.5px;color:var(--txt-3)}
-  .act .tm{margin-left:auto;font-size:10.5px;color:var(--txt-4);font-variant-numeric:tabular-nums}
+  /* bottom nav */
+  .bnav{display:flex;flex:none;padding:9px 4px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--br);background:rgba(8,12,16,.92);backdrop-filter:blur(12px)}
+  .bnav .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--faint)}
+  .bnav .ni .nl{font-size:9px;font-weight:700}
+  .bnav .ni.on{color:var(--ac)}
+  .bnav .ni.on .dt{width:4px;height:4px;border-radius:50%;background:var(--ac);margin-top:-1px}
+  .homebar{height:5px;width:120px;border-radius:9px;background:rgba(255,255,255,.2);margin:6px auto 8px}
 
-  /* turnover / scanner view */
-  .turn{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:15px}
-  .turn h4{font-size:12px;font-weight:700;color:var(--txt-2);margin-bottom:12px}
-  .turn .r{display:flex;align-items:center}
-  .turn .it{flex:1;display:flex;align-items:center;gap:10px}
-  .turn .it .i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
-  .turn .it .l{font-size:10.5px;color:var(--txt-3)}
-  .turn .it .a{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
-  .turn .dv{width:1px;align-self:stretch;background:var(--line);margin:0 6px}
-  .s3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-  .s3 .st{background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:12px 8px;text-align:center}
-  .s3 .st .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:5px}
-  .s3 .st .l{font-size:9.5px;color:var(--txt-3);margin-top:2px}
-  .big{display:flex;flex-direction:column;gap:10px}
-  .bigbtn{display:flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:700;padding:15px;border-radius:14px;border:1px solid}
-  .bigbtn.v{color:#fff;background:linear-gradient(135deg,var(--violet),var(--violet-2));border-color:transparent;box-shadow:0 12px 26px -12px rgba(139,92,246,.8)}
-  .bigbtn.g{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
-  .close{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:13px;padding:12px}
+  /* subtabs */
+  .subtabs{display:flex;gap:7px;overflow:hidden;flex:none}
+  .subtab{font-size:12px;font-weight:800;padding:7px 13px;border-radius:20px;border:1px solid var(--br2);background:var(--sf2);color:var(--mu);white-space:nowrap}
+  .subtab.on{background:var(--acb);border-color:var(--acbd);color:var(--ac)}
+  .bk{width:36px;height:36px;border-radius:50%;background:var(--sf2);border:1px solid var(--br2);display:grid;place-items:center;color:var(--mu);flex:none}
+  .scr-title{font-size:17px;font-weight:900}
 
-  /* scanner camera */
-  .cam{position:relative;flex:1;margin:0 -16px;background:radial-gradient(120% 90% at 50% 0,#1a1622,#050507);overflow:hidden;display:flex;align-items:center;justify-content:center}
-  .cam .grid-tex{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:26px 26px;mask:radial-gradient(circle at 50% 42%,#000,transparent 70%)}
-  .reticle{width:172px;height:172px;border-radius:24px;position:relative}
-  .reticle span{position:absolute;width:30px;height:30px;border:3px solid var(--violet)}
-  .reticle .tl{top:0;left:0;border-right:0;border-bottom:0;border-radius:14px 0 0 0}
-  .reticle .tr{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 14px 0 0}
-  .reticle .bl{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 14px}
-  .reticle .br{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 14px 0}
-  .laser{position:absolute;left:8px;right:8px;top:52%;height:2px;background:linear-gradient(90deg,transparent,var(--violet),transparent);box-shadow:0 0 14px var(--violet);animation:scan 2.4s ease-in-out infinite}
-  @keyframes scan{0%,100%{top:12%}50%{top:86%}}
-  @media(prefers-reduced-motion:reduce){.laser{animation:none;top:50%}}
-  .cam .hint{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:var(--txt-3)}
-  .cam .mini{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px}
-  .cam .mini .m{flex:1;background:rgba(10,10,15,.7);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:7px;text-align:center}
-  .cam .mini .m .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
-  .cam .mini .m .l{font-size:9px;color:var(--txt-3)}
-  /* result card */
-  .result{border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
-  .result.ok{background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(16,185,129,.05));border:1px solid var(--green-bd)}
-  .result.dup{background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(245,158,11,.04));border:1px solid var(--amber-bd)}
-  .result .rh{display:flex;align-items:center;gap:10px}
-  .result .rh .ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
-  .result .rh .rt{font-size:15px;font-weight:800}
-  .result .rh .rs{font-size:11px;color:var(--txt-2)}
-  .result .meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
-  .result .meta div{background:rgba(0,0,0,.22);border-radius:9px;padding:7px 9px}
-  .result .meta .k{font-size:9px;color:var(--txt-3);text-transform:uppercase;letter-spacing:.06em}
-  .result .meta .val{font-size:12.5px;font-weight:700;margin-top:1px}
+  /* generic rows */
+  .lrow{display:flex;align-items:center;gap:11px;padding:11px 13px}
+  .lrow+.lrow{border-top:1px solid var(--br)}
+  .lrow .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+  .lrow .t{font-size:13px;font-weight:700}
+  .lrow .s{font-size:11px;color:var(--hi);margin-top:1px}
+  .lrow .rt{margin-left:auto;text-align:right;flex:none;font-variant-numeric:tabular-nums}
 
-  /* POS */
-  .tt{display:flex;align-items:center;gap:11px;background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:11px 12px}
-  .tt .sq{width:6px;align-self:stretch;border-radius:4px;flex:none}
-  .tt .nm{font-size:13px;font-weight:700}
-  .tt .pr{font-size:11px;color:var(--txt-3);font-variant-numeric:tabular-nums}
-  .tt .stp{margin-left:auto;display:flex;align-items:center;gap:10px}
-  .tt .stp b{width:26px;height:26px;border-radius:8px;background:var(--glass-2);border:1px solid var(--line);display:grid;place-items:center;font-size:15px;font-weight:700;color:var(--txt-2)}
-  .tt .stp .qn{font-size:14px;font-weight:800;min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
-  .cartbar{margin:0 -16px;padding:13px 16px calc(13px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(10,10,15,0),var(--bg) 30%);flex:none}
-  .paybtn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,var(--green),#059669);color:#022;border-radius:14px;padding:14px 16px;font-weight:800;box-shadow:0 14px 30px -14px rgba(16,185,129,.8)}
-  .paybtn .c{font-size:12px;font-weight:700;opacity:.85}
+  /* toggles */
+  .tog{width:42px;height:24px;border-radius:12px;position:relative;flex:none;background:var(--sf2);border:1px solid var(--br2)}
+  .tog .th{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.4);transition:.2s}
+  .tog.on{background:var(--ac);border-color:var(--ac)}
+  .tog.on .th{transform:translateX(18px);background:#000}
+
+  /* notifications center */
+  .nfilter{display:flex;gap:6px;overflow:hidden;flex:none}
+  .nchip{font-size:11px;font-weight:800;padding:6px 11px;border-radius:999px;border:1px solid var(--br2);background:var(--sf2);color:var(--mu);white-space:nowrap}
+  .nchip.on{background:var(--acb);border-color:var(--acbd);color:var(--ac)}
+  .nchip .cnt{font-size:9px;opacity:.7;margin-left:3px}
+  .nitem{display:flex;gap:11px;padding:12px 12px;border-radius:14px;background:var(--sf);border:1px solid var(--br2);position:relative}
+  .nitem.unread{background:linear-gradient(90deg,var(--acb),var(--sf) 60%)}
+  .nitem .nic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none}
+  .nitem .nt{font-size:12.5px;font-weight:800}
+  .nitem .ns{font-size:11px;color:var(--hi);margin-top:2px;line-height:1.45}
+  .nitem .ntime{font-size:10px;color:var(--faint);margin-top:4px}
+  .nitem .udot{position:absolute;top:14px;right:12px;width:7px;height:7px;border-radius:50%;background:var(--ac)}
+
+  /* POS ticket types */
+  .tt{display:flex;align-items:center;gap:11px;background:var(--sf);border:1px solid var(--br2);border-radius:14px;padding:11px 12px}
+  .tt .sq{width:5px;align-self:stretch;border-radius:3px;flex:none}
+  .tt .nm{font-size:13px;font-weight:800}
+  .tt .pr{font-size:11px;color:var(--hi);font-variant-numeric:tabular-nums}
+  .tt .stp{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .tt .stp b{width:26px;height:26px;border-radius:8px;background:var(--sf2);border:1px solid var(--br2);display:grid;place-items:center;font-size:15px;font-weight:800;color:var(--mu)}
+  .tt .qn{font-size:14px;font-weight:900;min-width:15px;text-align:center;font-variant-numeric:tabular-nums}
+  .paybar{flex:none;padding:12px 15px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--bg) 32%)}
+  .paybtn{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--ac),var(--tl));color:#022;border-radius:15px;padding:14px 16px;font-weight:900;box-shadow:0 16px 32px -16px var(--ac)}
   .paybtn .amt{font-size:16px;font-variant-numeric:tabular-nums}
+  .paybtn .c{font-size:11.5px;font-weight:800;opacity:.85}
 
-  /* reports ring + summary */
-  .ring{display:flex;align-items:center;gap:16px;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:16px}
-  .ring .g{width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;background:conic-gradient(var(--green) 0 76%,rgba(255,255,255,.08) 76% 100%)}
-  .ring .g .inner{width:70px;height:70px;border-radius:50%;background:var(--bg);display:grid;place-items:center;flex-direction:column}
-  .ring .g .inner b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
-  .ring .g .inner small{font-size:8.5px;color:var(--txt-3)}
-  .ring .leg{display:flex;flex-direction:column;gap:8px;font-size:11px}
-  .ring .leg div{display:flex;align-items:center;gap:7px;color:var(--txt-2)}
-  .ring .leg .d{width:8px;height:8px;border-radius:3px}
-  .ring .leg b{color:var(--txt);font-variant-numeric:tabular-nums}
-  .rsum{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-  .rsum .rc{border-radius:13px;padding:12px;border:1px solid}
-  .rsum .rc .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
-  .rsum .rc .l{font-size:10px;margin-top:2px;opacity:.8}
-  .row2{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:9px 0;border-top:1px solid var(--line)}
-  .row2:first-child{border-top:0}
-  .row2 .nm{font-weight:600}
-  .row2 .vv{font-variant-numeric:tabular-nums;color:var(--txt-2);font-weight:700}
+  /* SEAT MAP (requested) */
+  .stage{text-align:center;font-size:10px;font-weight:800;letter-spacing:.3em;color:var(--mu);padding:8px;background:linear-gradient(180deg,var(--acb),transparent);border-radius:12px 12px 40px 40px;border:1px solid var(--br);border-bottom:0;margin:0 4px}
+  .seatzone{margin-top:12px}
+  .seatzone .zl{font-size:10px;font-weight:800;color:var(--hi);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;display:flex;justify-content:space-between}
+  .seatgrid{display:flex;flex-direction:column;gap:5px;align-items:center}
+  .seatrow{display:flex;gap:4px;align-items:center}
+  .seatrow .rl{font-size:8px;color:var(--faint);width:12px;text-align:center;flex:none}
+  .seat{width:15px;height:15px;border-radius:4px;flex:none}
+  .seat.free{background:var(--sf2);border:1px solid var(--br2)}
+  .seat.sel{background:var(--ac);box-shadow:0 0 8px var(--acbd)}
+  .seat.sold{background:rgba(255,255,255,.05);border:1px solid var(--br)}
+  .seat.vip{background:rgba(245,166,35,.18);border:1px solid rgba(245,166,35,.4)}
+  .seatlegend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:10px;color:var(--mu);padding:6px 0}
+  .seatlegend div{display:flex;align-items:center;gap:5px}
+  .seatlegend i{width:11px;height:11px;border-radius:3px}
+  .selsum{display:flex;align-items:center;gap:8px;background:var(--sf);border:1px solid var(--acbd);border-radius:12px;padding:10px 12px}
+  .selsum .chip{font-size:10px;font-weight:800;color:var(--ac);background:var(--acb);border:1px solid var(--acbd);border-radius:7px;padding:3px 7px;font-variant-numeric:tabular-nums}
 
-  /* guest list */
-  .filters{display:flex;gap:7px}
-  .filters .f{flex:1;text-align:center;font-size:11px;font-weight:700;padding:8px;border-radius:10px;border:1px solid var(--line);color:var(--txt-3);background:var(--glass)}
-  .filters .f.on{color:var(--violet);background:var(--violet-bg);border-color:var(--violet-bd)}
-  .search{display:flex;align-items:center;gap:9px;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--txt-4);font-size:12px}
-  .gl{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid var(--line)}
-  .gl .av{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}
-  .gl .nm{font-size:12.5px;font-weight:700}
-  .gl .cd{font-size:10.5px;color:var(--txt-3);font-family:var(--mono)}
-  .gl .stt{margin-left:auto;font-size:10px;font-weight:700;padding:4px 9px;border-radius:999px}
+  /* scan */
+  .cam{position:relative;flex:1;margin:0 -15px;background:radial-gradient(120% 90% at 50% 0,#101820,#04070a);overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .cam .tex{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:26px 26px;mask:radial-gradient(circle at 50% 42%,#000,transparent 70%)}
+  .ret{width:170px;height:170px;position:relative}
+  .ret span{position:absolute;width:30px;height:30px;border:3px solid var(--ac)}
+  .ret .tl{top:0;left:0;border-right:0;border-bottom:0;border-radius:14px 0 0 0}
+  .ret .tr{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 14px 0 0}
+  .ret .bl{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 14px}
+  .ret .br{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 14px 0}
+  .laser{position:absolute;left:6px;right:6px;height:2px;background:linear-gradient(90deg,transparent,var(--ac),transparent);box-shadow:0 0 12px var(--ac);animation:sc 2.4s ease-in-out infinite}
+  @keyframes sc{0%,100%{top:12%}50%{top:86%}}
+  @media(prefers-reduced-motion:reduce){.laser{animation:none;top:50%}}
+  .cmini{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px}
+  .cmini .m{flex:1;background:rgba(8,12,16,.72);backdrop-filter:blur(6px);border:1px solid var(--br2);border-radius:10px;padding:7px;text-align:center}
+  .cmini .m .v{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums}
+  .cmini .m .l{font-size:8.5px;color:var(--hi)}
+  .result{border-radius:15px;padding:13px;display:flex;flex-direction:column;gap:8px;border:1px solid}
+  .result.ok{background:linear-gradient(135deg,rgba(61,219,138,.18),transparent);border-color:rgba(61,219,138,.35)}
+  .result .rh{display:flex;align-items:center;gap:10px}
+  .result .ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+  .result .meta{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .result .meta div{background:rgba(0,0,0,.25);border-radius:9px;padding:7px 9px}
+  .result .meta .k{font-size:9px;color:var(--hi);text-transform:uppercase;letter-spacing:.05em}
+  .result .meta .v{font-size:12px;font-weight:800;margin-top:1px}
 
-  /* settings toggles */
-  .set{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:12px 13px}
-  .set .si{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
-  .set .st{font-size:13px;font-weight:600}
-  .set .ss{font-size:10.5px;color:var(--txt-3)}
-  .tog{margin-left:auto;width:42px;height:25px;border-radius:999px;flex:none;position:relative;transition:.2s}
-  .tog::after{content:"";position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s}
-  .tog.on{background:var(--violet)}.tog.on::after{left:20px}
-  .tog.off{background:rgba(255,255,255,.14)}.tog.off::after{left:3px}
+  /* live gate feed (venue) */
+  .gate{display:flex;align-items:center;gap:10px;padding:11px 13px}
+  .gate+.gate{border-top:1px solid var(--br)}
+  .gate .st{width:8px;height:8px;border-radius:50%;flex:none}
+  .zbar{display:flex;flex-direction:column;gap:9px}
+  .zrow{display:flex;align-items:center;gap:9px}
+  .zrow .zl{font-size:11px;color:var(--mu);width:96px;flex:none}
+  .zrow .zt{flex:1;height:6px;background:var(--sf2);border-radius:3px;overflow:hidden}
+  .zrow .zv{font-size:10px;font-weight:800;color:var(--mu);width:60px;text-align:right;font-variant-numeric:tabular-nums}
 
-  /* bottom tab bar */
-  .tab{display:grid;flex:none;padding:9px 8px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(10,10,15,.9);backdrop-filter:blur(12px)}
-  .tab.c5{grid-template-columns:repeat(5,1fr)}.tab.c3{grid-template-columns:repeat(3,1fr)}
-  .tab a{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;color:var(--txt-4)}
-  .tab a.on{color:var(--violet)}
-  .homebar{height:5px;width:120px;border-radius:999px;background:rgba(255,255,255,.22);margin:6px auto 0}
+  /* small helpers */
+  .drow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--br);font-size:12.5px}
+  .drow:last-child{border-bottom:0}
+  .drow .dl{color:var(--mu)}
+  .drow .dv{font-weight:800;font-variant-numeric:tabular-nums}
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .bars .b{display:flex;align-items:center;gap:8px}
+  .bars .bl{font-size:11px;color:var(--mu);width:88px;flex:none}
+  .bars .bt{flex:1;height:6px;background:var(--sf2);border-radius:3px;overflow:hidden}
+  .bars .bv{font-size:10px;font-weight:800;color:var(--mu);width:36px;text-align:right;font-variant-numeric:tabular-nums}
+  .chipwrap{display:flex;gap:6px;flex-wrap:wrap}
 
-  .muted{color:var(--txt-3)}
-  .flow{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
-  .flow .step{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600}
-  .flow .step .n{width:22px;height:22px;border-radius:7px;background:var(--violet-bg);border:1px solid var(--violet-bd);color:var(--violet);display:grid;place-items:center;font-size:11px;font-weight:800}
-  .flow .arw{color:var(--txt-4);align-self:center}
-  footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--line);color:var(--txt-3);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
-  .legendgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
-  .lgc{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:15px}
-  .lgc .t{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
-  .lgc .d{font-size:11.5px;color:var(--txt-3);margin-top:6px;line-height:1.5}
-  .lgc code{font-family:var(--mono);font-size:10.5px;color:var(--violet)}
+  footer{margin-top:76px;padding-top:22px;border-top:1px solid var(--br);color:var(--hi);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .miniav{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:11px;font-weight:900;flex:none}
 </style>
 
 <div class="wrap">
 
   <header>
-    <div class="wordmark eyebrow"><span class="dot"></span> Tixello · Design mobil</div>
-    <h1>Aplicația <span class="grad">Tixello</span> pentru staff: vinde, scanează, raportează — de pe orice telefon.</h1>
-    <p class="lede">O singură aplicație multi-brand care servește <b>orice tenant</b> al platformei și <b>orice organizator</b> dintr-un marketplace. Modelată după app-ul de scanare existent (Tixello Scan / <code style="font-family:var(--mono);font-size:.85em">ambilet-app2</code>), generalizată la întreaga platformă. Temă întunecată, mobile-first, adaptivă pe rol.</p>
+    <div class="wordmark eyebrow"><span class="logo-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#04211a" stroke-width="2.4" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span> Tixello · Design mobil v2</div>
+    <h1>O aplicație, <span class="grad">fiecare tenant cu ecranele lui</span> — plus header, notificări și hartă de locuri.</h1>
+    <p class="lede">Rescrisă după modelul template-urilor tale: temă întunecată <code>#080c10</code>, accent per-context, header cu comutator + clopoțel, și ecrane dedicate pentru teatru, venue, artist, agenție și organizator. Peste ele stă nucleul operațional din Tixello Scan: vânzare, scanare, validare, rapoarte.</p>
   </header>
+
+  <!-- WHAT'S NEW -->
+  <section style="margin-top:38px">
+    <div class="newgrid">
+      <div class="newc"><div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="6" rx="2"/><circle cx="7" cy="6" r="0"/></svg></div><h4>Header de aplicație</h4><p>Persistent pe fiecare ecran: avatar organizator, nume + tip, comutator de context și clopoțel de notificări cu badge.</p></div>
+      <div class="newc"><div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><h4>Centru de notificări</h4><p>Ecranul din spatele clopoțelului: feed cu categorii (vânzări, operațional, aprobări, financiar, sistem), filtre, necitite și preferințe — funcțiile din ambilet-app2.</p></div>
+      <div class="newc"><div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 20h10M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01"/></svg></div><h4>Selectare loc pe hartă</h4><p>Sub-ecran de vânzare pentru evenimente cu locuri: scenă, secțiuni, stări (liber / selectat / vândut / VIP) și rezumat selecție → plată.</p></div>
+    </div>
+  </section>
 
   <!-- DESIGN SYSTEM -->
   <section>
-    <div class="sec-head"><h2>Sistem de design</h2><p>Preluat din <code style="font-family:var(--mono)">tixello-app/src/theme/colors.js</code> — accent unic violet, semantice separate.</p></div>
-    <div class="grid cols-3">
-      <div class="card">
-        <h3>Bază & accent</h3>
-        <div class="sw"><span class="chip" style="background:#0A0A0F"></span><b>Fundal</b><code>#0A0A0F</code></div>
-        <div class="sw"><span class="chip" style="background:#14141b"></span><b>Suprafață</b><code>#14141B</code></div>
-        <div class="sw"><span class="chip" style="background:linear-gradient(135deg,#8B5CF6,#6366F1)"></span><b>Violet (primar)</b><code>#8B5CF6</code></div>
-        <div class="sw"><span class="chip" style="background:rgba(255,255,255,.5)"></span><b>Text / opacități</b><code>1 · .55 · .4</code></div>
-      </div>
-      <div class="card">
-        <h3>Culori semantice</h3>
-        <div class="semrow">
-          <span class="pill g">Valid · Numerar</span>
-          <span class="pill c">Card · Timp</span>
-          <span class="pill a">Duplicat · Rată</span>
-          <span class="pill r">Invalid · Închide</span>
-          <span class="pill v">Primar · Selectat</span>
-        </div>
-        <div class="sw" style="margin-top:14px"><span class="chip" style="background:#10B981"></span><b>Verde</b><code>#10B981</code></div>
-        <div class="sw"><span class="chip" style="background:#06B6D4"></span><b>Cyan</b><code>#06B6D4</code></div>
-        <div class="sw"><span class="chip" style="background:#F59E0B"></span><b>Ambră</b><code>#F59E0B</code></div>
-        <div class="sw"><span class="chip" style="background:#EF4444"></span><b>Roșu</b><code>#EF4444</code></div>
-      </div>
-      <div class="card">
-        <h3>Tipografie & formă</h3>
-        <div class="typerow"><span style="font-size:26px;font-weight:800;letter-spacing:-.03em">Panou eveniment</span><small>UI · System 800 · -3% tracking</small></div>
-        <div class="typerow"><span style="font-size:15px;font-weight:600;color:var(--txt-2)">Text de conținut, etichete, meta</span><small>UI · 600/400</small></div>
-        <div class="typerow"><span style="font-family:var(--mono);font-size:15px;letter-spacing:.04em">X1SG7TLS · 1.240 lei</span><small>Mono · coduri & cifre tabulare</small></div>
-        <div class="typerow"><span style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-3)">Eyebrow / secțiune</span><small>UI · 700 · +16% tracking</small></div>
-        <div style="margin-top:10px;display:flex;gap:8px"><span class="pill v" style="border-radius:12px">radius 18</span><span class="pill" style="color:var(--txt-2);border-color:var(--line-2);border-radius:999px">pill 999</span></div>
-      </div>
+    <div class="sec-head"><span class="num">01</span><h2>Sistem de design</h2><p>Preluat din template-urile tale — accentul se schimbă după contextul activ.</p></div>
+    <div class="tokrow" style="margin-top:22px">
+      <div class="tok"><div class="sw" style="background:#080c10"></div><b>Fundal</b><code>#080c10</code></div>
+      <div class="tok"><div class="sw" style="background:#0e1318"></div><b>Suprafață</b><code>#0e1318</code></div>
+      <div class="tok"><div class="sw" style="background:#141c24"></div><b>Suprafață 2</b><code>#141c24</code></div>
+      <div class="tok"><div class="sw" style="background:#3ddb8a"></div><b>Succes</b><code>#3ddb8a</code></div>
+      <div class="tok"><div class="sw" style="background:#f5a623"></div><b>Atenție</b><code>#f5a623</code></div>
+      <div class="tok"><div class="sw" style="background:#f04f4f"></div><b>Eroare</b><code>#f04f4f</code></div>
     </div>
+    <div class="ctxrow">
+      <span class="ctxpill"><i style="background:#00c896"></i>Organizator · teal</span>
+      <span class="ctxpill"><i style="background:#9b60c8"></i>Teatru · violet</span>
+      <span class="ctxpill"><i style="background:#00e5ff"></i>Venue · cyan</span>
+      <span class="ctxpill"><i style="background:#1ddab4"></i>Artist · turcoaz</span>
+      <span class="ctxpill"><i style="background:#9b7ff8"></i>Agenție · mov</span>
+      <span class="ctxpill"><i style="background:#f03e8f"></i>Festival · pink</span>
+    </div>
+    <p class="sec-intro" style="margin-top:18px">Fiecare organizator/tenant primește un accent propriu (variabila <code>--ac</code>) care temează întreaga interfață — hero, KPI, butoane, badge-uri. Comutarea de context schimbă accentul, brandingul (logo/nume) și navigația. Tot restul rămâne consistent.</p>
   </section>
 
-  <!-- SCREENS -->
+  <!-- CORE SCREENS -->
   <section>
-    <div class="sec-head"><h2>Ecrane</h2><p>Fluxul complet: onboarding → panou → scanare → vânzare → rapoarte → echipă → setări.</p></div>
+    <div class="sec-head"><span class="num">02</span><h2>Nucleu — comun tuturor</h2><p>Header, home, notificări, vânzare, hartă locuri, scanare, rapoarte.</p></div>
+    <div class="sec-intro">Accent teal (context „Organizator"). Bara de sus și clopoțelul sunt prezente pe fiecare ecran.</div>
     <div class="gallery">
 
-      <!-- 1. LOGIN / CONTEXT -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Login & context</span><span class="role">A1 · A7</span></div>
+      <!-- SWITCHER -->
+      <div class="dw" style="--ac:#00c896;--acb:rgba(0,200,150,.12);--acbd:rgba(0,200,150,.30)">
+        <div class="dtag"><span class="n">Comutator context</span><span class="ctx" style="background:var(--acb);color:var(--ac)">multi-tenant</span></div>
         <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r">
-            <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
-            <svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
-          </span></div>
-          <div class="body" style="justify-content:center;gap:16px;padding:20px 22px">
-            <div style="text-align:center;margin-bottom:4px">
-              <div class="wordmark" style="justify-content:center;font-size:30px"><span class="dot" style="width:15px;height:15px"></span> Tixello</div>
-              <div class="muted" style="font-size:12px;margin-top:8px">Aplicația pentru organizatori & staff</div>
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="body" style="padding-top:16px">
+            <div style="text-align:center;margin:8px 0 6px">
+              <div class="wordmark" style="justify-content:center;font-size:17px"><span class="logo-badge" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#04211a" stroke-width="2.4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg></span> tixello</div>
+              <div class="miniav" style="background:var(--acb);border:2px solid var(--acbd);color:var(--ac);width:54px;height:54px;border-radius:50%;margin:16px auto 8px;font-size:17px">AM</div>
+              <div style="font-size:15px;font-weight:900">Andrei Matei</div>
+              <div style="font-size:12px;color:var(--mu);margin-top:2px">andrei.matei@gmail.com</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:9px">
-              <div class="search" style="color:var(--txt-2)">📧&nbsp; email@organizator.ro</div>
-              <div class="search" style="color:var(--txt-2)">🔒&nbsp; ••••••••••</div>
-            </div>
-            <div class="bigbtn v" style="padding:14px">Autentificare</div>
-            <div style="text-align:center;font-size:11.5px;color:var(--txt-3)">Ai uitat parola?</div>
-            <div style="margin-top:6px">
-              <div class="slab" style="margin-bottom:9px">Workspace-uri</div>
-              <div class="act" style="margin-bottom:8px"><span class="ai" style="background:var(--violet-bg);color:var(--violet)">◈</span><div><div class="at">Teatrul Odeon</div><div class="as">Tenant · white-label</div></div><span class="tm" style="color:var(--violet)">activ</span></div>
-              <div class="act"><span class="ai" style="background:var(--cyan-bg);color:var(--cyan)">◇</span><div><div class="at">Neversea Fest</div><div class="as">AmBilet · marketplace</div></div></div>
-            </div>
+            <div class="stitle" style="text-align:center;margin:6px 0">Alege contextul de lucru</div>
+            <div class="evc" style="border-color:var(--acbd)"><div style="display:flex;align-items:center;gap:12px"><div class="miniav" style="background:var(--acb);color:var(--ac);border:1px solid var(--acbd);width:44px;height:44px;border-radius:13px">LN</div><div style="flex:1"><div style="font-size:14px;font-weight:900">LiveNation Romania</div><div style="font-size:11.5px;color:var(--mu)">Organizator · București</div><div style="margin-top:5px"><span class="badge b-ac">8 concerte · 2025</span></div></div><span style="color:var(--acbd)">›</span></div></div>
+            <div class="evc"><div style="display:flex;align-items:center;gap:12px"><div class="miniav" style="background:rgba(155,96,200,.14);color:#9b60c8;border:1px solid rgba(155,96,200,.3);width:44px;height:44px;border-radius:13px">TN</div><div style="flex:1"><div style="font-size:14px;font-weight:900">Teatrul Național</div><div style="font-size:11.5px;color:var(--mu)">Teatru · Cluj</div><div style="margin-top:5px"><span class="badge b-mu">stagiune · 3 săli</span></div></div><span style="color:var(--faint)">›</span></div></div>
+            <div class="evc"><div style="display:flex;align-items:center;gap:12px"><div class="miniav" style="background:rgba(0,229,255,.12);color:#00e5ff;border:1px solid rgba(0,229,255,.3);width:44px;height:44px;border-radius:13px">SP</div><div style="flex:1"><div style="font-size:14px;font-weight:900">Sala Polivalentă</div><div style="font-size:11.5px;color:var(--mu)">Venue · Cluj-Napoca</div><div style="margin-top:5px"><span class="badge b-mu">4 gate · live scan</span></div></div><span style="color:var(--faint)">›</span></div></div>
           </div>
           <div class="homebar"></div>
         </div></div>
-        <div class="dnote">Login unic prin <code>POST /organizer/login</code> (Sanctum). Un cont poate accesa mai mulți organizatori/tenanți — comutare prin <code>switch-organizer</code>. Brandingul (logo/culori) se aduce la runtime per workspace.</div>
+        <div class="dnote">Un cont, oricâte contexte. <code>available_organizers[]</code> + <code>switch-organizer</code>. Fiecare rând poate fi tenant (teatru/venue) sau organizator de marketplace — accent și navigație diferite.</div>
       </div>
 
-      <!-- 2. PANOU ADMIN -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Panou — Admin</span><span class="role">B1</span></div>
+      <!-- HOME with HEADER -->
+      <div class="dw" style="--ac:#00c896;--acb:rgba(0,200,150,.12);--acbd:rgba(0,200,150,.30)">
+        <div class="dtag"><span class="n">Home + header aplicație</span><span class="role">nou header</span></div>
         <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Tixello</div><div style="display:flex;gap:8px;align-items:center"><span class="live"><span class="d"></span>Live</span><span class="ic">↻</span></div></div>
-          <div class="body">
-            <div class="evsel"><div class="txt"><div class="t">Concert Simfonic de Vară</div><div class="m">Sala Palatului · 20:00</div></div><div class="badge"><span class="d" style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>Live</div><span class="chev">›</span></div>
-            <div class="kpis">
-              <div class="kpi"><div class="h"><span class="i" style="background:var(--violet-bg);color:var(--violet)">◔</span>Scanați</div><div class="v">842</div><div class="u">persoane</div></div>
-              <div class="kpi"><div class="h"><span class="i" style="background:var(--green-bg);color:var(--green)">🎟</span>Vândute</div><div class="v">1.180</div><div class="u">bilete</div></div>
-              <div class="kpi"><div class="h"><span class="i" style="background:var(--cyan-bg);color:var(--cyan)">₊</span>Încasări</div><div class="v" style="font-size:19px">73.4k</div><div class="u">lei · total</div></div>
-              <div class="kpi"><div class="h"><span class="i" style="background:var(--amber-bg);color:var(--amber)">▤</span>Disponibile</div><div class="v">320</div><div class="u">bilete</div></div>
-            </div>
-            <div class="block"><div class="lab"><span>Capacitate</span><span style="color:var(--violet)">79%</span></div><div class="bar"><i style="width:79%"></i></div><div class="bsub">1.180 / 1.500 locuri</div></div>
-            <div class="block"><div class="lab" style="margin-bottom:2px"><span>Online vs. la ușă</span></div><div class="seg"><i class="on" style="flex:0 0 68%">Online 68%</i><i class="dr" style="flex:0 0 32%">Ușă 32%</i></div></div>
-            <div class="slab">Acțiuni rapide</div>
-            <div class="qa">
-              <a><span class="qi" style="background:var(--violet-bg);color:var(--violet)">▣</span>Scanare</a>
-              <a><span class="qi" style="background:var(--green-bg);color:var(--green)">🛒</span>Vânzare</a>
-              <a><span class="qi" style="background:var(--cyan-bg);color:var(--cyan)">☰</span>Invitați</a>
-              <a><span class="qi" style="background:var(--amber-bg);color:var(--amber)">👥</span>Echipă</a>
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr">
+            <div class="id"><div class="av">LN</div><div style="min-width:0"><div class="nm">LiveNation Romania</div><div class="sub">București · Organizator</div></div></div>
+            <div class="acts">
+              <div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+              <div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="badge">5</span></div>
             </div>
           </div>
-          <div class="tab c5"><a class="on">▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a>▤<span>Rapoarte</span></a><a>⋯<span>Mai mult</span></a></div>
+          <div class="body">
+            <div class="hero"><div class="glow"></div><div class="lbl">GMV total · 2025</div><div class="big">4.820.000 lei</div><div class="stats"><div><div class="v">8</div><div class="l">Concerte</div></div><div><div class="v">42.800</div><div class="l">Bilete</div></div><div><div class="v">89%</div><div class="l">Fill rate</div></div></div></div>
+            <div class="kpis"><div class="kpi"><div class="v">8</div><div class="l">Planificate</div></div><div class="kpi"><div class="v">4.800</div><div class="l">Disponibile</div></div><div class="kpi"><div class="v">190</div><div class="l">Preț mediu</div></div><div class="kpi"><div class="v">3.4M</div><div class="l">Nete lei</div></div></div>
+            <div class="alert am"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--am)" stroke-width="1.8" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div style="flex:1"><div class="t" style="color:var(--am)">Aprobare IGSU în așteptare</div><div class="s">Coldplay 19 Apr — termen 72h</div></div><span style="color:var(--am)">›</span></div>
+            <div class="row-h"><div class="stitle">Evenimente active</div><span class="lnk">Toate →</span></div>
+            <div class="evc"><div class="top"><div><div class="nm">Coldplay — Music of the Spheres</div><div class="meta">Sala Polivalentă Cluj · 19 Apr</div><div class="chipwrap" style="margin-top:6px"><span class="badge b-ac">● Activ</span><span class="badge b-mu">Pop/Rock</span></div></div><div class="rt"><div class="s">9.200</div><div class="c">/ 10.000</div><div class="rev">2.3M lei</div></div></div><div class="trk"><i style="width:92%"></i></div></div>
+          </div>
+          <div class="bnav">
+            <div class="ni on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="nl">Home</span><span class="dt"></span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg><span class="nl">Evenimente</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nl">Vânzări</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="nl">Scanare</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nl">Setări</span></div>
+          </div>
           <div class="homebar"></div>
         </div></div>
-        <div class="dnote">Fiecare KPI e buton → bottom-sheet cu defalcare. Sursă <code>pos_app</code> = „la ușă". Date live via Reverb + polling 30s. <code>GET …/events/{id}/statistics</code>, <code>/sales-breakdown</code>.</div>
+        <div class="dnote">Header = avatar (comută context la tap) + nume/tip + buton switch + <b>clopoțel cu badge</b>. Hero GMV, KPI orizontale, alerte, evenimente. <code>GET /organizer/dashboard</code>.</div>
       </div>
 
-      <!-- 3. PANOU SCANNER (TURA) -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Panou — Scanner (tură)</span><span class="role">B2 · check_in</span></div>
+      <!-- NOTIFICATIONS CENTER -->
+      <div class="dw" style="--ac:#00c896;--acb:rgba(0,200,150,.12);--acbd:rgba(0,200,150,.30)">
+        <div class="dtag"><span class="n">Centru notificări</span><span class="role" style="color:var(--ac);border-color:var(--acbd)">nou</span></div>
         <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Tixello</div><div style="display:flex;gap:8px;align-items:center"><span class="live"><span class="d"></span>Live</span><span class="ic">↻</span></div></div>
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr" style="padding-bottom:10px">
+            <div class="id"><div class="bk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></div><div><div class="scr-title">Notificări</div><div style="font-size:11px;color:var(--mu)">5 necitite</div></div></div>
+            <div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div></div>
+          </div>
+          <div class="nfilter" style="padding:0 15px 4px"><span class="nchip on">Toate<span class="cnt">5</span></span><span class="nchip">Vânzări</span><span class="nchip">Operațional</span><span class="nchip">Financiar</span><span class="nchip">Sistem</span></div>
+          <div class="body" style="gap:9px">
+            <div class="nitem unread"><div class="nic" style="background:var(--acb);color:var(--ac)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg></div><div><div class="nt">3 bilete vândute — Coldplay</div><div class="ns">Fan Pit ×2, Standard ×1 · 850 lei online</div><div class="ntime">acum 2 min</div></div><span class="udot"></span></div>
+            <div class="nitem unread"><div class="nic" style="background:rgba(240,79,79,.12);color:var(--rd)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div><div class="nt">Scan invalid la Poarta B</div><div class="ns">QR nerecunoscut · verifică manual invitatul</div><div class="ntime">acum 6 min</div></div><span class="udot"></span></div>
+            <div class="nitem unread"><div class="nic" style="background:rgba(245,166,35,.12);color:var(--am)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></div><div><div class="nt">Capacitate 92% — Coldplay</div><div class="ns">Ultimele 300 locuri · recomandăm urgentare</div><div class="ntime">acum 20 min</div></div><span class="udot"></span></div>
+            <div class="nitem"><div class="nic" style="background:rgba(155,127,248,.12);color:var(--pu)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="nt">Decont procesat · 18.400 lei</div><div class="ns">Transfer către IBAN ****3921</div><div class="ntime">azi 08:12</div></div></div>
+            <div class="nitem"><div class="nic" style="background:rgba(61,219,138,.1);color:var(--gr)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h16v16H4z" opacity="0"/><path d="M20 6L9 17l-5-5"/></svg></div><div><div class="nt">Invitație folosită · Dan Popescu</div><div class="ns">Presă · check-in Poarta A</div><div class="ntime">ieri 21:03</div></div></div>
+            <div class="nitem"><div class="nic" style="background:var(--sf2);color:var(--mu)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div><div class="nt">Contract de semnat</div><div class="ns">Necesar înainte de publicarea evenimentelor</div><div class="ntime">acum 2 zile</div></div></div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Feed real-time (Reverb) cu categorii + filtre + necitite + „marchează tot citit". Include preferințe (toggles: bilet vândut, capacitate &gt;80%, scan invalid, decont, raport zilnic). Push pe telefon.</div>
+      </div>
+
+      <!-- POS SALE -->
+      <div class="dw" style="--ac:#00c896;--acb:rgba(0,200,150,.12);--acbd:rgba(0,200,150,.30)">
+        <div class="dtag"><span class="n">Vânzare (POS)</span><span class="role">D</span></div>
+        <div class="device"><div class="screen">
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr" style="padding-bottom:8px"><div class="id"><div class="bk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></div><div><div class="scr-title">Vânzare la ușă</div><div style="font-size:11px;color:var(--mu)">Coldplay · sursă pos_app</div></div></div><div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="dot"></span></div></div></div>
           <div class="body">
-            <div class="evsel evsel"><div class="txt"><div class="t">Poarta B · Andrei P.</div><div class="m">Tură începută 18:30</div></div></div>
-            <div class="turn">
-              <h4>Încasări tură</h4>
-              <div class="r">
-                <div class="it"><span class="i" style="background:var(--green-bg);color:var(--green)">₊</span><div><div class="l">Numerar</div><div class="a" style="color:var(--green)">1.240 lei</div></div></div>
-                <div class="dv"></div>
-                <div class="it"><span class="i" style="background:var(--cyan-bg);color:var(--cyan)">▭</span><div><div class="l">Card</div><div class="a" style="color:var(--cyan)">860 lei</div></div></div>
+            <div class="stitle">Categorie bilete</div>
+            <div class="tt"><span class="sq" style="background:var(--ac)"></span><div><div class="nm">Fan Pit</div><div class="pr">350 lei · loc în picioare</div></div><div class="stp"><b>–</b><span class="qn">2</span><b>+</b></div></div>
+            <div class="tt"><span class="sq" style="background:#00e5ff"></span><div><div class="nm">Standard cu loc</div><div class="pr">250 lei · alege pe hartă →</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--faint)">0</span><b>+</b></div></div>
+            <div class="tt"><span class="sq" style="background:var(--am)"></span><div><div class="nm">VIP Loge</div><div class="pr">800 lei · alege pe hartă →</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--faint)">0</span><b>+</b></div></div>
+            <div class="tt"><span class="sq" style="background:var(--pu)"></span><div><div class="nm">Elev / Student</div><div class="pr">120 lei · la intrare</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--faint)">0</span><b>+</b></div></div>
+            <div class="alert tl" style="margin-top:2px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tl)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div style="flex:1"><div class="t" style="color:var(--tl)">Biletele cu loc deschid harta sălii</div></div></div>
+          </div>
+          <div class="paybar"><div class="paybtn"><span><span class="c">2 bilete · Continuă</span><br><span class="amt">700 lei</span></span><span style="font-size:18px">→</span></div></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Grid tipuri (<code>is_entry_ticket</code>) + coș. Metodă: numerar / card / NFC / factură. Biletele cu loc trimit spre harta sălii. <code>POST /orders</code> (<code>pos_app</code>) → <code>/pos-complete</code>.</div>
+      </div>
+
+      <!-- SEAT MAP -->
+      <div class="dw" style="--ac:#00c896;--acb:rgba(0,200,150,.12);--acbd:rgba(0,200,150,.30)">
+        <div class="dtag"><span class="n">Selectare loc pe hartă</span><span class="role" style="color:var(--ac);border-color:var(--acbd)">nou</span></div>
+        <div class="device"><div class="screen">
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr" style="padding-bottom:8px"><div class="id"><div class="bk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></div><div><div class="scr-title">Alege locurile</div><div style="font-size:11px;color:var(--mu)">Standard cu loc · Sala Mare</div></div></div></div>
+          <div class="body" style="gap:8px">
+            <div class="stage">S C E N Ă</div>
+            <div class="seatzone">
+              <div class="zl"><span>Parter · rândurile 1–5</span><span style="color:var(--ac)">250 lei</span></div>
+              <div class="seatgrid">
+                <div class="seatrow"><span class="rl">A</span><span class="seat sold"></span><span class="seat sold"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat sold"></span><span class="seat sold"></span></div>
+                <div class="seatrow"><span class="rl">B</span><span class="seat free"></span><span class="seat sel"></span><span class="seat sel"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span></div>
+                <div class="seatrow"><span class="rl">C</span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat sold"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span></div>
+                <div class="seatrow"><span class="rl">D</span><span class="seat free"></span><span class="seat free"></span><span class="seat sold"></span><span class="seat sold"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span></div>
+                <div class="seatrow"><span class="rl">E</span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span><span class="seat free"></span></div>
               </div>
             </div>
-            <div class="s3">
-              <div class="st"><div style="color:var(--violet)">◳</div><div class="v" style="color:var(--violet)">213</div><div class="l">Scanări</div></div>
-              <div class="st"><div style="color:var(--green)">🛒</div><div class="v" style="color:var(--green)">18</div><div class="l">Vânzări</div></div>
-              <div class="st"><div style="color:var(--cyan)">◷</div><div class="v" style="color:var(--cyan)">2:14</div><div class="l">Durată</div></div>
+            <div class="seatzone">
+              <div class="zl"><span>Lojă VIP</span><span style="color:var(--am)">800 lei</span></div>
+              <div class="seatgrid">
+                <div class="seatrow"><span class="rl">L</span><span class="seat vip"></span><span class="seat vip"></span><span class="seat sold"></span><span class="seat vip"></span><span class="seat vip"></span><span class="seat vip"></span></div>
+              </div>
             </div>
-            <div class="big" style="margin-top:2px">
-              <div class="bigbtn v">◳ &nbsp;Începe Scanarea</div>
-              <div class="bigbtn g">🛒 &nbsp;Începe Vânzarea</div>
-            </div>
-            <div class="close" style="margin-top:2px">⊘ &nbsp;Închide Tura</div>
+            <div class="seatlegend"><div><i class="seat free" style="width:11px;height:11px"></i>Liber</div><div><i style="background:var(--ac)"></i>Selectat</div><div><i style="background:rgba(255,255,255,.06);border:1px solid var(--br)"></i>Vândut</div><div><i style="background:rgba(245,166,35,.2);border:1px solid rgba(245,166,35,.4)"></i>VIP</div></div>
           </div>
-          <div class="tab c3"><a class="on">▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>⋯<span>Mai mult</span></a></div>
+          <div class="paybar"><div class="selsum" style="margin:0 0 10px"><span class="chip">B2 · B3</span><div style="font-size:11px;color:var(--mu);flex:1">2 locuri selectate · Parter</div><span style="font-weight:900;font-variant-numeric:tabular-nums">500 lei</span></div><div class="paybtn"><span><span class="c">Confirmă locurile</span><br><span class="amt">2 × Standard</span></span><span style="font-size:18px">→</span></div></div>
           <div class="homebar"></div>
         </div></div>
-        <div class="dnote">Rolul de scanner vede maxim 3 taburi. Starea turei (turnover, contoare) persistă local; <code>GET /me/active-shift</code>. „Închide tura" = reconciliere numerar/card.</div>
+        <div class="dnote">Hartă sală: scenă, secțiuni (parter/lojă/balcon), stări liber/selectat/vândut/VIP, rezumat selecție. Randată în WebView cu token semnat. <code>GET …/events/{id}/seating-map</code>, <code>POST /organizer/seating/embed-token</code>, hold via <code>/api/public/seats/hold</code>.</div>
       </div>
 
-      <!-- 4. SCANARE -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Scanare — validare</span><span class="role">C</span></div>
+      <!-- SCAN -->
+      <div class="dw" style="--ac:#00c896;--acb:rgba(0,200,150,.12);--acbd:rgba(0,200,150,.30)">
+        <div class="dtag"><span class="n">Scanare / validare</span><span class="role">C</span></div>
         <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Scanare</div><span class="ic">⌨</span></div>
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr" style="padding-bottom:8px"><div class="id"><div class="bk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></div><div><div class="scr-title">Scanare</div><div style="font-size:11px;color:var(--mu)">Coldplay · Poarta A</div></div></div><div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h6"/></svg></div></div></div>
           <div class="cam">
-            <div class="grid-tex"></div>
-            <div class="mini">
-              <div class="m"><div class="v" style="color:var(--violet)">24</div><div class="l">scan/min</div></div>
-              <div class="m"><div class="v">842</div><div class="l">intrați</div></div>
-              <div class="m"><div class="v" style="color:var(--amber)">338</div><div class="l">așteptare</div></div>
-            </div>
-            <div class="reticle"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><div class="laser"></div></div>
-            <div class="hint">Îndreaptă camera spre codul QR</div>
+            <div class="tex"></div>
+            <div class="cmini"><div class="m"><div class="v" style="color:var(--ac)">24</div><div class="l">scan/min</div></div><div class="m"><div class="v">842</div><div class="l">intrați</div></div><div class="m"><div class="v" style="color:var(--am)">338</div><div class="l">așteptare</div></div></div>
+            <div class="ret"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><div class="laser"></div></div>
           </div>
-          <div class="body" style="flex:none;padding:12px 16px 14px">
-            <div class="result ok">
-              <div class="rh"><span class="ri" style="background:var(--green);color:#03251a">✓</span><div><div class="rt" style="color:var(--green)">Check-in valid</div><div class="rs">Maria Ionescu · Categoria I</div></div></div>
-              <div class="meta">
-                <div><div class="k">Loc</div><div class="val">Rândul 4 · Loc 12</div></div>
-                <div><div class="k">Cod</div><div class="val" style="font-family:var(--mono)">X1SG7TLS</div></div>
-              </div>
-            </div>
+          <div class="body" style="flex:none;padding:11px 15px 14px">
+            <div class="result ok"><div class="rh"><div class="ri" style="background:var(--gr);color:#04211a"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg></div><div><div style="font-size:15px;font-weight:900;color:var(--gr)">Check-in valid</div><div style="font-size:11px;color:var(--mu)">Maria Ionescu · Fan Pit</div></div></div><div class="meta"><div><div class="k">Loc</div><div class="v">Rândul B · Loc 2</div></div><div><div class="k">Cod</div><div class="v" style="font-family:var(--mono)">X1SG7TLS</div></div></div></div>
           </div>
           <div class="homebar"></div>
         </div></div>
-        <div class="dnote">Scanner multi-tier: <code>BarcodeDetector</code> → <code>jsQR</code> → manual. Dedup 60s, sunet + vibrație. <code>POST /organizer/participants/checkin</code>. Duplicat/invalid → 400 cu payload complet (cine a intrat deja).</div>
-      </div>
-
-      <!-- 5. VANZARE POS -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Vânzare — POS</span><span class="role">D · pos_cashier</span></div>
-        <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Vânzare</div><span class="ic">☰</span></div>
-          <div class="body">
-            <div class="evsel"><div class="txt"><div class="t">Concert Simfonic de Vară</div><div class="m">La ușă · sursă pos_app</div></div></div>
-            <div class="slab">Tipuri de bilete</div>
-            <div class="tt"><span class="sq" style="background:var(--violet)"></span><div><div class="nm">Categoria I</div><div class="pr">120 lei · 84 disp.</div></div><div class="stp"><b>–</b><span class="qn">2</span><b>+</b></div></div>
-            <div class="tt"><span class="sq" style="background:var(--cyan)"></span><div><div class="nm">Categoria II</div><div class="pr">80 lei · 152 disp.</div></div><div class="stp"><b>–</b><span class="qn">1</span><b>+</b></div></div>
-            <div class="tt"><span class="sq" style="background:var(--green)"></span><div><div class="nm">Acces general</div><div class="pr">50 lei · stoc mare</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--txt-4)">0</span><b>+</b></div></div>
-            <div class="tt"><span class="sq" style="background:var(--amber)"></span><div><div class="nm">Elev / Student</div><div class="pr">35 lei · 40 disp.</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--txt-4)">0</span><b>+</b></div></div>
-          </div>
-          <div class="cartbar"><div class="paybtn"><span><span class="c">3 bilete · Plătește</span><br><span class="amt">320 lei</span></span><span style="font-size:18px">→</span></div></div>
-          <div class="homebar"></div>
-        </div></div>
-        <div class="dnote">Coș → metodă (Numerar / Card / Card NFC dacă <code>card_nfc_enabled</code> / Factură). <code>POST /orders</code> (<code>source=pos_app</code>) → <code>/pos-complete</code>. Livrare: email sau QR-claim; print thermal <code>/v/CODE?p=pos</code>. Locuri via WebView (<code>seating/embed-token</code>).</div>
-      </div>
-
-      <!-- 6. RAPOARTE -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Rapoarte</span><span class="role">E</span></div>
-        <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Rapoarte</div><span class="ic">⭳</span></div>
-          <div class="body">
-            <div class="evsel"><div class="txt"><div class="t">Gală Aniversară · 12 iun</div><div class="m">Eveniment încheiat</div></div><span class="chev">›</span></div>
-            <div class="ring">
-              <div class="g"><div class="inner"><b>76%</b><small>check-in</small></div></div>
-              <div class="leg">
-                <div><span class="d" style="background:var(--green)"></span>Intrați <b>&nbsp;898</b></div>
-                <div><span class="d" style="background:rgba(255,255,255,.2)"></span>Neintrați <b>&nbsp;282</b></div>
-                <div><span class="d" style="background:var(--violet)"></span>Vândute <b>&nbsp;1.180</b></div>
-              </div>
-            </div>
-            <div class="rsum">
-              <div class="rc" style="background:var(--violet-bg);border-color:var(--violet-bd)"><div class="v" style="color:var(--violet)">1.180</div><div class="l">Total vândute</div></div>
-              <div class="rc" style="background:var(--cyan-bg);border-color:var(--cyan-bd)"><div class="v" style="color:var(--cyan)">73.4k</div><div class="l">Venituri (lei)</div></div>
-            </div>
-            <div class="block">
-              <div class="lab" style="margin-bottom:6px"><span>Performanța porților</span></div>
-              <div class="row2"><span class="nm">Poarta A</span><span class="vv">412</span></div>
-              <div class="row2"><span class="nm">Poarta B</span><span class="vv">356</span></div>
-              <div class="row2"><span class="nm">VIP</span><span class="vv">130</span></div>
-            </div>
-            <div class="act"><span class="ai" style="background:var(--green-bg);color:var(--green)">⭳</span><div><div class="at">Export CSV</div><div class="as">Participanți · vânzări · staff</div></div><span class="tm">›</span></div>
-          </div>
-          <div class="tab c5"><a>▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a class="on">▤<span>Rapoarte</span></a><a>⋯<span>Mai mult</span></a></div>
-          <div class="homebar"></div>
-        </div></div>
-        <div class="dnote">Selector evenimente trecute (filtre an/lună). Rată, per-tip, porți, staff, scanări leisure. Export CSV. <code>…/statistics</code>, <code>/staff-report</code>, <code>…/export</code>.</div>
-      </div>
-
-      <!-- 7. LISTA INVITATI -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Listă invitați</span><span class="role">F</span></div>
-        <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Invitați</div><span class="ic">↻</span></div>
-          <div class="body">
-            <div class="s3">
-              <div class="st"><div class="v">1.180</div><div class="l">Total</div></div>
-              <div class="st"><div class="v" style="color:var(--green)">842</div><div class="l">Intrați</div></div>
-              <div class="st"><div class="v" style="color:var(--amber)">338</div><div class="l">Lipsesc</div></div>
-            </div>
-            <div class="filters"><span class="f on">Toți</span><span class="f">Intrați</span><span class="f">Neintrați</span></div>
-            <div class="search">🔍&nbsp; Caută nume, email sau cod bilet…</div>
-            <div style="margin-top:2px">
-              <div class="gl"><span class="av" style="background:var(--green-bg);color:var(--green)">MI</span><div><div class="nm">Maria Ionescu</div><div class="cd">X1SG7TLS · Cat. I</div></div><span class="stt" style="color:var(--green);background:var(--green-bg)">Intrat</span></div>
-              <div class="gl"><span class="av" style="background:var(--violet-bg);color:var(--violet)">AP</span><div><div class="nm">Andrei Popa</div><div class="cd">K9M2QZ4R · Cat. II</div></div><span class="stt" style="color:var(--txt-3);background:var(--glass-2)">Lipsă</span></div>
-              <div class="gl"><span class="av" style="background:var(--green-bg);color:var(--green)">DL</span><div><div class="nm">Diana Lungu</div><div class="cd">P4T8WX1C · VIP</div></div><span class="stt" style="color:var(--green);background:var(--green-bg)">Intrat</span></div>
-              <div class="gl"><span class="av" style="background:var(--violet-bg);color:var(--violet)">RS</span><div><div class="nm">Radu Stan</div><div class="cd">B7N3JH5L · Cat. I</div></div><span class="stt" style="color:var(--txt-3);background:var(--glass-2)">Lipsă</span></div>
-            </div>
-          </div>
-          <div class="tab c5"><a>▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a>▤<span>Rapoarte</span></a><a class="on">⋯<span>Mai mult</span></a></div>
-          <div class="homebar"></div>
-        </div></div>
-        <div class="dnote">Căutare + filtre + check-in manual din listă (util când camera nu poate scana). <code>GET …/events/{id}/participants</code>, global <code>/participants</code>.</div>
-      </div>
-
-      <!-- 8. SETARI -->
-      <div class="device-wrap">
-        <div class="dtag"><span class="n">Mai multe & Setări</span><span class="role">H</span></div>
-        <div class="device"><div class="screen">
-          <div class="notch"></div>
-          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
-          <div class="top"><div class="lg"><span class="dot"></span>Setări</div></div>
-          <div class="body">
-            <div class="act"><span class="ai" style="background:var(--violet-bg);color:var(--violet)">◈</span><div><div class="at">Teatrul Odeon</div><div class="as">Andrei P. · admin</div></div><span class="tm" style="color:var(--violet)">Schimbă ›</span></div>
-            <div class="slab">Scanner</div>
-            <div class="set"><span class="si" style="background:var(--violet-bg);color:var(--violet)">≋</span><div><div class="st">Vibrație</div></div><span class="tog on"></span></div>
-            <div class="set"><span class="si" style="background:var(--cyan-bg);color:var(--cyan)">♪</span><div><div class="st">Efecte sonore</div></div><span class="tog on"></span></div>
-            <div class="set"><span class="si" style="background:var(--green-bg);color:var(--green)">✓</span><div><div class="st">Auto-confirmare valide</div><div class="ss">Fără tap la fiecare scanare</div></div><span class="tog off"></span></div>
-            <div class="slab">Hardware</div>
-            <div class="set"><span class="si" style="background:var(--amber-bg);color:var(--amber)">🖶</span><div><div class="st">Imprimantă bon</div><div class="ss">Thermal 80mm</div></div><span class="tm">›</span></div>
-            <div class="set"><span class="si" style="background:var(--cyan-bg);color:var(--cyan)">◫</span><div><div class="st">Card prin NFC</div><div class="ss">Plată contactless</div></div><span class="tog on"></span></div>
-            <div class="slab">Admin</div>
-            <div class="set"><span class="si" style="background:var(--violet-bg);color:var(--violet)">⛩</span><div><div class="st">Porți & personal</div></div><span class="tm">›</span></div>
-          </div>
-          <div class="tab c5"><a>▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a>▤<span>Rapoarte</span></a><a class="on">⋯<span>Mai mult</span></a></div>
-          <div class="homebar"></div>
-        </div></div>
-        <div class="dnote">Preferințe scanner (local). Hardware & <code>card_nfc_enabled</code> via <code>PUT /organizer/mobile-settings</code>. Secțiunea Admin: porți, echipă, staff QR, payout/bănci.</div>
+        <div class="dnote">Multi-tier (BarcodeDetector → jsQR → manual). Card verde/galben/roșu + sunet + vibrație. <code>POST /organizer/participants/checkin</code>. Duplicat → 400 cu „cine a intrat deja".</div>
       </div>
 
     </div>
   </section>
 
-  <!-- ROLE ADAPTATION -->
+  <!-- TENANT-SPECIFIC SCREENS -->
   <section>
-    <div class="sec-head"><h2>Adaptare pe rol & context</h2><p>Aceeași aplicație, navigație și permisiuni diferite.</p></div>
-    <div class="legendgrid">
-      <div class="lgc"><div class="t"><span class="pill v">Owner / Admin</span></div><div class="d">Toate taburile: panou, scanare, vânzare, rapoarte, echipă, porți, setări, payout.</div></div>
-      <div class="lgc"><div class="t"><span class="pill c">Manager</span></div><div class="d">Panou, scanare, vânzare, rapoarte. Fără gestiune echipă/finanțe.</div></div>
-      <div class="lgc"><div class="t"><span class="pill g">Casier · <code>pos_cashier</code></span></div><div class="d">Vânzare + sesiune casă. Panou-tură. Fără scanare.</div></div>
-      <div class="lgc"><div class="t"><span class="pill a">Scanner · <code>check_in</code></span></div><div class="d">3 taburi: panou-tură, scanare, mai mult. Fluxul cel mai rapid.</div></div>
-      <div class="lgc"><div class="t"><span class="pill v"><code>admin_mobile</code></span></div><div class="d">Scanare + vânzare pe același dispozitiv mobil.</div></div>
-      <div class="lgc"><div class="t"><span class="pill" style="color:var(--txt-2);border-color:var(--line-2)">Venue-owner</span></div><div class="d">Read-only + scanare pentru evenimentele din locația proprie (<code>/venue-owner/scan</code>).</div></div>
-    </div>
-    <div style="margin-top:22px">
-      <div class="slab" style="margin-bottom:12px">Un cont, oricâte contexte</div>
-      <div class="flow">
-        <div class="step"><span class="n">1</span>Login (email + parolă)</div>
-        <span class="arw">→</span>
-        <div class="step"><span class="n">2</span>Rezolvă context: tenant / marketplace / venue</div>
-        <span class="arw">→</span>
-        <div class="step"><span class="n">3</span>Branding runtime (logo · culori)</div>
-        <span class="arw">→</span>
-        <div class="step"><span class="n">4</span>Rutare API + permisiuni pe rol</div>
+    <div class="sec-head"><span class="num">03</span><h2>Ecrane pe tip de tenant</h2><p>Aceeași aplicație, navigație și module diferite — din template-urile tale.</p></div>
+    <div class="sec-intro">Fiecare tip de cont primește taburi și ecrane proprii, peste nucleul comun. Accentul temează interfața.</div>
+    <div class="gallery">
+
+      <!-- TEATRU -->
+      <div class="dw" style="--ac:#9b60c8;--acb:rgba(155,96,200,.14);--acbd:rgba(155,96,200,.32)">
+        <div class="dtag"><span class="n">Teatru — Spectacole & Abonamente</span><span class="ctx" style="background:var(--acb);color:var(--ac)">teatru</span></div>
+        <div class="device"><div class="screen">
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr"><div class="id"><div class="av">TN</div><div><div class="nm">Teatrul Național</div><div class="sub">Cluj · Stagiune 2024/25</div></div></div><div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="badge">3</span></div></div></div>
+          <div class="subtabs" style="padding:0 15px 2px"><span class="subtab on">Spectacole</span><span class="subtab">Abonamente</span><span class="subtab">Săli</span></div>
+          <div class="body">
+            <div class="hero"><div class="glow"></div><div class="lbl">Încasări stagiune</div><div class="big">1.240.000 lei</div><div class="stats"><div><div class="v">18</div><div class="l">Spectacole</div></div><div><div class="v">3</div><div class="l">Săli</div></div><div><div class="v">412</div><div class="l">Abonați</div></div></div></div>
+            <div class="stitle">Spectacole viitoare</div>
+            <div class="evc"><div class="top"><div><div class="nm">Hamlet</div><div class="meta">W. Shakespeare · reg. Radu Afrim</div><div class="chipwrap" style="margin-top:6px"><span class="badge b-ac">Sala Mare</span><span class="badge b-mu">Dramă</span><span class="badge b-am">18 Apr · 19:00</span></div></div><div class="rt"><div class="s">380</div><div class="c">/ 400</div><div class="rev">30k lei</div></div></div><div class="trk"><i style="width:95%"></i></div></div>
+            <div class="evc"><div class="top"><div><div class="nm">Woyzeck</div><div class="meta">G. Büchner · reg. Cristi Juncu</div><div class="chipwrap" style="margin-top:6px"><span class="badge b-mu">Sala Mică</span><span class="badge b-mu">Tragedie</span></div></div><div class="rt"><div class="s">110</div><div class="c">/ 120</div><div class="rev">5.5k lei</div></div></div><div class="trk"><i style="width:92%"></i></div></div>
+            <div class="stitle" style="margin-top:2px">Taxe culturale aplicate</div>
+            <div class="card"><div class="drow" style="padding:11px 13px"><span class="dl">Timbru monumente</span><span class="dv">2%</span></div><div class="drow" style="padding:11px 13px"><span class="dl">TVA cultural</span><span class="dv">5%</span></div></div>
+          </div>
+          <div class="bnav">
+            <div class="ni on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="nl">Home</span><span class="dt"></span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h20l-2 14H4z"/><path d="M8 21h8"/></svg><span class="nl">Abonamente</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nl">Vânzări</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="nl">Scanare</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nl">Setări</span></div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Spectacole (autor/regizor/sală), <b>abonamente</b> (utilizare, reînnoire), săli configurate + hartă locuri, taxe culturale (timbru, TVA 5%, Card Cultural).</div>
       </div>
-      <p class="muted" style="margin-top:16px;max-width:70ch;font-size:13px">Un rewriter de API mapează căile după context: organizator → <code style="font-family:var(--mono)">/marketplace-client/organizer/*</code>, venue-owner → <code style="font-family:var(--mono)">/marketplace-client/venue-owner/*</code>, tenant → <code style="font-family:var(--mono)">/tenant-client/*</code> (rezolvat pe domeniu). Autentificare unică prin Sanctum; cheia de marketplace doar identifică brandul, nu se împachetează în binar.</p>
+
+      <!-- VENUE LIVE -->
+      <div class="dw" style="--ac:#00e5ff;--acb:rgba(0,229,255,.12);--acbd:rgba(0,229,255,.32)">
+        <div class="dtag"><span class="n">Venue — Live / Gate-uri</span><span class="ctx" style="background:var(--acb);color:var(--ac)">venue</span></div>
+        <div class="device"><div class="screen">
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr"><div class="id"><div class="av">SP</div><div><div class="nm">Sala Polivalentă</div><div class="sub">Cluj · LIVE acum</div></div></div><div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="dot"></span></div></div></div>
+          <div class="body">
+            <div class="alert" style="background:rgba(61,219,138,.07);border-color:rgba(61,219,138,.2)"><span style="width:9px;height:9px;border-radius:50%;background:var(--gr);flex:none;box-shadow:0 0 8px var(--gr)"></span><div style="flex:1"><div class="t" style="color:var(--gr)">Eveniment LIVE acum</div><div class="s">Scanare activă pe toate gate-urile</div></div></div>
+            <div class="kpis"><div class="kpi"><div class="v" style="color:var(--ac)">6.240</div><div class="l">Intrați</div></div><div class="kpi"><div class="v">8.100</div><div class="l">Vândute</div></div><div class="kpi"><div class="v">77%</div><div class="l">Ocupare</div></div></div>
+            <div class="stitle">Status gate-uri</div>
+            <div class="card">
+              <div class="gate"><span class="st" style="background:var(--gr)"></span><div style="flex:1"><div class="lrow" style="padding:0;gap:0"><div><div style="font-size:13px;font-weight:800">Poarta A (Nord)</div><div style="font-size:11px;color:var(--hi)">2 scanere · 24/min</div></div></div></div><span class="badge b-gr">Activ</span></div>
+              <div class="gate"><span class="st" style="background:var(--gr)"></span><div style="flex:1"><div style="font-size:13px;font-weight:800">Poarta B (Sud)</div><div style="font-size:11px;color:var(--hi)">1 scaner · 11/min</div></div><span class="badge b-gr">Activ</span></div>
+              <div class="gate"><span class="st" style="background:var(--am)"></span><div style="flex:1"><div style="font-size:13px;font-weight:800">Poarta C (VIP)</div><div style="font-size:11px;color:var(--hi)">Închisă · deschide 20:00</div></div><span class="badge b-am">Standby</span></div>
+            </div>
+            <div class="stitle">Ocupare pe zone</div>
+            <div class="card" style="padding:13px">
+              <div class="zbar">
+                <div class="zrow"><span class="zl">Tribună Nord</span><span class="zt"><i style="display:block;height:100%;width:88%;background:var(--ac);border-radius:3px"></i></span><span class="zv">88%</span></div>
+                <div class="zrow"><span class="zl">Tribună Sud</span><span class="zt"><i style="display:block;height:100%;width:72%;background:var(--ac);border-radius:3px"></i></span><span class="zv">72%</span></div>
+                <div class="zrow"><span class="zl">Parter GA</span><span class="zt"><i style="display:block;height:100%;width:64%;background:var(--ac);border-radius:3px"></i></span><span class="zv">64%</span></div>
+              </div>
+            </div>
+            <div class="stitle">Intrări recente</div>
+            <div class="card">
+              <div class="lrow"><div class="ic" style="background:rgba(61,219,138,.1);color:var(--gr)">✓</div><div><div class="t">Alexandru M.</div><div class="s">Standard · Poarta A</div></div><span class="rt" style="font-size:10px;color:var(--hi)">acum 2 min</span></div>
+              <div class="lrow"><div class="ic" style="background:rgba(240,79,79,.1);color:var(--rd)">✗</div><div><div class="t" style="color:var(--rd)">QR invalid</div><div class="s">Poarta A</div></div><span class="rt" style="font-size:10px;color:var(--hi)">acum 5 min</span></div>
+            </div>
+          </div>
+          <div class="bnav">
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="nl">Home</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/></svg><span class="nl">Evenimente</span></div>
+            <div class="ni on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="nl">Live</span><span class="dt"></span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nl">Vânzări</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nl">Setări</span></div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Tab dedicat <b>Live</b>: status gate-uri, ocupare pe zone, intrări recente în timp real. Agregă scanările tuturor porților. Ideal pentru venue cu mai multe puncte de acces.</div>
+      </div>
+
+      <!-- ARTIST -->
+      <div class="dw" style="--ac:#1ddab4;--acb:rgba(29,218,180,.12);--acbd:rgba(29,218,180,.32)">
+        <div class="dtag"><span class="n">Artist — Fani & Rider</span><span class="ctx" style="background:var(--acb);color:var(--ac)">artist</span></div>
+        <div class="device"><div class="screen">
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr"><div class="id"><div class="av">CD</div><div><div class="nm">Carla's Dreams</div><div class="sub">Artist · turneu 2025</div></div></div><div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="badge">2</span></div></div></div>
+          <div class="subtabs" style="padding:0 15px 2px"><span class="subtab on">Fani</span><span class="subtab">Demografice</span><span class="subtab">Rider</span></div>
+          <div class="body">
+            <div class="hero"><div class="glow"></div><div class="lbl">Fani totali · toate show-urile</div><div class="big">48.200</div><div class="stats"><div><div class="v">6</div><div class="l">Show-uri</div></div><div><div class="v">1.240</div><div class="l">Fani fideli</div></div><div><div class="v">72%</div><div class="l">Revin</div></div></div></div>
+            <div class="stitle">Top orașe</div>
+            <div class="card" style="padding:13px"><div class="bars"><div class="b"><span class="bl">București</span><span class="bt"><i style="display:block;height:100%;width:90%;background:var(--ac);border-radius:3px"></i></span><span class="bv">18.2k</span></div><div class="b"><span class="bl">Cluj-Napoca</span><span class="bt"><i style="display:block;height:100%;width:62%;background:var(--ac);border-radius:3px"></i></span><span class="bv">9.4k</span></div><div class="b"><span class="bl">Timișoara</span><span class="bt"><i style="display:block;height:100%;width:48%;background:var(--ac);border-radius:3px"></i></span><span class="bv">6.1k</span></div></div></div>
+            <div class="stitle">Top fani după cheltuieli</div>
+            <div class="card">
+              <div class="lrow"><div class="miniav" style="background:var(--acb);color:var(--ac)">MP</div><div><div class="t">Maria Popa</div><div class="s">12 bilete · 3 orașe</div></div><span class="rt"><span class="badge b-ac">2.480 lei</span></span></div>
+              <div class="lrow"><div class="miniav" style="background:var(--acb);color:var(--ac)">AI</div><div><div class="t">Andrei Ion</div><div class="s">9 bilete · merch</div></div><span class="rt"><span class="badge b-ac">1.960 lei</span></span></div>
+            </div>
+            <div class="stitle">Rider — status</div>
+            <div class="card"><div class="lrow"><div class="ic" style="background:rgba(61,219,138,.1);color:var(--gr)">✓</div><div><div class="t">Tehnic</div><div class="s">Sunet, lumini, scenă</div></div><span class="rt"><span class="badge b-gr">OK</span></span></div><div class="lrow"><div class="ic" style="background:rgba(245,166,35,.1);color:var(--am)">!</div><div><div class="t">Hospitality</div><div class="s">Cameră relaxare lipsă</div></div><span class="rt"><span class="badge b-am">Parțial</span></span></div></div>
+          </div>
+          <div class="bnav">
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="nl">Home</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="nl">Show-uri</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nl">Vânzări</span></div>
+            <div class="ni on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg><span class="nl">Fani</span><span class="dt"></span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nl">Setări</span></div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Artistul vede <b>Fani</b> (top orașe, fideli, cheltuieli, demografice) și <b>Rider</b> (tehnic/hospitality/contract). Show-uri = evenimentele lui, cu vânzări per oraș.</div>
+      </div>
+
+      <!-- AGENTIE -->
+      <div class="dw" style="--ac:#9b7ff8;--acb:rgba(155,127,248,.14);--acbd:rgba(155,127,248,.32)">
+        <div class="dtag"><span class="n">Agenție — Artiști, Contracte, Financiar</span><span class="ctx" style="background:var(--acb);color:var(--ac)">agenție</span></div>
+        <div class="device"><div class="screen">
+          <div class="di"></div>
+          <div class="sb"><span>9:41</span><span class="r">◧ ▮</span></div>
+          <div class="apphdr"><div class="id"><div class="av">EP</div><div><div class="nm">EventPro Agency</div><div class="sub">Booking · 12 artiști</div></div></div><div class="acts"><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div><div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="badge">4</span></div></div></div>
+          <div class="body">
+            <div class="hero"><div class="glow"></div><div class="lbl">Fee booking încasat · 2025</div><div class="big">184.000 EUR</div><div class="stats"><div><div class="v">12</div><div class="l">Artiști</div></div><div><div class="v">38</div><div class="l">Shows</div></div><div><div class="v">6</div><div class="l">Fee pending</div></div></div></div>
+            <div class="stitle">Plăți fee artiști în așteptare</div>
+            <div class="card">
+              <div class="lrow"><div class="miniav" style="background:var(--acb);color:var(--ac)">CD</div><div><div class="t">Carla's Dreams</div><div class="s">Acoustic Tour · 19 Apr</div></div><span class="rt"><div style="font-size:13px;font-weight:900">8.500 €</div><span class="badge b-am">scadent</span></span></div>
+              <div class="lrow"><div class="miniav" style="background:var(--acb);color:var(--ac)">IR</div><div><div class="t">Iris</div><div class="s">40 ani pe scenă · 25 Apr</div></div><span class="rt"><div style="font-size:13px;font-weight:900">22.000 €</div><span class="badge b-gr">plătit</span></span></div>
+            </div>
+            <div class="stitle">Comisioane booking per artist</div>
+            <div class="card" style="padding:13px"><div class="bars"><div class="b"><span class="bl">Carla's Dreams</span><span class="bt"><i style="display:block;height:100%;width:85%;background:var(--ac);border-radius:3px"></i></span><span class="bv">15%</span></div><div class="b"><span class="bl">Irina Rimes</span><span class="bt"><i style="display:block;height:100%;width:66%;background:var(--ac);border-radius:3px"></i></span><span class="bv">12%</span></div></div></div>
+            <div class="stitle">Contracte</div>
+            <div class="card"><div class="lrow"><div class="ic" style="background:rgba(61,219,138,.1);color:var(--gr)">✓</div><div><div class="t">Micutzu — Turneu Național</div><div class="s">Semnat · valid 12 luni</div></div><span class="badge b-gr">Activ</span></div><div class="lrow"><div class="ic" style="background:rgba(245,166,35,.1);color:var(--am)">!</div><div><div class="t">Forbes Conf.</div><div class="s">Expiră în 8 zile</div></div><span class="badge b-am">Curând</span></div></div>
+          </div>
+          <div class="bnav">
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="nl">Home</span></div>
+            <div class="ni on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg><span class="nl">Artiști</span><span class="dt"></span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="nl">Shows</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="nl">Contracte</span></div>
+            <div class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="nl">Financiar</span></div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Agenția gestionează <b>artiști</b> (booking, comisioane), <b>contracte</b> (status, expirare) și <b>financiar</b> (fee-uri de plată, încasări). Nav complet diferit de organizator.</div>
+      </div>
+
     </div>
   </section>
 
   <footer>
-    <span>Tixello · aplicație mobilă staff — design de referință, Fază 1</span>
-    <span class="muted">Modelat după Tixello Scan (ambilet-app2) · plan complet: <code style="font-family:var(--mono)">plans/mds/TIXELLO_MOBILE_APP_PLAN.md</code></span>
+    <span>Tixello · aplicație mobilă staff — design v2, integrează template-urile tenant</span>
+    <span style="color:var(--faint)">Plan complet: <code>plans/mds/TIXELLO_MOBILE_APP_PLAN.md</code></span>
   </footer>
 
 </div>
