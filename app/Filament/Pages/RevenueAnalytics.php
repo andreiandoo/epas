@@ -96,7 +96,7 @@ class RevenueAnalytics extends Page
         $avgCommissionRate = (float) (MarketplaceClient::query()->avg('commission_rate') ?? 1);
 
         // === MICROSERVICE REVENUE BREAKDOWN ===
-        $microserviceData = $this->calculateMicroserviceBreakdown();
+        $microserviceData = $this->calculateMicroserviceBreakdown($currentMonthStart, $currentMonthEnd);
         $recurringMicroserviceRevenue = $microserviceData['recurring'];
         $fixedMicroserviceRevenue = $microserviceData['fixed'];
         $totalMicroserviceRevenue = $recurringMicroserviceRevenue + $fixedMicroserviceRevenue;
@@ -172,7 +172,7 @@ class RevenueAnalytics extends Page
         $this->calculateFinancialHealth($mrr, $arr, $monthlyCosts, $netProfit);
     }
 
-    protected function calculateMicroserviceBreakdown(): array
+    protected function calculateMicroserviceBreakdown(Carbon $periodStart, Carbon $periodEnd): array
     {
         $recurring = 0;
         $fixed = 0;
@@ -185,18 +185,29 @@ class RevenueAnalytics extends Page
             $activeTenantCount = TenantMicroservice::where('microservice_id', $microservice->id)
                 ->where('status', 'active')
                 ->count();
-            $tenantIsRecurring = in_array($microservice->billing_cycle, ['monthly', 'yearly']);
-            $tenantMonthlyPrice = match ($microservice->billing_cycle) {
-                'yearly' => $microservice->price / 12,
-                default => $microservice->price,
-            };
-            $tenantMonthlyRevenue = $tenantMonthlyPrice * $activeTenantCount;
-            $tenantRecurring = $tenantIsRecurring ? $tenantMonthlyRevenue : 0;
-            $tenantFixed = $tenantIsRecurring ? 0 : $tenantMonthlyRevenue;
+            // Tenant revenue by billing cycle:
+            //   monthly / yearly → recurring (yearly / 12);
+            //   one_time         → counts ONLY in the month it was activated;
+            //   on_demand / other / null → usage-based or unpriced, NOT counted
+            //     (e.g. "Festival Cashless" on_demand @3000 is charged per use,
+            //     not a flat monthly fee — it was inflating the total).
+            $cycle = $microservice->billing_cycle;
+            $tenantRecurring = 0.0;
+            $tenantFixed = 0.0;
+            if (in_array($cycle, ['monthly', 'yearly'], true)) {
+                $monthlyPrice = $cycle === 'yearly' ? $microservice->price / 12 : $microservice->price;
+                $tenantRecurring = $monthlyPrice * $activeTenantCount;
+            } elseif ($cycle === 'one_time') {
+                $activatedThisPeriod = TenantMicroservice::where('microservice_id', $microservice->id)
+                    ->where('status', 'active')
+                    ->whereBetween('activated_at', [$periodStart, $periodEnd])
+                    ->count();
+                $tenantFixed = (float) $microservice->price * $activatedThisPeriod;
+            }
 
             // Marketplaces bill at their PER-MARKETPLACE configured amount only
-            // (billing_amount + billing_cycle on the pivot). Not set => 0, so a
-            // marketplace like Ambilet no longer inflates revenue.
+            // (billing_amount + billing_cycle on the pivot). Not set => 0. A
+            // one-time marketplace fee also counts only in its activation month.
             $mpPivots = MarketplaceClientMicroservice::where('microservice_id', $microservice->id)
                 ->where('status', 'active')
                 ->get();
@@ -205,7 +216,11 @@ class RevenueAnalytics extends Page
             $mpFixed = 0.0;
             foreach ($mpPivots as $pivot) {
                 $mpRecurring += $pivot->monthlyRevenue();
-                $mpFixed += $pivot->oneTimeRevenue();
+                if ($pivot->billing_cycle === 'one_time'
+                    && $pivot->activated_at
+                    && $pivot->activated_at->between($periodStart, $periodEnd)) {
+                    $mpFixed += $pivot->oneTimeRevenue();
+                }
             }
 
             $recurring += $tenantRecurring + $mpRecurring;
@@ -268,7 +283,9 @@ class RevenueAnalytics extends Page
         $commission = $this->tixelloRevenueForPeriod($start, $end)['total'];
 
         // Calculate months in period for recurring revenue
-        $monthsInPeriod = $start->diffInMonths($end) + 1;
+        // Count calendar months in the range (anchor both to start-of-month so a
+        // single month like 1–31 Jul = 1, not 2).
+        $monthsInPeriod = max(1, (int) $start->copy()->startOfMonth()->diffInMonths($end->copy()->startOfMonth()) + 1);
         $recurringRevenue = $this->metrics['recurring_microservice_revenue'] * $monthsInPeriod;
 
         $this->filteredRevenue = [
