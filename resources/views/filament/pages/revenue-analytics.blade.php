@@ -20,7 +20,7 @@
             {{-- MRR --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">MRR</p>
-                <p class="text-lg font-bold text-white">{{ number_format($metrics['mrr'], 0) }} RON</p>
+                <p class="text-lg font-bold text-white">€{{ number_format($metrics['mrr'], 0) }}</p>
                 @if($metrics['mrr_growth'] != 0)
                     <p class="text-xs {{ $metrics['mrr_growth'] > 0 ? 'text-green-400' : 'text-red-400' }}">
                         {{ $metrics['mrr_growth'] > 0 ? '↑' : '↓' }} {{ abs(number_format($metrics['mrr_growth'], 1)) }}%
@@ -30,40 +30,40 @@
             {{-- ARR --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">ARR</p>
-                <p class="text-lg font-bold text-white">{{ number_format($metrics['arr'], 0) }} RON</p>
+                <p class="text-lg font-bold text-white">€{{ number_format($metrics['arr'], 0) }}</p>
             </div>
             {{-- Net Profit --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">Net Profit/mo</p>
                 <p class="text-lg font-bold {{ $metrics['net_profit'] >= 0 ? 'text-green-400' : 'text-red-400' }}">
-                    {{ number_format($metrics['net_profit'], 0) }} RON
+                    €{{ number_format($metrics['net_profit'], 0) }}
                 </p>
                 <p class="text-xs text-gray-500">{{ number_format($metrics['profit_margin'], 1) }}% margin</p>
             </div>
             {{-- Costs --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">Costs/mo</p>
-                <p class="text-lg font-bold text-red-400">{{ number_format($metrics['monthly_costs'], 0) }} RON</p>
+                <p class="text-lg font-bold text-red-400">€{{ number_format($metrics['monthly_costs'], 0) }}</p>
             </div>
             {{-- Filtered Gross --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">Period Gross</p>
-                <p class="text-lg font-bold text-white">{{ number_format($filteredRevenue['gross_sales'], 0) }} RON</p>
+                <p class="text-lg font-bold text-white">€{{ number_format($filteredRevenue['gross_sales'], 0) }}</p>
             </div>
             {{-- Commission --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">Commission</p>
-                <p class="text-lg font-bold text-blue-400">{{ number_format($filteredRevenue['commission'], 0) }} RON</p>
+                <p class="text-lg font-bold text-blue-400">€{{ number_format($filteredRevenue['commission'], 0) }}</p>
             </div>
             {{-- Recurring MS --}}
             <div class="bg-gray-800 rounded-lg p-3">
                 <p class="text-xs text-gray-400">Recurring MS</p>
-                <p class="text-lg font-bold text-emerald-400">{{ number_format($filteredRevenue['recurring_microservices'], 0) }} RON</p>
+                <p class="text-lg font-bold text-emerald-400">€{{ number_format($filteredRevenue['recurring_microservices'], 0) }}</p>
             </div>
             {{-- Total Period --}}
             <div class="bg-gray-800 rounded-lg p-3 border border-primary-600">
                 <p class="text-xs text-gray-400">Period Total</p>
-                <p class="text-lg font-bold text-primary-400">{{ number_format($filteredRevenue['total'], 0) }} RON</p>
+                <p class="text-lg font-bold text-primary-400">€{{ number_format($filteredRevenue['total'], 0) }}</p>
             </div>
         </div>
 
@@ -110,12 +110,12 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div class="text-center p-2 bg-gray-700/50 rounded">
                         <p class="text-xs text-gray-400">LTV</p>
-                        <p class="text-sm font-bold text-indigo-400">{{ number_format($unitEconomics['ltv'] ?? 0, 0) }} RON</p>
+                        <p class="text-sm font-bold text-indigo-400">€{{ number_format($unitEconomics['ltv'] ?? 0, 0) }}</p>
                         <p class="text-xs text-gray-500">{{ number_format($unitEconomics['avg_lifespan_months'] ?? 0, 0) }}mo avg</p>
                     </div>
                     <div class="text-center p-2 bg-gray-700/50 rounded">
                         <p class="text-xs text-gray-400">CAC</p>
-                        <p class="text-sm font-bold text-rose-400">{{ number_format($unitEconomics['cac'] ?? 0, 0) }} RON</p>
+                        <p class="text-sm font-bold text-rose-400">€{{ number_format($unitEconomics['cac'] ?? 0, 0) }}</p>
                         <p class="text-xs text-gray-500">{{ $unitEconomics['new_tenants_this_month'] ?? 0 }} new</p>
                     </div>
                     <div class="text-center p-2 bg-gray-700/50 rounded">
@@ -124,7 +124,7 @@
                     </div>
                     <div class="text-center p-2 bg-gray-700/50 rounded">
                         <p class="text-xs text-gray-400">ARPU</p>
-                        <p class="text-sm font-bold text-cyan-400">{{ number_format($unitEconomics['arpu'] ?? 0, 0) }} RON</p>
+                        <p class="text-sm font-bold text-cyan-400">€{{ number_format($unitEconomics['arpu'] ?? 0, 0) }}</p>
                     </div>
                 </div>
             </div>
@@ -137,7 +137,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div class="text-center p-2 bg-gray-700/50 rounded">
                         <p class="text-xs text-gray-400">EBITDA</p>
-                        <p class="text-sm font-bold {{ ($financialHealth['ebitda'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">{{ number_format($financialHealth['ebitda'] ?? 0, 0) }} RON</p>
+                        <p class="text-sm font-bold {{ ($financialHealth['ebitda'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">€{{ number_format($financialHealth['ebitda'] ?? 0, 0) }}</p>
                         <p class="text-xs text-gray-500">{{ number_format($financialHealth['ebitda_margin'] ?? 0, 1) }}%</p>
                     </div>
                     <div class="text-center p-2 bg-gray-700/50 rounded">
@@ -148,7 +148,7 @@
                     </div>
                     <div class="text-center p-2 bg-gray-700/50 rounded">
                         <p class="text-xs text-gray-400">Cash Flow</p>
-                        <p class="text-sm font-bold {{ ($financialHealth['operating_cash_flow'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">{{ number_format($financialHealth['operating_cash_flow'] ?? 0, 0) }} RON</p>
+                        <p class="text-sm font-bold {{ ($financialHealth['operating_cash_flow'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">€{{ number_format($financialHealth['operating_cash_flow'] ?? 0, 0) }}</p>
                     </div>
                     <div class="text-center p-2 bg-gray-700/50 rounded">
                         <p class="text-xs text-gray-400">Runway</p>
@@ -170,7 +170,7 @@
                         <div class="flex items-center gap-3">
                             <div class="w-3 h-3 rounded-full" style="background-color: {{ $source['color'] }}"></div>
                             <span class="text-xs text-gray-400 flex-1">{{ $source['label'] }}</span>
-                            <span class="text-sm font-medium text-white">{{ number_format($source['value'], 0) }} RON</span>
+                            <span class="text-sm font-medium text-white">€{{ number_format($source['value'], 0) }}</span>
                             @php
                                 $total = array_sum(array_column($revenueBreakdown, 'value'));
                                 $percent = $total > 0 ? ($source['value'] / $total) * 100 : 0;
@@ -180,7 +180,7 @@
                     @endforeach
                     <div class="pt-2 border-t border-gray-700 flex justify-between">
                         <span class="text-sm font-medium text-gray-300">Total MRR</span>
-                        <span class="text-sm font-bold text-white">{{ number_format($metrics['mrr'], 0) }} RON</span>
+                        <span class="text-sm font-bold text-white">€{{ number_format($metrics['mrr'], 0) }}</span>
                     </div>
                 </div>
             </div>
@@ -196,12 +196,12 @@
                         @foreach($costBreakdown as $cost)
                             <div class="flex justify-between">
                                 <span class="text-xs text-gray-400">{{ $cost['label'] }}</span>
-                                <span class="text-sm font-medium text-gray-300">{{ number_format($cost['value'], 0) }} RON</span>
+                                <span class="text-sm font-medium text-gray-300">€{{ number_format($cost['value'], 0) }}</span>
                             </div>
                         @endforeach
                         <div class="pt-2 border-t border-gray-700 flex justify-between">
                             <span class="text-sm font-medium text-gray-300">Total Costs</span>
-                            <span class="text-sm font-bold text-red-400">{{ number_format($metrics['monthly_costs'], 0) }} RON</span>
+                            <span class="text-sm font-bold text-red-400">€{{ number_format($metrics['monthly_costs'], 0) }}</span>
                         </div>
                     </div>
                 @else
@@ -238,10 +238,10 @@
                             @foreach($projections as $months => $projection)
                                 <tr class="border-b border-gray-700/50">
                                     <td class="py-2 px-2 text-gray-300">{{ $projection['label'] }}</td>
-                                    <td class="py-2 px-2 text-right text-white">{{ number_format($projection['mrr'], 0) }} RON</td>
-                                    <td class="py-2 px-2 text-right text-red-400">{{ number_format($projection['costs'], 0) }} RON</td>
-                                    <td class="py-2 px-2 text-right {{ $projection['net_profit'] >= 0 ? 'text-green-400' : 'text-red-400' }}">{{ number_format($projection['net_profit'], 0) }} RON</td>
-                                    <td class="py-2 px-2 text-right text-gray-300">{{ number_format($projection['cumulative_revenue'], 0) }} RON</td>
+                                    <td class="py-2 px-2 text-right text-white">€{{ number_format($projection['mrr'], 0) }}</td>
+                                    <td class="py-2 px-2 text-right text-red-400">€{{ number_format($projection['costs'], 0) }}</td>
+                                    <td class="py-2 px-2 text-right {{ $projection['net_profit'] >= 0 ? 'text-green-400' : 'text-red-400' }}">€{{ number_format($projection['net_profit'], 0) }}</td>
+                                    <td class="py-2 px-2 text-right text-gray-300">€{{ number_format($projection['cumulative_revenue'], 0) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -268,21 +268,21 @@
                                 @foreach($microserviceBreakdown as $ms)
                                     <tr class="border-b border-gray-700/50">
                                         <td class="py-2 px-2 text-gray-300 truncate max-w-[120px]">{{ is_array($ms['name']) ? ($ms['name']['en'] ?? '') : $ms['name'] }}</td>
-                                        <td class="py-2 px-2 text-right text-white">{{ number_format($ms['price'], 0) }} RON</td>
+                                        <td class="py-2 px-2 text-right text-white">€{{ number_format($ms['price'], 0) }}</td>
                                         <td class="py-2 px-2 text-center">
                                             <span class="inline-flex px-1.5 py-0.5 rounded text-xs {{ $ms['is_recurring'] ? 'bg-green-900/50 text-green-400' : 'bg-amber-900/50 text-amber-400' }}">
                                                 {{ $ms['is_recurring'] ? 'Rec' : 'Once' }}
                                             </span>
                                         </td>
                                         <td class="py-2 px-2 text-right text-gray-300" title="Tenants: {{ $ms['active_tenants'] }}, Marketplace: {{ $ms['active_marketplace_clients'] ?? 0 }}">{{ $ms['active_total'] ?? $ms['active_tenants'] }}</td>
-                                        <td class="py-2 px-2 text-right font-medium {{ $ms['is_recurring'] ? 'text-green-400' : 'text-amber-400' }}">{{ number_format($ms['monthly_revenue'], 0) }} RON</td>
+                                        <td class="py-2 px-2 text-right font-medium {{ $ms['is_recurring'] ? 'text-green-400' : 'text-amber-400' }}">€{{ number_format($ms['monthly_revenue'], 0) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr class="border-t border-gray-600">
                                     <td colspan="4" class="py-2 px-2 font-medium text-gray-300">Total</td>
-                                    <td class="py-2 px-2 text-right font-bold text-white">{{ number_format($metrics['total_microservice_revenue'], 0) }} RON</td>
+                                    <td class="py-2 px-2 text-right font-bold text-white">€{{ number_format($metrics['total_microservice_revenue'], 0) }}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -309,8 +309,8 @@
                         @foreach($monthlyData as $data)
                             <tr class="border-b border-gray-700/50">
                                 <td class="py-2 px-2 text-gray-300">{{ $data['month'] }}</td>
-                                <td class="py-2 px-2 text-right text-white">{{ number_format($data['revenue'], 0) }} RON</td>
-                                <td class="py-2 px-2 text-right text-green-400">{{ number_format($data['commission'], 0) }} RON</td>
+                                <td class="py-2 px-2 text-right text-white">€{{ number_format($data['revenue'], 0) }}</td>
+                                <td class="py-2 px-2 text-right text-green-400">€{{ number_format($data['commission'], 0) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -324,11 +324,11 @@
             <div class="grid grid-cols-3 gap-4">
                 <div>
                     <p class="text-primary-200 text-xs">Current ARR</p>
-                    <p class="text-2xl font-bold text-white">{{ number_format($metrics['arr'], 0) }} RON</p>
+                    <p class="text-2xl font-bold text-white">€{{ number_format($metrics['arr'], 0) }}</p>
                 </div>
                 <div>
                     <p class="text-primary-200 text-xs">12mo Projected ARR</p>
-                    <p class="text-2xl font-bold text-white">{{ number_format($projections[12]['arr'] ?? 0, 0) }} RON</p>
+                    <p class="text-2xl font-bold text-white">€{{ number_format($projections[12]['arr'] ?? 0, 0) }}</p>
                 </div>
                 <div>
                     <p class="text-primary-200 text-xs">Profit Margin</p>
@@ -336,7 +336,7 @@
                 </div>
             </div>
             <p class="mt-3 text-xs text-primary-200 border-t border-primary-500 pt-2">
-                Commission ({{ number_format($metrics['avg_commission_rate'], 1) }}% avg) + Recurring MS ({{ number_format($metrics['recurring_microservice_revenue'], 0) }} RON/mo) + One-time ({{ number_format($metrics['fixed_microservice_revenue'], 0) }} RON)
+                Commission ({{ number_format($metrics['avg_commission_rate'], 1) }}% avg) + Recurring MS (€{{ number_format($metrics['recurring_microservice_revenue'], 0) }}/mo) + One-time (€{{ number_format($metrics['fixed_microservice_revenue'], 0) }})
             </p>
         </div>
     </div>
@@ -390,7 +390,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(0) + ' RON';
+                                    return context.dataset.label + ': €' + context.parsed.y.toFixed(0);
                                 }
                             }
                         }
@@ -401,7 +401,7 @@
                             grid: { color: 'rgba(75, 85, 99, 0.3)' },
                             ticks: {
                                 color: '#9ca3af',
-                                callback: function(value) { return value + ' RON'; }
+                                callback: function(value) { return '€' + value; }
                             }
                         },
                         x: {

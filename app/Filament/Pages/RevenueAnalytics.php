@@ -34,6 +34,11 @@ class RevenueAnalytics extends Page
     public array $unitEconomics = [];
     public array $financialHealth = [];
 
+    // RON→EUR conversion factor. The page's base currency is EUR (microservice
+    // prices + platform costs are stored in EUR); commission is collected in RON
+    // and converted with this. Set from ExchangeRate on each recalculation.
+    protected float $ronToEur = 0.20;
+
     #[Url]
     public ?string $startDate = null;
 
@@ -63,18 +68,23 @@ class RevenueAnalytics extends Page
         $filterStart = Carbon::parse($this->startDate)->startOfDay();
         $filterEnd = Carbon::parse($this->endDate)->endOfDay();
 
-        // Current month dates
+        // Base currency is EUR; commission is in RON → convert with this factor.
+        $this->ronToEur = (float) (\App\Models\ExchangeRate::getRate('RON', 'EUR') ?? 0.20);
+
+        // Month windows — anchor to start-of-month BEFORE subtracting so a 31st
+        // (e.g. Jul 31) doesn't overflow into the wrong month and duplicate rows
+        // in Revenue History.
         $currentMonthStart = now()->startOfMonth();
         $currentMonthEnd = now()->endOfMonth();
-        $lastMonthStart = now()->subMonth()->startOfMonth();
-        $lastMonthEnd = now()->subMonth()->endOfMonth();
+        $lastMonthStart = now()->startOfMonth()->subMonth();
+        $lastMonthEnd = now()->startOfMonth()->subMonth()->endOfMonth();
 
         // === REVENUE: TIXELLO'S REAL CUT (not the marketplace's commission) ===
-        // Gross order volume across all marketplaces — informational only.
+        // Gross order volume across all marketplaces (RON) → EUR. Informational.
         $currentMonthOrderRevenue = (float) Order::where('status', 'completed')
-            ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])->sum('total');
+            ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])->sum('total') * $this->ronToEur;
         $lastMonthOrderRevenue = (float) Order::where('status', 'completed')
-            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('total');
+            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('total') * $this->ronToEur;
 
         // What Tixello ACTUALLY collects = its own commission_rate × each
         // marketplace's encasări (ticketing) + extra-services 50% share.
@@ -252,9 +262,9 @@ class RevenueAnalytics extends Page
     {
         $orderRevenue = (float) Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->sum('total');
+            ->sum('total') * $this->ronToEur;
 
-        // Tixello's real cut for the filtered period.
+        // Tixello's real cut for the filtered period (already EUR).
         $commission = $this->tixelloRevenueForPeriod($start, $end)['total'];
 
         // Calculate months in period for recurring revenue
@@ -274,15 +284,17 @@ class RevenueAnalytics extends Page
     protected function calculateMonthlyData(): void
     {
         $this->monthlyData = collect(range(11, 0))->map(function ($monthsAgo) {
-            $date = now()->subMonths($monthsAgo);
+            // startOfMonth() BEFORE subMonths() — otherwise the 31st overflows
+            // into the wrong month and duplicates rows in Revenue History.
+            $date = now()->startOfMonth()->subMonths($monthsAgo);
             $start = $date->copy()->startOfMonth();
             $end = $date->copy()->endOfMonth();
 
             $orderRevenue = (float) Order::where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end])
-                ->sum('total');
+                ->sum('total') * $this->ronToEur;
 
-            // Tixello's real cut (ticketing + services), not marketplace commission.
+            // Tixello's real cut (ticketing + services), already converted to EUR.
             $commission = $this->tixelloRevenueForPeriod($start, $end)['total'];
 
             return [
@@ -322,10 +334,11 @@ class RevenueAnalytics extends Page
             ->whereBetween('created_at', [$start, $end])
             ->sum('total');
 
+        // Convert RON → EUR (page base currency).
         return [
-            'ticketing' => round($ticketing, 2),
-            'services' => round($services, 2),
-            'total' => round($ticketing + $services, 2),
+            'ticketing' => round($ticketing * $this->ronToEur, 2),
+            'services' => round($services * $this->ronToEur, 2),
+            'total' => round(($ticketing + $services) * $this->ronToEur, 2),
         ];
     }
 

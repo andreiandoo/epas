@@ -49,11 +49,11 @@ class MicroservicesRelationManager extends RelationManager
                     ->helperText('Cât și dacă Tixello încasează pentru acest microserviciu de la acest marketplace'),
 
                 Forms\Components\TextInput::make('billing_amount')
-                    ->label('Sumă (RON)')
+                    ->label('Sumă (EUR)')
                     ->numeric()
                     ->minValue(0)
                     ->default(0)
-                    ->prefix('RON')
+                    ->prefix('€')
                     ->visible(fn ($get) => in_array($get('billing_cycle'), ['monthly', 'one_time'], true)),
 
                 Forms\Components\KeyValue::make('settings')
@@ -116,7 +116,7 @@ class MicroservicesRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('billing_amount')
                     ->label('Sumă')
-                    ->money('RON')
+                    ->money('EUR')
                     ->placeholder('—'),
             ])
             ->filters([
@@ -147,11 +147,11 @@ class MicroservicesRelationManager extends RelationManager
                             ->default('none')
                             ->live(),
                         Forms\Components\TextInput::make('billing_amount')
-                            ->label('Sumă (RON)')
+                            ->label('Sumă (EUR)')
                             ->numeric()
                             ->minValue(0)
                             ->default(0)
-                            ->prefix('RON')
+                            ->prefix('€')
                             ->visible(fn ($get) => in_array($get('billing_cycle'), ['monthly', 'one_time'], true)),
                         Forms\Components\KeyValue::make('settings')
                             ->label('Configuration'),
