@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Tixello",
+    "slug": "tixello-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "tixello",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#080c10",
+    "splash": {
+      "backgroundColor": "#080c10",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tixello.staff",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera este folosită pentru scanarea biletelor la intrare."
+      }
+    },
+    "android": {
+      "package": "com.tixello.staff",
+      "adaptiveIcon": {
+        "backgroundColor": "#080c10"
+      },
+      "permissions": ["CAMERA", "VIBRATE"]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        { "cameraPermission": "Camera este folosită pentru scanarea biletelor la intrare." }
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiBaseUrl": "https://core.tixello.com/api"
+    }
+  }
+}
