@@ -116,7 +116,7 @@ class MarketplaceClient extends Model
     {
         return $this->belongsToMany(Microservice::class, 'marketplace_client_microservices')
             ->using(MarketplaceClientMicroservicePivot::class)
-            ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings', 'usage_stats', 'is_default', 'sort_order'])
+            ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings', 'usage_stats', 'is_default', 'sort_order', 'billing_amount', 'billing_cycle'])
             ->withTimestamps();
     }
 

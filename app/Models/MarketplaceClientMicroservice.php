@@ -18,6 +18,8 @@ class MarketplaceClientMicroservice extends Model
         'usage_stats',
         'is_default',
         'sort_order',
+        'billing_amount',
+        'billing_cycle',
     ];
 
     protected $casts = [
@@ -27,7 +29,25 @@ class MarketplaceClientMicroservice extends Model
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
         'is_default' => 'boolean',
+        'billing_amount' => 'decimal:2',
     ];
+
+    /**
+     * Monthly recurring revenue Tixello bills the marketplace for this
+     * microservice (0 unless billing_cycle = 'monthly').
+     */
+    public function monthlyRevenue(): float
+    {
+        return $this->billing_cycle === 'monthly' ? (float) ($this->billing_amount ?? 0) : 0.0;
+    }
+
+    /**
+     * One-time fee for this microservice (0 unless billing_cycle = 'one_time').
+     */
+    public function oneTimeRevenue(): float
+    {
+        return $this->billing_cycle === 'one_time' ? (float) ($this->billing_amount ?? 0) : 0.0;
+    }
 
     public function marketplaceClient(): BelongsTo
     {

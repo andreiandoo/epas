@@ -37,6 +37,25 @@ class MicroservicesRelationManager extends RelationManager
                     ->label('Expires At')
                     ->helperText('Leave empty for no expiration'),
 
+                Forms\Components\Select::make('billing_cycle')
+                    ->label('Facturare Tixello')
+                    ->options([
+                        'none' => 'Nefacturat',
+                        'monthly' => 'Lunar',
+                        'one_time' => 'O singură dată',
+                    ])
+                    ->default('none')
+                    ->live()
+                    ->helperText('Cât și dacă Tixello încasează pentru acest microserviciu de la acest marketplace'),
+
+                Forms\Components\TextInput::make('billing_amount')
+                    ->label('Sumă (RON)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->default(0)
+                    ->prefix('RON')
+                    ->visible(fn ($get) => in_array($get('billing_cycle'), ['monthly', 'one_time'], true)),
+
                 Forms\Components\KeyValue::make('settings')
                     ->label('Configuration')
                     ->helperText('Custom configuration for this microservice')
@@ -84,6 +103,21 @@ class MicroservicesRelationManager extends RelationManager
                     ->date()
                     ->placeholder('Never')
                     ->color(fn ($state) => $state && $state->isPast() ? 'danger' : null),
+
+                Tables\Columns\TextColumn::make('billing_cycle')
+                    ->label('Facturare Tixello')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'monthly' => 'Lunar',
+                        'one_time' => 'O singură dată',
+                        default => 'Nefacturat',
+                    })
+                    ->color(fn ($state) => in_array($state, ['monthly', 'one_time'], true) ? 'success' : 'gray'),
+
+                Tables\Columns\TextColumn::make('billing_amount')
+                    ->label('Sumă')
+                    ->money('RON')
+                    ->placeholder('—'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
@@ -103,6 +137,22 @@ class MicroservicesRelationManager extends RelationManager
                             ->default(true),
                         Forms\Components\DatePicker::make('expires_at')
                             ->label('Expires At'),
+                        Forms\Components\Select::make('billing_cycle')
+                            ->label('Facturare Tixello')
+                            ->options([
+                                'none' => 'Nefacturat',
+                                'monthly' => 'Lunar',
+                                'one_time' => 'O singură dată',
+                            ])
+                            ->default('none')
+                            ->live(),
+                        Forms\Components\TextInput::make('billing_amount')
+                            ->label('Sumă (RON)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0)
+                            ->prefix('RON')
+                            ->visible(fn ($get) => in_array($get('billing_cycle'), ['monthly', 'one_time'], true)),
                         Forms\Components\KeyValue::make('settings')
                             ->label('Configuration'),
                     ])

@@ -8,6 +8,8 @@ use App\Models\PlatformCost;
 use App\Models\Microservice;
 use App\Models\TenantMicroservice;
 use App\Models\MarketplaceClientMicroservice;
+use App\Models\MarketplaceClient;
+use App\Models\ServiceOrder;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Url;
@@ -67,36 +69,21 @@ class RevenueAnalytics extends Page
         $lastMonthStart = now()->subMonth()->startOfMonth();
         $lastMonthEnd = now()->subMonth()->endOfMonth();
 
-        // === REVENUE FROM ORDERS (Commission) ===
-        $currentMonthOrderRevenue = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
-            ->sum('total') ?: (Order::where('status', 'completed')
-                ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
-                ->sum('total_cents') / 100);
+        // === REVENUE: TIXELLO'S REAL CUT (not the marketplace's commission) ===
+        // Gross order volume across all marketplaces — informational only.
+        $currentMonthOrderRevenue = (float) Order::where('status', 'completed')
+            ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])->sum('total');
+        $lastMonthOrderRevenue = (float) Order::where('status', 'completed')
+            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('total');
 
-        $lastMonthOrderRevenue = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-            ->sum('total') ?: (Order::where('status', 'completed')
-                ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-                ->sum('total_cents') / 100);
-
-        // Use actual commission_amount from orders (falls back to estimated if not available)
-        $currentMonthCommission = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
-            ->sum('commission_amount');
-
-        $lastMonthCommission = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-            ->sum('commission_amount');
-
-        // If no commission_amount data, fall back to estimated calculation
-        $avgCommissionRate = Tenant::where('status', 'active')->avg('commission_rate') ?? 2;
-        if ($currentMonthCommission == 0 && $currentMonthOrderRevenue > 0) {
-            $currentMonthCommission = $currentMonthOrderRevenue * ($avgCommissionRate / 100);
-        }
-        if ($lastMonthCommission == 0 && $lastMonthOrderRevenue > 0) {
-            $lastMonthCommission = $lastMonthOrderRevenue * ($avgCommissionRate / 100);
-        }
+        // What Tixello ACTUALLY collects = its own commission_rate × each
+        // marketplace's encasări (ticketing) + extra-services 50% share.
+        // NOT orders.commission_amount — that is the marketplace's own cut.
+        $currentTixello = $this->tixelloRevenueForPeriod($currentMonthStart, $currentMonthEnd);
+        $lastTixello = $this->tixelloRevenueForPeriod($lastMonthStart, $lastMonthEnd);
+        $currentMonthCommission = $currentTixello['total'];
+        $lastMonthCommission = $lastTixello['total'];
+        $avgCommissionRate = (float) (MarketplaceClient::query()->avg('commission_rate') ?? 1);
 
         // === MICROSERVICE REVENUE BREAKDOWN ===
         $microserviceData = $this->calculateMicroserviceBreakdown();
@@ -184,34 +171,37 @@ class RevenueAnalytics extends Page
         $microservices = Microservice::where('is_active', true)->get();
 
         foreach ($microservices as $microservice) {
-            // Count active tenants using this microservice
-            // Use TenantMicroservice directly to avoid bigint/varchar type mismatch on pivot join
+            // Tenants still bill at the microservice's GLOBAL price (unchanged).
             $activeTenantCount = TenantMicroservice::where('microservice_id', $microservice->id)
                 ->where('status', 'active')
                 ->count();
-
-            // Count active marketplace clients using this microservice
-            $activeMarketplaceCount = MarketplaceClientMicroservice::where('microservice_id', $microservice->id)
-                ->where('status', 'active')
-                ->count();
-
-            $activeCount = $activeTenantCount + $activeMarketplaceCount;
-
-            $isRecurring = in_array($microservice->billing_cycle, ['monthly', 'yearly']);
-
-            $monthlyPrice = match ($microservice->billing_cycle) {
+            $tenantIsRecurring = in_array($microservice->billing_cycle, ['monthly', 'yearly']);
+            $tenantMonthlyPrice = match ($microservice->billing_cycle) {
                 'yearly' => $microservice->price / 12,
-                'one_time' => $microservice->price,
                 default => $microservice->price,
             };
+            $tenantMonthlyRevenue = $tenantMonthlyPrice * $activeTenantCount;
+            $tenantRecurring = $tenantIsRecurring ? $tenantMonthlyRevenue : 0;
+            $tenantFixed = $tenantIsRecurring ? 0 : $tenantMonthlyRevenue;
 
-            $monthlyRevenue = $monthlyPrice * $activeCount;
-
-            if ($isRecurring) {
-                $recurring += $monthlyRevenue;
-            } else {
-                $fixed += $monthlyRevenue;
+            // Marketplaces bill at their PER-MARKETPLACE configured amount only
+            // (billing_amount + billing_cycle on the pivot). Not set => 0, so a
+            // marketplace like Ambilet no longer inflates revenue.
+            $mpPivots = MarketplaceClientMicroservice::where('microservice_id', $microservice->id)
+                ->where('status', 'active')
+                ->get();
+            $activeMarketplaceCount = $mpPivots->count();
+            $mpRecurring = 0.0;
+            $mpFixed = 0.0;
+            foreach ($mpPivots as $pivot) {
+                $mpRecurring += $pivot->monthlyRevenue();
+                $mpFixed += $pivot->oneTimeRevenue();
             }
+
+            $recurring += $tenantRecurring + $mpRecurring;
+            $fixed += $tenantFixed + $mpFixed;
+
+            $monthlyRevenue = $tenantRecurring + $mpRecurring; // recurring component
 
             $this->microserviceBreakdown[] = [
                 'id' => $microservice->id,
@@ -220,9 +210,10 @@ class RevenueAnalytics extends Page
                 'billing_cycle' => $microservice->billing_cycle,
                 'active_tenants' => $activeTenantCount,
                 'active_marketplace_clients' => $activeMarketplaceCount,
-                'active_total' => $activeCount,
+                'active_total' => $activeTenantCount + $activeMarketplaceCount,
                 'monthly_revenue' => $monthlyRevenue,
-                'is_recurring' => $isRecurring,
+                'marketplace_one_time' => $mpFixed,
+                'is_recurring' => ($tenantRecurring + $mpRecurring) > 0,
                 'projections' => [
                     3 => $monthlyRevenue * 3,
                     6 => $monthlyRevenue * 6,
@@ -259,20 +250,12 @@ class RevenueAnalytics extends Page
 
     protected function calculateFilteredRevenue(Carbon $start, Carbon $end, float $avgCommissionRate): void
     {
-        $orderRevenue = Order::where('status', 'completed')
+        $orderRevenue = (float) Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->sum('total') ?: (Order::where('status', 'completed')
-                ->whereBetween('created_at', [$start, $end])
-                ->sum('total_cents') / 100);
+            ->sum('total');
 
-        // Use actual commission data, fall back to estimate
-        $commission = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('commission_amount');
-
-        if ($commission == 0 && $orderRevenue > 0) {
-            $commission = $orderRevenue * ($avgCommissionRate / 100);
-        }
+        // Tixello's real cut for the filtered period.
+        $commission = $this->tixelloRevenueForPeriod($start, $end)['total'];
 
         // Calculate months in period for recurring revenue
         $monthsInPeriod = $start->diffInMonths($end) + 1;
@@ -290,27 +273,17 @@ class RevenueAnalytics extends Page
 
     protected function calculateMonthlyData(): void
     {
-        $avgCommissionRate = Tenant::where('status', 'active')->avg('commission_rate') ?? 2;
-
-        $this->monthlyData = collect(range(11, 0))->map(function ($monthsAgo) use ($avgCommissionRate) {
+        $this->monthlyData = collect(range(11, 0))->map(function ($monthsAgo) {
             $date = now()->subMonths($monthsAgo);
             $start = $date->copy()->startOfMonth();
             $end = $date->copy()->endOfMonth();
 
-            $orderRevenue = Order::where('status', 'completed')
+            $orderRevenue = (float) Order::where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end])
-                ->sum('total') ?: (Order::where('status', 'completed')
-                    ->whereBetween('created_at', [$start, $end])
-                    ->sum('total_cents') / 100);
+                ->sum('total');
 
-            // Use actual commission amounts, fall back to estimate
-            $commission = Order::where('status', 'completed')
-                ->whereBetween('created_at', [$start, $end])
-                ->sum('commission_amount');
-
-            if ($commission == 0 && $orderRevenue > 0) {
-                $commission = $orderRevenue * ($avgCommissionRate / 100);
-            }
+            // Tixello's real cut (ticketing + services), not marketplace commission.
+            $commission = $this->tixelloRevenueForPeriod($start, $end)['total'];
 
             return [
                 'month' => $date->format('M Y'),
@@ -318,6 +291,42 @@ class RevenueAnalytics extends Page
                 'commission' => $commission,
             ];
         })->values()->toArray();
+    }
+
+    /**
+     * Tixello's ACTUAL revenue for a period: its own commission_rate applied to
+     * each marketplace's paid encasări (ticketing), plus the 50% share of extra
+     * services (ServiceOrder.total already IS that share). This is what Tixello
+     * collects — NOT orders.commission_amount, which is the marketplace's own
+     * commission on its organizers.
+     *
+     * @return array{ticketing: float, services: float, total: float}
+     */
+    protected function tixelloRevenueForPeriod(Carbon $start, Carbon $end): array
+    {
+        $ticketing = 0.0;
+        foreach (MarketplaceClient::query()->get(['id', 'commission_rate']) as $mc) {
+            $rate = (float) ($mc->commission_rate ?? 0);
+            if ($rate <= 0) {
+                continue;
+            }
+            $enc = (float) Order::where('marketplace_client_id', $mc->id)
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import', 'pos_test'])
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('total');
+            $ticketing += $enc * $rate / 100;
+        }
+
+        $services = (float) ServiceOrder::where('payment_status', 'paid')
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('total');
+
+        return [
+            'ticketing' => round($ticketing, 2),
+            'services' => round($services, 2),
+            'total' => round($ticketing + $services, 2),
+        ];
     }
 
     protected function prepareChartData(): void
