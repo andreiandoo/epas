@@ -1,0 +1,573 @@
+<title>Tixello — Aplicație Mobilă · Design</title>
+<style>
+  :root{
+    --bg:#0A0A0F; --bg-2:#0d0d13; --surface:#14141b; --surface-2:#1b1b24;
+    --glass:rgba(255,255,255,.03); --glass-2:rgba(255,255,255,.06);
+    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.12);
+    --txt:#fff; --txt-2:rgba(255,255,255,.55); --txt-3:rgba(255,255,255,.4); --txt-4:rgba(255,255,255,.28);
+    --violet:#8B5CF6; --violet-2:#6366F1; --violet-bg:rgba(139,92,246,.1); --violet-bd:rgba(139,92,246,.32);
+    --green:#10B981; --green-bg:rgba(16,185,129,.12); --green-bd:rgba(16,185,129,.3);
+    --cyan:#06B6D4;  --cyan-bg:rgba(6,182,212,.12);  --cyan-bd:rgba(6,182,212,.28);
+    --amber:#F59E0B; --amber-bg:rgba(245,158,11,.12); --amber-bd:rgba(245,158,11,.3);
+    --red:#EF4444;   --red-bg:rgba(239,68,68,.12);   --red-bd:rgba(239,68,68,.3);
+    --ui:"SF Pro Text",ui-sans-serif,-apple-system,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,monospace;
+    --r:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:
+      radial-gradient(1100px 700px at 82% -8%, rgba(139,92,246,.16), transparent 60%),
+      radial-gradient(900px 640px at 6% 4%, rgba(99,102,241,.12), transparent 55%),
+      var(--bg);
+    color:var(--txt); font-family:var(--ui); line-height:1.5;
+    -webkit-font-smoothing:antialiased; letter-spacing:-.01em;
+    padding:clamp(20px,5vw,64px) clamp(16px,4vw,56px) 80px;
+  }
+  .wrap{max-width:1240px;margin:0 auto}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--violet)}
+  h1{font-size:clamp(34px,6vw,60px);line-height:1.02;font-weight:800;letter-spacing:-.03em;text-wrap:balance;margin:14px 0 0}
+  .lede{color:var(--txt-2);font-size:clamp(15px,1.7vw,18px);max-width:60ch;margin-top:16px}
+  .wordmark{display:inline-flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.03em}
+  .wordmark .dot{width:12px;height:12px;border-radius:4px;background:linear-gradient(135deg,var(--violet),var(--violet-2));box-shadow:0 0 22px rgba(139,92,246,.65)}
+  .grad{background:linear-gradient(100deg,#fff 20%,#c9bdfb 55%,var(--violet) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* ---- section scaffolding ---- */
+  section{margin-top:clamp(48px,7vw,86px)}
+  .sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:26px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .sec-head h2{font-size:clamp(20px,3vw,27px);font-weight:700;letter-spacing:-.02em}
+  .sec-head p{color:var(--txt-3);font-size:14px;margin-left:auto;max-width:46ch}
+
+  /* ---- tokens strip ---- */
+  .grid{display:grid;gap:16px}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  .cols-2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:860px){.cols-3{grid-template-columns:1fr}.cols-2{grid-template-columns:1fr}}
+  .card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+  .card h3{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-3);margin-bottom:16px}
+  .sw{display:flex;align-items:center;gap:12px;padding:9px 0}
+  .sw+.sw{border-top:1px solid var(--line)}
+  .chip{width:34px;height:34px;border-radius:10px;flex:none;border:1px solid rgba(255,255,255,.14)}
+  .sw b{font-size:13px;font-weight:600}
+  .sw code{font-family:var(--mono);font-size:11.5px;color:var(--txt-3);margin-left:auto}
+  .semrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .pill{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid}
+  .pill.v{color:var(--violet);background:var(--violet-bg);border-color:var(--violet-bd)}
+  .pill.g{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
+  .pill.c{color:var(--cyan);background:var(--cyan-bg);border-color:var(--cyan-bd)}
+  .pill.a{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+  .pill.r{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
+  .typerow{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-top:1px solid var(--line)}
+  .typerow:first-of-type{border-top:0}
+  .typerow small{font-family:var(--mono);font-size:10.5px;color:var(--txt-4);letter-spacing:.08em}
+
+  /* ---- device gallery ---- */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:clamp(26px,3.2vw,40px);align-items:start}
+  .device-wrap{display:flex;flex-direction:column;gap:14px}
+  .dtag{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .dtag .n{font-size:15px;font-weight:700}
+  .dtag .role{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-3);border:1px solid var(--line-2);border-radius:999px;padding:3px 9px}
+  .dnote{font-size:12px;color:var(--txt-3);line-height:1.45}
+  .dnote code{font-family:var(--mono);font-size:11px;color:var(--txt-2)}
+
+  .device{border-radius:40px;background:linear-gradient(160deg,#26262f,#111117);padding:9px;border:1px solid rgba(255,255,255,.09);box-shadow:0 40px 80px -40px rgba(0,0,0,.9),0 0 0 1px rgba(0,0,0,.5),inset 0 1px 1px rgba(255,255,255,.06)}
+  .screen{position:relative;border-radius:33px;background:var(--bg);overflow:hidden;height:600px;display:flex;flex-direction:column}
+  .screen::-webkit-scrollbar{display:none}
+  /* status bar */
+  .sb{display:flex;align-items:center;justify-content:space-between;padding:11px 20px 5px;font-size:12px;font-weight:600;flex:none}
+  .sb .r{display:flex;align-items:center;gap:6px}
+  .sb svg{display:block}
+  .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:96px;height:22px;background:#000;border-radius:0 0 14px 14px;z-index:5}
+  /* app top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 10px;flex:none}
+  .top .lg{display:flex;align-items:center;gap:7px;font-weight:800;font-size:15px;letter-spacing:-.02em}
+  .top .lg .dot{width:9px;height:9px;border-radius:3px;background:linear-gradient(135deg,var(--violet),var(--violet-2));box-shadow:0 0 12px rgba(139,92,246,.7)}
+  .live{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);border-radius:999px;padding:4px 10px}
+  .live .d{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .ic{width:30px;height:30px;border-radius:9px;background:var(--glass-2);display:grid;place-items:center;color:var(--txt-2)}
+  /* scroll body */
+  .body{flex:1;overflow:hidden;padding:2px 16px 0;display:flex;flex-direction:column;gap:12px}
+  .evsel{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:11px 13px}
+  .evsel .txt{min-width:0}
+  .evsel .txt .t{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .evsel .txt .m{font-size:11px;color:var(--txt-3)}
+  .evsel .badge{margin-left:auto;font-size:10px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:5px;flex:none}
+  .evsel .chev{color:var(--txt-4);flex:none}
+
+  .hero{border-radius:16px;padding:15px;background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(99,102,241,.05));border:1px solid var(--violet-bd)}
+  .hero .row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--txt-2);font-weight:600}
+  .hero .cd{margin-left:auto;display:flex;align-items:center;gap:5px;color:var(--amber);font-weight:700}
+  .hero .nm{font-size:17px;font-weight:800;letter-spacing:-.02em;margin-top:7px}
+  .hero .vn{font-size:12px;color:var(--txt-3);margin-top:2px}
+
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:12px}
+  .kpi .h{display:flex;align-items:center;gap:7px;color:var(--txt-2);font-size:11px;font-weight:600}
+  .kpi .h .i{width:22px;height:22px;border-radius:7px;display:grid;place-items:center}
+  .kpi .v{font-size:23px;font-weight:800;letter-spacing:-.02em;margin-top:9px;font-variant-numeric:tabular-nums}
+  .kpi .u{font-size:10.5px;color:var(--txt-4);margin-top:1px}
+
+  .block{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:13px}
+  .block .lab{font-size:11px;font-weight:700;color:var(--txt-2);display:flex;justify-content:space-between;align-items:center}
+  .bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:9px}
+  .bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--violet),var(--violet-2))}
+  .bsub{font-size:10.5px;color:var(--txt-3);margin-top:7px;font-variant-numeric:tabular-nums}
+  .seg{display:flex;height:26px;border-radius:8px;overflow:hidden;margin-top:9px;font-size:10px;font-weight:700}
+  .seg>i{display:grid;place-items:center;color:#04121a}
+  .seg .on{background:var(--cyan)}
+  .seg .dr{background:var(--violet);color:#0c0716}
+
+  .qa{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .qa a{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--txt-2);text-decoration:none;padding:11px 4px;border-radius:12px;border:1px solid var(--line);background:var(--glass)}
+  .qa .qi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+
+  .slab{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--txt-3);text-transform:uppercase;margin:2px 0 -2px}
+  .act{display:flex;align-items:center;gap:11px;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .act .ai{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
+  .act .at{font-size:12.5px;font-weight:600}
+  .act .as{font-size:10.5px;color:var(--txt-3)}
+  .act .tm{margin-left:auto;font-size:10.5px;color:var(--txt-4);font-variant-numeric:tabular-nums}
+
+  /* turnover / scanner view */
+  .turn{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:15px}
+  .turn h4{font-size:12px;font-weight:700;color:var(--txt-2);margin-bottom:12px}
+  .turn .r{display:flex;align-items:center}
+  .turn .it{flex:1;display:flex;align-items:center;gap:10px}
+  .turn .it .i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+  .turn .it .l{font-size:10.5px;color:var(--txt-3)}
+  .turn .it .a{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+  .turn .dv{width:1px;align-self:stretch;background:var(--line);margin:0 6px}
+  .s3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .s3 .st{background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:12px 8px;text-align:center}
+  .s3 .st .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:5px}
+  .s3 .st .l{font-size:9.5px;color:var(--txt-3);margin-top:2px}
+  .big{display:flex;flex-direction:column;gap:10px}
+  .bigbtn{display:flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:700;padding:15px;border-radius:14px;border:1px solid}
+  .bigbtn.v{color:#fff;background:linear-gradient(135deg,var(--violet),var(--violet-2));border-color:transparent;box-shadow:0 12px 26px -12px rgba(139,92,246,.8)}
+  .bigbtn.g{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
+  .close{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:13px;padding:12px}
+
+  /* scanner camera */
+  .cam{position:relative;flex:1;margin:0 -16px;background:radial-gradient(120% 90% at 50% 0,#1a1622,#050507);overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .cam .grid-tex{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:26px 26px;mask:radial-gradient(circle at 50% 42%,#000,transparent 70%)}
+  .reticle{width:172px;height:172px;border-radius:24px;position:relative}
+  .reticle span{position:absolute;width:30px;height:30px;border:3px solid var(--violet)}
+  .reticle .tl{top:0;left:0;border-right:0;border-bottom:0;border-radius:14px 0 0 0}
+  .reticle .tr{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 14px 0 0}
+  .reticle .bl{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 14px}
+  .reticle .br{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 14px 0}
+  .laser{position:absolute;left:8px;right:8px;top:52%;height:2px;background:linear-gradient(90deg,transparent,var(--violet),transparent);box-shadow:0 0 14px var(--violet);animation:scan 2.4s ease-in-out infinite}
+  @keyframes scan{0%,100%{top:12%}50%{top:86%}}
+  @media(prefers-reduced-motion:reduce){.laser{animation:none;top:50%}}
+  .cam .hint{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:var(--txt-3)}
+  .cam .mini{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px}
+  .cam .mini .m{flex:1;background:rgba(10,10,15,.7);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:7px;text-align:center}
+  .cam .mini .m .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .cam .mini .m .l{font-size:9px;color:var(--txt-3)}
+  /* result card */
+  .result{border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+  .result.ok{background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(16,185,129,.05));border:1px solid var(--green-bd)}
+  .result.dup{background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(245,158,11,.04));border:1px solid var(--amber-bd)}
+  .result .rh{display:flex;align-items:center;gap:10px}
+  .result .rh .ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+  .result .rh .rt{font-size:15px;font-weight:800}
+  .result .rh .rs{font-size:11px;color:var(--txt-2)}
+  .result .meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
+  .result .meta div{background:rgba(0,0,0,.22);border-radius:9px;padding:7px 9px}
+  .result .meta .k{font-size:9px;color:var(--txt-3);text-transform:uppercase;letter-spacing:.06em}
+  .result .meta .val{font-size:12.5px;font-weight:700;margin-top:1px}
+
+  /* POS */
+  .tt{display:flex;align-items:center;gap:11px;background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:11px 12px}
+  .tt .sq{width:6px;align-self:stretch;border-radius:4px;flex:none}
+  .tt .nm{font-size:13px;font-weight:700}
+  .tt .pr{font-size:11px;color:var(--txt-3);font-variant-numeric:tabular-nums}
+  .tt .stp{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .tt .stp b{width:26px;height:26px;border-radius:8px;background:var(--glass-2);border:1px solid var(--line);display:grid;place-items:center;font-size:15px;font-weight:700;color:var(--txt-2)}
+  .tt .stp .qn{font-size:14px;font-weight:800;min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
+  .cartbar{margin:0 -16px;padding:13px 16px calc(13px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(10,10,15,0),var(--bg) 30%);flex:none}
+  .paybtn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,var(--green),#059669);color:#022;border-radius:14px;padding:14px 16px;font-weight:800;box-shadow:0 14px 30px -14px rgba(16,185,129,.8)}
+  .paybtn .c{font-size:12px;font-weight:700;opacity:.85}
+  .paybtn .amt{font-size:16px;font-variant-numeric:tabular-nums}
+
+  /* reports ring + summary */
+  .ring{display:flex;align-items:center;gap:16px;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .ring .g{width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;background:conic-gradient(var(--green) 0 76%,rgba(255,255,255,.08) 76% 100%)}
+  .ring .g .inner{width:70px;height:70px;border-radius:50%;background:var(--bg);display:grid;place-items:center;flex-direction:column}
+  .ring .g .inner b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .ring .g .inner small{font-size:8.5px;color:var(--txt-3)}
+  .ring .leg{display:flex;flex-direction:column;gap:8px;font-size:11px}
+  .ring .leg div{display:flex;align-items:center;gap:7px;color:var(--txt-2)}
+  .ring .leg .d{width:8px;height:8px;border-radius:3px}
+  .ring .leg b{color:var(--txt);font-variant-numeric:tabular-nums}
+  .rsum{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .rsum .rc{border-radius:13px;padding:12px;border:1px solid}
+  .rsum .rc .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+  .rsum .rc .l{font-size:10px;margin-top:2px;opacity:.8}
+  .row2{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:9px 0;border-top:1px solid var(--line)}
+  .row2:first-child{border-top:0}
+  .row2 .nm{font-weight:600}
+  .row2 .vv{font-variant-numeric:tabular-nums;color:var(--txt-2);font-weight:700}
+
+  /* guest list */
+  .filters{display:flex;gap:7px}
+  .filters .f{flex:1;text-align:center;font-size:11px;font-weight:700;padding:8px;border-radius:10px;border:1px solid var(--line);color:var(--txt-3);background:var(--glass)}
+  .filters .f.on{color:var(--violet);background:var(--violet-bg);border-color:var(--violet-bd)}
+  .search{display:flex;align-items:center;gap:9px;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--txt-4);font-size:12px}
+  .gl{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid var(--line)}
+  .gl .av{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}
+  .gl .nm{font-size:12.5px;font-weight:700}
+  .gl .cd{font-size:10.5px;color:var(--txt-3);font-family:var(--mono)}
+  .gl .stt{margin-left:auto;font-size:10px;font-weight:700;padding:4px 9px;border-radius:999px}
+
+  /* settings toggles */
+  .set{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:12px 13px}
+  .set .si{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
+  .set .st{font-size:13px;font-weight:600}
+  .set .ss{font-size:10.5px;color:var(--txt-3)}
+  .tog{margin-left:auto;width:42px;height:25px;border-radius:999px;flex:none;position:relative;transition:.2s}
+  .tog::after{content:"";position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s}
+  .tog.on{background:var(--violet)}.tog.on::after{left:20px}
+  .tog.off{background:rgba(255,255,255,.14)}.tog.off::after{left:3px}
+
+  /* bottom tab bar */
+  .tab{display:grid;flex:none;padding:9px 8px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(10,10,15,.9);backdrop-filter:blur(12px)}
+  .tab.c5{grid-template-columns:repeat(5,1fr)}.tab.c3{grid-template-columns:repeat(3,1fr)}
+  .tab a{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;color:var(--txt-4)}
+  .tab a.on{color:var(--violet)}
+  .homebar{height:5px;width:120px;border-radius:999px;background:rgba(255,255,255,.22);margin:6px auto 0}
+
+  .muted{color:var(--txt-3)}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+  .flow .step{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600}
+  .flow .step .n{width:22px;height:22px;border-radius:7px;background:var(--violet-bg);border:1px solid var(--violet-bd);color:var(--violet);display:grid;place-items:center;font-size:11px;font-weight:800}
+  .flow .arw{color:var(--txt-4);align-self:center}
+  footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--line);color:var(--txt-3);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .legendgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+  .lgc{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:15px}
+  .lgc .t{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .lgc .d{font-size:11.5px;color:var(--txt-3);margin-top:6px;line-height:1.5}
+  .lgc code{font-family:var(--mono);font-size:10.5px;color:var(--violet)}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="wordmark eyebrow"><span class="dot"></span> Tixello · Design mobil</div>
+    <h1>Aplicația <span class="grad">Tixello</span> pentru staff: vinde, scanează, raportează — de pe orice telefon.</h1>
+    <p class="lede">O singură aplicație multi-brand care servește <b>orice tenant</b> al platformei și <b>orice organizator</b> dintr-un marketplace. Modelată după app-ul de scanare existent (Tixello Scan / <code style="font-family:var(--mono);font-size:.85em">ambilet-app2</code>), generalizată la întreaga platformă. Temă întunecată, mobile-first, adaptivă pe rol.</p>
+  </header>
+
+  <!-- DESIGN SYSTEM -->
+  <section>
+    <div class="sec-head"><h2>Sistem de design</h2><p>Preluat din <code style="font-family:var(--mono)">tixello-app/src/theme/colors.js</code> — accent unic violet, semantice separate.</p></div>
+    <div class="grid cols-3">
+      <div class="card">
+        <h3>Bază & accent</h3>
+        <div class="sw"><span class="chip" style="background:#0A0A0F"></span><b>Fundal</b><code>#0A0A0F</code></div>
+        <div class="sw"><span class="chip" style="background:#14141b"></span><b>Suprafață</b><code>#14141B</code></div>
+        <div class="sw"><span class="chip" style="background:linear-gradient(135deg,#8B5CF6,#6366F1)"></span><b>Violet (primar)</b><code>#8B5CF6</code></div>
+        <div class="sw"><span class="chip" style="background:rgba(255,255,255,.5)"></span><b>Text / opacități</b><code>1 · .55 · .4</code></div>
+      </div>
+      <div class="card">
+        <h3>Culori semantice</h3>
+        <div class="semrow">
+          <span class="pill g">Valid · Numerar</span>
+          <span class="pill c">Card · Timp</span>
+          <span class="pill a">Duplicat · Rată</span>
+          <span class="pill r">Invalid · Închide</span>
+          <span class="pill v">Primar · Selectat</span>
+        </div>
+        <div class="sw" style="margin-top:14px"><span class="chip" style="background:#10B981"></span><b>Verde</b><code>#10B981</code></div>
+        <div class="sw"><span class="chip" style="background:#06B6D4"></span><b>Cyan</b><code>#06B6D4</code></div>
+        <div class="sw"><span class="chip" style="background:#F59E0B"></span><b>Ambră</b><code>#F59E0B</code></div>
+        <div class="sw"><span class="chip" style="background:#EF4444"></span><b>Roșu</b><code>#EF4444</code></div>
+      </div>
+      <div class="card">
+        <h3>Tipografie & formă</h3>
+        <div class="typerow"><span style="font-size:26px;font-weight:800;letter-spacing:-.03em">Panou eveniment</span><small>UI · System 800 · -3% tracking</small></div>
+        <div class="typerow"><span style="font-size:15px;font-weight:600;color:var(--txt-2)">Text de conținut, etichete, meta</span><small>UI · 600/400</small></div>
+        <div class="typerow"><span style="font-family:var(--mono);font-size:15px;letter-spacing:.04em">X1SG7TLS · 1.240 lei</span><small>Mono · coduri & cifre tabulare</small></div>
+        <div class="typerow"><span style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-3)">Eyebrow / secțiune</span><small>UI · 700 · +16% tracking</small></div>
+        <div style="margin-top:10px;display:flex;gap:8px"><span class="pill v" style="border-radius:12px">radius 18</span><span class="pill" style="color:var(--txt-2);border-color:var(--line-2);border-radius:999px">pill 999</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREENS -->
+  <section>
+    <div class="sec-head"><h2>Ecrane</h2><p>Fluxul complet: onboarding → panou → scanare → vânzare → rapoarte → echipă → setări.</p></div>
+    <div class="gallery">
+
+      <!-- 1. LOGIN / CONTEXT -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Login & context</span><span class="role">A1 · A7</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r">
+            <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+            <svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
+          </span></div>
+          <div class="body" style="justify-content:center;gap:16px;padding:20px 22px">
+            <div style="text-align:center;margin-bottom:4px">
+              <div class="wordmark" style="justify-content:center;font-size:30px"><span class="dot" style="width:15px;height:15px"></span> Tixello</div>
+              <div class="muted" style="font-size:12px;margin-top:8px">Aplicația pentru organizatori & staff</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div class="search" style="color:var(--txt-2)">📧&nbsp; email@organizator.ro</div>
+              <div class="search" style="color:var(--txt-2)">🔒&nbsp; ••••••••••</div>
+            </div>
+            <div class="bigbtn v" style="padding:14px">Autentificare</div>
+            <div style="text-align:center;font-size:11.5px;color:var(--txt-3)">Ai uitat parola?</div>
+            <div style="margin-top:6px">
+              <div class="slab" style="margin-bottom:9px">Workspace-uri</div>
+              <div class="act" style="margin-bottom:8px"><span class="ai" style="background:var(--violet-bg);color:var(--violet)">◈</span><div><div class="at">Teatrul Odeon</div><div class="as">Tenant · white-label</div></div><span class="tm" style="color:var(--violet)">activ</span></div>
+              <div class="act"><span class="ai" style="background:var(--cyan-bg);color:var(--cyan)">◇</span><div><div class="at">Neversea Fest</div><div class="as">AmBilet · marketplace</div></div></div>
+            </div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Login unic prin <code>POST /organizer/login</code> (Sanctum). Un cont poate accesa mai mulți organizatori/tenanți — comutare prin <code>switch-organizer</code>. Brandingul (logo/culori) se aduce la runtime per workspace.</div>
+      </div>
+
+      <!-- 2. PANOU ADMIN -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Panou — Admin</span><span class="role">B1</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Tixello</div><div style="display:flex;gap:8px;align-items:center"><span class="live"><span class="d"></span>Live</span><span class="ic">↻</span></div></div>
+          <div class="body">
+            <div class="evsel"><div class="txt"><div class="t">Concert Simfonic de Vară</div><div class="m">Sala Palatului · 20:00</div></div><div class="badge"><span class="d" style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>Live</div><span class="chev">›</span></div>
+            <div class="kpis">
+              <div class="kpi"><div class="h"><span class="i" style="background:var(--violet-bg);color:var(--violet)">◔</span>Scanați</div><div class="v">842</div><div class="u">persoane</div></div>
+              <div class="kpi"><div class="h"><span class="i" style="background:var(--green-bg);color:var(--green)">🎟</span>Vândute</div><div class="v">1.180</div><div class="u">bilete</div></div>
+              <div class="kpi"><div class="h"><span class="i" style="background:var(--cyan-bg);color:var(--cyan)">₊</span>Încasări</div><div class="v" style="font-size:19px">73.4k</div><div class="u">lei · total</div></div>
+              <div class="kpi"><div class="h"><span class="i" style="background:var(--amber-bg);color:var(--amber)">▤</span>Disponibile</div><div class="v">320</div><div class="u">bilete</div></div>
+            </div>
+            <div class="block"><div class="lab"><span>Capacitate</span><span style="color:var(--violet)">79%</span></div><div class="bar"><i style="width:79%"></i></div><div class="bsub">1.180 / 1.500 locuri</div></div>
+            <div class="block"><div class="lab" style="margin-bottom:2px"><span>Online vs. la ușă</span></div><div class="seg"><i class="on" style="flex:0 0 68%">Online 68%</i><i class="dr" style="flex:0 0 32%">Ușă 32%</i></div></div>
+            <div class="slab">Acțiuni rapide</div>
+            <div class="qa">
+              <a><span class="qi" style="background:var(--violet-bg);color:var(--violet)">▣</span>Scanare</a>
+              <a><span class="qi" style="background:var(--green-bg);color:var(--green)">🛒</span>Vânzare</a>
+              <a><span class="qi" style="background:var(--cyan-bg);color:var(--cyan)">☰</span>Invitați</a>
+              <a><span class="qi" style="background:var(--amber-bg);color:var(--amber)">👥</span>Echipă</a>
+            </div>
+          </div>
+          <div class="tab c5"><a class="on">▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a>▤<span>Rapoarte</span></a><a>⋯<span>Mai mult</span></a></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Fiecare KPI e buton → bottom-sheet cu defalcare. Sursă <code>pos_app</code> = „la ușă". Date live via Reverb + polling 30s. <code>GET …/events/{id}/statistics</code>, <code>/sales-breakdown</code>.</div>
+      </div>
+
+      <!-- 3. PANOU SCANNER (TURA) -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Panou — Scanner (tură)</span><span class="role">B2 · check_in</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Tixello</div><div style="display:flex;gap:8px;align-items:center"><span class="live"><span class="d"></span>Live</span><span class="ic">↻</span></div></div>
+          <div class="body">
+            <div class="evsel evsel"><div class="txt"><div class="t">Poarta B · Andrei P.</div><div class="m">Tură începută 18:30</div></div></div>
+            <div class="turn">
+              <h4>Încasări tură</h4>
+              <div class="r">
+                <div class="it"><span class="i" style="background:var(--green-bg);color:var(--green)">₊</span><div><div class="l">Numerar</div><div class="a" style="color:var(--green)">1.240 lei</div></div></div>
+                <div class="dv"></div>
+                <div class="it"><span class="i" style="background:var(--cyan-bg);color:var(--cyan)">▭</span><div><div class="l">Card</div><div class="a" style="color:var(--cyan)">860 lei</div></div></div>
+              </div>
+            </div>
+            <div class="s3">
+              <div class="st"><div style="color:var(--violet)">◳</div><div class="v" style="color:var(--violet)">213</div><div class="l">Scanări</div></div>
+              <div class="st"><div style="color:var(--green)">🛒</div><div class="v" style="color:var(--green)">18</div><div class="l">Vânzări</div></div>
+              <div class="st"><div style="color:var(--cyan)">◷</div><div class="v" style="color:var(--cyan)">2:14</div><div class="l">Durată</div></div>
+            </div>
+            <div class="big" style="margin-top:2px">
+              <div class="bigbtn v">◳ &nbsp;Începe Scanarea</div>
+              <div class="bigbtn g">🛒 &nbsp;Începe Vânzarea</div>
+            </div>
+            <div class="close" style="margin-top:2px">⊘ &nbsp;Închide Tura</div>
+          </div>
+          <div class="tab c3"><a class="on">▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>⋯<span>Mai mult</span></a></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Rolul de scanner vede maxim 3 taburi. Starea turei (turnover, contoare) persistă local; <code>GET /me/active-shift</code>. „Închide tura" = reconciliere numerar/card.</div>
+      </div>
+
+      <!-- 4. SCANARE -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Scanare — validare</span><span class="role">C</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Scanare</div><span class="ic">⌨</span></div>
+          <div class="cam">
+            <div class="grid-tex"></div>
+            <div class="mini">
+              <div class="m"><div class="v" style="color:var(--violet)">24</div><div class="l">scan/min</div></div>
+              <div class="m"><div class="v">842</div><div class="l">intrați</div></div>
+              <div class="m"><div class="v" style="color:var(--amber)">338</div><div class="l">așteptare</div></div>
+            </div>
+            <div class="reticle"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><div class="laser"></div></div>
+            <div class="hint">Îndreaptă camera spre codul QR</div>
+          </div>
+          <div class="body" style="flex:none;padding:12px 16px 14px">
+            <div class="result ok">
+              <div class="rh"><span class="ri" style="background:var(--green);color:#03251a">✓</span><div><div class="rt" style="color:var(--green)">Check-in valid</div><div class="rs">Maria Ionescu · Categoria I</div></div></div>
+              <div class="meta">
+                <div><div class="k">Loc</div><div class="val">Rândul 4 · Loc 12</div></div>
+                <div><div class="k">Cod</div><div class="val" style="font-family:var(--mono)">X1SG7TLS</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Scanner multi-tier: <code>BarcodeDetector</code> → <code>jsQR</code> → manual. Dedup 60s, sunet + vibrație. <code>POST /organizer/participants/checkin</code>. Duplicat/invalid → 400 cu payload complet (cine a intrat deja).</div>
+      </div>
+
+      <!-- 5. VANZARE POS -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Vânzare — POS</span><span class="role">D · pos_cashier</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Vânzare</div><span class="ic">☰</span></div>
+          <div class="body">
+            <div class="evsel"><div class="txt"><div class="t">Concert Simfonic de Vară</div><div class="m">La ușă · sursă pos_app</div></div></div>
+            <div class="slab">Tipuri de bilete</div>
+            <div class="tt"><span class="sq" style="background:var(--violet)"></span><div><div class="nm">Categoria I</div><div class="pr">120 lei · 84 disp.</div></div><div class="stp"><b>–</b><span class="qn">2</span><b>+</b></div></div>
+            <div class="tt"><span class="sq" style="background:var(--cyan)"></span><div><div class="nm">Categoria II</div><div class="pr">80 lei · 152 disp.</div></div><div class="stp"><b>–</b><span class="qn">1</span><b>+</b></div></div>
+            <div class="tt"><span class="sq" style="background:var(--green)"></span><div><div class="nm">Acces general</div><div class="pr">50 lei · stoc mare</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--txt-4)">0</span><b>+</b></div></div>
+            <div class="tt"><span class="sq" style="background:var(--amber)"></span><div><div class="nm">Elev / Student</div><div class="pr">35 lei · 40 disp.</div></div><div class="stp"><b>–</b><span class="qn" style="color:var(--txt-4)">0</span><b>+</b></div></div>
+          </div>
+          <div class="cartbar"><div class="paybtn"><span><span class="c">3 bilete · Plătește</span><br><span class="amt">320 lei</span></span><span style="font-size:18px">→</span></div></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Coș → metodă (Numerar / Card / Card NFC dacă <code>card_nfc_enabled</code> / Factură). <code>POST /orders</code> (<code>source=pos_app</code>) → <code>/pos-complete</code>. Livrare: email sau QR-claim; print thermal <code>/v/CODE?p=pos</code>. Locuri via WebView (<code>seating/embed-token</code>).</div>
+      </div>
+
+      <!-- 6. RAPOARTE -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Rapoarte</span><span class="role">E</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Rapoarte</div><span class="ic">⭳</span></div>
+          <div class="body">
+            <div class="evsel"><div class="txt"><div class="t">Gală Aniversară · 12 iun</div><div class="m">Eveniment încheiat</div></div><span class="chev">›</span></div>
+            <div class="ring">
+              <div class="g"><div class="inner"><b>76%</b><small>check-in</small></div></div>
+              <div class="leg">
+                <div><span class="d" style="background:var(--green)"></span>Intrați <b>&nbsp;898</b></div>
+                <div><span class="d" style="background:rgba(255,255,255,.2)"></span>Neintrați <b>&nbsp;282</b></div>
+                <div><span class="d" style="background:var(--violet)"></span>Vândute <b>&nbsp;1.180</b></div>
+              </div>
+            </div>
+            <div class="rsum">
+              <div class="rc" style="background:var(--violet-bg);border-color:var(--violet-bd)"><div class="v" style="color:var(--violet)">1.180</div><div class="l">Total vândute</div></div>
+              <div class="rc" style="background:var(--cyan-bg);border-color:var(--cyan-bd)"><div class="v" style="color:var(--cyan)">73.4k</div><div class="l">Venituri (lei)</div></div>
+            </div>
+            <div class="block">
+              <div class="lab" style="margin-bottom:6px"><span>Performanța porților</span></div>
+              <div class="row2"><span class="nm">Poarta A</span><span class="vv">412</span></div>
+              <div class="row2"><span class="nm">Poarta B</span><span class="vv">356</span></div>
+              <div class="row2"><span class="nm">VIP</span><span class="vv">130</span></div>
+            </div>
+            <div class="act"><span class="ai" style="background:var(--green-bg);color:var(--green)">⭳</span><div><div class="at">Export CSV</div><div class="as">Participanți · vânzări · staff</div></div><span class="tm">›</span></div>
+          </div>
+          <div class="tab c5"><a>▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a class="on">▤<span>Rapoarte</span></a><a>⋯<span>Mai mult</span></a></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Selector evenimente trecute (filtre an/lună). Rată, per-tip, porți, staff, scanări leisure. Export CSV. <code>…/statistics</code>, <code>/staff-report</code>, <code>…/export</code>.</div>
+      </div>
+
+      <!-- 7. LISTA INVITATI -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Listă invitați</span><span class="role">F</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Invitați</div><span class="ic">↻</span></div>
+          <div class="body">
+            <div class="s3">
+              <div class="st"><div class="v">1.180</div><div class="l">Total</div></div>
+              <div class="st"><div class="v" style="color:var(--green)">842</div><div class="l">Intrați</div></div>
+              <div class="st"><div class="v" style="color:var(--amber)">338</div><div class="l">Lipsesc</div></div>
+            </div>
+            <div class="filters"><span class="f on">Toți</span><span class="f">Intrați</span><span class="f">Neintrați</span></div>
+            <div class="search">🔍&nbsp; Caută nume, email sau cod bilet…</div>
+            <div style="margin-top:2px">
+              <div class="gl"><span class="av" style="background:var(--green-bg);color:var(--green)">MI</span><div><div class="nm">Maria Ionescu</div><div class="cd">X1SG7TLS · Cat. I</div></div><span class="stt" style="color:var(--green);background:var(--green-bg)">Intrat</span></div>
+              <div class="gl"><span class="av" style="background:var(--violet-bg);color:var(--violet)">AP</span><div><div class="nm">Andrei Popa</div><div class="cd">K9M2QZ4R · Cat. II</div></div><span class="stt" style="color:var(--txt-3);background:var(--glass-2)">Lipsă</span></div>
+              <div class="gl"><span class="av" style="background:var(--green-bg);color:var(--green)">DL</span><div><div class="nm">Diana Lungu</div><div class="cd">P4T8WX1C · VIP</div></div><span class="stt" style="color:var(--green);background:var(--green-bg)">Intrat</span></div>
+              <div class="gl"><span class="av" style="background:var(--violet-bg);color:var(--violet)">RS</span><div><div class="nm">Radu Stan</div><div class="cd">B7N3JH5L · Cat. I</div></div><span class="stt" style="color:var(--txt-3);background:var(--glass-2)">Lipsă</span></div>
+            </div>
+          </div>
+          <div class="tab c5"><a>▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a>▤<span>Rapoarte</span></a><a class="on">⋯<span>Mai mult</span></a></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Căutare + filtre + check-in manual din listă (util când camera nu poate scana). <code>GET …/events/{id}/participants</code>, global <code>/participants</code>.</div>
+      </div>
+
+      <!-- 8. SETARI -->
+      <div class="device-wrap">
+        <div class="dtag"><span class="n">Mai multe & Setări</span><span class="role">H</span></div>
+        <div class="device"><div class="screen">
+          <div class="notch"></div>
+          <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>
+          <div class="top"><div class="lg"><span class="dot"></span>Setări</div></div>
+          <div class="body">
+            <div class="act"><span class="ai" style="background:var(--violet-bg);color:var(--violet)">◈</span><div><div class="at">Teatrul Odeon</div><div class="as">Andrei P. · admin</div></div><span class="tm" style="color:var(--violet)">Schimbă ›</span></div>
+            <div class="slab">Scanner</div>
+            <div class="set"><span class="si" style="background:var(--violet-bg);color:var(--violet)">≋</span><div><div class="st">Vibrație</div></div><span class="tog on"></span></div>
+            <div class="set"><span class="si" style="background:var(--cyan-bg);color:var(--cyan)">♪</span><div><div class="st">Efecte sonore</div></div><span class="tog on"></span></div>
+            <div class="set"><span class="si" style="background:var(--green-bg);color:var(--green)">✓</span><div><div class="st">Auto-confirmare valide</div><div class="ss">Fără tap la fiecare scanare</div></div><span class="tog off"></span></div>
+            <div class="slab">Hardware</div>
+            <div class="set"><span class="si" style="background:var(--amber-bg);color:var(--amber)">🖶</span><div><div class="st">Imprimantă bon</div><div class="ss">Thermal 80mm</div></div><span class="tm">›</span></div>
+            <div class="set"><span class="si" style="background:var(--cyan-bg);color:var(--cyan)">◫</span><div><div class="st">Card prin NFC</div><div class="ss">Plată contactless</div></div><span class="tog on"></span></div>
+            <div class="slab">Admin</div>
+            <div class="set"><span class="si" style="background:var(--violet-bg);color:var(--violet)">⛩</span><div><div class="st">Porți & personal</div></div><span class="tm">›</span></div>
+          </div>
+          <div class="tab c5"><a>▣<span>Panou</span></a><a>◳<span>Scanare</span></a><a>🛒<span>Vânzare</span></a><a>▤<span>Rapoarte</span></a><a class="on">⋯<span>Mai mult</span></a></div>
+          <div class="homebar"></div>
+        </div></div>
+        <div class="dnote">Preferințe scanner (local). Hardware & <code>card_nfc_enabled</code> via <code>PUT /organizer/mobile-settings</code>. Secțiunea Admin: porți, echipă, staff QR, payout/bănci.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ROLE ADAPTATION -->
+  <section>
+    <div class="sec-head"><h2>Adaptare pe rol & context</h2><p>Aceeași aplicație, navigație și permisiuni diferite.</p></div>
+    <div class="legendgrid">
+      <div class="lgc"><div class="t"><span class="pill v">Owner / Admin</span></div><div class="d">Toate taburile: panou, scanare, vânzare, rapoarte, echipă, porți, setări, payout.</div></div>
+      <div class="lgc"><div class="t"><span class="pill c">Manager</span></div><div class="d">Panou, scanare, vânzare, rapoarte. Fără gestiune echipă/finanțe.</div></div>
+      <div class="lgc"><div class="t"><span class="pill g">Casier · <code>pos_cashier</code></span></div><div class="d">Vânzare + sesiune casă. Panou-tură. Fără scanare.</div></div>
+      <div class="lgc"><div class="t"><span class="pill a">Scanner · <code>check_in</code></span></div><div class="d">3 taburi: panou-tură, scanare, mai mult. Fluxul cel mai rapid.</div></div>
+      <div class="lgc"><div class="t"><span class="pill v"><code>admin_mobile</code></span></div><div class="d">Scanare + vânzare pe același dispozitiv mobil.</div></div>
+      <div class="lgc"><div class="t"><span class="pill" style="color:var(--txt-2);border-color:var(--line-2)">Venue-owner</span></div><div class="d">Read-only + scanare pentru evenimentele din locația proprie (<code>/venue-owner/scan</code>).</div></div>
+    </div>
+    <div style="margin-top:22px">
+      <div class="slab" style="margin-bottom:12px">Un cont, oricâte contexte</div>
+      <div class="flow">
+        <div class="step"><span class="n">1</span>Login (email + parolă)</div>
+        <span class="arw">→</span>
+        <div class="step"><span class="n">2</span>Rezolvă context: tenant / marketplace / venue</div>
+        <span class="arw">→</span>
+        <div class="step"><span class="n">3</span>Branding runtime (logo · culori)</div>
+        <span class="arw">→</span>
+        <div class="step"><span class="n">4</span>Rutare API + permisiuni pe rol</div>
+      </div>
+      <p class="muted" style="margin-top:16px;max-width:70ch;font-size:13px">Un rewriter de API mapează căile după context: organizator → <code style="font-family:var(--mono)">/marketplace-client/organizer/*</code>, venue-owner → <code style="font-family:var(--mono)">/marketplace-client/venue-owner/*</code>, tenant → <code style="font-family:var(--mono)">/tenant-client/*</code> (rezolvat pe domeniu). Autentificare unică prin Sanctum; cheia de marketplace doar identifică brandul, nu se împachetează în binar.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Tixello · aplicație mobilă staff — design de referință, Fază 1</span>
+    <span class="muted">Modelat după Tixello Scan (ambilet-app2) · plan complet: <code style="font-family:var(--mono)">plans/mds/TIXELLO_MOBILE_APP_PLAN.md</code></span>
+  </footer>
+
+</div>
