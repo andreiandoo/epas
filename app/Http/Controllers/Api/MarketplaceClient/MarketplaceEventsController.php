@@ -2212,11 +2212,15 @@ class MarketplaceEventsController extends BaseController
             // exposing all linked ids here is safe.
             if (($section->section_type ?? null) === \App\Models\Seating\SeatingSection::TYPE_GENERAL) {
                 $sectionData['max_capacity'] = $section->max_capacity;
-                $sectionData['general_access_ticket_type_ids'] = $section->generalAccessTicketTypes()
-                    ->pluck('ticket_types.id')
-                    ->map(fn ($id) => (int) $id)
-                    ->values()
-                    ->all();
+                // Guard the pivot query so a code deploy that lands before
+                // `php artisan migrate` can't 500 the public event page.
+                $sectionData['general_access_ticket_type_ids'] = \Illuminate\Support\Facades\Schema::hasTable('ticket_type_general_sections')
+                    ? $section->generalAccessTicketTypes()
+                        ->pluck('ticket_types.id')
+                        ->map(fn ($id) => (int) $id)
+                        ->values()
+                        ->all()
+                    : [];
             }
 
             $sections[] = $sectionData;
