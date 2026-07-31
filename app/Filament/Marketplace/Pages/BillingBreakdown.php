@@ -13,7 +13,6 @@ use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Livewire\Attributes\Url;
 
 class BillingBreakdown extends Page
 {
@@ -26,7 +25,10 @@ class BillingBreakdown extends Page
 
     public ?MarketplaceClient $marketplace = null;
 
-    #[Url]
+    // NOT #[Url]: on this Filament page the #[Url] hydration was clobbering the
+    // value mount() reads from the query string, so ?month=YYYY-MM was ignored.
+    // Month is driven purely by mount() reading request()->query('month'); the
+    // prev/next buttons are plain links that reload the page with the new month.
     public string $month = '';
 
     /**
