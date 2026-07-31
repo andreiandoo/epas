@@ -722,12 +722,13 @@ class BillingBreakdown extends Page
             'data' => [
                 'month_label' => $monthDate->translatedFormat('F Y'),
                 'month' => $this->month,
-                // URL-based month navigation (robust even if wire:click actions
-                // are not firing). next_url is null in the current month.
-                'prev_url' => static::getUrl(['month' => $monthDate->copy()->subMonth()->format('Y-m')]),
+                // URL-based month navigation. Build the URL manually — static::getUrl()
+                // with a #[Url] property merges the LIVE $month instead of the param we
+                // pass, so every button ended up pointing at the current month.
+                'prev_url' => url()->current() . '?month=' . $monthDate->copy()->subMonth()->format('Y-m'),
                 'next_url' => $monthDate->format('Y-m') === Carbon::now()->format('Y-m')
                     ? null
-                    : static::getUrl(['month' => $monthDate->copy()->addMonth()->format('Y-m')]),
+                    : url()->current() . '?month=' . $monthDate->copy()->addMonth()->format('Y-m'),
                 'currency' => $currency,
                 'commission_rate' => $commissionRate,
                 'events' => $events,
