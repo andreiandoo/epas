@@ -15,12 +15,15 @@ use Illuminate\Http\Request;
  */
 class DashboardController extends BaseController
 {
-    private const PAID_STATES = ['paid', 'free', 'completed', 'confirmed'];
+    // Revenue keyed on Order.status (paid orders keep payment_status='pending').
+    private const PAID_ORDER_STATUSES = ['paid', 'completed', 'confirmed', 'free'];
     private const DEAD_TICKET_STATES = ['cancelled', 'refunded'];
 
     public function index(Request $request): JsonResponse
     {
-        $this->requirePermission($request, 'reports.view');
+        // Home KPIs are visible to any authenticated tenant staff (a gate
+        // scanner still sees the basic numbers); detailed reports/exports are
+        // gated separately by 'reports.view'.
         $tid = $this->tenantId($request);
 
         $totalEvents = Event::where('tenant_id', $tid)->count();
@@ -35,7 +38,7 @@ class DashboardController extends BaseController
             ->whereNotNull('checked_in_at')
             ->count();
         $totalRevenue = (float) Order::where('tenant_id', $tid)
-            ->whereIn('payment_status', self::PAID_STATES)
+            ->whereIn('status', self::PAID_ORDER_STATUSES)
             ->sum('total');
 
         $recent = Order::where('tenant_id', $tid)

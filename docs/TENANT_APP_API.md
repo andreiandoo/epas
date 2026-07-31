@@ -50,6 +50,15 @@ Răspuns standard: `{ "success": bool, "message"?, "data"? }` (envelope identic 
 - **Finanțe / facturi / payout**, **setări/branding/mobile-settings**, **export CSV**.
 - **Auth**: forgot/reset password, verificare, mobile-settings.
 
-## Note (fără mediu de test)
+## Calibrare pe date reale (tenant demo 17 teatru & 36 leisure)
 
-Codul e aliniat la modelele existente (`User`, `Leisure\TenantTeamMember`, `Event`, `Order`, `Ticket`) și lint-uit (`php -l`), dar **nu a fost rulat** (repo-ul din sesiune nu are `vendor/`). Bucketele de status pentru agregate (`paid|free|completed|confirmed`, tickete non-`cancelled/refunded`) trebuie confirmate pe date reale înainte de producție.
+Ajustări făcute după inspecția conturilor demo:
+
+- **Venituri / „plătit" se calculează pe `Order.status`, NU pe `payment_status`.** În date reale o comandă plătită are `status='paid'` dar `payment_status='pending'`. Bucket folosit: `status ∈ {paid, completed, confirmed, free}`.
+- **Permisiuni derivate din `leisure_role`.** Membrii de echipă reali au `permissions=null` și doar `leisure_role` setat. `BaseController::can()` mapează rolul la permisiuni (ex. `check_in → tickets.scan`, `pos_cashier → pos.checkout,orders.view,tickets.scan`), în plus față de `admin/manager` (acces complet) și lista explicită de permisiuni dacă există.
+- **Identitate confirmată**: teatru 17 = owner `User(role='tenant')` fără team members; leisure 36 = 1 editor + 5 `tenant_team_members` (manager/admin, staff pos_cashier/check_in/rental_operator/inventory_manager). Login-ul acoperă owner, editor și staff.
+- **KPIs de Home** nu mai cer `reports.view` (un scanner vede numerele de bază); rapoartele detaliate/export rămân gated.
+
+## Note
+
+Codul e aliniat la modelele existente (`User`, `Leisure\TenantTeamMember`, `Event`, `Order`, `Ticket`), lint-uit (`php -l`) și calibrat pe datele demo, dar **nu a fost rulat runtime** (repo-ul din sesiune nu are `vendor/`). Rămâne de verificat cu tickete reale (demo n-avea `tickets`): fluxul de check-in și numărul „vândute" bazat pe tickete.

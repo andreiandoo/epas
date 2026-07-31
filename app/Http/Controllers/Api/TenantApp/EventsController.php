@@ -14,7 +14,9 @@ use Illuminate\Http\Request;
  */
 class EventsController extends BaseController
 {
-    private const PAID_STATES = ['paid', 'free', 'completed', 'confirmed'];
+    // NB: real paid orders carry status='paid' while payment_status stays
+    // 'pending' — so revenue/"paid" is keyed on Order.status, NOT payment_status.
+    private const PAID_ORDER_STATUSES = ['paid', 'completed', 'confirmed', 'free'];
     private const DEAD_TICKET_STATES = ['cancelled', 'refunded'];
 
     public function index(Request $request): JsonResponse
@@ -33,7 +35,7 @@ class EventsController extends BaseController
         $ids = collect($events->items())->pluck('id');
         $revenue = Order::whereIn('event_id', $ids)
             ->where('tenant_id', $tid)
-            ->whereIn('payment_status', self::PAID_STATES)
+            ->whereIn('status', self::PAID_ORDER_STATUSES)
             ->groupBy('event_id')
             ->selectRaw('event_id, SUM(total) as rev')
             ->pluck('rev', 'event_id');
@@ -97,7 +99,7 @@ class EventsController extends BaseController
 
         $doorCount = Order::where('event_id', $event->id)
             ->where('tenant_id', $tid)
-            ->whereIn('payment_status', self::PAID_STATES)
+            ->whereIn('status', self::PAID_ORDER_STATUSES)
             ->where('source', 'pos_app')
             ->count();
 
@@ -116,7 +118,7 @@ class EventsController extends BaseController
     {
         return (float) Order::where('event_id', $eventId)
             ->where('tenant_id', $tenantId)
-            ->whereIn('payment_status', self::PAID_STATES)
+            ->whereIn('status', self::PAID_ORDER_STATUSES)
             ->sum('total');
     }
 

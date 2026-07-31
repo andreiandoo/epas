@@ -15,6 +15,22 @@ use Illuminate\Http\Request;
  */
 abstract class BaseController extends Controller
 {
+    /**
+     * Implied permissions per leisure_role. In real data the team member's
+     * `permissions` column is often null and only `leisure_role` is set, so we
+     * derive an operational permission set from the role. Explicit permissions
+     * (or '*') on the member still take precedence.
+     *
+     * @var array<string,string[]>
+     */
+    protected const LEISURE_ROLE_PERMISSIONS = [
+        'check_in' => ['tickets.scan'],
+        'pos_cashier' => ['pos.checkout', 'orders.view', 'tickets.scan'],
+        'pos_manager' => ['pos.checkout', 'orders.view', 'orders.refund', 'reports.view', 'tickets.scan'],
+        'rental_operator' => ['rentals.start', 'rentals.end', 'tickets.scan'],
+        'inventory_manager' => ['inventory.manage', 'reports.view'],
+    ];
+
     protected function tenant(Request $request): Tenant
     {
         $tenant = $request->attributes->get('tenant');
@@ -37,14 +53,30 @@ abstract class BaseController extends Controller
     }
 
     /**
-     * Owner/admin tokens (no team member) have full access; staff tokens are
-     * gated by the member's `permissions` array (admins bypass — see
-     * TenantTeamMember::hasPermission).
+     * Permission gate. Owner/admin tokens (no team member) have full access.
+     * Staff are allowed if: they are an admin/manager (or leisure_role=admin);
+     * OR the permission is in their explicit `permissions` array (or '*');
+     * OR it is implied by their `leisure_role` (permissions column is often
+     * null in real data — see LEISURE_ROLE_PERMISSIONS).
      */
     protected function can(Request $request, string $permission): bool
     {
         $member = $this->teamMember($request);
-        return $member ? $member->hasPermission($permission) : true;
+        if (! $member) {
+            return true; // tenant owner / editor / admin
+        }
+
+        if (in_array($member->role, ['admin', 'manager'], true) || $member->leisure_role === 'admin') {
+            return true;
+        }
+
+        $perms = is_array($member->permissions) ? $member->permissions : [];
+        if (in_array('*', $perms, true) || in_array($permission, $perms, true)) {
+            return true;
+        }
+
+        $implied = self::LEISURE_ROLE_PERMISSIONS[$member->leisure_role] ?? [];
+        return in_array($permission, $implied, true);
     }
 
     protected function requirePermission(Request $request, string $permission): void
