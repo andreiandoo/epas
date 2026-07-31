@@ -10,6 +10,10 @@
 $root   = __DIR__;
 $routes = is_file($root . '/routes.php') ? require $root . '/routes.php' : [];
 
+// Where /theme and /kit actually live, so kit_asset_v() can stamp asset URLs
+// with their mtime and defeat the seven-day cache the .htaccess sets.
+define('KIT_SITE_ROOT', $root);
+
 // Apache's ErrorDocument does an INTERNAL redirect: REQUEST_URI still holds the
 // URL that failed, and the status lands in REDIRECT_STATUS. Without this the
 // `ErrorDocument 403 /403` lines in .htaccess were dead — a denied path fell
