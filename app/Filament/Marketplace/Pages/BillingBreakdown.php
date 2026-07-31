@@ -326,6 +326,91 @@ class BillingBreakdown extends Page
             ];
         })->keyBy('event_id')->toArray();
 
+        // === Allocate multi-event cart orders to their real events ===========
+        // Orders whose cart spans several events carry NO order-level event id
+        // (marketplace_event_id / event_id both NULL), so the grouping above
+        // dumped their revenue into a single "Necunoscut" row. Their tickets and
+        // per-event commission are ALREADY attributed to the real events
+        // (ticket-based, via SalesBreakdownService + $ticketCounts); only the
+        // order-level revenue needs spreading. We split each such order's total
+        // across its events proportional to that event's ticket face value, add
+        // it to the real event rows, then drop the "Necunoscut" row — including
+        // its raw commission_amount, which the service-based per-event
+        // commission already counts (so keeping it double-counted the total).
+        $nullRow = $events[''] ?? null;
+        unset($events['']);
+        if ($nullRow && (float) ($nullRow['revenue'] ?? 0) > 0) {
+            $multiOrders = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
+                    $q->where('marketplace_client_id', $marketplaceId);
+                    if (!empty($mpEventIds)) {
+                        $q->orWhereIn('marketplace_event_id', $mpEventIds)->orWhereIn('event_id', $mpEventIds);
+                    }
+                })
+                ->whereIn('status', $validStatuses)
+                ->whereNotIn('source', $excludedSources)
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->whereNull('marketplace_event_id')->whereNull('event_id')
+                ->where('status', '<>', 'refunded') // 'revenue' excludes refunded
+                ->pluck('total', 'id');
+
+            $orderIds = $multiOrders->keys()->all();
+            $ticketVals = empty($orderIds) ? collect() : DB::table('tickets as t')
+                ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->whereIn('t.order_id', $orderIds)
+                ->whereIn('t.status', ['valid', 'used'])
+                ->selectRaw('t.order_id, tt.event_id, SUM(t.price) as val')
+                ->groupBy('t.order_id', 'tt.event_id')
+                ->get();
+
+            $byOrder = [];
+            foreach ($ticketVals as $tv) {
+                $byOrder[$tv->order_id][(int) $tv->event_id] = (float) $tv->val;
+            }
+
+            $allocRev = [];        // event_id => allocated revenue
+            $allocOrders = [];     // event_id => [order_id => true]
+            $residualRev = 0.0;
+            $residualOrders = [];
+            foreach ($multiOrders as $oid => $total) {
+                $per = $byOrder[$oid] ?? [];
+                $sum = array_sum($per);
+                if ($sum <= 0) { // order without sellable tickets — keep as residual
+                    $residualRev += (float) $total;
+                    $residualOrders[$oid] = true;
+                    continue;
+                }
+                foreach ($per as $eid => $val) {
+                    $share = (float) $total * ($val / $sum);
+                    if (isset($events[$eid])) {
+                        $allocRev[$eid] = ($allocRev[$eid] ?? 0) + $share;
+                        $allocOrders[$eid][$oid] = true;
+                    } else {
+                        // Event has no direct sales this month — can't enrich a
+                        // full row here; keep its share in the residual.
+                        $residualRev += $share;
+                        $residualOrders[$oid] = true;
+                    }
+                }
+            }
+
+            foreach ($allocRev as $eid => $rev) {
+                $events[$eid]['revenue'] = round($events[$eid]['revenue'] + $rev, 2);
+                $events[$eid]['order_count'] += count($allocOrders[$eid] ?? []);
+            }
+
+            if (round($residualRev, 2) > 0) {
+                $events[''] = array_merge($nullRow, [
+                    'event_name' => 'Comenzi multi-eveniment (fără vânzări directe luna aceasta)',
+                    'revenue' => round($residualRev, 2),
+                    'marketplace_commission' => 0.0, // already counted per-event via the service
+                    'order_count' => count($residualOrders),
+                    'ticket_count' => 0,
+                    'tixello_commission' => 0.0,
+                ]);
+            }
+        }
+        // ====================================================================
+
         $revenueTotal = collect($events)->sum('revenue');
         $marketplaceCommissionTotal = collect($events)->sum('marketplace_commission');
 
