@@ -233,7 +233,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <span>EN</span>
                         </button>
                     </div>
-                    <p class="text-[10px] text-muted mt-1.5">Determină limba textelor pe biletul PDF (dacă template-ul are traduceri) și pe emailurile trimise.</p>
                 </div>
 
                 </div>
@@ -1001,7 +1000,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // ultima inchidere afisata ca referinta cand nu sunt sesiuni azi).
     function renderCashSessionCard(s) {
         const escapeHtml = (v) => String(v || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        const PM_LABELS = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
+        const PM_LABELS = { cash: '💵 Cash', card: '💳 Card' }; // fara online: online nu intra in casa
+        const CAT_LABELS = { access: '🎫 Acces', parking: '🅿️ Parcare', activity: '🎯 Activitate', rental: '🛶 Închiriere', extra: '➕ Extra', package: '📦 Pachet' };
         const isOpen = s.is_open;
         const openTime = fmtTime(s.opened_at);
         const closeTime = s.closed_at ? fmtTime(s.closed_at) : '⏳ în desfășurare';
@@ -1009,24 +1009,42 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const closeDate = s.closed_at ? new Date(s.closed_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
         const showDates = openDate && closeDate && openDate !== closeDate;
         const dur = s.duration_minutes != null ? (s.duration_minutes >= 60 ? `${Math.floor(s.duration_minutes/60)}h ${s.duration_minutes%60}m` : `${s.duration_minutes} min`) : '';
-        const t = s.snapshot?.totals || {};
-        const byPay = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
+        // POS-only: sesiuni noi au pos_only_totals; sesiuni vechi cad pe totals + filtru client
+        const posT = s.snapshot?.pos_only_totals || null;
+        const t = posT || s.snapshot?.totals || {};
+        const byPayAll = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
+        const byPay = byPayAll.filter(p => p.method !== 'online'); // exclude online din UI operator
         const byPayHtml = byPay.map(p => `<div class="flex justify-between text-xs"><span>${PM_LABELS[p.method] || p.method}</span><strong>${fmtMoney(p.revenue)} RON</strong></div>`).join('');
-        // Breakdown per SOCIETATE (SC1/SC2) cu detaliu per metoda de plata.
-        // by_issuer.primary / secondary → { name, revenue, by_payment: {cash,card,online} }
+        // Total POS = cash + card (nu totalul care include online)
+        const posRev = (byPay.find(p => p.method === 'cash') || {}).revenue + (byPay.find(p => p.method === 'card') || {}).revenue || 0;
+        const posRevSafe = ((byPay.find(p => p.method === 'cash') || {}).revenue || 0) + ((byPay.find(p => p.method === 'card') || {}).revenue || 0);
+        // Breakdown pe categorie (POS only)
+        const byCatPos = Array.isArray(s.snapshot?.by_category_pos) ? s.snapshot.by_category_pos : [];
+        const catHtml = byCatPos.length ? `<div class="grid grid-cols-2 gap-1 mt-1 pt-1 border-t border-slate-100">
+            ${byCatPos.map(c => {
+                const lbl = CAT_LABELS[c.category] || c.category;
+                return `<div class="flex justify-between text-[10px] text-slate-600 gap-1">
+                    <span class="truncate">${lbl}</span>
+                    <span class="tabular-nums font-semibold whitespace-nowrap">${c.tickets}× · ${fmtMoney(c.revenue)}</span>
+                </div>`;
+            }).join('')}
+        </div>` : '';
+        // Breakdown per SOCIETATE (SC1/SC2) - fara online in detaliu.
         const byIssuer = s.snapshot?.by_issuer || null;
         const renderIssuerBlock = (iss, badge) => {
             if (!iss || (!iss.revenue && !iss.orders && !iss.tickets)) return '';
             const bp = iss.by_payment || {};
-            const bpRows = ['cash','card','online']
+            const bpRows = ['cash','card']
                 .filter(k => (bp[k] || 0) > 0)
                 .map(k => `<div class="flex justify-between text-[10px] text-slate-600"><span class="pl-2">${PM_LABELS[k]}</span><span>${fmtMoney(bp[k])} RON</span></div>`)
                 .join('');
+            // Total POS pentru issuer = cash + card
+            const posIssuerRev = (bp.cash || 0) + (bp.card || 0);
             return `<div class="mt-1 p-1.5 rounded border border-slate-200 bg-slate-50">
                 <div class="flex justify-between items-center gap-2">
                     <span class="text-[10px] uppercase font-bold ${badge}">${badge.includes('primary') ? 'SC1' : 'SC2'}</span>
                     <span class="text-[10px] text-slate-500 truncate flex-1">${escapeHtml(iss.name || '')}</span>
-                    <strong class="text-xs">${fmtMoney(iss.revenue || 0)} RON</strong>
+                    <strong class="text-xs">${fmtMoney(posIssuerRev)} RON</strong>
                 </div>
                 ${bpRows}
             </div>`;
@@ -1048,9 +1066,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 ${badge}
             </div>
-            ${!isOpen && t.revenue != null ? `<div class="pt-2 border-t border-slate-100">
-                <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi · ${t.tickets_sold != null ? (t.tickets_sold + ' bilete vândute') : ((t.tickets || 0) + ' bilete')}${t.tickets_visitors != null && t.tickets_visitors !== (t.tickets_sold ?? t.tickets) ? ' · ' + t.tickets_visitors + ' vizitatori' : ''} · <strong class="text-emerald-800">${fmtMoney(t.revenue || 0)} RON</strong></p>
-                ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : ''}
+            ${!isOpen ? `<div class="pt-2 border-t border-slate-100">
+                <p class="text-xs text-muted mb-1">${t.orders || 0} comenzi POS · ${t.tickets_sold != null ? (t.tickets_sold + ' bilete vândute') : ((t.tickets || 0) + ' bilete')}${t.tickets_visitors != null && t.tickets_visitors !== (t.tickets_sold ?? t.tickets) ? ' · ' + t.tickets_visitors + ' vizitatori' : ''} · <strong class="text-emerald-800">${fmtMoney(posRevSafe)} RON</strong></p>
+                ${byPayHtml ? '<div class="space-y-0.5">' + byPayHtml + '</div>' : '<p class="text-[10px] text-muted italic">Nicio vânzare POS</p>'}
+                ${catHtml}
                 ${issuerHtml}
             </div>` : ''}
         </div>`;
@@ -1086,17 +1105,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
 
-        // Total zi
-        //   tickets       = raw (backwards compat pentru snapshot-uri vechi)
-        //   tickets_sold  = "Bilete vandute" (exclude from_package + price<=0) — mirror dashboard
-        //   tickets_visit = "Vizitatori" (exclude umbrella parent pachet) — mirror dashboard
-        // Cand snapshot-ul e vechi (fara cele 2 fields noi), afisam doar tickets (raw).
+        // Total zi — POS ONLY (fara online, cum vede operatorul).
+        // Prefera pos_only_totals (sesiuni noi); fallback la totals + suma cash+card din by_payment
+        // filtrat (sesiuni vechi fara pos_only_totals in snapshot).
         let totalRev = 0, totalOrders = 0, totalTickets = 0, totalSold = 0, totalVisitors = 0;
         let hasSoldMetric = false, hasVisitorMetric = false;
         let spansMidnight = false;
         sessions.forEach(s => {
-            const t = s.snapshot?.totals || {};
-            totalRev += Number(t.revenue || 0);
+            const posT = s.snapshot?.pos_only_totals || null;
+            const t = posT || s.snapshot?.totals || {};
+            // Revenue: daca avem pos_only, ia direct; altfel suma cash+card din by_payment
+            if (posT) {
+                totalRev += Number(posT.revenue || 0);
+            } else {
+                const bp = Array.isArray(s.snapshot?.by_payment) ? s.snapshot.by_payment : [];
+                totalRev += ((bp.find(p => p.method === 'cash') || {}).revenue || 0)
+                          + ((bp.find(p => p.method === 'card') || {}).revenue || 0);
+            }
             totalOrders += Number(t.orders || 0);
             totalTickets += Number(t.tickets || 0);
             if (t.tickets_sold != null) { totalSold += Number(t.tickets_sold); hasSoldMetric = true; }
@@ -1120,9 +1145,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             : '';
 
         const summary = `<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-            <p class="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Total sesiuni</p>
+            <p class="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Total sesiuni POS (fără online)</p>
             <p class="text-2xl font-bold text-emerald-900">${fmtMoney(totalRev)} <span class="text-xs text-emerald-700">RON</span></p>
-            <p class="text-xs text-emerald-700 mt-0.5">${totalOrders} comenzi · ${primaryTickets} ${primaryLabel}${visitorSuffix} · ${sessions.length} sesiun${sessions.length === 1 ? 'e' : 'i'}</p>
+            <p class="text-xs text-emerald-700 mt-0.5">${totalOrders} comenzi POS · ${primaryTickets} ${primaryLabel}${visitorSuffix} · ${sessions.length} sesiun${sessions.length === 1 ? 'e' : 'i'}</p>
             ${midnightNote}
         </div>`;
 
@@ -1180,13 +1205,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
     function renderCashierSnapshot(session, snap) {
-        const t = snap.totals || {};
-        const byPay = Array.isArray(snap.by_payment) ? snap.by_payment : [];
+        // Închiderea de casa: OPERATORUL vede DOAR ce s-a strans in POS (cash+card).
+        // Online-ul e ignorat complet — nu intra in casa fizica.
+        // Fallback la totals + filtru client-side pt sesiuni vechi fara pos_only_totals.
+        const posT = snap.pos_only_totals || null;
+        const t = posT || snap.totals || {};
+        const byPayAll = Array.isArray(snap.by_payment) ? snap.by_payment : [];
+        const byPay = byPayAll.filter(p => p.method !== 'online'); // hide online
         const byTt = Array.isArray(snap.by_ticket_type) ? snap.by_ticket_type : [];
-        const PM = { cash: '💵 Cash', card: '💳 Card', online: '🌐 Online' };
+        // Breakdown pe categorie (POS only) - vine din backend pentru sesiuni noi
+        const byCatPos = Array.isArray(snap.by_category_pos) ? snap.by_category_pos : [];
+        const PM = { cash: '💵 Cash', card: '💳 Card' };
         // Cash physically in the drawer to hand over + total taken by card.
         const cashRev = (byPay.find(p => p.method === 'cash') || {}).revenue || 0;
         const cardRev = (byPay.find(p => p.method === 'card') || {}).revenue || 0;
+        const posRev = cashRev + cardRev; // Total incasat POS (fara online)
 
         $('lv-cash-summary').innerHTML = `<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div class="p-3 border-2 border-amber-300 bg-amber-50 rounded-lg">
@@ -1198,21 +1231,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-lg font-extrabold text-sky-800">${fmtMoney(cardRev)} <span class="text-xs">RON</span></p>
             </div>
             <div class="p-3 bg-slate-50 rounded-lg">
-                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold">Total încasat</p>
-                <p class="text-lg font-bold text-emerald-800">${fmtMoney(t.revenue || 0)} <span class="text-xs text-muted">RON</span></p>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold">Total încasat POS</p>
+                <p class="text-lg font-bold text-emerald-800">${fmtMoney(posRev)} <span class="text-xs text-muted">RON</span></p>
             </div>
             <div class="p-3 bg-slate-50 rounded-lg">
                 <p class="text-[10px] uppercase tracking-wider text-muted font-semibold">Comenzi · Bilete</p>
-                <p class="text-lg font-bold text-secondary">${t.orders || 0} · ${t.tickets || 0}</p>
+                <p class="text-lg font-bold text-secondary">${t.orders || 0} · ${t.tickets_sold ?? t.tickets ?? 0}</p>
             </div>
         </div>
-        <p class="text-[11px] text-muted mt-2">Cash de predat = banii fizic în sertar. Cardul/online-ul intră electronic. Deschisă: ${fmtTime(session.opened_at)} · Închisă: ${fmtTime(session.closed_at)} · Durată: ${session.duration_minutes || 0} min</p>`;
+        <p class="text-[11px] text-muted mt-2">Cash de predat = banii fizic în sertar. Vânzările online NU intră în casă. Deschisă: ${fmtTime(session.opened_at)} · Închisă: ${fmtTime(session.closed_at)} · Durată: ${session.duration_minutes || 0} min</p>`;
 
         const payHtml = byPay.length ? byPay.map(p => `
             <div class="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
                 <span>${PM[p.method] || p.method}</span>
                 <span class="text-right"><strong>${fmtMoney(p.revenue)} RON</strong> · <span class="text-muted">${p.orders} comenzi · ${p.tickets} bilete</span></span>
-            </div>`).join('') : '<p class="text-muted text-xs">Nicio incasare</p>';
+            </div>`).join('') : '<p class="text-muted text-xs">Nicio incasare POS</p>';
 
         const ttHtml = byTt.length ? byTt.map(r => `
             <div class="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0 gap-2">
@@ -1220,25 +1253,42 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <span class="text-right whitespace-nowrap"><strong>${r.tickets}×</strong> · ${fmtMoney(r.revenue)} RON</span>
             </div>`).join('') : '<p class="text-muted text-xs">Niciun bilet</p>';
 
-        // Breakdown per societate emitenta (SC1/SC2) cu detaliu per metoda plata.
+        // Breakdown pe categorie serviciu: acces / parcare / activitate / inchiriere / alta
+        const CAT_LABELS = { access: '🎫 Acces', parking: '🅿️ Parcare', activity: '🎯 Activitate', rental: '🛶 Închiriere', extra: '➕ Extra', package: '📦 Pachet' };
+        const CAT_COLORS = { access: 'text-blue-700 bg-blue-50 border-blue-200', parking: 'text-purple-700 bg-purple-50 border-purple-200', activity: 'text-emerald-700 bg-emerald-50 border-emerald-200', rental: 'text-amber-700 bg-amber-50 border-amber-200', extra: 'text-slate-700 bg-slate-50 border-slate-200', package: 'text-indigo-700 bg-indigo-50 border-indigo-200' };
+        const catHtml = byCatPos.length ? `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            ${byCatPos.map(c => {
+                const label = CAT_LABELS[c.category] || c.category;
+                const color = CAT_COLORS[c.category] || 'text-slate-700 bg-slate-50 border-slate-200';
+                return `<div class="p-2 rounded border ${color}">
+                    <p class="text-[10px] uppercase font-bold tracking-wider">${label}</p>
+                    <p class="text-base font-extrabold tabular-nums">${c.tickets}<span class="text-xs font-normal ml-1">bilete</span></p>
+                    <p class="text-[10px] tabular-nums">${fmtMoney(c.revenue)} RON</p>
+                </div>`;
+            }).join('')}
+        </div>` : '';
+
+        // Breakdown per societate emitenta (SC1/SC2) — filtram online din by_payment.
         const byIssuer = snap.by_issuer || null;
         const issuerCard = (iss, label, colorClass) => {
             if (!iss || (!iss.revenue && !iss.orders && !iss.tickets)) return '';
             const bp = iss.by_payment || {};
-            const bpHtml = ['cash','card','online']
+            const bpHtml = ['cash','card']
                 .filter(k => (bp[k] || 0) > 0)
                 .map(k => `<div class="flex justify-between text-xs"><span class="text-muted">${PM[k]}</span><strong>${fmtMoney(bp[k])} RON</strong></div>`)
                 .join('');
+            // Total afisat = cash + card doar (fara online)
+            const posOnlyIssuerRev = (bp.cash || 0) + (bp.card || 0);
             return `<div class="p-3 border-2 ${colorClass} rounded-lg">
                 <div class="flex items-center justify-between gap-2 mb-2">
                     <div class="min-w-0">
                         <p class="text-[10px] uppercase font-bold tracking-wider">${label}</p>
                         <p class="text-xs text-secondary font-semibold truncate">${escapeHtml(iss.name || '')}</p>
                     </div>
-                    <p class="text-base font-bold">${fmtMoney(iss.revenue || 0)}<span class="text-xs text-muted ml-1">RON</span></p>
+                    <p class="text-base font-bold">${fmtMoney(posOnlyIssuerRev)}<span class="text-xs text-muted ml-1">RON</span></p>
                 </div>
                 <p class="text-[11px] text-muted mb-1">${iss.orders || 0} comenzi · ${iss.tickets || 0} bilete</p>
-                ${bpHtml ? '<div class="space-y-0.5 pt-2 border-t border-slate-100">' + bpHtml + '</div>' : ''}
+                ${bpHtml ? '<div class="space-y-0.5 pt-2 border-t border-slate-100">' + bpHtml + '</div>' : '<p class="text-[10px] text-muted">Nicio vânzare POS</p>'}
             </div>`;
         };
         const issuersHtml = byIssuer
@@ -1250,15 +1300,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         $('lv-cash-details-body').innerHTML = `
             <div>
-                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Pe metodă plată</p>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Pe metodă plată (POS)</p>
                 ${payHtml}
             </div>
+            ${catHtml ? `<div>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe categorie serviciu (POS)</p>
+                ${catHtml}
+            </div>` : ''}
             ${issuersHtml ? `<div>
-                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe societate emitentă</p>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe societate emitentă (POS)</p>
                 ${issuersHtml}
             </div>` : ''}
             <div>
-                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe tip bilet</p>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2 mt-4">Pe tip bilet (toate)</p>
                 ${ttHtml}
             </div>
         `;

@@ -3464,6 +3464,16 @@ class LeisureController extends BaseController
         $totalTicketsSold = 0;     // tranzactii cu valoare (mirror dashboard "Bilete vandute"): exclude from_package + price<=0
         $totalTicketsVisitors = 0; // bilete scanabile (mirror dashboard "Vizitatori"): exclude umbrella parent pachet
         $totalRevenue = 0.0;
+        // POS-only aggregates: la inchiderea de casa operatorului ii pasa DOAR de POS
+        // (banii fizici din sertar + cardurile trecute). Online-ul nu intra in casa.
+        $posOnlyOrders = 0;
+        $posOnlyTickets = 0;
+        $posOnlyTicketsSold = 0;
+        $posOnlyTicketsVisitors = 0;
+        $posOnlyRevenue = 0.0;
+        // Breakdown pe categorie serviciu (access/parking/activity/rental/extra) - POS only,
+        // exclude componentele pachet (from_package) ca sa evitam dublul-numarat.
+        $posOnlyByCategory = [];
 
         foreach ($orders as $o) {
             $rev = (float) ($o->total ?? 0);
@@ -3477,6 +3487,12 @@ class LeisureController extends BaseController
             if (!isset($byPayment[$pm])) $byPayment[$pm] = ['method' => $pm, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
             $byPayment[$pm]['orders']++;
             $byPayment[$pm]['revenue'] += $rev;
+
+            // Track pos-only totals
+            if ($isPos) {
+                $posOnlyOrders++;
+                $posOnlyRevenue += $rev;
+            }
 
             // Track daca comanda a inclus vreun bilet pe SC1/SC2 (pentru orders count per societate)
             $orderTouchedIssuers = ['primary' => false, 'secondary' => false];
@@ -3497,6 +3513,24 @@ class LeisureController extends BaseController
                 if (!$isFromPackage && $tp > 0) $totalTicketsSold++;   // "Bilete vandute" (tranzactii cu valoare)
                 if (!$isUmbrella) $totalTicketsVisitors++;              // "Vizitatori" (bilete scanabile fizic)
                 $byPayment[$pm]['tickets']++;
+
+                // POS-only counters + breakdown pe categorie
+                if ($isPos) {
+                    $posOnlyTickets++;
+                    if (!$isFromPackage && $tp > 0) $posOnlyTicketsSold++;
+                    if (!$isUmbrella) $posOnlyTicketsVisitors++;
+                    // Category breakdown: exclude umbrella (dubla numaratoare - umbrella e categorie 'package',
+                    // dar componentele au categoriile lor reale). Contorizam BILETELE FIZICE (fizic scanabile
+                    // la poarta) grupate pe service_category.
+                    if (!$isUmbrella) {
+                        $catKey = $svcCat ?: 'access';
+                        if (!isset($posOnlyByCategory[$catKey])) {
+                            $posOnlyByCategory[$catKey] = ['category' => $catKey, 'tickets' => 0, 'revenue' => 0.0];
+                        }
+                        $posOnlyByCategory[$catKey]['tickets']++;
+                        $posOnlyByCategory[$catKey]['revenue'] += $tp;
+                    }
+                }
 
                 $ttId = $t->ticket_type_id;
                 $ttName = $tt->name ?? "Tip #{$ttId}";
@@ -3571,6 +3605,16 @@ class LeisureController extends BaseController
         }
         unset($row);
         usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
+        foreach ($posOnlyByCategory as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
+        $posOnlyByCategoryList = array_values($posOnlyByCategory);
+        // Ordonare fixa pt UI: acces, parcare, activitate, inchiriere, altele
+        $catOrder = ['access' => 1, 'parking' => 2, 'activity' => 3, 'rental' => 4];
+        usort($posOnlyByCategoryList, function ($a, $b) use ($catOrder) {
+            $oa = $catOrder[$a['category']] ?? 99;
+            $ob = $catOrder[$b['category']] ?? 99;
+            return $oa <=> $ob;
+        });
 
         $snapshot = [
             'totals' => [
@@ -3581,8 +3625,21 @@ class LeisureController extends BaseController
                 'revenue' => round($totalRevenue, 2),
                 'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
             ],
+            // POS-only totals — cifrele care conteaza pentru operator la inchidere casa
+            // (cardul + cash-ul din sertar). Online-ul e IGNORAT complet aici.
+            'pos_only_totals' => [
+                'orders' => $posOnlyOrders,
+                'tickets' => $posOnlyTickets,
+                'tickets_sold' => $posOnlyTicketsSold,
+                'tickets_visitors' => $posOnlyTicketsVisitors,
+                'revenue' => round($posOnlyRevenue, 2),
+                'avg_order' => $posOnlyOrders > 0 ? round($posOnlyRevenue / $posOnlyOrders, 2) : 0,
+            ],
             'by_payment' => array_values($byPayment),
             'by_ticket_type' => array_values($byTicketType),
+            // Breakdown pe categorie serviciu (access/parking/activity/rental/etc) - POS ONLY.
+            // Contorizeaza bilete fizice scanabile (exclude umbrella pachet).
+            'by_category_pos' => $posOnlyByCategoryList,
             // Breakdown per societate emitenta (SC1/SC2), fiecare cu by_payment nested.
             // Secondary null cand organizatorul nu are has_secondary_issuer setat.
             'by_issuer' => [
