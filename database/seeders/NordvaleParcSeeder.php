@@ -427,9 +427,13 @@ class NordvaleParcSeeder extends Seeder
 
                 if ($slotMinutes > 0) {
                     // Slot-based: split the opening window into fixed intervals.
-                    $open = CarbonImmutable::parse($date->toDateString() . ' ' . ($tt->leisure_schedule_open_time ?: '10:00'));
-                    $close = CarbonImmutable::parse($date->toDateString() . ' ' . ($tt->leisure_schedule_close_time ?: '18:00'));
-                    $perSlot = max(1, (int) floor($daily / max(1, (int) floor($open->diffInMinutes($close) / $slotMinutes))));
+                    $open = CarbonImmutable::parse($date->toDateString() . ' ' . $this->timeOfDay($tt->leisure_schedule_open_time, '10:00:00'));
+                    $close = CarbonImmutable::parse($date->toDateString() . ' ' . $this->timeOfDay($tt->leisure_schedule_close_time, '18:00:00'));
+                    if (! $close->gt($open)) {
+                        continue;   // misconfigured window — no slots to lay down
+                    }
+                    $slotCount = max(1, (int) floor(abs($open->diffInMinutes($close)) / $slotMinutes));
+                    $perSlot = max(1, (int) floor($daily / $slotCount));
 
                     for ($t = $open; $t->lt($close); $t = $t->addMinutes($slotMinutes)) {
                         TicketTypeCapacity::firstOrCreate([
@@ -478,6 +482,26 @@ class NordvaleParcSeeder extends Seeder
                 ]));
             }
         }
+    }
+
+    /**
+     * Reduce a schedule value to a bare "H:i:s" so it can be concatenated onto
+     * a date. TicketType casts these columns with `datetime:H:i:s`, which only
+     * changes SERIALIZATION — the attribute itself is a Carbon, and stringifying
+     * it yields a full "Y-m-d H:i:s". Concatenating that onto a date produced
+     * "2026-07-30 2026-07-31 10:00:00" and Carbon rejected the double date.
+     * Accepts a Carbon, a bare time, or a full datetime string.
+     */
+    private function timeOfDay($value, string $fallback): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('H:i:s');
+        }
+        $s = trim((string) $value);
+        if ($s !== '' && preg_match('/(\d{1,2}):(\d{2})(?::(\d{2}))?/', $s, $m)) {
+            return sprintf('%02d:%02d:%02d', (int) $m[1], (int) $m[2], (int) ($m[3] ?? 0));
+        }
+        return $fallback;
     }
 
     /* ----------------------------------------------- physical rental stock */
