@@ -48,6 +48,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- filled by JS -->
             </section>
 
+            <!-- ===== WEATHER FORECAST (7 zile) ===== -->
+            <!-- Se ascunde daca API-ul pica sau venue-ul n-are lat/lng — via JS. -->
+            <section id="ld-weather" class="hidden overflow-hidden bg-white border shadow-sm rounded-2xl border-border">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-border bg-slate-50">
+                    <div>
+                        <h2 class="font-bold text-secondary">🌤️ Prognoză meteo · 7 zile</h2>
+                        <p class="text-xs text-muted" id="ld-weather-venue">—</p>
+                    </div>
+                    <span class="text-[10px] text-muted">Sursa: Open-Meteo · cache 1h</span>
+                </div>
+                <div id="ld-weather-body" class="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 lg:grid-cols-7"></div>
+            </section>
+
             <!-- ===== LIVE KPI ===== -->
             <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
@@ -73,6 +86,34 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
                     <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-teal-500/10">👥</div>
                     <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-occupancy">—</p><p class="mt-1 text-xs truncate text-muted">Prezenți acum</p></div>
+                </div>
+            </section>
+
+            <!-- ===== COMPARE ROW: azi vs ieri / sapt / luna / an ===== -->
+            <section id="ld-compare" class="overflow-hidden bg-white border shadow-sm rounded-2xl border-border">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-border bg-slate-50">
+                    <div>
+                        <h2 class="font-bold text-secondary">📊 Comparativ · azi vs perioade anterioare</h2>
+                        <p class="text-xs text-muted">Ziua întreagă (00:00 – 23:59). Delta % față de azi.</p>
+                    </div>
+                    <span class="text-[10px] text-muted" id="ld-compare-note"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-slate-50 text-slate-600">
+                            <tr>
+                                <th class="px-4 py-2 text-left font-semibold">Metrica</th>
+                                <th class="px-3 py-2 text-right font-semibold">Azi</th>
+                                <th class="px-3 py-2 text-right font-semibold">Ieri</th>
+                                <th class="px-3 py-2 text-right font-semibold">Săpt. trecută</th>
+                                <th class="px-3 py-2 text-right font-semibold">Luna trecută</th>
+                                <th class="px-3 py-2 text-right font-semibold">Anul trecut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ld-compare-body" class="divide-y divide-slate-100">
+                            <tr><td colspan="6" class="px-4 py-4 text-center text-muted">Se încarcă...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -141,11 +182,13 @@ const LeisureDash = {
             return;
         }
         this.refreshAll();
-        // Live refresh of the fast-moving panels every 20s.
+        // Live refresh: KPI + casa la 20s; compare la 60s (mai lent, sunt date agregate);
+        // weather doar la init (cache-uit 1h server-side).
         setInterval(() => { this.loadLive(); this.loadCasa(); }, 20000);
+        setInterval(() => { this.loadCompare(); }, 60000);
     },
 
-    refreshAll() { this.loadLive(); this.loadCasa(); this.loadSales(); this.loadParticipants(); },
+    refreshAll() { this.loadLive(); this.loadCasa(); this.loadSales(); this.loadParticipants(); this.loadWeather(); this.loadCompare(); },
 
     // ---- Live stats + stream ----
     async loadLive() {
@@ -247,6 +290,101 @@ const LeisureDash = {
             document.getElementById('ld-part-checked').textContent = this.num(st.checked_in);
             document.getElementById('ld-part-rate').textContent = (Number(st.rate) || 0) + '%';
         } catch (e) { console.warn('participants', e); }
+    },
+
+    // ---- Weather (Open-Meteo, 7 zile) ----
+    async loadWeather() {
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/weather`);
+            const d = res.data || {};
+            const forecast = d.forecast;
+            const venue = d.venue || {};
+            const wrap = document.getElementById('ld-weather');
+            const body = document.getElementById('ld-weather-body');
+            const venueEl = document.getElementById('ld-weather-venue');
+            if (!forecast || !forecast.days || !forecast.days.length) {
+                wrap.classList.add('hidden');
+                return;
+            }
+            wrap.classList.remove('hidden');
+            venueEl.textContent = (venue.name ? venue.name : 'Locație') + (venue.city ? ' · ' + venue.city : '') + ' · ' + (forecast.location?.lat?.toFixed(3) || '') + '°N, ' + (forecast.location?.lng?.toFixed(3) || '') + '°E';
+            const dayNames = ['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
+            body.innerHTML = forecast.days.map((d, i) => {
+                const dt = new Date(d.date + 'T00:00:00');
+                const label = i === 0 ? 'Azi' : (i === 1 ? 'Mâine' : dayNames[dt.getDay()]);
+                const dateShort = dt.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' });
+                const precip = d.precip_mm > 0 ? `<p class="text-[10px] text-sky-700">💧 ${d.precip_mm} mm</p>` : '<p class="text-[10px] text-slate-400">—</p>';
+                const uvClass = d.uv_max >= 8 ? 'text-rose-700' : (d.uv_max >= 6 ? 'text-amber-700' : 'text-slate-500');
+                const uv = d.uv_max != null ? `<p class="text-[10px] ${uvClass}">UV ${d.uv_max}</p>` : '';
+                return `
+                <div class="p-2 text-center border rounded-lg border-slate-200 bg-slate-50/50">
+                    <p class="text-[10px] uppercase font-bold text-slate-600">${label}</p>
+                    <p class="text-[10px] text-muted mb-1">${dateShort}</p>
+                    <p class="text-2xl leading-none" title="${d.label}">${d.icon}</p>
+                    <p class="mt-1 text-xs font-semibold text-secondary tabular-nums">
+                        <span class="text-rose-700">${d.temp_max ?? '—'}°</span>
+                        <span class="text-slate-400">/</span>
+                        <span class="text-sky-700">${d.temp_min ?? '—'}°</span>
+                    </p>
+                    ${precip}
+                    ${uv}
+                </div>`;
+            }).join('');
+        } catch (e) { console.warn('weather', e); document.getElementById('ld-weather')?.classList.add('hidden'); }
+    },
+
+    // ---- Compare: azi vs ieri / sapt trecuta / luna trecuta / an trecut ----
+    async loadCompare() {
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/dashboard/compare`);
+            const snaps = (res.data || {}).snapshots || {};
+            const tbody = document.getElementById('ld-compare-body');
+            const t = snaps.today || {};
+            const metrics = [
+                { key: 'revenue', label: '💰 Venituri (RON)', fmt: v => this.money(v) },
+                { key: 'orders', label: '🧾 Comenzi', fmt: v => this.num(v) },
+                { key: 'tickets_sold', label: '🎟️ Bilete vândute', fmt: v => this.num(v) },
+                { key: 'checkins', label: '✅ Check-in-uri', fmt: v => this.num(v) },
+            ];
+            const compareKeys = ['yesterday', 'last_week', 'last_month', 'last_year'];
+            const deltaCell = (deltaPct, oldVal) => {
+                if (deltaPct === null || deltaPct === undefined) {
+                    return `<div class="text-slate-400">—</div>`;
+                }
+                const arrow = deltaPct > 0 ? '⬆️' : (deltaPct < 0 ? '⬇️' : '➡️');
+                const color = deltaPct > 0 ? 'text-emerald-700' : (deltaPct < 0 ? 'text-rose-700' : 'text-slate-500');
+                const sign = deltaPct > 0 ? '+' : '';
+                return `<div class="${color} font-semibold">${arrow} ${sign}${deltaPct}%</div>`;
+            };
+            tbody.innerHTML = metrics.map(m => {
+                const todayVal = m.fmt(t[m.key] ?? 0);
+                const cells = compareKeys.map(k => {
+                    const snap = snaps[k] || {};
+                    const val = snap[m.key];
+                    if (val === undefined || val === null) return `<td class="px-3 py-2 text-right text-slate-400">—</td>`;
+                    const delta = (snap.delta_vs_today || {})[m.key];
+                    return `<td class="px-3 py-2 text-right">
+                        <div class="tabular-nums text-secondary">${m.fmt(val)}</div>
+                        ${deltaCell(delta, val)}
+                    </td>`;
+                }).join('');
+                return `
+                <tr>
+                    <td class="px-4 py-2 font-semibold text-secondary">${m.label}</td>
+                    <td class="px-3 py-2 text-right font-bold text-secondary tabular-nums">${todayVal}</td>
+                    ${cells}
+                </tr>`;
+            }).join('');
+            // Sub-note cu datele efective ale zilelor comparate
+            const noteEl = document.getElementById('ld-compare-note');
+            if (noteEl && snaps.yesterday && snaps.today) {
+                noteEl.textContent = 'Azi ' + snaps.today.date + ' · vs ' + snaps.yesterday.date + ' / ' + (snaps.last_week?.date || '—') + ' / ' + (snaps.last_month?.date || '—') + ' / ' + (snaps.last_year?.date || '—');
+            }
+        } catch (e) {
+            console.warn('compare', e);
+            const tbody = document.getElementById('ld-compare-body');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-rose-700">Eroare la încărcare</td></tr>';
+        }
     },
 
     // ---- Sales chart ----

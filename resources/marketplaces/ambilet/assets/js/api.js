@@ -410,6 +410,8 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales-timeline/)) return 'organizer.event.leisure.sales-timeline';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales\/summary/)) return 'organizer.event.leisure.sales.summary';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales\/range-csv/)) return 'organizer.event.leisure.sales.range-csv';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/weather/)) return 'organizer.event.leisure.weather';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/compare/)) return 'organizer.event.leisure.dashboard.compare';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/live/)) return 'organizer.event.leisure.dashboard.live';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/raport/)) return 'organizer.event.leisure.raport';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';

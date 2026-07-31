@@ -1931,6 +1931,22 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.weather':
+        // GET /organizer/events/{id}/leisure/weather → prognoza 7 zile
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/weather';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.dashboard.compare':
+        // GET /organizer/events/{id}/leisure/dashboard/compare → azi vs ieri/sapt/luna/an
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/dashboard/compare';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.scans':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }

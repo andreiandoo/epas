@@ -4110,6 +4110,170 @@ class LeisureController extends BaseController
     }
 
     /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/weather
+     *
+     * Prognoza meteo 7 zile pentru locatia evenimentului leisure.
+     * Coordonatele lat/lng vin din Venue-ul evenimentului. Cache 1h (in service).
+     *
+     * Return: { location: {lat,lng}, timezone, days: [...] } sau null daca:
+     *  - Event fara venue asociat
+     *  - Venue fara lat/lng (null in DB)
+     *  - Open-Meteo indisponibil (fail-safe → widget UI se ascunde)
+     */
+    public function weather(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->with('venue:id,name,city,lat,lng')
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $venue = $eventModel->venue;
+        if (!$venue || $venue->lat === null || $venue->lng === null) {
+            // Nu returnam eroare — front-end-ul ascunde widget-ul cand data e null.
+            return $this->success(['forecast' => null, 'reason' => 'no_coordinates']);
+        }
+
+        $svc = app(\App\Services\Leisure\WeatherService::class);
+        $forecast = $svc->getForecast((float) $venue->lat, (float) $venue->lng, 7);
+
+        return $this->success([
+            'forecast' => $forecast,
+            'venue' => ['id' => $venue->id, 'name' => $venue->name, 'city' => $venue->city],
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/dashboard/compare
+     *
+     * Comparativ cifre-cheie pentru dashboard: azi vs ieri vs saptamana trecuta
+     * vs luna trecuta vs anul trecut. Fiecare snapshot = ZIUA INTREAGA (00:00–23:59
+     * in RO tz) a datei respective — nu ora curenta.
+     *
+     * Metrici comparate:
+     *  - revenue (order.total, paid/completed)
+     *  - orders (count)
+     *  - tickets_sold (tranzactii cu valoare: exclude from_package + price=0)
+     *  - checkins (tickets.checked_in_at in intervalul zilei)
+     *
+     * Cache: azi 60s (schimba live); istorice 24h (imutabile).
+     */
+    public function dashboardCompare(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tz = 'Europe/Bucharest';
+        $today = Carbon::now($tz)->startOfDay();
+
+        // Perioadele de comparat: fiecare = ziua intreaga pt data respectiva
+        $periods = [
+            'today'      => $today->copy(),
+            'yesterday'  => $today->copy()->subDay(),
+            'last_week'  => $today->copy()->subWeek(),   // aceeasi zi a saptamanii, cu 7 zile in urma
+            'last_month' => $today->copy()->subMonth(),  // aceeasi data luna trecuta
+            'last_year'  => $today->copy()->subYear(),   // aceeasi data anul trecut
+        ];
+
+        $result = [];
+        foreach ($periods as $key => $day) {
+            // Azi cache scurt (60s), istorice cache lung 24h (imutabile)
+            $ttl = $key === 'today' ? 60 : 86400;
+            $cacheKey = "leisure_compare_v1_{$eventModel->id}_{$key}_" . $day->format('Y-m-d');
+            $result[$key] = Cache::remember($cacheKey, $ttl, function () use ($eventModel, $day, $tz) {
+                return $this->buildDaySnapshot($eventModel->id, $day, $tz);
+            });
+        }
+
+        // Delta computed vs today pentru fiecare cheie (pentru UI convenienta)
+        $t = $result['today'];
+        foreach (['yesterday', 'last_week', 'last_month', 'last_year'] as $k) {
+            $result[$k]['delta_vs_today'] = [
+                'revenue' => $this->pctDelta($t['revenue'], $result[$k]['revenue']),
+                'orders' => $this->pctDelta($t['orders'], $result[$k]['orders']),
+                'tickets_sold' => $this->pctDelta($t['tickets_sold'], $result[$k]['tickets_sold']),
+                'checkins' => $this->pctDelta($t['checkins'], $result[$k]['checkins']),
+            ];
+        }
+
+        return $this->success([
+            'timezone' => $tz,
+            'snapshots' => $result,
+        ]);
+    }
+
+    /**
+     * Delta procentual: today vs old. Return null cand old = 0 (nu putem calcula %).
+     */
+    private function pctDelta(float|int $today, float|int $old): ?float
+    {
+        if ($old == 0) return null; // divide by zero
+        return round((($today - $old) / $old) * 100, 1);
+    }
+
+    /**
+     * Snapshot pt o zi calendaristica intreaga (00:00-23:59 RO tz). Metrici =
+     * aceleasi definitii ca dashboardLive (aliniate 1:1). Returneaza floats/ints
+     * simpli — computare rapida (agregare in DB, fara SalesBreakdownService).
+     */
+    private function buildDaySnapshot(int $eventId, Carbon $dayRo, string $tz): array
+    {
+        $start = $dayRo->copy()->startOfDay()->setTimezone('UTC');
+        $end = $dayRo->copy()->endOfDay()->setTimezone('UTC');
+
+        $orders = Order::query()
+            ->where('event_id', $eventId)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$start, $end])
+            ->get(['id', 'total']);
+        $revenue = round((float) $orders->sum('total'), 2);
+        $ordersCount = $orders->count();
+
+        // Bilete vandute (tranzactii cu valoare) — aliniat cu dashboardLive:
+        // exclude from_package + price<=0.
+        $ticketsBase = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventId)
+                ->whereIn('status', ['paid', 'completed'])
+                ->whereBetween('paid_at', [$start, $end]))
+            ->whereNotIn('status', ['cancelled', 'refunded'])
+            ->get(['id', 'price', 'meta']);
+        $ticketsSold = 0;
+        foreach ($ticketsBase as $t) {
+            $meta = is_array($t->meta ?? null) ? $t->meta : [];
+            $isFromPackage = !empty($meta['from_package']);
+            if (!$isFromPackage && (float) ($t->price ?? 0) > 0) {
+                $ticketsSold++;
+            }
+        }
+
+        // Check-ins in ziua respectiva (tickets.checked_in_at cade in interval)
+        $checkins = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q->where('event_id', $eventId))
+            ->whereNotNull('checked_in_at')
+            ->whereBetween('checked_in_at', [$start, $end])
+            ->count();
+
+        return [
+            'date' => $dayRo->format('Y-m-d'),
+            'revenue' => $revenue,
+            'orders' => $ordersCount,
+            'tickets_sold' => $ticketsSold,
+            'checkins' => $checkins,
+        ];
+    }
+
+    /**
      * GET /marketplace-client/organizer/events/{event}/leisure/sales/summary?from=&to=
      *
      * Snapshot bogat pentru cardurile din /organizator/leisure-sales:

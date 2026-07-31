@@ -2040,6 +2040,12 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/leisure/sales/summary', [OrganizerLeisureController::class, 'salesSummary'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.sales.summary');
+        Route::get('/events/{event}/leisure/weather', [OrganizerLeisureController::class, 'weather'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.weather');
+        Route::get('/events/{event}/leisure/dashboard/compare', [OrganizerLeisureController::class, 'dashboardCompare'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.dashboard.compare');
         // Scanari — chart per zi + detalii pe zi
         Route::get('/events/{event}/leisure/scans', [OrganizerLeisureController::class, 'scansOverview'])
             ->whereNumber('event')
