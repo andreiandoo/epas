@@ -1491,7 +1491,10 @@ Route::prefix('marketplace-client')->middleware('throttle:120,1')->group(functio
         ->name('api.marketplace-client.newsletter.track.open');
     Route::get('/newsletter/track/click', [NewsletterTrackingController::class, 'trackClick'])
         ->name('api.marketplace-client.newsletter.track.click');
-    Route::get('/newsletter/unsubscribe', [NewsletterTrackingController::class, 'unsubscribe'])
+    // GET = user clicks the link in the email body. POST = RFC 8058 one-click
+    // from the List-Unsubscribe-Post header (Gmail's "Unsubscribe" button). Both
+    // record the unsubscribe in OUR DB only — Brevo never sees it.
+    Route::match(['GET', 'POST'], '/newsletter/unsubscribe', [NewsletterTrackingController::class, 'unsubscribe'])
         ->name('api.marketplace-client.newsletter.unsubscribe');
     Route::post('/newsletter/unsubscribe-reason', [NewsletterTrackingController::class, 'submitUnsubscribeReason'])
         ->name('api.marketplace-client.newsletter.unsubscribe.reason');

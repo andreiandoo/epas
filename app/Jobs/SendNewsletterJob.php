@@ -199,6 +199,18 @@ class SendNewsletterJob implements ShouldQueue
             ->subject($subject)
             ->html($bodyHtml);
 
+        // Set OUR OWN List-Unsubscribe header (+ RFC 8058 one-click) so Gmail's
+        // "Unsubscribe" button and any List-Unsubscribe-aware client hit OUR
+        // endpoint, which records the unsubscribe in our DB only. Without this,
+        // Brevo injects its own header and a one-click unsubscribe marks the
+        // contact as unsubscribed IN BREVO — which then blocks even transactional
+        // emails (order confirmations, password resets) to that address.
+        $unsubUrl = $variables['unsubscribe_url'];
+        if ($unsubUrl) {
+            $email->getHeaders()->addTextHeader('List-Unsubscribe', '<' . $unsubUrl . '>');
+            $email->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+        }
+
         if ($newsletter->reply_to) {
             $email->replyTo($newsletter->reply_to);
         }
