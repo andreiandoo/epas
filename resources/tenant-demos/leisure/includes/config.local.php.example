@@ -6,12 +6,13 @@
  * Cel mai important: TENANT_ID trebuie să fie id-ul real al tenantului leisure „Nordvale”.
  */
 
-// ID-ul real al tenantului de tip leisure (obligatoriu înainte de go-live).
-if (!defined('TENANT_ID')) { define('TENANT_ID', 18); }
+// ID-ul tenantului de tip leisure. Nordvale = 36 pe staging.
+if (!defined('TENANT_ID')) { define('TENANT_ID', 36); }
 
-// Mediu alternativ de API (ex. staging), dacă e cazul.
-// if (!defined('API_BASE')) { define('API_BASE', 'https://staging.tixello.com/api'); }
-// if (!defined('CORE_URL')) { define('CORE_URL', 'https://staging.tixello.com'); }
+// Implicit config.php pointează pe STAGING (stage.tixello.com).
+// Pentru a comuta pe PRODUCȚIE, decomentează:
+// if (!defined('API_BASE')) { define('API_BASE', 'https://core.tixello.com/api'); }
+// if (!defined('CORE_URL')) { define('CORE_URL', 'https://core.tixello.com'); }
 
 // Afișează erorile de API în pagină pe timpul dezvoltării.
 // if (!defined('DEBUG')) { define('DEBUG', true); }

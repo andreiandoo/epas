@@ -2626,71 +2626,7 @@
         <div id="page-progress" class="progress-line h-full w-full bg-acid"></div>
     </div>
 
-    <!-- Header -->
-    <header class="safe-top fixed inset-x-0 top-0 z-[120] px-2.5 sm:px-4 lg:px-6">
-        <nav class="mx-auto mt-2 flex min-h-[62px] max-w-[1540px] items-center justify-between gap-2 rounded-[20px] px-3 py-2.5 transition-all duration-500 sm:gap-4 sm:px-4 lg:mt-4 lg:px-5"
-             :class="scrolled ? 'nav-shell' : 'border border-white/0 bg-transparent'">
-            <a href="/" class="flex min-w-0 items-center gap-2.5 text-white sm:gap-3" aria-label="Nordvale homepage">
-                <span class="grid h-10 w-10 flex-none place-items-center rounded-[14px] border border-white/20 bg-white/10 sm:h-11 sm:w-11">
-                    <svg viewBox="0 0 48 48" class="h-7 w-7 sm:h-8 sm:w-8" fill="none" aria-hidden="true">
-                        <path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/>
-                        <path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/>
-                    </svg>
-                </span>
-                <span class="min-w-0">
-                    <span class="block truncate font-display text-[19px] font-semibold leading-none sm:text-[21px]">Nordvale</span>
-                    <span class="mt-1 hidden truncate text-[7px] font-bold uppercase tracking-[.25em] text-white/50 min-[410px]:block sm:text-[8px]">wild park · forest reserve</span>
-                </span>
-            </a>
-
-            <div class="hidden items-center gap-7 xl:flex">
-                <a href="/experiente" class="text-sm font-semibold text-white/70 transition hover:text-acid">Experiențe</a>
-                <a href="/planifica" class="text-sm font-semibold text-white/70 transition hover:text-acid">Planifică</a>
-                <a href="/calendar" class="text-sm font-semibold text-white/70 transition hover:text-acid">Calendar</a>
-                <a href="#programe" class="text-sm font-semibold text-acid">Grupuri</a>
-                <a href="/abonamente" class="text-sm font-semibold text-white/70 transition hover:text-acid">Abonamente</a>
-            </div>
-
-            <div class="flex flex-none items-center gap-1.5 sm:gap-2">
-                <button type="button" @click="quoteOpen = true" class="hidden whitespace-nowrap rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 lg:inline-flex">Cere ofertă</button>
-                <a href="/bilete" class="inline-flex flex-none items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-acid px-3 py-2.5 text-[12px] font-bold text-pine-950 shadow-acid transition hover:-translate-y-0.5 sm:gap-2 sm:px-4 sm:text-sm lg:px-5">
-                    <svg class="h-3.5 w-3.5 flex-none sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H18l3 3v9.5A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-10Z"/><path d="M8 6V3m8 3V3M3 11h18"/></svg>
-                    <span>Bilete</span>
-                </a>
-                <button type="button" @click="menuOpen = true" class="grid h-10 w-10 flex-none place-items-center rounded-full border border-white/15 text-white sm:h-11 sm:w-11 xl:hidden" aria-label="Deschide meniul">
-                    <svg class="h-[18px] w-[18px] sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 17h16"/></svg>
-                </button>
-            </div>
-        </nav>
-    </header>
-
-    <!-- Mobile menu -->
-    <div x-cloak x-show="menuOpen" class="fixed inset-0 z-[150]" role="dialog" aria-modal="true">
-        <div x-show="menuOpen" x-transition.opacity @click="menuOpen = false" class="absolute inset-0 bg-pine-950/75 backdrop-blur-sm"></div>
-        <aside x-show="menuOpen" x-transition:enter="transition duration-500 ease-out" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition duration-300 ease-in" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="safe-bottom absolute right-0 top-0 flex h-full w-[min(88vw,430px)] flex-col overflow-y-auto bg-cream p-5 sm:p-7">
-            <div class="flex items-center justify-between">
-                <span class="font-display text-2xl font-semibold text-pine-950">Nordvale</span>
-                <button type="button" @click="menuOpen = false" class="grid h-11 w-11 place-items-center rounded-full border border-pine-900/15" aria-label="Închide meniul">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
-                </button>
-            </div>
-            <div class="mt-10 space-y-1">
-                <template x-for="item in menuItems" :key="item.href">
-                    <a :href="item.href" @click="menuOpen = false" class="group flex items-center justify-between border-b border-pine-900/10 py-4 font-display text-[27px] font-semibold text-pine-950">
-                        <span x-text="item.label"></span>
-                        <span class="grid h-8 w-8 place-items-center rounded-full bg-pine-900 text-acid transition group-hover:rotate-45">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 17 10-10M8 7h9v9"/></svg>
-                        </span>
-                    </a>
-                </template>
-            </div>
-            <div class="mt-8 rounded-[22px] bg-pine-900 p-5 text-white">
-                <div class="text-[10px] font-bold uppercase tracking-[.19em] text-acid">Birou grupuri</div>
-                <p class="mt-3 text-sm leading-6 text-white/65">Răspundem solicitărilor în maximum o zi lucrătoare.</p>
-                <button type="button" @click="menuOpen = false; quoteOpen = true" class="mt-5 w-full rounded-full bg-acid px-5 py-3.5 font-bold text-pine-950">Cere ofertă</button>
-            </div>
-        </aside>
-    </div>
+    <?php $nvNav='grupuri'; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
     <main>
         <!-- Hero -->
@@ -3183,38 +3119,7 @@
         </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-pine-950 px-4 pb-24 pt-16 text-white sm:px-6 sm:pb-8 sm:pt-20 lg:px-10">
-        <div class="mx-auto max-w-[1460px]">
-            <div class="grid gap-12 border-b border-white/10 pb-12 lg:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
-                <div>
-                    <div class="flex items-center gap-3">
-                        <span class="grid h-12 w-12 place-items-center rounded-[16px] border border-white/15 bg-white/[.06]">
-                            <svg viewBox="0 0 48 48" class="h-8 w-8" fill="none"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg>
-                        </span>
-                        <div><div class="font-display text-2xl font-semibold">Nordvale</div><div class="mt-1 text-[8px] font-bold uppercase tracking-[.24em] text-white/40">wild park · forest reserve</div></div>
-                    </div>
-                    <p class="mt-5 max-w-sm text-sm leading-7 text-white/48">O rezervație vie și un parc de aventură construit cu grijă pentru pădure, oameni și timpul petrecut împreună.</p>
-                </div>
-                <div>
-                    <div class="text-[10px] font-bold uppercase tracking-[.2em] text-acid">Explorează</div>
-                    <div class="mt-5 space-y-3 text-sm text-white/55"><a href="/experiente" class="block hover:text-white">Experiențe</a><a href="/calendar" class="block hover:text-white">Calendar</a><a href="/planifica" class="block hover:text-white">Planifică vizita</a><a href="/bilete" class="block hover:text-white">Bilete</a></div>
-                </div>
-                <div>
-                    <div class="text-[10px] font-bold uppercase tracking-[.2em] text-acid">Grupuri</div>
-                    <div class="mt-5 space-y-3 text-sm text-white/55"><a href="#programe" class="block hover:text-white">Școli</a><a href="#programe" class="block hover:text-white">Grupuri private</a><a href="#programe" class="block hover:text-white">Companii</a><button type="button" @click="quoteOpen = true" class="block hover:text-white">Cere ofertă</button></div>
-                </div>
-                <div>
-                    <div class="text-[10px] font-bold uppercase tracking-[.2em] text-acid">Contact</div>
-                    <div class="mt-5 space-y-3 text-sm text-white/55"><p>+40 700 000 000</p><p>grupuri@nordvale.test</p><p>Luni–Vineri<br>09:00–17:00</p></div>
-                </div>
-            </div>
-            <div class="flex flex-col gap-4 pt-6 text-xs text-white/35 sm:flex-row sm:items-center sm:justify-between">
-                <p>© 2026 Nordvale. Concept demonstrativ.</p>
-                <p>Ticketing powered by <span class="font-bold text-acid">tixello</span></p>
-            </div>
-        </div>
-    </footer>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 
     <!-- Mobile sticky CTA -->
     <div class="safe-bottom fixed inset-x-0 bottom-0 z-[110] border-t border-pine-900/10 bg-cream/95 px-3 py-2.5 shadow-[0_-18px_50px_-28px_rgba(6,26,21,.6)] backdrop-blur-xl sm:hidden">

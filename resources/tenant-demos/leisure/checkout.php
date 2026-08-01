@@ -2054,22 +2054,7 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 </head>
 
 <body x-data="checkoutPage()" x-init="init()" class="antialiased pb-28 lg:pb-0">
-<header class="fixed inset-x-0 top-0 z-50 safe-top px-3 sm:px-5 lg:px-8">
-  <div class="nav-shell mx-auto flex h-[62px] max-w-[1440px] items-center justify-between rounded-[20px] px-3 sm:h-[68px] sm:rounded-[22px] sm:px-5">
-    <a href="/" class="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="Nordvale homepage">
-      <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-acid text-pine-950 sm:h-10 sm:w-10">
-        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M5 17.5 12 4l7 13.5-7-3-7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8.5v8.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </span>
-      <span class="min-w-0 text-white"><span class="block truncate font-display text-[17px] font-semibold leading-none sm:text-xl">Nordvale</span><span class="mt-1 hidden text-[8px] font-bold uppercase tracking-[.23em] text-white/45 min-[385px]:block sm:text-[9px]">Secure checkout</span></span>
-    </a>
-    <div class="flex flex-none items-center gap-2 sm:gap-3">
-      <a href="/cos" class="hidden whitespace-nowrap rounded-full border border-white/15 px-4 py-2 text-xs font-bold text-white/80 transition hover:border-white/35 hover:text-white sm:inline-flex">← Înapoi la coș</a>
-      <span class="lock-badge grid h-10 w-10 flex-none place-items-center rounded-full border border-white/15 text-acid" aria-label="Plată securizată">
-        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 14v2.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-    </div>
-  </div>
-</header>
+<?php $nvNav=''; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
 <main>
 <section class="relative overflow-hidden bg-pine-950 pb-14 pt-28 text-white topo-dark grain sm:pb-18 sm:pt-32 lg:pb-20 lg:pt-36">
@@ -2162,6 +2147,8 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 
 <section class="overflow-hidden bg-cream py-12 sm:py-16"><div class="mx-auto grid max-w-7xl gap-4 px-4 sm:grid-cols-3 sm:px-6 lg:px-8"><div class="rounded-[24px] border border-pine-900/9 bg-oat/55 p-5" data-reveal><span class="grid h-10 w-10 place-items-center rounded-2xl bg-acid text-pine-950"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3 class="mt-4 font-display text-xl font-semibold">Bilete instant</h3><p class="mt-2 text-xs leading-5 text-pine-700/55">Confirmarea și codurile QR sunt trimise imediat după autorizarea plății.</p></div><div class="rounded-[24px] border border-pine-900/9 bg-oat/55 p-5" data-reveal><span class="grid h-10 w-10 place-items-center rounded-2xl bg-sky text-pine-950"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M5.5 7.5 12 3l6.5 4.5M5.5 16.5 12 21l6.5-4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3 class="mt-4 font-display text-xl font-semibold">Flexibilitate meteo</h3><p class="mt-2 text-xs leading-5 text-pine-700/55">Dacă o activitate este suspendată, primești reprogramare sau credit integral.</p></div><div class="rounded-[24px] border border-pine-900/9 bg-oat/55 p-5" data-reveal><span class="grid h-10 w-10 place-items-center rounded-2xl bg-ember text-white"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M4 8h16v10H4V8Zm4-4h8v4H8V4Z" stroke="currentColor" stroke-width="1.7"/><path d="M8 12h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><h3 class="mt-4 font-display text-xl font-semibold">Suport local</h3><p class="mt-2 text-xs leading-5 text-pine-700/55">Echipa Nordvale poate corecta rapid nume, emailuri și detalii de acces.</p></div></div></section>
 </main>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
 
 <!-- Mobile commercial bar -->
 <div class="mobile-summary-shadow fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream/95 px-3 pt-3 backdrop-blur-xl safe-bottom lg:hidden"><div class="mx-auto flex max-w-xl items-center gap-3"><button type="button" @click="summaryOpen=true" class="min-w-0 flex-1 text-left"><p class="text-[9px] font-bold uppercase tracking-[.15em] text-pine-600" x-text="totalTickets ? ('Total · ' + totalTickets + (totalTickets === 1 ? ' bilet' : ' bilete')) : 'Total'">Total · 3 persoane</p><p class="mt-0.5 font-display text-2xl font-semibold text-pine-900" x-text="cart.items.length ? money(cartTotal) : '660 lei'">660 lei</p></button><button type="button" @click="mobilePrimary()" :disabled="processing" class="inline-flex flex-none items-center justify-center gap-2 whitespace-nowrap rounded-full bg-pine-900 px-5 py-3.5 text-sm font-bold text-white"><span x-show="processing" class="spinner" style="border-color:rgba(255,255,255,.25);border-top-color:#fff"></span><span x-text="internalStep === 1 ? 'Continuă' : (processing ? 'Se procesează' : 'Plătește')"></span></button></div></div>

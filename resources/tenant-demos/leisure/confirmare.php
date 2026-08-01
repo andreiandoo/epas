@@ -2015,18 +2015,7 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
   </style>
 </head>
 <body>
-<header class="fixed inset-x-0 top-0 z-50 safe-top px-3 sm:px-5 lg:px-8">
-  <div class="nav-shell mx-auto flex h-[62px] max-w-[1440px] items-center justify-between rounded-[20px] px-3 sm:h-[68px] sm:rounded-[22px] sm:px-5">
-    <a href="/" class="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="Nordvale homepage">
-      <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-acid text-pine-950 sm:h-10 sm:w-10"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M5 17.5 12 4l7 13.5-7-3-7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8.5v8.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-      <span class="min-w-0 text-white"><span class="block truncate font-display text-[17px] font-semibold leading-none sm:text-xl">Nordvale</span><span class="mt-1 hidden text-[8px] font-bold uppercase tracking-[.23em] text-white/45 min-[385px]:block sm:text-[9px]">Comandă confirmată</span></span>
-    </a>
-    <div class="flex flex-none items-center gap-2 sm:gap-3">
-      <button type="button" class="hidden whitespace-nowrap rounded-full border border-white/15 px-4 py-2 text-xs font-bold text-white/80 transition hover:border-white/35 hover:text-white sm:inline-flex" data-share>Trimite biletele</button>
-      <a href="/cont" class="grid h-10 w-10 flex-none place-items-center rounded-full border border-white/15 text-acid" aria-label="Deschide contul"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 7a7 7 0 0 0-14 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></a>
-    </div>
-  </div>
-</header>
+<?php $nvNav=''; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
 <main>
 <section class="hero topo-dark grain">
@@ -2112,7 +2101,7 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 </section>
 </main>
 
-<footer class="footer"><div class="page-wrap footer-row"><div class="footer-brand"><span class="footer-brandmark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 17.5 12 4l7 13.5-7-3-7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8.5v8.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><div><strong class="font-display">Nordvale</strong><p>Wild Park & Forest Reserve</p></div></div><div class="footer-links"><a href="/termeni">Termeni</a><a href="/confidentialitate">Confidențialitate</a><a href="/contact">Suport</a><p>Ticketing by <strong style="color:var(--acid)">Tixello</strong></p></div></div></footer>
+<?php include __DIR__ . '/includes/footer.php'; ?>
 
 <div class="mobile-actions safe-bottom"><button type="button" class="btn-primary" data-download>Descarcă biletele</button><a href="/cont" class="btn-dark" aria-label="Cont"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 7a7 7 0 0 0-14 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></a></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -2104,44 +2104,7 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 </head>
 <body x-data="cartPage()" x-init="init()" class="antialiased pb-28 lg:pb-0">
 
-    <!-- Header -->
-    <header class="fixed inset-x-0 top-0 z-50 safe-top px-3 sm:px-5 lg:px-8">
-        <div class="nav-shell mx-auto flex h-[62px] max-w-[1440px] items-center justify-between rounded-[20px] px-3 sm:h-[68px] sm:rounded-[22px] sm:px-5">
-            <a href="/" class="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="Nordvale homepage">
-                <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-acid text-pine-950 sm:h-10 sm:w-10">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 17.5 12 4l7 13.5-7-3-7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8.5v8.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </span>
-                <span class="min-w-0 text-white">
-                    <span class="block truncate font-display text-[17px] font-semibold leading-none sm:text-xl">Nordvale</span>
-                    <span class="mt-1 hidden text-[8px] font-bold uppercase tracking-[.23em] text-white/45 min-[385px]:block sm:text-[9px]">Wild park & reserve</span>
-                </span>
-            </a>
-
-            <nav class="hidden items-center gap-7 text-sm font-semibold text-white/72 lg:flex" aria-label="Navigație principală">
-                <a href="/experiente" class="transition hover:text-white">Experiențe</a>
-                <a href="/planifica" class="transition hover:text-white">Planifică</a>
-                <a href="/calendar" class="transition hover:text-white">Calendar</a>
-                <a href="/bilete" class="transition hover:text-white">Bilete</a>
-            </nav>
-
-            <div class="flex flex-none items-center gap-2 sm:gap-3">
-                <a href="#cart-content" class="hidden whitespace-nowrap rounded-full border border-white/15 px-4 py-2 text-xs font-bold text-white/80 transition hover:border-white/35 hover:text-white sm:inline-flex">2 rezervări</a>
-                <button type="button" @click="mobileMenu = !mobileMenu" class="grid h-10 w-10 flex-none place-items-center rounded-full border border-white/15 text-white lg:hidden" :aria-expanded="mobileMenu" aria-label="Deschide meniul">
-                    <svg x-show="!mobileMenu" class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M5 8h14M5 16h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                    <svg x-show="mobileMenu" x-cloak class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </button>
-            </div>
-        </div>
-
-        <div x-show="mobileMenu" x-cloak x-transition.opacity @click.outside="mobileMenu = false" class="nav-shell mx-auto mt-2 max-w-[1440px] rounded-[22px] p-4 lg:hidden">
-            <div class="grid gap-1 text-sm font-semibold text-white/78">
-                <a href="/experiente" class="rounded-xl px-4 py-3 hover:bg-white/5 hover:text-white">Experiențe</a>
-                <a href="/planifica" class="rounded-xl px-4 py-3 hover:bg-white/5 hover:text-white">Planifică vizita</a>
-                <a href="/calendar" class="rounded-xl px-4 py-3 hover:bg-white/5 hover:text-white">Calendar</a>
-                <a href="/bilete" class="rounded-xl px-4 py-3 hover:bg-white/5 hover:text-white">Bilete și pachete</a>
-            </div>
-        </div>
-    </header>
+    <?php $nvNav=''; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
     <main>
         <!-- Dark heading -->
@@ -2431,6 +2394,8 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
             </div>
         </section>
     </main>
+
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 
     <!-- Mobile checkout bar -->
     <div x-show="items.length > 0" class="fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream/95 px-3 pt-3 backdrop-blur-xl safe-bottom lg:hidden">

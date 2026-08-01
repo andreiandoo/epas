@@ -117,25 +117,7 @@
 <body>
   <div class="progress" aria-hidden="true"><span id="readingProgress"></span></div>
 
-  <header class="site-header safe-top">
-    <nav class="nav" id="nav">
-      <a href="/" class="brand" aria-label="Nordvale homepage">
-        <span class="brand-mark"><svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M4 18 10.6 5l2.7 5.4L15.8 7 21 18H4Z" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round"/><path d="M8.3 18 12 11l3.4 7" stroke="currentColor" stroke-width="1.55"/></svg></span>
-        <span><span class="brand-name">Nordvale</span><span class="brand-sub">Wild reserve · Tixello tenant</span></span>
-      </a>
-      <div class="desktop-nav"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică</a><a href="/noutati" class="active">Noutăți</a><a href="/despre">Rezervația</a></div>
-      <div class="nav-actions"><a href="/autentificare" class="account-link">Contul meu</a><a href="/bilete" class="btn btn-acid ticket-btn">Bilete</a><button class="menu-btn" id="menuOpen" type="button" aria-label="Deschide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></div>
-    </nav>
-  </header>
-
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
-    <button class="menu-backdrop" id="menuBackdrop" type="button" aria-label="Închide meniul"></button>
-    <div class="menu-panel safe-top safe-bottom">
-      <div class="menu-head"><span class="display" style="font-size:24px;color:var(--pine)">Nordvale</span><button class="icon-btn" id="menuClose" type="button" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></div>
-      <div class="menu-links"><a href="/experiente">Experiențe <span>↗</span></a><a href="/planifica">Planifică vizita <span>↗</span></a><a href="/noutati">Noutăți <span>↗</span></a><a href="/despre">Rezervația <span>↗</span></a><a href="/autentificare">Contul meu <span>↗</span></a></div>
-      <div class="menu-status"><div style="display:flex;align-items:center;gap:9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:var(--acid)"><span class="status-dot"></span> Parc deschis astăzi</div><p style="margin:10px 0 0;color:rgba(255,255,255,.65);font-size:13px;line-height:1.6">09:00–20:00 · Ultima intrare 18:30</p></div>
-    </div>
-  </div>
+  <?php $nvNoSpacer = true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="article-hero grain">
@@ -240,9 +222,7 @@
     </section>
   </main>
 
-  <footer>
-    <div class="wrap"><div class="footer-grid"><div class="footer-brand"><a href="/" class="brand"><span class="brand-mark"><svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M4 18 10.6 5l2.7 5.4L15.8 7 21 18H4Z" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round"/></svg></span><span class="brand-name">Nordvale</span></a><p>Un parc de aventură și o rezervație forestieră fictivă, construită ca tenant demonstrativ pentru ecosistemul Tixello.</p></div><div class="footer-links"><div class="footer-col"><strong>Explorează</strong><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></div><div class="footer-col"><strong>Pregătește</strong><a href="/planifica">Planifică vizita</a><a href="/noutati">Noutăți</a><a href="/cont/suport">Ajutor</a></div><div class="footer-col"><strong>Nordvale</strong><a href="/despre">Rezervația</a><a href="#">Contact</a><a href="#">Termeni</a></div></div></div><div class="footer-bottom"><span>© 2026 Nordvale. Date și identitate fictive.</span><span>Ticketing powered by Tixello</span></div></div>
-  </footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <div class="modal" id="galleryModal" aria-hidden="true"><button class="modal-backdrop" type="button" data-close-modal="galleryModal" aria-label="Închide galeria"></button><div class="modal-card"><div class="modal-head"><strong class="display" id="galleryTitle" style="font-size:23px">Galerie</strong><button class="modal-close" type="button" data-close-modal="galleryModal" aria-label="Închide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></div><img class="modal-image" id="galleryImage" src="" alt="Imagine mărită din galerie"></div></div>
 
@@ -264,7 +244,7 @@
       let toastTimer;
 
       const showToast=(message)=>{clearTimeout(toastTimer);toast.textContent=message;toast.classList.add('show');toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)};
-      const setMenu=(open)=>{mobileMenu.classList.toggle('open',open);mobileMenu.setAttribute('aria-hidden',String(!open));body.classList.toggle('menu-open',open)};
+      const setMenu=(open)=>{mobileMenu?.classList.toggle('open',open);mobileMenu?.setAttribute('aria-hidden',String(!open));body.classList.toggle('menu-open',open)};
       menuOpen?.addEventListener('click',()=>setMenu(true));menuClose?.addEventListener('click',()=>setMenu(false));menuBackdrop?.addEventListener('click',()=>setMenu(false));
 
       const updateScroll=()=>{

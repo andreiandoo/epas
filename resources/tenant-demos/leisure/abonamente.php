@@ -1536,37 +1536,7 @@ foreach (array_slice(is_array($subs) ? $subs : [], 0, 3) as $s) {
 <body x-data="membershipPage()" x-init="init()" :class="drawerOpen ? 'modal-open' : ''">
   <div id="scroll-progress" style="position:fixed;left:0;top:0;z-index:100;height:3px;width:100%;background:var(--acid);transform:scaleX(0);transform-origin:left"></div>
 
-  <header class="safe-top fixed inset-x-0 top-0 z-50 px-3 sm:px-5 lg:px-7">
-    <nav class="nav-shell mx-auto flex max-w-screen-2xl items-center justify-between gap-2 rounded-2xl px-3 py-2 text-white sm:rounded-3xl sm:px-4 lg:px-5">
-      <a href="/" class="flex min-w-0 items-center gap-2 sm:gap-3" aria-label="Nordvale — Acasă">
-        <span class="grid h-10 w-10 flex-none place-items-center rounded-full" style="background:var(--pine-800)">
-          <svg viewBox="0 0 48 48" class="h-7 w-7" fill="none" aria-hidden="true"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg>
-        </span>
-        <span class="min-w-0"><span class="block truncate font-display text-xl font-semibold leading-none">Nordvale</span><span class="nav-subtitle mt-1 block truncate text-xs font-bold uppercase tracking-widest text-white opacity-40">wild park · forest reserve</span></span>
-      </a>
-      <div class="hidden items-center gap-7 text-sm lg:flex">
-        <a href="/experiente" class="text-white opacity-70 transition hover:opacity-100">Experiențe</a>
-        <a href="/planifica" class="text-white opacity-70 transition hover:opacity-100">Planifică vizita</a>
-        <a href="/calendar" class="text-white opacity-70 transition hover:opacity-100">Calendar</a>
-        <a href="/bilete" class="text-white opacity-70 transition hover:opacity-100">Bilete & pachete</a>
-        <a href="#abonamente" class="font-semibold" style="color:var(--acid)">Abonamente</a>
-      </div>
-      <div class="flex flex-none items-center gap-2">
-        <a href="/bilete" class="nav-cta inline-flex h-10 flex-none items-center rounded-full px-4 text-sm font-bold whitespace-nowrap" style="background:var(--acid);color:var(--pine-950)">Bilete</a>
-        <button type="button" @click="menuOpen=!menuOpen" class="grid h-10 w-10 flex-none place-items-center rounded-full border border-white border-opacity-20 lg:hidden" aria-label="Deschide meniul">
-          <svg x-show="!menuOpen" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-          <svg x-show="menuOpen" x-cloak viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
-        </button>
-      </div>
-    </nav>
-    <div x-show="menuOpen" x-cloak @click.outside="menuOpen=false" class="nav-shell mx-auto mt-2 max-w-screen-2xl rounded-2xl p-3 text-white lg:hidden">
-      <a href="/experiente" class="block rounded-xl px-4 py-3">Experiențe</a>
-      <a href="/planifica" class="block rounded-xl px-4 py-3">Planifică vizita</a>
-      <a href="/calendar" class="block rounded-xl px-4 py-3">Calendar</a>
-      <a href="/bilete" class="block rounded-xl px-4 py-3">Bilete & pachete</a>
-      <a href="#abonamente" @click="menuOpen=false" class="block rounded-xl px-4 py-3 font-bold" style="color:var(--acid)">Abonamente</a>
-    </div>
-  </header>
+  <?php $nvNav='abonamente'; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="hero topo-dark grain relative overflow-hidden text-white">
@@ -1811,12 +1781,7 @@ foreach (array_slice(is_array($subs) ? $subs : [], 0, 3) as $s) {
     </section>
   </main>
 
-  <footer class="topo-dark border-t border-white border-opacity-10 py-12 text-white">
-    <div class="page-shell grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
-      <div><div class="flex items-center gap-3"><span class="grid h-11 w-11 place-items-center rounded-full" style="background:var(--pine-800)"><svg viewBox="0 0 48 48" class="h-7 w-7"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/></svg></span><span class="font-display text-2xl font-semibold">Nordvale</span></div><p class="mt-4 max-w-md text-sm leading-6 text-white text-opacity-45">Concept dummy pentru un tenant Tixello leisure. Numele, prețurile și beneficiile sunt demonstrative.</p></div>
-      <div class="flex flex-wrap gap-x-6 gap-y-3 text-sm text-white text-opacity-55"><a href="#">Termeni</a><a href="#">Confidențialitate</a><a href="#">Regulament</a><span>Ticketing by <strong style="color:var(--acid)">tixello</strong></span></div>
-    </div>
-  </footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <div class="mobile-bar safe-bottom">
     <div class="min-w-0"><span class="block truncate text-xs text-white text-opacity-45">Recomandat pentru tine</span><strong class="block truncate font-display text-xl" x-text="recommendation.name">Wild Circle</strong></div>

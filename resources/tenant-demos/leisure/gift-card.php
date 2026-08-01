@@ -45,18 +45,7 @@
   </style>
 </head>
 <body x-data="giftCardPage()" x-init="init()" :class="menuOpen ? 'menu-lock' : ''">
-<header class="site-header">
-  <div class="shell">
-    <nav class="nav" aria-label="Navigație principală">
-      <a class="brand" href="/">
-        <span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span>
-        <span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span>
-      </a>
-      <div class="main-nav"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/grupuri">Grupuri</a></div>
-      <div class="nav-actions"><a class="ticket-cta" href="/bilete">Bilete</a><button class="menu-btn" type="button" @click="menuOpen=true" aria-label="Deschide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
-    </nav>
-  </div>
-</header>
+<?php include __DIR__ . '/includes/header.php'; ?>
 <main>
   <section class="shell hero topo">
     <div class="hero-copy">
@@ -143,9 +132,8 @@
     <div class="shell faq-grid"><div class="faq-intro"><p class="panel-kicker">Întrebări frecvente</p><h2>Tot ce trebuie să știi înainte să <em>dăruiești.</em></h2><p>Regulile de utilizare apar și în emailul voucherului.</p></div><div class="faq-list"><template x-for="(faq,i) in faqs" :key="i"><article class="faq-item" :class="openFaq===i?'open':''"><button class="faq-q" type="button" @click="toggleFaq(i)"><span x-text="faq.q"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button><div class="faq-a" :style="openFaq===i?'max-height:180px':''"><p x-text="faq.a"></p></div></article></template></div></div>
   </section>
 </main>
-<footer class="footer"><div class="shell footer-card"><div><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><p>Concept dummy pentru un tenant leisure Tixello.</p></div><nav class="footer-links"><a href="/bilete">Bilete</a><a href="/planifica">Planifică vizita</a><a href="#">Termeni voucher</a><a href="#">Suport</a></nav></div></footer>
+<?php include __DIR__ . '/includes/footer.php'; ?>
 <div class="mobile-bar"><div class="mobile-total"><span>Total voucher</span><strong x-text="total + ' RON'"></strong></div><button class="btn btn-primary" type="button" @click="addToCart()">Adaugă în coș</button></div>
-<div class="mobile-menu" :class="menuOpen?'open':''" x-cloak><div class="mobile-menu-head"><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><button class="menu-btn" style="display:grid" type="button" @click="menuOpen=false" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="mobile-menu-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a><a href="/autentificare">Contul meu</a></div></div>
 <div class="toast" :class="toastVisible?'show':''" x-text="toast"></div>
 <script>
 function giftCardPage(){return{

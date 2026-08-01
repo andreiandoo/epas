@@ -104,33 +104,7 @@
 <body>
   <div class="progress"><span id="pageProgress"></span></div>
 
-  <header class="site-header safe-top">
-    <nav class="nav" id="nav">
-      <a href="/" class="brand" aria-label="Nordvale homepage">
-        <span class="brand-mark">
-          <svg viewBox="0 0 48 48" width="31" height="31" fill="none" aria-hidden="true"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg>
-        </span>
-        <span><span class="brand-name">Nordvale</span><span class="brand-sub">wild park · forest reserve</span></span>
-      </a>
-      <div class="desktop-nav">
-        <a href="/experiente">Experiențe</a><a href="/planifica">Planifică</a><a href="/calendar">Program</a><a class="active" href="#top">Rezervația</a><a href="/abonamente">Abonamente</a>
-      </div>
-      <div class="nav-actions">
-        <a class="account-link" href="/autentificare">Contul meu</a>
-        <a class="btn btn-acid ticket-btn" href="/bilete">Bilete</a>
-        <button class="menu-btn" id="menuOpen" aria-label="Deschide meniul"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 17h16"/></svg></button>
-      </div>
-    </nav>
-  </header>
-
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
-    <div class="menu-backdrop" id="menuBackdrop"></div>
-    <aside class="menu-panel safe-bottom" role="dialog" aria-modal="true">
-      <div class="menu-head"><span class="display" style="font-size:26px;font-weight:600;color:var(--pine)">Nordvale</span><button class="icon-round" id="menuClose" style="border:1px solid rgba(9,37,29,.14);background:transparent" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-      <div class="menu-links"><a href="/experiente">Experiențe <span>↗</span></a><a href="/planifica">Planifică <span>↗</span></a><a href="/calendar">Program <span>↗</span></a><a href="#top">Rezervația <span>↗</span></a><a href="/abonamente">Abonamente <span>↗</span></a><a href="/autentificare">Contul meu <span>↗</span></a></div>
-      <div class="menu-status"><div style="display:flex;align-items:center;gap:9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--acid)"><span class="status-dot"></span> Parc deschis</div><p style="font-size:13px;color:rgba(255,255,255,.58);margin:12px 0 18px">Astăzi · 09:00–20:00</p><a href="/bilete" class="btn btn-acid" style="width:100%">Rezervă acum</a></div>
-    </aside>
-  </div>
+  <?php $nvNoSpacer = true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="hero grain topo-dark" id="top">
@@ -253,19 +227,17 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="wrap"><div class="footer-grid"><div class="footer-brand"><div class="brand"><span class="brand-mark"><svg viewBox="0 0 48 48" width="31" height="31" fill="none"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg></span><span><span class="brand-name">Nordvale</span><span class="brand-sub" style="display:block">wild park · forest reserve</span></span></div><p>Un concept dummy de tenant Tixello pentru parcuri de aventură și rezervații naturale.</p></div><div class="footer-links"><div><h4>Explorează</h4><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/planifica">Planifică</a></div><div><h4>Nordvale</h4><a href="#top">Rezervația</a><a href="/grupuri">Grupuri</a><a href="/cont/suport">Suport</a></div><div><h4>Cont</h4><a href="/autentificare">Autentificare</a><a href="/cont">Dashboard</a><a href="/cont/bilete">Bilete</a></div></div></div><div class="footer-bottom"><span>© 2026 Nordvale. Date și identitate dummy.</span><span>Ticketing & access by Tixello</span></div></div>
-  </footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <script>
     const $=(s,c=document)=>c.querySelector(s), $$=(s,c=document)=>[...c.querySelectorAll(s)];
     const nav=$('#nav'), progress=$('#pageProgress');
-    const onScroll=()=>{const y=window.scrollY;nav.classList.toggle('scrolled',y>18);const h=document.documentElement.scrollHeight-innerHeight;progress.style.transform=`scaleX(${h>0?y/h:0})`};
+    const onScroll=()=>{const y=window.scrollY;nav?.classList.toggle('scrolled',y>18);const h=document.documentElement.scrollHeight-innerHeight;if(progress)progress.style.transform=`scaleX(${h>0?y/h:0})`};
     addEventListener('scroll',onScroll,{passive:true});onScroll();
 
     const menu=$('#mobileMenu');
-    function setMenu(open){menu.classList.toggle('open',open);menu.setAttribute('aria-hidden',String(!open));document.body.classList.toggle('menu-open',open)}
-    $('#menuOpen').addEventListener('click',()=>setMenu(true));$('#menuClose').addEventListener('click',()=>setMenu(false));$('#menuBackdrop').addEventListener('click',()=>setMenu(false));$$('.menu-links a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
+    function setMenu(open){menu?.classList.toggle('open',open);menu?.setAttribute('aria-hidden',String(!open));document.body.classList.toggle('menu-open',open)}
+    $('#menuOpen')?.addEventListener('click',()=>setMenu(true));$('#menuClose')?.addEventListener('click',()=>setMenu(false));$('#menuBackdrop')?.addEventListener('click',()=>setMenu(false));$$('.menu-links a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
 
     const revealObserver=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');revealObserver.unobserve(e.target)}}),{threshold:.13,rootMargin:'0px 0px -5%'});$$('[data-reveal]').forEach(el=>revealObserver.observe(el));
 

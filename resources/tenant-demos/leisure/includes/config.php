@@ -12,9 +12,11 @@
  */
 
 // ---- Core API ----
-define('API_BASE',     'https://core.tixello.com/api');   // baza API
-define('CORE_URL',     'https://core.tixello.com');       // pentru asset-uri (/storage/...)
-define('TENANT_ID',    18);                               // TODO: id-ul tenantului leisure „Nordvale”
+// Tenantul „Nordvale” (leisure) trăiește pe STAGING (stage.tixello.com), tenant id 36.
+// Când se migrează pe producție, schimbă în https://core.tixello.com (via config.local.php).
+define('API_BASE',     'https://stage.tixello.com/api');   // baza API
+define('CORE_URL',     'https://stage.tixello.com');       // pentru asset-uri (/storage/...)
+define('TENANT_ID',    36);                                // id-ul tenantului leisure „Nordvale”
 
 // ---- Identitate site (branding) ----
 define('SITE_NAME',      'Nordvale');

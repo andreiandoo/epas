@@ -35,14 +35,7 @@
 </head>
 <body>
   <div id="scrollProgress" aria-hidden="true"></div>
-  <header class="site-header safe-top">
-    <nav class="nav" id="siteNav" aria-label="Navigație principală">
-      <a class="brand" href="/"><span class="brand-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19 9.7 5.5l2.4 6.1L14.9 4 20 19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.1 15.2h9.9" stroke="#09251d" stroke-width="1.7" stroke-linecap="round"/></svg></span><span><span class="brand-name">Nordvale</span><span class="brand-sub">Wild park & forest reserve</span></span></a>
-      <div class="nav-links"><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/planifica">Planifică</a><a href="/despre">Rezervația</a><a class="active" href="#">FAQ</a></div>
-      <div class="nav-actions"><a class="nav-icon" href="/autentificare" aria-label="Cont"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M4.5 20c.8-4.2 3.3-6.2 7.5-6.2s6.7 2 7.5 6.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></a><a class="ticket-btn" href="/bilete">Bilete</a><button class="nav-icon mobile-trigger" id="menuOpen" type="button" aria-label="Deschide meniul"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></div>
-    </nav>
-  </header>
-  <aside class="mobile-menu" id="mobileMenu" aria-hidden="true"><div class="menu-backdrop" id="menuBackdrop"></div><div class="menu-panel"><div class="menu-head"><a class="brand" href="/" style="color:var(--pine-900)"><span class="brand-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19 9.7 5.5l2.4 6.1L14.9 4 20 19" stroke="currentColor" stroke-width="1.7"/></svg></span><span class="brand-name">Nordvale</span></a><button class="menu-close" id="menuClose" type="button" aria-label="Închide meniul">×</button></div><div class="menu-links"><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/planifica">Planifică vizita</a><a href="/despre">Rezervația</a><a href="/noutati">Noutăți</a><a href="/contact">Contact</a></div><div class="menu-cta"><a class="btn btn-dark" href="/autentificare">Contul meu</a><a class="btn btn-acid" href="/bilete">Ia bilete</a></div></div></aside>
+  <?php $nvNoSpacer = true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="hero topo-dark grain">
@@ -88,7 +81,7 @@
     <section class="support-cta"><div class="wrap support-card"><div><span class="eyebrow" style="color:var(--pine-950)">Răspuns personalizat</span><h2>Întrebarea ta nu încape<br>într-un răspuns standard?</h2><p>Trimite situația exactă echipei Nordvale. Pentru rezervări existente, autentifică-te pentru ca numărul comenzii și biletele să fie asociate automat.</p></div><div class="support-actions"><a class="btn btn-dark" href="/contact">Contact public</a><a class="btn btn-cream" href="/cont/suport">Suport din cont</a></div></div></section>
   </main>
 
-  <footer><div class="wrap"><div class="footer-grid"><div class="footer-brand"><a class="brand" href="/"><span class="brand-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19 9.7 5.5l2.4 6.1L14.9 4 20 19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.1 15.2h9.9" stroke="#09251d" stroke-width="1.7" stroke-linecap="round"/></svg></span><span><span class="brand-name">Nordvale</span><span class="brand-sub">Wild park & forest reserve</span></span></a><p>Un tenant leisure Tixello construit pentru explorare, conservare și experiențe care merită planificate.</p></div><div class="footer-cols"><div class="footer-col"><h4>Descoperă</h4><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></div><div class="footer-col"><h4>Vizita ta</h4><a href="/planifica">Planifică</a><a href="/grupuri">Grupuri</a><a href="/voucher">Voucher</a></div><div class="footer-col"><h4>Nordvale</h4><a href="/despre">Rezervația</a><a href="/noutati">Noutăți</a><a href="/contact">Contact</a></div><div class="footer-col"><h4>Cont</h4><a href="/autentificare">Autentificare</a><a href="/inregistrare">Creează cont</a><a href="/cont">Dashboard</a></div></div></div><div class="footer-bottom"><span>© 2026 Nordvale. Date și denumiri demonstrative.</span><span>Ticketing by Tixello</span></div></div></footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
   <div class="toast" id="toast">Mulțumim pentru feedback.</div>
 
   <script>
@@ -97,9 +90,9 @@
     const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
     const body=document.body, nav=$('#siteNav'), progress=$('#scrollProgress'), menu=$('#mobileMenu');
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function setMenu(open){menu.classList.toggle('open',open);menu.setAttribute('aria-hidden',String(!open));body.classList.toggle('menu-open',open)}
-    $('#menuOpen').addEventListener('click',()=>setMenu(true));$('#menuClose').addEventListener('click',()=>setMenu(false));$('#menuBackdrop').addEventListener('click',()=>setMenu(false));
-    function onScroll(){const y=scrollY,max=document.documentElement.scrollHeight-innerHeight;nav.classList.toggle('scrolled',y>24);progress.style.transform=`scaleX(${max>0?Math.min(1,y/max):0})`}addEventListener('scroll',onScroll,{passive:true});onScroll();
+    function setMenu(open){menu?.classList.toggle('open',open);menu?.setAttribute('aria-hidden',String(!open));body.classList.toggle('menu-open',open)}
+    $('#menuOpen')?.addEventListener('click',()=>setMenu(true));$('#menuClose')?.addEventListener('click',()=>setMenu(false));$('#menuBackdrop')?.addEventListener('click',()=>setMenu(false));
+    function onScroll(){const y=scrollY,max=document.documentElement.scrollHeight-innerHeight;nav?.classList.toggle('scrolled',y>24);if(progress)progress.style.transform=`scaleX(${max>0?Math.min(1,y/max):0})`}addEventListener('scroll',onScroll,{passive:true});onScroll();
     if(!reduce&&'IntersectionObserver'in window){const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.animate([{opacity:0,transform:'translateY(28px)'},{opacity:1,transform:'none'}],{duration:650,easing:'cubic-bezier(.2,.75,.2,1)',fill:'forwards'});io.unobserve(e.target)}}),{threshold:.12});$$('[data-reveal]').forEach(el=>io.observe(el))}else{$$('[data-reveal]').forEach(el=>{el.style.opacity=1;el.style.transform='none'})}
     function animatePath(path,marker,duration=2200){if(!path||!marker||reduce)return;const length=path.getTotalLength();path.style.strokeDasharray=length;path.style.strokeDashoffset=length;path.animate([{strokeDashoffset:length},{strokeDashoffset:0}],{duration,easing:'cubic-bezier(.2,.75,.2,1)',fill:'forwards',delay:260});const start=performance.now()+260;function move(t){const p=Math.max(0,Math.min(1,(t-start)/duration)),pt=path.getPointAtLength(length*p);marker.setAttribute('cx',pt.x);marker.setAttribute('cy',pt.y);if(p<1)requestAnimationFrame(move)}requestAnimationFrame(move)}animatePath($('#heroRoute'),$('#heroMarker'));
 

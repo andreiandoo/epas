@@ -263,33 +263,7 @@
   </style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <nav class="nav" aria-label="Navigație principală">
-        <a class="brand" href="/" aria-label="Nordvale, pagina principală">
-          <span class="brand-mark" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg>
-          </span>
-          <span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span>
-        </a>
-        <div class="main-nav">
-          <a href="/experiente">Experiențe</a>
-          <a href="/planifica">Planifică vizita</a>
-          <a href="/calendar">Calendar</a>
-          <a href="/bilete">Bilete</a>
-        </div>
-        <div class="nav-actions">
-          <button class="nav-icon" id="notificationButton" type="button" aria-label="Notificări">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-          </button>
-          <a class="ticket-cta" href="/bilete">Bilete</a>
-          <button class="menu-btn" id="menuOpen" type="button" aria-label="Deschide meniul">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-          </button>
-        </div>
-      </nav>
-    </div>
-  </header>
+  <?php include __DIR__ . '/../includes/header.php'; ?>
 
   <main class="shell layout">
     <aside class="sidebar" aria-label="Navigație cont">
@@ -414,11 +388,6 @@
     <a href="/cont/profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.2-4 4-6 8-6s6.8 2 8 6"/></svg>Profil</a>
   </nav>
 
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
-    <div class="mobile-menu-head"><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><button class="menu-btn" id="menuClose" type="button" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-    <div class="mobile-menu-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a><a href="/autentificare">Deconectare</a></div>
-  </div>
-
   <div class="modal" id="ticketModal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="ticketModalTitle">
       <button class="modal-close" id="modalClose" type="button" aria-label="Închide"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
@@ -484,5 +453,6 @@
     api('acc-tickets').then(function(d){ if(!(d&&d.success&&d.data))return; var up=d.data.upcoming||[]; if(!up.length)return; var t=up[0]; var chip=document.querySelector('.next-chip'); if(chip){ var cs=chip.querySelector('strong'); if(cs&&t.event)cs.textContent=t.event; var ct=chip.querySelector('time'); if(ct&&t.date){ var dd=new Date(t.date); if(!isNaN(dd)){ ct.setAttribute('datetime',String(t.date).slice(0,10)); ct.textContent=dd.toLocaleDateString('ro-RO',{day:'2-digit',month:'short'}); } } var m=chip.querySelectorAll('.next-chip-meta span'); if(m[0]&&t.time)m[0].textContent=String(t.time).slice(0,5); if(m[1])m[1].textContent=up.length+(up.length===1?' bilet':' bilete'); if(m[2]&&t.venue)m[2].textContent=t.venue; } var mc=document.querySelector('.ticket-code'); if(mc&&t.code)mc.textContent=t.code; var mt=document.querySelector('.ticket-preview small'); if(mt&&t.event)mt.textContent=t.event; });
   })();
   </script>
+  <?php include __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>
