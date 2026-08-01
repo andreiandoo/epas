@@ -113,51 +113,7 @@
 <body>
   <div class="progress" aria-hidden="true"><span id="scrollProgress"></span></div>
 
-  <header class="site-header safe-top">
-    <nav class="nav" id="siteNav" aria-label="Navigație principală">
-      <a class="brand" href="/" aria-label="Nordvale — Acasă">
-        <span class="brand-mark" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19 9.7 5.5l2.4 6.1L14.9 4 20 19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.1 15.2h9.9" stroke="#dffc62" stroke-width="1.7" stroke-linecap="round"/></svg>
-        </span>
-        <span><span class="brand-name">Nordvale</span><span class="brand-sub">Wild park & forest reserve</span></span>
-      </a>
-      <div class="desktop-nav">
-        <a href="/experiente">Experiențe</a>
-        <a href="/planifica">Planifică vizita</a>
-        <a href="/calendar">Calendar</a>
-        <a href="/despre">Rezervația</a>
-        <a class="active" href="#">Noutăți</a>
-      </div>
-      <div class="nav-actions">
-        <a class="account-link" href="/autentificare">Contul meu</a>
-        <a class="btn btn-acid ticket-btn" href="/bilete">Bilete</a>
-        <button class="menu-btn" id="menuOpen" type="button" aria-label="Deschide meniul">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-    </nav>
-  </header>
-
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
-    <button class="menu-backdrop" id="menuBackdrop" type="button" aria-label="Închide meniul"></button>
-    <div class="menu-panel safe-top safe-bottom">
-      <div class="menu-head">
-        <strong class="display" style="font-size:24px;color:var(--pine)">Nordvale</strong>
-        <button class="icon-round" id="menuClose" type="button" aria-label="Închide meniul" style="border:1px solid rgba(9,37,29,.15);background:transparent;color:var(--pine)">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div class="menu-links">
-        <a href="/experiente">Experiențe <span>↗</span></a>
-        <a href="/planifica">Planifică vizita <span>↗</span></a>
-        <a href="/calendar">Calendar <span>↗</span></a>
-        <a href="/despre">Rezervația <span>↗</span></a>
-        <a href="#">Noutăți <span>↗</span></a>
-        <a href="/autentificare">Contul meu <span>↗</span></a>
-      </div>
-      <div class="menu-status"><div style="display:flex;align-items:center;gap:10px"><span class="status-dot"></span><strong>Parcul este deschis</strong></div><p style="margin:10px 0 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,.58)">Astăzi · 09:00–20:00 · Ultima intrare 18:30</p></div>
-    </div>
-  </div>
+  <?php $nvNoSpacer = true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="hero grain topo-dark">
@@ -240,9 +196,7 @@
     </section>
   </main>
 
-  <footer>
-    <div class="wrap"><div class="footer-grid"><div class="footer-brand"><a class="brand" href="/"><span class="brand-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19 9.7 5.5l2.4 6.1L14.9 4 20 19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.1 15.2h9.9" stroke="#dffc62" stroke-width="1.7" stroke-linecap="round"/></svg></span><span><span class="brand-name">Nordvale</span><span class="brand-sub">Wild park & forest reserve</span></span></a><p>Un tenant leisure Tixello construit pentru explorare, conservare și experiențe care merită planificate.</p></div><div class="footer-cols"><div class="footer-col"><h4>Descoperă</h4><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></div><div class="footer-col"><h4>Vizita ta</h4><a href="/planifica">Planifică</a><a href="/grupuri">Grupuri</a><a href="/voucher">Voucher</a></div><div class="footer-col"><h4>Nordvale</h4><a href="/despre">Rezervația</a><a href="#">Noutăți</a><a href="/cont/suport">Contact</a></div><div class="footer-col"><h4>Cont</h4><a href="/autentificare">Autentificare</a><a href="/inregistrare">Creează cont</a><a href="/cont">Dashboard</a></div></div></div><div class="footer-bottom"><span>© 2026 Nordvale. Date și denumiri demonstrative.</span><span>Ticketing by Tixello</span></div></div>
-  </footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <div id="toast" style="position:fixed;left:50%;bottom:22px;z-index:190;transform:translate(-50%,130%);background:var(--pine);color:white;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:13px 18px;box-shadow:var(--shadow);font-size:12px;font-weight:700;transition:.35s ease;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis">Te-ai abonat la jurnalul Nordvale.</div>
 
@@ -252,7 +206,7 @@
       const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
       const body=document.body, nav=$('#siteNav'), progress=$('#scrollProgress');
       const menu=$('#mobileMenu'), menuOpen=$('#menuOpen'), menuClose=$('#menuClose'), menuBackdrop=$('#menuBackdrop');
-      function setMenu(open){menu.classList.toggle('open',open);menu.setAttribute('aria-hidden',String(!open));body.classList.toggle('menu-open',open)}
+      function setMenu(open){menu?.classList.toggle('open',open);menu?.setAttribute('aria-hidden',String(!open));body.classList.toggle('menu-open',open)}
       menuOpen?.addEventListener('click',()=>setMenu(true));menuClose?.addEventListener('click',()=>setMenu(false));menuBackdrop?.addEventListener('click',()=>setMenu(false));
       window.addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
 

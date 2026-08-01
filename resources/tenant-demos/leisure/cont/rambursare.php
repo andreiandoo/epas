@@ -115,16 +115,7 @@
   </style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="shell nav">
-      <a class="brand" href="/" aria-label="Nordvale — Acasă">
-        <span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span>
-        <span class="brand-copy"><strong>Nordvale</strong><span>Wild Park</span></span>
-      </a>
-      <nav class="main-nav" aria-label="Navigație principală"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></nav>
-      <div class="nav-actions"><button class="nav-icon" id="notificationButton" type="button" aria-label="Notificări"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button><a class="ticket-cta" href="/bilete">Bilete</a><button class="menu-btn" id="menuOpen" type="button" aria-label="Deschide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
-    </div>
-  </header>
+  <?php include __DIR__ . '/../includes/header.php'; ?>
 
   <main class="shell layout">
     <aside class="sidebar">
@@ -243,8 +234,6 @@
 
   <nav class="mobile-nav" aria-label="Navigație cont mobil"><a href="/cont"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>Acasă</a><a href="/cont/bilete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>Bilete</a><a href="/cont/comenzi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Comenzi</a><a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v10H4z"/><path d="m9 12 2 2 4-4"/></svg>Cereri</a></nav>
 
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><div class="mobile-menu-head"><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park</span></span></a><button class="menu-btn" id="menuClose" type="button" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><nav class="mobile-menu-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a><a href="/cont">Contul meu</a></nav></div>
-
   <div class="toast" id="toast"><span class="toast-icon">✓</span><span><strong id="toastTitle">Actualizat</strong><span id="toastText">Informația a fost salvată.</span></span></div>
 
   <script>
@@ -306,5 +295,6 @@
     if(nb){ nb.addEventListener('click',function(){ if((nb.textContent||'').trim().indexOf('Trimite')>=0){ var cp=document.querySelector('#confirmPolicy'); if(cp&&!cp.checked)return; var reason=(document.querySelector('#reason')||{}).value||''; var details=(document.querySelector('#message')||{}).value||''; var oid=selOrder?selOrder.id:null; if(oid){ post('acc-refund-request',{order_id:oid,reason:reason,details:details}); } } }, true); }
   })();
   </script>
+  <?php include __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>

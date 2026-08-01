@@ -1438,36 +1438,7 @@ $pkgItemsJs = ! empty($pkgItems) ? json_encode($pkgItems, JSON_UNESCAPED_UNICODE
 <body x-data="ticketsPage()" x-init="init()" :class="drawerOpen || giftOpen ? 'overflow-hidden' : ''" class="antialiased">
   <div id="progress" class="fixed left-0 top-0 z-50 h-1 w-full origin-left" style="background:var(--acid);transform:scaleX(0)"></div>
 
-  <header class="safe-top fixed inset-x-0 top-0 z-40 px-3 sm:px-5 lg:px-7">
-    <nav class="nav-shell mx-auto flex max-w-screen-2xl items-center justify-between gap-2 rounded-2xl px-3 py-2 text-white sm:rounded-3xl sm:px-4 lg:px-5">
-      <a href="/" class="flex min-w-0 items-center gap-2 sm:gap-3" aria-label="Nordvale — Acasă">
-        <span class="grid h-10 w-10 flex-none place-items-center rounded-full" style="background:var(--pine-800)">
-          <svg viewBox="0 0 48 48" class="h-7 w-7" fill="none" aria-hidden="true"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg>
-        </span>
-        <span class="min-w-0"><span class="block truncate font-display text-xl font-semibold leading-none">Nordvale</span><span class="nav-subtitle mt-1 block truncate text-xs font-bold uppercase tracking-widest text-white opacity-40">wild park · forest reserve</span></span>
-      </a>
-      <div class="hidden items-center gap-7 text-sm lg:flex">
-        <a href="/experiente" class="text-white opacity-70 transition hover:opacity-100">Experiențe</a>
-        <a href="/planifica" class="text-white opacity-70 transition hover:opacity-100">Planifică vizita</a>
-        <a href="/calendar" class="text-white opacity-70 transition hover:opacity-100">Calendar</a>
-        <a href="#pachete" class="font-semibold" style="color:var(--acid)">Bilete & pachete</a>
-      </div>
-      <div class="flex flex-none items-center gap-2">
-        <button type="button" @click="scrollBuilder()" class="nav-cta whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold sm:px-5" style="background:var(--acid);color:var(--pine-950)">Bilete</button>
-        <button type="button" @click="menu=!menu" class="grid h-10 w-10 place-items-center rounded-full border border-white border-opacity-10 lg:hidden" :aria-expanded="menu" aria-label="Deschide meniul">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8"><path x-show="!menu" d="M4 7h16M4 12h16M4 17h16"/><path x-show="menu" d="m6 6 12 12M18 6 6 18"/></svg>
-        </button>
-      </div>
-    </nav>
-    <div x-show="menu" x-cloak x-transition.opacity class="nav-shell mx-auto mt-2 max-w-screen-2xl rounded-2xl p-3 text-white lg:hidden">
-      <div class="grid gap-1 text-sm">
-        <a href="/experiente" class="rounded-xl px-4 py-3 hover:bg-white hover:bg-opacity-10">Experiențe</a>
-        <a href="/planifica" class="rounded-xl px-4 py-3 hover:bg-white hover:bg-opacity-10">Planifică vizita</a>
-        <a href="/calendar" class="rounded-xl px-4 py-3 hover:bg-white hover:bg-opacity-10">Calendar</a>
-        <a href="#pachete" @click="menu=false" class="rounded-xl px-4 py-3 font-semibold" style="color:var(--acid)">Bilete & pachete</a>
-      </div>
-    </div>
-  </header>
+  <?php $nvNav=''; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="topo-dark grain relative overflow-hidden pb-16 pt-32 text-white sm:pb-24 sm:pt-40 lg:min-h-screen lg:flex lg:items-center">
@@ -1608,9 +1579,7 @@ $pkgItemsJs = ! empty($pkgItems) ? json_encode($pkgItems, JSON_UNESCAPED_UNICODE
     </section>
   </main>
 
-  <footer class="px-4 pb-8 pt-14 text-white sm:px-6 lg:px-8" style="background:var(--pine-950)">
-    <div class="mx-auto max-w-screen-2xl"><div class="grid gap-10 border-b border-white border-opacity-10 pb-10 md:grid-cols-2 lg:grid-cols-4"><div><a href="/" class="inline-flex items-center gap-3"><span class="grid h-11 w-11 place-items-center rounded-full" style="background:var(--pine-800)"><svg viewBox="0 0 48 48" class="h-8 w-8" fill="none"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg></span><span><span class="block font-display text-2xl font-semibold leading-none">Nordvale</span><span class="mt-1 block text-xs font-bold uppercase tracking-widest text-white opacity-30">wild park · forest reserve</span></span></a><p class="mt-5 max-w-sm text-sm leading-6 text-white text-opacity-40">Un tenant Tixello leisure construit pentru aventuri, rezervații și experiențe care încep înainte de poarta parcului.</p></div><div><p class="text-xs font-bold uppercase tracking-widest text-white text-opacity-30">Explorează</p><div class="mt-4 grid gap-3 text-sm text-white text-opacity-60"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a></div></div><div><p class="text-xs font-bold uppercase tracking-widest text-white text-opacity-30">Bilete</p><div class="mt-4 grid gap-3 text-sm text-white text-opacity-60"><a href="#pachete">Pachete</a><a href="#builder">Configurator</a><a href="#faq">Întrebări frecvente</a></div></div><div><p class="text-xs font-bold uppercase tracking-widest text-white text-opacity-30">Program</p><p class="mt-4 text-sm text-white text-opacity-60">Luni–Duminică<br>09:00–20:00</p><p class="mt-4 text-xs leading-5 text-white text-opacity-40">Ultima intrare diferă în funcție de experiență.</p></div></div><div class="flex flex-col gap-4 pt-6 text-xs text-white text-opacity-30 sm:flex-row sm:items-center sm:justify-between"><p>© 2026 Nordvale. Concept demonstrativ cu date dummy.</p><p>Ticketing by <span class="font-bold" style="color:var(--acid)">tixello</span></p></div></div>
-  </footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <div x-show="drawerOpen" x-cloak class="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Alege data vizitei">
     <button type="button" @click="drawerOpen=false" class="drawer-backdrop absolute inset-0 w-full" aria-label="Închide"></button>

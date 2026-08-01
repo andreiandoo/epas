@@ -33,18 +33,7 @@
 </head>
 <body>
   <div class="progress"><i id="scrollProgress"></i></div>
-  <header class="safe-top">
-    <nav class="nav" id="siteNav">
-      <a class="brand" href="/" aria-label="Nordvale homepage">
-        <span class="brand-mark"><svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg></span>
-        <span><span class="brand-name">Nordvale</span><span class="brand-sub">wild park · forest reserve</span></span>
-      </a>
-      <div class="nav-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică</a><a href="/calendar">Program</a><a href="/despre">Rezervația</a><a href="/faq">Ajutor</a></div>
-      <div class="nav-actions"><a class="btn btn-acid" href="/bilete">Bilete</a><button class="icon-btn" id="menuOpen" type="button" aria-label="Deschide meniul"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 17h16"/></svg></button></div>
-    </nav>
-  </header>
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><div class="menu-backdrop" id="menuBackdrop"></div><aside class="menu-panel safe-bottom"><div class="menu-head"><span class="font-display" style="font-size:25px;font-weight:600">Nordvale</span><button class="menu-close" id="menuClose" type="button" aria-label="Închide meniul">✕</button></div><div class="menu-list"><a href="/experiente">Experiențe <span>↗</span></a><a href="/calendar">Calendar <span>↗</span></a><a href="/planifica">Planifică <span>↗</span></a><a href="/despre">Rezervația <span>↗</span></a><a href="/contact">Contact <span>↗</span></a><a href="/autentificare">Contul meu <span>↗</span></a></div><div class="menu-status"><div style="display:flex;align-items:center;gap:9px;font-size:10px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--acid)"><i class="pulse"></i> Parc deschis</div><p style="margin:11px 0 0;color:rgba(255,255,255,.58);font-size:13px">Astăzi · 09:00–20:00</p><a class="btn btn-acid" style="width:100%;margin-top:16px" href="/bilete">Rezervă acum</a></div></aside></div>
-
+  <?php $nvNoSpacer = true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="hero topo grain">
@@ -98,7 +87,7 @@
 
   <div class="toc-sheet" id="tocSheet" aria-hidden="true"><div class="toc-sheet-backdrop" id="tocBackdrop"></div><div class="toc-sheet-panel safe-bottom"><div class="sheet-head"><strong>Cuprins</strong><button class="sheet-close" id="tocClose" type="button" aria-label="Închide cuprinsul">✕</button></div><nav class="sheet-links" id="mobileToc"></nav></div></div>
 
-  <footer><div class="wrap"><div class="footer-grid"><div class="footer-brand"><a class="brand" href="/"><span class="brand-mark"><svg width="27" height="27" viewBox="0 0 48 48" fill="none"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg></span><span><span class="brand-name">Nordvale</span><span class="brand-sub">wild park · forest reserve</span></span></a><p>O destinație demonstrativă pentru un tenant leisure Tixello, construită în jurul explorării și conservării.</p></div><div class="footer-cols"><div class="footer-col"><h4>Descoperă</h4><a href="/experiente">Experiențe</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></div><div class="footer-col"><h4>Vizita ta</h4><a href="/planifica">Planifică</a><a href="/grupuri">Grupuri</a><a href="/card-cadou">Voucher</a></div><div class="footer-col"><h4>Nordvale</h4><a href="/despre">Rezervația</a><a href="/noutati">Noutăți</a><a href="/contact">Contact</a></div><div class="footer-col"><h4>Legal</h4><a href="/termeni">Termeni</a><a href="/confidentialitate">Confidențialitate</a><a href="/confidentialitate">Cookies</a></div></div></div><div class="footer-bottom"><span>© 2026 Nordvale. Date și denumiri demonstrative.</span><span>Ticketing by Tixello</span></div></div></footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
   <div class="toast" id="toast">Link copiat.</div>
 
   <script>
@@ -107,10 +96,10 @@
     const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>Array.from(p.querySelectorAll(s));
     const body=document.body, nav=$('#siteNav'), progress=$('#scrollProgress'), menu=$('#mobileMenu'), tocSheet=$('#tocSheet');
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function setMenu(open){menu.classList.toggle('open',open);menu.setAttribute('aria-hidden',String(!open));body.style.overflow=open?'hidden':''}
+    function setMenu(open){menu?.classList.toggle('open',open);menu?.setAttribute('aria-hidden',String(!open));body.style.overflow=open?'hidden':''}
     function setToc(open){tocSheet.classList.toggle('open',open);tocSheet.setAttribute('aria-hidden',String(!open));body.style.overflow=open?'hidden':''}
-    $('#menuOpen').addEventListener('click',()=>setMenu(true));$('#menuClose').addEventListener('click',()=>setMenu(false));$('#menuBackdrop').addEventListener('click',()=>setMenu(false));$('#tocOpen').addEventListener('click',()=>setToc(true));$('#tocClose').addEventListener('click',()=>setToc(false));$('#tocBackdrop').addEventListener('click',()=>setToc(false));
-    function onScroll(){const y=scrollY,max=document.documentElement.scrollHeight-innerHeight;nav.classList.toggle('scrolled',y>20);progress.style.transform=`scaleX(${max>0?Math.min(1,y/max):0})`}addEventListener('scroll',onScroll,{passive:true});onScroll();
+    $('#menuOpen')?.addEventListener('click',()=>setMenu(true));$('#menuClose')?.addEventListener('click',()=>setMenu(false));$('#menuBackdrop')?.addEventListener('click',()=>setMenu(false));$('#tocOpen').addEventListener('click',()=>setToc(true));$('#tocClose').addEventListener('click',()=>setToc(false));$('#tocBackdrop').addEventListener('click',()=>setToc(false));
+    function onScroll(){const y=scrollY,max=document.documentElement.scrollHeight-innerHeight;nav?.classList.toggle('scrolled',y>20);progress.style.transform=`scaleX(${max>0?Math.min(1,y/max):0})`}addEventListener('scroll',onScroll,{passive:true});onScroll();
     if(!reduce&&'IntersectionObserver'in window){const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.animate([{opacity:0,transform:'translateY(26px)'},{opacity:1,transform:'none'}],{duration:620,easing:'cubic-bezier(.2,.75,.2,1)',fill:'forwards'});io.unobserve(e.target)}}),{threshold:.1});$$('[data-reveal],.legal-section').forEach(el=>io.observe(el))}else{$$('[data-reveal],.legal-section').forEach(el=>{el.style.opacity=1;el.style.transform='none'})}
     const sections=$$('.legal-section');
     const links=sections.map((section,i)=>({id:section.id,no:String(i+1).padStart(2,'0'),title:section.dataset.title}));

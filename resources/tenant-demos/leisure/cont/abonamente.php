@@ -36,11 +36,7 @@
   </style>
 </head>
 <body>
-  <header class="site-header"><div class="shell"><nav class="nav" aria-label="Navigație principală">
-    <a class="brand" href="/" aria-label="Nordvale, pagina principală"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a>
-    <div class="main-nav"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></div>
-    <div class="nav-actions"><a class="ticket-cta" href="/bilete">Bilete</a><button class="menu-btn" id="menuOpen" type="button" aria-label="Deschide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
-  </nav></div></header>
+  <?php include __DIR__ . '/../includes/header.php'; ?>
 
   <main class="shell layout">
     <aside class="sidebar" aria-label="Navigație cont">
@@ -104,8 +100,6 @@
 
   <nav class="mobile-nav" aria-label="Navigație cont mobil"><a href="/cont"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>Acasă</a><a href="/cont/bilete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>Bilete</a><a href="/cont/comenzi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5z"/></svg>Comenzi</a><a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16v12H4z"/><path d="M8 10h8"/></svg>Abonament</a></nav>
 
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><div class="mobile-menu-head"><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><button class="menu-btn" id="menuClose" type="button" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="mobile-menu-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a><a href="/autentificare">Deconectare</a></div></div>
-
   <div class="modal" id="passModal" aria-hidden="true"><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="passTitle"><button class="modal-close" id="passClose" type="button" aria-label="Închide"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button><p class="card-kicker">Card digital</p><h3 id="passTitle">Wild Circle</h3><p>Prezintă codul la porțile parcului sau la evenimentele private pentru membri.</p><div class="digital-pass"><div class="digital-pass-head"><span><small>Membru</small><strong>Andrei Popescu</strong></span><span><small>Valabil</small><strong>31.05.2027</strong></span></div><div class="qr" aria-label="Cod QR demonstrativ"></div><div class="pass-code">NV-WC-026184</div></div><div class="modal-actions"><button class="btn btn-primary" id="walletButton" type="button">Adaugă în Wallet</button><button class="btn" id="copyButton" type="button" style="background:var(--oat);color:var(--pine-900)">Copiază ID-ul</button></div></div></div>
 
   <div class="drawer" id="upgradeDrawer" aria-hidden="true"><div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="upgradeTitle"><div class="drawer-head"><span><p class="card-kicker">Membership 2027</p><h3 id="upgradeTitle">Reînnoiește sau schimbă nivelul.</h3><p>Prețurile și beneficiile sunt demonstrative.</p></span><button class="modal-close" id="upgradeClose" type="button" aria-label="Închide"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="plan-options" id="planOptions"><button class="plan-option selected" type="button" data-plan="wild" data-price="690"><span class="plan-radio"></span><span><strong>Wild Circle</strong><span>Păstrezi beneficiile actuale și prețul protejat.</span></span><span class="plan-price">690 lei</span></button><button class="plan-option" type="button" data-plan="summit" data-price="1190"><span class="plan-radio"></span><span><strong>Summit Society</strong><span>Acces premium, 6 invitații și evenimente cu loc garantat.</span></span><span class="plan-price">1.190 lei</span></button></div><div class="drawer-summary"><div class="drawer-summary-row"><span>Nivel selectat</span><strong id="selectedPlanLabel">Wild Circle</strong></div><div class="drawer-summary-row"><span>Începe la</span><strong>1 iunie 2027</strong></div><div class="drawer-summary-row total"><span>Total</span><strong id="selectedPlanPrice">690 lei</strong></div></div><button class="btn btn-primary" id="confirmUpgrade" type="button">Confirmă alegerea</button></div></div>
@@ -152,5 +146,6 @@
     });
   })();
   </script>
+  <?php include __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>

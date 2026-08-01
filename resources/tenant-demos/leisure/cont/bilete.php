@@ -51,22 +51,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <nav class="nav" aria-label="Navigație principală">
-        <a class="brand" href="/" aria-label="Nordvale, pagina principală">
-          <span class="brand-mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span>
-          <span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span>
-        </a>
-        <div class="main-nav"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a></div>
-        <div class="nav-actions">
-          <button class="nav-icon" id="notificationButton" type="button" aria-label="Notificări"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button>
-          <a class="ticket-cta" href="/bilete">Bilete</a>
-          <button class="menu-btn" id="menuOpen" type="button" aria-label="Deschide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-        </div>
-      </nav>
-    </div>
-  </header>
+  <?php include __DIR__ . '/../includes/header.php'; ?>
 
   <main class="shell layout">
     <aside class="sidebar" aria-label="Navigație cont">
@@ -143,8 +128,6 @@
   </main>
 
   <nav class="mobile-nav" aria-label="Navigație cont mobil"><a href="/cont"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>Acasă</a><a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>Bilete</a><a href="/cont/comenzi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Comenzi</a><a href="/cont/profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.2-4 4-6 8-6s6.8 2 8 6"/></svg>Profil</a></nav>
-
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><div class="mobile-menu-head"><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><button class="menu-btn" id="menuClose" type="button" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="mobile-menu-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/bilete">Bilete</a><a href="/autentificare">Deconectare</a></div></div>
 
   <div class="modal" id="ticketModal" aria-hidden="true"><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="ticketModalTitle"><button class="modal-close" type="button" data-close-modal aria-label="Închide"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button><span class="modal-kicker">Acces individual</span><h3 id="ticketModalTitle">Bilet pentru <span id="modalTicketName">Andrei Popescu</span></h3><p>Prezintă codul la Poarta Nord. Fiecare participant trebuie scanat separat.</p><div class="digital-pass"><div class="digital-head"><span><small>Canopy Run Day</small><strong id="modalParticipant">Andrei Popescu</strong></span><span><small>Bilet</small><strong id="modalIndex">01 / 04</strong></span></div><div class="qr-large" aria-label="Cod QR demonstrativ"></div><div class="digital-code" id="modalCode">NV-1842-A01</div></div><div class="modal-actions"><button class="btn btn-primary" type="button" data-wallet>Adaugă în Wallet</button><button class="btn btn-secondary" type="button" data-download>Descarcă PDF</button></div></div></div>
 
@@ -228,5 +211,6 @@
     });
   })();
   </script>
+  <?php include __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>

@@ -2192,43 +2192,7 @@ $calItemsJs = ! empty($calItems) ? json_encode($calItems, JSON_UNESCAPED_UNICODE
 <body x-data="calendarPage()" x-init="init()" @keydown.escape.window="closeBooking()" class="antialiased">
   <div id="pageProgress" class="progress-line fixed left-0 top-0 z-[190] h-[3px] w-full bg-acid"></div>
 
-  <header class="safe-top fixed inset-x-0 top-0 z-[150] px-3 sm:px-5 lg:px-7">
-    <nav class="nav-shell mx-auto flex max-w-[1540px] items-center justify-between gap-2 rounded-[18px] px-3 py-2.5 text-white sm:rounded-[22px] sm:px-4 lg:px-5">
-      <a href="/" class="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="Nordvale — Acasă">
-        <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-pine-800 sm:h-11 sm:w-11">
-          <svg viewBox="0 0 48 48" class="h-7 w-7 sm:h-8 sm:w-8" fill="none" aria-hidden="true"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg>
-        </span>
-        <span class="min-w-0"><span class="block truncate font-display text-[19px] font-semibold leading-none sm:text-[21px]">Nordvale</span><span class="mt-1 hidden truncate text-[7px] font-bold uppercase tracking-[.25em] text-white/50 min-[410px]:block sm:text-[8px]">wild park · forest reserve</span></span>
-      </a>
-      <div class="hidden items-center gap-7 xl:flex">
-        <a href="/experiente" class="text-sm font-semibold text-white/70 transition hover:text-acid">Experiențe</a>
-        <a href="/planifica" class="text-sm font-semibold text-white/70 transition hover:text-acid">Planifică vizita</a>
-        <a href="#calendar" class="text-sm font-semibold text-acid">Calendar</a>
-        <a href="#ghid" class="text-sm font-semibold text-white/70 transition hover:text-acid">Ghid disponibilitate</a>
-        <a href="#bilete" class="text-sm font-semibold text-white/70 transition hover:text-acid">Bilete & pachete</a>
-      </div>
-      <div class="flex flex-none items-center gap-1.5 sm:gap-2.5">
-        <a href="#cont" class="hidden whitespace-nowrap rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/85 transition hover:border-white/30 hover:text-white sm:block">Contul meu</a>
-        <a href="#calendar" class="inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full bg-acid px-3.5 py-2.5 text-[13px] font-bold text-pine-950 shadow-[0_14px_35px_-20px_rgba(223,252,98,.8)] transition hover:-translate-y-0.5 sm:gap-2 sm:px-5 sm:text-sm">
-          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14v12H5z"/><path d="M8 7V5m8 2V5M8 11h8"/></svg><span>Bilete</span>
-        </a>
-        <button @click="menu=!menu" class="grid h-10 w-10 flex-none place-items-center rounded-full border border-white/15 text-white xl:hidden" :aria-expanded="menu" aria-label="Deschide meniul">
-          <svg x-show="!menu" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-          <svg x-show="menu" x-cloak viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
-        </button>
-      </div>
-    </nav>
-    <div x-show="menu" x-cloak @click.outside="menu=false" class="nav-shell mx-auto mt-2 max-w-[1540px] rounded-[20px] p-3 text-white xl:hidden">
-      <div class="grid gap-1 sm:grid-cols-2">
-        <a @click="menu=false" href="/experiente" class="rounded-xl px-4 py-3 font-semibold hover:bg-white/10">Experiențe</a>
-        <a @click="menu=false" href="/planifica" class="rounded-xl px-4 py-3 font-semibold hover:bg-white/10">Planifică vizita</a>
-        <a @click="menu=false" href="#calendar" class="rounded-xl bg-acid px-4 py-3 font-bold text-pine-950">Calendar</a>
-        <a @click="menu=false" href="#ghid" class="rounded-xl px-4 py-3 font-semibold hover:bg-white/10">Ghid disponibilitate</a>
-        <a @click="menu=false" href="#bilete" class="rounded-xl px-4 py-3 font-semibold hover:bg-white/10">Bilete & pachete</a>
-        <a @click="menu=false" href="#cont" class="rounded-xl px-4 py-3 font-semibold hover:bg-white/10">Contul meu</a>
-      </div>
-    </div>
-  </header>
+  <?php $nvNav='calendar'; $nvNoSpacer=true; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="topo-dark grain relative overflow-hidden bg-pine-950 pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:min-h-[790px] lg:pb-24 lg:pt-36">
@@ -2381,17 +2345,7 @@ $calItemsJs = ! empty($calItems) ? json_encode($calItems, JSON_UNESCAPED_UNICODE
     </section>
   </main>
 
-  <footer class="bg-pine-950 px-4 pb-8 pt-14 text-white sm:px-6 lg:px-8 lg:pt-18">
-    <div class="mx-auto max-w-[1540px]">
-      <div class="grid gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-[1.15fr_.85fr_.85fr_.85fr]">
-        <div><a href="/" class="inline-flex items-center gap-3"><span class="grid h-11 w-11 place-items-center rounded-full bg-pine-800"><svg viewBox="0 0 48 48" class="h-8 w-8" fill="none"><path d="M7 35 18 11l7 14 5-10 11 20H7Z" fill="#DFFC62"/><path d="m8 37 11-10 6 6 7-8 8 12H8Z" fill="#FFFDF6"/></svg></span><span><span class="block font-display text-2xl font-semibold leading-none">Nordvale</span><span class="mt-1 block text-[8px] font-bold uppercase tracking-[.24em] text-white/40">wild park · forest reserve</span></span></a><p class="mt-5 max-w-sm text-sm leading-6 text-white/48">Un tenant Tixello leisure construit pentru aventuri, rezervații și experiențe care încep înainte de poarta parcului.</p></div>
-        <div><p class="text-[9px] font-bold uppercase tracking-[.2em] text-white/35">Explorează</p><div class="mt-4 grid gap-3 text-sm"><a href="/experiente" class="text-white/64 hover:text-acid">Experiențe</a><a href="/planifica" class="text-white/64 hover:text-acid">Planifică vizita</a><a href="#calendar" class="text-white/64 hover:text-acid">Calendar</a></div></div>
-        <div><p class="text-[9px] font-bold uppercase tracking-[.2em] text-white/35">Ajutor</p><div class="mt-4 grid gap-3 text-sm"><a href="#ghid" class="text-white/64 hover:text-acid">Cum rezerv</a><a href="#" class="text-white/64 hover:text-acid">Întrebări frecvente</a><a href="#" class="text-white/64 hover:text-acid">Contact</a></div></div>
-        <div><p class="text-[9px] font-bold uppercase tracking-[.2em] text-white/35">Program</p><p class="mt-4 text-sm text-white/64">Luni–Duminică<br>09:00–20:00</p><p class="mt-4 text-xs leading-5 text-white/36">Ultima intrare diferă în funcție de experiență.</p></div>
-      </div>
-      <div class="flex flex-col gap-4 pt-6 text-xs text-white/34 sm:flex-row sm:items-center sm:justify-between"><p>© 2026 Nordvale. Concept demonstrativ cu date dummy.</p><p>Ticketing by <span class="font-bold text-acid">tixello</span></p></div>
-    </div>
-  </footer>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <div x-show="bookingOpen" x-cloak class="fixed inset-0 z-[210]" role="dialog" aria-modal="true" aria-label="Rezervare rapidă">
     <button @click="closeBooking()" class="drawer-backdrop absolute inset-0 w-full" aria-label="Închide rezervarea"></button>

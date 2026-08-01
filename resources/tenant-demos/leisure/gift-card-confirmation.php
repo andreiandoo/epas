@@ -63,16 +63,7 @@ $gcAmountFmt = price_fmt($gcAmount, 'RON');
   </style>
 </head>
 <body>
-<header class="site-header">
-  <div class="shell nav">
-    <a class="brand" href="/">
-      <span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span>
-      <span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span>
-    </a>
-    <nav class="main-nav"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/card-cadou">Voucher cadou</a></nav>
-    <div class="nav-actions"><a href="/cont" class="main-nav" style="margin:0"><span>Contul meu</span></a><a class="ticket-cta" href="/bilete">Bilete</a><button class="menu-btn" type="button" id="menuOpen" aria-label="Deschide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
-  </div>
-</header>
+<?php include __DIR__ . '/includes/header.php'; ?>
 <main>
   <section class="shell hero topo">
     <div class="confetti" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -167,10 +158,9 @@ $gcAmountFmt = price_fmt($gcAmount, 'RON');
     </div>
   </section>
 </main>
-<footer class="footer"><div class="shell footer-card"><div><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><p>Concept dummy pentru un tenant leisure Tixello.</p></div><nav class="footer-links"><a href="/voucher">Verifică voucher</a><a href="/cont/suport">Suport</a><a href="#">Termeni voucher</a><a href="#">Politica de rambursare</a></nav></div></footer>
+<?php include __DIR__ . '/includes/footer.php'; ?>
 
 <div class="mobile-bar"><div class="mobile-copy"><span>Voucher pregătit</span><strong id="mobileDeliveryText">Livrare 18 aug. · 08:00</strong></div><button class="btn btn-primary" type="button" id="mobileDownload">Descarcă</button></div>
-<div class="mobile-menu" id="mobileMenu"><div class="mobile-menu-head"><a class="brand" href="/"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 17 5-10 3 6 2-4 6 8"/><path d="M3 20h18"/></svg></span><span class="brand-copy"><strong>Nordvale</strong><span>Wild Park & Forest Reserve</span></span></a><button class="menu-btn" style="display:grid" type="button" id="menuClose" aria-label="Închide meniul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="mobile-menu-links"><a href="/experiente">Experiențe</a><a href="/planifica">Planifică vizita</a><a href="/calendar">Calendar</a><a href="/card-cadou">Voucher cadou</a><a href="/cont">Contul meu</a></div></div>
 
 <div class="modal-backdrop" id="shareModal" aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle"><div class="modal-head"><div><h3 id="shareTitle">Trimite voucherul personal</h3><p>Această acțiune nu modifică livrarea programată decât dacă alegi explicit să o anulezi.</p></div><button class="modal-close" type="button" data-close-modal aria-label="Închide"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><form class="modal-body" id="shareForm"><div class="field"><label for="shareEmail">Email</label><input id="shareEmail" type="email" value="<?= e($gcEmail) ?>" required></div><div class="field"><label for="shareMessage">Mesaj opțional</label><textarea id="shareMessage">Ți-am pregătit o aventură Nordvale. Voucherul este atașat și îl poți folosi când îți alegi ziua potrivită.</textarea></div><label style="display:flex;align-items:flex-start;gap:10px;margin-top:16px;color:var(--muted);font-size:11px"><input type="checkbox" id="cancelScheduled" style="margin-top:2px"> Anulează livrarea programată dacă trimit voucherul acum.</label><div class="modal-actions"><button class="btn btn-soft" type="button" data-close-modal>Renunță</button><button class="btn btn-dark" type="submit">Trimite voucherul</button></div></form></div></div>
 
