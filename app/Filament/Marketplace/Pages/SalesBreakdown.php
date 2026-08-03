@@ -66,6 +66,12 @@ class SalesBreakdown extends Page
         $paidStatuses = ['paid', 'confirmed', 'completed'];
         $excludedSources = ['test_order', 'external_import', 'legacy_import', 'pos_test'];
 
+        // Refunds have their own, narrower exclusion list. A refund processed
+        // THIS month on a legacy/imported order is still a real cash-out event
+        // — Netopia sees it and the operator needs it visible for reconciliation.
+        // We only strip test data here, not migrated data.
+        $refundExcludedSources = ['test_order', 'pos_test'];
+
         // Marketplace scope: 3-key OR pattern (marketplace_client_id OR
         // marketplace_event_id OR event_id) — imported / migrated orders may
         // lack marketplace_client_id but still resolve via the event id.
@@ -130,7 +136,7 @@ class SalesBreakdown extends Page
                 }
             })
             ->where('ri.status', 'refunded')
-            ->whereNotIn('o.source', $excludedSources)
+            ->whereNotIn('o.source', $refundExcludedSources)
             ->whereNotIn('o.source', $posSources)
             ->whereBetween('ri.updated_at', [$monthStart, $monthEnd])
             ->selectRaw('COALESCE(tt.event_id, o.marketplace_event_id, o.event_id) as resolved_event_id')
@@ -339,6 +345,30 @@ class SalesBreakdown extends Page
         // revenue, "returnat" is its own line.
         $salesTotal = round($onlineTotal + $posTotal, 2);
 
+        // === RECONCILIATION with the processor dashboard ===
+        // The processor (Netopia et al) reports "accepted transactions" =
+        // every capture that succeeded, regardless of whether it was later
+        // refunded. So an order paid then fully refunded shows up in BOTH the
+        // processor's "accepted" AND "refunded" tallies. The page's "Încasat
+        // online" tile is NET (excludes status=refunded), which matches the
+        // operator's mental model of "money that stayed", but that number
+        // will always be lower than the processor's "accepted" by the value
+        // of fully-refunded orders. Surface that delta explicitly so the two
+        // dashboards reconcile without guesswork.
+        $refundedOrdersRow = $scopeOrders(Order::query())
+            ->where('status', 'refunded')
+            ->whereNotIn('source', $posSources)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(total), 0) as total')
+            ->first();
+        $refundedOrdersCount = (int) ($refundedOrdersRow->cnt ?? 0);
+        $refundedOrdersTotal = round((float) ($refundedOrdersRow->total ?? 0), 2);
+
+        // The processor-view "accepted" figure the operator can compare 1:1
+        // against the Netopia / Stripe dashboard for the month.
+        $processorAcceptedTotal = round($onlineTotal + $refundedOrdersTotal, 2);
+        $processorAcceptedCount = $onlineOrderCount + $refundedOrdersCount;
+
         return [
             'marketplace' => $marketplace,
             'data' => [
@@ -365,6 +395,12 @@ class SalesBreakdown extends Page
 
                 // Combined sales (online + POS)
                 'sales_total' => $salesTotal,
+
+                // Processor reconciliation (Netopia / Stripe dashboards)
+                'refunded_orders_count' => $refundedOrdersCount,
+                'refunded_orders_total' => $refundedOrdersTotal,
+                'processor_accepted_count' => $processorAcceptedCount,
+                'processor_accepted_total' => $processorAcceptedTotal,
 
                 // Block D — POS
                 'pos_total' => round($posTotal, 2),
