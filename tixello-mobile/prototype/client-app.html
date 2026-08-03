@@ -5,13 +5,13 @@
 
   :root{
     /* Tixello brand — DARK: purple primary, green + cyan accents, grid (from tixello.com) */
-    --bg:#0B0912; --bg-2:#0F0D18; --surface:#16142330; --surface-solid:#161423; --surface-2:#1D1A2E; --surface-3:#242138;
-    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14); --line-3:rgba(255,255,255,.2);
-    --ink:#F4F4F8; --ink-2:#C7C9D6; --muted:#9195A8; --faint:#63677D;
-    --indigo:#8B5CF6; --indigo-2:#A78BFA; --indigo-3:#7C3AED; --indigo-4:#6D28D9; --indigo-ink:#c4b5fd;
-    --indigo-soft:rgba(139,92,246,.15); --indigo-line:rgba(139,92,246,.34);
-    --green:#22C55E; --green-2:#34D399; --green-soft:rgba(34,197,94,.15); --green-line:rgba(34,197,94,.32);
-    --cyan:#22D3EE; --blue:#3B82F6; --cyan-soft:rgba(34,211,238,.14);
+    --bg:#0A0711; --bg-2:#0E0A18; --surface:#15112230; --surface-solid:#151122; --surface-2:#1B1630; --surface-3:#231E39;
+    --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.13); --line-3:rgba(255,255,255,.2);
+    --ink:#F5F5FA; --ink-2:#C4C6D4; --muted:#8E92A6; --faint:#5F6379;
+    --indigo:#8B5CF6; --indigo-2:#A996FA; --indigo-3:#7C3AED; --indigo-4:#6D28D9; --indigo-ink:#c4b5fd;
+    --indigo-soft:rgba(139,92,246,.14); --indigo-line:rgba(139,92,246,.34);
+    --green:#22C55E; --green-2:#3DDC97; --green-soft:rgba(34,197,94,.14); --green-line:rgba(34,197,94,.32);
+    --cyan:#2DD6EE; --blue:#3B82F6; --cyan-soft:rgba(45,214,238,.13);
     --amber:#F59E0B; --amber-soft:rgba(245,158,11,.15); --red:#F0616D; --pink:#EC4899;
     --ui:'Outfit',ui-rounded,-apple-system,"Segoe UI",system-ui,sans-serif;
     --sh:0 22px 46px -22px rgba(0,0,0,.7); --sh-sm:0 10px 24px -14px rgba(0,0,0,.6);
@@ -22,7 +22,7 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
   body{font-family:var(--ui);color:var(--ink);letter-spacing:-.011em;
-    background:radial-gradient(900px 560px at 82% 0%, #211a3a, transparent 60%),radial-gradient(760px 520px at -8% 100%, #14162e, transparent 55%),#070510;
+    background:radial-gradient(820px 520px at 84% -2%, #241a44, transparent 58%),radial-gradient(680px 480px at -6% 102%, #17122e, transparent 55%),#050309;
     display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px 14px;overflow-x:hidden}
   .stage{display:flex;flex-direction:column;align-items:center;gap:14px}
   .hint{font-size:11.5px;color:#8a8fa6;font-weight:600} .hint b{color:var(--indigo-2)}
@@ -136,6 +136,10 @@
   .prefwrap{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:300px}
   .pref{border:1.5px solid var(--line-2);background:var(--surface-2);border-radius:999px;padding:10px 15px;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;transition:.15s}
   .pref.on{background:var(--indigo-soft);border-color:var(--indigo);color:var(--indigo-2)}
+  .obf{animation:obfwd .36s cubic-bezier(.3,.9,.3,1)}.obb{animation:obback .36s cubic-bezier(.3,.9,.3,1)}
+  @keyframes obfwd{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+  @keyframes obback{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.obf,.obb{animation:none}}
   .login-top{position:relative;height:236px;background:linear-gradient(160deg,#7c3aed,#4c1d95);overflow:hidden;border-radius:0 0 36px 36px;color:#fff}
   .login-top .gridfx{position:absolute;inset:0;background-image:var(--grid);background-size:28px 28px;opacity:.4}
   .login-top .mesh{position:absolute;inset:-20%;background:conic-gradient(from 40deg,rgba(255,255,255,.1),transparent 30%,rgba(210,190,255,.16) 60%,transparent);animation:spin 18s linear infinite}
@@ -302,7 +306,7 @@
     return `<div class="ob grid">${sb()}
       <div class="between pad" style="padding-top:4px"><div class="row" style="gap:7px;font-weight:600;font-size:16px"><span style="color:var(--indigo-2)">●</span>tixello</div><button class="chip" data-a="go:login" style="border:0;background:transparent;color:var(--muted)">Sari peste</button></div>
       <div class="seg">${OB.map((_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div>
-      <div class="body" style="${o.pref?'justify-content:flex-start;overflow-y:auto;text-align:left;gap:6px;padding-top:16px':''}">
+      <div class="body ${ST._obDir==='back'?'obb':'obf'}" style="${o.pref?'justify-content:flex-start;overflow-y:auto;text-align:left;gap:6px;padding-top:16px':''}">
         ${o.pref?`<div style="width:100%"><h2 style="text-align:center">${o.h}</h2><p style="text-align:center;margin:6px auto 4px">${o.p}</p>
           ${PREFGROUPS.map(g=>`<div style="margin-top:16px"><div class="label" style="margin-bottom:9px">${g.t}</div><div class="prefwrap" style="justify-content:flex-start;max-width:none">${g.o.map(p=>`<button class="pref ${ST.prefsSel.includes(p)?'on':''}" data-a="pref:${p}">${p}</button>`).join('')}</div></div>`).join('')}
           <div style="height:8px"></div></div>`
@@ -372,13 +376,22 @@
     ${nav('explore')}</div>`;
   };
 
-  S.category=(d)=>{const cat=d.id||'Concerte';const list=Object.values(EV).filter(e=>cat==='Toate'||e.cat===cat);
+  const SORTLBL={rec:'Recomandate',price:'Preț ↑',rating:'Rating ★'};
+  S.category=(d)=>{const cat=d.id||'Concerte';
+    if(ST._catFor!==cat){ST.catF={sort:'rec',maxPrice:500,city:'',seated:false};ST._catFor=cat;}
+    const f=ST.catF;const base=Object.values(EV).filter(e=>cat==='Toate'||e.cat===cat);
+    const cities=[...new Set(base.map(e=>e.city))];
+    let list=base.filter(e=>e.from<=f.maxPrice).filter(e=>!f.city||e.city===f.city).filter(e=>!f.seated||e.seatmap);
+    if(f.sort==='price')list=[...list].sort((a,b)=>a.from-b.from);
+    else if(f.sort==='rating')list=[...list].sort((a,b)=>parseFloat(b.rat)-parseFloat(a.rat));
+    const active=(f.city?1:0)+(f.seated?1:0)+(f.maxPrice<500?1:0);
     return `<div class="grid" style="min-height:100%">${sb()}
-    <div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div><div class="h2">${cat}</div><div class="muted" style="font-size:11.5px">${list.length} rezultate</div></div></div><div class="icon-btn" data-a="go:search">${I.search}</div></div>
-    <div class="filterbar" style="margin-top:14px"><div class="flt" data-a="fltToggle:0">${I.slider} Filtre</div><div class="flt on">Sortează: Recomandate</div><div class="flt">Azi</div><div class="flt">Weekend</div><div class="flt">Sub 100 lei</div><div class="flt">Cluj</div></div>
-    <div class="pad" id="fltPanel" style="display:none;margin-top:12px"><div class="card" style="padding:15px"><div class="label">Preț maxim</div><input type="range" min="0" max="500" value="300" style="width:100%;accent-color:var(--indigo)"><div class="between" style="margin-top:10px"><span class="label" style="margin:0">Doar cu locuri</span><div class="toggle"></div></div><div class="between" style="margin-top:12px"><span class="label" style="margin:0">Doar experiențe</span><div class="toggle"></div></div><button class="cta" style="margin-top:14px;padding:13px">Aplică filtre</button></div></div>
-    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">${list.map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="overflow:hidden;cursor:pointer;display:flex;gap:12px;padding:11px">${poster(ev,'','width:78px;height:78px;border-radius:16px;flex:none',{tag:1})}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:3px">${I.pin} ${VEN[ev.ven].name}</div><div class="row muted" style="gap:10px;font-size:11.5px;margin-top:2px"><span class="row" style="gap:4px">${I.cal} ${ev.d}</span><span class="row" style="gap:3px;color:var(--amber)">${I.star} ${ev.rat}</span></div><div class="between" style="margin-top:6px"><span style="font-weight:600;color:var(--indigo-2);font-size:13.5px">de la $${money(ev.from)}</span>${ev.type==='experience'?'<span class="badge" style="background:var(--indigo-soft);color:var(--indigo-2)">Experiență</span>':''}</div></div></div>`).join('')}</div><div style="height:20px"></div></div>`;
+    <div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div><div class="h2">${cat}</div><div class="muted" style="font-size:11.5px">${list.length} din ${base.length} rezultate</div></div></div><div class="icon-btn" data-a="go:search">${I.search}</div></div>
+    <div class="filterbar" style="margin-top:14px"><div class="flt ${active?'on':''}" data-a="fltToggle:0">${I.slider} Filtre${active?' · '+active:''}</div><div class="flt on" data-a="catSort">Sortează: ${SORTLBL[f.sort]}</div><div class="flt ${f.seated?'on':''}" data-a="catSeat">Cu locuri</div>${cities.map(c=>`<div class="flt ${f.city===c?'on':''}" data-a="catCity:${c}">${c}</div>`).join('')}</div>
+    <div class="pad" id="fltPanel" style="display:none;margin-top:12px"><div class="card" style="padding:15px"><div class="between"><span class="label" style="margin:0">Preț maxim</span><span id="fltPriceVal" style="font-weight:600;font-size:13px;color:var(--indigo-2)">${f.maxPrice>=500?'oricât':f.maxPrice+' lei'}</span></div><input id="fltPrice" type="range" min="20" max="500" step="10" value="${f.maxPrice}" style="width:100%;margin-top:8px;accent-color:var(--indigo)"><div class="between" style="margin-top:14px"><span class="label" style="margin:0">Doar cu locuri pe scaun</span><div class="toggle ${f.seated?'on':''}" data-a="catSeat"></div></div><div class="row" style="gap:10px;margin-top:16px"><button class="cta ghost" style="padding:12px" data-a="catReset">Resetează</button><button class="cta" style="padding:12px" data-a="fltToggle:0">Vezi ${list.length} rezultate</button></div></div></div>
+    ${list.length?`<div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">${list.map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="overflow:hidden;cursor:pointer;display:flex;gap:12px;padding:11px">${poster(ev,'','width:78px;height:78px;border-radius:16px;flex:none',{tag:1})}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:3px">${I.pin} ${VEN[ev.ven].name} · ${ev.city}</div><div class="row muted" style="gap:10px;font-size:11.5px;margin-top:2px"><span class="row" style="gap:4px">${I.cal} ${ev.d}</span><span class="row" style="gap:3px;color:var(--amber)">${I.star} ${ev.rat}</span></div><div class="between" style="margin-top:6px"><span style="font-weight:600;color:var(--indigo-2);font-size:13.5px">de la $${money(ev.from)}</span>${ev.type==='experience'?'<span class="badge" style="background:var(--indigo-soft);color:var(--indigo-2)">Experiență</span>':''}</div></div></div>`).join('')}</div>`:`<div class="pad" style="margin-top:40px;text-align:center"><div style="font-size:44px;opacity:.5">🔎</div><div style="font-weight:600;font-size:15px;margin-top:10px">Niciun rezultat</div><div class="muted" style="font-size:12.5px;margin-top:4px">Încearcă să relaxezi filtrele</div><button class="cta ghost" style="width:auto;padding:11px 20px;margin:16px auto 0" data-a="catReset">Resetează filtrele</button></div>`}<div style="height:20px"></div></div>`;
   };
+  INIT.category=(el)=>{const r=$('#fltPrice',el),lbl=$('#fltPriceVal',el);if(!r)return;r.addEventListener('input',()=>{const v=+r.value;lbl.textContent=v>=500?'oricât':v+' lei';});r.addEventListener('change',()=>{ST.catF.maxPrice=+r.value;const open=$('#fltPanel',el);const wasOpen=open&&open.style.display!=='none';rerender();if(wasOpen){const p=$('#fltPanel',vp.querySelector('.screen:last-child'));if(p)p.style.display='block';}});};
 
   S.search=()=>`<div class="grid" style="min-height:100%">${sb()}
     <div class="row pad" style="padding-top:8px;gap:11px"><div class="icon-btn" data-a="back">${I.back}</div><div class="field" style="flex:1"><span class="muted">${I.search}</span><input id="searchInput" placeholder="Caută evenimente, experiențe, artiști…"><span style="color:var(--indigo-2)">${I.slider}</span></div></div>
@@ -417,14 +430,17 @@
   /* ===== STAY22 MAP EMBED ===== */
   S.stay22=(d)=>{const v=VEN[d.id]||VEN.arena;
     return `<div style="min-height:100%;background:var(--bg);display:flex;flex-direction:column;height:100%">
-      <div style="position:relative;flex:1;min-height:0;background:linear-gradient(120deg,#141126,#0d0b16)">
+      <div style="position:relative;flex:1;min-height:0;overflow:hidden;background:#0d0b16">
         <div style="position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7"></div>
-        <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 55%, rgba(139,92,246,.14), transparent 60%)"></div>
+        <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, rgba(139,92,246,.15), transparent 62%)"></div>
+        <div class="mapinner" id="mapinner" style="position:absolute;inset:0;z-index:2;transition:transform .55s cubic-bezier(.3,.85,.3,1);transform:${panStay(ST.stayPin)}">
+          <div style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);text-align:center"><div style="width:18px;height:18px;border-radius:50%;background:var(--indigo);border:3px solid #fff;box-shadow:var(--sh-p);margin:0 auto"></div><div style="font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:999px;margin-top:6px">${v.name}</div></div>
+          ${STAY.map((s,i)=>`<div class="mappin ${i===ST.stayPin?'on':''}" style="left:${s.x}%;top:${s.y}%" data-a="stayPin:${i}"><div class="bub">${s.p} lei</div></div>`).join('')}
+        </div>
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none;width:66px;height:66px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.28)"></div>
         ${sb()}
-        <div class="between pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass">${I.slider}</div></div>
-        <div style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);text-align:center"><div style="width:18px;height:18px;border-radius:50%;background:var(--indigo);border:3px solid #fff;box-shadow:var(--sh-p);margin:0 auto"></div><div style="font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:999px;margin-top:6px">${v.name}</div></div>
-        ${STAY.map((s,i)=>`<div class="mappin ${i===ST.stayPin?'on':''}" style="left:${s.x}%;top:${s.y}%" data-a="stayPin:${i}"><div class="bub">${s.p} lei</div></div>`).join('')}
-        <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:var(--faint);font-weight:500">powered by Stay22</div>
+        <div class="between pad" style="position:relative;padding-top:4px;z-index:5"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass">${I.slider}</div></div>
+        <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:var(--faint);font-weight:500;z-index:5">powered by Stay22</div>
       </div>
       <div style="background:var(--bg);border-radius:24px 24px 0 0;margin-top:-18px;position:relative;box-shadow:0 -20px 40px -20px rgba(0,0,0,.6);padding-bottom:14px">
         <div style="width:40px;height:4px;border-radius:9px;background:var(--line-2);margin:10px auto 6px"></div>
@@ -649,14 +665,16 @@
   function ttAdj(i,d){const ev=EV[ST.ev];if(!ST._ttCounts||ST._ttEv!==ST.ev){ST._ttCounts=ev.tt.map((_,k)=>k===0?1:0);ST._ttEv=ST.ev;}ST._ttCounts[i]=Math.max(0,(ST._ttCounts[i]||0)+d);recalcTT();}
   function toggleSeat(id){const i=ST.seats.indexOf(id);if(i>=0)ST.seats.splice(i,1);else ST.seats.push(id);const cur=vp.querySelector('.screen:last-child');const se=$$('.seat',cur).find(s=>s.dataset.a==='seat:'+id);if(se)se.classList.toggle('sel');const ev=EV[ST.ev];const sp=ev.tt.find(t=>t.seat)?.p||120;const c=$('#seatCount',cur),l=$('#seatList',cur),sm=$('#seatSum',cur);if(c)c.textContent=ST.seats.length;if(l)l.textContent=ST.seats.join(', ')||'niciunul';if(sm)sm.textContent=(ST.seats.length*sp)+' lei';}
   function updateCartTotals(){const cur=vp.querySelector('.screen:last-child');const c=cartCompute();const set=(id,v)=>{const e=$('#'+id,cur);if(e)e.textContent=v;};set('cSub',c.subtotal+' lei');set('cFee',lei(c.fee)+' lei');set('cProt',lei(c.protect)+' lei');set('cDisc','-'+c.disc+' lei');set('cTotal',lei(c.total)+' lei');set('cBtnTotal',lei(c.total));const pr=$('#cProtRow',cur),dr=$('#cDiscRow',cur);if(pr)pr.hidden=!c.protect;if(dr)dr.hidden=!c.disc;}
-  function selectStay(i){ST.stayPin=i;rerender();}
+  const panStay=i=>{const s=STAY[i];return s?`translate(${(50-s.x).toFixed(2)}%,${(50-s.y).toFixed(2)}%)`:'translate(0%,0%)';};
+  function catRerender(){const cur=vp.querySelector('.screen:last-child');const wasOpen=(()=>{const p=$('#fltPanel',cur);return p&&p.style.display!=='none';})();rerender();if(wasOpen){const p=$('#fltPanel',vp.querySelector('.screen:last-child'));if(p)p.style.display='block';const fb=$('.filterbar .flt',vp.querySelector('.screen:last-child'));if(fb)fb.classList.add('on');}}
+  function selectStay(i){ST.stayPin=i;const cur=vp.querySelector('.screen:last-child');if(!cur)return rerender();const mi=$('#mapinner',cur);if(!mi)return rerender();mi.style.transform=panStay(i);$$('.mappin',cur).forEach((p,j)=>p.classList.toggle('on',j===i));const cards=$$('#stayList .card',cur);cards.forEach((c,j)=>c.style.borderColor=(j===i?'var(--indigo)':'var(--line)'));if(cards[i])cards[i].scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});}
 
   document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const parts=el.dataset.a.split(':');const a=parts[0],arg=parts[1];
     if(a==='back')return back();
     if(a==='go')return go(arg,parts[2]!==undefined?{id:parts[2],pi:parts[3]}:{});
     if(a==='tab')return tab(arg);
-    if(a==='obNext'){if(ST.obStep>=OB.length-1){ST.obStep=0;return go('login');}ST.obStep++;return rerender();}
-    if(a==='obBack'){if(ST.obStep>0){ST.obStep--;rerender();}return;}
+    if(a==='obNext'){if(ST.obStep>=OB.length-1){ST.obStep=0;return go('login');}ST._obDir='fwd';ST.obStep++;return rerender();}
+    if(a==='obBack'){if(ST.obStep>0){ST._obDir='back';ST.obStep--;rerender();}return;}
     if(a==='pref'){const idx=ST.prefsSel.indexOf(arg);if(idx>=0)ST.prefsSel.splice(idx,1);else ST.prefsSel.push(arg);el.classList.toggle('on');return;}
     if(a==='prefsEdit'){ST.obStep=OB.length-1;return go('onboarding');}
     if(a==='ttInc')return ttAdj(+arg,1);
@@ -664,6 +682,10 @@
     if(a==='bundleAdd')return toast('Pachet adăugat în coș');
     if(a==='seat')return toggleSeat(arg);
     if(a==='stayPin')return selectStay(+arg);
+    if(a==='catSort'){const order=['rec','price','rating'];ST.catF.sort=order[(order.indexOf(ST.catF.sort)+1)%order.length];return catRerender();}
+    if(a==='catCity'){ST.catF.city=ST.catF.city===arg?'':arg;return catRerender();}
+    if(a==='catSeat'){ST.catF.seated=!ST.catF.seated;return catRerender();}
+    if(a==='catReset'){ST.catF={sort:'rec',maxPrice:500,city:'',seated:false};return catRerender();}
     if(a==='tgl'){ST.cart[arg]=!ST.cart[arg];if(arg==='nameOnTicket'||arg==='cultural'){rerender();}else{el.classList.toggle('on');updateCartTotals();}return;}
     if(a==='expDate'){ST.expDate=+arg;rerender();return;}
     if(a==='addon'){ST.addons[arg]=!ST.addons[arg];el.classList.toggle('on');recalcTT();return;}
