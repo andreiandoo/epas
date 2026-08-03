@@ -43,7 +43,18 @@ class ListPayouts extends ListRecords
         // event_id argument, the same canonical pipeline as "Evenimente încheiate").
         if (request()->boolean('open_decont')) {
             $eventId = (int) request()->query('event');
-            $this->mountAction('create_payout', $eventId > 0 ? ['event_id' => $eventId] : []);
+            $args = $eventId > 0 ? ['event_id' => $eventId] : [];
+
+            // Calling mountAction() directly in mount() does NOT render the modal
+            // on initial (GET) page load in Filament 4 — the action mounts server
+            // side but the modal never opens. Trigger it from the client after the
+            // component has rendered instead: $wire.mountAction() is the exact same
+            // call Filament fires when the header button is clicked, so the modal
+            // opens and fillForm() pre-fills it from the event_id argument.
+            $this->js(
+                '$wire.mountAction('.json_encode('create_payout').', '
+                .json_encode($args, JSON_UNESCAPED_SLASHES).')'
+            );
         }
     }
 
