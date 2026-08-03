@@ -958,6 +958,21 @@
             @endif
         </div>
 
+        <!-- Breakdown vânzări & bilete (link to detail page) -->
+        <a href="{{ route('filament.marketplace.pages.sales-breakdown', ['month' => ($chartMonthMeta['monthRef'] ?? \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m'))]) }}"
+           class="flex items-center justify-between gap-4 p-5 mb-5 transition-colors bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 group">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 shrink-0">
+                    <x-heroicon-o-chart-pie class="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Breakdown vânzări & bilete</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Încasări online, refund-uri prin procesator, split POS cash / card, per eveniment</p>
+                </div>
+            </div>
+            <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 transition-colors shrink-0 group-hover:text-indigo-500" />
+        </a>
+
         <!-- Monthly Stats -->
         @if(isset($monthStats))
         <div class="mb-5">

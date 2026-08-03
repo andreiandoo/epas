@@ -185,6 +185,7 @@ class OrdersController extends BaseController
                 'sold_by' => $soldByLabel,
                 'venue_owner_user_id' => $user->id,
                 'venue_owner_tenant_id' => $tenant->id,
+                'payment_method' => in_array($payment, ['cash', 'card', 'tap'], true) ? $payment : 'cash',
             ];
 
             $orderId = DB::table('orders')->insertGetId([

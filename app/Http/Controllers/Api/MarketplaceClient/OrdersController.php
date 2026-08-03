@@ -477,11 +477,15 @@ class OrdersController extends BaseController
             $isInvitation = (bool) $request->input('is_invitation', false);
             $isOfflinePos = in_array($paymentMethod, ['cash', 'card'], true);
             if (($isOfflinePos || $isInvitation) && $source === 'pos_app') {
+                $posMeta = array_merge($order->meta ?? [], $isInvitation ? ['is_invitation' => true] : []);
+                if ($isOfflinePos) {
+                    $posMeta['payment_method'] = $paymentMethod;
+                }
                 DB::table('orders')->where('id', $order->id)->update([
                     'status' => 'confirmed',
                     'payment_status' => $isInvitation ? 'free' : 'paid',
                     'paid_at' => now(),
-                    'meta' => json_encode(array_merge($order->meta ?? [], $isInvitation ? ['is_invitation' => true] : [])),
+                    'meta' => json_encode($posMeta),
                     'updated_at' => now(),
                 ]);
                 // Mark tickets as valid
