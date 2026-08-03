@@ -1142,6 +1142,25 @@ class EventResource extends Resource
                             ]),
                                     ]), // End Tab 2: Vanzari
 
+                                // ========== TAB: DECONTURI (leisure venues only) ==========
+                                SC\Tabs\Tab::make($t('Deconturi', 'Settlements'))
+                                    ->key('deconturi')
+                                    ->icon('heroicon-o-banknotes')
+                                    ->visible(fn (?Event $record) => (bool) $record?->isLeisureVenue())
+                                    ->lazy()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('deconturi_list')
+                                            ->hiddenLabel()
+                                            ->content(fn (?Event $record, $livewire) => new HtmlString(
+                                                $record
+                                                    ? view('filament.marketplace.events.leisure-deconturi', [
+                                                        'periods' => $livewire->getLeisureSettlementPeriods(),
+                                                    ])->render()
+                                                    : '<div class="p-6 text-center text-gray-500">' . $t('Salvați evenimentul întâi.', 'Save the event first.') . '</div>'
+                                            ))
+                                            ->columnSpanFull(),
+                                    ]),
+
                                 // ========== TAB 2: PROGRAM ==========
                                 SC\Tabs\Tab::make($t('Program', 'Schedule'))
                                     ->key('program')

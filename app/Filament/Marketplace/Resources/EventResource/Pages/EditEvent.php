@@ -9,6 +9,10 @@ use App\Services\EventSchedulingService;
 use App\Services\PerformanceSyncService;
 use App\Services\Seating\MarketplaceEventSeatingService;
 use App\Models\Seating\EventSeatingLayout;
+use App\Models\Leisure\LeisureSettlementPeriod;
+use App\Services\Marketplace\SalesBreakdownService;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Schemas\Components as SC;
@@ -2082,5 +2086,138 @@ class EditEvent extends EditRecord
         if (($record->is_general_featured || $record->is_category_featured) && !$record->featured_image && $record->hero_image_url) {
             $record->updateQuietly(['featured_image' => $record->hero_image_url]);
         }
+    }
+
+    // ========================================================================
+    // DECONTURI (leisure) — biweekly settlement periods for the "Deconturi" tab.
+    // Amounts are recomputed live (SalesBreakdownService, paid_at, online vs POS,
+    // same basis as LeisureController::settlement + the Sf. Ana dashboard). Only
+    // the two "generat/lichidat" flags persist (leisure_settlement_periods).
+    // ========================================================================
+
+    /**
+     * All biweekly periods from the project start (2026-07-15) to today, newest
+     * first, each with online/POS totals, a daily breakdown, and the persisted
+     * generated/settled flags. Heavy build() calls are cached per period.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getLeisureSettlementPeriods(): array
+    {
+        $event = $this->record;
+        $tz = 'Europe/Bucharest';
+        $projectStart = Carbon::parse('2026-07-15', $tz)->startOfDay();
+        $today = Carbon::now($tz)->endOfDay();
+        $svc = app(SalesBreakdownService::class);
+
+        $flags = LeisureSettlementPeriod::where('event_id', $event->id)
+            ->get()
+            ->keyBy(fn ($p) => $p->period_from->format('Y-m-d'));
+
+        $periods = [];
+        $cursor = $projectStart->copy();
+        while ($cursor->lte($today)) {
+            $from = $cursor->copy()->startOfDay();
+            $to = $cursor->copy()->addDays(13)->endOfDay();
+            $isCurrent = $today->between($from, $to);
+            $key = $from->format('Y-m-d');
+
+            $data = Cache::remember(
+                "leisure_decont_{$event->id}_{$key}",
+                $isCurrent ? 300 : 86400,
+                fn () => $this->computeLeisureSettlementPeriod($svc, $event, $from, $to)
+            );
+
+            $flag = $flags->get($key);
+            $data['generated_at'] = $flag?->generated_at?->format('d.m.Y H:i');
+            $data['settled_at'] = $flag?->settled_at?->format('d.m.Y H:i');
+            $data['is_current'] = $isCurrent;
+            $periods[] = $data;
+
+            $cursor->addDays(14);
+        }
+
+        return array_reverse($periods);
+    }
+
+    /**
+     * Compute one period's online/POS totals + per-day rows (no flags — those are
+     * merged in getLeisureSettlementPeriods so toggling doesn't bust this cache).
+     *
+     * @return array<string, mixed>
+     */
+    protected function computeLeisureSettlementPeriod(SalesBreakdownService $svc, Event $event, Carbon $from, Carbon $to): array
+    {
+        $online = $svc->build($event, $from, $to, excludePos: true, dateColumn: 'paid_at');
+        $pos = $svc->build($event, $from, $to, onlyPos: true, dateColumn: 'paid_at');
+
+        $days = [];
+        $d = $from->copy()->startOfDay();
+        $end = $to->copy()->startOfDay();
+        while ($d->lte($end)) {
+            $dFrom = $d->copy()->startOfDay();
+            $dTo = $d->copy()->endOfDay();
+            $o = $svc->build($event, $dFrom, $dTo, excludePos: true, dateColumn: 'paid_at');
+            $p = $svc->build($event, $dFrom, $dTo, onlyPos: true, dateColumn: 'paid_at');
+            $oRev = (float) ($o['total_revenue'] ?? 0);
+            $pRev = (float) ($p['total_revenue'] ?? 0);
+            if ($oRev != 0.0 || $pRev != 0.0) {
+                $days[] = [
+                    'date' => $dFrom->format('Y-m-d'),
+                    'online_revenue' => $oRev,
+                    'online_commission' => (float) ($o['total_commission'] ?? 0),
+                    'pos_revenue' => $pRev,
+                    'pos_commission' => (float) ($p['total_commission'] ?? 0),
+                    'tickets' => (int) (collect($o['per_type'] ?? [])->sum('qty') + collect($p['per_type'] ?? [])->sum('qty')),
+                ];
+            }
+            $d->addDay();
+        }
+
+        return [
+            'from' => $from->format('Y-m-d'),
+            'to' => $to->copy()->startOfDay()->format('Y-m-d'),
+            'online_revenue' => (float) ($online['total_revenue'] ?? 0),
+            'online_commission' => (float) ($online['total_commission'] ?? 0),
+            'pos_revenue' => (float) ($pos['total_revenue'] ?? 0),
+            'pos_commission' => (float) ($pos['total_commission'] ?? 0),
+            'tickets' => (int) (collect($online['per_type'] ?? [])->sum('qty') + collect($pos['per_type'] ?? [])->sum('qty')),
+            'currency' => $event->currency ?? ($event->marketplaceClient?->currency ?? 'RON'),
+            'days' => $days,
+        ];
+    }
+
+    /**
+     * Toggle the generated/settled flag for a period. State only — no money side
+     * effects. Called from the Deconturi accordion checkboxes.
+     */
+    public function toggleDecontFlag(string $periodFrom, string $which): void
+    {
+        if (!in_array($which, ['generated', 'settled'], true)) {
+            return;
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodFrom)) {
+            return;
+        }
+
+        $from = Carbon::parse($periodFrom, 'Europe/Bucharest')->startOfDay();
+        $row = LeisureSettlementPeriod::firstOrNew([
+            'event_id' => $this->record->id,
+            'period_from' => $from->format('Y-m-d'),
+        ]);
+        $row->period_to = $from->copy()->addDays(13)->format('Y-m-d');
+
+        $col = $which === 'generated' ? 'generated_at' : 'settled_at';
+        $row->{$col} = $row->{$col} ? null : now();
+
+        // Settling implies it was generated; un-generating clears settled.
+        if ($which === 'settled' && $row->settled_at && !$row->generated_at) {
+            $row->generated_at = now();
+        }
+        if ($which === 'generated' && !$row->generated_at) {
+            $row->settled_at = null;
+        }
+
+        $row->save();
     }
 }
