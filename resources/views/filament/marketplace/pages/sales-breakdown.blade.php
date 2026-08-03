@@ -110,9 +110,16 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach($d['online_rows'] as $row)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                                <tr class="hover:bg-slate-100 dark:hover:bg-slate-700">
                                     <td class="px-3 py-2">
-                                        <div class="font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</div>
+                                        @if($row['event_id'] > 0)
+                                            <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $row['event_id']]) }}"
+                                               class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">
+                                                {{ $row['event_name'] }}
+                                            </a>
+                                        @else
+                                            <div class="font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</div>
+                                        @endif
                                         <div class="text-xs text-gray-500 dark:text-gray-400">
                                             @if($row['event_date']){{ $row['event_date'] }} &middot; @endif
                                             @if($row['venue']){{ $row['venue'] }}@endif
@@ -182,9 +189,16 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach($d['refund_rows'] as $row)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                                <tr class="hover:bg-slate-100 dark:hover:bg-slate-700">
                                     <td class="px-3 py-2">
-                                        <div class="font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</div>
+                                        @if($row['event_id'] > 0)
+                                            <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $row['event_id']]) }}"
+                                               class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">
+                                                {{ $row['event_name'] }}
+                                            </a>
+                                        @else
+                                            <div class="font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</div>
+                                        @endif
                                         <div class="text-xs text-gray-500 dark:text-gray-400">
                                             @if($row['event_date']){{ $row['event_date'] }} &middot; @endif
                                             @if($row['venue']){{ $row['venue'] }}@endif
@@ -279,9 +293,16 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach($d['pos_rows'] as $row)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                                <tr class="hover:bg-slate-100 dark:hover:bg-slate-700">
                                     <td class="px-3 py-2">
-                                        <div class="font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</div>
+                                        @if($row['event_id'] > 0)
+                                            <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $row['event_id']]) }}"
+                                               class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">
+                                                {{ $row['event_name'] }}
+                                            </a>
+                                        @else
+                                            <div class="font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</div>
+                                        @endif
                                         <div class="text-xs text-gray-500 dark:text-gray-400">
                                             @if($row['event_date']){{ $row['event_date'] }} &middot; @endif
                                             @if($row['venue']){{ $row['venue'] }}@endif
