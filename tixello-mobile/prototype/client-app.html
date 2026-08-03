@@ -1,177 +1,188 @@
 <title>Tixello — App Client</title>
 <style>
   :root{
-    /* Tixello brand — indigo + slate (light) */
-    --indigo:#6366F1; --indigo-2:#818CF8; --indigo-3:#4F46E5; --indigo-4:#4338CA; --indigo-ink:#312E81;
-    --indigo-soft:#EEF0FE; --indigo-line:#DCDFFB;
-    --bg:#F7F8FC; --bg-2:#EDF0F7; --surface:#FFFFFF; --surface-2:#FBFCFE;
-    --ink:#1E293B; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --line:#E9EDF4; --line-2:#DCE3EC;
-    --green:#10B981; --green-soft:#E6F7F1; --amber:#F59E0B; --amber-soft:#FDF2DC; --red:#EF4444; --blue:#3B82F6; --pink:#EC4899;
-    --dim:#0E1626; --dim-2:#1B2740; --dim-line:rgba(255,255,255,.09);
+    /* Tixello brand — DARK: purple primary, green + cyan accents, grid (from tixello.com) */
+    --bg:#0B0912; --bg-2:#0F0D18; --surface:#16142330; --surface-solid:#161423; --surface-2:#1D1A2E; --surface-3:#242138;
+    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14); --line-3:rgba(255,255,255,.2);
+    --ink:#F4F4F8; --ink-2:#C7C9D6; --muted:#9195A8; --faint:#63677D;
+    --indigo:#8B5CF6; --indigo-2:#A78BFA; --indigo-3:#7C3AED; --indigo-4:#6D28D9; --indigo-ink:#c4b5fd;
+    --indigo-soft:rgba(139,92,246,.15); --indigo-line:rgba(139,92,246,.34);
+    --green:#22C55E; --green-2:#34D399; --green-soft:rgba(34,197,94,.15); --green-line:rgba(34,197,94,.32);
+    --cyan:#22D3EE; --blue:#3B82F6; --cyan-soft:rgba(34,211,238,.14);
+    --amber:#F59E0B; --amber-soft:rgba(245,158,11,.15); --red:#F0616D; --pink:#EC4899;
     --ui:"Poppins","Sora",ui-rounded,-apple-system,"Segoe UI",system-ui,sans-serif;
-    --sh:0 18px 40px -22px rgba(30,41,90,.30); --sh-sm:0 8px 20px -12px rgba(30,41,90,.26);
-    --sh-in:0 16px 30px -14px rgba(99,102,241,.6);
+    --sh:0 22px 46px -22px rgba(0,0,0,.7); --sh-sm:0 10px 24px -14px rgba(0,0,0,.6);
+    --sh-p:0 16px 34px -14px rgba(124,58,237,.7);
+    --grid:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+    --glow:radial-gradient(680px 380px at 84% -6%, rgba(139,92,246,.22), transparent 62%);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
   body{font-family:var(--ui);color:var(--ink);letter-spacing:-.011em;
-    background:radial-gradient(1000px 620px at 82% -6%, #dfe1fb, transparent 58%),radial-gradient(820px 560px at -8% 104%, #dde6f6, transparent 55%),#e4e8f2;
-    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:22px 14px;overflow-x:hidden}
+    background:radial-gradient(900px 560px at 82% 0%, #211a3a, transparent 60%),radial-gradient(760px 520px at -8% 100%, #14162e, transparent 55%),#070510;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px 14px;overflow-x:hidden}
   .stage{display:flex;flex-direction:column;align-items:center;gap:14px}
-  .hint{font-size:11.5px;color:#5b6478;font-weight:600} .hint b{color:var(--indigo-3)}
-  .device{width:392px;max-width:calc(100vw - 28px);height:812px;max-height:calc(100vh - 96px);border-radius:52px;
-    background:linear-gradient(160deg,#2a2f38,#0e1016);padding:11px;position:relative;box-shadow:0 60px 120px -50px rgba(0,0,0,.62),inset 0 1px 2px rgba(255,255,255,.12)}
-  .screenport{position:relative;width:100%;height:100%;border-radius:42px;overflow:hidden;background:var(--bg)}
+  .hint{font-size:11.5px;color:#8a8fa6;font-weight:600} .hint b{color:var(--indigo-2)}
+  /* modern iPhone frame */
+  .device{position:relative;height:min(844px,calc(100vh - 64px));aspect-ratio:390/844;border-radius:56px;padding:12px;
+    background:linear-gradient(145deg,#4a4d57,#17181e 42%,#101116 62%,#43454f);
+    box-shadow:0 54px 110px -44px rgba(0,0,0,.78),inset 0 0 3px 1px rgba(255,255,255,.16)}
+  .screenport{position:relative;width:100%;height:100%;border-radius:45px;overflow:hidden;background:var(--bg);box-shadow:inset 0 0 0 2px #000}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:112px;height:31px;background:#000;border-radius:20px;z-index:60}
+  .island::after{content:"";position:absolute;right:12px;top:9px;width:11px;height:11px;border-radius:50%;background:#0b0b12;box-shadow:inset 0 0 3px rgba(80,90,140,.7)}
   .vp{position:absolute;inset:0}
   .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;transition:transform .4s cubic-bezier(.32,.9,.28,1),opacity .4s}
   .screen::-webkit-scrollbar{display:none}
   .enter-forward{transform:translateX(100%)} .exit-forward{transform:translateX(-24%);opacity:.5}
   .enter-back{transform:translateX(-100%)} .exit-back{transform:translateX(100%)}
   @media (prefers-reduced-motion:reduce){.screen{transition:opacity .2s}.enter-forward,.enter-back{transform:none;opacity:0}.exit-forward,.exit-back{opacity:0;transform:none}}
+  .grid{background-color:var(--bg);background-image:var(--glow),var(--grid);background-size:100% 100%,30px 30px,30px 30px}
 
-  .sb{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 4px;font-size:13px;font-weight:700}
-  .sb.dark,.sb.dark *{color:#fff} .sb.light,.sb.light *{color:var(--ink)} .sb .dd{display:flex;gap:5px;align-items:center}
+  .sb{display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font-size:13px;font-weight:700;color:#fff}
+  .sb .dd{display:flex;gap:5px;align-items:center}
   .pad{padding:0 20px} .row{display:flex;align-items:center;gap:10px} .between{display:flex;align-items:center;justify-content:space-between}
   .muted{color:var(--muted)} .tnum{font-variant-numeric:tabular-nums} svg{display:block}
   .h1{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.08} .h2{font-size:16px;font-weight:800;letter-spacing:-.02em}
-  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--indigo-3)}
-  .icon-btn{width:42px;height:42px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;box-shadow:var(--sh-sm);color:var(--ink);flex:none;transition:transform .12s}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--indigo-2)}
+  .cyan-grad{background:linear-gradient(100deg,#67e8f9,#3b82f6);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .icon-btn{width:42px;height:42px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;color:var(--ink);flex:none;transition:transform .12s}
   .icon-btn:active{transform:scale(.9)}
-  .icon-btn.glass{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.26);color:#fff;backdrop-filter:blur(10px);box-shadow:none}
-  .icon-btn.dark{background:var(--dim-2);border-color:var(--dim-line);color:#fff;box-shadow:none}
-  .cta{border:0;font:inherit;cursor:pointer;width:100%;padding:17px;border-radius:18px;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-3));box-shadow:var(--sh-in);display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s}
+  .icon-btn.glass{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(10px)}
+  .cta{border:0;font:inherit;cursor:pointer;width:100%;padding:17px;border-radius:16px;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--indigo-3));box-shadow:var(--sh-p);display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s}
   .cta:active{transform:translateY(1px) scale(.995)}
-  .cta.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line-2);box-shadow:none}
-  .cta.dark{background:#fff;color:var(--dim)} .cta.block2{justify-content:space-between}
-  .chip{border:0;font:inherit;cursor:pointer;padding:9px 15px;border-radius:999px;font-size:13px;font-weight:700;background:var(--surface);color:var(--muted);border:1px solid var(--line);white-space:nowrap;flex:none;transition:.16s}
-  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .chip.ind.on{background:linear-gradient(135deg,var(--indigo-2),var(--indigo-3));border-color:transparent;box-shadow:var(--sh-in)}
+  .cta.ghost{background:var(--surface-2);color:var(--ink);border:1px solid var(--line-2);box-shadow:none}
+  .cta.dark{background:#fff;color:#141020} .cta.block2{justify-content:space-between}
+  .cta.green{background:linear-gradient(135deg,var(--green),#16a34a);box-shadow:0 16px 30px -14px rgba(34,197,94,.6)}
+  .chip{border:0;font:inherit;cursor:pointer;padding:9px 15px;border-radius:999px;font-size:13px;font-weight:700;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);white-space:nowrap;flex:none;transition:.16s}
+  .chip.on{background:#fff;color:#141020;border-color:#fff}
+  .chip.ind.on{background:linear-gradient(135deg,var(--indigo),var(--indigo-3));border-color:transparent;color:#fff;box-shadow:var(--sh-p)}
   .scroll-x{display:flex;gap:9px;overflow-x:auto;padding:2px 20px;scrollbar-width:none} .scroll-x::-webkit-scrollbar{display:none}
   .badge{font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--sh-sm)}
+  .card{background:var(--surface-solid);border:1px solid var(--line);border-radius:22px;box-shadow:var(--sh-sm)}
   .poster{position:relative;overflow:hidden;background:var(--tone,#3a2b4d)}
-  .poster::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 18% 0%,rgba(255,255,255,.24),transparent 52%),radial-gradient(90% 76% at 100% 100%,rgba(0,0,0,.44),transparent 60%)}
-  .poster .glyph{position:absolute;right:-4px;bottom:-14px;font-size:88px;opacity:.2;color:#fff}
-  .poster .tag{position:absolute;top:12px;left:12px;font-size:10px;font-weight:800;color:#fff;background:rgba(0,0,0,.3);backdrop-filter:blur(6px);padding:4px 9px;border-radius:999px}
+  .poster::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 18% 0%,rgba(255,255,255,.22),transparent 52%),radial-gradient(90% 76% at 100% 100%,rgba(0,0,0,.5),transparent 60%)}
+  .poster .glyph{position:absolute;right:-4px;bottom:-14px;font-size:88px;opacity:.22;color:#fff}
+  .poster .tag{position:absolute;top:12px;left:12px;font-size:10px;font-weight:800;color:#fff;background:rgba(0,0,0,.34);backdrop-filter:blur(6px);padding:4px 9px;border-radius:999px}
   .poster .exp{background:linear-gradient(135deg,var(--indigo),var(--indigo-4))}
-  .poster .dt{position:absolute;top:12px;right:12px;text-align:center;background:rgba(255,255,255,.94);border-radius:12px;padding:5px 9px;line-height:1}
-  .poster .dt b{font-size:15px;font-weight:800;color:var(--ink)} .poster .dt span{font-size:9px;font-weight:800;color:var(--indigo-3);text-transform:uppercase}
-  .avatar{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-4));display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;box-shadow:var(--sh-in)}
+  .poster .dt{position:absolute;top:12px;right:12px;text-align:center;background:rgba(20,16,32,.82);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:5px 9px;line-height:1}
+  .poster .dt b{font-size:15px;font-weight:800;color:#fff} .poster .dt span{font-size:9px;font-weight:800;color:var(--indigo-2);text-transform:uppercase}
+  .avatar{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;box-shadow:var(--sh-p)}
   .hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 20px 0}
   .hdr .loc-l{font-size:10.5px;font-weight:700;color:var(--muted);display:flex;gap:4px;align-items:center}
   .hdr .loc-v{font-weight:800;font-size:15.5px;display:flex;gap:5px;align-items:center}
-  .searchbar{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:11px;box-shadow:var(--sh-sm);cursor:pointer}
+  .searchbar{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer}
   .searchbar .ph{color:var(--faint);font-size:14px;font-weight:600;flex:1}
-  .bnav{position:sticky;bottom:14px;margin:8px 16px 0;height:66px;background:rgba(255,255,255,.9);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:24px;display:flex;align-items:center;justify-content:space-around;box-shadow:0 18px 36px -18px rgba(30,41,90,.4);z-index:30}
+  .bnav{position:sticky;bottom:14px;margin:8px 16px 0;height:66px;background:rgba(18,15,30,.82);backdrop-filter:blur(20px);border:1px solid var(--line-2);border-radius:24px;display:flex;align-items:center;justify-content:space-around;box-shadow:0 20px 40px -18px rgba(0,0,0,.7);z-index:30}
   .bnav .nav{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--faint);cursor:pointer;font-size:9.5px;font-weight:700;flex:1;transition:.15s}
-  .bnav .nav.on{color:var(--indigo-3)}
-  .bnav .fab{width:56px;height:56px;border-radius:19px;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-3));color:#fff;display:grid;place-items:center;box-shadow:var(--sh-in);margin-top:-30px;cursor:pointer;border:4px solid var(--bg)}
+  .bnav .nav.on{color:var(--indigo-2)}
+  .bnav .fab{width:56px;height:56px;border-radius:19px;background:linear-gradient(135deg,var(--indigo),var(--indigo-3));color:#fff;display:grid;place-items:center;box-shadow:var(--sh-p);margin-top:-30px;cursor:pointer;border:4px solid #100d1c}
   .dock{position:sticky;bottom:0;padding:12px 16px 18px;z-index:20;background:linear-gradient(180deg,transparent,var(--bg) 42%)}
-  .dock.dk{background:linear-gradient(180deg,transparent,var(--dim) 42%)}
-  .listitem{display:flex;align-items:center;gap:13px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px}
-  .field{background:var(--surface-2);border:1.5px solid var(--line-2);border-radius:15px;padding:14px 15px;display:flex;align-items:center;gap:11px;transition:border-color .18s}
+  .listitem{display:flex;align-items:center;gap:13px;padding:12px;background:var(--surface-solid);border:1px solid var(--line);border-radius:18px}
+  .field{background:var(--surface-2);border:1.5px solid var(--line-2);border-radius:15px;padding:14px 15px;display:flex;align-items:center;gap:11px;transition:border-color .18s;color:var(--muted)}
   .field:focus-within{border-color:var(--indigo)}
   .field input{border:0;outline:0;font:inherit;font-size:14.5px;font-weight:600;color:var(--ink);background:transparent;width:100%}
   .field input::placeholder{color:var(--faint)} .label{font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:7px}
-  .toggle{width:46px;height:27px;border-radius:999px;background:var(--line-2);position:relative;cursor:pointer;flex:none;transition:.2s}
-  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s}
-  .toggle.on{background:var(--indigo)} .toggle.on::after{left:22px}
-  /* seat */
-  .stagebar{margin:0 40px;height:26px;border-radius:40px 40px 8px 8px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.16);border-bottom:0;display:grid;place-items:center;color:rgba(255,255,255,.7);font-size:9px;font-weight:800;letter-spacing:3px}
+  .toggle{width:46px;height:27px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line-2);position:relative;cursor:pointer;flex:none;transition:.2s}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+  .toggle.on{background:var(--indigo);border-color:var(--indigo)} .toggle.on::after{left:22px}
+  .stagebar{margin:0 40px;height:26px;border-radius:40px 40px 8px 8px;background:linear-gradient(180deg,rgba(139,92,246,.35),rgba(139,92,246,.05));border:1px solid rgba(255,255,255,.16);border-bottom:0;display:grid;place-items:center;color:rgba(255,255,255,.75);font-size:9px;font-weight:800;letter-spacing:3px}
   .seatgrid{display:flex;flex-direction:column;gap:6px;align-items:center}.seatrow{display:flex;gap:6px}
   .seat{width:22px;height:22px;border-radius:7px;cursor:pointer;transition:transform .1s}
-  .seat.free{background:#2a3550;border:1px solid rgba(255,255,255,.14)}.seat.free:active{transform:scale(.85)}
-  .seat.sel{background:var(--indigo);box-shadow:0 0 12px rgba(99,102,241,.85)}
+  .seat.free{background:#2c2942;border:1px solid rgba(255,255,255,.14)}.seat.free:active{transform:scale(.85)}
+  .seat.sel{background:var(--indigo);box-shadow:0 0 12px rgba(139,92,246,.9)}
   .seat.sold{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);cursor:not-allowed}
   .qr-wrap{background:#fff;border-radius:18px;padding:14px;display:grid;place-items:center}
   .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
   .confetti span{position:absolute;top:-10px;width:9px;height:14px;border-radius:2px;animation:fall linear forwards}
   @keyframes fall{to{transform:translateY(900px) rotate(720deg);opacity:.9}}
-  .burst{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-3));box-shadow:var(--sh-in);animation:pop .6s cubic-bezier(.2,1.3,.3,1) both}
+  .burst{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--indigo-3));box-shadow:var(--sh-p);animation:pop .6s cubic-bezier(.2,1.3,.3,1) both}
   @keyframes pop{from{transform:scale(.5) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
-  .pts{display:inline-flex;align-items:center;gap:5px;font-weight:800;color:var(--amber);background:var(--amber-soft);border:1px solid #f6dfae;border-radius:999px;padding:4px 10px;font-size:11.5px}
-  .walletcard{border-radius:26px;padding:20px;color:#fff;position:relative;overflow:hidden;background:linear-gradient(140deg,#1e2a4a,#4f46e5 130%);box-shadow:0 26px 50px -22px rgba(50,40,160,.6)}
+  .pts{display:inline-flex;align-items:center;gap:5px;font-weight:800;color:var(--amber);background:var(--amber-soft);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:4px 10px;font-size:11.5px}
+  .walletcard{border-radius:26px;padding:20px;color:#fff;position:relative;overflow:hidden;background:linear-gradient(140deg,#241a44,#7c3aed 135%);box-shadow:0 26px 50px -22px rgba(90,50,200,.6);border:1px solid rgba(255,255,255,.1)}
   .txrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.txrow:last-child{border-bottom:0}
   .fade-up{animation:fu .5s both}@keyframes fu{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
   .stagger>*{animation:fu .5s both}
   .stagger>*:nth-child(2){animation-delay:.05s}.stagger>*:nth-child(3){animation-delay:.1s}.stagger>*:nth-child(4){animation-delay:.15s}.stagger>*:nth-child(5){animation-delay:.2s}
-  /* toast */
-  #toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:700;box-shadow:var(--sh);opacity:0;transition:.3s;z-index:60;pointer-events:none;max-width:80%;text-align:center}
+  #toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:#fff;color:#141020;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:700;box-shadow:var(--sh);opacity:0;transition:.3s;z-index:70;pointer-events:none;max-width:80%;text-align:center}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   /* splash */
-  .splash{position:absolute;inset:0;overflow:hidden;background:radial-gradient(130% 100% at 50% 12%,#818cf8 0%,#6366f1 44%,#4338ca 100%);color:#fff}
-  .splash .mesh{position:absolute;inset:-30%;background:conic-gradient(from 0deg,rgba(255,255,255,.1),transparent 25%,rgba(200,205,255,.16) 50%,transparent 75%,rgba(255,255,255,.1));animation:spin 14s linear infinite;filter:blur(6px)}
-  .splash .grain{position:absolute;inset:0;opacity:.06;mix-blend-mode:overlay;background-image:radial-gradient(rgba(255,255,255,.9) .5px,transparent .5px);background-size:3px 3px}
+  .splash{position:absolute;inset:0;overflow:hidden;background:radial-gradient(130% 100% at 50% 14%,#7c3aed 0%,#5b21b6 46%,#2a1065 100%);color:#fff}
+  .splash .gridfx{position:absolute;inset:0;background-image:var(--grid);background-size:30px 30px;opacity:.5;mask:radial-gradient(circle at 50% 40%,#000,transparent 72%)}
+  .splash .mesh{position:absolute;inset:-30%;background:conic-gradient(from 0deg,rgba(255,255,255,.1),transparent 25%,rgba(200,180,255,.18) 50%,transparent 75%,rgba(255,255,255,.1));animation:spin 14s linear infinite;filter:blur(6px)}
   .splash .spark{position:absolute;color:rgba(255,255,255,.85);animation:floaty 4s ease-in-out infinite}
-  .splash .core{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
-  .splash .mark{width:104px;height:104px;border-radius:32px;position:relative;display:grid;place-items:center;background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.32);box-shadow:0 30px 60px -20px rgba(40,30,120,.7),inset 0 1px 3px rgba(255,255,255,.4);animation:pop .8s cubic-bezier(.18,1.25,.3,1) both}
-  .splash .mark::after{content:"";position:absolute;inset:-10px;border-radius:40px;border:1.5px solid rgba(255,255,255,.28);animation:ring 2.4s ease-out infinite}
+  .splash .core{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+  .splash .mark{width:104px;height:104px;border-radius:32px;position:relative;display:grid;place-items:center;background:linear-gradient(160deg,rgba(255,255,255,.24),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.34);box-shadow:0 30px 60px -20px rgba(30,10,80,.8),inset 0 1px 3px rgba(255,255,255,.5);animation:pop .8s cubic-bezier(.18,1.25,.3,1) both}
+  .splash .mark::after{content:"";position:absolute;inset:-10px;border-radius:40px;border:1.5px solid rgba(255,255,255,.3);animation:ring 2.4s ease-out infinite}
   .splash .wm{font-size:36px;font-weight:800;letter-spacing:-.04em;animation:wmIn .7s .35s cubic-bezier(.2,.9,.3,1) both}
-  .splash .tl{font-size:13px;font-weight:600;color:rgba(255,255,255,.82);animation:wmIn .7s .5s both}
-  .splash .prog{position:absolute;left:50%;transform:translateX(-50%);bottom:56px;width:120px;height:4px;border-radius:9px;background:rgba(255,255,255,.22);overflow:hidden}
-  .splash .prog i{display:block;height:100%;width:0;background:#fff;border-radius:9px;animation:load 1.9s .3s ease-in-out forwards}
+  .splash .tl{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);animation:wmIn .7s .5s both}
+  .splash .prog{position:absolute;left:50%;transform:translateX(-50%);bottom:58px;width:120px;height:4px;border-radius:9px;background:rgba(255,255,255,.24);overflow:hidden}
+  .splash .prog i{display:block;height:100%;width:0;background:#fff;border-radius:9px;animation:load 2s .3s ease-in-out forwards}
   @keyframes spin{to{transform:rotate(360deg)}}@keyframes floaty{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-12px) rotate(10deg)}}
   @keyframes ring{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.25);opacity:0}}@keyframes wmIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}@keyframes load{to{width:100%}}
   @media(prefers-reduced-motion:reduce){.splash .mesh,.splash .spark,.splash .mark::after{animation:none}.splash .prog i{animation-duration:.4s}}
-  /* onboarding */
-  .ob{height:100%;display:flex;flex-direction:column;background:radial-gradient(120% 55% at 50% -6%,var(--indigo-soft),transparent 55%),var(--bg)}
-  .ob .seg{display:flex;gap:6px;padding:6px 24px 0}
-  .ob .seg i{flex:1;height:4px;border-radius:9px;background:var(--line-2);position:relative;overflow:hidden}
-  .ob .seg i.on::after{content:"";position:absolute;inset:0;background:var(--indigo);border-radius:9px}
-  .ob .slides{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}.ob .slides::-webkit-scrollbar{display:none}
-  .ob .slide{min-width:100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:14px 30px;text-align:center}
-  .ob h2{font-size:23px;font-weight:800;letter-spacing:-.03em;text-wrap:balance;max-width:15ch}
+  /* onboarding (one step at a time) */
+  .ob{height:100%;display:flex;flex-direction:column}
+  .ob .seg{display:flex;gap:6px;padding:6px 26px 0}
+  .ob .seg i{flex:1;height:4px;border-radius:9px;background:var(--surface-3);overflow:hidden}
+  .ob .seg i.on{background:var(--indigo)}
+  .ob .body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:14px 32px;text-align:center}
+  .ob h2{font-size:24px;font-weight:800;letter-spacing:-.03em;text-wrap:balance;max-width:15ch}
   .ob p{color:var(--muted);font-size:14px;line-height:1.55;max-width:29ch}
   .ob .foot{padding:8px 26px 30px;display:flex;flex-direction:column;gap:12px}
-  .ill{width:240px;height:220px;border-radius:32px;position:relative;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line)}
+  .obart{width:260px;height:220px;border-radius:32px;position:relative;overflow:hidden;border:1px solid var(--line);box-shadow:var(--sh)}
   .prefwrap{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:300px}
-  .pref{border:1.5px solid var(--line-2);background:var(--surface);border-radius:999px;padding:10px 15px;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:.15s}
-  .pref.on{background:var(--indigo-soft);border-color:var(--indigo);color:var(--indigo-3)}
-  .login-top{position:relative;height:236px;background:linear-gradient(160deg,var(--indigo-2),var(--indigo-4));overflow:hidden;border-radius:0 0 36px 36px;color:#fff}
-  .login-top .mesh{position:absolute;inset:-20%;background:conic-gradient(from 40deg,rgba(255,255,255,.1),transparent 30%,rgba(210,214,255,.14) 60%,transparent);animation:spin 18s linear infinite}
-  .login-sheet{background:var(--surface);margin:-26px 14px 0;border-radius:26px;box-shadow:var(--sh);padding:22px 20px;position:relative}
-  .divider{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:11.5px;font-weight:600;margin:16px 0}
-  .divider span{flex:1;height:1px;background:var(--line-2)}
-  .sbtn{display:flex;align-items:center;justify-content:center;gap:9px;padding:14px;border-radius:15px;border:1.5px solid var(--line-2);background:var(--surface);font-weight:800;font-size:14px;cursor:pointer;flex:1;color:var(--ink)}
+  .pref{border:1.5px solid var(--line-2);background:var(--surface-2);border-radius:999px;padding:10px 15px;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:.15s}
+  .pref.on{background:var(--indigo-soft);border-color:var(--indigo);color:var(--indigo-2)}
+  .login-top{position:relative;height:236px;background:linear-gradient(160deg,#7c3aed,#4c1d95);overflow:hidden;border-radius:0 0 36px 36px;color:#fff}
+  .login-top .gridfx{position:absolute;inset:0;background-image:var(--grid);background-size:28px 28px;opacity:.4}
+  .login-top .mesh{position:absolute;inset:-20%;background:conic-gradient(from 40deg,rgba(255,255,255,.1),transparent 30%,rgba(210,190,255,.16) 60%,transparent);animation:spin 18s linear infinite}
+  .login-sheet{background:var(--surface-solid);margin:-26px 14px 0;border-radius:26px;box-shadow:var(--sh);padding:22px 20px;position:relative;border:1px solid var(--line)}
+  .divider{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:11.5px;font-weight:600;margin:16px 0}.divider span{flex:1;height:1px;background:var(--line-2)}
+  .sbtn{display:flex;align-items:center;justify-content:center;gap:9px;padding:14px;border-radius:15px;border:1px solid var(--line-2);background:var(--surface-2);font-weight:800;font-size:14px;cursor:pointer;flex:1;color:var(--ink)}
   .filterbar{display:flex;gap:8px;overflow-x:auto;padding:0 20px;scrollbar-width:none}.filterbar::-webkit-scrollbar{display:none}
-  .flt{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:12px;font-size:12.5px;font-weight:700;background:var(--surface);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap;cursor:pointer}
-  .flt.on{background:var(--indigo-soft);border-color:var(--indigo);color:var(--indigo-3)}
+  .flt{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:12px;font-size:12.5px;font-weight:700;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap;cursor:pointer}
+  .flt.on{background:var(--indigo-soft);border-color:var(--indigo);color:var(--indigo-2)}
+  .whitecard{background:#fff;color:#141020;border-radius:26px;overflow:hidden;box-shadow:0 30px 60px -24px rgba(0,0,0,.7)}
+  .whitecard .wm2{color:#71748a}
+  .mappin{position:absolute;transform:translate(-50%,-100%);cursor:pointer}
+  .mappin .bub{background:#fff;color:#141020;font-weight:800;font-size:11px;padding:4px 9px;border-radius:999px;box-shadow:0 6px 14px rgba(0,0,0,.4);white-space:nowrap}
+  .mappin.on .bub{background:var(--indigo);color:#fff}
+  .mappin::after{content:"";position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);border:5px solid transparent;border-top-color:#fff}
+  .mappin.on::after{border-top-color:var(--indigo)}
 </style>
 
 <div class="stage">
-  <div class="device"><div class="screenport"><div class="vp" id="vp"></div><div id="toast"></div></div></div>
-  <div class="hint">Client Tixello · evenimente <b>+</b> experiențe · sugestii <b>AI</b> · bilete <b>QR</b> · cashless</div>
+  <div class="device"><div class="screenport"><div class="vp" id="vp"></div><div class="island"></div><div id="toast"></div></div></div>
+  <div class="hint">Client Tixello · dark · evenimente <b>+</b> experiențe · <b>AI</b> · agregator app.tics.ro · bilete <b>QR</b></div>
 </div>
 
 <script>
 (function(){
   "use strict";
-  const RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const vp=document.getElementById('vp'), toastEl=document.getElementById('toast');
-  const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>[...(r||document).querySelectorAll(s)];
+  const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const vp=document.getElementById('vp'),toastEl=document.getElementById('toast');
+  const $=(s,r)=>(r||document).querySelector(s),$$=(s,r)=>[...(r||document).querySelectorAll(s)];
 
-  /* ------- data ------- */
   const VEN={
-    arena:{id:'arena',name:'Cluj Arena',city:'Cluj-Napoca',addr:'Aleea Stadionului 2',cap:'30.000',tone:'linear-gradient(150deg,#1e2a4a,#4f46e5)'},
-    sala:{id:'sala',name:'Sala Mare · TN Cluj',city:'Cluj-Napoca',addr:'Piața Ștefan cel Mare 24',cap:'820',tone:'linear-gradient(150deg,#233150,#6d5bd0)'},
-    zeppelin:{id:'zeppelin',name:'Zeppelin Feld',city:'Nuremberg',addr:'Bayern, DE',cap:'40.000',tone:'linear-gradient(150deg,#3a2c66,#6366f1)'},
+    arena:{id:'arena',name:'Cluj Arena',city:'Cluj-Napoca',addr:'Aleea Stadionului 2',cap:'30.000',tone:'linear-gradient(150deg,#241a44,#6d28d9)'},
+    sala:{id:'sala',name:'Sala Mare · TN Cluj',city:'Cluj-Napoca',addr:'P-ța Ștefan cel Mare 24',cap:'820',tone:'linear-gradient(150deg,#2a2150,#7c3aed)'},
+    zeppelin:{id:'zeppelin',name:'Zeppelin Feld',city:'Nuremberg',addr:'Bayern, DE',cap:'40.000',tone:'linear-gradient(150deg,#3a2c66,#8b5cf6)'},
     turda:{id:'turda',name:'Salina Turda',city:'Turda',addr:'Aleea Durgăului 7',cap:'—',tone:'linear-gradient(150deg,#0f4c4a,#12b3a6)'},
   };
   const ART={
-    coldplay:{id:'coldplay',name:'Coldplay',role:'Headliner',g:'🎤',tone:'linear-gradient(135deg,#4f46e5,#312e81)',fol:'82M',bio:'Formație britanică de rock alternativ, una dintre cele mai apreciate live din lume.'},
-    guetta:{id:'guetta',name:'David Guetta',role:'DJ / Producer',g:'🎧',tone:'linear-gradient(135deg,#6366f1,#1e2a4a)',fol:'55M',bio:'DJ francez, pionier al EDM-ului comercial.'},
-    smiley:{id:'smiley',name:'Smiley',role:'Local act',g:'🎙',tone:'linear-gradient(135deg,#818cf8,#4338ca)',fol:'3.2M',bio:'Artist pop român, cofondator HaHaHa Production.'},
+    coldplay:{id:'coldplay',name:'Coldplay',role:'Headliner',g:'🎤',tone:'linear-gradient(135deg,#7c3aed,#2a1065)',fol:'82M',bio:'Formație britanică de rock alternativ, una dintre cele mai apreciate live din lume.'},
+    guetta:{id:'guetta',name:'David Guetta',role:'DJ / Producer',g:'🎧',tone:'linear-gradient(135deg,#8b5cf6,#241a44)',fol:'55M',bio:'DJ francez, pionier al EDM-ului comercial.'},
   };
   const EV={
-    coldplay:{id:'coldplay',t:'Coldplay — Music of the Spheres',s:'Coldplay',type:'event',cat:'Concerte',city:'Cluj-Napoca',ven:'arena',d:'19 Apr',mon:'Apr',day:'19',time:'20:00',from:175,tone:'linear-gradient(150deg,#3a1c6e,#6366f1)',g:'🎤',rat:'4.9',by:'Live Nation',
-      artists:['coldplay'],gallery:['linear-gradient(135deg,#4f46e5,#312e81)','linear-gradient(135deg,#6366f1,#1e2a4a)','linear-gradient(135deg,#818cf8,#4338ca)'],video:true,friends:['MI','AP','DL'],seatmap:true,
+    coldplay:{id:'coldplay',t:'Coldplay — Music of the Spheres',s:'Coldplay',type:'event',cat:'Concerte',city:'Cluj-Napoca',ven:'arena',d:'19 Apr',mon:'Apr',day:'19',time:'20:00',from:175,tone:'linear-gradient(150deg,#4c1d95,#8b5cf6)',g:'🎤',rat:'4.9',by:'Live Nation',
+      artists:['coldplay'],gallery:['linear-gradient(135deg,#7c3aed,#2a1065)','linear-gradient(135deg,#8b5cf6,#241a44)','linear-gradient(135deg,#a78bfa,#6d28d9)'],video:true,friends:['MI','AP','DL'],seatmap:true,
       tt:[{n:'Fan Pit',desc:'Cea mai apropiată zonă de scenă, în picioare.',p:350,pts:350,seat:false},{n:'Categoria I',desc:'Loc pe scaun, tribună centrală.',p:250,old:290,pts:250,seat:true},{n:'Categoria II',desc:'Loc pe scaun, tribună laterală.',p:175,pts:175,seat:true},{n:'Elev/Student',desc:'Necesită legitimație validă la intrare.',p:120,pts:120,seat:false}],
       bundles:[{n:'Pachet 2 persoane · Cat. I',desc:'2× Categoria I + program tipărit',p:460,old:500,pts:460},{n:'VIP Experience',desc:'Fast-track, lounge, welcome drink',p:690,pts:690}]},
-    celestial:{id:'celestial',t:'Celestial Echo: The Horizon',s:'Celestial Echo',type:'event',cat:'Concerte',city:'Nuremberg',ven:'zeppelin',d:'21 Oct',mon:'Oct',day:'21',time:'19:00',from:56,tone:'linear-gradient(150deg,#3a2c66,#818cf8)',g:'✨',rat:'4.7',by:'Zeppelin Live',
-      artists:['guetta'],gallery:['linear-gradient(135deg,#6366f1,#312e81)','linear-gradient(135deg,#818cf8,#4338ca)'],video:false,friends:['RS'],seatmap:false,
+    celestial:{id:'celestial',t:'Celestial Echo: The Horizon',s:'Celestial Echo',type:'event',cat:'Concerte',city:'Nuremberg',ven:'zeppelin',d:'21 Oct',mon:'Oct',day:'21',time:'19:00',from:56,tone:'linear-gradient(150deg,#3a2c66,#a78bfa)',g:'✨',rat:'4.7',by:'Zeppelin Live',
+      artists:['guetta'],gallery:['linear-gradient(135deg,#8b5cf6,#2a1065)','linear-gradient(135deg,#a78bfa,#6d28d9)'],video:false,friends:['RS'],seatmap:false,
       tt:[{n:'General Access',desc:'Acces general, în picioare.',p:56,pts:56,seat:false},{n:'Golden Circle',desc:'Zonă premium lângă scenă.',p:110,old:130,pts:110,seat:false}],bundles:[]},
-    swan:{id:'swan',t:'Lacul Lebedelor',s:'Lacul Lebedelor',type:'event',cat:'Teatru',city:'Cluj',ven:'sala',d:'18 Apr',mon:'Apr',day:'18',time:'19:00',from:80,tone:'linear-gradient(150deg,#233150,#6d5bd0)',g:'🩰',rat:'4.9',by:'Teatrul Național',
-      artists:[],gallery:['linear-gradient(135deg,#6d5bd0,#233150)'],video:false,friends:[],seatmap:true,
+    swan:{id:'swan',t:'Lacul Lebedelor',s:'Lacul Lebedelor',type:'event',cat:'Teatru',city:'Cluj',ven:'sala',d:'18 Apr',mon:'Apr',day:'18',time:'19:00',from:80,tone:'linear-gradient(150deg,#2a2150,#7c3aed)',g:'🩰',rat:'4.9',by:'Teatrul Național',
+      artists:[],gallery:['linear-gradient(135deg,#7c3aed,#2a2150)'],video:false,friends:[],seatmap:true,
       tt:[{n:'Parter',desc:'Rândurile 1–10, vizibilitate optimă.',p:120,pts:120,seat:true},{n:'Balcon',desc:'Etaj, vedere de ansamblu.',p:80,pts:80,seat:true}],bundles:[]},
     salina:{id:'salina',t:'Salina Turda — Tur & Agrement',s:'Salina Turda',type:'experience',cat:'Experiențe',city:'Turda',ven:'turda',d:'Zilnic',mon:'',day:'',time:'09–17',from:35,tone:'linear-gradient(150deg,#0f4c4a,#12b3a6)',g:'⛰',rat:'4.8',by:'via bilete.online',
       artists:[],gallery:['linear-gradient(135deg,#12b3a6,#0f4c4a)','linear-gradient(135deg,#0f766e,#134e4a)'],video:true,friends:['AP'],seatmap:false,
@@ -183,21 +194,22 @@
       artists:[],gallery:['linear-gradient(135deg,#a83e6a,#5b1f3a)'],video:false,friends:['DL'],seatmap:false,
       tt:[{n:'Degustare 5 vinuri',desc:'Cu platou de brânzeturi.',p:120,pts:120,seat:false},{n:'Degustare 3 vinuri',desc:'Introducere ghidată.',p:90,pts:90,seat:false}],bundles:[]},
   };
-  // aggregator (app.tics.ro) — events from other RO ticketing platforms
-  const TICS=[{s:'Smiley Live',city:'Arad',from:99,src:'iaBilet',tone:'linear-gradient(150deg,#4338ca,#818cf8)',g:'🎙',day:'02',mon:'Mai'},
-    {s:'Untold 2026',city:'Cluj',from:499,src:'Untold',tone:'linear-gradient(150deg,#1e2a4a,#6366f1)',g:'🎪',day:'06',mon:'Aug'},
-    {s:'Delia — Deliria',city:'București',from:129,src:'Entertix',tone:'linear-gradient(150deg,#6d5bd0,#312e81)',g:'🎤',day:'14',mon:'Iun'}];
-  const FEST={id:'nordvale',t:'Nordvale Festival 2026',s:'Nordvale',city:'Cluj',d:'10–13 Iul',from:420,tone:'linear-gradient(150deg,#0e1626,#4f46e5 130%)',g:'🎪',days:['Joi 10','Vin 11','Sâm 12','Dum 13'],
-    lineup:[['David Guetta','Headliner'],['Martin Garrix','Co-headliner'],['Post Malone','Headliner'],['Antonia','Local']],stages:['Main Stage','Arcadia','Sunset','Cashless Bar']};
+  // app.tics.ro aggregator — tracks 20 platforms, links out (does NOT sell)
+  const TICS={
+    smiley:{id:'smiley',s:'Smiley Live',cat:'Concerte',city:'Arad',day:'02',mon:'Mai',tone:'linear-gradient(150deg,#4c1d95,#a78bfa)',g:'🎙',stock:'40+',
+      offers:[['bilete.ro',95,'12 bilete'],['iaBilet',99,'stoc bun'],['Entertix',109,'ultimele 6']]},
+    untold:{id:'untold',s:'Untold 2026',cat:'Festival',city:'Cluj',day:'06',mon:'Aug',tone:'linear-gradient(150deg,#1e1b4b,#7c3aed)',g:'🎪',stock:'Puține',
+      offers:[['Untold.com',499,'Faza 3'],['iaBilet',520,'stoc bun'],['MyTicket',549,'ultimele']]},
+    delia:{id:'delia',s:'Delia — Deliria',cat:'Concerte',city:'București',day:'14',mon:'Iun',tone:'linear-gradient(150deg,#6d28d9,#2a1065)',g:'🎤',stock:'Disponibil',
+      offers:[['Entertix',129,'stoc bun'],['bilete.ro',135,'stoc bun'],['iaBilet',139,'stoc bun']]},
+  };
+  const FEST={id:'nordvale',t:'Nordvale Festival 2026',s:'Nordvale',city:'Cluj',d:'10–13 Iul',from:420,tone:'linear-gradient(150deg,#0e0b1a,#7c3aed 130%)',g:'🎪',days:['Joi 10','Vin 11','Sâm 12','Dum 13'],lineup:[['David Guetta','Headliner'],['Martin Garrix','Co-headliner'],['Post Malone','Headliner'],['Antonia','Local']],stages:['Main Stage','Arcadia','Sunset','Cashless Bar']};
+  const STAY=[{n:'Hotel Platinia',r:'4.7',dist:'0.4 km',p:420,x:44,y:38,tone:'linear-gradient(135deg,#7c3aed,#2a1065)'},{n:'Grand Hotel Italia',r:'4.6',dist:'1.2 km',p:380,x:66,y:52,tone:'linear-gradient(135deg,#4c1d95,#8b5cf6)'},{n:'Hampton by Hilton',r:'4.5',dist:'0.8 km',p:340,x:34,y:60,tone:'linear-gradient(135deg,#6d28d9,#a78bfa)'},{n:'DoubleTree Cluj',r:'4.4',dist:'1.5 km',p:300,x:58,y:30,tone:'linear-gradient(135deg,#312e81,#6366f1)'}];
   const CATS=[['Toate','✦'],['Concerte','🎵'],['Experiențe','⛰'],['Festival','🎪'],['Teatru','🩰'],['Sport','🏟'],['Stand-up','🎙']];
   const PREFS=['Rock','Pop','Electronic','Hip-Hop','Teatru','Stand-up','Festivaluri','Experiențe','Sport','Familie','Clasică','Jazz'];
-  const FEED=['coldplay','celestial','swan'];
-  const TIERS_SEAT={coldplay:['Categoria I','Categoria II'],swan:['Parter','Balcon']};
 
-  const ST={prefs:['Rock','Electronic','Experiențe'], ev:'coldplay', tt:null, seats:['D4','D5'], qty:2,
-    cart:{items:[],protect:false,cultural:false,discount:0,nameOnTicket:false}, balance:162.00, points:1240};
+  const ST={prefs:['Rock','Electronic','Experiențe'],ev:'coldplay',seats:['D4','D5'],obStep:0,cart:{protect:false,cultural:false,discount:0,nameOnTicket:false},balance:162.00,points:1240,_ttCounts:null,_ttEv:null,stayPin:0};
 
-  /* icons */
   const I={
     back:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
     bell:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
@@ -218,77 +230,68 @@
     plus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
     minus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>',
     arrow:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    ext:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>',
     star:'<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>',
     play:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>',
     bed:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4M2 17h20M6 11V9a2 2 0 0 1 2-2h3v4"/></svg>',
     car:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13v5H5z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></svg>',
     check:'<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
-    shield:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>',
     tag:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-7-7A2 2 0 0 1 3 12V4h8a2 2 0 0 1 1.4.6l8.2 8.2a1 1 0 0 1 0 1.4z"/><circle cx="7.5" cy="7.5" r="1"/></svg>',
+    layers:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/></svg>',
   };
   const google='<svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-2 3.2-4.9 3.2-7.9z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.3 1.1-3.6 1.1-2.8 0-5.1-1.9-6-4.4H2.3v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M6 14.3a6.6 6.6 0 0 1 0-4.2V7.3H2.3a11 11 0 0 0 0 9.9z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.3L6 10.1c.9-2.6 3.2-4.7 6-4.7z"/></svg>';
   const facebook='<svg width="19" height="19" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.6 4.5-4.6 1.3 0 2.6.2 2.6.2v2.9h-1.5c-1.4 0-1.9.9-1.9 1.8V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0 0 24 12z"/></svg>';
 
-  const money=n=>(Number.isInteger(n)?n:n.toFixed(2)), lei=n=>n.toFixed(2).replace('.',',');
+  const money=n=>(Number.isInteger(n)?n:n.toFixed(2)),lei=n=>n.toFixed(2).replace('.',',');
   const poster=(ev,cls,style,opt)=>`<div class="poster ${cls||''}" style="background:${ev.tone};${style||''}"><span class="glyph">${ev.g}</span>${opt&&opt.tag?`<span class="tag ${ev.type==='experience'?'exp':''}">${ev.type==='experience'?'Experiență':ev.cat}</span>`:''}${opt&&opt.date&&ev.day?`<div class="dt"><b>${ev.day}</b><span>${ev.mon}</span></div>`:''}</div>`;
-  const sb=t=>`<div class="sb ${t||'light'}"><span>9:41</span><span class="dd"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>`;
+  const sb=()=>`<div class="sb"><span>9:41</span><span class="dd"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" width="3" height="11" rx="1"/></svg><svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span></div>`;
   const toast=m=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>toastEl.classList.remove('show'),1900);};
 
   const S={},INIT={};
 
-  /* ===== SPLASH ===== */
-  S.splash=()=>`<div class="splash"><div class="mesh"></div><div class="grain"></div>
+  S.splash=()=>`<div class="splash"><div class="gridfx"></div><div class="mesh"></div>
     <span class="spark" style="top:20%;left:18%">✦</span><span class="spark" style="top:26%;right:16%;animation-delay:.7s">✧</span><span class="spark" style="bottom:28%;left:24%;animation-delay:1.2s">✦</span><span class="spark" style="bottom:22%;right:22%;animation-delay:1.8s">✧</span>
-    <div class="core"><div class="mark"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v14"/></svg></div>
-      <div class="wm">tixello</div><div class="tl">Evenimente, experiențe & cashless.</div></div><div class="prog"><i></i></div></div>`;
+    <div class="core"><div class="mark"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v14"/></svg></div><div class="wm">tixello</div><div class="tl">Evenimente, experiențe & cashless.</div></div><div class="prog"><i></i></div></div>`;
   INIT.splash=el=>{const t=setTimeout(()=>{if(top()==='splash')go('onboarding');},RM?600:2200);el.onclick=()=>{clearTimeout(t);if(top()==='splash')go('onboarding');};};
 
-  /* ===== ONBOARDING (with preferences) ===== */
+  /* ===== ONBOARDING — one step at a time ===== */
   const OB=[
-    {ill:`<div class="ill" style="background:linear-gradient(160deg,#eef0fe,#fff);display:grid;place-items:center">
-        <div style="position:relative;width:160px;height:150px">
-          <div style="position:absolute;left:6px;top:20px;width:96px;height:120px;border-radius:18px;background:${EV.coldplay.tone};transform:rotate(-9deg);box-shadow:var(--sh)"></div>
-          <div style="position:absolute;right:2px;top:12px;width:96px;height:120px;border-radius:18px;background:${EV.salina.tone};transform:rotate(9deg);box-shadow:var(--sh)"></div>
-          <div style="position:absolute;left:34px;top:4px;width:96px;height:126px;border-radius:18px;background:${EV.swan.tone};box-shadow:var(--sh);display:grid;place-items:center;font-size:40px">🎟</div></div></div>`,
+    {art:`<div class="obart" style="background:linear-gradient(160deg,#171326,#0f0d18);display:grid;place-items:center">
+        <div style="position:relative;width:180px;height:160px">
+          <div style="position:absolute;left:4px;top:22px;width:100px;height:126px;border-radius:18px;background:${EV.coldplay.tone};transform:rotate(-9deg);box-shadow:var(--sh)"></div>
+          <div style="position:absolute;right:0;top:14px;width:100px;height:126px;border-radius:18px;background:${EV.salina.tone};transform:rotate(9deg);box-shadow:var(--sh)"></div>
+          <div style="position:absolute;left:40px;top:4px;width:100px;height:132px;border-radius:18px;background:${EV.swan.tone};box-shadow:var(--sh);display:grid;place-items:center;font-size:42px">🎟</div></div></div>`,
       h:'Evenimente ȘI experiențe',p:'Concerte, teatru, stand-up — plus tururi, aventuri și degustări. Totul într-un singur loc.'},
-    {ill:`<div class="ill" style="background:linear-gradient(160deg,#1b2740,#4f46e5)">
-        <div style="position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:12px;padding-bottom:22px">
-          ${[60,90,70,110,80].map((h,i)=>`<span style="width:12px;height:${h}px;border-radius:9px;background:linear-gradient(180deg,#c7ccff,#818cf8);opacity:${.6+i*.08}"></span>`).join('')}</div>
-        <div style="position:absolute;top:18px;left:18px;color:#fff;font-weight:800">🎪 Nordvale · 4 zile</div>
-        <div style="position:absolute;bottom:16px;right:16px;background:rgba(255,255,255,.16);color:#fff;font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px">Cashless</div></div>`,
+    {art:`<div class="obart" style="background:linear-gradient(160deg,#241a44,#7c3aed)">
+        <div style="position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:12px;padding-bottom:26px">${[60,92,72,112,82].map((h,i)=>`<span style="width:13px;height:${h}px;border-radius:9px;background:linear-gradient(180deg,#e9d5ff,#a78bfa);opacity:${.62+i*.08}"></span>`).join('')}</div>
+        <div style="position:absolute;top:18px;left:18px;color:#fff;font-weight:800">🎪 Nordvale · 4 zile</div><div style="position:absolute;bottom:16px;right:16px;background:rgba(255,255,255,.18);color:#fff;font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px">Cashless</div></div>`,
       h:'Festivaluri & portofel cashless',p:'Program, lineup, brățară cashless și portofel electronic — fără cash, fără cozi.'},
-    {ill:`<div class="ill" style="background:linear-gradient(160deg,#eef0fe,#fff);display:grid;place-items:center">
-        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(var(--indigo) 0 70%, #e3e6fb 0);display:grid;place-items:center">
-          <div style="width:110px;height:110px;border-radius:50%;background:#fff;display:grid;place-items:center;text-align:center">
-            <div><div style="font-size:30px">🤖</div><div style="font-weight:800;font-size:13px;color:var(--indigo-3);margin-top:2px">Pentru tine</div></div></div></div></div>`,
-      h:'Sugestii AI, doar pentru tine',p:'Tixello adună evenimente din toată România (app.tics.ro) și îți recomandă ce ți se potrivește.'},
+    {art:`<div class="obart" style="background:linear-gradient(160deg,#171326,#0f0d18);display:grid;place-items:center">
+        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(var(--indigo) 0 70%, #241f3a 0);display:grid;place-items:center"><div style="width:112px;height:112px;border-radius:50%;background:#0f0d18;display:grid;place-items:center;text-align:center"><div><div style="font-size:32px">🤖</div><div style="font-weight:800;font-size:13px;color:var(--indigo-2);margin-top:2px">Pentru tine</div></div></div></div></div>`,
+      h:'Sugestii AI, doar pentru tine',p:'Adunăm evenimente din toată România (app.tics.ro, 20 platforme) și îți recomandăm ce ți se potrivește.'},
     {pref:true,h:'Ce îți place?',p:'Alege câteva interese — le folosim pentru recomandări personalizate.'},
   ];
-  S.onboarding=()=>`<div class="ob">${sb('light')}
-    <div class="between pad" style="padding-top:4px"><div class="row" style="gap:7px;font-weight:800;font-size:16px"><span style="color:var(--indigo)">●</span>tixello</div>
-      <button class="chip" data-a="go:login" style="border:0;background:transparent;color:var(--muted)">Sari peste</button></div>
-    <div class="seg" id="obSeg">${OB.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</div>
-    <div class="slides" id="obSlides">${OB.map(o=>`<div class="slide">
-      ${o.pref?`<div style="font-size:46px">✨</div>`:o.ill}
-      <h2>${o.h}</h2><p>${o.p}</p>
-      ${o.pref?`<div class="prefwrap" id="prefWrap">${PREFS.map(p=>`<button class="pref ${ST.prefs.includes(p)?'on':''}" data-a="pref:${p}">${p}</button>`).join('')}</div>`:''}</div>`).join('')}</div>
-    <div class="ob foot"><button class="cta" id="obBtn" data-a="obNext">Continuă ${I.arrow}</button></div></div>`;
-  INIT.onboarding=el=>{const sl=$('#obSlides',el),segs=$('#obSeg',el).children,btn=$('#obBtn',el);let idx=0;
-    sl.addEventListener('scroll',()=>{const i=Math.round(sl.scrollLeft/sl.clientWidth);if(i!==idx){idx=i;[...segs].forEach((s,j)=>s.classList.toggle('on',j<=idx));btn.childNodes[0].nodeValue=idx===OB.length-1?'Începe ':'Continuă ';}});};
+  S.onboarding=()=>{const i=ST.obStep,o=OB[i];
+    return `<div class="ob grid">${sb()}
+      <div class="between pad" style="padding-top:4px"><div class="row" style="gap:7px;font-weight:800;font-size:16px"><span style="color:var(--indigo-2)">●</span>tixello</div><button class="chip" data-a="go:login" style="border:0;background:transparent;color:var(--muted)">Sari peste</button></div>
+      <div class="seg">${OB.map((_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div>
+      <div class="body">${o.pref?'<div style="font-size:46px">✨</div>':o.art}<h2>${o.h}</h2><p>${o.p}</p>
+        ${o.pref?`<div class="prefwrap">${PREFS.map(p=>`<button class="pref ${ST.prefs.includes(p)?'on':''}" data-a="pref:${p}">${p}</button>`).join('')}</div>`:''}</div>
+      <div class="foot"><button class="cta" data-a="obNext">${i===OB.length-1?'Începe':'Continuă'} ${I.arrow}</button>${i>0?`<button class="cta ghost" data-a="obBack" style="padding:13px">Înapoi</button>`:''}</div></div>`;
+  };
 
-  /* ===== LOGIN ===== */
   S.login=()=>`<div style="min-height:100%;background:var(--bg);padding-bottom:26px">
-    <div class="login-top"><div class="mesh"></div>${sb('dark')}
-      <div style="position:relative;padding:22px 24px 0"><div style="width:50px;height:50px;border-radius:16px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;backdrop-filter:blur(8px)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v14"/></svg></div>
-        <div style="font-size:25px;font-weight:800;letter-spacing:-.03em;margin-top:14px">Bine ai revenit 👋</div><div style="font-size:13.5px;color:rgba(255,255,255,.8);margin-top:4px">Intră în cont și continuă distracția.</div></div></div>
+    <div class="login-top"><div class="gridfx"></div><div class="mesh"></div>${sb()}
+      <div style="position:relative;padding:20px 24px 0"><div style="width:50px;height:50px;border-radius:16px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;backdrop-filter:blur(8px)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v14"/></svg></div>
+        <div style="font-size:25px;font-weight:800;letter-spacing:-.03em;margin-top:14px">Bine ai revenit 👋</div><div style="font-size:13.5px;color:rgba(255,255,255,.82);margin-top:4px">Intră în cont și continuă distracția.</div></div></div>
     <div class="login-sheet stagger">
       <div class="row" style="gap:11px"><button class="sbtn" data-a="tab:home">${google} Google</button><button class="sbtn" data-a="tab:home">${facebook} Facebook</button></div>
       <div class="divider"><span></span>sau cu email<span></span></div>
       <div><div class="label">Email</div><div class="field">${I.user}<input placeholder="nume@email.ro" value="andrei@tixello.ro"></div></div>
       <div style="margin-top:12px"><div class="label">Parolă</div><div class="field"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><input type="password" placeholder="••••••••" value="password"></div></div>
-      <div class="between" style="margin:12px 2px 0;font-size:12.5px;font-weight:700"><span class="muted">Ține-mă minte</span><span style="color:var(--indigo-3)">Ai uitat parola?</span></div>
+      <div class="between" style="margin:12px 2px 0;font-size:12.5px;font-weight:700"><span class="muted">Ține-mă minte</span><span style="color:var(--indigo-2)">Ai uitat parola?</span></div>
       <button class="cta" data-a="tab:home" style="margin-top:16px">Autentificare</button></div>
-    <div style="text-align:center;font-size:13px;font-weight:700;color:var(--muted);margin-top:16px">Nu ai cont? <span style="color:var(--indigo-3)">Creează cont</span></div></div>`;
+    <div style="text-align:center;font-size:13px;font-weight:700;color:var(--muted);margin-top:16px">Nu ai cont? <span style="color:var(--indigo-2)">Creează cont</span></div></div>`;
 
   const nav=a=>`<div class="bnav">
     <div class="nav ${a==='home'?'on':''}" data-a="tab:home">${I.home}<span>Acasă</span></div>
@@ -296,394 +299,303 @@
     <div class="fab" data-a="tab:wallet">${I.qr}</div>
     <div class="nav ${a==='tickets'?'on':''}" data-a="tab:tickets">${I.ticket}<span>Bilete</span></div>
     <div class="nav ${a==='profile'?'on':''}" data-a="tab:profile">${I.user}<span>Profil</span></div></div>`;
+  const evMini=ev=>`<div data-a="go:event:${ev.id}" style="min-width:166px;cursor:pointer">${poster(ev,'card','height:142px',{date:1,tag:1})}<div style="padding:9px 3px 0"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11px;font-weight:600;margin-top:3px">${I.pin} ${ev.city}</div><div style="font-weight:800;color:var(--indigo-2);font-size:13px;margin-top:4px">de la $${money(ev.from)}</div></div></div>`;
 
-  const evMini=ev=>`<div data-a="go:event:${ev.id}" style="min-width:166px;cursor:pointer">${poster(ev,'card','height:142px;box-shadow:var(--sh-sm)',{date:1,tag:1})}
-    <div style="padding:9px 3px 0"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11px;font-weight:600;margin-top:3px">${I.pin} ${ev.city}</div>
-    <div style="font-weight:800;color:var(--indigo-3);font-size:13px;margin-top:4px">de la $${money(ev.from)}</div></div></div>`;
-
-  /* ===== HOME ===== */
-  S.home=()=>{const f=EV.coldplay, forYou=['coldplay','celestial','salina'].map(id=>EV[id]), exps=['salina','atv','wine'].map(id=>EV[id]);
-    return `<div style="min-height:100%;padding-bottom:6px;background:radial-gradient(120% 28% at 100% 0%,var(--indigo-soft),transparent 60%),var(--bg)">${sb('light')}
+  S.home=()=>{const f=EV.coldplay,forYou=['coldplay','celestial','salina'].map(id=>EV[id]),exps=['salina','atv','wine'].map(id=>EV[id]);
+    return `<div class="grid" style="min-height:100%;padding-bottom:6px">${sb()}
       <div class="hdr"><div class="row" style="gap:11px"><div class="avatar">AP</div><div><div class="loc-l">${I.pin} Locația ta</div><div class="loc-v">Cluj-Napoca <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div></div></div>
-        <div class="icon-btn" data-a="go:notif" style="position:relative">${I.bell}<span style="position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--indigo);border:2px solid #fff"></span></div></div>
-      <div class="pad" style="margin-top:14px"><div class="searchbar" data-a="go:search"><span class="muted">${I.search}</span><span class="ph">Caută evenimente, experiențe, artiști…</span><span style="color:var(--indigo-3)">${I.slider}</span></div></div>
+        <div class="icon-btn" data-a="go:notif" style="position:relative">${I.bell}<span style="position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--indigo);border:2px solid var(--bg)"></span></div></div>
+      <div class="pad" style="margin-top:14px"><div class="searchbar" data-a="go:search"><span class="muted">${I.search}</span><span class="ph">Caută evenimente, experiențe, artiști…</span><span style="color:var(--indigo-2)">${I.slider}</span></div></div>
       <div class="scroll-x" style="margin-top:14px">${CATS.map((c,i)=>`<button class="chip ind ${i===0?'on':''}" data-a="${i===0?'noop':'go:category:'+c[0]}">${c[1]} ${c[0]}</button>`).join('')}</div>
-
       <div class="between pad" style="margin-top:20px"><div><div class="eyebrow">🤖 Pentru tine · AI</div><div class="h2" style="margin-top:3px">Pe baza gusturilor tale</div></div></div>
       <div class="scroll-x" style="margin-top:11px">${forYou.map(evMini).join('')}</div>
-
       <div class="pad" style="margin-top:20px"><div class="card fade-up" data-a="go:event:${f.id}" style="overflow:hidden;cursor:pointer">${poster(f,'','height:184px',{tag:1,date:1})}
-        <div style="padding:14px 15px"><div class="between"><div class="h2">${f.s}</div><div class="badge" style="background:var(--indigo-soft);color:var(--indigo-3)">de la $${money(f.from)}</div></div>
+        <div style="padding:14px 15px"><div class="between"><div class="h2">${f.s}</div><div class="badge" style="background:var(--indigo-soft);color:var(--indigo-2)">de la $${money(f.from)}</div></div>
           <div class="row muted" style="gap:6px;margin-top:7px;font-size:12px;font-weight:600">${I.pin} ${VEN[f.ven].name} · ${f.city}</div>
           <div class="row" style="gap:12px;margin-top:6px;font-size:12px;font-weight:600"><span class="row muted" style="gap:5px">${I.cal} ${f.d}</span><span class="row muted" style="gap:5px">${I.clock} ${f.time}</span><span class="row" style="gap:4px;color:var(--amber)">${I.star} ${f.rat}</span></div></div></div></div>
-
       <div class="between pad" style="margin-top:20px"><div class="h2">Experiențe ⛰</div><span class="muted" style="font-size:12px;font-weight:700" data-a="go:category:Experiențe">Vezi tot</span></div>
       <div style="padding:0 20px;margin-top:4px;font-size:11.5px;color:var(--faint);font-weight:600">by bilete.online — operat de Tixello</div>
       <div class="scroll-x" style="margin-top:8px">${exps.map(evMini).join('')}</div>
-
-      <div class="pad" style="margin-top:20px"><div class="card" data-a="go:festival" style="overflow:hidden;cursor:pointer;background:${FEST.tone};border:0;color:#fff;padding:16px 17px;position:relative"><div style="position:absolute;right:-10px;bottom:-16px;font-size:84px;opacity:.16">🎪</div>
-        <div class="eyebrow" style="color:#c7ccff">Festival în desfășurare</div><div style="font-size:19px;font-weight:800;margin-top:5px">${FEST.t}</div><div style="font-size:12px;opacity:.78;margin-top:3px">${FEST.d} · Wonderland Cluj · cashless</div>
+      <div class="pad" style="margin-top:20px"><div class="card" data-a="go:festival" style="overflow:hidden;cursor:pointer;background:${FEST.tone};border:1px solid var(--line-2);color:#fff;padding:16px 17px;position:relative"><div style="position:absolute;right:-10px;bottom:-16px;font-size:84px;opacity:.18">🎪</div>
+        <div class="eyebrow" style="color:#c4b5fd">Festival în desfășurare</div><div style="font-size:19px;font-weight:800;margin-top:5px">${FEST.t}</div><div style="font-size:12px;opacity:.78;margin-top:3px">${FEST.d} · Wonderland Cluj · cashless</div>
         <div class="row" style="gap:8px;margin-top:12px"><span class="badge" style="background:rgba(255,255,255,.16)">Lineup 40+</span><span class="badge" style="background:rgba(255,255,255,.16)">Portofel cashless</span></div></div></div>
-
-      <div class="between pad" style="margin-top:22px"><div><div class="eyebrow">app.tics.ro</div><div class="h2" style="margin-top:3px">Din toată România</div></div></div>
-      <div style="padding:0 20px;margin-top:3px;font-size:11.5px;color:var(--faint);font-weight:600">Agregăm evenimente de la toate platformele de ticketing</div>
-      <div class="scroll-x" style="margin-top:10px">${TICS.map(t=>`<div style="min-width:166px;cursor:pointer" data-a="go:event:coldplay">${poster(t,'card','height:120px;box-shadow:var(--sh-sm)',{date:1})}
-        <div style="padding:9px 3px 0"><div style="font-weight:800;font-size:13px">${t.s}</div><div class="row" style="gap:5px;margin-top:3px"><span class="badge" style="background:var(--bg-2);color:var(--muted);font-size:9.5px">via ${t.src}</span></div>
-        <div style="font-weight:800;color:var(--indigo-3);font-size:12.5px;margin-top:4px">de la $${t.from}</div></div></div>`).join('')}</div>
+      <div class="between pad" style="margin-top:22px"><div><div class="eyebrow" style="color:var(--cyan)">app.tics.ro</div><div class="h2" style="margin-top:3px">Din toată România</div></div></div>
+      <div style="padding:0 20px;margin-top:3px;font-size:11.5px;color:var(--faint);font-weight:600">Urmărim 20 platforme în timp real · te trimitem la cel mai ieftin</div>
+      <div class="scroll-x" style="margin-top:10px">${Object.values(TICS).map(t=>{const ch=Math.min(...t.offers.map(o=>o[1]));return `<div style="min-width:176px;cursor:pointer" data-a="go:ticsoffers:${t.id}">${poster(t,'card','height:118px',{date:1})}
+        <div style="padding:9px 3px 0"><div style="font-weight:800;font-size:13px">${t.s}</div><div class="row" style="gap:6px;margin-top:4px"><span class="badge" style="background:var(--cyan-soft);color:var(--cyan);font-size:9.5px">${t.offers.length} piețe</span><span class="badge" style="background:var(--green-soft);color:var(--green-2);font-size:9.5px">min ${ch} lei</span></div></div></div>`;}).join('')}</div>
       ${nav('home')}</div>`;
   };
 
-  /* ===== EXPLORE (AI tailored) ===== */
   S.explore=()=>{const rec=['coldplay','salina','swan'].map(id=>EV[id]);
-    return `<div style="min-height:100%;background:var(--bg);padding-bottom:6px">${sb('light')}
+    return `<div class="grid" style="min-height:100%;padding-bottom:6px">${sb()}
     <div class="pad" style="padding-top:8px"><div class="between"><div><div class="eyebrow">Descoperă</div><h1 class="h1" style="margin-top:4px">Explorează</h1></div><div class="icon-btn" data-a="go:search">${I.search}</div></div></div>
-    <div class="pad" style="margin-top:14px"><div class="card" style="background:linear-gradient(135deg,var(--indigo-3),var(--indigo-ink));border:0;color:#fff;padding:15px 16px;position:relative;overflow:hidden">
-      <div style="position:absolute;right:-8px;bottom:-14px;font-size:76px;opacity:.18">🤖</div><div class="eyebrow" style="color:#c7ccff">Recomandat pentru tine</div>
-      <div style="font-size:15px;font-weight:800;margin-top:5px">Pentru că îți place ${ST.prefs.slice(0,2).join(' & ')||'muzica'}</div>
-      <div style="font-size:12px;opacity:.8;margin-top:3px">${ST.prefs.length} interese · editează în profil</div></div></div>
+    <div class="pad" style="margin-top:14px"><div class="card" style="background:linear-gradient(135deg,var(--indigo-3),#2a1065);border:1px solid var(--line-2);color:#fff;padding:15px 16px;position:relative;overflow:hidden"><div style="position:absolute;right:-8px;bottom:-14px;font-size:76px;opacity:.2">🤖</div><div class="eyebrow" style="color:#c4b5fd">Recomandat pentru tine</div><div style="font-size:15px;font-weight:800;margin-top:5px">Pentru că îți place ${ST.prefs.slice(0,2).join(' & ')||'muzica'}</div><div style="font-size:12px;opacity:.82;margin-top:3px">${ST.prefs.length} interese · editează în profil</div></div></div>
     <div class="scroll-x" style="margin-top:12px">${rec.map(evMini).join('')}</div>
-
-    <div class="pad" style="margin-top:20px"><div class="h2" style="font-size:15px;margin-bottom:11px">Categorii</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
-        ${[['Concerte','🎵','linear-gradient(135deg,#4f46e5,#312e81)'],['Experiențe','⛰','linear-gradient(135deg,#0f766e,#12b3a6)'],['Festival','🎪','linear-gradient(135deg,#1e2a4a,#6366f1)'],['Teatru','🩰','linear-gradient(135deg,#6d5bd0,#312e81)']].map(c=>`
-        <div data-a="${c[0]==='Festival'?'go:festival':'go:category:'+c[0]}" style="border-radius:20px;padding:15px;color:#fff;background:${c[2]};box-shadow:var(--sh-sm);cursor:pointer;position:relative;overflow:hidden;height:96px"><span style="position:absolute;right:-6px;bottom:-12px;font-size:60px;opacity:.24">${c[1]}</span><div style="font-weight:800;font-size:15px">${c[0]}</div></div>`).join('')}</div></div>
-
+    <div class="pad" style="margin-top:20px"><div class="h2" style="font-size:15px;margin-bottom:11px">Categorii</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+      ${[['Concerte','🎵','linear-gradient(135deg,#7c3aed,#2a1065)'],['Experiențe','⛰','linear-gradient(135deg,#0f766e,#12b3a6)'],['Festival','🎪','linear-gradient(135deg,#241a44,#8b5cf6)'],['Teatru','🩰','linear-gradient(135deg,#6d28d9,#2a1065)']].map(c=>`<div data-a="${c[0]==='Festival'?'go:festival':'go:category:'+c[0]}" style="border-radius:20px;padding:15px;color:#fff;background:${c[2]};box-shadow:var(--sh-sm);cursor:pointer;position:relative;overflow:hidden;height:96px;border:1px solid var(--line-2)"><span style="position:absolute;right:-6px;bottom:-12px;font-size:60px;opacity:.26">${c[1]}</span><div style="font-weight:800;font-size:15px">${c[0]}</div></div>`).join('')}</div></div>
     <div class="between pad" style="margin-top:20px"><div class="h2" style="font-size:15px">Festivaluri lângă tine</div><span class="muted" style="font-size:12px;font-weight:700">Hartă</span></div>
-    <div class="pad" style="margin-top:10px"><div class="card" style="overflow:hidden"><div style="height:120px;background:linear-gradient(120deg,#dbe0f4,#eef1f8);position:relative"><div style="position:absolute;inset:0;background-image:linear-gradient(rgba(150,160,200,.32) 1px,transparent 1px),linear-gradient(90deg,rgba(150,160,200,.32) 1px,transparent 1px);background-size:26px 26px"></div>
-      <div style="position:absolute;left:40%;top:44%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid #fff;box-shadow:var(--sh-in)"></div><div style="position:absolute;left:66%;top:32%;width:12px;height:12px;border-radius:50%;background:var(--blue);border:3px solid #fff"></div></div>
+    <div class="pad" style="margin-top:10px"><div class="card" style="overflow:hidden"><div style="height:120px;background:linear-gradient(120deg,#1a1730,#0f0d18);position:relative"><div style="position:absolute;inset:0;background-image:var(--grid);background-size:24px 24px;opacity:.6"></div><div style="position:absolute;left:40%;top:44%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid var(--bg);box-shadow:var(--sh-p)"></div><div style="position:absolute;left:66%;top:32%;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:3px solid var(--bg)"></div></div>
       <div class="listitem" style="border:0;border-radius:0" data-a="go:festival"><div style="width:44px;height:44px;border-radius:13px;background:${FEST.tone};display:grid;place-items:center;font-size:20px">🎪</div><div style="flex:1"><div style="font-weight:800;font-size:14px">Nordvale Festival</div><div class="muted" style="font-size:11.5px">Wonderland · 8 km</div></div><span class="muted">${I.arrow}</span></div></div></div>
     ${nav('explore')}</div>`;
   };
 
-  /* ===== CATEGORY LISTING + FILTERS ===== */
-  S.category=(d)=>{const cat=d.id||'Concerte'; const list=Object.values(EV).filter(e=>cat==='Toate'||e.cat===cat);
-    return `<div style="min-height:100%;background:var(--bg)">${sb('light')}
+  S.category=(d)=>{const cat=d.id||'Concerte';const list=Object.values(EV).filter(e=>cat==='Toate'||e.cat===cat);
+    return `<div class="grid" style="min-height:100%">${sb()}
     <div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div><div class="h2">${cat}</div><div class="muted" style="font-size:11.5px">${list.length} rezultate</div></div></div><div class="icon-btn" data-a="go:search">${I.search}</div></div>
-    <div class="filterbar" style="margin-top:14px"><div class="flt" data-a="fltToggle:0">${I.slider} Filtre</div><div class="flt on">Sortează: Recomandate</div><div class="flt">Azi</div><div class="flt">Weekend</div><div class="flt">Sub 100 lei</div><div class="flt">Cluj</div><div class="flt">Gratuite</div></div>
-    <div class="pad" id="fltPanel" style="display:none;margin-top:12px"><div class="card" style="padding:15px">
-      <div class="label">Preț maxim</div><input type="range" min="0" max="500" value="300" style="width:100%;accent-color:var(--indigo)">
-      <div class="between" style="margin-top:10px"><span class="label" style="margin:0">Doar cu locuri</span><div class="toggle"></div></div>
-      <div class="between" style="margin-top:12px"><span class="label" style="margin:0">Doar experiențe</span><div class="toggle"></div></div>
-      <button class="cta" style="margin-top:14px;padding:13px">Aplică filtre</button></div></div>
-    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
-      ${list.map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="overflow:hidden;cursor:pointer;display:flex;gap:12px;padding:11px">${poster(ev,'','width:78px;height:78px;border-radius:16px;flex:none',{tag:1})}
-        <div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:3px">${I.pin} ${VEN[ev.ven].name}</div>
-          <div class="row muted" style="gap:10px;font-size:11.5px;margin-top:2px"><span class="row" style="gap:4px">${I.cal} ${ev.d}</span><span class="row" style="gap:3px;color:var(--amber)">${I.star} ${ev.rat}</span></div>
-          <div class="between" style="margin-top:6px"><span style="font-weight:800;color:var(--indigo-3);font-size:13.5px">de la $${money(ev.from)}</span>${ev.type==='experience'?'<span class="badge" style="background:var(--indigo-soft);color:var(--indigo-3)">Experiență</span>':''}</div></div></div>`).join('')}
-    </div><div style="height:20px"></div></div>`;
+    <div class="filterbar" style="margin-top:14px"><div class="flt" data-a="fltToggle:0">${I.slider} Filtre</div><div class="flt on">Sortează: Recomandate</div><div class="flt">Azi</div><div class="flt">Weekend</div><div class="flt">Sub 100 lei</div><div class="flt">Cluj</div></div>
+    <div class="pad" id="fltPanel" style="display:none;margin-top:12px"><div class="card" style="padding:15px"><div class="label">Preț maxim</div><input type="range" min="0" max="500" value="300" style="width:100%;accent-color:var(--indigo)"><div class="between" style="margin-top:10px"><span class="label" style="margin:0">Doar cu locuri</span><div class="toggle"></div></div><div class="between" style="margin-top:12px"><span class="label" style="margin:0">Doar experiențe</span><div class="toggle"></div></div><button class="cta" style="margin-top:14px;padding:13px">Aplică filtre</button></div></div>
+    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">${list.map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="overflow:hidden;cursor:pointer;display:flex;gap:12px;padding:11px">${poster(ev,'','width:78px;height:78px;border-radius:16px;flex:none',{tag:1})}<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:3px">${I.pin} ${VEN[ev.ven].name}</div><div class="row muted" style="gap:10px;font-size:11.5px;margin-top:2px"><span class="row" style="gap:4px">${I.cal} ${ev.d}</span><span class="row" style="gap:3px;color:var(--amber)">${I.star} ${ev.rat}</span></div><div class="between" style="margin-top:6px"><span style="font-weight:800;color:var(--indigo-2);font-size:13.5px">de la $${money(ev.from)}</span>${ev.type==='experience'?'<span class="badge" style="background:var(--indigo-soft);color:var(--indigo-2)">Experiență</span>':''}</div></div></div>`).join('')}</div><div style="height:20px"></div></div>`;
   };
 
-  /* ===== SEARCH ===== */
-  S.search=()=>`<div style="min-height:100%;background:var(--bg)">${sb('light')}
-    <div class="row pad" style="padding-top:8px;gap:11px"><div class="icon-btn" data-a="back">${I.back}</div><div class="field" style="flex:1;background:var(--surface)"><span class="muted">${I.search}</span><input id="searchInput" placeholder="Caută evenimente, experiențe, artiști…"><span style="color:var(--indigo-3)">${I.slider}</span></div></div>
-    <div class="pad" style="margin-top:18px" id="searchIdle">
-      <div class="between"><div class="h2" style="font-size:14px">Căutări recente</div><span class="muted" style="font-size:12px;font-weight:700">Șterge</span></div>
+  S.search=()=>`<div class="grid" style="min-height:100%">${sb()}
+    <div class="row pad" style="padding-top:8px;gap:11px"><div class="icon-btn" data-a="back">${I.back}</div><div class="field" style="flex:1"><span class="muted">${I.search}</span><input id="searchInput" placeholder="Caută evenimente, experiențe, artiști…"><span style="color:var(--indigo-2)">${I.slider}</span></div></div>
+    <div class="pad" style="margin-top:18px" id="searchIdle"><div class="between"><div class="h2" style="font-size:14px">Căutări recente</div><span class="muted" style="font-size:12px;font-weight:700">Șterge</span></div>
       <div class="scroll-x" style="padding:11px 0 0;margin:0">${['Coldplay','Salina Turda','Nordvale','Teatru'].map(t=>`<button class="chip" data-a="searchDo:${t}">${t} ✕</button>`).join('')}</div>
       <div class="h2" style="font-size:14px;margin-top:22px;margin-bottom:11px">În trend 🔥</div>
-      <div style="display:flex;flex-direction:column;gap:9px">${['Nordvale Festival 2026','Coldplay','Salina Turda','ATV Adventure','Smiley Live'].map((t,i)=>`<div class="row" data-a="searchDo:${t}" style="gap:12px;cursor:pointer"><span style="width:26px;text-align:center;font-weight:800;color:${i<3?'var(--indigo-3)':'var(--faint)'}">${i+1}</span><div style="flex:1;font-weight:700;font-size:14px">${t}</div><span class="muted">${I.search}</span></div>`).join('')}</div></div>
-    <div class="pad" id="searchResults" style="margin-top:14px;display:none">
-      <div class="scroll-x" style="padding:0 0 12px;margin:0"><button class="chip ind on">Toate</button><button class="chip">Evenimente</button><button class="chip">Experiențe</button><button class="chip">Artiști</button></div>
-      <div id="searchList" style="display:flex;flex-direction:column;gap:11px"></div></div></div>`;
+      <div style="display:flex;flex-direction:column;gap:9px">${['Nordvale Festival 2026','Coldplay','Salina Turda','ATV Adventure','Smiley Live'].map((t,i)=>`<div class="row" data-a="searchDo:${t}" style="gap:12px;cursor:pointer"><span style="width:26px;text-align:center;font-weight:800;color:${i<3?'var(--indigo-2)':'var(--faint)'}">${i+1}</span><div style="flex:1;font-weight:700;font-size:14px">${t}</div><span class="muted">${I.search}</span></div>`).join('')}</div></div>
+    <div class="pad" id="searchResults" style="margin-top:14px;display:none"><div class="scroll-x" style="padding:0 0 12px;margin:0"><button class="chip ind on">Toate</button><button class="chip">Evenimente</button><button class="chip">Experiențe</button><button class="chip">Artiști</button></div><div id="searchList" style="display:flex;flex-direction:column;gap:11px"></div></div></div>`;
   INIT.search=el=>{const inp=$('#searchInput',el);setTimeout(()=>inp&&inp.focus(),350);
-    const render=()=>{const v=(inp.value||'').toLowerCase();const idle=$('#searchIdle',el),res=$('#searchResults',el),list=$('#searchList',el);
-      if(!v){idle.style.display='block';res.style.display='none';return;}idle.style.display='none';res.style.display='block';
+    const render=()=>{const v=(inp.value||'').toLowerCase();const idle=$('#searchIdle',el),res=$('#searchResults',el),list=$('#searchList',el);if(!v){idle.style.display='block';res.style.display='none';return;}idle.style.display='none';res.style.display='block';
       const hits=Object.values(EV).filter(e=>e.t.toLowerCase().includes(v)||e.cat.toLowerCase().includes(v)||e.city.toLowerCase().includes(v));const arr=hits.length?hits:Object.values(EV).slice(0,3);
-      list.innerHTML=arr.map(ev=>`<div class="listitem" data-a="go:event:${ev.id}" style="cursor:pointer">${poster(ev,'','width:52px;height:52px;border-radius:14px;flex:none',{tag:1})}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px">${ev.cat} · ${ev.city}</div></div><div style="font-weight:800;color:var(--indigo-3);font-size:13px">$${money(ev.from)}</div></div>`).join('');};
+      list.innerHTML=arr.map(ev=>`<div class="listitem" data-a="go:event:${ev.id}" style="cursor:pointer">${poster(ev,'','width:52px;height:52px;border-radius:14px;flex:none',{tag:1})}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px">${ev.cat} · ${ev.city}</div></div><div style="font-weight:800;color:var(--indigo-2);font-size:13px">$${money(ev.from)}</div></div>`).join('');};
     inp&&inp.addEventListener('input',render);};
 
-  /* ===== EVENT DETAIL (rich) ===== */
   S.event=(d)=>{const ev=EV[d.id||ST.ev];ST.ev=ev.id;const v=VEN[ev.ven];
-    return `<div style="min-height:100%;background:var(--dim);color:#fff;padding-bottom:2px">
-      <div class="poster" style="background:${ev.tone};height:388px;border-radius:0 0 30px 30px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 26%,rgba(14,22,38,.95))"></div>${sb('dark')}
+    return `<div style="min-height:100%;background:var(--bg);padding-bottom:2px">
+      <div class="poster" style="background:${ev.tone};height:388px;border-radius:0 0 30px 30px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 26%,rgba(11,9,18,.97))"></div>${sb()}
         <div class="between pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="row" style="gap:9px"><div class="icon-btn glass">${I.share}</div><div class="icon-btn glass">${I.save}</div></div></div>
         ${ev.video?`<div style="position:absolute;left:50%;top:150px;transform:translateX(-50%)"><div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(8px);display:grid;place-items:center;color:#fff">${I.play}</div></div>`:''}
-        <div style="position:absolute;left:20px;right:20px;bottom:22px"><span class="badge" style="background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff">${ev.type==='experience'?'Experiență':ev.cat} · ⭐ ${ev.rat}</span>
-          <div style="font-size:23px;font-weight:800;letter-spacing:-.03em;margin-top:10px;line-height:1.12;text-wrap:balance">${ev.t}</div></div></div>
+        <div style="position:absolute;left:20px;right:20px;bottom:22px"><span class="badge" style="background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff">${ev.type==='experience'?'Experiență':ev.cat} · ⭐ ${ev.rat}</span><div style="font-size:23px;font-weight:800;letter-spacing:-.03em;margin-top:10px;line-height:1.12;text-wrap:balance">${ev.t}</div></div></div>
       <div class="pad" style="margin-top:16px">
-        <div class="row" style="gap:22px"><div class="row" style="gap:9px"><div class="icon-btn dark" style="width:38px;height:38px">${I.cal}</div><div><div style="font-size:12.5px;font-weight:700">${ev.d}</div><div style="font-size:11px;color:rgba(255,255,255,.5)">Ora ${ev.time}</div></div></div>
-          <div class="row" style="gap:9px" data-a="go:venue:${v.id}"><div class="icon-btn dark" style="width:38px;height:38px">${I.pin}</div><div><div style="font-size:12.5px;font-weight:700">${v.name}</div><div style="font-size:11px;color:rgba(255,255,255,.5)">Vezi locația ›</div></div></div></div>
-
-        ${ev.friends.length?`<div class="listitem" style="background:var(--dim-2);border-color:var(--dim-line);margin-top:18px">
-          <div class="row" style="margin-right:2px">${ev.friends.map((f,i)=>`<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-4));display:grid;place-items:center;font-size:10px;font-weight:800;border:2px solid var(--dim-2);margin-left:${i?-10:0}px">${f}</div>`).join('')}</div>
-          <div style="flex:1;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.75)"><b style="color:#fff">${ev.friends.length} prieteni</b> au deja bilete</div></div>`:''}
-
-        ${ev.artists.length?`<div class="h2" style="margin-top:22px;font-size:15px">Artiști</div>
-        <div class="scroll-x" style="margin-top:11px;padding:0">${ev.artists.map(id=>{const a=ART[id];return `<div data-a="go:artist:${id}" style="min-width:90px;text-align:center;cursor:pointer"><div style="width:72px;height:72px;border-radius:24px;margin:0 auto;background:${a.tone};display:grid;place-items:center;font-size:28px">${a.g}</div><div style="font-weight:700;font-size:12.5px;margin-top:7px">${a.name}</div><div style="font-size:10.5px;color:rgba(255,255,255,.5)">${a.role}</div></div>`;}).join('')}</div>`:''}
-
-        <div class="h2" style="margin-top:22px;font-size:15px">Despre</div>
-        <p style="color:rgba(255,255,255,.64);font-size:13.5px;line-height:1.62;margin-top:8px">Un spectacol care îmbină energie, atmosferă și un show de neuitat. Fie că ești fan de mult timp sau descoperi acum, aceasta e experiența ta.</p>
-
-        <div class="h2" style="margin-top:22px;font-size:15px">Galerie</div>
-        <div class="scroll-x" style="margin-top:11px;padding:0">${ev.gallery.map(g=>`<div style="min-width:140px;height:100px;border-radius:16px;background:${g};box-shadow:var(--sh)"></div>`).join('')}${ev.video?`<div style="min-width:140px;height:100px;border-radius:16px;background:${ev.tone};display:grid;place-items:center;color:#fff">${I.play}</div>`:''}</div>
-
-        <div class="h2" style="margin-top:22px;font-size:15px">Locație</div>
-        <div class="listitem" data-a="go:venue:${v.id}" style="background:var(--dim-2);border-color:var(--dim-line);margin-top:11px;cursor:pointer"><div style="width:44px;height:44px;border-radius:13px;background:${v.tone}"></div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">${v.name}</div><div style="font-size:11px;color:rgba(255,255,255,.5)">${v.addr} · ${v.city}</div></div><span style="color:rgba(255,255,255,.5)">${I.arrow}</span></div>
-        <div style="height:120px;border-radius:18px;margin-top:11px;background:linear-gradient(120deg,#182236,#243149);position:relative;overflow:hidden;border:1px solid var(--dim-line)"><div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:24px 24px"></div><div style="position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid #fff"></div></div>
-        <div class="row" style="gap:10px;margin-top:11px"><button class="cta ghost" style="background:var(--dim-2);border-color:var(--dim-line);color:#fff;padding:13px">${I.car} Cum ajung</button><button class="cta ghost" style="background:var(--dim-2);border-color:var(--dim-line);color:#fff;padding:13px">${I.bed} Cazare</button></div>
-
-        <div class="listitem" style="background:linear-gradient(135deg,#0f766e,#12b3a6);border:0;margin-top:11px;color:#fff"><div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center">${I.bed}</div><div style="flex:1"><div style="font-weight:800;font-size:13.5px">Cazare prin Stay22</div><div style="font-size:11.5px;opacity:.85">Hoteluri lângă ${v.name} · de la 220 lei/noapte</div></div>${I.arrow}</div>
+        <div class="row" style="gap:22px"><div class="row" style="gap:9px"><div class="icon-btn" style="width:38px;height:38px">${I.cal}</div><div><div style="font-size:12.5px;font-weight:700">${ev.d}</div><div style="font-size:11px;color:var(--muted)">Ora ${ev.time}</div></div></div>
+          <div class="row" style="gap:9px" data-a="go:venue:${v.id}"><div class="icon-btn" style="width:38px;height:38px">${I.pin}</div><div><div style="font-size:12.5px;font-weight:700">${v.name}</div><div style="font-size:11px;color:var(--indigo-2)">Vezi locația ›</div></div></div></div>
+        ${ev.friends.length?`<div class="listitem" style="margin-top:18px"><div class="row" style="margin-right:2px">${ev.friends.map((fr,i)=>`<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-4));display:grid;place-items:center;font-size:10px;font-weight:800;border:2px solid var(--surface-solid);margin-left:${i?-10:0}px">${fr}</div>`).join('')}</div><div style="flex:1;font-size:12.5px;font-weight:600;color:var(--ink-2)"><b>${ev.friends.length} prieteni</b> au deja bilete</div></div>`:''}
+        ${ev.artists.length?`<div class="h2" style="margin-top:22px;font-size:15px">Artiști</div><div class="scroll-x" style="margin-top:11px;padding:0">${ev.artists.map(id=>{const a=ART[id];return `<div data-a="go:artist:${id}" style="min-width:90px;text-align:center;cursor:pointer"><div style="width:72px;height:72px;border-radius:24px;margin:0 auto;background:${a.tone};display:grid;place-items:center;font-size:28px">${a.g}</div><div style="font-weight:700;font-size:12.5px;margin-top:7px">${a.name}</div><div style="font-size:10.5px;color:var(--muted)">${a.role}</div></div>`;}).join('')}</div>`:''}
+        <div class="h2" style="margin-top:22px;font-size:15px">Despre</div><p style="color:var(--ink-2);font-size:13.5px;line-height:1.62;margin-top:8px">Un spectacol care îmbină energie, atmosferă și un show de neuitat. Fie că ești fan de mult timp sau descoperi acum, aceasta e experiența ta.</p>
+        <div class="h2" style="margin-top:22px;font-size:15px">Galerie</div><div class="scroll-x" style="margin-top:11px;padding:0">${ev.gallery.map(g=>`<div style="min-width:140px;height:100px;border-radius:16px;background:${g};box-shadow:var(--sh)"></div>`).join('')}${ev.video?`<div style="min-width:140px;height:100px;border-radius:16px;background:${ev.tone};display:grid;place-items:center;color:#fff">${I.play}</div>`:''}</div>
+        <div class="h2" style="margin-top:22px;font-size:15px">Locație & cazare</div>
+        <div class="listitem" data-a="go:venue:${v.id}" style="margin-top:11px;cursor:pointer"><div style="width:44px;height:44px;border-radius:13px;background:${v.tone}"></div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">${v.name}</div><div style="font-size:11px;color:var(--muted)">${v.addr} · ${v.city}</div></div><span class="muted">${I.arrow}</span></div>
+        <div class="row" style="gap:10px;margin-top:11px"><button class="cta ghost" style="padding:13px" data-a="go:stay22:${v.id}">${I.car} Cum ajung</button><button class="cta ghost" style="padding:13px" data-a="go:stay22:${v.id}">${I.bed} Cazare</button></div>
+        <div class="listitem" data-a="go:stay22:${v.id}" style="background:linear-gradient(135deg,#0f766e,#12b3a6);border:0;margin-top:11px;color:#fff;cursor:pointer"><div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center">${I.bed}</div><div style="flex:1"><div style="font-weight:800;font-size:13.5px">Cazare prin Stay22</div><div style="font-size:11.5px;opacity:.85">Hartă cu hoteluri lângă ${v.name}</div></div>${I.arrow}</div>
       </div>
-      <div class="dock dk"><div class="row" style="gap:12px;align-items:center"><div><div style="font-size:10.5px;color:rgba(255,255,255,.55);font-weight:700">Preț de la</div><div style="font-weight:800;font-size:19px">$${money(ev.from)}</div></div><button class="cta" data-a="go:tickettypes" style="flex:1">Alege bilete ${I.arrow}</button></div></div></div>`;
+      <div class="dock"><div class="row" style="gap:12px;align-items:center"><div><div style="font-size:10.5px;color:var(--muted);font-weight:700">Preț de la</div><div style="font-weight:800;font-size:19px">$${money(ev.from)}</div></div><button class="cta" data-a="go:tickettypes" style="flex:1">Alege bilete ${I.arrow}</button></div></div></div>`;
   };
-  INIT.event=()=>{};
 
-  /* ===== ARTIST PROFILE ===== */
+  /* ===== STAY22 MAP EMBED ===== */
+  S.stay22=(d)=>{const v=VEN[d.id]||VEN.arena;
+    return `<div style="min-height:100%;background:var(--bg);display:flex;flex-direction:column;height:100%">
+      <div style="position:relative;flex:1;min-height:0;background:linear-gradient(120deg,#141126,#0d0b16)">
+        <div style="position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7"></div>
+        <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 55%, rgba(139,92,246,.14), transparent 60%)"></div>
+        ${sb()}
+        <div class="between pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass">${I.slider}</div></div>
+        <div style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);text-align:center"><div style="width:18px;height:18px;border-radius:50%;background:var(--indigo);border:3px solid #fff;box-shadow:var(--sh-p);margin:0 auto"></div><div style="font-size:10px;font-weight:800;color:#fff;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:999px;margin-top:6px">${v.name}</div></div>
+        ${STAY.map((s,i)=>`<div class="mappin ${i===ST.stayPin?'on':''}" style="left:${s.x}%;top:${s.y}%" data-a="stayPin:${i}"><div class="bub">${s.p} lei</div></div>`).join('')}
+        <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:var(--faint);font-weight:700">powered by Stay22</div>
+      </div>
+      <div style="background:var(--bg);border-radius:24px 24px 0 0;margin-top:-18px;position:relative;box-shadow:0 -20px 40px -20px rgba(0,0,0,.6);padding-bottom:14px">
+        <div style="width:40px;height:4px;border-radius:9px;background:var(--line-2);margin:10px auto 6px"></div>
+        <div class="between pad"><div class="h2" style="font-size:15px">Cazare lângă ${v.name}</div><span class="muted" style="font-size:11.5px;font-weight:700">${STAY.length} opțiuni</span></div>
+        <div class="scroll-x" style="margin-top:10px" id="stayList">${STAY.map((s,i)=>`<div class="card" data-a="stayPin:${i}" style="min-width:220px;padding:11px;display:flex;gap:11px;cursor:pointer;border-color:${i===ST.stayPin?'var(--indigo)':'var(--line)'}"><div style="width:54px;height:54px;border-radius:14px;background:${s.tone};flex:none"></div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.n}</div><div class="row" style="gap:8px;margin-top:3px;font-size:11px"><span style="color:var(--amber);font-weight:700">★ ${s.r}</span><span class="muted">${s.dist}</span></div><div style="font-weight:800;color:var(--indigo-2);font-size:13px;margin-top:5px">${s.p} lei<span class="muted" style="font-weight:600;font-size:10.5px"> /noapte</span></div></div></div>`).join('')}</div>
+        <div class="pad" style="margin-top:12px"><button class="cta green" data-a="noop">Rezervă prin Stay22 ${I.ext}</button></div>
+      </div></div>`;
+  };
+
+  /* ===== app.tics.ro OFFERS (links out, does not sell) ===== */
+  S.ticsoffers=(d)=>{const t=TICS[d.id]||TICS.smiley;const sorted=[...t.offers].sort((a,b)=>a[1]-b[1]);
+    return `<div class="grid" style="min-height:100%">
+      <div class="poster" style="background:${t.tone};height:210px;border-radius:0 0 28px 28px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 40%,rgba(11,9,18,.92))"></div>${sb()}
+        <div class="between pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass">${I.save}</div></div>
+        <div style="position:absolute;left:20px;right:20px;bottom:18px"><span class="badge" style="background:var(--cyan-soft);color:var(--cyan)">via app.tics.ro</span><div style="font-size:22px;font-weight:800;margin-top:8px">${t.s}</div><div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:2px">${t.cat} · ${t.city} · ${t.day} ${t.mon}</div></div></div>
+      <div class="pad" style="margin-top:16px"><div class="listitem" style="background:var(--cyan-soft);border-color:rgba(34,211,238,.3)"><div style="width:40px;height:40px;border-radius:12px;background:rgba(34,211,238,.2);display:grid;place-items:center;color:var(--cyan)">${I.layers}</div><div style="flex:1"><div style="font-weight:800;font-size:13px">app.tics.ro nu vinde bilete</div><div class="muted" style="font-size:11.5px">Comparăm ${t.offers.length} marketplace-uri în timp real și te trimitem la ofertă</div></div></div></div>
+      <div class="between pad" style="margin-top:18px"><div class="h2" style="font-size:15px">Cine vinde bilete</div><span class="muted" style="font-size:11.5px;font-weight:700">stoc live</span></div>
+      <div class="pad" style="margin-top:10px;display:flex;flex-direction:column;gap:10px">${sorted.map((o,i)=>`<div class="card" style="padding:13px;display:flex;align-items:center;gap:12px">
+        <div style="width:44px;height:44px;border-radius:13px;background:var(--surface-3);display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--indigo-2)">${o[0][0].toUpperCase()}</div>
+        <div style="flex:1"><div class="row" style="gap:7px"><div style="font-weight:800;font-size:13.5px">${o[0]}</div>${i===0?`<span class="badge" style="background:var(--green-soft);color:var(--green-2)">cel mai ieftin</span>`:''}</div><div class="muted" style="font-size:11.5px;margin-top:2px">🟢 ${o[2]}</div></div>
+        <div style="text-align:right"><div style="font-weight:800;font-size:16px;color:${i===0?'var(--green-2)':'var(--ink)'}">${o[1]} lei</div><button class="chip ind on" style="padding:6px 12px;margin-top:4px" data-a="ticsOut:${o[0]}">Ofertă ${I.ext}</button></div></div>`).join('')}</div>
+      <div class="pad" style="margin-top:14px"><div class="muted" style="font-size:11px;text-align:center;line-height:1.5">Prețurile și stocul sunt urmărite automat pe 20 platforme. Achiziția se face pe site-ul marketplace-ului ales.</div></div><div style="height:24px"></div></div>`;
+  };
+
   S.artist=(d)=>{const a=ART[d.id]||ART.coldplay;const evs=Object.values(EV).filter(e=>e.artists.includes(a.id));
-    return `<div style="min-height:100%;background:var(--bg)">${sb('light')}
-      <div class="poster" style="background:${a.tone};height:200px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),transparent 40%,rgba(247,248,252,1))"></div>${sb('light')}
-        <div class="pad" style="position:absolute;top:14px;left:0;right:0"><div class="icon-btn glass" data-a="back">${I.back}</div></div>
+    return `<div style="min-height:100%;background:var(--bg)">
+      <div class="poster" style="background:${a.tone};height:200px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 40%,var(--bg))"></div>${sb()}
+        <div class="pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div></div>
         <div style="position:absolute;left:0;right:0;bottom:-2px;text-align:center"><div style="width:96px;height:96px;border-radius:32px;margin:0 auto;background:${a.tone};border:4px solid var(--bg);display:grid;place-items:center;font-size:40px">${a.g}</div></div></div>
-      <div style="text-align:center;margin-top:14px"><div style="font-weight:800;font-size:20px">${a.name}</div><div class="muted" style="font-size:13px">${a.role} · ${a.fol} urmăritori</div>
-        <div class="row" style="justify-content:center;gap:10px;margin-top:14px"><button class="cta" style="width:auto;padding:11px 22px">Urmărește</button><button class="icon-btn">${I.bell}</button><button class="icon-btn">${I.share}</button></div></div>
-      <div class="pad" style="margin-top:20px"><p class="muted" style="font-size:13.5px;line-height:1.6;text-align:center">${a.bio}</p>
-        <div class="h2" style="font-size:15px;margin-top:22px;margin-bottom:11px">Evenimente viitoare</div>
-        <div style="display:flex;flex-direction:column;gap:11px">${(evs.length?evs:[EV.coldplay]).map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="display:flex;gap:12px;padding:11px;cursor:pointer">${poster(ev,'','width:64px;height:64px;border-radius:15px;flex:none',{date:1})}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px;margin-top:2px">${VEN[ev.ven].name} · ${ev.d}</div><div style="font-weight:800;color:var(--indigo-3);font-size:13px;margin-top:3px">de la $${money(ev.from)}</div></div></div>`).join('')}</div></div>
-      <div style="height:24px"></div></div>`;
+      <div style="text-align:center;margin-top:14px"><div style="font-weight:800;font-size:20px">${a.name}</div><div class="muted" style="font-size:13px">${a.role} · ${a.fol} urmăritori</div><div class="row" style="justify-content:center;gap:10px;margin-top:14px"><button class="cta" style="width:auto;padding:11px 22px">Urmărește</button><button class="icon-btn">${I.bell}</button><button class="icon-btn">${I.share}</button></div></div>
+      <div class="pad" style="margin-top:20px"><p class="muted" style="font-size:13.5px;line-height:1.6;text-align:center">${a.bio}</p><div class="h2" style="font-size:15px;margin-top:22px;margin-bottom:11px">Evenimente viitoare</div>
+        <div style="display:flex;flex-direction:column;gap:11px">${(evs.length?evs:[EV.coldplay]).map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="display:flex;gap:12px;padding:11px;cursor:pointer">${poster(ev,'','width:64px;height:64px;border-radius:15px;flex:none',{date:1})}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px;margin-top:2px">${VEN[ev.ven].name} · ${ev.d}</div><div style="font-weight:800;color:var(--indigo-2);font-size:13px;margin-top:3px">de la $${money(ev.from)}</div></div></div>`).join('')}</div></div><div style="height:24px"></div></div>`;
   };
 
-  /* ===== VENUE PAGE ===== */
   S.venue=(d)=>{const v=VEN[d.id]||VEN.arena;const evs=Object.values(EV).filter(e=>e.ven===v.id);
     return `<div style="min-height:100%;background:var(--bg)">
-      <div class="poster" style="background:${v.tone};height:210px;border-radius:0 0 28px 28px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 45%,rgba(14,22,38,.5))"></div>${sb('dark')}
+      <div class="poster" style="background:${v.tone};height:210px;border-radius:0 0 28px 28px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 45%,rgba(11,9,18,.6))"></div>${sb()}
         <div class="pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div></div>
         <div style="position:absolute;left:20px;bottom:18px;color:#fff"><div style="font-size:22px;font-weight:800">${v.name}</div><div style="font-size:12.5px;opacity:.85">${v.addr} · ${v.city}</div></div></div>
       <div class="pad" style="margin-top:16px"><div class="row" style="gap:10px">${[['Capacitate',v.cap],['Oraș',v.city],['Rating','4.8 ⭐']].map(s=>`<div class="card" style="flex:1;text-align:center;padding:12px"><div style="font-weight:800;font-size:15px">${s[1]}</div><div class="muted" style="font-size:10px;font-weight:700;text-transform:uppercase;margin-top:2px">${s[0]}</div></div>`).join('')}</div>
-        <div style="height:130px;border-radius:18px;margin-top:16px;background:linear-gradient(120deg,#dbe0f4,#eef1f8);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background-image:linear-gradient(rgba(150,160,200,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(150,160,200,.3) 1px,transparent 1px);background-size:26px 26px"></div><div style="position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid #fff;box-shadow:var(--sh-in)"></div></div>
-        <div class="row" style="gap:10px;margin-top:12px"><button class="cta ghost" style="padding:13px">${I.car} Direcții</button><button class="cta ghost" style="padding:13px">${I.bed} Cazare Stay22</button></div>
-        <div class="h2" style="font-size:15px;margin-top:22px;margin-bottom:11px">Evenimente aici</div>
-        <div style="display:flex;flex-direction:column;gap:11px">${(evs.length?evs:[EV.coldplay]).map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="display:flex;gap:12px;padding:11px;cursor:pointer">${poster(ev,'','width:60px;height:60px;border-radius:15px;flex:none',{date:1})}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px;margin-top:2px">${ev.d} · ${ev.time}</div></div><span class="muted">${I.arrow}</span></div>`).join('')}</div></div><div style="height:24px"></div></div>`;
+        <div style="height:130px;border-radius:18px;margin-top:16px;background:linear-gradient(120deg,#141126,#0d0b16);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7"></div><div style="position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid var(--bg);box-shadow:var(--sh-p)"></div></div>
+        <div class="row" style="gap:10px;margin-top:12px"><button class="cta ghost" style="padding:13px" data-a="go:stay22:${v.id}">${I.car} Direcții</button><button class="cta ghost" style="padding:13px" data-a="go:stay22:${v.id}">${I.bed} Cazare</button></div>
+        <div class="h2" style="font-size:15px;margin-top:22px;margin-bottom:11px">Evenimente aici</div><div style="display:flex;flex-direction:column;gap:11px">${(evs.length?evs:[EV.coldplay]).map(ev=>`<div class="card" data-a="go:event:${ev.id}" style="display:flex;gap:12px;padding:11px;cursor:pointer">${poster(ev,'','width:60px;height:60px;border-radius:15px;flex:none',{date:1})}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px;margin-top:2px">${ev.d} · ${ev.time}</div></div><span class="muted">${I.arrow}</span></div>`).join('')}</div></div><div style="height:24px"></div></div>`;
   };
 
-  /* ===== TICKET TYPES ===== */
   S.tickettypes=()=>{const ev=EV[ST.ev];
-    return `<div style="min-height:100%;background:var(--bg)">${sb('light')}
+    return `<div class="grid" style="min-height:100%">${sb()}
       <div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div><div class="h2">Alege bilete</div><div class="muted" style="font-size:11.5px">${ev.s}</div></div></div><div class="icon-btn">${I.info}</div></div>
-      <div class="pad" style="margin-top:6px"><div class="pts" style="margin-top:8px">${I.star} Câștigi puncte la fiecare bilet · 1 lei = 1 punct</div></div>
-      <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:11px">
-        ${ev.tt.map((t,i)=>`<div class="card" style="padding:14px"><div class="between"><div style="flex:1"><div class="row" style="gap:8px"><div style="font-weight:800;font-size:14.5px">${t.n}</div>${t.old?`<span class="badge" style="background:#fde7ea;color:#c0263d">-${Math.round((1-t.p/t.old)*100)}%</span>`:''}${t.seat&&ev.seatmap?`<span class="badge" style="background:var(--indigo-soft);color:var(--indigo-3)">Loc pe hartă</span>`:''}</div>
-            <div class="muted" style="font-size:12px;margin-top:5px;line-height:1.45">${t.desc}</div>
-            <div class="row" style="gap:8px;margin-top:8px"><span style="font-weight:800;color:var(--indigo-3);font-size:15px">${t.p} lei</span>${t.old?`<span class="muted" style="text-decoration:line-through;font-size:12.5px">${t.old} lei</span>`:''}<span class="pts">${I.star} +${t.pts}</span></div></div></div>
-          <div class="between" style="margin-top:12px;border-top:1px solid var(--line);padding-top:11px"><span class="muted" style="font-size:11.5px">${t.seat&&ev.seatmap?'Alege locul la pasul următor':'Disponibil'}</span>
-            <div class="row" style="gap:10px"><div class="icon-btn" style="width:32px;height:32px;border-radius:10px" data-a="ttDec:${i}">${I.minus}</div><span class="tnum" id="tt${i}" style="font-weight:800;min-width:18px;text-align:center">${i===0?1:0}</span><div class="icon-btn" style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-3));color:#fff;border:0" data-a="ttInc:${i}">${I.plus}</div></div></div></div>`).join('')}
-        ${ev.bundles.length?`<div class="h2" style="font-size:15px;margin-top:8px">🎁 Pachete & bundles</div>${ev.bundles.map((b,i)=>`<div class="card" style="padding:14px;border:1.5px solid var(--indigo-line);background:var(--indigo-soft)"><div class="between"><div style="flex:1"><div style="font-weight:800;font-size:14.5px">${b.n}</div><div class="muted" style="font-size:12px;margin-top:4px">${b.desc}</div><div class="row" style="gap:8px;margin-top:8px"><span style="font-weight:800;color:var(--indigo-3);font-size:15px">${b.p} lei</span>${b.old?`<span class="muted" style="text-decoration:line-through;font-size:12.5px">${b.old} lei</span>`:''}<span class="pts">${I.star} +${b.pts}</span></div></div><button class="chip ind on" data-a="bundleAdd:${i}" style="align-self:center">Adaugă</button></div></div>`).join('')}`:''}
-      </div>
+      <div class="pad" style="margin-top:8px"><div class="pts">${I.star} Câștigi puncte la fiecare bilet · 1 lei = 1 punct</div></div>
+      <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:11px">${ev.tt.map((t,i)=>`<div class="card" style="padding:14px"><div style="flex:1"><div class="row" style="gap:8px"><div style="font-weight:800;font-size:14.5px">${t.n}</div>${t.old?`<span class="badge" style="background:rgba(240,97,109,.16);color:#f0616d">-${Math.round((1-t.p/t.old)*100)}%</span>`:''}${t.seat&&ev.seatmap?`<span class="badge" style="background:var(--indigo-soft);color:var(--indigo-2)">Loc pe hartă</span>`:''}</div><div class="muted" style="font-size:12px;margin-top:5px;line-height:1.45">${t.desc}</div><div class="row" style="gap:8px;margin-top:8px"><span style="font-weight:800;color:var(--indigo-2);font-size:15px">${t.p} lei</span>${t.old?`<span class="muted" style="text-decoration:line-through;font-size:12.5px">${t.old} lei</span>`:''}<span class="pts">${I.star} +${t.pts}</span></div></div>
+          <div class="between" style="margin-top:12px;border-top:1px solid var(--line);padding-top:11px"><span class="muted" style="font-size:11.5px">${t.seat&&ev.seatmap?'Alege locul la pasul următor':'Disponibil'}</span><div class="row" style="gap:10px"><div class="icon-btn" style="width:32px;height:32px;border-radius:10px" data-a="ttDec:${i}">${I.minus}</div><span class="tnum" id="tt${i}" style="font-weight:800;min-width:18px;text-align:center">${i===0?1:0}</span><div class="icon-btn" style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--indigo),var(--indigo-3));color:#fff;border:0" data-a="ttInc:${i}">${I.plus}</div></div></div></div>`).join('')}
+        ${ev.bundles.length?`<div class="h2" style="font-size:15px;margin-top:8px">🎁 Pachete & bundles</div>${ev.bundles.map((b,i)=>`<div class="card" style="padding:14px;border:1.5px solid var(--indigo-line);background:var(--indigo-soft)"><div class="between"><div style="flex:1"><div style="font-weight:800;font-size:14.5px">${b.n}</div><div class="muted" style="font-size:12px;margin-top:4px">${b.desc}</div><div class="row" style="gap:8px;margin-top:8px"><span style="font-weight:800;color:var(--indigo-2);font-size:15px">${b.p} lei</span>${b.old?`<span class="muted" style="text-decoration:line-through;font-size:12.5px">${b.old} lei</span>`:''}<span class="pts">${I.star} +${b.pts}</span></div></div><button class="chip ind on" data-a="bundleAdd:${i}" style="align-self:center">Adaugă</button></div></div>`).join('')}`:''}</div>
       <div class="dock"><button class="cta block2" data-a="${ev.seatmap?'go:seatmap':'go:cart'}"><span>Continuă · <span id="ttCount">1</span> bilete</span><span class="tnum" id="ttTotal">${ev.tt[0].p} lei</span></button></div></div>`;
   };
-  INIT.tickettypes=()=>{ recalcTT(); };
+  INIT.tickettypes=()=>recalcTT();
 
-  /* ===== SEAT MAP ===== */
   S.seatmap=()=>{const ev=EV[ST.ev];
-    return `<div style="min-height:100%;background:var(--dim);color:#fff;padding-bottom:2px">${sb('dark')}
-      <div class="between pad" style="padding-top:4px"><div class="icon-btn dark" data-a="back">${I.back}</div><div style="text-align:center"><div style="font-weight:800;font-size:15px">Alege locul</div><div style="font-size:11px;color:rgba(255,255,255,.5)">${ev.s}</div></div><div class="icon-btn dark">${I.info}</div></div>
-      <div class="row pad" style="justify-content:center;gap:16px;margin-top:12px;font-size:11px;color:rgba(255,255,255,.6);font-weight:600"><span class="row" style="gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:#2a3550;border:1px solid rgba(255,255,255,.14)"></i>Liber</span><span class="row" style="gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:var(--indigo)"></i>Ales</span><span class="row" style="gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:rgba(255,255,255,.06)"></i>Ocupat</span></div>
+    return `<div style="min-height:100%;background:var(--bg);padding-bottom:2px">${sb()}
+      <div class="between pad" style="padding-top:4px"><div class="icon-btn" data-a="back">${I.back}</div><div style="text-align:center"><div style="font-weight:800;font-size:15px">Alege locul</div><div class="muted" style="font-size:11px">${ev.s}</div></div><div class="icon-btn">${I.info}</div></div>
+      <div class="row pad" style="justify-content:center;gap:16px;margin-top:12px;font-size:11px;color:var(--muted);font-weight:600"><span class="row" style="gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:#2c2942;border:1px solid rgba(255,255,255,.14)"></i>Liber</span><span class="row" style="gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:var(--indigo)"></i>Ales</span><span class="row" style="gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:rgba(255,255,255,.06)"></i>Ocupat</span></div>
       <div style="margin-top:14px"><div class="stagebar">S C E N A</div><div class="seatgrid" id="seatgrid" style="margin-top:14px">${seatRows()}</div></div>
-      <div class="pad" style="margin-top:20px"><div class="listitem" style="background:var(--dim-2);border-color:var(--dim-line)"><div style="width:38px;height:38px;border-radius:11px;background:var(--indigo)"></div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">Locuri selectate</div><div style="font-size:11px;color:rgba(255,255,255,.5)" id="seatList">${ST.seats.join(', ')||'niciunul'}</div></div><div style="font-weight:800" id="seatSum">${(ST.seats.length* (EV[ST.ev].tt.find(t=>t.seat)?.p||120))} lei</div></div></div>
-      <div class="dock dk"><button class="cta block2" data-a="go:cart"><span>Continuă · <span id="seatCount">${ST.seats.length}</span> locuri</span>${I.arrow}</button></div></div>`;
+      <div class="pad" style="margin-top:20px"><div class="listitem"><div style="width:38px;height:38px;border-radius:11px;background:var(--indigo)"></div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">Locuri selectate</div><div class="muted" style="font-size:11px" id="seatList">${ST.seats.join(', ')||'niciunul'}</div></div><div style="font-weight:800" id="seatSum">${ST.seats.length*(ev.tt.find(t=>t.seat)?.p||120)} lei</div></div></div>
+      <div class="dock"><button class="cta block2" data-a="go:cart"><span>Continuă · <span id="seatCount">${ST.seats.length}</span> locuri</span>${I.arrow}</button></div></div>`;
   };
   const seatRows=()=>'ABCDEF'.split('').map(r=>`<div class="seatrow">${Array.from({length:8},(_,i)=>{const id=r+(i+1);const sold=(r==='A'&&[0,1,6,7].includes(i))||(r==='C'&&i===3)||(r==='D'&&i===2);const sel=ST.seats.includes(id);return `<div class="seat ${sold?'sold':(sel?'sel':'free')}" ${sold?'':`data-a="seat:${id}"`}></div>`;}).join('')}</div>`).join('');
 
-  /* ===== CART / CHECKOUT ===== */
-  function cartCompute(){const ev=EV[ST.ev];const seatT=ev.tt.find(t=>t.seat)?.p||120;
-    let items=[]; // build from tt counts if present else seats
-    if(ST._ttCounts){ ev.tt.forEach((t,i)=>{const q=ST._ttCounts[i]||0; if(q>0) items.push({n:t.n,p:t.p,q,pts:t.pts});}); }
-    if(!items.length){ items=[{n:'Categoria I',p:seatT,q:ST.seats.length||2,pts:seatT}]; }
-    const subtotal=items.reduce((s,it)=>s+it.p*it.q,0);
-    const fee=Math.round(subtotal*0.02*100)/100;
-    const protect=ST.cart.protect?Math.round(subtotal*0.08*100)/100:0;
-    const disc=ST.cart.discount||0;
-    const total=Math.max(0,subtotal+fee+protect-disc);
-    const pts=items.reduce((s,it)=>s+it.pts*it.q,0);
-    return {items,subtotal,fee,protect,disc,total,pts};
-  }
+  function cartCompute(){const ev=EV[ST.ev];const seatT=ev.tt.find(t=>t.seat)?.p||120;let items=[];
+    if(ST._ttCounts&&ST._ttEv===ST.ev){ev.tt.forEach((t,i)=>{const q=ST._ttCounts[i]||0;if(q>0)items.push({n:t.n,p:t.p,q,pts:t.pts});});}
+    if(!items.length)items=[{n:'Categoria I',p:seatT,q:ST.seats.length||2,pts:seatT}];
+    const subtotal=items.reduce((s,it)=>s+it.p*it.q,0);const fee=Math.round(subtotal*0.02*100)/100;const protect=ST.cart.protect?Math.round(subtotal*0.08*100)/100:0;const disc=ST.cart.discount||0;const total=Math.max(0,subtotal+fee+protect-disc);const pts=items.reduce((s,it)=>s+it.pts*it.q,0);
+    return {items,subtotal,fee,protect,disc,total,pts};}
   S.cart=()=>{const ev=EV[ST.ev];const c=cartCompute();
-    return `<div style="min-height:100%;background:var(--bg)">${sb('light')}
+    return `<div class="grid" style="min-height:100%">${sb()}
       <div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Coș & checkout</div></div><div class="icon-btn">${I.info}</div></div>
       <div class="pad" style="margin-top:14px"><div class="card" style="padding:12px;display:flex;gap:12px;align-items:center">${poster(ev,'','width:56px;height:56px;border-radius:15px;flex:none')}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px">${ev.d} · ${ev.time} · ${VEN[ev.ven].name}</div></div></div></div>
-      <div class="pad" style="margin-top:12px"><div class="card" style="padding:6px 14px">${c.items.map(it=>`<div class="between" style="padding:11px 0;border-bottom:1px solid var(--line)"><div><div style="font-weight:700;font-size:13.5px">${it.n}</div><div class="muted" style="font-size:11.5px">${it.q} × ${it.p} lei</div></div><div style="font-weight:800">${it.p*it.q} lei</div></div>`).join('')}
-        <div class="between" style="padding:11px 0"><div class="row" style="gap:6px"><span class="pts">${I.star} Câștigi +${c.pts} puncte</span></div></div></div></div>
-
+      <div class="pad" style="margin-top:12px"><div class="card" style="padding:6px 14px">${c.items.map(it=>`<div class="between" style="padding:11px 0;border-bottom:1px solid var(--line)"><div><div style="font-weight:700;font-size:13.5px">${it.n}</div><div class="muted" style="font-size:11.5px">${it.q} × ${it.p} lei</div></div><div style="font-weight:800">${it.p*it.q} lei</div></div>`).join('')}<div style="padding:11px 0"><span class="pts">${I.star} Câștigi +${c.pts} puncte</span></div></div></div>
       <div class="pad" style="margin-top:14px"><div class="label">Cod de reducere</div><div class="field"><span class="muted">${I.tag}</span><input id="discInput" placeholder="Ex: TIXELLO10"><button class="chip ind on" data-a="applyDisc" style="padding:7px 14px">Aplică</button></div></div>
-
       <div class="pad" style="margin-top:14px"><div class="card" style="padding:4px 14px">
         <div class="between" style="padding:13px 0;border-bottom:1px solid var(--line)"><div style="flex:1"><div style="font-weight:700;font-size:13.5px">Nume diferit pe bilete</div><div class="muted" style="font-size:11px">Fiecare bilet poate avea alt beneficiar</div></div><div class="toggle ${ST.cart.nameOnTicket?'on':''}" data-a="tgl:nameOnTicket"></div></div>
-        <div class="between" style="padding:13px 0"><div style="flex:1"><div class="row" style="gap:7px"><div style="font-weight:700;font-size:13.5px">Protecție Bilet</div><span class="pts" style="color:var(--green);background:var(--green-soft);border-color:#bfe9d8">Recomandat</span></div><div class="muted" style="font-size:11px">Returnezi biletele oricând · +8%</div></div><div class="toggle ${ST.cart.protect?'on':''}" data-a="tgl:protect"></div></div></div></div>
-
-      <div class="pad" style="margin-top:14px"><div class="h2" style="font-size:14px;margin-bottom:10px">Metodă de plată</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div class="listitem" style="border-color:var(--indigo)"><div style="width:44px;height:30px;border-radius:7px;background:#1a1f71;color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;font-style:italic">VISA</div><div style="flex:1"><div style="font-weight:700;font-size:13px">•••• 8756</div><div class="muted" style="font-size:11px">Card primar</div></div><div style="width:22px;height:22px;border-radius:50%;background:var(--indigo);display:grid;place-items:center;color:#fff"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>
-          <div class="listitem" data-a="tgl:cultural"><div style="width:44px;height:30px;border-radius:7px;background:linear-gradient(135deg,#0f766e,#12b3a6);color:#fff;display:grid;place-items:center;font-size:15px">🎭</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Card cultural</div><div class="muted" style="font-size:11px">Up · Edenred · Sodexo</div></div><div style="width:20px;height:20px;border-radius:50%;border:2px solid ${ST.cart.cultural?'var(--indigo)':'var(--line-2)'};background:${ST.cart.cultural?'var(--indigo)':'transparent'}"></div></div>
-          <div class="listitem"><div style="width:44px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff">${I.wallet}</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Portofel Tixello</div><div class="muted" style="font-size:11px">Sold ${lei(ST.balance)} lei</div></div><div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--line-2)"></div></div></div></div>
-
+        <div class="between" style="padding:13px 0"><div style="flex:1"><div class="row" style="gap:7px"><div style="font-weight:700;font-size:13.5px">Protecție Bilet</div><span class="badge" style="color:var(--green-2);background:var(--green-soft)">Recomandat</span></div><div class="muted" style="font-size:11px">Returnezi biletele oricând · +8%</div></div><div class="toggle ${ST.cart.protect?'on':''}" data-a="tgl:protect"></div></div></div></div>
+      <div class="pad" style="margin-top:14px"><div class="h2" style="font-size:14px;margin-bottom:10px">Metodă de plată</div><div style="display:flex;flex-direction:column;gap:10px">
+        <div class="listitem" style="border-color:var(--indigo)"><div style="width:44px;height:30px;border-radius:7px;background:#1a1f71;color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;font-style:italic">VISA</div><div style="flex:1"><div style="font-weight:700;font-size:13px">•••• 8756</div><div class="muted" style="font-size:11px">Card primar</div></div><div style="width:22px;height:22px;border-radius:50%;background:var(--indigo);display:grid;place-items:center;color:#fff"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>
+        <div class="listitem" data-a="tgl:cultural"><div style="width:44px;height:30px;border-radius:7px;background:linear-gradient(135deg,#0f766e,#12b3a6);color:#fff;display:grid;place-items:center;font-size:15px">🎭</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Card cultural</div><div class="muted" style="font-size:11px">Up · Edenred · Sodexo</div></div><div style="width:20px;height:20px;border-radius:50%;border:2px solid ${ST.cart.cultural?'var(--indigo)':'var(--line-2)'};background:${ST.cart.cultural?'var(--indigo)':'transparent'}"></div></div>
+        <div class="listitem"><div style="width:44px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff">${I.wallet}</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Portofel Tixello</div><div class="muted" style="font-size:11px">Sold ${lei(ST.balance)} lei</div></div><div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--line-2)"></div></div></div></div>
       <div class="pad" style="margin-top:16px"><div class="card" style="padding:14px">
         <div class="between" style="padding:5px 0"><span class="muted" style="font-size:13px">Subtotal bilete</span><span style="font-weight:700" id="cSub">${c.subtotal} lei</span></div>
         <div class="between" style="padding:5px 0"><span class="muted" style="font-size:13px">Taxă Tixello (2%)</span><span style="font-weight:700" id="cFee">${lei(c.fee)} lei</span></div>
         <div class="between" style="padding:5px 0" id="cProtRow" ${c.protect?'':'hidden'}><span class="muted" style="font-size:13px">Protecție Bilet</span><span style="font-weight:700" id="cProt">${lei(c.protect)} lei</span></div>
-        <div class="between" style="padding:5px 0" id="cDiscRow" ${c.disc?'':'hidden'}><span style="color:var(--green);font-size:13px;font-weight:700">Reducere</span><span style="font-weight:700;color:var(--green)" id="cDisc">-${c.disc} lei</span></div>
-        <div class="between" style="padding:9px 0 2px;border-top:1px solid var(--line);margin-top:5px"><span style="font-weight:800">Total</span><span style="font-weight:800;color:var(--indigo-3);font-size:17px" id="cTotal">${lei(c.total)} lei</span></div></div></div>
+        <div class="between" style="padding:5px 0" id="cDiscRow" ${c.disc?'':'hidden'}><span style="color:var(--green-2);font-size:13px;font-weight:700">Reducere</span><span style="font-weight:700;color:var(--green-2)" id="cDisc">-${c.disc} lei</span></div>
+        <div class="between" style="padding:9px 0 2px;border-top:1px solid var(--line);margin-top:5px"><span style="font-weight:800">Total</span><span style="font-weight:800;color:var(--indigo-2);font-size:17px" id="cTotal">${lei(c.total)} lei</span></div></div></div>
       <div class="dock"><button class="cta" data-a="go:success">Plătește · <span id="cBtnTotal">${lei(c.total)}</span> lei</button></div></div>`;
   };
 
-  /* ===== SUCCESS ===== */
   S.success=()=>{const c=cartCompute();ST.points+=c.pts;
-    return `<div style="min-height:100%;background:radial-gradient(120% 70% at 50% 28%,var(--indigo-soft),var(--bg));display:flex;flex-direction:column"><div class="confetti" id="confetti"></div>${sb('light')}
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;position:relative;z-index:5"><div class="burst">${I.check}</div>
-      <div class="eyebrow" style="margin-top:22px">Confirmat</div><h1 class="h1" style="margin-top:8px">Comanda ta a reușit 🎉</h1>
-      <p class="muted" style="margin-top:10px;font-size:14px;line-height:1.55;max-width:28ch">Biletele QR sunt în „Biletele mele" și pe email.</p>
-      <div class="pts" style="margin-top:14px;font-size:13px;padding:8px 14px">${I.star} +${c.pts} puncte · total ${ST.points} pts</div></div>
+    return `<div class="grid" style="min-height:100%;display:flex;flex-direction:column"><div class="confetti" id="confetti"></div>${sb()}
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;position:relative;z-index:5"><div class="burst">${I.check}</div><div class="eyebrow" style="margin-top:22px">Confirmat</div><h1 class="h1" style="margin-top:8px">Comanda ta a reușit 🎉</h1><p class="muted" style="margin-top:10px;font-size:14px;line-height:1.55;max-width:28ch">Biletele QR sunt în „Biletele mele" și pe email.</p><div class="pts" style="margin-top:14px;font-size:13px;padding:8px 14px">${I.star} +${c.pts} puncte · total ${ST.points} pts</div></div>
     <div class="pad" style="padding-bottom:26px;display:flex;flex-direction:column;gap:11px"><button class="cta" data-a="tab:tickets">Vezi biletele mele ${I.arrow}</button><button class="cta ghost" data-a="tab:home">Înapoi acasă</button></div></div>`;
   };
-  INIT.success=el=>{if(RM)return;const c=$('#confetti',el);const cols=['#6366F1','#818CF8','#4F46E5','#F59E0B','#10B981','#EC4899'];for(let i=0;i<48;i++){const s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.background=cols[i%cols.length];s.style.animationDuration=(1.6+Math.random()*1.7)+'s';s.style.animationDelay=(Math.random()*.5)+'s';s.style.transform='rotate('+Math.random()*360+'deg)';c.appendChild(s);}};
+  INIT.success=el=>{if(RM)return;const c=$('#confetti',el);const cols=['#8B5CF6','#A78BFA','#7C3AED','#22C55E','#22D3EE','#F59E0B'];for(let i=0;i<48;i++){const s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.background=cols[i%cols.length];s.style.animationDuration=(1.6+Math.random()*1.7)+'s';s.style.animationDelay=(Math.random()*.5)+'s';s.style.transform='rotate('+Math.random()*360+'deg)';c.appendChild(s);}};
 
-  /* ===== TICKETS (multiple QR passes per event) ===== */
-  const MYTIX=[{ev:'coldplay',passes:[{name:'Andrei Popescu',code:'TIX-CP-8841'},{name:'Maria Ionescu',code:'TIX-CP-8842'}],seat:'B2, B3',cat:'Categoria I'},
-    {ev:'salina',passes:[{name:'Andrei Popescu',code:'TIX-SL-2240'}],seat:'—',cat:'Bilet Adult'}];
-  S.tickets=()=>`<div style="min-height:100%;background:var(--bg);padding-bottom:6px">${sb('light')}
+  const MYTIX=[{ev:'coldplay',passes:[{name:'Andrei Popescu',code:'TIX-CP-8841'},{name:'Maria Ionescu',code:'TIX-CP-8842'}],seat:'B2, B3',cat:'Categoria I'},{ev:'salina',passes:[{name:'Andrei Popescu',code:'TIX-SL-2240'}],seat:'—',cat:'Bilet Adult'}];
+  S.tickets=()=>`<div class="grid" style="min-height:100%;padding-bottom:6px">${sb()}
     <div class="pad" style="padding-top:10px"><h1 class="h1">Biletele mele</h1><p class="muted" style="margin-top:4px;font-size:13.5px">Bilete individuale QR · arată fiecare la scanare</p></div>
     <div class="scroll-x" style="margin-top:14px"><button class="chip ind on">Active</button><button class="chip">Trecute</button><button class="chip">Transferate</button></div>
-    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:14px">
-      ${MYTIX.map((tk,ti)=>{const ev=EV[tk.ev];return `<div class="card" style="overflow:hidden">
-        <div style="display:flex;gap:12px;padding:13px" data-a="go:ticket:${tk.ev}:0">${poster(ev,'','width:56px;height:56px;border-radius:15px;flex:none')}
-          <div style="flex:1"><div style="font-weight:800;font-size:14px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:3px">${I.cal} ${ev.d} · ${ev.time}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:2px">${I.pin} ${VEN[ev.ven].name}</div></div>
-          <span class="badge" style="background:var(--indigo-soft);color:var(--indigo-3);align-self:flex-start">${tk.passes.length} ${tk.passes.length>1?'bilete':'bilet'}</span></div>
-        <div style="border-top:2px dashed var(--line-2);padding:8px 8px 10px;position:relative"><span style="position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--bg)"></span><span style="position:absolute;right:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--bg)"></span>
-          ${tk.passes.map((p,pi)=>`<div class="row" data-a="go:ticket:${tk.ev}:${pi}" style="gap:11px;padding:9px 8px;cursor:pointer;border-radius:12px"><div style="width:44px;height:44px;border-radius:11px;background:#fff;border:1px solid var(--line);padding:4px;flex:none"><canvas class="miniqr" data-seed="${p.code.length+pi}" width="72" height="72" style="width:100%;height:100%"></canvas></div>
-            <div style="flex:1"><div style="font-weight:700;font-size:13px">${p.name}</div><div class="muted" style="font-size:11px">${tk.cat}${tk.seat!=='—'?' · '+tk.seat.split(', ')[pi]:''} · ${p.code}</div></div>
-            <span style="font-size:11px;font-weight:800;color:var(--indigo-3)">${pi+1}/${tk.passes.length} ›</span></div>`).join('')}</div></div>`;}).join('')}
-    </div>${nav('tickets')}</div>`;
+    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:14px">${MYTIX.map(tk=>{const ev=EV[tk.ev];return `<div class="card" style="overflow:hidden">
+      <div style="display:flex;gap:12px;padding:13px" data-a="go:ticket:${tk.ev}:0">${poster(ev,'','width:56px;height:56px;border-radius:15px;flex:none')}<div style="flex:1"><div style="font-weight:800;font-size:14px">${ev.s}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:3px">${I.cal} ${ev.d} · ${ev.time}</div><div class="row muted" style="gap:5px;font-size:11.5px;margin-top:2px">${I.pin} ${VEN[ev.ven].name}</div></div><span class="badge" style="background:var(--indigo-soft);color:var(--indigo-2);align-self:flex-start">${tk.passes.length} ${tk.passes.length>1?'bilete':'bilet'}</span></div>
+      <div style="border-top:2px dashed var(--line-2);padding:8px;position:relative"><span style="position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--bg)"></span><span style="position:absolute;right:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--bg)"></span>
+        ${tk.passes.map((p,pi)=>`<div class="row" data-a="go:ticket:${tk.ev}:${pi}" style="gap:11px;padding:9px 8px;cursor:pointer;border-radius:12px"><div style="width:44px;height:44px;border-radius:11px;background:#fff;padding:4px;flex:none"><canvas class="miniqr" data-seed="${p.code.length+pi}" width="72" height="72" style="width:100%;height:100%"></canvas></div><div style="flex:1"><div style="font-weight:700;font-size:13px">${p.name}</div><div class="muted" style="font-size:11px">${tk.cat}${tk.seat!=='—'?' · '+tk.seat.split(', ')[pi]:''} · ${p.code}</div></div><span style="font-size:11px;font-weight:800;color:var(--indigo-2)">${pi+1}/${tk.passes.length} ›</span></div>`).join('')}</div></div>`;}).join('')}</div>${nav('tickets')}</div>`;
   INIT.tickets=el=>$$('.miniqr',el).forEach(cv=>drawQR(cv,{seed:+cv.dataset.seed+3}));
 
-  /* ===== TICKET DETAIL (single pass, QR) ===== */
   S.ticket=(d)=>{const tk=MYTIX.find(t=>t.ev===d.id)||MYTIX[0];const pi=+(d.pi||0);const p=tk.passes[pi];const ev=EV[tk.ev];
-    return `<div style="min-height:100%;background:var(--dim);color:#fff;padding-bottom:26px">${sb('dark')}
-      <div class="between pad" style="padding-top:4px"><div class="icon-btn dark" data-a="back">${I.back}</div><div style="text-align:center"><div class="h2">Biletul tău</div><div style="font-size:11px;color:rgba(255,255,255,.5)">Bilet ${pi+1} din ${tk.passes.length}</div></div><div class="icon-btn dark">${I.share}</div></div>
-      ${tk.passes.length>1?`<div class="scroll-x" style="margin-top:12px;padding:0 20px">${tk.passes.map((pp,j)=>`<button class="chip ${j===pi?'ind on':''}" data-a="go:ticket:${tk.ev}:${j}" style="${j===pi?'':'background:var(--dim-2);border-color:var(--dim-line);color:#fff'}">${pp.name.split(' ')[0]} · ${j+1}/${tk.passes.length}</button>`).join('')}</div>`:''}
-      <div class="pad" style="margin-top:16px"><div style="background:#fff;color:var(--ink);border-radius:26px;overflow:hidden;box-shadow:0 30px 60px -24px rgba(0,0,0,.6)">
-        ${poster(ev,'','height:130px')}
-        <div style="padding:16px 18px 2px"><div style="font-weight:800;font-size:17px;letter-spacing:-.02em">${ev.s}</div><div class="muted" style="font-size:12.5px;margin-top:2px">${VEN[ev.ven].name} · ${ev.city}</div>
-          <div class="row" style="margin-top:14px"><div style="flex:1"><div class="muted" style="font-size:10px;font-weight:700;text-transform:uppercase">Beneficiar</div><div style="font-weight:800;font-size:13px">${p.name}</div></div>
-            <div style="flex:1"><div class="muted" style="font-size:10px;font-weight:700;text-transform:uppercase">Cat.</div><div style="font-weight:800;font-size:13px">${tk.cat}</div></div>
-            <div style="flex:.8"><div class="muted" style="font-size:10px;font-weight:700;text-transform:uppercase">Loc</div><div style="font-weight:800;font-size:13px">${tk.seat!=='—'?tk.seat.split(', ')[pi]:'—'}</div></div></div></div>
-        <div style="position:relative;padding:18px;margin-top:12px;border-top:2px dashed var(--line-2);text-align:center"><span style="position:absolute;left:-10px;top:-10px;width:20px;height:20px;border-radius:50%;background:var(--dim)"></span><span style="position:absolute;right:-10px;top:-10px;width:20px;height:20px;border-radius:50%;background:var(--dim)"></span>
-          <canvas id="bigqr" width="360" height="360" style="width:196px;height:196px"></canvas><div style="margin-top:10px;font-size:12px;font-weight:800;letter-spacing:1px">${p.code}</div><div class="muted" style="font-size:11px;margin-top:2px">Prezintă acest cod QR la intrare</div></div></div>
-        <div class="row" style="gap:11px;margin-top:18px"><button class="cta ghost" data-a="go:transfer:${tk.ev}:${pi}" style="background:var(--dim-2);border-color:var(--dim-line);color:#fff">Transferă</button><button class="cta dark">Adaugă în Wallet</button></div></div></div>`;
+    return `<div style="min-height:100%;background:var(--bg);padding-bottom:26px">${sb()}
+      <div class="between pad" style="padding-top:4px"><div class="icon-btn" data-a="back">${I.back}</div><div style="text-align:center"><div class="h2">Biletul tău</div><div class="muted" style="font-size:11px">Bilet ${pi+1} din ${tk.passes.length}</div></div><div class="icon-btn">${I.share}</div></div>
+      ${tk.passes.length>1?`<div class="scroll-x" style="margin-top:12px;padding:0 20px">${tk.passes.map((pp,j)=>`<button class="chip ${j===pi?'ind on':''}" data-a="go:ticket:${tk.ev}:${j}">${pp.name.split(' ')[0]} · ${j+1}/${tk.passes.length}</button>`).join('')}</div>`:''}
+      <div class="pad" style="margin-top:16px"><div class="whitecard">${poster(ev,'','height:130px')}
+        <div style="padding:16px 18px 2px"><div style="font-weight:800;font-size:17px;letter-spacing:-.02em">${ev.s}</div><div class="wm2" style="font-size:12.5px;margin-top:2px">${VEN[ev.ven].name} · ${ev.city}</div>
+          <div class="row" style="margin-top:14px"><div style="flex:1"><div class="wm2" style="font-size:10px;font-weight:700;text-transform:uppercase">Beneficiar</div><div style="font-weight:800;font-size:13px">${p.name}</div></div><div style="flex:1"><div class="wm2" style="font-size:10px;font-weight:700;text-transform:uppercase">Cat.</div><div style="font-weight:800;font-size:13px">${tk.cat}</div></div><div style="flex:.8"><div class="wm2" style="font-size:10px;font-weight:700;text-transform:uppercase">Loc</div><div style="font-weight:800;font-size:13px">${tk.seat!=='—'?tk.seat.split(', ')[pi]:'—'}</div></div></div></div>
+        <div style="position:relative;padding:18px;margin-top:12px;border-top:2px dashed #e2e5ee;text-align:center"><span style="position:absolute;left:-10px;top:-10px;width:20px;height:20px;border-radius:50%;background:var(--bg)"></span><span style="position:absolute;right:-10px;top:-10px;width:20px;height:20px;border-radius:50%;background:var(--bg)"></span><canvas id="bigqr" width="360" height="360" style="width:196px;height:196px"></canvas><div style="margin-top:10px;font-size:12px;font-weight:800;letter-spacing:1px">${p.code}</div><div class="wm2" style="font-size:11px;margin-top:2px">Prezintă acest cod QR la intrare</div></div></div>
+        <div class="row" style="gap:11px;margin-top:18px"><button class="cta ghost" data-a="go:transfer:${tk.ev}:${pi}">Transferă</button><button class="cta dark">Adaugă în Wallet</button></div></div></div>`;
   };
   INIT.ticket=el=>{const cv=$('#bigqr',el);if(cv)drawQR(cv,{seed:11});};
 
-  /* ===== TRANSFER (functional) ===== */
   S.transfer=(d)=>{const tk=MYTIX.find(t=>t.ev===d.id)||MYTIX[0];const pi=+(d.pi||0);const p=tk.passes[pi];const ev=EV[tk.ev];
-    return `<div style="min-height:100%;background:var(--bg)">${sb('light')}
+    return `<div class="grid" style="min-height:100%">${sb()}
       <div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Transferă biletul</div></div><div class="icon-btn">${I.info}</div></div>
       <div class="pad" style="margin-top:14px"><div class="card" style="padding:13px;display:flex;gap:12px;align-items:center">${poster(ev,'','width:56px;height:56px;border-radius:15px;flex:none')}<div style="flex:1"><div style="font-weight:800;font-size:13.5px">${ev.s}</div><div class="muted" style="font-size:11.5px">${tk.cat} · ${p.code}</div></div></div></div>
-      <div class="pad" style="margin-top:8px"><div class="listitem" style="background:var(--amber-soft);border-color:#f6dfae"><span style="font-size:18px">⚠️</span><div class="muted" style="font-size:11.5px;color:#8a5a12">După transfer, biletul dispare din contul tău și codul QR se regenerează pentru noul beneficiar.</div></div></div>
-      <div class="pad" style="margin-top:16px;display:flex;flex-direction:column;gap:14px">
-        <div><div class="label">Cui trimiți?</div><div class="scroll-x" style="padding:0 0 4px;margin:0 0 8px"><button class="chip ind on">📱 Telefon / email</button><button class="chip">👥 Contacte Tixello</button></div>
-          <div class="field">${I.user}<input placeholder="Email sau telefon beneficiar"></div></div>
+      <div class="pad" style="margin-top:8px"><div class="listitem" style="background:var(--amber-soft);border-color:rgba(245,158,11,.3)"><span style="font-size:18px">⚠️</span><div class="muted" style="font-size:11.5px;color:#f0c98a">După transfer, biletul dispare din contul tău și codul QR se regenerează pentru noul beneficiar.</div></div></div>
+      <div class="pad" style="margin-top:16px;display:flex;flex-direction:column;gap:14px"><div><div class="label">Cui trimiți?</div><div class="scroll-x" style="padding:0 0 4px;margin:0 0 8px"><button class="chip ind on">📱 Telefon / email</button><button class="chip">👥 Contacte Tixello</button></div><div class="field">${I.user}<input placeholder="Email sau telefon beneficiar"></div></div>
         <div><div class="label">Nume beneficiar (apare pe bilet)</div><div class="field">${I.user}<input placeholder="Nume complet"></div></div>
         <div><div class="label">Mesaj (opțional)</div><div class="field"><input placeholder="Ne vedem la eveniment! 🎉"></div></div></div>
       <div class="dock"><button class="cta" data-a="transferDone">Trimite biletul ${I.arrow}</button></div></div>`;
   };
 
-  /* ===== WALLET ===== */
   const TX=[['Top-up card ••8756','Azi 14:20','+200,00',1],['Cashless Bar · 2× Bere','Ieri 22:10','-24,00',0],['Food Truck · Burger','Ieri 21:32','-32,00',0]];
-  S.wallet=()=>`<div style="min-height:100%;background:var(--bg);padding-bottom:6px">${sb('light')}
+  S.wallet=()=>`<div class="grid" style="min-height:100%;padding-bottom:6px">${sb()}
     <div class="between pad" style="padding-top:6px"><div><div class="eyebrow">Cashless</div><h1 class="h1" style="margin-top:4px">Portofel</h1></div><div class="icon-btn" data-a="go:notif">${I.bell}</div></div>
-    <div class="pad" style="margin-top:14px"><div class="walletcard fade-up"><div style="position:absolute;right:-24px;top:-24px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
-      <div class="between"><div><div style="font-size:11px;opacity:.72;font-weight:700">Sold disponibil</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin-top:3px">${lei(ST.balance)} <span style="font-size:16px;opacity:.7">lei</span></div></div><div style="width:38px;height:28px;border-radius:7px;background:linear-gradient(135deg,#f4d27a,#c99a3e)"></div></div>
-      <div class="between" style="margin-top:20px"><div><div style="font-size:10.5px;opacity:.66">Brățară · Nordvale Festival</div><div style="font-size:12.5px;font-weight:700;letter-spacing:1px;margin-top:1px">NV ·· 8842 ·· 7A</div></div><div style="width:40px;height:40px;border-radius:11px;background:#fff;display:grid;place-items:center;color:var(--ink)">${I.qr}</div></div></div></div>
+    <div class="pad" style="margin-top:14px"><div class="walletcard fade-up"><div style="position:absolute;right:-24px;top:-24px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06)"></div><div class="between"><div><div style="font-size:11px;opacity:.72;font-weight:700">Sold disponibil</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin-top:3px">${lei(ST.balance)} <span style="font-size:16px;opacity:.7">lei</span></div></div><div style="width:38px;height:28px;border-radius:7px;background:linear-gradient(135deg,#f4d27a,#c99a3e)"></div></div><div class="between" style="margin-top:20px"><div><div style="font-size:10.5px;opacity:.66">Brățară · Nordvale Festival</div><div style="font-size:12.5px;font-weight:700;letter-spacing:1px;margin-top:1px">NV ·· 8842 ·· 7A</div></div><div style="width:40px;height:40px;border-radius:11px;background:#fff;display:grid;place-items:center;color:#141020">${I.qr}</div></div></div></div>
     <div class="pad" style="margin-top:14px"><div class="row" style="gap:11px"><button class="cta" data-a="go:topup" style="flex:1;padding:14px">${I.plus} Încarcă</button><button class="cta ghost" data-a="go:payqr" style="flex:1;padding:14px">${I.qr} Plătește</button></div></div>
-    <div class="pad" style="margin-top:14px"><div class="card" style="padding:14px;display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,var(--amber-soft),#fff)"><div style="width:44px;height:44px;border-radius:13px;background:var(--amber);display:grid;place-items:center;color:#fff">${I.star}</div>
-      <div style="flex:1"><div style="font-weight:800;font-size:14px">${ST.points} puncte Tixello</div><div class="muted" style="font-size:11.5px">Convertești în reduceri la bilete</div></div><button class="chip ind on" style="padding:8px 14px">Folosește</button></div></div>
+    <div class="pad" style="margin-top:14px"><div class="card" style="padding:14px;display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,var(--amber-soft),var(--surface-solid))"><div style="width:44px;height:44px;border-radius:13px;background:var(--amber);display:grid;place-items:center;color:#111">${I.star}</div><div style="flex:1"><div style="font-weight:800;font-size:14px">${ST.points} puncte Tixello</div><div class="muted" style="font-size:11.5px">Convertești în reduceri la bilete</div></div><button class="chip ind on" style="padding:8px 14px">Folosește</button></div></div>
     <div class="between pad" style="margin-top:20px"><div class="h2" style="font-size:15px">Tranzacții</div><span class="muted" style="font-size:12px;font-weight:700">Toate</span></div>
-    <div class="pad" style="margin-top:8px"><div class="card" style="padding:4px 14px">${TX.map(t=>`<div class="txrow"><div style="width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;background:${t[3]?'var(--green-soft)':'var(--indigo-soft)'};color:${t[3]?'var(--green)':'var(--indigo-3)'}">${t[3]?I.plus:I.wallet}</div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">${t[0]}</div><div class="muted" style="font-size:11.5px">${t[1]}</div></div><div style="font-weight:800;font-size:13.5px;color:${t[3]?'var(--green)':'var(--ink)'}" class="tnum">${t[2]} lei</div></div>`).join('')}</div></div>
-    ${nav('wallet')}</div>`;
-
-  S.topup=()=>`<div style="min-height:100%;background:var(--bg)">${sb('light')}<div class="between pad" style="padding-top:4px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Încarcă portofelul</div><div style="width:42px"></div></div>
-    <div class="pad" style="margin-top:16px"><div class="muted" style="font-size:12.5px;font-weight:700;text-align:center">Sold curent</div><div style="text-align:center;font-size:34px;font-weight:800;margin-top:2px">${lei(ST.balance)} lei</div>
-      <div class="h2" style="font-size:14px;margin-top:22px;margin-bottom:11px">Alege suma</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">${['50','100','200','300','500','Alta'].map((v,i)=>`<button class="chip ${i===2?'ind on':''}" style="padding:16px 0;justify-content:center;font-size:15px;border-radius:16px">${v==='Alta'?v:v+' lei'}</button>`).join('')}</div>
-      <div class="card" style="margin-top:18px;padding:13px;display:flex;align-items:center;gap:12px"><div style="width:44px;height:30px;border-radius:7px;background:#1a1f71;color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;font-style:italic">VISA</div><div style="flex:1"><div style="font-weight:700;font-size:13px">•••• 8756</div><div class="muted" style="font-size:11px">Card primar</div></div><span class="muted">Schimbă ›</span></div></div>
+    <div class="pad" style="margin-top:8px"><div class="card" style="padding:4px 14px">${TX.map(t=>`<div class="txrow"><div style="width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;background:${t[3]?'var(--green-soft)':'var(--indigo-soft)'};color:${t[3]?'var(--green-2)':'var(--indigo-2)'}">${t[3]?I.plus:I.wallet}</div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">${t[0]}</div><div class="muted" style="font-size:11.5px">${t[1]}</div></div><div style="font-weight:800;font-size:13.5px;color:${t[3]?'var(--green-2)':'var(--ink)'}" class="tnum">${t[2]} lei</div></div>`).join('')}</div></div>${nav('wallet')}</div>`;
+  S.topup=()=>`<div class="grid" style="min-height:100%">${sb()}<div class="between pad" style="padding-top:4px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Încarcă portofelul</div><div style="width:42px"></div></div>
+    <div class="pad" style="margin-top:16px"><div class="muted" style="font-size:12.5px;font-weight:700;text-align:center">Sold curent</div><div style="text-align:center;font-size:34px;font-weight:800;margin-top:2px">${lei(ST.balance)} lei</div><div class="h2" style="font-size:14px;margin-top:22px;margin-bottom:11px">Alege suma</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">${['50','100','200','300','500','Alta'].map((v,i)=>`<button class="chip ${i===2?'ind on':''}" style="padding:16px 0;justify-content:center;font-size:15px;border-radius:16px">${v==='Alta'?v:v+' lei'}</button>`).join('')}</div><div class="card" style="margin-top:18px;padding:13px;display:flex;align-items:center;gap:12px"><div style="width:44px;height:30px;border-radius:7px;background:#1a1f71;color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;font-style:italic">VISA</div><div style="flex:1"><div style="font-weight:700;font-size:13px">•••• 8756</div><div class="muted" style="font-size:11px">Card primar</div></div><span class="muted">Schimbă ›</span></div></div>
     <div class="dock"><button class="cta" data-a="topupDone">Încarcă 200 lei</button></div></div>`;
-
-  S.payqr=()=>`<div style="min-height:100%;background:var(--dim);color:#fff;display:flex;flex-direction:column">${sb('dark')}<div class="between pad" style="padding-top:4px"><div class="icon-btn dark" data-a="back">${I.back}</div><div class="h2">Plătește cashless</div><div class="icon-btn dark">${I.info}</div></div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px;gap:18px"><div style="text-align:center"><div style="font-size:12px;color:rgba(255,255,255,.6);font-weight:700">Sold disponibil</div><div style="font-size:26px;font-weight:800">${lei(ST.balance)} lei</div></div>
-      <div class="qr-wrap" style="box-shadow:0 30px 60px -24px rgba(0,0,0,.6)"><canvas id="payqrCanvas" width="220" height="220" style="width:220px;height:220px"></canvas></div>
-      <p style="text-align:center;color:rgba(255,255,255,.62);font-size:13px;max-width:26ch">Arată codul la orice bar sau food-truck din festival. Se scanează și se scade din sold instant.</p>
-      <div class="row" style="gap:8px"><span class="badge" style="background:var(--dim-2)">Brățară activă</span><span class="badge" style="background:var(--dim-2)">Reîmprospătare 30s</span></div></div></div>`;
+  S.payqr=()=>`<div style="min-height:100%;background:var(--bg);display:flex;flex-direction:column">${sb()}<div class="between pad" style="padding-top:4px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Plătește cashless</div><div class="icon-btn">${I.info}</div></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px;gap:18px"><div style="text-align:center"><div class="muted" style="font-size:12px;font-weight:700">Sold disponibil</div><div style="font-size:26px;font-weight:800">${lei(ST.balance)} lei</div></div><div class="qr-wrap"><canvas id="payqrCanvas" width="220" height="220" style="width:220px;height:220px"></canvas></div><p class="muted" style="text-align:center;font-size:13px;max-width:26ch">Arată codul la orice bar sau food-truck din festival. Se scanează și se scade din sold instant.</p><div class="row" style="gap:8px"><span class="badge" style="background:var(--surface-2)">Brățară activă</span><span class="badge" style="background:var(--surface-2)">Reîmprospătare 30s</span></div></div></div>`;
   INIT.payqr=el=>{const cv=$('#payqrCanvas',el);if(cv)drawQR(cv,{seed:23});};
 
-  /* ===== PROFILE ===== */
-  S.profile=()=>`<div style="min-height:100%;background:var(--bg);padding-bottom:6px"><div style="background:radial-gradient(120% 70% at 50% -18%,var(--indigo-soft),transparent 58%)">${sb('light')}
-      <div style="display:flex;flex-direction:column;align-items:center;padding:14px 20px 20px"><div style="width:86px;height:86px;border-radius:28px;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-4));display:grid;place-items:center;color:#fff;font-size:28px;font-weight:800;box-shadow:var(--sh-in)">AP</div>
-        <div style="font-weight:800;font-size:19px;margin-top:12px">Andrei Popescu</div><div class="muted" style="font-size:13px">andrei@tixello.ro</div>
-        <div class="row" style="gap:10px;margin-top:16px">${[['12','Bilete'],[ST.points,'Puncte'],['162','Sold lei']].map(s=>`<div class="card" style="text-align:center;min-width:84px;padding:12px"><div style="font-size:18px;font-weight:800">${s[0]}</div><div class="muted" style="font-size:10px;font-weight:700;text-transform:uppercase;margin-top:2px">${s[1]}</div></div>`).join('')}</div></div></div>
-    <div class="pad" style="margin-top:6px;display:flex;flex-direction:column;gap:10px">
-      ${[['🎟','Biletele mele','tab:tickets'],['💳','Portofel & carduri','tab:wallet'],['⭐','Puncte & recompense','noop'],['🎯','Preferințele mele','go:onboarding'],['❤️','Salvate','noop'],['🔔','Notificări','go:notif'],['⚙️','Setări cont','noop'],['↩︎','Deconectare','logout']].map(m=>`<div class="listitem" data-a="${m[2]}" style="cursor:pointer"><div style="width:38px;height:38px;border-radius:12px;background:var(--bg-2);display:grid;place-items:center;font-size:17px">${m[0]}</div><div style="flex:1;font-weight:700;font-size:14px">${m[1]}</div><span class="muted">${I.arrow}</span></div>`).join('')}</div>${nav('profile')}</div>`;
+  S.profile=()=>`<div class="grid" style="min-height:100%;padding-bottom:6px">${sb()}
+    <div style="display:flex;flex-direction:column;align-items:center;padding:14px 20px 20px"><div style="width:86px;height:86px;border-radius:28px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-size:28px;font-weight:800;box-shadow:var(--sh-p)">AP</div><div style="font-weight:800;font-size:19px;margin-top:12px">Andrei Popescu</div><div class="muted" style="font-size:13px">andrei@tixello.ro</div><div class="row" style="gap:10px;margin-top:16px">${[['12','Bilete'],[ST.points,'Puncte'],['162','Sold lei']].map(s=>`<div class="card" style="text-align:center;min-width:84px;padding:12px"><div style="font-size:18px;font-weight:800">${s[0]}</div><div class="muted" style="font-size:10px;font-weight:700;text-transform:uppercase;margin-top:2px">${s[1]}</div></div>`).join('')}</div></div>
+    <div class="pad" style="margin-top:6px;display:flex;flex-direction:column;gap:10px">${[['🎟','Biletele mele','tab:tickets'],['💳','Portofel & carduri','tab:wallet'],['⭐','Puncte & recompense','noop'],['🎯','Preferințele mele','prefsEdit'],['❤️','Salvate','noop'],['🔔','Notificări','go:notif'],['⚙️','Setări cont','noop'],['↩︎','Deconectare','logout']].map(m=>`<div class="listitem" data-a="${m[2]}" style="cursor:pointer"><div style="width:38px;height:38px;border-radius:12px;background:var(--surface-3);display:grid;place-items:center;font-size:17px">${m[0]}</div><div style="flex:1;font-weight:700;font-size:14px">${m[1]}</div><span class="muted">${I.arrow}</span></div>`).join('')}</div>${nav('profile')}</div>`;
 
-  /* ===== FESTIVAL ===== */
-  S.festival=()=>`<div style="min-height:100%;background:var(--dim);color:#fff;padding-bottom:2px">
-    <div class="poster" style="background:${FEST.tone};height:220px;border-radius:0 0 28px 28px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 40%,rgba(14,22,38,.9))"></div>${sb('dark')}
+  S.festival=()=>`<div style="min-height:100%;background:var(--bg);padding-bottom:2px">
+    <div class="poster" style="background:${FEST.tone};height:220px;border-radius:0 0 28px 28px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 40%,rgba(11,9,18,.94))"></div>${sb()}
       <div class="between pad" style="position:relative;padding-top:4px"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass">${I.save}</div></div>
       <div style="position:absolute;left:20px;right:20px;bottom:18px"><span class="badge" style="background:rgba(255,255,255,.16);color:#fff">Festival · 4 zile</span><div style="font-size:23px;font-weight:800;margin-top:8px">${FEST.t}</div><div style="font-size:12.5px;opacity:.8;margin-top:2px">${FEST.d} · Wonderland, Cluj</div></div></div>
-    <div class="pad" style="margin-top:16px"><div class="card" data-a="tab:wallet" style="cursor:pointer;background:linear-gradient(135deg,var(--indigo-3),var(--indigo-ink));border:0;color:#fff;padding:15px 16px;display:flex;align-items:center;gap:13px"><div style="width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.18);display:grid;place-items:center">${I.wallet}</div><div style="flex:1"><div style="font-weight:800;font-size:14px">Portofel cashless</div><div style="font-size:11.5px;opacity:.82">Sold ${lei(ST.balance)} lei · plătește cu brățara</div></div>${I.arrow}</div>
-      <div class="scroll-x" style="margin-top:16px;padding:0">${FEST.days.map((d,i)=>`<button class="chip ${i===0?'ind on':''}" style="${i===0?'':'background:var(--dim-2);border-color:var(--dim-line);color:#fff'}">${d}</button>`).join('')}</div>
-      <div class="h2" style="margin-top:18px;font-size:15px">Lineup — Joi 10</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:11px">${FEST.lineup.map((l,i)=>`<div class="listitem" style="background:var(--dim-2);border-color:var(--dim-line)"><div style="width:46px;height:46px;border-radius:14px;background:${['linear-gradient(135deg,#4f46e5,#312e81)','linear-gradient(135deg,#6366f1,#1e2a4a)','linear-gradient(135deg,#818cf8,#4338ca)'][i%3]};display:grid;place-items:center;font-size:18px">🎧</div><div style="flex:1"><div style="font-weight:800;font-size:14px">${l[0]}</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">${l[1]} · ${FEST.stages[i%FEST.stages.length]}</div></div><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6)">21:30</span></div>`).join('')}</div>
-      <div class="h2" style="margin-top:20px;font-size:15px">Scene</div><div class="scroll-x" style="margin-top:11px;padding:0">${FEST.stages.map((s,i)=>`<div style="min-width:130px;height:80px;border-radius:16px;padding:13px;background:${['#4f46e5','#1e2a4a','#6d5bd0','#0f766e'][i]};color:#fff;display:flex;flex-direction:column;justify-content:flex-end;font-weight:800;font-size:13px">${s}</div>`).join('')}</div></div>
-    <div class="dock dk"><button class="cta" data-a="go:tickettypes">Cumpără abonament · de la $${FEST.from}</button></div></div>`;
+    <div class="pad" style="margin-top:16px"><div class="card" data-a="tab:wallet" style="cursor:pointer;background:linear-gradient(135deg,var(--indigo-3),#2a1065);border:1px solid var(--line-2);color:#fff;padding:15px 16px;display:flex;align-items:center;gap:13px"><div style="width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.18);display:grid;place-items:center">${I.wallet}</div><div style="flex:1"><div style="font-weight:800;font-size:14px">Portofel cashless</div><div style="font-size:11.5px;opacity:.82">Sold ${lei(ST.balance)} lei · plătește cu brățara</div></div>${I.arrow}</div>
+      <div class="scroll-x" style="margin-top:16px;padding:0">${FEST.days.map((d,i)=>`<button class="chip ${i===0?'ind on':''}">${d}</button>`).join('')}</div>
+      <div class="h2" style="margin-top:18px;font-size:15px">Lineup — Joi 10</div><div style="display:flex;flex-direction:column;gap:10px;margin-top:11px">${FEST.lineup.map((l,i)=>`<div class="listitem"><div style="width:46px;height:46px;border-radius:14px;background:${['linear-gradient(135deg,#7c3aed,#2a1065)','linear-gradient(135deg,#8b5cf6,#241a44)','linear-gradient(135deg,#a78bfa,#6d28d9)'][i%3]};display:grid;place-items:center;font-size:18px">🎧</div><div style="flex:1"><div style="font-weight:800;font-size:14px">${l[0]}</div><div class="muted" style="font-size:11.5px">${l[1]} · ${FEST.stages[i%FEST.stages.length]}</div></div><span style="font-size:11px;font-weight:700;color:var(--muted)">21:30</span></div>`).join('')}</div>
+      <div class="h2" style="margin-top:20px;font-size:15px">Scene</div><div class="scroll-x" style="margin-top:11px;padding:0">${FEST.stages.map((s,i)=>`<div style="min-width:130px;height:80px;border-radius:16px;padding:13px;background:${['#4c1d95','#241a44','#6d28d9','#0f766e'][i]};color:#fff;display:flex;flex-direction:column;justify-content:flex-end;font-weight:800;font-size:13px;border:1px solid var(--line-2)">${s}</div>`).join('')}</div></div>
+    <div class="dock"><button class="cta" data-a="go:tickettypes">Cumpără abonament · de la $${FEST.from}</button></div></div>`;
 
-  /* ===== NOTIFICATIONS ===== */
   const NOTI=[['🎫','Biletele tale sunt gata','Coldplay · 2× QR în cont','acum 5 min',1],['🤖','Recomandare nouă pentru tine','Salina Turda — pentru că îți plac experiențele','acum 1h',1],['💳','Top-up reușit · +200 lei','Sold nou: 362 lei','azi 14:20',0],['🔥','Coldplay — ultimele bilete','Categoria II aproape epuizată','ieri',0]];
-  S.notif=()=>`<div style="min-height:100%;background:var(--bg)">${sb('light')}<div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Notificări</div></div><span style="color:var(--indigo-3);font-size:12.5px;font-weight:700">Citește tot</span></div>
-    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:10px">${NOTI.map(n=>`<div class="listitem" style="${n[4]?'background:var(--indigo-soft);border-color:var(--indigo-line)':''}"><div style="width:42px;height:42px;border-radius:13px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-size:19px">${n[0]}</div><div style="flex:1"><div style="font-weight:800;font-size:13.5px">${n[1]}</div><div class="muted" style="font-size:11.5px;margin-top:1px">${n[2]}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px">${n[3]}</div></div>${n[4]?`<span style="width:8px;height:8px;border-radius:50%;background:var(--indigo)"></span>`:''}</div>`).join('')}</div></div>`;
+  S.notif=()=>`<div class="grid" style="min-height:100%">${sb()}<div class="between pad" style="padding-top:4px"><div class="row" style="gap:12px"><div class="icon-btn" data-a="back">${I.back}</div><div class="h2">Notificări</div></div><span style="color:var(--indigo-2);font-size:12.5px;font-weight:700">Citește tot</span></div>
+    <div class="pad" style="margin-top:14px;display:flex;flex-direction:column;gap:10px">${NOTI.map(n=>`<div class="listitem" style="${n[4]?'background:var(--indigo-soft);border-color:var(--indigo-line)':''}"><div style="width:42px;height:42px;border-radius:13px;background:var(--surface-3);display:grid;place-items:center;font-size:19px">${n[0]}</div><div style="flex:1"><div style="font-weight:800;font-size:13.5px">${n[1]}</div><div class="muted" style="font-size:11.5px;margin-top:1px">${n[2]}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px">${n[3]}</div></div>${n[4]?`<span style="width:8px;height:8px;border-radius:50%;background:var(--indigo)"></span>`:''}</div>`).join('')}</div></div>`;
 
-  /* ---- QR ---- */
-  function drawQR(cv,opt){const ctx=cv.getContext('2d');const n=25,q=2,N=n+q*2,s=cv.width/N;ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle=(opt&&opt.color)||'#1E293B';
-    let seed=((opt&&opt.seed)||7)*2654435761%2147483647;const rnd=()=>{seed=(seed*48271)%2147483647;return seed/2147483647;};
-    const cell=(x,y)=>ctx.fillRect(Math.round((x+q)*s),Math.round((y+q)*s),Math.ceil(s),Math.ceil(s));
-    const finder=(fx,fy)=>{for(let y=0;y<7;y++)for(let x=0;x<7;x++){const b=(x===0||x===6||y===0||y===6),i=(x>=2&&x<=4&&y>=2&&y<=4);if(b||i)cell(fx+x,fy+y);}};
-    finder(0,0);finder(n-7,0);finder(0,n-7);for(let y=0;y<n;y++)for(let x=0;x<n;x++){if((x<8&&y<8)||(x>n-9&&y<8)||(x<8&&y>n-9))continue;if(x===6||y===6){if((x+y)%2===0)cell(x,y);continue;}if(rnd()>0.5)cell(x,y);}}
+  function drawQR(cv,opt){const ctx=cv.getContext('2d');const n=25,q=2,N=n+q*2,s=cv.width/N;ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle=(opt&&opt.color)||'#141020';let seed=((opt&&opt.seed)||7)*2654435761%2147483647;const rnd=()=>{seed=(seed*48271)%2147483647;return seed/2147483647;};const cell=(x,y)=>ctx.fillRect(Math.round((x+q)*s),Math.round((y+q)*s),Math.ceil(s),Math.ceil(s));const finder=(fx,fy)=>{for(let y=0;y<7;y++)for(let x=0;x<7;x++){const b=(x===0||x===6||y===0||y===6),i=(x>=2&&x<=4&&y>=2&&y<=4);if(b||i)cell(fx+x,fy+y);}};finder(0,0);finder(n-7,0);finder(0,n-7);for(let y=0;y<n;y++)for(let x=0;x<n;x++){if((x<8&&y<8)||(x>n-9&&y<8)||(x<8&&y>n-9))continue;if(x===6||y===6){if((x+y)%2===0)cell(x,y);continue;}if(rnd()>0.5)cell(x,y);}}
 
-  /* ---- router ---- */
   let stack=[{id:'splash',data:{}}];const top=()=>stack[stack.length-1].id;
-  function paint(dir){const {id,data}=stack[stack.length-1];const html=(S[id]||S.home)(data||{});
-    const el=document.createElement('div');el.className='screen '+(dir==='back'?'enter-back':'enter-forward');el.innerHTML=html;
-    const old=vp.querySelector('.screen');vp.appendChild(el);void el.offsetWidth;
-    requestAnimationFrame(()=>{el.classList.remove('enter-back','enter-forward');if(old){old.classList.add(dir==='back'?'exit-back':'exit-forward');setTimeout(()=>old.remove(),420);}(INIT[id]||(()=>{}))(el,data||{});});el.scrollTop=0;}
+  function paint(dir){const {id,data}=stack[stack.length-1];const html=(S[id]||S.home)(data||{});const el=document.createElement('div');el.className='screen '+(dir==='back'?'enter-back':'enter-forward');el.innerHTML=html;const old=vp.querySelector('.screen');vp.appendChild(el);void el.offsetWidth;requestAnimationFrame(()=>{el.classList.remove('enter-back','enter-forward');if(old){old.classList.add(dir==='back'?'exit-back':'exit-forward');setTimeout(()=>old.remove(),420);}(INIT[id]||(()=>{}))(el,data||{});});el.scrollTop=0;}
+  function rerender(){const cur=stack[stack.length-1];const el=vp.querySelector('.screen:last-child');if(!el)return;el.innerHTML=(S[cur.id])(cur.data||{});(INIT[cur.id]||(()=>{}))(el,cur.data||{});}
   function go(id,data){stack.push({id,data:data||{}});paint('forward');}
   function back(){if(stack.length>1){stack.pop();paint('back');}}
   function reset(id){stack=[{id,data:{}}];paint('forward');}
   const tabScreens=['home','explore','wallet','tickets','profile'];
   function tab(id){if(tabScreens.includes(top())){stack[stack.length-1]={id,data:{}};paint('forward');}else reset(id);}
 
-  /* ---- buy-flow helpers ---- */
-  function recalcTT(){const ev=EV[ST.ev];const cur=vp.querySelector('.screen:last-child');if(!cur)return;
-    if(!ST._ttCounts||ST._ttEv!==ST.ev){ST._ttCounts=ev.tt.map((_,i)=>i===0?1:0);ST._ttEv=ST.ev;}
-    let cnt=0,tot=0;ev.tt.forEach((t,i)=>{const el=$('#tt'+i,cur);if(el)el.textContent=ST._ttCounts[i];cnt+=ST._ttCounts[i];tot+=ST._ttCounts[i]*t.p;});
-    const c=$('#ttCount',cur),tt=$('#ttTotal',cur);if(c)c.textContent=cnt;if(tt)tt.textContent=tot+' lei';}
+  function recalcTT(){const ev=EV[ST.ev];const cur=vp.querySelector('.screen:last-child');if(!cur)return;if(!ST._ttCounts||ST._ttEv!==ST.ev){ST._ttCounts=ev.tt.map((_,i)=>i===0?1:0);ST._ttEv=ST.ev;}let cnt=0,tot=0;ev.tt.forEach((t,i)=>{const el=$('#tt'+i,cur);if(el)el.textContent=ST._ttCounts[i];cnt+=ST._ttCounts[i];tot+=ST._ttCounts[i]*t.p;});const c=$('#ttCount',cur),tt=$('#ttTotal',cur);if(c)c.textContent=cnt;if(tt)tt.textContent=tot+' lei';}
   function ttAdj(i,d){const ev=EV[ST.ev];if(!ST._ttCounts||ST._ttEv!==ST.ev){ST._ttCounts=ev.tt.map((_,k)=>k===0?1:0);ST._ttEv=ST.ev;}ST._ttCounts[i]=Math.max(0,(ST._ttCounts[i]||0)+d);recalcTT();}
   function toggleSeat(id){const i=ST.seats.indexOf(id);if(i>=0)ST.seats.splice(i,1);else ST.seats.push(id);const cur=vp.querySelector('.screen:last-child');const se=$$('.seat',cur).find(s=>s.dataset.a==='seat:'+id);if(se)se.classList.toggle('sel');const ev=EV[ST.ev];const sp=ev.tt.find(t=>t.seat)?.p||120;const c=$('#seatCount',cur),l=$('#seatList',cur),sm=$('#seatSum',cur);if(c)c.textContent=ST.seats.length;if(l)l.textContent=ST.seats.join(', ')||'niciunul';if(sm)sm.textContent=(ST.seats.length*sp)+' lei';}
+  function updateCartTotals(){const cur=vp.querySelector('.screen:last-child');const c=cartCompute();const set=(id,v)=>{const e=$('#'+id,cur);if(e)e.textContent=v;};set('cSub',c.subtotal+' lei');set('cFee',lei(c.fee)+' lei');set('cProt',lei(c.protect)+' lei');set('cDisc','-'+c.disc+' lei');set('cTotal',lei(c.total)+' lei');set('cBtnTotal',lei(c.total));const pr=$('#cProtRow',cur),dr=$('#cDiscRow',cur);if(pr)pr.hidden=!c.protect;if(dr)dr.hidden=!c.disc;}
+  function selectStay(i){ST.stayPin=i;rerender();}
 
-  function updateCartTotals(){const cur=vp.querySelector('.screen:last-child');const c=cartCompute();
-    const set=(id,v)=>{const e=$('#'+id,cur);if(e)e.textContent=v;};
-    set('cSub',c.subtotal+' lei');set('cFee',lei(c.fee)+' lei');set('cProt',lei(c.protect)+' lei');set('cDisc','-'+c.disc+' lei');set('cTotal',lei(c.total)+' lei');set('cBtnTotal',lei(c.total));
-    const pr=$('#cProtRow',cur),dr=$('#cDiscRow',cur);if(pr)pr.hidden=!c.protect;if(dr)dr.hidden=!c.disc;}
-
-  document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const parts=el.dataset.a.split(':');const a=parts[0],arg=parts[1],arg2=parts[2];
+  document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const parts=el.dataset.a.split(':');const a=parts[0],arg=parts[1];
     if(a==='back')return back();
-    if(a==='go')return go(arg,arg2!==undefined?{id:arg2,pi:parts[3]}:{});
+    if(a==='go')return go(arg,parts[2]!==undefined?{id:parts[2],pi:parts[3]}:{});
     if(a==='tab')return tab(arg);
-    if(a==='obNext'){const sl=$('#obSlides');const i=Math.round(sl.scrollLeft/sl.clientWidth);if(i>=OB.length-1)return go('login');sl.scrollTo({left:sl.clientWidth*(i+1),behavior:'smooth'});return;}
-    if(a==='pref'){const p=arg;const idx=ST.prefs.indexOf(p);if(idx>=0)ST.prefs.splice(idx,1);else ST.prefs.push(p);el.classList.toggle('on');return;}
+    if(a==='obNext'){if(ST.obStep>=OB.length-1){ST.obStep=0;return go('login');}ST.obStep++;return rerender();}
+    if(a==='obBack'){if(ST.obStep>0){ST.obStep--;rerender();}return;}
+    if(a==='pref'){const idx=ST.prefs.indexOf(arg);if(idx>=0)ST.prefs.splice(idx,1);else ST.prefs.push(arg);el.classList.toggle('on');return;}
+    if(a==='prefsEdit'){ST.obStep=OB.length-1;return go('onboarding');}
     if(a==='ttInc')return ttAdj(+arg,1);
     if(a==='ttDec')return ttAdj(+arg,-1);
-    if(a==='bundleAdd'){toast('Pachet adăugat în coș');return;}
+    if(a==='bundleAdd')return toast('Pachet adăugat în coș');
     if(a==='seat')return toggleSeat(arg);
-    if(a==='tgl'){ST.cart[arg]=!ST.cart[arg];el.classList.toggle('on');if(arg==='cultural'){const dot=el.closest('.listitem').querySelector('div:last-child');}updateCartTotals();return;}
+    if(a==='stayPin')return selectStay(+arg);
+    if(a==='tgl'){ST.cart[arg]=!ST.cart[arg];el.classList.toggle('on');updateCartTotals();return;}
     if(a==='applyDisc'){const inp=$('#discInput');if(inp&&inp.value.trim()){ST.cart.discount=30;toast('Cod aplicat · -30 lei');updateCartTotals();}return;}
     if(a==='searchDo'){const inp=$('#searchInput');if(inp){inp.value=arg;inp.dispatchEvent(new Event('input'));}return;}
+    if(a==='ticsOut')return toast('Deschid '+arg+' ↗');
     if(a==='transferDone'){back();setTimeout(()=>toast('Bilet trimis! 🎉'),300);return;}
     if(a==='topupDone'){ST.balance+=200;back();setTimeout(()=>toast('Portofel încărcat · +200 lei'),300);return;}
     if(a==='fltToggle'){const p=$('#fltPanel');if(p)p.style.display=p.style.display==='none'?'block':'none';el.classList.toggle('on');return;}
-    if(a==='logout')return reset('login');
+    if(a==='logout'){ST.obStep=0;return reset('login');}
     if(a==='noop')return;
   });
 
