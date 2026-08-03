@@ -32,6 +32,15 @@
         {{-- Summary tiles                                                     --}}
         {{-- ================================================================ --}}
         <div class="grid grid-cols-1 gap-3 mb-5 lg:grid-cols-4">
+            <div class="p-4 border shadow-sm border-primary-200 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-800 rounded-xl">
+                <p class="text-xs tracking-wide uppercase text-primary-700 dark:text-primary-300">Total vânzări</p>
+                <p class="mt-1 text-2xl font-bold text-primary-700 dark:text-primary-300">
+                    {{ number_format($d['sales_total'], 2) }} {{ $d['currency'] }}
+                </p>
+                <p class="mt-0.5 text-xs text-primary-700/70 dark:text-primary-300/70">
+                    Online + POS &middot; {{ number_format($d['online_order_count'] + $d['pos_order_count']) }} comenzi &middot; {{ number_format($d['online_ticket_count'] + $d['pos_ticket_count']) }} bilete
+                </p>
+            </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                 <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Încasat online</p>
                 <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -51,15 +60,6 @@
                 </p>
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Balanță procesator</p>
-                <p class="mt-1 text-2xl font-bold {{ $d['online_balance'] >= 0 ? 'text-gray-900 dark:text-white' : 'text-rose-600 dark:text-rose-400' }}">
-                    {{ number_format($d['online_balance'], 2) }} {{ $d['currency'] }}
-                </p>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    Cash-flow net = încasat &minus; returnat
-                </p>
-            </div>
-            <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                 <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Încasat POS</p>
                 <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                     {{ number_format($d['pos_total'], 2) }} {{ $d['currency'] }}
@@ -71,15 +71,24 @@
         </div>
 
         {{-- ================================================================ --}}
-        {{-- BLOCK A — ONLINE SALES per event                                  --}}
+        {{-- BLOCK A — ONLINE SALES per event (accordion, collapsed default)   --}}
         {{-- ================================================================ --}}
-        <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="flex items-center gap-2 mb-3">
-                <x-heroicon-o-globe-alt class="w-5 h-5 text-emerald-500" />
-                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
-                    Vânzări online (procesator de plăți)
-                </h3>
-            </div>
+        <div x-data="{ open: false }" class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full text-left">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-globe-alt class="w-5 h-5 text-emerald-500" />
+                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
+                        Vânzări online (procesator de plăți)
+                    </h3>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        {{ number_format($d['online_total'], 2) }} {{ $d['currency'] }}
+                    </span>
+                    <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
+                </div>
+            </button>
+            <div x-show="open" x-cloak class="mt-4">
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
                 Comenzi cu status <em>paid / confirmed / completed</em>, sursă diferită de POS. Include comenzile cu refund parțial (valoarea refund-ată apare în tabelul de mai jos, nu se scade aici).
             </p>
@@ -130,18 +139,28 @@
                     </table>
                 </div>
             @endif
-        </div>
+            </div>{{-- /x-show open A --}}
+        </div>{{-- /accordion A --}}
 
         {{-- ================================================================ --}}
-        {{-- BLOCK B — REFUNDS via processor per event                         --}}
+        {{-- BLOCK B — REFUNDS via processor per event (accordion, collapsed)  --}}
         {{-- ================================================================ --}}
-        <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="flex items-center gap-2 mb-3">
-                <x-heroicon-o-arrow-uturn-left class="w-5 h-5 text-rose-500" />
-                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
-                    Returnat prin procesator
-                </h3>
-            </div>
+        <div x-data="{ open: false }" class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full text-left">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-arrow-uturn-left class="w-5 h-5 text-rose-500" />
+                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
+                        Returnat prin procesator
+                    </h3>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                        {{ number_format($d['refund_total'], 2) }} {{ $d['currency'] }}
+                    </span>
+                    <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
+                </div>
+            </button>
+            <div x-show="open" x-cloak class="mt-4">
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
                 Sursă: <code class="px-1 rounded bg-gray-100 dark:bg-gray-900">marketplace_refund_items</code>, status <em>refunded</em>, ancorat pe data procesării (când a plecat banul înapoi), nu pe data comenzii. Refund-urile parțiale apar la valoarea reală returnată.
             </p>
@@ -192,44 +211,34 @@
                     </table>
                 </div>
             @endif
-        </div>
+            </div>{{-- /x-show open B --}}
+        </div>{{-- /accordion B --}}
 
         {{-- ================================================================ --}}
-        {{-- BLOCK C — Processor balance line                                  --}}
+        {{-- BLOCK D — POS SALES per event, split cash/card (accordion)        --}}
         {{-- ================================================================ --}}
-        <div class="p-4 mb-5 border border-indigo-200 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-800">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs tracking-wide text-indigo-700 uppercase dark:text-indigo-300">Balanța procesatorului pentru lună</p>
-                    <p class="mt-0.5 text-xs text-indigo-700/80 dark:text-indigo-300/80">
-                        Cash-flow net: <strong>{{ number_format($d['online_total'], 2) }}</strong> încasat &minus; <strong>{{ number_format($d['refund_total'], 2) }}</strong> returnat.
-                        Nu e balanța bancară a procesatorului (aceea include și fees, retrageri, ajustări) — e diferența netă a fluxului atribuit acestei luni de activitate.
-                    </p>
+        <div x-data="{ open: false }" class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full text-left">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-building-storefront class="w-5 h-5 text-indigo-500" />
+                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
+                        Vânzări prin POS (fără procesator)
+                    </h3>
                 </div>
-                <div class="text-right">
-                    <p class="text-3xl font-bold {{ $d['online_balance'] >= 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-rose-600 dark:text-rose-400' }}">
-                        {{ number_format($d['online_balance'], 2) }} {{ $d['currency'] }}
-                    </p>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
+                        {{ number_format($d['pos_total'], 2) }} {{ $d['currency'] }}
+                    </span>
+                    <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
                 </div>
-            </div>
-        </div>
-
-        {{-- ================================================================ --}}
-        {{-- BLOCK D — POS SALES per event, split cash/card                    --}}
-        {{-- ================================================================ --}}
-        <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="flex items-center gap-2 mb-3">
-                <x-heroicon-o-building-storefront class="w-5 h-5 text-indigo-500" />
-                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
-                    Vânzări prin POS (fără procesator)
-                </h3>
-            </div>
+            </button>
+            <div x-show="open" x-cloak class="mt-4">
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
                 Comenzi cu <em>source</em> = <code class="px-1 rounded bg-gray-100 dark:bg-gray-900">pos_app</code> (aplicația mobilă Tixello), <code class="px-1 rounded bg-gray-100 dark:bg-gray-900">venue_owner_pos</code> (POS operator locație) sau <code class="px-1 rounded bg-gray-100 dark:bg-gray-900">pos</code> (leisure &mdash; Sf. Ana). Split cash/card citit din <code class="px-1 rounded bg-gray-100 dark:bg-gray-900">meta.payment_method</code>. Comenzile create înainte de patch nu au acest câmp și apar la <em>metodă neînregistrată</em>.
             </p>
 
-            {{-- POS payment-method summary tiles --}}
-            <div class="grid grid-cols-1 gap-3 mb-4 sm:grid-cols-3">
+            {{-- POS payment-method summary tiles — fixed 3-col layout --}}
+            <div class="grid grid-cols-3 gap-3 mb-4">
                 <div class="p-3 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30">
                     <p class="text-xs text-gray-500 uppercase dark:text-gray-400">Cash</p>
                     <p class="mt-1 text-lg font-bold text-emerald-600 dark:text-emerald-400">
@@ -320,7 +329,11 @@
                     </table>
                 </div>
             @endif
-        </div>
+            </div>{{-- /x-show open D --}}
+        </div>{{-- /accordion D --}}
 
+        {{-- Alpine x-cloak hides accordion bodies until Alpine hydrates,
+             preventing a brief flash of the expanded state on first paint. --}}
+        <style>[x-cloak]{display:none!important;}</style>
     @endif
 </x-filament-panels::page>

@@ -334,8 +334,10 @@ class SalesBreakdown extends Page
             ];
         }
 
-        // === Balance (cash-flow through the processor) ===
-        $onlineBalance = round($onlineTotal - $refundTotal, 2);
+        // Total sales across every channel (online + POS). Refunds are shown
+        // separately in Block B and not deducted here — "vânzări" = gross
+        // revenue, "returnat" is its own line.
+        $salesTotal = round($onlineTotal + $posTotal, 2);
 
         return [
             'marketplace' => $marketplace,
@@ -361,8 +363,8 @@ class SalesBreakdown extends Page
                 'refund_ticket_count' => $refundTicketCount,
                 'refund_rows' => $refundRows,
 
-                // Block C — processor balance
-                'online_balance' => $onlineBalance,
+                // Combined sales (online + POS)
+                'sales_total' => $salesTotal,
 
                 // Block D — POS
                 'pos_total' => round($posTotal, 2),
