@@ -2015,6 +2015,35 @@ class MarketplaceTaxTemplate extends Model
                 max(0.0, $organizerNetFromTickets - $advanceDeduction),
                 2
             );
+
+            // Included-mode override. In this mode the ticket price ALREADY
+            // contains the marketplace commission — customer pays 170, of
+            // which 10.20 is Ambilet's cut and 159.80 belongs to organizer.
+            // The decont template expresses this as:
+            //   A (1a) = customer gross (13,550)
+            //   B (2a) = refunds (170)
+            //   C      = advance (0)
+            //   D      = 0        (no separate invoice — commission is baked in)
+            //   E      = A − B − C − D = customer gross − refunds − advance
+            //
+            // Old behavior used organizerNetFromTickets which — after Fix 1 —
+            // returns the breakdown NET (12,737 = gross minus commission).
+            // For an included payout that produced E = 12,737 instead of the
+            // 13,380 the operator expects. Override both {{payout_amount}}
+            // (E) and {{payout_commission_amount}} (D) to match the mode
+            // semantic here. On-top payouts and net_override payouts stay
+            // on the existing path unchanged.
+            $isIncluded = ($payout->commission_mode ?? 'included') !== 'added_on_top';
+            if ($isIncluded && $payout->net_override === null) {
+                $totals = $payout->getBreakdownTotals();
+                $grossAll = ($totals['online']['gross'] ?? 0) + ($totals['pos']['gross'] ?? 0);
+
+                $variables['payout_amount'] = number_format(
+                    max(0.0, $grossAll - $refundDeduction - $advanceDeduction),
+                    2
+                );
+                $variables['payout_commission_amount'] = number_format(0, 2);
+            }
             // Sortat după număr de utilizări desc, "COD (xN)" format.
             arsort($promoCodes);
             $codeStrings = [];
