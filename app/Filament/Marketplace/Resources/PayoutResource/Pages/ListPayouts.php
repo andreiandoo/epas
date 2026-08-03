@@ -45,6 +45,16 @@ class ListPayouts extends ListRecords
             $eventId = (int) request()->query('event');
             $args = $eventId > 0 ? ['event_id' => $eventId] : [];
 
+            // Optional settlement-period bounds from the leisure "Deconturi" tab
+            // (&from=YYYY-MM-DD&to=YYYY-MM-DD). When present, the modal pre-fills
+            // scoped to that period (cutoff = period end) instead of all-time.
+            if ($from = request()->query('from')) {
+                $args['period_from'] = $from;
+            }
+            if ($to = request()->query('to')) {
+                $args['period_to'] = $to;
+            }
+
             // Calling mountAction() directly in mount() does NOT render the modal
             // on initial (GET) page load in Filament 4 — the action mounts server
             // side but the modal never opens. Trigger it from the client after the
@@ -90,7 +100,25 @@ class ListPayouts extends ListRecords
                 if (!$event || !$event->marketplace_organizer_id) {
                     return [];
                 }
-                return $this->buildCreatePayoutInitialState($event);
+
+                // Settlement-period mode: when the leisure "Deconturi" tab passes
+                // period bounds, scope the whole modal to sales up to the period
+                // end (cutoff). Because prior periods' payouts are subtracted from
+                // the balance, "remaining as of period_end" equals exactly that
+                // period's sales — the same cumulative model the payouts already
+                // use. period_from/period_to round-trip via hidden fields so the
+                // saved payout's period_start/period_end match the slice.
+                $cutoff = !empty($arguments['period_to'])
+                    ? \Carbon\Carbon::parse($arguments['period_to'])
+                    : null;
+                $state = $this->buildCreatePayoutInitialState($event, $cutoff);
+                if (!empty($arguments['period_from'])) {
+                    $state['period_from'] = $arguments['period_from'];
+                }
+                if (!empty($arguments['period_to'])) {
+                    $state['period_to'] = $arguments['period_to'];
+                }
+                return $state;
             })
             ->form([
                 Forms\Components\Select::make('marketplace_organizer_id')
@@ -229,7 +257,8 @@ class ListPayouts extends ListRecords
                         if (!$eventId) return '-';
                         $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
                         if (!$event) return '-';
-                        $balance = self::calculateEventBalance($event);
+                        $cutoff = ($to = $get('period_to')) ? \Carbon\Carbon::parse($to) : null;
+                        $balance = self::calculateEventBalance($event, $cutoff);
 
                         // Commission info — check at event level first
                         $html = '<span class="font-semibold text-emerald-600 dark:text-emerald-400">' . number_format($balance, 2) . ' RON</span> disponibil';
@@ -259,6 +288,11 @@ class ListPayouts extends ListRecords
 
                 Forms\Components\Hidden::make('has_balance')->default(false)->dehydrated(false),
                 Forms\Components\Hidden::make('zero_reason')->default(null)->dehydrated(false),
+                // Settlement-period bounds (leisure "Deconturi" tab). Dehydrated
+                // so the submit handler can stamp period_start/period_end and the
+                // display placeholders can scope to the cutoff via $get('period_to').
+                Forms\Components\Hidden::make('period_from')->default(null),
+                Forms\Components\Hidden::make('period_to')->default(null),
 
                 // Zero balance info (not a blocker) — operator can still
                 // proceed with a 0-net decont. Renders only when there's
@@ -291,7 +325,8 @@ class ListPayouts extends ListRecords
                         $event = Event::with(['ticketTypes'])->find($eventId);
                         if (!$event) return '';
 
-                        return new HtmlString($this->renderEventBreakdown($event));
+                        $cutoff = ($to = $get('period_to')) ? \Carbon\Carbon::parse($to) : null;
+                        return new HtmlString($this->renderEventBreakdown($event, $cutoff));
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
@@ -421,7 +456,8 @@ class ListPayouts extends ListRecords
                             if (!$eventId) return 'Introdu suma netă dorită, apoi apasă pe Distribuie automat.';
                             $event = Event::with(['marketplaceOrganizer'])->find($eventId);
                             if (!$event) return 'Introdu suma netă dorită, apoi apasă pe Distribuie automat.';
-                            $balance = self::calculateEventFinancials($event)['balance'];
+                            $cutoff = ($to = $get('period_to')) ? \Carbon\Carbon::parse($to) : null;
+                            $balance = self::calculateEventFinancials($event, $cutoff)['balance'];
                             $fmt = number_format($balance, 2, ',', '.');
                             return "Pentru un decont integral ({$fmt} RON), nu introduce nimic aici — biletele și sumele sunt deja pre-completate, doar trimite formul. Completează acest câmp DOAR pentru un decont parțial.";
                         })
@@ -436,7 +472,8 @@ class ListPayouts extends ListRecords
                             if (!$eventId) return 0;
                             $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
                             if (!$event) return 0;
-                            return self::calculateEventFinancials($event)['balance'];
+                            $cutoff = ($to = $get('period_to')) ? \Carbon\Carbon::parse($to) : null;
+                            return self::calculateEventFinancials($event, $cutoff)['balance'];
                         }),
                     \Filament\Schemas\Components\Actions::make([
                         \Filament\Actions\Action::make('auto_distribute')
@@ -842,10 +879,18 @@ class ListPayouts extends ListRecords
                 // without manually rebalancing every row), qtys are scaled
                 // proportionally so the breakdown matches the entered net.
                 $organizerId = (int) $data['marketplace_organizer_id'];
-                $periodStart = $event
-                    ? MarketplacePayout::resolveNextPeriodStart($event->id, $organizerId, $event)
-                    : null;
-                $periodEnd = now();
+                // Settlement-period decont (leisure "Deconturi" tab): use the
+                // explicit period bounds so the stored snapshot matches the slice
+                // the modal was scoped to. Otherwise fall back to the historical
+                // "next period start → now" behaviour.
+                $periodStart = !empty($data['period_from'])
+                    ? \Carbon\Carbon::parse($data['period_from'])
+                    : ($event
+                        ? MarketplacePayout::resolveNextPeriodStart($event->id, $organizerId, $event)
+                        : null);
+                $periodEnd = !empty($data['period_to'])
+                    ? \Carbon\Carbon::parse($data['period_to'])->endOfDay()
+                    : now();
 
                 $payoutTicketsInput = $data['payout_tickets'] ?? [];
                 $enteredNet = (float) ($data['net_amount'] ?? 0);
@@ -1350,9 +1395,9 @@ class ListPayouts extends ListRecords
      *
      * @return array<string, mixed>
      */
-    protected function buildCreatePayoutInitialState(Event $event): array
+    protected function buildCreatePayoutInitialState(Event $event, ?\Carbon\Carbon $cutoff = null): array
     {
-        $fin = self::calculateEventFinancials($event);
+        $fin = self::calculateEventFinancials($event, $cutoff);
         $eventDiscount = (float) ($fin['discount'] ?? 0);
         $eventExtras = (float) ($fin['extras'] ?? 0);
 
@@ -1383,8 +1428,9 @@ class ListPayouts extends ListRecords
 
         $state['zero_reason'] = null;
 
-        // Same items the manual populate + auto path both use.
-        $items = MarketplacePayout::buildRemainingTicketsItems($event, null, null);
+        // Same items the manual populate + auto path both use. When a settlement
+        // period cutoff is provided, scope tickets to sales up to the period end.
+        $items = MarketplacePayout::buildRemainingTicketsItems($event, null, $cutoff);
         foreach ($items as &$item) {
             $item['available'] = $item['qty'];
         }
@@ -1439,7 +1485,7 @@ class ListPayouts extends ListRecords
      * Calculate event financials: gross, commission (per-ticket-type aware), net.
      * Single source of truth for all payout calculations.
      */
-    public static function calculateEventFinancials(Event $event): array
+    public static function calculateEventFinancials(Event $event, ?\Carbon\Carbon $cutoff = null): array
     {
         $organizer = $event->marketplaceOrganizer;
         if (!$organizer) return ['gross' => 0, 'commission' => 0, 'net' => 0, 'refunds' => 0, 'paid' => 0, 'pending' => 0, 'balance' => 0];
@@ -1450,7 +1496,10 @@ class ListPayouts extends ListRecords
         // POS/test_order excluded — money never flowed through marketplace,
         // commissions are invoiced separately.
         $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-        $breakdown = $service->build($event, null, null, excludePos: true);
+        // $cutoff (period end) truncates the slice on order.created_at — the same
+        // column buildRemainingTicketsItems uses — so the header "Sold disponibil",
+        // the breakdown table and the ticket repeater all agree for the period.
+        $breakdown = $service->build($event, null, $cutoff, excludePos: true);
 
         $grossRevenue = 0.0;
         $totalCommission = 0.0;
@@ -1483,6 +1532,7 @@ class ListPayouts extends ListRecords
             })
             ->where('status', 'refunded')
             ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+            ->when($cutoff, fn ($q) => $q->where('created_at', '<=', $cutoff->copy()->endOfDay()))
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
 
         // Net = breakdown net only. Refunds excluded from balance math but
@@ -1519,9 +1569,9 @@ class ListPayouts extends ListRecords
     /**
      * Calculate available balance for an event (backward compat)
      */
-    public static function calculateEventBalance(Event $event): float
+    public static function calculateEventBalance(Event $event, ?\Carbon\Carbon $cutoff = null): float
     {
-        return self::calculateEventFinancials($event)['balance'];
+        return self::calculateEventFinancials($event, $cutoff)['balance'];
     }
 
     /**
@@ -1536,19 +1586,19 @@ class ListPayouts extends ListRecords
      * thread for the specific bugs (wrong on_top base extraction, double-
      * counting cancelled tickets, missing discount/extras lines, etc.).
      */
-    protected function renderEventBreakdown(Event $event): string
+    protected function renderEventBreakdown(Event $event, ?\Carbon\Carbon $cutoff = null): string
     {
         $organizer = $event->marketplaceOrganizer;
         if (!$organizer) return '';
 
         // Authoritative numbers (same call used by the modal header)
-        $financials = self::calculateEventFinancials($event);
+        $financials = self::calculateEventFinancials($event, $cutoff);
 
         // Per-ticket-type breakdown — same service the Vânzări tab uses,
         // so the per-row figures match what the organizer sees on the
         // event edit page.
         $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->build($event, null, null, excludePos: true);
+            ->build($event, null, $cutoff, excludePos: true);
 
         $perType = $breakdown['per_type'] ?? [];
         $totalRevenue = (float) ($breakdown['total_revenue'] ?? 0);
