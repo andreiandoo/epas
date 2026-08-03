@@ -1789,9 +1789,14 @@ class MarketplaceTaxTemplate extends Model
                 $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
                 $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                 if ($qty <= 0) continue;
+                // Skip zero-priced rows (invitations). Invitations are not a
+                // sale — they don't produce revenue, commission, or a tax
+                // event, so they don't belong in a decont's 1a/1b lines.
+                // Previous cut kept them so 1b's qty total matched the label,
+                // but the operator confirmed invitations must not appear at
+                // all on the PDF.
+                if ($price <= 0) continue;
                 $totalTicketsSold += $qty;
-                // Zero-priced rows (invitations) still emit as "0lei*N" so
-                // 1b's qty total matches the qty in the label.
                 $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
             }
 
@@ -1837,6 +1842,17 @@ class MarketplaceTaxTemplate extends Model
                     })
                     ->where('status', 'refunded')
                     ->get();
+
+                // Legacy fallback: refund_requests may not be linked to the
+                // payout via marketplace_payout_id (older workflow or manual
+                // decont creation). When the primary scoped query is empty
+                // but payout.refund_amount is populated, iterate refund_items
+                // by ticket.event_id + payout period bounds. Mirrors the
+                // escape hatch in MarketplacePayout::getInformationalRefund
+                // AmountAttribute so page and PDF surface the same number.
+                if ($refundItems->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
+                    $refundItems = self::fetchLegacyPeriodRefundItems($payout);
+                }
 
                 $refundCount = $refundItems->count();
                 $refundFaceTotal = (float) $refundItems->sum('face_value');
@@ -1955,9 +1971,18 @@ class MarketplaceTaxTemplate extends Model
             $refundDeduction = (float) ($payout->refund_amount ?? 0);
             $advanceDeduction = (float) ($payout->payout_method['advance_amount'] ?? 0);
 
-            $organizerNetFromTickets = method_exists($payout, 'computeOrganizerNetFromTickets')
-                ? $payout->computeOrganizerNetFromTickets()
-                : max(0.0, $payoutAmount - $totalDiscountAmount);
+            // Read from the frozen ticket_breakdown snapshot (getBreakdownNetTotal)
+            // instead of the live ticket recompute. Rationale: the live path uses
+            // Ticket::getEffectivePrice() which returns the full customer price
+            // for commission_mode=included, so E ended up equal to gross (13,550
+            // for a 12,737-net payout). The snapshot has the correct per-row net
+            // baked in when the payout was frozen. See MarketplacePayout::
+            // getBreakdownNetTotal + audit AUDIT_DECONTURI_2026-07-29.md.
+            $organizerNetFromTickets = method_exists($payout, 'getBreakdownNetTotal')
+                ? $payout->getBreakdownNetTotal()
+                : (method_exists($payout, 'computeOrganizerNetFromTickets')
+                    ? $payout->computeOrganizerNetFromTickets()
+                    : max(0.0, $payoutAmount - $totalDiscountAmount));
 
             // Targeted reconciliation (payout 3208, 2026-07-29): when an
             // operator has set an explicit net_override on this payout, THAT is
@@ -2643,6 +2668,36 @@ class MarketplaceTaxTemplate extends Model
     }
 
     /**
+     * Legacy fallback for refund items on a payout where refund_requests
+     * were never linked via marketplace_payout_id. Scoped by:
+     *   - ticket.event_id = payout.event_id
+     *   - ri.status = 'refunded'
+     *   - ri.updated_at within [payout.period_start, payout.period_end]
+     * Safe from double-counting across payouts because payout periods for
+     * the same event are disjoint by design.
+     */
+    private static function fetchLegacyPeriodRefundItems(MarketplacePayout $payout)
+    {
+        if (!$payout->event_id) return collect();
+
+        $q = \App\Models\MarketplaceRefundItem::query()
+            ->where('status', 'refunded')
+            ->whereHas('ticket.ticketType', function ($ttq) use ($payout) {
+                $ttq->where('event_id', $payout->event_id);
+            });
+
+        if ($payout->period_start) {
+            $q->where('updated_at', '>=', $payout->period_start);
+        }
+        if ($payout->period_end) {
+            // period_end is a date; include the whole day.
+            $q->where('updated_at', '<=', $payout->period_end->copy()->endOfDay());
+        }
+
+        return $q->with('ticketType:id,name,commission_type,commission_rate,commission_fixed,commission_mode')->get();
+    }
+
+    /**
      * Same idea as buildPayoutSalesBreakdownRows but for refunded tickets,
      * pulling rules from each refund item's ticket type. Returns 2a/2b
      * (and optional 2c/2d, 2e/2f...) HTML, or empty string when nothing
@@ -2664,6 +2719,14 @@ class MarketplaceTaxTemplate extends Model
             ->where('status', 'refunded')
             ->with('ticketType:id,name,commission_type,commission_rate,commission_fixed,commission_mode')
             ->get();
+
+        // Legacy fallback: when refund_requests aren't linked to this payout
+        // via marketplace_payout_id but payout.refund_amount is populated,
+        // pull refund_items scoped by event_id + period bounds. Same guard as
+        // the aggregate refund vars above so both surfaces stay consistent.
+        if ($items->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
+            $items = self::fetchLegacyPeriodRefundItems($payout);
+        }
 
         if ($items->isEmpty()) return '';
 

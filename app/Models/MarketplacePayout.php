@@ -667,12 +667,42 @@ class MarketplacePayout extends Model
         // loss (current Ambilet model). Subtract those, but ONLY those.
         // Refunds with commission_refunded=false are tracked for
         // reporting but don't deduct from the organizer's payment.
-        $organizerNet = $this->computeOrganizerNetFromTickets();
+        // Authoritative net comes from the frozen ticket_breakdown snapshot
+        // (getBreakdownTotals), NOT the live ticket recompute
+        // (computeOrganizerNetFromTickets). The recompute uses
+        // Ticket::getEffectivePrice() which returns the FULL customer price
+        // for included-commission tickets — i.e. gross, not net — so payouts
+        // with commission_mode=included came out with net=gross, breaking E
+        // in the PDF and "Net de plată" on the page. The audit doc
+        // AUDIT_DECONTURI_2026-07-29.md §Direcție-cheie recommends this
+        // exact collapse to the snapshot as the single source of truth.
+        $organizerNet = $this->getBreakdownNetTotal();
         $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
         $deductibleRefund = $this->deductible_refund_amount;
 
         $this->finalNetAmountCache = max(0.0, round($organizerNet - $advance - $deductibleRefund, 2));
         return $this->finalNetAmountCache;
+    }
+
+    /**
+     * Organizer net for this payout, read from the frozen ticket_breakdown
+     * snapshot (getBreakdownTotals). This is the same net rendered per-row
+     * on the page ("Sumă netă bilete online / POS") and in the PDF's row
+     * 1a — so surfaces stay consistent instead of showing gross-as-net on
+     * included-commission events.
+     *
+     * Legacy fallback: when the snapshot is empty (very old payouts pre-
+     * ticket_breakdown), falls back to the live compute — imperfect on
+     * included, but preserves historic behaviour for those specific rows.
+     */
+    public function getBreakdownNetTotal(): float
+    {
+        $totals = $this->getBreakdownTotals();
+        $net = round(($totals['online']['net'] ?? 0) + ($totals['pos']['net'] ?? 0), 2);
+        if ($net > 0.001 || !empty($this->ticket_breakdown)) {
+            return $net;
+        }
+        return $this->computeOrganizerNetFromTickets();
     }
 
     /**
