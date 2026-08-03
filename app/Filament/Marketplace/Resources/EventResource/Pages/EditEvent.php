@@ -2106,7 +2106,6 @@ class EditEvent extends EditRecord
     {
         $event = $this->record;
         $tz = 'Europe/Bucharest';
-        $projectStart = Carbon::parse('2026-07-15', $tz)->startOfDay();
         $today = Carbon::now($tz)->endOfDay();
         $svc = app(SalesBreakdownService::class);
 
@@ -2115,10 +2114,14 @@ class EditEvent extends EditRecord
             ->keyBy(fn ($p) => $p->period_from->format('Y-m-d'));
 
         $periods = [];
-        $cursor = $projectStart->copy();
+        // Calendar half-month periods: [1..15] and [16..end-of-month]. The
+        // project's first settlement period is 16-31.07.2026.
+        $cursor = Carbon::parse('2026-07-16', $tz)->startOfDay();
         while ($cursor->lte($today)) {
             $from = $cursor->copy()->startOfDay();
-            $to = $cursor->copy()->addDays(13)->endOfDay();
+            $to = $from->day <= 15
+                ? $from->copy()->day(15)->endOfDay()
+                : $from->copy()->endOfMonth();
             $isCurrent = $today->between($from, $to);
             $key = $from->format('Y-m-d');
 
@@ -2132,9 +2135,15 @@ class EditEvent extends EditRecord
             $data['generated_at'] = $flag?->generated_at?->format('d.m.Y H:i');
             $data['settled_at'] = $flag?->settled_at?->format('d.m.Y H:i');
             $data['is_current'] = $isCurrent;
-            $periods[] = $data;
 
-            $cursor->addDays(14);
+            // Skip the current, still-open period until it actually has sales, so a
+            // brand-new half-month doesn't show as an empty decont period.
+            $hasSales = ($data['online_revenue'] ?? 0) != 0.0 || ($data['pos_revenue'] ?? 0) != 0.0;
+            if (!$isCurrent || $hasSales) {
+                $periods[] = $data;
+            }
+
+            $cursor = $to->copy()->addDay()->startOfDay();
         }
 
         return array_reverse($periods);
@@ -2205,7 +2214,9 @@ class EditEvent extends EditRecord
             'event_id' => $this->record->id,
             'period_from' => $from->format('Y-m-d'),
         ]);
-        $row->period_to = $from->copy()->addDays(13)->format('Y-m-d');
+        $row->period_to = ($from->day <= 15
+            ? $from->copy()->day(15)
+            : $from->copy()->endOfMonth())->format('Y-m-d');
 
         $col = $which === 'generated' ? 'generated_at' : 'settled_at';
         $row->{$col} = $row->{$col} ? null : now();

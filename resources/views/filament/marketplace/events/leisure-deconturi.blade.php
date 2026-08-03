@@ -1,5 +1,8 @@
 @php
     $periods = $periods ?? [];
+    $payoutUrl = $payoutUrl ?? null;
+    $eventId = $eventId ?? null;
+    $orgId = $orgId ?? null;
     $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
     $roDate = function ($ymd) {
         try { return \Illuminate\Support\Carbon::parse($ymd)->format('d.m.Y'); }
@@ -16,7 +19,7 @@
     @forelse ($periods as $p)
         @php $cur = $p['currency'] ?? 'RON'; @endphp
         <details class="ep-decont overflow-hidden bg-white border border-gray-200 rounded-xl dark:border-gray-700 dark:bg-gray-800" @if(!empty($p['is_current'])) open @endif>
-            <summary class="flex flex-wrap items-center justify-between gap-3 p-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700/40">
+            <summary class="flex flex-wrap items-center justify-between gap-3 p-4 cursor-pointer select-none">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-gray-400 transition-transform ep-chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="font-semibold text-gray-900 dark:text-white">{{ $roDate($p['from']) }} – {{ $roDate($p['to']) }}</span>
@@ -37,7 +40,14 @@
             </summary>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex flex-wrap gap-6 mb-4">
+                <div class="flex flex-wrap items-center gap-6 mb-4">
+                    @if ($payoutUrl && $eventId)
+                        <a href="{{ $payoutUrl }}?open_decont=1&org={{ $orgId }}&event={{ $eventId }}&from={{ $p['from'] }}&to={{ $p['to'] }}"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Generează decont
+                        </a>
+                    @endif
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="checkbox" wire:click="toggleDecontFlag('{{ $p['from'] }}','generated')" @checked($p['generated_at']) class="w-4 h-4 text-indigo-600 rounded border-gray-300">
                         <span class="text-gray-800 dark:text-gray-200">S-a generat decont?</span>

@@ -1155,6 +1155,9 @@ class EventResource extends Resource
                                                 $record
                                                     ? view('filament.marketplace.events.leisure-deconturi', [
                                                         'periods' => $livewire->getLeisureSettlementPeriods(),
+                                                        'payoutUrl' => \App\Filament\Marketplace\Resources\PayoutResource::getUrl('index'),
+                                                        'eventId' => $record->id,
+                                                        'orgId' => $record->marketplace_organizer_id,
                                                     ])->render()
                                                     : '<div class="p-6 text-center text-gray-500">' . $t('Salvați evenimentul întâi.', 'Save the event first.') . '</div>'
                                             ))

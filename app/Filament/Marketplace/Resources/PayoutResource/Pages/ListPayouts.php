@@ -32,6 +32,21 @@ class ListPayouts extends ListRecords
         return new HtmlString("Deconturi <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
     }
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Deep link from the leisure event "Deconturi" tab "Generează decont"
+        // button: /marketplace/payouts?open_decont=1&event={id} → open the "Crează
+        // Decont Manual" modal fully pre-filled for that event (the action's
+        // fillForm() populates organizer + event + tickets + financials from the
+        // event_id argument, the same canonical pipeline as "Evenimente încheiate").
+        if (request()->boolean('open_decont')) {
+            $eventId = (int) request()->query('event');
+            $this->mountAction('create_payout', $eventId > 0 ? ['event_id' => $eventId] : []);
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
