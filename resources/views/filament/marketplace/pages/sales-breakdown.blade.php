@@ -49,6 +49,12 @@
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                     {{ number_format($d['online_order_count']) }} comenzi &middot; {{ number_format($d['online_ticket_count']) }} bilete
                 </p>
+                @if($d['refunded_orders_count'] > 0)
+                    <p class="pt-2 mt-2 text-[11px] leading-tight text-gray-500 border-t border-gray-100 dark:text-gray-400 dark:border-gray-700">
+                        <span class="font-semibold">+ {{ number_format($d['refunded_orders_count']) }} comenzi refund-ate complet ({{ number_format($d['refunded_orders_total'], 2) }} {{ $d['currency'] }})</span>
+                        au fost inițial captate prin procesator. Le vezi în dashboard-ul Netopia la <em>Tranzacții acceptate</em>, dar nu apar aici pentru că banii au plecat înapoi. Total <em>acceptate</em> comparabil: <strong>{{ number_format($d['processor_accepted_total'], 2) }} {{ $d['currency'] }}</strong>.
+                    </p>
+                @endif
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                 <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Returnat prin procesator</p>
@@ -352,88 +358,6 @@
             @endif
             </div>{{-- /x-show open D --}}
         </div>{{-- /accordion D --}}
-
-        {{-- ================================================================ --}}
-        {{-- BLOCK E — Reconciliation with processor dashboard (informational) --}}
-        {{-- ================================================================ --}}
-        <div x-data="{ open: false }" class="p-5 mb-5 border border-amber-200 shadow-sm dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10 rounded-xl">
-            <button type="button" @click="open = !open" class="flex items-center justify-between w-full text-left">
-                <div class="flex items-center gap-2">
-                    <x-heroicon-o-scale class="w-5 h-5 text-amber-500" />
-                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">
-                        Reconciliere procesator plăți
-                    </h3>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-                        {{ number_format($d['processor_accepted_total'], 2) }} {{ $d['currency'] }}
-                    </span>
-                    <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
-                </div>
-            </button>
-            <div x-show="open" x-cloak class="mt-4">
-                <p class="mb-4 text-xs text-gray-600 dark:text-gray-300">
-                    Dashboard-ul procesatorului (Netopia, Stripe etc) raportează <strong>toate</strong> tranzacțiile care au fost capturate cu succes, chiar dacă ulterior au fost refundate integral. Tile-urile de sus arată vânzarea <strong>netă</strong> — o comandă complet refundată dispare din "Încasat online" (pentru că banii au plecat înapoi) dar rămâne în "acceptate" la procesator. Blocul ăsta explică diferența.
-                </p>
-
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {{-- Left column: processor's "accepted" reconstruction --}}
-                    <div class="p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Total acceptate — reconstruit</p>
-                        <p class="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">
-                            {{ number_format($d['processor_accepted_total'], 2) }} {{ $d['currency'] }}
-                        </p>
-                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {{ number_format($d['processor_accepted_count']) }} comenzi
-                        </p>
-                        <div class="pt-3 mt-3 space-y-1 text-xs border-t border-gray-200 dark:border-gray-700">
-                            <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                                <span>Încasat online (net)</span>
-                                <span class="font-medium tabular-nums">{{ number_format($d['online_total'], 2) }}</span>
-                            </div>
-                            <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                                <span>+ Comenzi refund-ate complet ({{ number_format($d['refunded_orders_count']) }})</span>
-                                <span class="font-medium tabular-nums">{{ number_format($d['refunded_orders_total'], 2) }}</span>
-                            </div>
-                            <div class="flex justify-between pt-1 mt-1 font-semibold text-gray-900 border-t border-gray-100 dark:border-gray-700 dark:text-white">
-                                <span>= Total procesat</span>
-                                <span class="tabular-nums">{{ number_format($d['processor_accepted_total'], 2) }}</span>
-                            </div>
-                        </div>
-                        <p class="mt-3 text-[10px] text-gray-400 dark:text-gray-500">
-                            Comparabil cu <em>Tranzacții acceptate</em> din dashboard-ul Netopia.
-                        </p>
-                    </div>
-
-                    {{-- Right column: refunds reconstruction --}}
-                    <div class="p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Total refund-uri</p>
-                        <p class="mt-1 text-xl font-bold text-rose-600 dark:text-rose-400">
-                            {{ number_format($d['refund_total'], 2) }} {{ $d['currency'] }}
-                        </p>
-                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {{ number_format($d['refund_order_count']) }} comenzi &middot; {{ number_format($d['refund_ticket_count']) }} bilete refund-ate
-                        </p>
-                        <div class="pt-3 mt-3 text-xs text-gray-500 border-t border-gray-200 dark:border-gray-700 dark:text-gray-400">
-                            Sursă: <code class="px-1 rounded bg-gray-100 dark:bg-gray-900">marketplace_refund_items</code> cu status <em>refunded</em>, ancorat pe data efectivă a refund-ului. Include acum și refund-urile de pe comenzi <em>legacy_import</em> / <em>external_import</em> — banii au plecat prin procesator, deci apar în dashboard-ul lui.
-                        </div>
-                        <p class="mt-3 text-[10px] text-gray-400 dark:text-gray-500">
-                            Comparabil cu <em>Tranzacții creditate</em> din dashboard-ul Netopia.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="p-3 mt-4 text-xs text-gray-600 border rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 dark:text-gray-300">
-                    <strong>De ce nu se potrivesc perfect 1:1?</strong> Câteva surse tipice de diferență, sub 0.1% din volum:
-                    <ul class="mt-1 space-y-0.5 list-disc list-inside">
-                        <li>Preautorizare + captură separată — procesatorul loghează 2 tranzacții pentru 1 comandă</li>
-                        <li>Retry după eșec — procesatorul păstrează urma primei încercări</li>
-                        <li>Fus orar — o comandă la limita 00:00 Bucharest / 21:00 UTC poate cădea într-o parte sau alta</li>
-                        <li>Ordinele cu <em>paid_at</em> într-o altă lună decât <em>created_at</em> (plată amânată)</li>
-                    </ul>
-                </div>
-            </div>{{-- /x-show open E --}}
-        </div>{{-- /accordion E --}}
 
         {{-- Alpine x-cloak hides accordion bodies until Alpine hydrates,
              preventing a brief flash of the expanded state on first paint. --}}
