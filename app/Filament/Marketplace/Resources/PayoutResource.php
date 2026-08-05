@@ -346,6 +346,13 @@ class PayoutResource extends Resource
                                         $informationalRefund = (float) $record->informational_refund_amount;
                                         $finalNet = (float) $record->final_net_amount;
 
+                                        // Mode-conditional labelling: for included-mode payouts,
+                                        // final_net_amount subtracts BOTH refund kinds (see
+                                        // MarketplacePayout::getFinalNetAmountAttribute). The
+                                        // informational card's "nu scad din net" note is only
+                                        // correct for on-top mode.
+                                        $isIncludedMode = ($record->commission_mode ?? 'included') !== 'added_on_top';
+
                                         $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
                                         $hasDeductible = $deductibleRefund > 0.01;
                                         $hasInformational = $informationalRefund > 0.01;
@@ -360,13 +367,29 @@ class PayoutResource extends Resource
                                                 . "</div>"
                                             : '';
 
-                                        $informationalCard = $hasInformational
-                                            ? "<div style='padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;'>"
-                                                . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
-                                                . "<div style='font-size:16px;font-weight:700;color:#6b7280;'>{$fmt($informationalRefund)}</div>"
-                                                . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu scad din net</div>"
-                                                . "</div>"
-                                            : '';
+                                        // Informational card semantic differs by commission mode.
+                                        // On-top: marketplace absorbs the loss, organizer stays whole
+                                        //         → "nu scad din net", dashed gray card.
+                                        // Included: refund is money that flowed out through the
+                                        //           processor and the organizer sees it on the decont
+                                        //           → "scad din net", solid red card matching the
+                                        //           deductible one.
+                                        $informationalCard = '';
+                                        if ($hasInformational) {
+                                            if ($isIncludedMode) {
+                                                $informationalCard = "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
+                                                    . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
+                                                    . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($informationalRefund)}</div>"
+                                                    . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>scad din net</div>"
+                                                    . "</div>";
+                                            } else {
+                                                $informationalCard = "<div style='padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;'>"
+                                                    . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
+                                                    . "<div style='font-size:16px;font-weight:700;color:#6b7280;'>{$fmt($informationalRefund)}</div>"
+                                                    . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu scad din net</div>"
+                                                    . "</div>";
+                                            }
+                                        }
 
                                         return new \Illuminate\Support\HtmlString("
                                         <div style='display:grid; grid-template-columns:repeat({$cols},1fr); gap:8px; margin-bottom:16px;'>

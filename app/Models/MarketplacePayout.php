@@ -667,20 +667,49 @@ class MarketplacePayout extends Model
         // loss (current Ambilet model). Subtract those, but ONLY those.
         // Refunds with commission_refunded=false are tracked for
         // reporting but don't deduct from the organizer's payment.
-        // Authoritative net comes from the frozen ticket_breakdown snapshot
-        // (getBreakdownTotals), NOT the live ticket recompute
-        // (computeOrganizerNetFromTickets). The recompute uses
-        // Ticket::getEffectivePrice() which returns the FULL customer price
-        // for included-commission tickets — i.e. gross, not net — so payouts
-        // with commission_mode=included came out with net=gross, breaking E
-        // in the PDF and "Net de plată" on the page. The audit doc
-        // AUDIT_DECONTURI_2026-07-29.md §Direcție-cheie recommends this
-        // exact collapse to the snapshot as the single source of truth.
-        $organizerNet = $this->getBreakdownNetTotal();
-        $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
-        $deductibleRefund = $this->deductible_refund_amount;
+        // Net de plată is mode-conditional to match the PDF's E value:
+        //
+        // INCLUDED (commission baked into ticket price):
+        //   A = customer gross (money in through processor)
+        //   D = 0 (no separate invoice line; commission billed via organizer
+        //          invoice separately)
+        //   E = A − B − C = customer gross − refunds − advance
+        //
+        //   BOTH refund kinds (deductible + informational) subtract here —
+        //   both are money that went OUT via the processor. The distinction
+        //   only matters for who eats the commission-loss on the refunded
+        //   ticket, not for the cash-flow shown on the decont.
+        //
+        // ON-TOP (commission added on top of ticket price):
+        //   A = organizer's clean slice = getBreakdownTotals()[…].net
+        //   D = 0 (Ambilet already collected commission from customer)
+        //   E = A − B − C with only deductible refunds subtracting
+        //   (informational refunds are absorbed by Ambilet's pool, so the
+        //   organizer's slice stays whole — historical semantic preserved).
+        //
+        // Both branches match the PDF's {{payout_amount}} computation in
+        // MarketplaceTaxTemplate::getVariablesForContext.
+        $isIncluded = ($this->commission_mode ?? 'included') !== 'added_on_top';
+        $totals = $this->getBreakdownTotals();
 
-        $this->finalNetAmountCache = max(0.0, round($organizerNet - $advance - $deductibleRefund, 2));
+        if ($isIncluded) {
+            $baseAmount = ($totals['online']['gross'] ?? 0) + ($totals['pos']['gross'] ?? 0);
+            $refundToSubtract = $this->deductible_refund_amount + $this->informational_refund_amount;
+        } else {
+            $baseAmount = ($totals['online']['net'] ?? 0) + ($totals['pos']['net'] ?? 0);
+            $refundToSubtract = $this->deductible_refund_amount;
+        }
+
+        // Legacy fallback: very old payouts pre-ticket_breakdown snapshot
+        // fall back to the live compute — imperfect on included, but keeps
+        // historic behaviour intact for archived data.
+        if ($baseAmount <= 0.001 && empty($this->ticket_breakdown)) {
+            $baseAmount = $this->computeOrganizerNetFromTickets();
+        }
+
+        $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
+
+        $this->finalNetAmountCache = max(0.0, round($baseAmount - $advance - $refundToSubtract, 2));
         return $this->finalNetAmountCache;
     }
 
