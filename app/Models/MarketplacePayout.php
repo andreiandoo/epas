@@ -1435,6 +1435,52 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Preview of what the "Factură" (general_client) will bill on on_top
+     * events. On on_top the marketplace already collected commission from
+     * the customer on top of the ticket price — the invoice is a paper
+     * record of what Ambilet earned.
+     *
+     * For refunds where commission_refunded=false ("fara taxa"), Ambilet
+     * kept the commission on the refunded ticket at refund time. Those
+     * amounts are ALSO Ambilet's revenue and belong on the general_client
+     * invoice — even when the refund was full — so we add them here.
+     * Confirmed with operator on PAY-WF8XUUZ9-3256 (F-494202208 under-
+     * billed by 8 lei = 2 × 4 kept commission on 2 refunded Presale
+     * tickets).
+     *
+     * Returns zero across the board on included events (that mode bills
+     * the organizer, not the general_client).
+     *
+     * @return array{is_on_top:bool, commission:float, kept:float, total:float}
+     */
+    public function getGeneralClientInvoicePreview(): array
+    {
+        $mode = $this->commission_mode
+            ?? $this->event?->getEffectiveCommissionMode()
+            ?? 'included';
+        $isOnTop = $mode === 'added_on_top';
+
+        if (!$isOnTop) {
+            return [
+                'is_on_top' => false,
+                'commission' => 0.0,
+                'kept' => 0.0,
+                'total' => 0.0,
+            ];
+        }
+
+        $commission = round((float) $this->getCommissionExclPos(), 2);
+        $kept = round((float) $this->getKeptCommissionTotalForEvent(), 2);
+
+        return [
+            'is_on_top' => true,
+            'commission' => $commission,
+            'kept' => $kept,
+            'total' => round($commission + $kept, 2),
+        ];
+    }
+
+    /**
      * Preview of what the unified "Factură organizator" will bill.
      *
      * Included mode:
@@ -1604,11 +1650,25 @@ class MarketplacePayout extends Model
             ?? $this->event?->getEffectiveCommissionMode()
             ?? 'included';
         if ($modeForStep === 'added_on_top') {
+            $preview = $this->getGeneralClientInvoicePreview();
+            $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+            $parts = [];
+            if ($preview['commission'] > 0.01) {
+                $parts[] = 'comision online: ' . $fmt($preview['commission']);
+            }
+            if ($preview['kept'] > 0.01) {
+                $parts[] = 'comision reținut din rambursări: ' . $fmt($preview['kept']);
+            }
+            $hint = ($preview['total'] ?? 0) > 0.01
+                ? 'Total de facturat (client general): ' . $fmt($preview['total'])
+                    . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '')
+                : null;
+
             $steps[] = [
                 'key' => 'generate_invoice',
                 'label' => 'Generează factura',
                 'done' => $this->invoice !== null,
-                'hint' => null,
+                'hint' => $hint,
             ];
         }
 

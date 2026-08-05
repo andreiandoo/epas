@@ -667,7 +667,23 @@ class ViewPayout extends ViewRecord
                 ->icon('heroicon-o-document-plus')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('Se va genera o factură asociată acestui decont.')
+                ->modalDescription(function () {
+                    $preview = $this->record->getGeneralClientInvoicePreview();
+                    if (!($preview['is_on_top'] ?? false)) {
+                        return 'Se va genera o factură asociată acestui decont.';
+                    }
+                    $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+                    $parts = [];
+                    if ($preview['commission'] > 0.01) {
+                        $parts[] = 'comision online: ' . $fmt($preview['commission']);
+                    }
+                    if ($preview['kept'] > 0.01) {
+                        $parts[] = 'comision reținut la rambursări (rămas în vistieria Ambilet): ' . $fmt($preview['kept']);
+                    }
+                    $breakdown = !empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '';
+                    return 'Se va genera o factură către clientul general pentru comisioanele încasate pe acest decont: '
+                        . $fmt($preview['total']) . $breakdown . '.';
+                })
                 // Only appears on on_top payouts: this action creates the
                 // general-client invoice for the commission the customer
                 // paid on top of the ticket price. On included events the
@@ -713,19 +729,40 @@ class ViewPayout extends ViewRecord
                     $nextNumber = $lastInvoice ? ((int) preg_replace('/\D/', '', $lastInvoice->number) + 1) : 1;
                     $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
-                    // Use commission EXCLUDING POS — POS commission is billed on a
-                    // separate Factură POS, since those sales never flowed through
-                    // the marketplace.
-                    $commissionSubtotal = $payout->getCommissionExclPos();
-                    $vatRate = $marketplace->vat_payer ? 19 : 0;
-                    $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
-
                     // For general-client invoices the marketplace already
                     // collected the commission from buyers on top of the
                     // ticket price — the invoice is just a paper record.
                     // Stamp it as paid on creation. Organizer-recipient
                     // invoices represent an actual debt and stay outstanding.
                     $isGeneralClient = $recipientType === 'general_client';
+
+                    // Use commission EXCLUDING POS — POS commission is billed on a
+                    // separate Factură POS, since those sales never flowed through
+                    // the marketplace.
+                    $commissionSubtotal = $payout->getCommissionExclPos();
+
+                    // On on_top events with commission_refunded=false refunds,
+                    // Ambilet kept the commission portion of refunded tickets.
+                    // That amount is real Ambilet revenue and needs to hit the
+                    // general_client invoice — otherwise the invoice under-bills.
+                    // On included events + organizer-recipient invoices this is
+                    // handled via generate_invoice_organizer (subtracted from the
+                    // organizer's bill instead), so we only add here for the
+                    // on_top / general_client path.
+                    $keptCommission = 0.0;
+                    $keptRowsForGeneralClient = [];
+                    if ($isGeneralClient && ($payout->commission_mode === 'added_on_top'
+                        || $payout->event?->getEffectiveCommissionMode() === 'added_on_top')) {
+                        $keptRowsForGeneralClient = $payout->getKeptCommissionRowsForEvent();
+                        foreach ($keptRowsForGeneralClient as $row) {
+                            $keptCommission += (float) ($row['commission_amount'] ?? 0);
+                        }
+                        $keptCommission = round($keptCommission, 2);
+                        $commissionSubtotal = round($commissionSubtotal + $keptCommission, 2);
+                    }
+
+                    $vatRate = $marketplace->vat_payer ? 19 : 0;
+                    $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
 
                     // Description + line item composition mirrors what the
                     // accountant expects to see on the printed factură. The
@@ -760,12 +797,42 @@ class ViewPayout extends ViewRecord
                             ],
                             'client' => $client,
                             'recipient_type' => $recipientType,
-                            'items' => [[
-                                'description' => $itemDescription,
-                                'quantity' => 1,
-                                'unit_price' => $commissionSubtotal,
-                                'amount' => $commissionSubtotal,
-                            ]],
+                            'items' => (function () use ($itemDescription, $commissionSubtotal, $keptCommission, $keptRowsForGeneralClient, $isGeneralClient) {
+                                // Base line: total commission MINUS kept portion so the
+                                // main "Taxa ticketing" reflects only revenue from valid
+                                // tickets. Kept commission gets its own line(s) below
+                                // so the accountant sees exactly where the extra amount
+                                // came from (kept commission on refunded tickets — real
+                                // Ambilet revenue that survived the refund).
+                                $baseAmount = round($commissionSubtotal - $keptCommission, 2);
+                                $items = [[
+                                    'description' => $itemDescription,
+                                    'quantity' => 1,
+                                    'unit_price' => $baseAmount,
+                                    'amount' => $baseAmount,
+                                ]];
+
+                                if ($isGeneralClient && $keptCommission > 0.01) {
+                                    foreach ($keptRowsForGeneralClient as $row) {
+                                        $qty = (int) ($row['qty'] ?? 0);
+                                        $commPer = (float) ($row['commission_per_ticket'] ?? 0);
+                                        $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPer)), 2);
+                                        if ($qty <= 0 || $lineTotal <= 0) {
+                                            continue;
+                                        }
+                                        $items[] = [
+                                            'description' => 'Comision reținut din rambursare bilet "'
+                                                . ($row['ticket_type_name'] ?? 'Bilet')
+                                                . '" (comision peste preț neregăsit clientului) — venit Ambilet păstrat la rambursare',
+                                            'quantity' => $qty,
+                                            'unit_price' => $commPer,
+                                            'amount' => $lineTotal,
+                                        ];
+                                    }
+                                }
+
+                                return $items;
+                            })(),
                         ],
                     ]);
 
