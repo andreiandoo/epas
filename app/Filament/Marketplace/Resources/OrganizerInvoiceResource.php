@@ -307,22 +307,17 @@ class OrganizerInvoiceResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizator')
-                    ->searchable()
-                    ->sortable()
-                    ->formatStateUsing(function ($state, $record) {
-                        $meta = $record->meta ?? [];
-                        if (($meta['recipient_type'] ?? null) === 'general_client') {
-                            return $meta['client']['name'] ?? 'Client general';
-                        }
-                        return $state;
-                    }),
-
-                Tables\Columns\TextColumn::make('event_decont')
-                    ->label('Eveniment / Decont')
+                    ->label('Organizator / Eveniment / Perioadă')
                     ->searchable(query: function (Builder $query, string $search): Builder {
+                        // Original organizer-name search + the two lookups
+                        // that used to live on the standalone Eveniment/Decont
+                        // column (payout.reference and event.title). Merged
+                        // here after event_decont + period_start collapsed
+                        // into a single cell to fit the table without
+                        // horizontal scroll.
                         $like = '%' . $search . '%';
                         return $query
+                            ->orWhereHas('organizer', fn ($q) => $q->where('name', 'ilike', $like))
                             ->orWhereHas('payout', fn ($q) => $q->where('reference', 'ilike', $like))
                             ->orWhereHas('payout.event', function ($q) use ($like) {
                                 $driver = $q->getQuery()->getConnection()->getDriverName();
@@ -333,29 +328,59 @@ class OrganizerInvoiceResource extends Resource
                                 }
                             });
                     })
-                    ->getStateUsing(function (Invoice $record) {
+                    ->sortable()
+                    ->wrap()
+                    ->formatStateUsing(function ($state, $record) {
+                        // Resolve organizer / general-client name for the
+                        // main line — same logic as before the merge.
+                        $meta = $record->meta ?? [];
+                        $name = (($meta['recipient_type'] ?? null) === 'general_client')
+                            ? ($meta['client']['name'] ?? 'Client general')
+                            : ($state ?? '—');
+
+                        // Event · decont-reference on the second line (from
+                        // the removed Eveniment/Decont column).
                         $payout = $record->payout;
                         $eventTitle = null;
-                        $reference = $payout?->reference;
-
                         if ($payout?->event) {
                             $raw = $payout->event->title;
-                            if (is_array($raw)) {
-                                $eventTitle = $raw['ro'] ?? $raw['en'] ?? array_values($raw)[0] ?? null;
-                            } else {
-                                $eventTitle = $raw;
-                            }
+                            $eventTitle = is_array($raw)
+                                ? ($raw['ro'] ?? $raw['en'] ?? array_values($raw)[0] ?? null)
+                                : $raw;
+                        }
+                        $reference = $payout?->reference;
+                        $eventLine = '';
+                        if ($eventTitle && $reference) {
+                            $eventLine = $eventTitle . ' · ' . $reference;
+                        } elseif ($eventTitle) {
+                            $eventLine = $eventTitle;
+                        } elseif ($reference) {
+                            $eventLine = $reference;
                         }
 
-                        if ($eventTitle && $reference) {
-                            return $eventTitle . ' · ' . $reference;
+                        // Period on the third line (from the removed Perioadă
+                        // column). Only shown when both bounds exist.
+                        $periodLine = '';
+                        if ($record->period_start && $record->period_end) {
+                            $periodLine = $record->period_start->format('d.m.Y')
+                                . ' – ' . $record->period_end->format('d.m.Y');
                         }
-                        if ($eventTitle) return $eventTitle;
-                        if ($reference) return $reference;
-                        return '—';
+
+                        $html = '<div>'
+                            . '<div style="font-weight:500;">' . e($name) . '</div>';
+                        if ($eventLine !== '') {
+                            $html .= '<div style="font-size:11px; color:#6b7280; line-height:1.3;">'
+                                . e($eventLine) . '</div>';
+                        }
+                        if ($periodLine !== '') {
+                            $html .= '<div style="font-size:11px; color:#6b7280; line-height:1.3;">'
+                                . e($periodLine) . '</div>';
+                        }
+                        $html .= '</div>';
+
+                        return new \Illuminate\Support\HtmlString($html);
                     })
-                    ->wrap()
-                    ->tooltip(fn (Invoice $record) => $record->payout?->reference ? 'Decont: ' . $record->payout->reference : null),
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tip')
@@ -376,12 +401,8 @@ class OrganizerInvoiceResource extends Resource
                     ->date('d.m.Y')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('period_start')
-                    ->label('Perioadă')
-                    ->formatStateUsing(function ($state, Invoice $record) {
-                        if (!$record->period_start || !$record->period_end) return '-';
-                        return $record->period_start->format('d.m.Y') . ' - ' . $record->period_end->format('d.m.Y');
-                    }),
+                // Period column collapsed into the Organizator cell above
+                // (line 3) to reduce horizontal scroll on the invoices list.
 
                 Tables\Columns\TextColumn::make('subtotal')
                     ->label('Subtotal')
