@@ -638,10 +638,42 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['event_name'] = $title;
 
-            // Event date (date only, no time)
-            $variables['event_date'] = $event->start_date
-                ? $event->start_date->format('d.m.Y')
-                : ($event->event_date ? $event->event_date->format('d.m.Y') : '');
+            // Event date — handles all four duration modes. For multi-day
+            // festivals (range / multi_day) the operator explicitly asked
+            // for a "start - end" period instead of a single date, so the
+            // decont header shows the actual span of the event rather than
+            // a misleading single anchor.
+            $eventDateStr = '';
+            $mode = $event->duration_mode ?? null;
+            if ($mode === 'range' && $event->range_start_date) {
+                $start = $event->range_start_date->format('d.m.Y');
+                $end = $event->range_end_date?->format('d.m.Y');
+                $eventDateStr = $end && $end !== $start ? "{$start} - {$end}" : $start;
+            } elseif ($mode === 'multi_day' && ! empty($event->multi_slots)) {
+                $dates = collect($event->multi_slots)
+                    ->pluck('date')
+                    ->filter()
+                    ->sort()
+                    ->values();
+                if ($dates->isNotEmpty()) {
+                    $start = \Carbon\Carbon::parse($dates->first())->format('d.m.Y');
+                    $end = \Carbon\Carbon::parse($dates->last())->format('d.m.Y');
+                    $eventDateStr = $end !== $start ? "{$start} - {$end}" : $start;
+                }
+            } elseif ($mode === 'recurring' && $event->recurring_start_date) {
+                $start = \Carbon\Carbon::parse($event->recurring_start_date)->format('d.m.Y');
+                $end = $event->recurring_end_date
+                    ? \Carbon\Carbon::parse($event->recurring_end_date)->format('d.m.Y')
+                    : null;
+                $eventDateStr = $end && $end !== $start ? "{$start} - {$end}" : $start;
+            }
+            if ($eventDateStr === '') {
+                // Fallback to single_day or legacy: prefer start_date, then event_date.
+                $eventDateStr = $event->start_date
+                    ? $event->start_date->format('d.m.Y')
+                    : ($event->event_date ? $event->event_date->format('d.m.Y') : '');
+            }
+            $variables['event_date'] = $eventDateStr;
 
             // Event city (from venue)
             $variables['event_city'] = $event->venue?->city ?? $event->venue_city ?? '';
