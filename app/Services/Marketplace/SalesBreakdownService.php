@@ -45,6 +45,28 @@ class SalesBreakdownService
     public const POS_SOURCES = ['pos_app', 'pos'];
 
     /**
+     * Order statuses that count as "money in" for accounting/payout purposes.
+     *
+     * `partially_refunded` is included because a partial refund keeps most
+     * of the order's tickets valid — the refunded ticket flips to
+     * status='refunded' (a ticket-level flag that our whereIn('status',
+     * ['valid','used']) filter naturally excludes), while the remaining
+     * tickets stay valid and still represent real revenue for the organizer.
+     *
+     * Excluding `partially_refunded` here caused the whole order to vanish
+     * from Vânzări totals, payout snapshots, and organizer invoice math —
+     * costing Ambilet real commission on tickets that were never refunded.
+     * See payout PAY-WIS2QBQ2-3254 (event 4049, 2026-08): a 5-ticket order
+     * with one refund made 4 valid tickets and 680 lei gross disappear from
+     * the decont until this constant was introduced.
+     *
+     * Callers must always pair this with a ticket-status filter
+     * (whereIn('t.status', ['valid','used'])) to avoid counting refunded
+     * tickets that belong to partially_refunded orders.
+     */
+    public const PAID_ORDER_STATUSES = ['paid', 'confirmed', 'completed', 'partially_refunded'];
+
+    /**
      * Build the sales breakdown for an event, optionally scoped to a date
      * range on order.created_at.
      *
@@ -107,9 +129,12 @@ class SalesBreakdownService
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
             ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
-                // Normal flow: ticket tied to a paid/confirmed/completed order
+                // Normal flow: ticket tied to a paid-status order.
+                // See self::PAID_ORDER_STATUSES for the exact list — includes
+                // 'partially_refunded' so partial-refund orders' still-valid
+                // tickets don't disappear from the payout math.
                 $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
-                    $q->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    $q->whereIn('status', self::PAID_ORDER_STATUSES)
                         // Test POS smoke-test sales never touch the payout
                         // pipeline, Vânzări totals, or POS-billed slices
                         // — they're strictly for the mobile app to
@@ -672,7 +697,7 @@ class SalesBreakdownService
             ->whereIn('status', ['valid', 'used'])
             ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                 $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
-                    $q->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    $q->whereIn('status', self::PAID_ORDER_STATUSES)
                         ->whereNotIn('source', ['external_import', 'pos_test']);
                     if ($excludePos) {
                         $q->whereNotIn('source', array_merge(self::POS_SOURCES, ['test_order']));

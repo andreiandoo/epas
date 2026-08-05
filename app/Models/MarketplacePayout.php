@@ -295,7 +295,7 @@ class MarketplacePayout extends Model
             ->whereIn('status', ['valid', 'used'])
             ->where(function ($q) use ($cutoffEnd) {
                 $q->whereHas('order', function ($q2) use ($cutoffEnd) {
-                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    $q2->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
                         ->where('source', '!=', 'external_import')
                         ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
                         ->where('source', '!=', 'test_order');
@@ -807,7 +807,7 @@ class MarketplacePayout extends Model
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', function ($qq) use ($cutoff) {
-                $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
+                $qq->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
                     ->where('source', '!=', 'external_import')
                     ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 if ($cutoff) {
@@ -1600,7 +1600,7 @@ class MarketplacePayout extends Model
                         $q2->where('event_id', $this->event_id)
                             ->orWhere('marketplace_event_id', $this->event_id);
                     })
-                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
                     ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 })
                 ->exists();
@@ -1615,7 +1615,7 @@ class MarketplacePayout extends Model
                         $q2->where('event_id', $this->event_id)
                             ->orWhere('marketplace_event_id', $this->event_id);
                     })
-                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
                     ->whereIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
                 })
                 ->exists();
@@ -1643,7 +1643,7 @@ class MarketplacePayout extends Model
         }
 
         $query = Order::where('event_id', $this->event_id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
             ->where('discount_amount', '>', 0);
 
         if ($this->period_start) {
