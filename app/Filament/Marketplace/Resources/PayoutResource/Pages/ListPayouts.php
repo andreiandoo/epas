@@ -1535,6 +1535,28 @@ class ListPayouts extends ListRecords
             ->when($cutoff, fn ($q) => $q->where('created_at', '<=', $cutoff->copy()->endOfDay()))
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
 
+        // Kept commission from refunds where Ambilet chose "fara taxa"
+        // (commission_refunded=false). This is real revenue Ambilet holds
+        // in its treasury — customer got face value back, commission
+        // portion stayed on Ambilet's account. Add to totalCommission so
+        // the event's "Comision total" reflects everything Ambilet earned,
+        // not just the commission on still-valid tickets.
+        $keptCommission = (float) \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) use ($event) {
+                $q->whereHas('order', function ($oq) use ($event) {
+                    $oq->where(function ($w) use ($event) {
+                        $w->where('event_id', $event->id)
+                          ->orWhere('marketplace_event_id', $event->id);
+                    });
+                });
+            })
+            ->where('commission_refunded', false)
+            ->where('status', 'refunded')
+            ->when($cutoff, fn ($q) => $q->where('updated_at', '<=', $cutoff->copy()->endOfDay()))
+            ->sum('commission_amount');
+        $keptCommission = round($keptCommission, 2);
+        $totalCommission = round($totalCommission + $keptCommission, 2);
+
         // Net = breakdown net only. Refunds excluded from balance math but
         // still surfaced via 'refunds' for the modal info line.
         $netRevenue = $netRevenueFromBreakdown;
@@ -1553,6 +1575,7 @@ class ListPayouts extends ListRecords
         return [
             'gross' => round($grossRevenue, 2),
             'commission' => round($totalCommission, 2),
+            'kept_commission' => round($keptCommission, 2),
             'discount' => round($totalDiscount, 2),
             'extras' => round($totalExtras, 2),
             'refunds' => round($refundedAmount, 2),

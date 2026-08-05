@@ -542,10 +542,18 @@ class PayoutResource extends Resource
 
                                         $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
 
+                                        // Base commission recorded on payouts (from ticket_breakdown snapshots).
                                         $paidCommission = (float) MarketplacePayout::where('event_id', $record->event_id)
                                             ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
                                             ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
                                             ->sum('commission_amount');
+                                        // Add kept commission from refunds — on on_top events these are
+                                        // already Ambilet revenue (customer paid it, refund face-value went
+                                        // back but commission portion stayed on Ambilet's Netopia balance).
+                                        // Event totals must reflect what Ambilet has, not just the payout
+                                        // snapshot slice.
+                                        $paidCommission += (float) ($financials['kept_commission'] ?? 0);
+                                        $paidCommission = round($paidCommission, 2);
                                         $remainingCommission = max(0, $commission - $paidCommission);
 
                                         return new \Illuminate\Support\HtmlString("
