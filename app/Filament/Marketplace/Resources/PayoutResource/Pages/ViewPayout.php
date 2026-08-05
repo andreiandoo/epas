@@ -668,7 +668,23 @@ class ViewPayout extends ViewRecord
                 ->color('warning')
                 ->requiresConfirmation()
                 ->modalDescription('Se va genera o factură asociată acestui decont.')
-                ->visible(fn () => $this->record->decontDocument !== null && $this->record->invoice === null && !in_array($this->record->status, ['rejected', 'cancelled']))
+                // Only appears on on_top payouts: this action creates the
+                // general-client invoice for the commission the customer
+                // paid on top of the ticket price. On included events the
+                // commission is baked into the ticket price and billed
+                // exclusively to the organizer via generate_invoice_organizer,
+                // so this button has nothing to bill and previously fell
+                // through to creating a redundant organizer invoice with
+                // different math — hidden now.
+                ->visible(function () {
+                    $mode = $this->record->commission_mode
+                        ?? $this->record->event?->getEffectiveCommissionMode()
+                        ?? 'included';
+                    return $mode === 'added_on_top'
+                        && $this->record->decontDocument !== null
+                        && $this->record->invoice === null
+                        && !in_array($this->record->status, ['rejected', 'cancelled']);
+                })
                 ->action(function () {
                     $payout = $this->record;
                     $organizer = $payout->organizer;
