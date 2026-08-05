@@ -853,32 +853,36 @@ class ViewPayout extends ViewRecord
                 ->color('warning')
                 ->requiresConfirmation()
                 ->modalDescription(function () {
-                    $posComm = $this->record->getPosCommissionTotal();
-                    $refundedComm = $this->record->getRefundedCommissionTotalForEvent();
-                    $total = $posComm + $refundedComm;
+                    $preview = $this->record->getOrganizerInvoicePreview();
+                    $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
                     $parts = [];
-                    if ($posComm > 0) {
-                        $parts[] = 'comision POS: ' . number_format($posComm, 2) . ' RON';
+                    if ($preview['online'] > 0.01) {
+                        $parts[] = 'comision online inclus în preț bilet: ' . $fmt($preview['online']);
                     }
-                    if ($refundedComm > 0) {
-                        $parts[] = 'comision pe bilete rambursate integral: ' . number_format($refundedComm, 2) . ' RON';
+                    if ($preview['pos'] > 0.01) {
+                        $parts[] = 'comision POS: ' . $fmt($preview['pos']);
+                    }
+                    if ($preview['refunded'] > 0.01) {
+                        $parts[] = 'comision pe rambursări integrale: ' . $fmt($preview['refunded']);
+                    }
+                    if ($preview['kept'] > 0.01) {
+                        $parts[] = 'minus comision reținut din rambursări parțiale (rămâne în vistieria Ambilet): −' . $fmt($preview['kept']);
                     }
                     $breakdown = !empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '';
                     return 'Se va genera o singură factură către organizator pentru toate comisioanele datorate pe acest eveniment: '
-                        . number_format($total, 2) . ' RON' . $breakdown
+                        . $fmt($preview['total']) . $breakdown
                         . '. După emitere, butonul dispare de pe toate deconturile evenimentului.';
                 })
-                // Allow ONE invoice per PAYOUT (not per event). Previously
-                // the check was `getEventPosInvoice() === null`, which
-                // hid the button on every decont of the event once any
-                // single decont had emitted an invoice. Operators need
-                // to be able to emit one invoice per decont when sales /
-                // refunds keep arriving across multiple deconts of the
-                // same event.
-                ->visible(fn () => $this->record->posInvoice === null
+                // Bill ONCE per event: as soon as any decont of this event has
+                // emitted the organizer invoice, hide the button on every
+                // sibling decont too. The invoice is event-wide (covers POS +
+                // online-included + refunded − kept commissions across the
+                // event's whole life), so a second one would double-bill.
+                // Operators can still reach the emitted invoice via the
+                // "Vezi factura organizator (Decont #X)" cross-link below.
+                ->visible(fn () => $this->record->getEventPosInvoice() === null
                     && $this->record->isEventFinished()
-                    && ($this->record->getPosCommissionTotal() > 0
-                        || $this->record->getRefundedCommissionTotalForEvent() > 0)
+                    && ($this->record->getOrganizerInvoicePreview()['total'] ?? 0) > 0.01
                     && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $this->generatePosInvoice();
@@ -1011,17 +1015,30 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        // Organizer invoice is billed ONCE per event and covers BOTH:
-        //   (1) POS commission — every POS sale on the event, event-wide.
-        //   (2) Refunded-ticket commission — commission on tickets where
-        //       commission_refunded=true (marketplace returned commission to
-        //       the customer; bills it back to the organizer).
+        // Organizer invoice is billed ONCE per event and covers up to FOUR
+        // commission streams (event-wide, not per-decont):
+        //   (1) POS commission — every POS sale, always billed here.
+        //   (2) Online commission on INCLUDED-mode events — the 6% baked
+        //       into the ticket price. Ambilet never received it via a
+        //       separate ledger entry at sale time, so this invoice
+        //       recovers it. On on_top events this is [] (that commission
+        //       is billed to marketplace_client separately).
+        //   (3) Full-refund commission — where commission_refunded=true
+        //       (Ambilet handed the commission back to the customer alongside
+        //       the ticket price; organizer covers it now).
+        //   (4) Kept-commission credit (subtracted) — partial refunds where
+        //       commission_refunded=false left Ambilet already holding the
+        //       commission portion. Subtracting it here prevents double-
+        //       billing the organizer for money Ambilet already has.
         // Gated upstream by the button's visible() so we only reach here
-        // after the event has finished and no prior invoice exists.
+        // after the event has finished and no prior organizer invoice exists.
         $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
             ->buildPosForPayout($payout->event, null, null);
         $refundedRows = $payout->getRefundedCommissionRowsForEvent();
-        if (empty($posRows) && empty($refundedRows)) {
+        $onlineIncludedRows = $payout->getOnlineIncludedCommissionRowsForEvent();
+        $keptRows = $payout->getKeptCommissionRowsForEvent();
+
+        if (empty($posRows) && empty($refundedRows) && empty($onlineIncludedRows) && empty($keptRows)) {
             Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
             return;
         }
@@ -1098,6 +1115,56 @@ class ViewPayout extends ViewRecord
             ];
         }
 
+        // (3) Online commission lines — INCLUDED-mode events only. The 6%
+        //     was baked into the customer-facing ticket price at sale time,
+        //     so the organizer never sent it to Ambilet separately.
+        //     Recovered here. One line per ticket type sold online.
+        foreach ($onlineIncludedRows as $row) {
+            $qty = (int) ($row['qty'] ?? 0);
+            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
+            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
+            if ($qty <= 0 || $lineTotal <= 0) {
+                continue;
+            }
+
+            $subtotal += $lineTotal;
+
+            $items[] = [
+                'description' => trim('Comision inclus în preț bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
+                    . '" vândut online, taxa ticketing '
+                    . $contractFragment . $eventFragment),
+                'quantity' => $qty,
+                'unit_price' => $commPerTicket,
+                'amount' => $lineTotal,
+            ];
+        }
+
+        // (4) Kept-commission credit lines — negative amounts. For partial
+        //     refunds where the operator chose "fara taxa"
+        //     (commission_refunded=false), Ambilet is already holding the
+        //     commission portion of the refunded ticket. Subtract it so we
+        //     don't double-bill.
+        foreach ($keptRows as $row) {
+            $qty = (int) ($row['qty'] ?? 0);
+            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
+            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
+            if ($qty <= 0 || $lineTotal <= 0) {
+                continue;
+            }
+
+            $subtotal -= $lineTotal;
+
+            $items[] = [
+                'description' => trim('Storno: comision reținut de Ambilet la rambursarea parțială a biletului "'
+                    . ($row['ticket_type_name'] ?? 'Bilet')
+                    . '" (fără rambursarea comisionului) — deja în vistieria Ambilet, se scade din total, taxa ticketing '
+                    . $contractFragment . $eventFragment),
+                'quantity' => $qty,
+                'unit_price' => -$commPerTicket,
+                'amount' => -$lineTotal,
+            ];
+        }
+
         if ($subtotal <= 0) {
             Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
             return;
@@ -1126,7 +1193,7 @@ class ViewPayout extends ViewRecord
             'marketplace_payout_id' => $payout->id,
             'number' => $invoiceNumber,
             'type' => 'fiscal',
-            'description' => 'Factură organizator (comision POS + comision pe rambursări integrale) — decont ' . $payout->reference,
+            'description' => 'Factură organizator (comision online inclus + POS + rambursări − reținut) — event ' . ($payout->event?->id ?? '?') . ' / decont ' . $payout->reference,
             'issue_date' => now(),
             'period_start' => $payout->period_start,
             'period_end' => $payout->period_end,

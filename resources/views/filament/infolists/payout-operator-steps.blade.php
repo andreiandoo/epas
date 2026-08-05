@@ -21,16 +21,25 @@
         </p>
         <ol class="space-y-1.5">
             @foreach($pending as $i => $step)
-                <li class="flex items-center gap-3 p-2.5 rounded-lg border {{ $i === 0 ? 'border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }}">
-                    <span class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold {{ $i === 0 ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
+                <li class="flex items-start gap-3 p-2.5 rounded-lg border {{ $i === 0 ? 'border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }}">
+                    <span class="flex items-center justify-center w-6 h-6 mt-0.5 rounded-full text-xs font-bold shrink-0 {{ $i === 0 ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
                         {{ $doneCount + $i + 1 }}
                     </span>
-                    <span class="text-sm font-medium {{ $i === 0 ? 'text-primary-800 dark:text-primary-200' : 'text-gray-700 dark:text-gray-300' }}">
-                        {{ $step['label'] }}
-                    </span>
-                    @if($i === 0)
-                        <span class="ml-auto text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Următorul pas</span>
-                    @endif
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium {{ $i === 0 ? 'text-primary-800 dark:text-primary-200' : 'text-gray-700 dark:text-gray-300' }}">
+                                {{ $step['label'] }}
+                            </span>
+                            @if($i === 0)
+                                <span class="ml-auto text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400 shrink-0">Următorul pas</span>
+                            @endif
+                        </div>
+                        @if(!empty($step['hint']))
+                            <div class="mt-1 text-[11px] leading-tight text-gray-600 dark:text-gray-400">
+                                {{ $step['hint'] }}
+                            </div>
+                        @endif
+                    </div>
                 </li>
             @endforeach
         </ol>

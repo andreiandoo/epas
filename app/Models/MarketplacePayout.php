@@ -1293,6 +1293,191 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Per-ticket-type ONLINE commission for included-mode events. On included
+     * mode, the commission was baked into the customer-facing ticket price so
+     * the organizer never sent Ambilet the 6% separately at sale time — the
+     * unified organizer invoice recovers it via these lines.
+     *
+     * On on_top mode this always returns [] because online commission on
+     * those events is billed to the marketplace_client (general client) via
+     * a separate invoice, not to the organizer.
+     *
+     * Event-wide slice (no period bounds) — the organizer invoice covers the
+     * whole event, not just this decont, so all valid online tickets on the
+     * event contribute regardless of which decont holds them.
+     *
+     * Scoped by SalesBreakdownService::build with excludePos:true, so
+     * partially_refunded orders' still-valid tickets are included and the
+     * refunded ticket itself is excluded (via the 'valid'/'used' filter).
+     *
+     * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
+     */
+    public function getOnlineIncludedCommissionRowsForEvent(): array
+    {
+        if (!$this->event_id || !$this->event) {
+            return [];
+        }
+        $mode = $this->commission_mode
+            ?? $this->event->getEffectiveCommissionMode()
+            ?? 'included';
+        if ($mode === 'added_on_top') {
+            return [];
+        }
+
+        $bd = app(\App\Services\Marketplace\SalesBreakdownService::class)
+            ->build($this->event, null, null, excludePos: true);
+
+        $result = [];
+        foreach (($bd['per_type'] ?? []) as $row) {
+            $qty = (int) ($row['qty'] ?? $row['quantity'] ?? 0);
+            $commPer = (float) ($row['commission_per_ticket'] ?? 0);
+            if ($qty <= 0 || $commPer <= 0) {
+                continue;
+            }
+
+            $ttName = $row['name'] ?? $row['ticket_type_name'] ?? 'Bilet';
+            if (is_array($ttName)) {
+                $ttName = $ttName['ro'] ?? $ttName['en'] ?? (reset($ttName) ?: 'Bilet');
+            }
+
+            $result[] = [
+                'ticket_type_id' => (int) ($row['ticket_type_id'] ?? 0),
+                'ticket_type_name' => $ttName,
+                'qty' => $qty,
+                'commission_per_ticket' => $commPer,
+                'commission_amount' => round($qty * $commPer, 2),
+            ];
+        }
+
+        return $result;
+    }
+
+    public function getOnlineIncludedCommissionTotalForEvent(): float
+    {
+        $total = 0.0;
+        foreach ($this->getOnlineIncludedCommissionRowsForEvent() as $row) {
+            $total += (float) $row['commission_amount'];
+        }
+        return round($total, 2);
+    }
+
+    /**
+     * Per-ticket-type commission Ambilet KEPT from partial refunds where the
+     * operator chose "fara taxa" (`commission_refunded=false`). Those cases
+     * mean the customer got only the face value back, and Ambilet retained
+     * the commission portion from the processor — so that commission is
+     * already in Ambilet's treasury.
+     *
+     * The unified organizer invoice SUBTRACTS this total (as a negative
+     * line) because otherwise Ambilet would be billing the organizer for
+     * commission that Ambilet already collected. See PAY-WIS2QBQ2-3254
+     * for the concrete case: 1 × 10.20 kept from a partial-refund order.
+     *
+     * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
+     */
+    public function getKeptCommissionRowsForEvent(): array
+    {
+        if (!$this->event_id || !$this->marketplace_organizer_id) {
+            return [];
+        }
+
+        $items = \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) {
+                $q->whereHas('order', function ($oq) {
+                    $oq->where(function ($w) {
+                        $w->where('event_id', $this->event_id)
+                          ->orWhere('marketplace_event_id', $this->event_id);
+                    });
+                })
+                ->where('marketplace_organizer_id', $this->marketplace_organizer_id);
+            })
+            ->where('commission_refunded', false)
+            ->where('status', 'refunded')
+            ->with('ticketType:id,name')
+            ->get();
+
+        $byType = [];
+        foreach ($items as $item) {
+            $ttId = (int) $item->ticket_type_id;
+            $commPer = (float) $item->commission_amount;
+            if ($commPer <= 0) {
+                continue;
+            }
+
+            if (!isset($byType[$ttId])) {
+                $ttName = $item->ticketType?->name;
+                $ttName = is_array($ttName)
+                    ? ($ttName['ro'] ?? $ttName['en'] ?? (reset($ttName) ?: 'Bilet'))
+                    : ($ttName ?? 'Bilet');
+                $byType[$ttId] = [
+                    'ticket_type_id' => $ttId,
+                    'ticket_type_name' => $ttName,
+                    'qty' => 0,
+                    'commission_per_ticket' => $commPer,
+                    'commission_amount' => 0.0,
+                ];
+            }
+
+            $byType[$ttId]['qty']++;
+            $byType[$ttId]['commission_amount'] += $commPer;
+        }
+
+        return array_values($byType);
+    }
+
+    public function getKeptCommissionTotalForEvent(): float
+    {
+        $total = 0.0;
+        foreach ($this->getKeptCommissionRowsForEvent() as $row) {
+            $total += (float) $row['commission_amount'];
+        }
+        return round($total, 2);
+    }
+
+    /**
+     * Preview of what the unified "Factură organizator" will bill.
+     *
+     * Included mode:
+     *   + POS commission          (already-existing behavior)
+     *   + Online commission       (NEW — commission baked into ticket price)
+     *   + Refunded commission     (full refunds where commission_refunded=true)
+     *   − Kept commission         (partial refunds where commission_refunded=false;
+     *                              already in Ambilet's treasury)
+     *
+     * On-top mode:
+     *   + POS commission
+     *   + Refunded commission
+     *   (Online commission is billed to marketplace_client separately)
+     *
+     * Used by the "Pași de urmat" hints, the modalDescription of the
+     * generate button, and the invoice item builder inside generatePosInvoice.
+     */
+    public function getOrganizerInvoicePreview(): array
+    {
+        $mode = $this->commission_mode
+            ?? $this->event?->getEffectiveCommissionMode()
+            ?? 'included';
+        $isIncluded = $mode !== 'added_on_top';
+
+        $pos = $this->getPosCommissionTotal();
+        $refunded = $this->getRefundedCommissionTotalForEvent();
+        $online = $isIncluded ? $this->getOnlineIncludedCommissionTotalForEvent() : 0.0;
+        $kept = $isIncluded ? $this->getKeptCommissionTotalForEvent() : 0.0;
+
+        $total = round($pos + $refunded + $online - $kept, 2);
+
+        return [
+            'mode' => $mode,
+            'is_included' => $isIncluded,
+            'pos' => round($pos, 2),
+            'online' => round($online, 2),
+            'refunded' => round($refunded, 2),
+            'kept' => round($kept, 2),
+            'total' => max(0.0, $total),
+        ];
+    }
+
+    /**
      * True once the event has reached its end — the only point at which we
      * allow organizer-invoice billing, since after that no more sales (POS
      * or online) can be added and the single invoice can safely cover
@@ -1403,24 +1588,57 @@ class MarketplacePayout extends Model
         }
 
         $steps = [
-            ['key' => 'approve', 'label' => 'Aprobă decontul', 'done' => $this->status !== 'pending'],
-            ['key' => 'generate_decont', 'label' => 'Generează decontul', 'done' => $this->decontDocument !== null],
-            ['key' => 'generate_invoice', 'label' => 'Generează factura', 'done' => $this->invoice !== null],
+            ['key' => 'approve', 'label' => 'Aprobă decontul', 'done' => $this->status !== 'pending', 'hint' => null],
+            ['key' => 'generate_decont', 'label' => 'Generează decontul', 'done' => $this->decontDocument !== null, 'hint' => null],
+        ];
+
+        // Step: Factură (general_client) — the online-commission invoice for
+        // on_top events (billed to the marketplace_client, not the organizer).
+        // The label + hint tell the operator up-front which client will be
+        // billed and roughly what for.
+        $steps[] = [
+            'key' => 'generate_invoice',
+            'label' => 'Generează factura',
+            'done' => $this->invoice !== null,
+            'hint' => null,
         ];
 
         // Organizer-invoice step appears only when the event is finished AND
-        // there's something to bill the organizer for — either POS commission
-        // or commission on full refunds (where the commission was returned to
-        // the customer). Done = any decont on this event already emitted the
-        // (single) organizer invoice — by design we bill once per event.
-        if ($this->isEventFinished()
-            && ($this->getPosCommissionTotal() > 0
-                || $this->getRefundedCommissionTotalForEvent() > 0)) {
-            $steps[] = [
-                'key' => 'generate_invoice_organizer',
-                'label' => 'Generează factura organizator',
-                'done' => $this->getEventPosInvoice() !== null,
-            ];
+        // there's something to bill the organizer for. Preview computes the
+        // exact breakdown so the operator sees POS + online (included) +
+        // refunded − kept BEFORE clicking the button.
+        if ($this->isEventFinished()) {
+            $preview = $this->getOrganizerInvoicePreview();
+            $hasSomething = ($preview['total'] ?? 0) > 0.01
+                || $preview['pos'] > 0.01
+                || $preview['online'] > 0.01
+                || $preview['refunded'] > 0.01;
+
+            if ($hasSomething) {
+                $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+                $parts = [];
+                if ($preview['online'] > 0.01) {
+                    $parts[] = 'comision online inclus: ' . $fmt($preview['online']);
+                }
+                if ($preview['pos'] > 0.01) {
+                    $parts[] = 'comision POS: ' . $fmt($preview['pos']);
+                }
+                if ($preview['refunded'] > 0.01) {
+                    $parts[] = 'comision pe rambursări integrale: ' . $fmt($preview['refunded']);
+                }
+                if ($preview['kept'] > 0.01) {
+                    $parts[] = 'minus comision reținut din rambursări parțiale: −' . $fmt($preview['kept']);
+                }
+                $hint = 'Total de facturat: ' . $fmt($preview['total'])
+                    . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '');
+
+                $steps[] = [
+                    'key' => 'generate_invoice_organizer',
+                    'label' => 'Generează factura organizator',
+                    'done' => $this->getEventPosInvoice() !== null,
+                    'hint' => $hint,
+                ];
+            }
         }
 
         return $steps;
