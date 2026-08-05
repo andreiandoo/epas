@@ -2109,6 +2109,17 @@ class EditEvent extends EditRecord
         $today = Carbon::now($tz)->endOfDay();
         $svc = app(SalesBreakdownService::class);
 
+        // Organizer's primary + optional secondary company names. Passed
+        // into each period so the by_issuer block on the blade can render
+        // the real company labels next to their per-issuer totals.
+        $organizer = $event->marketplaceOrganizer;
+        $issuerLabels = [
+            'primary' => trim((string) ($organizer?->company_name ?? '')) ?: 'Societatea 1',
+            'secondary' => $organizer?->has_secondary_issuer
+                ? (trim((string) ($organizer?->secondary_company_name ?? '')) ?: 'Societatea 2')
+                : null,
+        ];
+
         $flags = LeisureSettlementPeriod::where('event_id', $event->id)
             ->get()
             ->keyBy(fn ($p) => $p->period_from->format('Y-m-d'));
@@ -2125,10 +2136,12 @@ class EditEvent extends EditRecord
             $isCurrent = $today->between($from, $to);
             $key = $from->format('Y-m-d');
 
+            // v2 cache key bump: schema now includes `compensation` and
+            // `by_issuer` blocks that the old cached rows don't have.
             $data = Cache::remember(
-                "leisure_decont_{$event->id}_{$key}",
+                "leisure_decont_v2_{$event->id}_{$key}",
                 $isCurrent ? 300 : 86400,
-                fn () => $this->computeLeisureSettlementPeriod($svc, $event, $from, $to)
+                fn () => $this->computeLeisureSettlementPeriod($svc, $event, $from, $to, $issuerLabels)
             );
 
             $flag = $flags->get($key);
@@ -2155,7 +2168,7 @@ class EditEvent extends EditRecord
      *
      * @return array<string, mixed>
      */
-    protected function computeLeisureSettlementPeriod(SalesBreakdownService $svc, Event $event, Carbon $from, Carbon $to): array
+    protected function computeLeisureSettlementPeriod(SalesBreakdownService $svc, Event $event, Carbon $from, Carbon $to, array $issuerLabels = ['primary' => 'Societatea 1', 'secondary' => null]): array
     {
         $online = $svc->build($event, $from, $to, excludePos: true, dateColumn: 'paid_at');
         $pos = $svc->build($event, $from, $to, onlyPos: true, dateColumn: 'paid_at');
@@ -2183,16 +2196,131 @@ class EditEvent extends EditRecord
             $d->addDay();
         }
 
+        $onlineRev = (float) ($online['total_revenue'] ?? 0);
+        $onlineComm = (float) ($online['total_commission'] ?? 0);
+        $posRev = (float) ($pos['total_revenue'] ?? 0);
+        $posComm = (float) ($pos['total_commission'] ?? 0);
+
+        // Compensation math — mirrors LeisureController::settlement (the
+        // canonical rules the standalone ambilet.ro/organizator/deconturi
+        // page uses).
+        //   ambilet_owes_venue = online net (Ambilet's Stripe held the money,
+        //                       venue is entitled to the net after commission)
+        //   venue_owes_ambilet = POS commission (venue collected cash at the
+        //                       door but still owes Ambilet its cut on those
+        //                       sales)
+        //   net > 0  → Ambilet transfers to venue
+        //   net < 0  → venue transfers to Ambilet
+        //   net = 0  → settled by offset
+        $ambiletOwesVenue = round($onlineRev - $onlineComm, 2);
+        $venueOwesAmbilet = round($posComm, 2);
+        $compNet = round($ambiletOwesVenue - $venueOwesAmbilet, 2);
+        $compDirection = abs($compNet) < 0.005
+            ? 'settled'
+            : ($compNet > 0 ? 'ambilet_to_venue' : 'venue_to_ambilet');
+        $compensation = [
+            'ambilet_owes_venue' => $ambiletOwesVenue,
+            'venue_owes_ambilet' => $venueOwesAmbilet,
+            'net' => $compNet,
+            'direction' => $compDirection,
+            'amount' => round(abs($compNet), 2),
+        ];
+
+        // Per-issuing-company split — the "acces / celelalte" breakdown
+        // the operator asked for. Sf. Ana sets ticket_types.issuing_company
+        // manually per type; typically service_category='access' types have
+        // issuing_company='primary' and everything else lands on secondary.
+        // Fall back to 'primary' for NULL / 'mix' so nothing silently drops.
+        $ttIds = collect($online['per_type'] ?? [])->pluck('ticket_type_id')
+            ->merge(collect($pos['per_type'] ?? [])->pluck('ticket_type_id'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $issuerMap = empty($ttIds)
+            ? []
+            : \App\Models\TicketType::whereIn('id', $ttIds)
+                ->pluck('issuing_company', 'id')
+                ->toArray();
+
+        $emptyIssuer = fn () => [
+            'online_revenue' => 0.0,
+            'online_commission' => 0.0,
+            'pos_revenue' => 0.0,
+            'pos_commission' => 0.0,
+            'tickets' => 0,
+        ];
+        $byIssuer = [
+            'primary' => $emptyIssuer(),
+            'secondary' => $emptyIssuer(),
+        ];
+
+        $resolveIssuer = function (array $row) use ($issuerMap): string {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            $val = $issuerMap[$ttId] ?? null;
+            if ($val === 'secondary') {
+                return 'secondary';
+            }
+            // NULL, 'primary', 'mix' → all default to primary. 'mix' handling
+            // per package_outputs is a v2 refinement — the standalone raport
+            // endpoint already does it (LeisureController::report), but the
+            // deconturi tab treats mix as primary for now.
+            return 'primary';
+        };
+
+        foreach (($online['per_type'] ?? []) as $row) {
+            $bucket = $resolveIssuer($row);
+            $byIssuer[$bucket]['online_revenue'] += (float) ($row['gross'] ?? 0);
+            $byIssuer[$bucket]['online_commission'] += (float) ($row['commission_amount'] ?? 0);
+            $byIssuer[$bucket]['tickets'] += (int) ($row['qty'] ?? 0);
+        }
+        foreach (($pos['per_type'] ?? []) as $row) {
+            $bucket = $resolveIssuer($row);
+            $byIssuer[$bucket]['pos_revenue'] += (float) ($row['gross'] ?? 0);
+            $byIssuer[$bucket]['pos_commission'] += (float) ($row['commission_amount'] ?? 0);
+            $byIssuer[$bucket]['tickets'] += (int) ($row['qty'] ?? 0);
+        }
+
+        // Round and stamp label + per-issuer compensation math. When there's
+        // no secondary company on this organizer we still emit an empty
+        // 'secondary' block (name=null) so the blade can conditionally hide
+        // it without extra key checks.
+        foreach ($byIssuer as $k => &$row) {
+            $row['online_revenue'] = round($row['online_revenue'], 2);
+            $row['online_commission'] = round($row['online_commission'], 2);
+            $row['pos_revenue'] = round($row['pos_revenue'], 2);
+            $row['pos_commission'] = round($row['pos_commission'], 2);
+            $row['name'] = $issuerLabels[$k] ?? null;
+
+            // Same compensation formula as the event total, but scoped to
+            // this issuer's slice — so operators see per-company subtotals
+            // for the offset settlement.
+            $iAmbilet = round($row['online_revenue'] - $row['online_commission'], 2);
+            $iVenue = round($row['pos_commission'], 2);
+            $iNet = round($iAmbilet - $iVenue, 2);
+            $row['ambilet_owes_venue'] = $iAmbilet;
+            $row['venue_owes_ambilet'] = $iVenue;
+            $row['net'] = $iNet;
+            $row['direction'] = abs($iNet) < 0.005
+                ? 'settled'
+                : ($iNet > 0 ? 'ambilet_to_venue' : 'venue_to_ambilet');
+            $row['amount'] = round(abs($iNet), 2);
+        }
+        unset($row);
+
         return [
             'from' => $from->format('Y-m-d'),
             'to' => $to->copy()->startOfDay()->format('Y-m-d'),
-            'online_revenue' => (float) ($online['total_revenue'] ?? 0),
-            'online_commission' => (float) ($online['total_commission'] ?? 0),
-            'pos_revenue' => (float) ($pos['total_revenue'] ?? 0),
-            'pos_commission' => (float) ($pos['total_commission'] ?? 0),
+            'online_revenue' => $onlineRev,
+            'online_commission' => $onlineComm,
+            'pos_revenue' => $posRev,
+            'pos_commission' => $posComm,
             'tickets' => (int) (collect($online['per_type'] ?? [])->sum('qty') + collect($pos['per_type'] ?? [])->sum('qty')),
             'currency' => $event->currency ?? ($event->marketplaceClient?->currency ?? 'RON'),
             'days' => $days,
+            'compensation' => $compensation,
+            'by_issuer' => $byIssuer,
+            'has_secondary_issuer' => $issuerLabels['secondary'] !== null,
         ];
     }
 
