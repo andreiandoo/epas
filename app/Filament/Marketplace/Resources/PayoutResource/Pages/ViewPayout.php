@@ -1193,7 +1193,21 @@ class ViewPayout extends ViewRecord
             'marketplace_payout_id' => $payout->id,
             'number' => $invoiceNumber,
             'type' => 'fiscal',
-            'description' => 'Factură organizator (comision online inclus + POS + rambursări − reținut) — event ' . ($payout->event?->id ?? '?') . ' / decont ' . $payout->reference,
+            'description' => (function () use ($payout) {
+                // Human-readable identifiers: event name + id, decont series
+                // (falls back to reference when the series is empty).
+                $eventName = $payout->event?->title ?? $payout->event?->name ?? '';
+                if (is_array($eventName)) {
+                    $eventName = $eventName['ro'] ?? $eventName['en'] ?? (reset($eventName) ?: '');
+                }
+                $eventLabel = $eventName !== ''
+                    ? 'eveniment "' . $eventName . '" (' . ($payout->event?->id ?? '?') . ')'
+                    : 'eveniment ' . ($payout->event?->id ?? '?');
+                $decontLabel = trim((string) $payout->decont_series) !== ''
+                    ? 'decont "' . $payout->decont_series . '"'
+                    : 'decont ' . $payout->reference;
+                return 'Factură organizator (comision online inclus + POS + rambursări − reținut) — ' . $eventLabel . ' / ' . $decontLabel;
+            })(),
             'issue_date' => now(),
             'period_start' => $payout->period_start,
             'period_end' => $payout->period_end,

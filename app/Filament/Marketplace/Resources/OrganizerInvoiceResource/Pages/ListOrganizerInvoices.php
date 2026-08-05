@@ -17,30 +17,13 @@ class ListOrganizerInvoices extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\Action::make('generate')
-                ->label('Generează Facturi')
-                ->icon('heroicon-o-arrow-path')
-                ->color('primary')
-                ->requiresConfirmation()
-                ->modalHeading('Generează facturi')
-                ->modalDescription('Se vor genera facturi pentru toți organizatorii care au comenzi finalizate. Facturile existente nu vor fi suprascrise.')
-                ->action(function () {
-                    $marketplace = static::getMarketplaceClient();
-                    if (!$marketplace) {
-                        Notification::make()->danger()->title('Marketplace nu a fost găsit.')->send();
-                        return;
-                    }
-
-                    $service = new InvoiceGeneratorService();
-                    $count = $service->generateForAllOrganizers($marketplace);
-
-                    Notification::make()
-                        ->success()
-                        ->title("Facturi generate: {$count}")
-                        ->body($count > 0 ? 'Facturile noi au fost create cu succes.' : 'Nu au fost găsite facturi noi de generat.')
-                        ->send();
-                }),
-        ];
+        // Bulk "Generează Facturi" was removed on 2026-08-04 after it
+        // silently emitted every organizer invoice on the marketplace
+        // when clicked once. The correct flow is per-decont via
+        // ViewPayout::generate_invoice_organizer, which knows the exact
+        // breakdown (POS + online-included + refunded − kept) for the
+        // specific payout / event. See commit that introduced this
+        // change for the incident context.
+        return [];
     }
 }

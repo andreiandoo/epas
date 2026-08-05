@@ -1592,16 +1592,25 @@ class MarketplacePayout extends Model
             ['key' => 'generate_decont', 'label' => 'Generează decontul', 'done' => $this->decontDocument !== null, 'hint' => null],
         ];
 
-        // Step: Factură (general_client) — the online-commission invoice for
-        // on_top events (billed to the marketplace_client, not the organizer).
-        // The label + hint tell the operator up-front which client will be
-        // billed and roughly what for.
-        $steps[] = [
-            'key' => 'generate_invoice',
-            'label' => 'Generează factura',
-            'done' => $this->invoice !== null,
-            'hint' => null,
-        ];
+        // Step: Factură (general_client) — the online-commission invoice
+        // billed to the marketplace_client, not the organizer. Appears ONLY
+        // for on_top events, where the customer paid the commission on top
+        // of the ticket price and Ambilet needs to invoice the general
+        // client for it. On included events the commission is baked into
+        // the ticket price and recovered via the organizer invoice below,
+        // so this step doesn't apply — the operator sees no dead-end step
+        // labelled "Generează factură" with nothing to bill.
+        $modeForStep = $this->commission_mode
+            ?? $this->event?->getEffectiveCommissionMode()
+            ?? 'included';
+        if ($modeForStep === 'added_on_top') {
+            $steps[] = [
+                'key' => 'generate_invoice',
+                'label' => 'Generează factura',
+                'done' => $this->invoice !== null,
+                'hint' => null,
+            ];
+        }
 
         // Organizer-invoice step appears only when the event is finished AND
         // there's something to bill the organizer for. Preview computes the
