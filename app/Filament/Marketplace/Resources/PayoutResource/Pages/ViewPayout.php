@@ -821,9 +821,8 @@ class ViewPayout extends ViewRecord
                                             continue;
                                         }
                                         $items[] = [
-                                            'description' => 'Comision reținut din rambursare bilet "'
-                                                . ($row['ticket_type_name'] ?? 'Bilet')
-                                                . '" (comision peste preț neregăsit clientului) — venit Ambilet păstrat la rambursare',
+                                            'description' => 'Comision reținut din rambursare bilet(e) "'
+                                                . ($row['ticket_type_name'] ?? 'Bilet') . '"',
                                             'quantity' => $qty,
                                             'unit_price' => $commPer,
                                             'amount' => $lineTotal,
