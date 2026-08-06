@@ -277,6 +277,21 @@
   .short .gdots{position:absolute;top:100px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:5}
   .short .gdots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);transition:.2s}.short .gdots span.on{background:#fff;width:16px;border-radius:3px}
   @media(prefers-reduced-motion:reduce){.short .kb{animation:none}.short .vbar i{animation:none;width:45%}}
+  /* reclamă simulată (unskippable 5s) */
+  .shad{position:absolute;inset:0;z-index:20;overflow:hidden;background:#08060f}
+  .shad-media{position:absolute;inset:0;background:linear-gradient(155deg,#0e7490,#7c3aed 55%,#ec4899);animation:adken 5s linear forwards}
+  @keyframes adken{from{transform:scale(1.06)}to{transform:scale(1.2)}}
+  .shad-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.5),transparent 30%,transparent 52%,rgba(0,0,0,.9))}
+  .shad-bar{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.22);z-index:3}
+  .shad-bar i{display:block;height:100%;background:#fff;width:0;animation:adbar 5s linear forwards}
+  @keyframes adbar{to{width:100%}}
+  .shad-badge{position:absolute;top:54px;left:16px;z-index:3;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.22)}
+  .shad-count{position:absolute;top:50px;right:16px;z-index:3;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.28);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+  .shad-info{position:absolute;left:18px;right:18px;bottom:44px;z-index:3;color:#fff}
+  .shad-spon{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+  .shad-t{font-size:30px;font-weight:700;letter-spacing:-.03em;margin-top:8px;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+  .shad-d{font-size:13.5px;opacity:.92;margin-top:8px;line-height:1.5}
+  .shad-cta{display:inline-flex;align-items:center;margin-top:16px;background:#fff;color:#141020;font-weight:700;font-size:14px;padding:12px 22px;border-radius:14px;border:0;font-family:inherit;cursor:pointer}
 </style>
 
 <div class="stage">
@@ -741,7 +756,7 @@
 
   S.event=(d)=>{const ev=EV[d.id||ST.ev];ST.ev=ev.id;const v=VEN[ev.ven];const attended=ATTENDED.some(a=>a.ev===ev.id);const addons=ADDONS[ev.id];const isExp=ev.type==='experience';
     return `<div style="min-height:100%;background:var(--bg);padding-bottom:2px">
-      ${dbar(`<div class="icon-btn glass">${I.share}</div><div class="icon-btn glass" data-a="save:${ev.id}" style="${ST.saved.includes(ev.id)?'color:var(--red)':''}">${ST.saved.includes(ev.id)?'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.9A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>':I.save}</div>`,ev.t)}
+      ${dbar(`<div class="icon-btn glass" data-a="share">${I.share}</div><div class="icon-btn glass" data-a="save:${ev.id}" style="${ST.saved.includes(ev.id)?'color:var(--red)':''}">${ST.saved.includes(ev.id)?'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.9A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>':I.save}</div>`,ev.t)}
       <div class="poster" style="background:${bgv(ev)};height:388px;border-radius:0 0 30px 30px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 26%,rgba(11,9,18,.97))"></div>
         ${ev.video?`<div style="position:absolute;left:50%;top:150px;transform:translateX(-50%)"><div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(8px);display:grid;place-items:center;color:#fff">${I.play}</div></div>`:''}
         <div style="position:absolute;left:20px;right:20px;bottom:22px"><span class="badge" style="background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff">${ev.type==='experience'?'Experiență':ev.cat} · ⭐ ${ev.rat}</span><div style="font-size:23px;font-weight:600;letter-spacing:-.03em;margin-top:10px;line-height:1.12;text-wrap:balance">${ev.t}</div></div></div>
@@ -799,7 +814,7 @@
   /* ===== RADAR — eveniment agregat: prezentare completă + unde găsești bilete ===== */
   S.ticsoffers=(d)=>{const t=TICS[d.id]||TICS.smiley;const sorted=[...t.offers].sort((a,b)=>a[1]-b[1]);const ch=sorted[0][1];const med=Math.round(ch*1.28);const savePct=Math.round((1-ch/med)*100);
     return `<div style="min-height:100%;background:var(--bg);padding-bottom:2px">
-      ${dbar(`<div class="icon-btn glass">${I.share}</div><div class="icon-btn glass" data-a="save:${t.id}">${I.save}</div>`,t.s)}
+      ${dbar(`<div class="icon-btn glass" data-a="share">${I.share}</div><div class="icon-btn glass" data-a="save:${t.id}">${I.save}</div>`,t.s)}
       <div class="poster" style="background:${bgv(t)};height:320px;border-radius:0 0 30px 30px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 30%,rgba(11,9,18,.96))"></div>
         <div style="position:absolute;left:20px;right:20px;bottom:20px"><span class="badge" style="background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff">${t.cat} · ⭐ ${t.rat}</span><div style="font-size:23px;font-weight:600;letter-spacing:-.03em;margin-top:10px;line-height:1.14">${t.s}</div><div style="font-size:12.5px;color:rgba(255,255,255,.82);margin-top:4px">${t.city} · ${t.day} ${t.mon} · ${t.time}</div></div></div>
       <div class="pad" style="margin-top:16px">
@@ -829,11 +844,11 @@
 
   S.artist=(d)=>{const a=ART[d.id]||ART.coldplay;const x=ARTX[a.id]||ARTX.coldplay;const evs=Object.values(EV).filter(e=>e.artists.includes(a.id));const upEv=evs.length?evs:[EV.coldplay];
     return `<div style="min-height:100%;background:var(--bg)">
-      ${dbar(`<div class="icon-btn glass">${I.share}</div>`,a.name)}
+      ${dbar(`<div class="icon-btn glass" data-a="share">${I.share}</div>`,a.name)}
       <div class="poster" style="background:${bgv(a)};height:228px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.4),transparent 42%,var(--bg))"></div>
         <div style="position:absolute;left:0;right:0;bottom:-42px;text-align:center"><div style="width:104px;height:104px;border-radius:34px;margin:0 auto;background:${a.tone};border:4px solid var(--bg);display:grid;place-items:center;font-size:44px;box-shadow:var(--sh-p)">${a.g}</div></div></div>
       <div style="text-align:center;margin-top:52px"><div style="font-weight:600;font-size:22px;letter-spacing:-.02em">${a.name}</div><div class="muted" style="font-size:12.5px;margin-top:3px">${x.sub} · ${a.fol} urmăritori</div>
-        <div class="row" style="justify-content:center;gap:9px;margin-top:15px"><button class="cta" data-a="follow" style="width:auto;padding:11px 28px">Urmărește</button><button class="icon-btn" data-a="noop">${I.bell}</button></div>
+        <div class="row" style="justify-content:center;gap:9px;margin-top:15px"><button class="cta" data-a="follow" style="width:auto;padding:12px 34px">Urmărește</button></div>
         <div class="row" style="justify-content:center;gap:10px;margin-top:15px">${SOCLIST.map(s=>`<button class="socbtn" data-a="soc:${s[1]}">${SOCIC[s[0]]}</button>`).join('')}</div></div>
       <div class="scroll-x" style="margin-top:18px">${SOCLIST.map(s=>`<div class="statpill">${SOCIC[s[0]]}<div><div style="font-weight:700;font-size:14px;font-variant-numeric:tabular-nums">${x.soc[s[0]]}</div><div class="muted" style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${s[1]}</div></div></div>`).join('')}</div>
       <div class="pad" style="margin-top:22px"><div class="h2" style="font-size:15px">Despre</div><p class="muted" style="font-size:13.5px;line-height:1.62;margin-top:8px">${x.bio}</p></div>
@@ -941,7 +956,7 @@
   INIT.tickets=el=>$$('.miniqr',el).forEach(cv=>drawQR(cv,{seed:+cv.dataset.seed+3}));
 
   S.ticket=(d)=>{const tk=MYTIX.find(t=>t.ev===d.id)||MYTIX[0];const pi0=+(d.pi||0);const ev=EV[tk.ev];const n=tk.passes.length;
-    return `<div style="min-height:100%;background:var(--bg);padding-bottom:8px">${topbar(`<div class="icon-btn" data-a="back">${I.back}</div><div style="text-align:center"><div class="h2">Biletul tău</div><div class="muted" style="font-size:11px" id="tkCounter">Bilet ${pi0+1} din ${n}</div></div><div class="icon-btn">${I.share}</div>`)}
+    return `<div style="min-height:100%;background:var(--bg);padding-bottom:8px">${topbar(`<div class="icon-btn" data-a="back">${I.back}</div><div style="text-align:center"><div class="h2">Biletul tău</div><div class="muted" style="font-size:11px" id="tkCounter">Bilet ${pi0+1} din ${n}</div></div><div class="icon-btn" data-a="share">${I.share}</div>`)}
       ${n>1?`<div class="scroll-x" id="tkChips" style="margin-top:12px;padding:0 20px">${tk.passes.map((pp,j)=>`<button class="chip ${j===pi0?'ind on':''}" data-tkgo="${j}">${pp.name.split(' ')[0]} · ${j+1}/${n}</button>`).join('')}</div>
       <div class="muted" style="text-align:center;font-size:10.5px;margin-top:9px">‹ glisează pentru a trece printre bilete ›</div>`:''}
       <div class="tkslider" id="tkSlider">${tk.passes.map((p,pi)=>`<div class="tkslide"><div class="pad" style="padding-top:14px"><div class="whitecard">${poster(ev,'','height:130px')}
@@ -1115,7 +1130,7 @@
   };
 
   S.festival=()=>`<div style="min-height:100%;background:var(--bg);padding-bottom:2px">
-    ${dbar(`<div class="icon-btn glass">${I.share}</div><div class="icon-btn glass" data-a="save:nordvale">${I.save}</div>`,FEST.name||'Festival')}
+    ${dbar(`<div class="icon-btn glass" data-a="share">${I.share}</div><div class="icon-btn glass" data-a="save:nordvale">${I.save}</div>`,FEST.name||'Festival')}
     <div class="poster" style="background:${FEST.tone};height:280px;border-radius:0 0 30px 30px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 30%,rgba(11,9,18,.96))"></div>
       ${FEST.video?`<div style="position:absolute;left:50%;top:118px;transform:translateX(-50%)"><div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(8px);display:grid;place-items:center;color:#fff">${I.play}</div></div>`:''}
       <div style="position:absolute;left:20px;right:20px;bottom:20px"><span class="badge" style="background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff">Festival · 4 zile · ⭐ ${FEST.rat}</span><div style="font-size:24px;font-weight:600;margin-top:9px;letter-spacing:-.03em">${FEST.t}</div><div style="font-size:12.5px;opacity:.82;margin-top:3px">${FEST.d} · Wonderland, Cluj · cashless</div></div></div>
@@ -1179,42 +1194,51 @@
     Object.values(ART).forEach(a=>{let s=Math.random()*0.9;const evs=Object.values(EV).filter(e=>e.artists.includes(a.id));if(evs.some(e=>prefs.includes(e.cat)))s+=1.1;items.push({t:'artist',a,evc:evs.length,likes:a.fol,s:s+0.5});});
     Object.values(VEN).forEach(v=>{let s=Math.random()*0.8;if(prefs.includes(v.city))s+=1;const evc=Object.values(EV).filter(e=>e.ven===v.id).length;items.push({t:'venue',v,evc,likes:kfmt(400+Math.floor(Math.random()*8000)),s:s+0.2});});
     items.sort((a,b)=>b.s-a.s);return items;}
-  const shTop=(icon)=>`<div class="shtop"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="row" style="gap:6px;color:#fff;font-weight:600;font-size:14px">${I.wave} Pe val</div><div class="icon-btn glass">${icon}</div></div>`;
+  const shTop=()=>`<div class="shtop"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="row" style="gap:5px;align-items:center;color:#fff">${txMark('#fff',19)}<span style="font-family:Outfit,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em">tixello</span></div><div style="width:42px"></div></div>`;
   const shRail=(acts)=>`<div class="rail">${acts}</div>`;
   function shortItem(it,idx){
     if(it.t==='artist'){const a=it.a;return `<div class="short" data-idx="${idx}" data-detail="go:artist:${a.id}">
-      <div class="media kb" style="background:${bgv(a)}"></div><div class="grad"></div>${shTop(I.user)}<span class="mtag">🎤 Artist</span>
+      <div class="media kb" style="background:${bgv(a)}"></div><div class="grad"></div>${shTop()}<span class="mtag">🎤 Artist</span>
       <div class="info"><div style="width:64px;height:64px;border-radius:22px;background:${a.tone};display:grid;place-items:center;font-size:29px;box-shadow:var(--sh-p);border:2px solid rgba(255,255,255,.25)">${a.g}</div>
         <span class="gpill solid" style="margin-top:12px">Artist · ${a.role}</span>
         <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:10px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)">${a.name}</div>
         <div class="cmeta" style="margin-top:8px"><span class="i">${I.user}<span>${a.fol} urmăritori</span></span><span class="i">${I.cal}<span>${it.evc} evenimente</span></span></div>
         <button class="shcta" data-a="go:artist:${a.id}" style="margin-top:14px">${I.user} Vezi artist</button></div>
-      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${a.fol}</span></div><div class="act" data-a="noop"><div class="b">${I.share}</div></div><div class="act" data-a="go:artist:${a.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);background:${a.tone};font-size:19px">${a.g}</div></div>`)}</div>`;}
+      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${a.fol}</span></div><div class="act" data-a="share"><div class="b">${I.share}</div></div><div class="act" data-a="go:artist:${a.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);background:${a.tone};font-size:19px">${a.g}</div></div>`)}</div>`;}
     if(it.t==='venue'){const v=it.v;return `<div class="short" data-idx="${idx}" data-detail="go:venue:${v.id}">
-      <div class="media kb" style="background:${bgv(v)}"></div><div class="grad"></div>${shTop(I.pin)}<span class="mtag">📍 Locație</span>
+      <div class="media kb" style="background:${bgv(v)}"></div><div class="grad"></div>${shTop()}<span class="mtag">📍 Locație</span>
       <div class="info"><span class="gpill" style="background:rgba(45,214,238,.9);border-color:transparent;color:#052a30">📍 Locație</span>
         <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)">${v.name}</div>
         <div class="cmeta" style="margin-top:8px"><span class="i">${I.pin}<span>${v.city}</span></span><span class="i">${I.user}<span>${v.cap} locuri</span></span><span class="i">${I.cal}<span>${it.evc} ev.</span></span></div>
         <button class="shcta" data-a="go:venue:${v.id}" style="margin-top:14px">${I.pin} Vezi locația</button></div>
-      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="noop"><div class="b">${I.share}</div></div><div class="act" data-a="go:venue:${v.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);background:${v.tone}"></div></div>`)}</div>`;}
+      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="share"><div class="b">${I.share}</div></div><div class="act" data-a="go:venue:${v.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);background:${v.tone}"></div></div>`)}</div>`;}
     const ev=it.ev,v=VEN[ev.ven],gal=ev.gallery||galFor(ev),m=it.media;
     return `<div class="short" data-idx="${idx}" data-detail="go:event:${ev.id}">
       ${m==='gallery'?`<div class="gal" data-gal>${gal.map(g=>`<div class="g" style="background:${g}"></div>`).join('')}</div>`:`<div class="media kb" style="background:${bgv(ev)}"></div>`}
-      <div class="grad"></div>${shTop(m==='video'?I.play:(m==='gallery'?I.layers:I.search))}
+      <div class="grad"></div>${shTop()}
       ${m==='video'?`<div class="vbar"><i></i></div><span class="mtag">${I.play} Video</span>`:m==='gallery'?`<div class="gdots" data-dots>${gal.map((_,j)=>`<span class="${j===0?'on':''}"></span>`).join('')}</div><span class="mtag">${I.layers} ${gal.length} foto</span>`:`<span class="mtag">📷 Foto</span>`}
       <div class="info"><span class="gpill ${ev.type==='experience'?'gsolid':'solid'}">${ev.type==='experience'?'⛰ Experiență':ev.cat}</span>
         <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)">${ev.s}</div>
         <div class="cmeta" style="margin-top:8px"><span class="i">${I.cal}<span>${ev.d}</span></span><span class="i">${I.pin}<span>${v.name}</span></span></div>
         <button class="shcta" data-a="go:event:${ev.id}" style="margin-top:14px">${I.ticket} de la ${money(ev.from)} lei</button></div>
-      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="save:${ev.id}"><div class="b">${I.save}</div></div><div class="act" data-a="noop"><div class="b">${I.share}</div></div><div class="act" data-a="go:event:${ev.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5)">${poster(ev,'','width:100%;height:100%')}</div></div>`)}</div>`;}
+      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="save:${ev.id}"><div class="b">${I.save}</div></div><div class="act" data-a="share"><div class="b">${I.share}</div></div><div class="act" data-a="go:event:${ev.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5)">${poster(ev,'','width:100%;height:100%')}</div></div>`)}</div>`;}
   S.shorts=()=>`<div class="shorts" id="shortsWrap">${(ST._feed||buildFeed()).map((it,idx)=>shortItem(it,idx)).join('')}</div>`;
   INIT.stay22=(el)=>{const r=$('#stayPrice',el),lbl=$('#stayPriceVal',el);if(!r)return;r.addEventListener('input',()=>{const v=+r.value;lbl.textContent=v>=500?'oricât':v+' lei';});r.addEventListener('change',()=>{ST.stayF.maxPrice=+r.value;ST.stayPin=0;ST._stayFltOpen=true;rerender();});};
-  INIT.shorts=el=>{const wrap=$('#shortsWrap',el);if(!wrap)return;const shorts=$$('.short',el);
+  INIT.shorts=el=>{const wrap=$('#shortsWrap',el);if(!wrap)return;const shorts=$$('.short',el);let adOpen=false;
     // auto-advance galeria short-ului vizibil (stil story)
-    tick(()=>{const idx=Math.round(wrap.scrollTop/wrap.clientHeight);const sh=shorts[idx];if(!sh)return;const gal=$('[data-gal]',sh);if(!gal)return;const n=gal.children.length;let ci=(+(gal.dataset.ci||0)+1)%n;gal.dataset.ci=ci;gal.style.transform='translateX(-'+(ci*100)+'%)';$$('[data-dots] span',sh).forEach((d,k)=>d.classList.toggle('on',k===ci));},2900);
-    // swipe orizontal: dreapta → înapoi (Exploreaza) · stânga → detaliu
+    tick(()=>{if(adOpen)return;const idx=Math.round(wrap.scrollTop/wrap.clientHeight);const sh=shorts[idx];if(!sh)return;const gal=$('[data-gal]',sh);if(!gal)return;const n=gal.children.length;let ci=(+(gal.dataset.ci||0)+1)%n;gal.dataset.ci=ci;gal.style.transform='translateX(-'+(ci*100)+'%)';$$('[data-dots] span',sh).forEach((d,k)=>d.classList.toggle('on',k===ci));},2900);
+    // reclamă simulată după al 4-lea scroll — 5 secunde, fără skip
+    let lastIdx=0,adv=0,adDone=false;
+    function showAd(){adOpen=true;const ad=document.createElement('div');ad.className='shad';
+      ad.innerHTML=`<div class="shad-media"></div><div class="shad-grad"></div><div class="shad-bar"><i></i></div><div class="shad-badge">Reclamă</div><div class="shad-count">5</div>`
+        +`<div class="shad-info"><div class="shad-spon">Sponsorizat</div><div class="shad-t">UNTOLD 2026</div><div class="shad-d">Early Bird · abonamente 4 zile la preț de lansare. Doar câteva zile.</div><button class="shad-cta">${I.ticket} Află mai mult</button></div>`;
+      wrap.appendChild(ad);const y=wrap.scrollTop;wrap.style.overflow='hidden';
+      const lock=()=>{wrap.scrollTop=y;};wrap.addEventListener('scroll',lock);
+      let n=5;const c=ad.querySelector('.shad-count');const t=setInterval(()=>{n--;if(c)c.textContent=Math.max(n,0);if(n<=0){clearInterval(t);wrap.removeEventListener('scroll',lock);wrap.style.overflow='';ad.remove();adOpen=false;}},1000);}
+    wrap.addEventListener('scroll',()=>{if(adOpen)return;const idx=Math.round(wrap.scrollTop/wrap.clientHeight);if(idx>lastIdx)adv+=idx-lastIdx;lastIdx=idx;if(!adDone&&adv>=4){adDone=true;showAd();}});
+    // swipe orizontal: stânga→dreapta → înapoi · dreapta→stânga → detaliu
     let p=null;
-    wrap.addEventListener('pointerdown',e=>{p={x:e.clientX,y:e.clientY,sw:false,id:e.pointerId};});
+    wrap.addEventListener('pointerdown',e=>{if(adOpen)return;p={x:e.clientX,y:e.clientY,sw:false,id:e.pointerId};});
     wrap.addEventListener('pointermove',e=>{if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;if(!p.sw){if(Math.abs(dx)<10&&Math.abs(dy)<10)return;if(Math.abs(dx)>Math.abs(dy)*1.35){p.sw=true;try{wrap.setPointerCapture(p.id);}catch(_){}}else p=null;}});
     const done=e=>{if(!p)return;const dx=e.clientX-p.x,sw=p.sw;p=null;if(!sw)return;if(dx>70){back();}else if(dx<-70){const idx=Math.round(wrap.scrollTop/wrap.clientHeight);const sh=shorts[idx];const tgt=sh&&sh.dataset.detail;if(tgt){const pp=tgt.split(':');go(pp[1],{id:pp[2]});}}};
     wrap.addEventListener('pointerup',done);wrap.addEventListener('pointercancel',done);};
@@ -1301,6 +1325,7 @@
     if(a==='topupDone'){ST.balance+=200;back();setTimeout(()=>toast('Portofel încărcat · +200 lei'),300);return;}
     if(a==='fltToggle'){const p=$('#fltPanel');if(p)p.style.display=p.style.display==='none'?'block':'none';el.classList.toggle('on');return;}
     if(a==='logout'){ST.obStep=0;return reset('login');}
+    if(a==='share'){const url='https://tixello.ro/'+(arg?arg+'/':'')+'app';try{if(navigator.share){navigator.share({title:'Tixello',text:'Am găsit ceva pe Tixello 👀',url}).catch(()=>toast('Link copiat · tixello.ro 🔗'));return;}}catch(_){}try{navigator.clipboard&&navigator.clipboard.writeText(url);}catch(_){}return toast('Link copiat · tixello.ro 🔗');}
     if(a==='noop')return;
   });
 
