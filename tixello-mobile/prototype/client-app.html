@@ -247,12 +247,17 @@
   .short .shtop{position:absolute;top:52px;left:16px;right:16px;display:flex;align-items:center;justify-content:space-between;z-index:6}
   .short .mtag{position:absolute;top:112px;left:50%;transform:translateX(-50%);z-index:5;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#fff;background:rgba(4,3,9,.42);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);padding:5px 11px;border-radius:999px}
   .short .mtag svg{width:12px;height:12px}
-  .short .info{position:absolute;left:18px;right:82px;bottom:38px;z-index:5;color:#fff}
-  .short .rail{position:absolute;right:12px;bottom:44px;display:flex;flex-direction:column;gap:19px;z-index:6;align-items:center}
-  .short .rail .act{display:flex;flex-direction:column;align-items:center;gap:5px;color:#fff;font-size:10.5px;font-weight:600;cursor:pointer}
-  .short .rail .act .b{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.22);display:grid;place-items:center;transition:.16s}
-  .short .rail .act:active .b{transform:scale(.88)}
-  .short .rail .act.liked .b{color:#f0616d;background:rgba(240,79,79,.24);border-color:rgba(240,79,79,.45)}
+  .short .info{position:absolute;left:18px;right:74px;bottom:34px;z-index:5;color:#fff}
+  .shcta{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#141020;font-weight:600;font-size:13.5px;padding:11px 17px;border-radius:14px;border:0;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.4);font-family:inherit}
+  .shcta svg{width:15px;height:15px} .shcta:active{transform:scale(.97)}
+  .short .rail{position:absolute;right:11px;bottom:34px;display:flex;flex-direction:column;gap:16px;z-index:6;align-items:center}
+  .short .rail .act{display:flex;flex-direction:column;align-items:center;gap:5px;color:#fff;font-size:10px;font-weight:600;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+  .short .rail .act .b{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.13);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;transition:.18s}
+  .short .rail .act .b svg{width:21px;height:21px}
+  .short .rail .act:active .b{transform:scale(.86)}
+  .short .rail .act.liked .b{color:#f0616d;background:rgba(240,79,79,.22);border-color:rgba(240,79,79,.4)}
+  .short .rail .act.liked .b svg{animation:hpop .35s cubic-bezier(.2,1.4,.3,1)}
+  @keyframes hpop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
   .short .vbar{position:absolute;top:98px;left:16px;right:16px;height:3px;border-radius:9px;background:rgba(255,255,255,.28);z-index:5;overflow:hidden}
   .short .vbar i{display:block;height:100%;background:#fff;width:0;animation:vplay 9s linear infinite}
   @keyframes vplay{to{width:100%}}
@@ -602,7 +607,7 @@
       <div class="hdr" style="padding:4px 20px 11px"><div class="row" style="gap:11px"><div class="avatar">AP</div><div><div class="loc-l">${I.pin} Locația ta</div><div class="loc-v">Cluj-Napoca <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div></div></div>
         <div class="icon-btn" data-a="go:notif" style="position:relative">${I.bell}<span style="position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--indigo);border:2px solid var(--bg)"></span></div></div></div>
       <div class="pad" style="margin-top:14px"><div class="searchbar" data-a="go:search"><span class="muted">${I.search}</span><span class="ph">Caută evenimente, experiențe, artiști…</span><span style="color:var(--indigo-2)">${I.slider}</span></div></div>
-      <div class="rail" style="margin-top:15px;padding-bottom:2px"><button class="chip" data-a="go:shorts" style="background:linear-gradient(120deg,#0e7490,#7c3aed,#ec4899);color:#fff;border-color:transparent;font-weight:600">${I.wave} Pe val</button>${CATS.map((c,i)=>`<button class="chip ind ${i===0?'on':''}" data-a="${i===0?'noop':(c[0]==='Festival'?'go:festival':'go:category:'+c[0])}">${c[1]} ${c[0]}</button>`).join('')}</div>
+      <div class="rail" style="margin-top:15px;padding-bottom:2px"><button class="chip" data-a="openShorts" style="background:linear-gradient(120deg,#0e7490,#7c3aed,#ec4899);color:#fff;border-color:transparent;font-weight:600">${I.wave} Pe val</button>${CATS.map((c,i)=>`<button class="chip ind ${i===0?'on':''}" data-a="${i===0?'noop':(c[0]==='Festival'?'go:festival':'go:category:'+c[0])}">${c[1]} ${c[0]}</button>`).join('')}</div>
 
       <div class="sec">${secH('🤖','var(--indigo-soft)','var(--indigo-2)','Pentru tine','Alese de AI pe gusturile tale')}<div class="rail">${forYou.map(ev=>evMini(ev)).join('')}</div></div>
 
@@ -632,7 +637,7 @@
     return `<div class="grid" style="min-height:100%;padding-bottom:6px"><div class="stickytop">${sb()}<div class="hrow"><div><div class="eyebrow">Descoperă</div><h1 class="h1" style="font-size:23px;margin-top:2px">Explorează</h1></div><div class="icon-btn" data-a="go:search">${I.search}</div></div></div>
     <div class="pad" style="margin-top:14px"><div data-a="prefsEdit" style="cursor:pointer;border-radius:20px;overflow:hidden;background:linear-gradient(135deg,var(--indigo-3),#2a1065);border:1px solid var(--line-2);color:#fff;padding:16px;position:relative"><div style="position:absolute;right:-10px;bottom:-18px;font-size:88px;opacity:.2">🤖</div><div class="row" style="gap:6px;color:#c4b5fd;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase">${I.star} Recomandat pentru tine</div><div style="font-size:16px;font-weight:600;margin-top:7px;letter-spacing:-.02em">Pentru că îți place ${ST.prefsSel.slice(0,2).join(' & ')||'muzica'}</div><div class="row" style="gap:6px;font-size:12px;opacity:.85;margin-top:5px">${ST.prefsSel.length} interese · editează ${I.arrow}</div></div></div>
     <div class="rail" style="margin-top:14px">${rec.map(ev=>evMini(ev)).join('')}</div>
-    <div class="pad" style="margin-top:16px"><div class="mcard" data-a="go:shorts" style="overflow:hidden;cursor:pointer"><div style="height:120px;position:relative;background:linear-gradient(120deg,#0e7490,#7c3aed,#ec4899)"><div style="position:absolute;inset:0;background:radial-gradient(80% 100% at 20% 0%,rgba(255,255,255,.25),transparent 60%)"></div>
+    <div class="pad" style="margin-top:16px"><div class="mcard" data-a="openShorts" style="overflow:hidden;cursor:pointer"><div style="height:120px;position:relative;background:linear-gradient(120deg,#0e7490,#7c3aed,#ec4899)"><div style="position:absolute;inset:0;background:radial-gradient(80% 100% at 20% 0%,rgba(255,255,255,.25),transparent 60%)"></div>
       <div style="position:absolute;left:16px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;color:#fff"><div class="row" style="gap:7px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">${I.wave} Nou</div><div style="font-size:19px;font-weight:700;letter-spacing:-.02em;margin-top:5px;text-shadow:0 2px 12px rgba(0,0,0,.4)">Pe val</div><div style="font-size:12px;opacity:.9;margin-top:2px">Scrolează evenimente ca la Shorts</div></div>
       <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;color:#7c3aed">${I.play}</div>
       <div style="position:absolute;right:74px;top:16px;font-size:34px;opacity:.5">🌊</div></div></div></div>
@@ -1026,24 +1031,45 @@
   };
 
   /* ===== PE VAL — feed vertical stil Shorts/TikTok ===== */
-  const FEED=[{id:'coldplay',media:'video',likes:'12.4k'},{id:'salina',media:'gallery',likes:'3.1k'},{id:'nordvale',media:'video',likes:'28.7k'},{id:'atv',media:'gallery',likes:'5.6k'},{id:'celestial',media:'image',likes:'2.2k'},{id:'swan',media:'image',likes:'1.8k'},{id:'wine',media:'gallery',likes:'4.3k'}];
-  S.shorts=()=>`<div class="shorts" id="shortsWrap">${FEED.map((f,idx)=>{const ev=EV[f.id];const v=VEN[ev.ven];const gal=ev.gallery||galFor(ev);return `<div class="short" data-idx="${idx}">
-    ${f.media==='gallery'?`<div class="gal" data-gal>${gal.map(g=>`<div class="g" style="background:${g}"><div class="kbwrap"></div></div>`).join('')}</div>`:`<div class="media kb" style="background:${bgv(ev)}"></div>`}
-    <div class="grad"></div>
-    <div class="shtop"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="row" style="gap:6px;color:#fff;font-weight:600;font-size:14px">${I.wave} Pe val</div><div class="icon-btn glass">${f.media==='video'?I.play:(f.media==='gallery'?I.layers:I.search)}</div></div>
-    ${f.media==='video'?`<div class="vbar"><i></i></div><span class="mtag">${I.play} Video</span>`:f.media==='gallery'?`<div class="gdots" data-dots>${gal.map((_,j)=>`<span class="${j===0?'on':''}"></span>`).join('')}</div><span class="mtag">${I.layers} ${gal.length} foto · glisează</span>`:`<span class="mtag">📷 Foto</span>`}
-    <div class="info">
-      <span class="gpill ${ev.type==='experience'?'gsolid':'solid'}">${ev.type==='experience'?'⛰ Experiență':ev.cat}</span>
-      <div style="font-size:25px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.08;text-shadow:0 2px 18px rgba(0,0,0,.6);color:#fff">${ev.s}</div>
-      <div class="cmeta" style="margin-top:9px"><span class="i">${I.cal}<span>${ev.d}</span></span><span class="i">${I.pin}<span>${v.name}</span></span></div>
-      <button class="cta" data-a="go:event:${ev.id}" style="width:auto;padding:13px 20px;margin-top:15px">Vezi bilete · de la ${money(ev.from)} lei ${I.arrow}</button>
-    </div>
-    <div class="rail">
-      <div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span class="lc">${f.likes}</span></div>
-      <div class="act" data-a="save:${ev.id}"><div class="b">${I.save}</div><span>Salvează</span></div>
-      <div class="act" data-a="noop"><div class="b">${I.share}</div><span>Trimite</span></div>
-      <div class="act" data-a="go:event:${ev.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5)">${poster(ev,'','width:100%;height:100%')}</div><span>Detalii</span></div>
-    </div></div>`;}).join('')}</div>`;
+  // scene pentru artiști (pentru fundal shorts)
+  const ARTSC={coldplay:'concert',guetta:'party',smiley:'concert',delia:'party',garrix:'party'};
+  Object.keys(ARTSC).forEach(k=>{if(ART[k])ART[k].sc=ARTSC[k];});
+  const kfmt=n=>n>=1000?(n/1000).toFixed(1).replace(/\.0$/,'')+'k':(''+n);
+  // feed personalizat + ordine non-repetitivă (recalculat la fiecare intrare)
+  function buildFeed(){const prefs=ST.prefsSel||[];const items=[];
+    Object.values(EV).forEach(ev=>{let s=Math.random()*0.9;if(prefs.includes(ev.cat))s+=1.5;if(prefs.includes(ev.city))s+=0.9;if(ev.type==='experience'&&prefs.includes('Experiențe'))s+=1.1;const media=ev.video?(Math.random()<0.62?'video':'gallery'):(Math.random()<0.5?'gallery':'image');items.push({t:'event',ev,media,likes:kfmt(900+Math.floor(Math.random()*30000)),s:s+1.4});});
+    Object.values(ART).forEach(a=>{let s=Math.random()*0.9;const evs=Object.values(EV).filter(e=>e.artists.includes(a.id));if(evs.some(e=>prefs.includes(e.cat)))s+=1.1;items.push({t:'artist',a,evc:evs.length,likes:a.fol,s:s+0.5});});
+    Object.values(VEN).forEach(v=>{let s=Math.random()*0.8;if(prefs.includes(v.city))s+=1;const evc=Object.values(EV).filter(e=>e.ven===v.id).length;items.push({t:'venue',v,evc,likes:kfmt(400+Math.floor(Math.random()*8000)),s:s+0.2});});
+    items.sort((a,b)=>b.s-a.s);return items;}
+  const shTop=(icon)=>`<div class="shtop"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="row" style="gap:6px;color:#fff;font-weight:600;font-size:14px">${I.wave} Pe val</div><div class="icon-btn glass">${icon}</div></div>`;
+  const shRail=(acts)=>`<div class="rail">${acts}</div>`;
+  function shortItem(it,idx){
+    if(it.t==='artist'){const a=it.a;return `<div class="short" data-idx="${idx}">
+      <div class="media kb" style="background:${bgv(a)}"></div><div class="grad"></div>${shTop(I.user)}<span class="mtag">🎤 Artist</span>
+      <div class="info"><div style="width:66px;height:66px;border-radius:22px;background:${a.tone};display:grid;place-items:center;font-size:30px;box-shadow:var(--sh-p);border:2px solid rgba(255,255,255,.25)">${a.g}</div>
+        <span class="gpill solid" style="margin-top:12px">Artist · ${a.role}</span>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:10px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)">${a.name}</div>
+        <div class="cmeta" style="margin-top:8px"><span class="i">${I.user}<span>${a.fol} urmăritori</span></span><span class="i">${I.cal}<span>${it.evc} evenimente</span></span></div>
+        <button class="shcta" data-a="go:artist:${a.id}" style="margin-top:14px">${I.user} Vezi artist</button></div>
+      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>Urmărește</span></div><div class="act" data-a="noop"><div class="b">${I.share}</div><span>Trimite</span></div><div class="act" data-a="go:artist:${a.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);background:${a.tone};font-size:20px">${a.g}</div><span>Profil</span></div>`)}</div>`;}
+    if(it.t==='venue'){const v=it.v;return `<div class="short" data-idx="${idx}">
+      <div class="media kb" style="background:${bgv(v)}"></div><div class="grad"></div>${shTop(I.pin)}<span class="mtag">📍 Locație</span>
+      <div class="info"><span class="gpill" style="background:rgba(45,214,238,.9);border-color:transparent;color:#052a30">📍 Locație</span>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)">${v.name}</div>
+        <div class="cmeta" style="margin-top:8px"><span class="i">${I.pin}<span>${v.city}</span></span><span class="i">${I.user}<span>${v.cap} locuri</span></span><span class="i">${I.cal}<span>${it.evc} ev.</span></span></div>
+        <button class="shcta" data-a="go:venue:${v.id}" style="margin-top:14px">${I.pin} Vezi locația</button></div>
+      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="noop"><div class="b">${I.share}</div><span>Trimite</span></div><div class="act" data-a="go:venue:${v.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);background:${v.tone}"></div><span>Profil</span></div>`)}</div>`;}
+    const ev=it.ev,v=VEN[ev.ven],gal=ev.gallery||galFor(ev),m=it.media;
+    return `<div class="short" data-idx="${idx}">
+      ${m==='gallery'?`<div class="gal" data-gal>${gal.map(g=>`<div class="g" style="background:${g}"></div>`).join('')}</div>`:`<div class="media kb" style="background:${bgv(ev)}"></div>`}
+      <div class="grad"></div>${shTop(m==='video'?I.play:(m==='gallery'?I.layers:I.search))}
+      ${m==='video'?`<div class="vbar"><i></i></div><span class="mtag">${I.play} Video</span>`:m==='gallery'?`<div class="gdots" data-dots>${gal.map((_,j)=>`<span class="${j===0?'on':''}"></span>`).join('')}</div><span class="mtag">${I.layers} ${gal.length} foto · glisează</span>`:`<span class="mtag">📷 Foto</span>`}
+      <div class="info"><span class="gpill ${ev.type==='experience'?'gsolid':'solid'}">${ev.type==='experience'?'⛰ Experiență':ev.cat}</span>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)">${ev.s}</div>
+        <div class="cmeta" style="margin-top:8px"><span class="i">${I.cal}<span>${ev.d}</span></span><span class="i">${I.pin}<span>${v.name}</span></span></div>
+        <button class="shcta" data-a="go:event:${ev.id}" style="margin-top:14px">${I.ticket} de la ${money(ev.from)} lei</button></div>
+      ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="save:${ev.id}"><div class="b">${I.save}</div><span>Salvează</span></div><div class="act" data-a="noop"><div class="b">${I.share}</div><span>Trimite</span></div><div class="act" data-a="go:event:${ev.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5)">${poster(ev,'','width:100%;height:100%')}</div><span>Detalii</span></div>`)}</div>`;}
+  S.shorts=()=>`<div class="shorts" id="shortsWrap">${(ST._feed||buildFeed()).map((it,idx)=>shortItem(it,idx)).join('')}</div>`;
   INIT.shorts=el=>{$$('.short',el).forEach(short=>{const gal=$('[data-gal]',short);const dots=$$('[data-dots] span',short);if(gal&&dots.length){let raf;gal.addEventListener('scroll',()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{const j=Math.round(gal.scrollLeft/gal.clientWidth);dots.forEach((d,k)=>d.classList.toggle('on',k===j));});});}});};
 
   let stack=[{id:'splash',data:{}}];const top=()=>stack[stack.length-1].id;
@@ -1095,6 +1121,7 @@
     if(a==='lbPrev')return stepLB(-1);
     if(a==='lbNext')return stepLB(1);
     if(a==='shLike'){el.classList.toggle('liked');const bt=el.querySelector('.b');const liked=el.classList.contains('liked');if(bt)bt.innerHTML=liked?I.heart:I.heartO;return;}
+    if(a==='openShorts'){ST._feed=buildFeed();return go('shorts');}
     if(a==='forgotSend'){const inp=$('#forgotEmail');const v=inp&&inp.value.trim();if(!v)return toast('Adaugă adresa de email');back();setTimeout(()=>toast('Link de resetare trimis către '+v+' 📧'),300);return;}
     if(a==='inviteSend'){const inp=$('#inviteEmail');const v=inp&&inp.value.trim();if(!v)return toast('Adaugă un email de invitat');if(inp)inp.value='';toast('Invitație trimisă către '+v+' 🎉');return;}
     if(a==='tgl'){ST.cart[arg]=!ST.cart[arg];if(arg==='nameOnTicket'||arg==='cultural'){rerender();}else{el.classList.toggle('on');updateCartTotals();}return;}
@@ -1113,6 +1140,13 @@
     if(a==='logout'){ST.obStep=0;return reset('login');}
     if(a==='noop')return;
   });
+
+  // ===== Instagram-style edge-swipe back =====
+  (function(){const noSwipe=['splash','onboarding','login','register','forgot'];let sw=null;
+    vp.addEventListener('pointerdown',e=>{if(stack.length<=1||noSwipe.includes(top()))return;const r=vp.getBoundingClientRect();if(e.clientX-r.left>30)return;sw={x0:e.clientX,y0:e.clientY,el:vp.querySelector('.screen:last-child'),active:false};});
+    vp.addEventListener('pointermove',e=>{if(!sw)return;const dx=e.clientX-sw.x0,dy=e.clientY-sw.y0;if(!sw.active){if(Math.abs(dx)<6&&Math.abs(dy)<6)return;if(Math.abs(dy)>Math.abs(dx)){sw=null;return;}sw.active=true;}if(dx<0)return;if(sw.el){sw.el.style.transition='none';sw.el.style.transform='translateX('+Math.min(dx,440)+'px)';sw.el.style.boxShadow='-26px 0 54px rgba(0,0,0,.5)';}});
+    const end=e=>{if(!sw)return;const dx=(e.clientX||sw.x0)-sw.x0;const el=sw.el;const commit=sw.active&&dx>90;sw=null;if(!el)return;if(commit){el.style.transition='';el.style.transform='';el.style.boxShadow='';back();}else{el.style.transition='transform .22s ease,box-shadow .22s ease';el.style.transform='';el.style.boxShadow='';setTimeout(()=>{if(el)el.style.transition='';},240);}};
+    vp.addEventListener('pointerup',end);vp.addEventListener('pointercancel',end);})();
 
   paint('forward');
 })();
