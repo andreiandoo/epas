@@ -2523,8 +2523,26 @@ class MarketplaceTaxTemplate extends Model
         // bucket (not as a value diff that reconciliation later smears
         // into the lowest-price tier — that's how payout 3055 ended up
         // with "133.33lei*3" on Cat III, which never had any refunds).
+        //
+        // FALLBACK: on a fully-refunded payout the ticket_breakdown snapshot
+        // is empty (Pass 1 above skipped every row), so no groups pre-exist.
+        // Synthesize the group from the refund's template_row (populated in
+        // allocateRefundByCommissionGroup from the ticket_type meta) so the
+        // decont still emits 1a/1b instead of showing an empty section 1 —
+        // reported on PAY-DC3HSEDV-3125 where all 3 tickets were refunded
+        // and the on_top decont template rendered without any sales row.
         foreach ($refundAllocByGroup as $key => $refundData) {
-            if (!isset($groups[$key])) continue;
+            if (!isset($groups[$key])) {
+                $template = $refundData['template_row'] ?? null;
+                if (!$template) continue;
+                $groups[$key] = [
+                    'label' => self::commissionRateLabel($template),
+                    'mode' => $template['commission_mode'] ?? null,
+                    'qty' => 0,
+                    'amount' => 0.0,
+                    'tierMap' => [],
+                ];
+            }
             $groups[$key]['amount'] += (float) ($refundData['amount'] ?? 0);
             $groups[$key]['qty'] += (int) ($refundData['qty'] ?? 0);
             foreach (($refundData['tiers'] ?? []) as $priceKey => $tierQty) {
@@ -2690,16 +2708,40 @@ class MarketplaceTaxTemplate extends Model
         // Returns a per-group descriptor instead of a plain amount so the
         // caller can fold each refunded ticket back into the right tier
         // bucket. Shape: ['amount' => float, 'qty' => int, 'tiers' =>
-        // [priceKey => qty]].
+        // [priceKey => qty], 'template_row' => array|null].
+        //
+        // `template_row` carries the minimal commission-rule meta needed to
+        // synthesize a group when Pass-1 of buildPayoutSalesBreakdownRows
+        // did NOT create it (i.e. fully-refunded payouts where the
+        // ticket_breakdown snapshot is empty, so no sold-tickets loop ran).
+        // Falls back to loading the ticket_type directly.
+        $ttCache = [];
         $allocByGroup = [];
         foreach ($refundItems as $ri) {
             $ttId = (int) ($ticketTypeByTicket[$ri->ticket_id] ?? 0);
             if ($ttId <= 0) continue;
             $row = $rowByTicketType[$ttId] ?? null;
-            if (!$row) continue;
+            if (!$row) {
+                // Empty breakdown fallback: synthesize the commission-rule
+                // meta from the ticket_type itself.
+                $tt = $ttCache[$ttId] ?? ($ttCache[$ttId] = \App\Models\TicketType::find($ttId));
+                if (!$tt) continue;
+                $row = [
+                    'ticket_type_id' => $ttId,
+                    'commission_mode' => $tt->commission_mode,
+                    'commission_rate' => $tt->commission_rate,
+                    'commission_type' => $tt->commission_type,
+                    'commission_fixed' => $tt->commission_fixed,
+                ];
+            }
             $key = self::commissionGroupKey($row);
             if (!isset($allocByGroup[$key])) {
-                $allocByGroup[$key] = ['amount' => 0.0, 'qty' => 0, 'tiers' => []];
+                $allocByGroup[$key] = [
+                    'amount' => 0.0,
+                    'qty' => 0,
+                    'tiers' => [],
+                    'template_row' => $row,
+                ];
             }
             $face = (float) ($ri->face_value ?? 0);
             $allocByGroup[$key]['amount'] += $face;
