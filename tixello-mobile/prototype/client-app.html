@@ -16,7 +16,7 @@
     --ui:'Outfit',ui-rounded,-apple-system,"Segoe UI",system-ui,sans-serif;
     --sh:0 22px 46px -22px rgba(0,0,0,.7); --sh-sm:0 10px 24px -14px rgba(0,0,0,.6);
     --sh-p:0 16px 34px -14px rgba(124,58,237,.7);
-    --grid:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+    --grid:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
     --glow:radial-gradient(680px 380px at 84% -6%, rgba(139,92,246,.22), transparent 62%);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -39,7 +39,7 @@
   .enter-forward{transform:translateX(100%)} .exit-forward{transform:translateX(-24%);opacity:.5}
   .enter-back{transform:translateX(-100%)} .exit-back{transform:translateX(100%)}
   @media (prefers-reduced-motion:reduce){.screen{transition:opacity .2s}.enter-forward,.enter-back{transform:none;opacity:0}.exit-forward,.exit-back{opacity:0;transform:none}}
-  .grid{background-color:var(--bg);background-image:var(--glow),var(--grid);background-size:100% 100%,30px 30px,30px 30px;display:flex;flex-direction:column;min-height:100%}
+  .grid{background-color:var(--bg);background-image:var(--glow),var(--grid);background-size:100% 100%,18px 18px,18px 18px;display:flex;flex-direction:column;min-height:100%}
 
   .sb{display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font-size:13px;font-weight:500;color:#fff}
   .sb .dd{display:flex;gap:5px;align-items:center}
@@ -76,6 +76,7 @@
   .hdr .loc-v{font-weight:600;font-size:15.5px;display:flex;gap:5px;align-items:center}
   .searchbar{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer}
   .searchbar .ph{color:var(--faint);font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navspace{height:38px;flex:none}
   .bnav{position:sticky;bottom:10px;margin:auto 7px 0;height:58px;background:rgba(18,15,30,.82);backdrop-filter:blur(20px);border:1px solid var(--line-2);border-radius:22px;display:flex;align-items:center;justify-content:space-around;box-shadow:0 20px 40px -18px rgba(0,0,0,.7);z-index:30}
   .bnav .nav{display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;flex:1;height:100%;transition:.18s}
   .bnav .nav svg{width:24px;height:24px}
@@ -343,7 +344,10 @@
         {n:'Bilet 1 zi',desc:'Acces general pentru o singură zi, la alegere.',p:180,pts:180,seat:false},
         {n:'Camping Pass 4 nopți',desc:'Loc de cort în zona de camping + dușuri. Se ia pe lângă abonament.',p:150,pts:150,seat:false}],
     rentals:[{n:'Loc campare + cort echipat',d:'4 nopți, cort 2 pers montat',p:150,ic:'⛺',period:true},{n:'Cazare glamping premium',d:'Cort cu pat, curent, lounge',p:900,ic:'🏕️',period:true},{n:'Parcare festival 4 zile',d:'Lângă intrarea principală',p:120,ic:'🅿️'},{n:'Locker + stație încărcare',d:'Bagaje & telefon, acces nelimitat',p:60,ic:'🔒'}]};
-  const STAY=[{n:'Hotel Platinia',r:'4.7',dist:'0.4 km',p:420,x:44,y:38,tone:'linear-gradient(135deg,#7c3aed,#2a1065)'},{n:'Grand Hotel Italia',r:'4.6',dist:'1.2 km',p:380,x:66,y:52,tone:'linear-gradient(135deg,#4c1d95,#8b5cf6)'},{n:'Hampton by Hilton',r:'4.5',dist:'0.8 km',p:340,x:34,y:60,tone:'linear-gradient(135deg,#6d28d9,#a78bfa)'},{n:'DoubleTree Cluj',r:'4.4',dist:'1.5 km',p:300,x:58,y:30,tone:'linear-gradient(135deg,#312e81,#6366f1)'}];
+  const STAY=[{n:'Hotel Platinia',type:'Hotel',r:'4.7',dkm:0.4,p:420,x:44,y:38,tone:'linear-gradient(135deg,#7c3aed,#2a1065)',am:['wifi','parcare','mic dejun']},{n:'Grand Hotel Italia',type:'Hotel',r:'4.6',dkm:1.2,p:380,x:66,y:52,tone:'linear-gradient(135deg,#4c1d95,#8b5cf6)',am:['wifi','piscină','parcare']},{n:'Apartament Central',type:'Apartament',r:'4.8',dkm:0.6,p:260,x:52,y:46,tone:'linear-gradient(135deg,#0e7490,#22d3ee)',am:['wifi','bucătărie']},{n:'Hampton by Hilton',type:'Hotel',r:'4.5',dkm:0.8,p:340,x:34,y:60,tone:'linear-gradient(135deg,#6d28d9,#a78bfa)',am:['wifi','mic dejun']},{n:'Hostel The Spot',type:'Hostel',r:'4.3',dkm:0.9,p:120,x:38,y:30,tone:'linear-gradient(135deg,#b45309,#f59e0b)',am:['wifi']},{n:'DoubleTree Cluj',type:'Hotel',r:'4.4',dkm:1.5,p:300,x:62,y:32,tone:'linear-gradient(135deg,#312e81,#6366f1)',am:['wifi','parcare','piscină']}];
+  const STAYTYPES=['Toate','Hotel','Apartament','Hostel'];
+  const STAYSORTS=[['dist','Distanță'],['price','Preț'],['rating','Rating']];
+  function stayFilter(){let l=STAY.filter(s=>ST.stayF.type==='Toate'||s.type===ST.stayF.type).filter(s=>s.p<=ST.stayF.maxPrice);const so=ST.stayF.sort;l=l.slice().sort((a,b)=>so==='price'?a.p-b.p:so==='rating'?parseFloat(b.r)-parseFloat(a.r):a.dkm-b.dkm);return l;}
   const CATS=[['Toate','✦'],['Concerte','🎵'],['Experiențe','⛰'],['Festival','🎪'],['Teatru','🩰'],['Sport','🏟'],['Stand-up','🎙']];
   const PREFS=['Rock','Pop','Electronic','Hip-Hop','Teatru','Stand-up','Festivaluri','Experiențe','Sport','Familie','Clasică','Jazz'];
   const PREFGROUPS=[
@@ -419,7 +423,9 @@
     {name:'Petrecere',count:1642,c:'#dc2626',route:'go:ticslist',pool:[EV.celestial,{tone:'linear-gradient(135deg,#7c3aed,#db2777)',g:'🍸',s:'Euphoria Cabaret'},{tone:'linear-gradient(135deg,#be185d,#7c3aed)',g:'🍺',s:'Beer Garden'}]},
   ];
 
-  const ST={prefs:['Rock','Electronic','Experiențe'],prefsSel:['Concerte','Experiențe','Rock','Electronic','Cluj-Napoca','Vineri','Cu prietenii'],ev:'coldplay',seats:['D4','D5'],obStep:0,cart:{protect:false,cultural:false,discount:0,nameOnTicket:false},balance:162.00,points:1240,_ttCounts:null,_ttEv:null,stayPin:0,expDate:0,expDay:4,addons:{},calDay:8,fStage:0,fDay:'Joi 10',saved:['celestial','atv','swan','wine'],revRating:0,revTab:0};
+  const ST={prefs:['Rock','Electronic','Experiențe'],prefsSel:['Concerte','Experiențe','Rock','Electronic','Cluj-Napoca','Vineri','Cu prietenii'],ev:'coldplay',seats:['D4','D5'],obStep:0,cart:{protect:false,cultural:false,discount:0,nameOnTicket:false},balance:162.00,points:1240,_ttCounts:null,_ttEv:null,stayPin:0,expDate:0,expDay:4,addons:{},calDay:8,fStage:0,fDay:'Joi 10',saved:['celestial','atv','swan','wine'],revRating:0,revTab:0,rateStars:0,
+    cards:[{brand:'Visa',last:'4218',exp:'07/27',grad:'linear-gradient(135deg,#1a1f71,#4b56d2)',primary:true},{brand:'Mastercard',last:'9902',exp:'11/26',grad:'linear-gradient(135deg,#c0392b,#e67e22)',primary:false}],
+    stayF:{type:'Toate',sort:'dist',maxPrice:500}};
   // "tx" lettermark în Outfit — currentColor => merge alb/negru. (SVG-ul oficial tixello.com a fost blocat de politica de egress; se poate înlocui 1:1)
   const txMark=(c,s)=>{s=s||26;return `<svg width="${s}" height="${s}" viewBox="0 0 40 40" fill="none" style="display:block"><text x="20" y="29" text-anchor="middle" font-family="Outfit,sans-serif" font-weight="700" font-size="29" letter-spacing="-1.6" fill="${c||'currentColor'}">tx</text></svg>`;};
 
@@ -445,6 +451,9 @@
     nticket:'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 5.5A2 2 0 0 0 2.5 7.5v1.9a.9.9 0 0 0 .62.86 1.85 1.85 0 0 1 0 3.48.9.9 0 0 0-.62.86v1.9a2 2 0 0 0 2 2H10V16.5a1 1 0 0 1 2 0V18.5h7.5a2 2 0 0 0 2-2v-1.9a.9.9 0 0 0-.62-.86 1.85 1.85 0 0 1 0-3.48.9.9 0 0 0 .62-.86V7.5a2 2 0 0 0-2-2H12V7.5a1 1 0 0 1-2 0V5.5Z"/><path d="M11 7.5V16.5" stroke="#100d1c" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.3 2.4"/></svg>',
     nprofile:'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.1"/><path d="M4.6 19.4a7.4 7.4 0 0 1 14.8 0 1.35 1.35 0 0 1-1.35 1.35H5.95A1.35 1.35 0 0 1 4.6 19.4Z"/></svg>',
     nscan:'<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="8.5" y="8.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/><rect x="12.5" y="8.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/><rect x="8.5" y="12.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/><rect x="12.5" y="12.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/></svg>',
+    x:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    lock:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    download:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>',
     plus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
     minus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>',
     arrow:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
@@ -600,7 +609,7 @@
   // sticky header used across list/detail pages
   const topbar=(inner,below)=>`<div class="stickytop">${sb()}<div class="hrow">${inner}</div>${below||''}</div>`;
   const backTitle=(title,sub,right)=>`<div class="row" style="gap:12px;min-width:0"><div class="icon-btn" data-a="back">${I.back}</div><div style="min-width:0"><div class="h2" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>${sub?`<div class="muted" style="font-size:11.5px">${sub}</div>`:''}</div></div>${right||'<div style="width:42px"></div>'}`;
-  const nav=a=>`<div class="bnav">
+  const nav=a=>`<div class="navspace"></div><div class="bnav">
     <div class="nav ${a==='home'?'on':''}" data-a="tab:home">${I.nhome}</div>
     <div class="nav ${a==='explore'?'on':''}" data-a="tab:explore">${I.nexplore}</div>
     <div class="fab" data-a="tab:wallet">${I.nscan}</div>
@@ -750,24 +759,32 @@
   };
 
   /* ===== STAY22 MAP EMBED ===== */
-  S.stay22=(d)=>{const v=VEN[d.id]||VEN.arena;
+  S.stay22=(d)=>{const v=VEN[d.id]||VEN.arena;const list=stayFilter();ST._stayList=list;if(ST.stayPin>=list.length)ST.stayPin=0;const f=ST.stayF;const active=(f.type!=='Toate'?1:0)+(f.maxPrice<500?1:0);
     return `<div style="min-height:100%;background:var(--bg);display:flex;flex-direction:column;height:100%">
       <div style="position:relative;flex:1;min-height:0;overflow:hidden;background:#0d0b16">
-        <div style="position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7"></div>
+        <div style="position:absolute;inset:0;background-image:var(--grid);background-size:18px 18px;opacity:.5"></div>
         <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, rgba(139,92,246,.15), transparent 62%)"></div>
         <div class="mapinner" id="mapinner" style="position:absolute;inset:0;z-index:2;transition:transform .55s cubic-bezier(.3,.85,.3,1);transform:${panStay(ST.stayPin)}">
           <div style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);text-align:center"><div style="width:18px;height:18px;border-radius:50%;background:var(--indigo);border:3px solid #fff;box-shadow:var(--sh-p);margin:0 auto"></div><div style="font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:999px;margin-top:6px">${v.name}</div></div>
-          ${STAY.map((s,i)=>`<div class="mappin ${i===ST.stayPin?'on':''}" style="left:${s.x}%;top:${s.y}%" data-a="stayPin:${i}"><div class="bub">${s.p} lei</div></div>`).join('')}
+          ${list.map((s,i)=>`<div class="mappin ${i===ST.stayPin?'on':''}" style="left:${s.x}%;top:${s.y}%" data-a="stayPin:${i}"><div class="bub">${s.p} lei</div></div>`).join('')}
         </div>
         <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none;width:66px;height:66px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.28)"></div>
         ${sb()}
-        <div class="between pad" style="position:relative;padding-top:4px;z-index:5"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass">${I.slider}</div></div>
+        <div class="between pad" style="position:relative;padding-top:4px;z-index:5"><div class="icon-btn glass" data-a="back">${I.back}</div><div class="icon-btn glass" data-a="stayFlt" style="position:relative">${I.slider}${active?`<span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:var(--indigo);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center">${active}</span>`:''}</div></div>
+        <div id="stayFltPanel" style="display:${ST._stayFltOpen?'block':'none'};position:absolute;left:12px;right:12px;top:64px;z-index:8"><div class="card" style="padding:15px;background:rgba(18,15,30,.96);backdrop-filter:blur(16px)">
+          <div class="between"><span class="label" style="margin:0">Tip cazare</span><button class="chip" data-a="stayReset" style="padding:5px 11px;font-size:11px">Resetează</button></div>
+          <div class="scroll-x" style="padding:8px 0 2px;margin:0 -4px">${STAYTYPES.map(t=>`<button class="chip ${f.type===t?'ind on':''}" data-a="stayType:${t}">${t}</button>`).join('')}</div>
+          <div class="label" style="margin:12px 0 8px">Sortează după</div><div class="scroll-x" style="padding:0 0 2px;margin:0 -4px">${STAYSORTS.map(s=>`<button class="chip ${f.sort===s[0]?'ind on':''}" data-a="staySort:${s[0]}">${s[1]}</button>`).join('')}</div>
+          <div class="between" style="margin-top:14px"><span class="label" style="margin:0">Preț maxim / noapte</span><span id="stayPriceVal" style="font-weight:600;font-size:13px;color:var(--indigo-2)">${f.maxPrice>=500?'oricât':f.maxPrice+' lei'}</span></div>
+          <input id="stayPrice" type="range" min="100" max="500" step="20" value="${f.maxPrice}" style="width:100%;margin-top:8px;accent-color:var(--indigo)">
+          <button class="cta" data-a="stayFlt" style="margin-top:14px;padding:12px">Vezi ${list.length} cazări</button>
+        </div></div>
         <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:var(--faint);font-weight:500;z-index:5">powered by Stay22</div>
       </div>
       <div style="background:var(--bg);border-radius:24px 24px 0 0;margin-top:-18px;position:relative;box-shadow:0 -20px 40px -20px rgba(0,0,0,.6);padding-bottom:14px">
         <div style="width:40px;height:4px;border-radius:9px;background:var(--line-2);margin:10px auto 6px"></div>
-        <div class="between pad"><div class="h2" style="font-size:15px">Cazare lângă ${v.name}</div><span class="muted" style="font-size:11.5px;font-weight:500">${STAY.length} opțiuni</span></div>
-        <div class="scroll-x" style="margin-top:10px" id="stayList">${STAY.map((s,i)=>`<div class="card" data-a="stayPin:${i}" style="min-width:220px;padding:11px;display:flex;gap:11px;cursor:pointer;border-color:${i===ST.stayPin?'var(--indigo)':'var(--line)'}"><div style="width:54px;height:54px;border-radius:14px;background:${s.tone};flex:none"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.n}</div><div class="row" style="gap:8px;margin-top:3px;font-size:11px"><span style="color:var(--amber);font-weight:500">★ ${s.r}</span><span class="muted">${s.dist}</span></div><div style="font-weight:600;color:var(--indigo-2);font-size:13px;margin-top:5px">${s.p} lei<span class="muted" style="font-weight:600;font-size:10.5px"> /noapte</span></div></div></div>`).join('')}</div>
+        <div class="between pad"><div class="h2" style="font-size:15px">Cazare lângă ${v.name}</div><span class="muted" style="font-size:11.5px;font-weight:500">${list.length} ${list.length===1?'opțiune':'opțiuni'}</span></div>
+        ${list.length?`<div class="scroll-x" style="margin-top:10px" id="stayList">${list.map((s,i)=>`<div class="card" data-a="stayPin:${i}" style="min-width:230px;padding:11px;display:flex;gap:11px;cursor:pointer;border-color:${i===ST.stayPin?'var(--indigo)':'var(--line)'}"><div style="width:54px;height:54px;border-radius:14px;background:${s.tone};flex:none;display:grid;place-items:center;color:#fff;font-size:20px">${s.type==='Hotel'?'🏨':s.type==='Apartament'?'🏢':'🛏'}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.n}</div><div class="row" style="gap:8px;margin-top:3px;font-size:11px"><span style="color:var(--amber);font-weight:500">★ ${s.r}</span><span class="muted">${s.dkm} km</span><span class="badge" style="padding:1px 7px;font-size:9.5px;background:var(--surface-3);color:var(--muted)">${s.type}</span></div><div style="font-weight:600;color:var(--indigo-2);font-size:13px;margin-top:5px">${s.p} lei<span class="muted" style="font-weight:600;font-size:10.5px"> /noapte</span></div></div></div>`).join('')}</div>`:`<div class="pad" style="padding-top:14px;padding-bottom:6px;text-align:center"><div class="muted" style="font-size:12.5px">Nicio cazare pentru aceste filtre.</div><button class="chip" data-a="stayReset" style="margin:10px auto 0;display:inline-flex">Resetează filtrele</button></div>`}
         <div class="pad" style="margin-top:12px"><button class="cta green" data-a="noop">Rezervă prin Stay22 ${I.ext}</button></div>
       </div></div>`;
   };
@@ -1029,9 +1046,26 @@
 
   S.setPayment=()=>`<div class="grid" style="min-height:100%">${setHead('Carduri & plată')}
     <div class="pad" style="margin-top:14px"><div class="label" style="margin-bottom:9px">Cardurile tale</div><div style="display:flex;flex-direction:column;gap:11px">
-      ${[['Visa','•••• 4218','07/27','linear-gradient(135deg,#1a1f71,#4b56d2)',1],['Mastercard','•••• 9902','11/26','linear-gradient(135deg,#c0392b,#e67e22)',0]].map(c=>`<div style="border-radius:18px;padding:16px;background:${c[3]};color:#fff;position:relative;box-shadow:var(--sh)"><div class="between"><span style="font-weight:600;font-size:14px">${c[0]}</span>${c[4]?`<span class="badge" style="background:rgba(255,255,255,.22);color:#fff">Principal</span>`:`<button class="circ" data-a="noop" style="position:static;width:30px;height:30px;background:rgba(255,255,255,.18);color:#fff;border:none">${I.x}</button>`}</div><div style="font-size:19px;letter-spacing:2px;margin-top:22px;font-weight:500">${c[1]}</div><div class="between" style="margin-top:10px;font-size:11px;opacity:.85"><span>Andrei Popescu</span><span>Exp ${c[2]}</span></div></div>`).join('')}
-    </div><button class="cta ghost" data-a="noop" style="margin-top:14px">${I.plus} Adaugă un card nou</button></div>
-    <div class="pad" style="margin-top:18px"><div class="label" style="margin-bottom:9px">Facturare</div><div class="card" style="padding:4px 14px">${[['🏢','Date de facturare','›'],['🧾','Istoric facturi','›']].map((r,i)=>`<div class="between" data-a="noop" style="padding:13px 0;${i<1?'border-bottom:1px solid var(--line)':''};cursor:pointer"><div class="row" style="gap:11px"><span style="font-size:16px">${r[0]}</span><span style="font-weight:500;font-size:13.5px">${r[1]}</span></div><span class="muted">${I.arrow}</span></div>`).join('')}</div></div>
+      ${ST.cards.length?ST.cards.map((c,i)=>`<div style="border-radius:18px;padding:16px;background:${c.grad};color:#fff;position:relative;box-shadow:var(--sh)"><div class="between"><span style="font-weight:600;font-size:14px">${c.brand}</span><div class="row" style="gap:7px">${c.primary?`<span class="badge" style="background:rgba(255,255,255,.22);color:#fff">Principal</span>`:`<button class="chip" data-a="cardPrimary:${i}" style="padding:5px 10px;background:rgba(255,255,255,.18);color:#fff;border:none;font-size:11px">Setează principal</button>`}<button class="circ" data-a="cardDel:${i}" style="position:static;width:30px;height:30px;background:rgba(255,255,255,.18);color:#fff;border:none" aria-label="Șterge cardul">${I.x}</button></div></div><div style="font-size:19px;letter-spacing:2px;margin-top:22px;font-weight:500">•••• ${c.last}</div><div class="between" style="margin-top:10px;font-size:11px;opacity:.85"><span>Andrei Popescu</span><span>Exp ${c.exp}</span></div></div>`).join(''):`<div class="card" style="padding:22px;text-align:center"><div style="font-size:34px;opacity:.5">💳</div><div class="muted" style="font-size:12.5px;margin-top:8px">Niciun card salvat. Adaugă unul ca să plătești mai rapid.</div></div>`}
+    </div><button class="cta ghost" data-a="go:setAddCard" style="margin-top:14px">${I.plus} Adaugă un card nou</button></div>
+    <div class="pad" style="margin-top:18px"><div class="label" style="margin-bottom:9px">Facturare</div><div class="card" style="padding:4px 14px">${[['🏢','Date de facturare','go:setBilling'],['🧾','Istoric facturi','go:setInvoices']].map((r,i)=>`<div class="between" data-a="${r[2]}" style="padding:13px 0;${i<1?'border-bottom:1px solid var(--line)':''};cursor:pointer"><div class="row" style="gap:11px"><span style="font-size:16px">${r[0]}</span><span style="font-weight:500;font-size:13.5px">${r[1]}</span></div><span class="muted">${I.arrow}</span></div>`).join('')}</div></div>
+    <div style="height:16px"></div></div>`;
+
+  S.setAddCard=()=>`<div class="grid" style="min-height:100%">${setHead('Adaugă un card')}
+    <div class="pad" style="margin-top:16px"><div style="border-radius:18px;padding:18px;background:linear-gradient(135deg,var(--indigo),#2a1065);color:#fff;box-shadow:var(--sh)"><div class="between"><span style="font-weight:600;font-size:14px">Card nou</span>${I.wallet}</div><div style="font-size:19px;letter-spacing:2px;margin-top:22px;font-weight:500">•••• •••• •••• ••••</div><div class="between" style="margin-top:10px;font-size:11px;opacity:.85"><span>NUME PRENUME</span><span>MM/AA</span></div></div></div>
+    <div class="pad">${fld('Numărul cardului','','1234 5678 9012 3456')}<div class="row" style="gap:11px">${[['Expirare','','MM/AA'],['CVV','','•••']].map(f=>`<div style="flex:1;margin-top:13px"><div class="label">${f[0]}</div><div class="field"><input placeholder="${f[2]}"></div></div>`).join('')}</div>${fld('Nume pe card','Andrei Popescu','Nume complet')}</div>
+    <div class="pad" style="margin-top:8px"><button class="cta" data-a="cardSave">Salvează cardul</button></div>
+    <div class="pad" style="margin-top:12px"><div class="row" style="gap:8px;justify-content:center;color:var(--faint);font-size:11px">${I.lock||''} Datele sunt criptate și securizate</div></div>
+    <div style="height:16px"></div></div>`;
+
+  S.setBilling=()=>`<div class="grid" style="min-height:100%">${setHead('Date de facturare')}
+    <div class="pad" style="margin-top:14px"><div class="row" style="gap:9px">${[['Persoană fizică',1],['Companie',0]].map((t,i)=>`<button class="chip ${i===0?'ind on':''}" data-a="noop" style="flex:1;justify-content:center">${t[0]}</button>`).join('')}</div></div>
+    <div class="pad">${fld('Nume complet','Andrei Popescu','Nume complet')}${fld('CNP / CIF','','Cod fiscal')}${fld('Adresă','Str. Memorandumului 28','Stradă, număr')}<div class="row" style="gap:11px"><div style="flex:1">${fld('Oraș','Cluj-Napoca','Oraș')}</div><div style="flex:1">${fld('Cod poștal','400114','Cod')}</div></div>${fld('Țară','România','Țară')}</div>
+    <div class="pad" style="margin-top:8px"><button class="cta" data-a="prefsSave">Salvează datele</button></div>
+    <div style="height:16px"></div></div>`;
+
+  S.setInvoices=()=>`<div class="grid" style="min-height:100%">${setHead('Istoric facturi')}
+    <div class="pad" style="margin-top:14px"><div style="display:flex;flex-direction:column;gap:11px">${[['TIX-2026-0412','Coldplay — Music of the Spheres','19 Apr 2026','350 lei','plătită'],['TIX-2026-0231','Salina Turda — 2 bilete','2 Feb 2026','70 lei','plătită'],['TIX-2025-1180','UNTOLD — abonament 4 zile','2 Aug 2025','899 lei','plătită'],['TIX-2025-0904','Smiley Live','12 Iun 2025','160 lei','rambursată']].map(inv=>`<div class="card" style="padding:14px"><div class="between"><div style="min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${inv[1]}</div><div class="muted" style="font-size:11px;margin-top:2px">${inv[0]} · ${inv[2]}</div></div><span class="badge" style="background:${inv[4]==='plătită'?'var(--green-soft)':'var(--surface-3)'};color:${inv[4]==='plătită'?'var(--green-2)':'var(--muted)'};flex:none">${inv[4]}</span></div><div class="between" style="margin-top:11px;padding-top:11px;border-top:1px solid var(--line)"><span style="font-weight:600;font-size:14px">${inv[3]}</span><button class="chip" data-a="dlInvoice" style="padding:7px 13px">${I.download||''} Descarcă PDF</button></div></div>`).join('')}</div></div>
     <div style="height:16px"></div></div>`;
 
   S.setDelete=()=>`<div class="grid" style="min-height:100%">${setHead('Șterge contul')}
@@ -1167,6 +1201,7 @@
         <button class="shcta" data-a="go:event:${ev.id}" style="margin-top:14px">${I.ticket} de la ${money(ev.from)} lei</button></div>
       ${shRail(`<div class="act" data-a="shLike:${idx}"><div class="b">${I.heartO}</div><span>${it.likes}</span></div><div class="act" data-a="save:${ev.id}"><div class="b">${I.save}</div></div><div class="act" data-a="noop"><div class="b">${I.share}</div></div><div class="act" data-a="go:event:${ev.id}"><div class="b" style="padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5)">${poster(ev,'','width:100%;height:100%')}</div></div>`)}</div>`;}
   S.shorts=()=>`<div class="shorts" id="shortsWrap">${(ST._feed||buildFeed()).map((it,idx)=>shortItem(it,idx)).join('')}</div>`;
+  INIT.stay22=(el)=>{const r=$('#stayPrice',el),lbl=$('#stayPriceVal',el);if(!r)return;r.addEventListener('input',()=>{const v=+r.value;lbl.textContent=v>=500?'oricât':v+' lei';});r.addEventListener('change',()=>{ST.stayF.maxPrice=+r.value;ST.stayPin=0;ST._stayFltOpen=true;rerender();});};
   INIT.shorts=el=>{const wrap=$('#shortsWrap',el);if(!wrap)return;const shorts=$$('.short',el);
     // auto-advance galeria short-ului vizibil (stil story)
     tick(()=>{const idx=Math.round(wrap.scrollTop/wrap.clientHeight);const sh=shorts[idx];if(!sh)return;const gal=$('[data-gal]',sh);if(!gal)return;const n=gal.children.length;let ci=(+(gal.dataset.ci||0)+1)%n;gal.dataset.ci=ci;gal.style.transform='translateX(-'+(ci*100)+'%)';$$('[data-dots] span',sh).forEach((d,k)=>d.classList.toggle('on',k===ci));},2900);
@@ -1190,7 +1225,7 @@
   function ttAdj(i,d){const ev=EV[ST.ev];if(!ST._ttCounts||ST._ttEv!==ST.ev){ST._ttCounts=ev.tt.map((_,k)=>k===0?1:0);ST._ttEv=ST.ev;}ST._ttCounts[i]=Math.max(0,(ST._ttCounts[i]||0)+d);recalcTT();}
   function toggleSeat(id){const i=ST.seats.indexOf(id);if(i>=0)ST.seats.splice(i,1);else ST.seats.push(id);const cur=vp.querySelector('.screen:last-child');const se=$$('.seat',cur).find(s=>s.dataset.a==='seat:'+id);if(se)se.classList.toggle('sel');const ev=EV[ST.ev];const sp=ev.tt.find(t=>t.seat)?.p||120;const c=$('#seatCount',cur),l=$('#seatList',cur),sm=$('#seatSum',cur);if(c)c.textContent=ST.seats.length;if(l)l.textContent=ST.seats.join(', ')||'niciunul';if(sm)sm.textContent=(ST.seats.length*sp)+' lei';}
   function updateCartTotals(){const cur=vp.querySelector('.screen:last-child');const c=cartCompute();const set=(id,v)=>{const e=$('#'+id,cur);if(e)e.textContent=v;};set('cSub',c.subtotal+' lei');set('cFee',lei(c.fee)+' lei');set('cProt',lei(c.protect)+' lei');set('cDisc','-'+c.disc+' lei');set('cTotal',lei(c.total)+' lei');set('cBtnTotal',lei(c.total));const pr=$('#cProtRow',cur),dr=$('#cDiscRow',cur);if(pr)pr.hidden=!c.protect;if(dr)dr.hidden=!c.disc;}
-  const panStay=i=>{const s=STAY[i];return s?`translate(${(50-s.x).toFixed(2)}%,${(50-s.y).toFixed(2)}%)`:'translate(0%,0%)';};
+  const panStay=i=>{const s=(ST._stayList||STAY)[i];return s?`translate(${(50-s.x).toFixed(2)}%,${(50-s.y).toFixed(2)}%)`:'translate(0%,0%)';};
   function catRerender(){const cur=vp.querySelector('.screen:last-child');const wasOpen=(()=>{const p=$('#fltPanel',cur);return p&&p.style.display!=='none';})();rerender();if(wasOpen){const p=$('#fltPanel',vp.querySelector('.screen:last-child'));if(p)p.style.display='block';const fb=$('.filterbar .flt',vp.querySelector('.screen:last-child'));if(fb)fb.classList.add('on');}}
   function selectStay(i){ST.stayPin=i;const cur=vp.querySelector('.screen:last-child');if(!cur)return rerender();const mi=$('#mapinner',cur);if(!mi)return rerender();mi.style.transform=panStay(i);$$('.mappin',cur).forEach((p,j)=>p.classList.toggle('on',j===i));const cards=$$('#stayList .card',cur);cards.forEach((c,j)=>c.style.borderColor=(j===i?'var(--indigo)':'var(--line)'));if(cards[i])cards[i].scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});}
 
@@ -1205,12 +1240,20 @@
     if(a==='prefsEdit')return go('prefsEdit');
     if(a==='prefsSave')return toast('Preferințe salvate ✓');
     if(a==='delAcc')return toast('Cerere de ștergere trimisă');
+    if(a==='cardDel'){ST.cards.splice(+arg,1);if(ST.cards.length&&!ST.cards.some(c=>c.primary))ST.cards[0].primary=true;rerender();return toast('Card șters');}
+    if(a==='cardPrimary'){ST.cards.forEach((c,i)=>c.primary=(i===+arg));rerender();return toast('Card principal actualizat ✓');}
+    if(a==='cardSave'){const grads=['linear-gradient(135deg,#0f766e,#12b3a6)','linear-gradient(135deg,#7c3aed,#2a1065)','linear-gradient(135deg,#334155,#0f172a)'];ST.cards.push({brand:'Visa',last:('' + (4000+ST.cards.length*137)).slice(-4),exp:'09/29',grad:grads[ST.cards.length%grads.length],primary:ST.cards.length===0});back();return toast('Card adăugat ✓');}
+    if(a==='dlInvoice')return toast('Descarc factura PDF…');
     if(a==='rateApp'){const n=+arg;ST.rateStars=n;const cur=vp.querySelector('.screen:last-child');$$('[data-a^="rateApp:"] svg',cur).forEach((s,i)=>s.style.fill=i<n?'var(--amber)':'transparent');return;}
     if(a==='ttInc')return ttAdj(+arg,1);
     if(a==='ttDec')return ttAdj(+arg,-1);
     if(a==='bundleAdd')return toast('Pachet adăugat în coș');
     if(a==='seat')return toggleSeat(arg);
     if(a==='stayPin')return selectStay(+arg);
+    if(a==='stayFlt'){ST._stayFltOpen=!ST._stayFltOpen;return rerender();}
+    if(a==='stayType'){ST.stayF.type=arg;ST.stayPin=0;ST._stayFltOpen=true;return rerender();}
+    if(a==='staySort'){ST.stayF.sort=arg;ST.stayPin=0;ST._stayFltOpen=true;return rerender();}
+    if(a==='stayReset'){ST.stayF={type:'Toate',sort:'dist',maxPrice:500};ST.stayPin=0;return rerender();}
     if(a==='catSort'){const order=['rec','price','rating'];ST.catF.sort=order[(order.indexOf(ST.catF.sort)+1)%order.length];return catRerender();}
     if(a==='catCity'){ST.catF.city=ST.catF.city===arg?'':arg;return catRerender();}
     if(a==='catSeat'){ST.catF.seated=!ST.catF.seated;return catRerender();}
