@@ -199,9 +199,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
         <div class="flex items-center justify-between gap-3 px-6 py-3 border-t border-border flex-shrink-0 flex-wrap">
             <div class="flex items-center gap-4 text-xs text-muted flex-wrap">
-                <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#10b981"></span>Disponibil</span>
+                <!-- Ticket-type chips (colors match the admin/public map) are injected
+                     here from seatingData.ticket_types by renderSeatModal(). -->
+                <div id="seat-modal-tt-legend" class="flex items-center gap-3 flex-wrap"></div>
                 <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#a51c30"></span>Selectat de tine</span>
-                <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#d1d5db"></span>Indisponibil</span>
+                <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#9ca3af"></span>Vândut / rezervat</span>
+                <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#d1d5db"></span>Blocat / indisponibil</span>
             </div>
             <div class="flex items-center gap-2">
                 <button id="seat-modal-clear" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 text-sm">Deselectează tot</button>
@@ -483,28 +486,48 @@ $scriptsExtra = <<<'JS'
                     }
                 }
 
+                const xOff = seatRadius * 0.5;
+
                 row.seats.forEach(function (seat) {
                     const cx2 = (section.x || 0) + (seat.x || 0);
                     const cy2 = (section.y || 0) + (seat.y || 0);
                     const uid = seat.seat_uid;
+                    const status = seat.status || 'available';
+                    // blocked/disabled are hard-unavailable (blocked from admin
+                    // or physically impossible seats) — rendered light-gray + X.
+                    const isBlocked = (status === 'blocked' || status === 'disabled');
 
-                    // Seat circle — click handler attached in renderSeatModal.
-                    // <title> gives the hover tooltip.
+                    // Tooltip mirrors the customer map: section·row·seat, plus the
+                    // ticket type on selectable seats and the reason on the rest.
+                    let tip = esc(section.name || '') + ' · Rând ' + esc(row.label || '') + ' · Loc ' + esc(seat.label || '');
+                    if (isBlocked) tip += ' — indisponibil';
+                    else if (status === 'sold') tip += ' — vândut';
+                    else if (status === 'held') tip += ' — rezervat';
+                    else if (seat.ticket_type_name) tip += ' · ' + esc(seat.ticket_type_name);
+
+                    // data-color carries the ticket-type color so paintSeat() can
+                    // fill available seats exactly like the admin/public map.
                     svg += '<circle data-seat-uid="' + esc(uid) + '"'
                         + ' data-section="' + esc(section.name || '') + '"'
                         + ' data-row="' + esc(row.label || '') + '"'
                         + ' data-seat="' + esc(seat.label || '') + '"'
-                        + ' data-status="' + esc(seat.status || 'available') + '"'
+                        + ' data-status="' + esc(status) + '"'
+                        + ' data-color="' + esc(seat.color || '') + '"'
                         + ' cx="' + cx2 + '" cy="' + cy2 + '" r="' + seatRadius + '"'
                         + ' stroke-width="1" style="cursor:pointer">'
-                        + '<title>' + esc(section.name || '') + ' · Rând ' + esc(row.label || '') + ' · Loc ' + esc(seat.label || '') + '</title>'
+                        + '<title>' + tip + '</title>'
                         + '</circle>';
 
-                    // Seat number inside the circle (skip for unavailable —
-                    // they render gray without a number, same as customer view)
-                    const status = seat.status || 'available';
-                    if (status === 'available' && seat.label) {
+                    // Seat number inside the circle for everything except
+                    // blocked/disabled (which get the X mark below instead).
+                    if (!isBlocked && seat.label) {
                         svg += '<text x="' + cx2 + '" y="' + (cy2 + seatRadius * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + esc(seat.label) + '</text>';
+                    }
+
+                    // X mark on blocked / physically-impossible seats.
+                    if (isBlocked) {
+                        svg += '<line x1="' + (cx2 - xOff) + '" y1="' + (cy2 - xOff) + '" x2="' + (cx2 + xOff) + '" y2="' + (cy2 + xOff) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round" class="pointer-events-none"/>'
+                            + '<line x1="' + (cx2 + xOff) + '" y1="' + (cy2 - xOff) + '" x2="' + (cx2 - xOff) + '" y2="' + (cy2 + xOff) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round" class="pointer-events-none"/>';
                     }
                 });
             });
@@ -520,6 +543,18 @@ $scriptsExtra = <<<'JS'
             paintSeat(el);
             el.addEventListener('click', onSeatClick);
         });
+
+        // Ticket-type legend — one color chip per ticket type, so the organizer
+        // reads the same color→category mapping shown on the admin/public map.
+        const ttLegend = $('seat-modal-tt-legend');
+        if (ttLegend) {
+            const tts = data.ticket_types || [];
+            ttLegend.innerHTML = tts.map(function (tt) {
+                return '<span class="inline-flex items-center gap-1.5">'
+                    + '<span class="inline-block w-3 h-3 rounded-full" style="background:' + esc(tt.color || '#8B5CF6') + '"></span>'
+                    + esc(tt.name || '') + '</span>';
+            }).join('');
+        }
 
         // Fit the map to the visible modal area on first open; subsequent
         // opens preserve the previous zoom/pan so organizers don't lose
@@ -781,21 +816,33 @@ $scriptsExtra = <<<'JS'
     function paintSeat(el) {
         const status = el.getAttribute('data-status') || 'available';
         const uid = el.getAttribute('data-seat-uid');
+        // Ticket-type color from the API (falls back to the map's default purple
+        // for seats with no ticket type assigned, matching the admin/public map).
+        const ttColor = el.getAttribute('data-color') || '#8b5cf6';
         const isSelected = selectedSeats.some((s) => s.seat_uid === uid);
 
+        // Same visual states as the customer/public map (event-single.js):
+        //   blocked/disabled → light gray (+ X, drawn in renderSeatModal)
+        //   sold/held        → medium gray
+        //   selected by me   → red
+        //   available        → its ticket-type color
+        // Only available seats are clickable for the organizer.
         let fill, stroke, clickable;
-        if (status !== 'available') {
-            // sold / held / blocked / disabled are all unavailable for the organizer
+        if (status === 'blocked' || status === 'disabled') {
             fill = '#d1d5db';
             stroke = '#9ca3af';
+            clickable = false;
+        } else if (status === 'sold' || status === 'held') {
+            fill = '#9ca3af';
+            stroke = '#6b7280';
             clickable = false;
         } else if (isSelected) {
             fill = '#a51c30';
             stroke = '#7a141f';
             clickable = true;
         } else {
-            fill = '#10b981';
-            stroke = '#059669';
+            fill = ttColor;
+            stroke = '#ffffff';
             clickable = true;
         }
         el.setAttribute('fill', fill);
