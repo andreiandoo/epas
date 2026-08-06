@@ -2101,54 +2101,58 @@ class MarketplaceTaxTemplate extends Model
                     2
                 );
                 $variables['payout_commission_amount'] = number_format(0, 2);
+            }
 
-                // 1b + tuple: merge refunded tickets into the sold count and
-                // label so 1b matches the 1a "sold-including-refunded" total.
-                // For a fully-refunded decont like 3125 this changes
-                //   1b: 0 → 3 with tuple "(119lei*3)"
-                // For a partial-refund decont like 3254 the 1 refunded Abon
-                // General merges into the existing 73-count for that price:
-                //   1b: 86 → 87 with tuple "(170lei*74+140lei*13)"
-                // Uses the same refund_items collection the aggregate refund
-                // block above computed (with legacy fallback). If none exist
-                // we leave 1b as-is.
-                if ($payout->event_id && ($refundCount ?? 0) > 0) {
-                    $refundQ = \App\Models\MarketplaceRefundItem::query()
-                        ->whereHas('refundRequest', function ($q) use ($payout) {
-                            $q->whereIn('status', ['refunded', 'partially_refunded'])
-                              ->where('marketplace_payout_id', $payout->id);
-                        })
-                        ->where('status', 'refunded');
-                    $refundedTicketsForMerge = $refundQ->get();
-                    if ($refundedTicketsForMerge->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
-                        $refundedTicketsForMerge = self::fetchLegacyPeriodRefundItems($payout);
+            // 1b + tuple merge: for BOTH commission modes, fold refunded
+            // tickets into total_tickets_sold + tickets_breakdown_label so
+            // 1b matches 1a's "sold-including-refunded" total. On on_top
+            // payouts 1a is already sold-including-refunded (via
+            // payout_net_amount = organizerNetFromTickets + refund at line
+            // 2046 above); on included payouts 1a is populated by the Fix-4
+            // override above. Either way, 1b needs the same inclusion or
+            // "3 sold with tuple (119lei*3)" wouldn't render on a decont
+            // whose entire sale volume was later refunded.
+            //
+            // Skipped when net_override is set — that path has its own
+            // reconciled A/E numbers and mixing in raw refund counts would
+            // fight the override intent.
+            if ($payout->event_id && ($refundCount ?? 0) > 0 && $payout->net_override === null) {
+                $refundQ = \App\Models\MarketplaceRefundItem::query()
+                    ->whereHas('refundRequest', function ($q) use ($payout) {
+                        $q->whereIn('status', ['refunded', 'partially_refunded'])
+                          ->where('marketplace_payout_id', $payout->id);
+                    })
+                    ->where('status', 'refunded');
+                $refundedTicketsForMerge = $refundQ->get();
+                if ($refundedTicketsForMerge->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
+                    $refundedTicketsForMerge = self::fetchLegacyPeriodRefundItems($payout);
+                }
+
+                if ($refundedTicketsForMerge->isNotEmpty()) {
+                    // Merge into the priceQtyMap we tracked in parallel with
+                    // breakdownParts. Same price bucket increments its qty,
+                    // new prices append.
+                    foreach ($refundedTicketsForMerge as $it) {
+                        $price = (float) $it->face_value;
+                        if ($price <= 0) continue;
+                        $priceKey = number_format($price, 2, '.', '');
+                        $priceQtyMap[$priceKey] = ($priceQtyMap[$priceKey] ?? 0) + 1;
                     }
 
-                    if ($refundedTicketsForMerge->isNotEmpty()) {
-                        // Merge into the priceQtyMap we tracked in parallel
-                        // with breakdownParts.
-                        foreach ($refundedTicketsForMerge as $it) {
-                            $price = (float) $it->face_value;
-                            if ($price <= 0) continue;
-                            $priceKey = number_format($price, 2, '.', '');
-                            $priceQtyMap[$priceKey] = ($priceQtyMap[$priceKey] ?? 0) + 1;
-                        }
-
-                        // Rebuild tuple parts, sorted by price desc for
-                        // readability (matches buildPayoutSalesBreakdownRows).
-                        krsort($priceQtyMap, SORT_NUMERIC);
-                        $mergedParts = [];
-                        foreach ($priceQtyMap as $pk => $q) {
-                            $mergedParts[] = $formatPrice((float) $pk) . 'lei*' . $q;
-                        }
-                        if (!empty($mergedParts)) {
-                            $chunks = array_chunk($mergedParts, 5);
-                            $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
-                            $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
-                        }
-
-                        $variables['total_tickets_sold'] = array_sum($priceQtyMap);
+                    // Rebuild tuple parts, sorted by price desc for
+                    // readability (matches buildPayoutSalesBreakdownRows).
+                    krsort($priceQtyMap, SORT_NUMERIC);
+                    $mergedParts = [];
+                    foreach ($priceQtyMap as $pk => $q) {
+                        $mergedParts[] = $formatPrice((float) $pk) . 'lei*' . $q;
                     }
+                    if (!empty($mergedParts)) {
+                        $chunks = array_chunk($mergedParts, 5);
+                        $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
+                        $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
+                    }
+
+                    $variables['total_tickets_sold'] = array_sum($priceQtyMap);
                 }
             }
             // Sortat după număr de utilizări desc, "COD (xN)" format.

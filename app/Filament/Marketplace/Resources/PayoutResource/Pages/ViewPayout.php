@@ -805,12 +805,19 @@ class ViewPayout extends ViewRecord
                                 // came from (kept commission on refunded tickets — real
                                 // Ambilet revenue that survived the refund).
                                 $baseAmount = round($commissionSubtotal - $keptCommission, 2);
-                                $items = [[
-                                    'description' => $itemDescription,
-                                    'quantity' => 1,
-                                    'unit_price' => $baseAmount,
-                                    'amount' => $baseAmount,
-                                ]];
+                                // Skip the base "Taxa ticketing..." line when it would
+                                // render as 0.00 — e.g. a fully-refunded decont where
+                                // ALL commission is kept from refunds, like PAY-DC3HSEDV-3125.
+                                // Otherwise the invoice starts with a useless "0.00 RON" line.
+                                $items = [];
+                                if ($baseAmount > 0.005) {
+                                    $items[] = [
+                                        'description' => $itemDescription,
+                                        'quantity' => 1,
+                                        'unit_price' => $baseAmount,
+                                        'amount' => $baseAmount,
+                                    ];
+                                }
 
                                 if ($isGeneralClient && $keptCommission > 0.01) {
                                     foreach ($keptRowsForGeneralClient as $row) {
