@@ -1,7 +1,6 @@
 # Capitolul 9 — Scanarea cu camera
 
-Metoda cea mai folosită la intrare: pui telefonul spre codul QR al
-biletului, aplicația verifică automat.
+Metoda cea mai folosită la intrare: pui telefonul spre codul QR al biletului, aplicația verifică automat.
 
 Timp de citit: **~4 minute**.
 
@@ -30,14 +29,12 @@ Sub cadru:
 
 ## 2. Cum scanezi
 
-**Pointezi telefonul spre codul QR** al biletului. Cadrul detectează
-automat — nu trebuie să apeși nimic.
+**Pointezi telefonul spre codul QR** al biletului. Cadrul detectează automat — nu trebuie să apeși nimic.
 
 **Sfaturi**:
 - Ține telefonul la ~15-30 cm de bilet
 - **Nu tremura** — mișcarea prea rapidă face codul illegibil
-- În lumină slabă, folosește lanterna telefonului (buton pe unele
-  device-uri, în bara de status)
+- În lumină slabă, folosește lanterna telefonului (buton pe unele device-uri, în bara de status)
 - Codul poate fi și pe **hârtie tipărită**, nu doar pe ecran
 
 **Detecție**: aplicația recunoaște automat:
@@ -65,9 +62,6 @@ Cardul verde arată:
 - Dacă e cu loc: **Secțiune · Rând · Loc**
 - Dacă e „extern" (achiziționat prin alt sistem): badge violet „Bilet extern"
 
-<!-- SCREENSHOT: card verde ACCES APROBAT cu nume + tip + loc -->
-![Rezultat verde](./screenshots/09-result-valid.png)
-
 ### 🟡 Portocaliu — DEJA SCANAT
 
 Biletul a fost scanat deja înainte.
@@ -76,8 +70,7 @@ Cardul portocaliu arată:
 - **Numele** (dacă e disponibil)
 - **Când s-a scanat** (ex. „Scanat: 20.07.26 · 14:32")
 
-Util să știi când a intrat prima dată — dacă a fost recent, cere să
-vadă biletul original / verifică actele.
+Util să știi când a intrat prima dată — dacă a fost recent, cere să vadă biletul original / verifică actele.
 
 <!-- SCREENSHOT: card portocaliu DEJA SCANAT cu timestamp -->
 ![Rezultat duplicat](./screenshots/09-result-duplicate.png)
@@ -88,9 +81,6 @@ Bilet inexistent, anulat, refundat sau blocat.
 
 Cardul roșu arată:
 - **Motivul** (ex. „Bilet neinvitat la acest eveniment", „Bilet anulat")
-
-<!-- SCREENSHOT: card roșu BILET INVALID cu motiv -->
-![Rezultat invalid](./screenshots/09-result-invalid.png)
 
 ---
 
@@ -104,18 +94,15 @@ Pentru fiecare rezultat, aplicația oferă și feedback non-vizual:
 | 🟡 Duplicat | „warning" | dublă | portocaliu |
 | 🔴 Invalid | „error" grav | triplă lungă | roșu |
 
-Deci chiar dacă nu te uiți la ecran, îți dai seama după sunet ce s-a
-întâmplat. Util în zgomot mare — vibrația și flash-ul ajung mereu.
+Deci chiar dacă nu te uiți la ecran, îți dai seama după sunet ce s-a întâmplat. Util în zgomot mare — vibrația și flash-ul ajung mereu.
 
-**Poți dezactiva sunetul/vibrația** din Setări → Scanner
-([cap. 24](./24_setari_scanner.md)).
+**Poți dezactiva sunetul/vibrația** din Setări → Scanner ([cap. 24](./24_setari_scanner.md)).
 
 ---
 
 ## 5. Auto-clear
 
-Cardul de rezultat rămâne pe ecran **~3 secunde**, apoi dispare
-automat. Aplicația e gata să scaneze următorul.
+Cardul de rezultat rămâne pe ecran **~3 secunde**, apoi dispare automat. Aplicația e gata să scaneze următorul.
 
 Poți continua să scanezi fără să apeși nimic — camera rămâne activă.
 
@@ -123,28 +110,23 @@ Poți continua să scanezi fără să apeși nimic — camera rămâne activă.
 
 ## 6. Modul auto-confirm
 
-Dacă activezi **Auto-confirmare Valide** din Setări, biletele valide se
-scanează **fără să mai vezi cardul verde** — mai rapid, mai fluid.
+Dacă activezi **Auto-confirmare Valide** din Setări, biletele valide se scanează **fără să mai vezi cardul verde** — mai rapid, mai fluid.
 
 Doar duplicatele și invalidele îți întrerup fluxul cu un card.
 
-**Recomandat pentru evenimente cu multe intrări** și **cifre mari de
-scanare pe minut**. Dezactivat automat pentru evenimente în viitor
-(vezi [cap. 24](./24_setari_scanner.md)).
+**Recomandat pentru evenimente cu multe intrări** și **cifre mari de scanare pe minut**. Dezactivat automat pentru evenimente în viitor (vezi [cap. 24](./24_setari_scanner.md)).
 
 ---
 
 ## 7. Butonul Pauzează
 
-Sub cadrul scanner, butonul `Pauzează` oprește temporar camera. Util
-când:
+Sub cadrul scanner, butonul `Pauzează` oprește temporar camera. Util când:
 
 - Ai nevoie de o pauză (mâncare, apă)
 - Vrei să-i arăți telefonul cuiva
 - Vine o vizită la casă și nu vrei să scanezi accidental
 
-Când e pausat, apare un overlay negru cu iconă mare `⏸` peste tot
-ecranul.
+Când e pausat, apare un overlay negru cu iconă mare `⏸` peste tot ecranul.
 
 Apasă `Reia` pentru a-l reactiva.
 
@@ -152,20 +134,15 @@ Apasă `Reia` pentru a-l reactiva.
 
 ## 8. Ecranul „doar rapoarte" (evenimente trecute)
 
-Dacă selectezi un **eveniment trecut**, tab-ul Scanare intră în modul
-**„doar rapoarte"** — nu se poate scana (nu are sens, evenimentul s-a
-încheiat), dar poți vedea toate statisticile de check-in.
+Dacă selectezi un **eveniment trecut**, tab-ul Scanare intră în modul **„doar rapoarte"** — nu se poate scana (nu are sens, evenimentul s-a încheiat), dar poți vedea toate statisticile de check-in.
 
-Un banner roșu sus îți amintește: „Doar rapoarte — evenimentul s-a
-încheiat".
+Un banner roșu sus îți amintește: „Doar rapoarte — evenimentul s-a încheiat".
 
 ---
 
 ## 9. Cod extern (nu QR)
 
-Dacă clientul are un **cod tipărit** fără QR (doar text, ex.
-„AMB-1234"), nu-l poți scana. Folosește **Cod Manual**
-([cap. 10](./10_scanare_manuala.md)).
+Dacă clientul are un **cod tipărit** fără QR (doar text, ex. „AMB-1234"), nu-l poți scana. Folosește **Cod Manual** ([cap. 10](./10_scanare_manuala.md)).
 
 ---
 
@@ -178,13 +155,11 @@ Dacă clientul are un **cod tipărit** fără QR (doar text, ex.
 - Verifică că codul biletului nu e mototolit / imprimat prost
 
 **„Cere mereu permisiunea camerei"**
-- Setări telefon → Aplicații → AmBilet → Permisiuni → Cameră →
-  Permite mereu
+- Setări telefon → Aplicații → AmBilet → Permisiuni → Cameră → Permite mereu
 
 **„Cadrul e negru, nu apare camera"**
 - Închide app-ul complet (swipe out din recente), redeschide-l
-- Verifică că altă app nu folosește camera (deschide/închide app-ul
-  camera nativ)
+- Verifică că altă app nu folosește camera (deschide/închide app-ul camera nativ)
 - Reboot telefon dacă persistă
 
 **„Codul se scanează dar rezultatul e mereu invalid"**

@@ -1,7 +1,6 @@
 # Capitolul 26 — Widget pe ecranul principal Android
 
-Un mini-tile pe home screen-ul telefonului care arată **cifrele
-evenimentului activ** — fără să deschizi aplicația.
+Un mini-tile pe home screen-ul telefonului care arată **cifrele evenimentului activ** — fără să deschizi aplicația.
 
 **Doar Android**. iOS nu are (deocamdată).
 
@@ -11,15 +10,11 @@ Timp de citit: **~2 minute**.
 
 ## 1. Ce e widget-ul
 
-Un dreptunghi **5×2 celule** (compact, orizontal) pe home screen. **Se
-poate redimensiona mai mic** (până la ~3×2) prin ținere apăsată + drag
-de la muchii, dacă vrei să economisești spațiu.
+Un dreptunghi **5×2 celule** (compact, orizontal) pe home screen. **Se poate redimensiona mai mic** (până la ~3×2) prin ținere apăsată + drag de la muchii, dacă vrei să economisești spațiu.
 
 **Conținut** (două coloane):
-- **Rând 1 (header, subțire)**: 🎫 **AmBilet** · pill **LIVE / AZI /
-  URMEAZĂ / TRECUT** · **Numele evenimentului** (trunchiat cu „…")
-- **Coloana stânga (cifra mare)**: total bilete vândute · „din N" (N =
-  capacitatea)
+- **Rând 1 (header, subțire)**: 🎫 **AmBilet** · pill **LIVE / AZI / URMEAZĂ / TRECUT** · **Numele evenimentului** (trunchiat cu „…")
+- **Coloana stânga (cifra mare)**: total bilete vândute · „din N" (N = capacitatea)
 - **Coloana dreapta (3 rânduri dense)**:
   - **🎟 X · 🌐 Y · 🏛 Z** (scanate · online · la ușă)
   - **💰 X.XXX RON** (total încasări)
@@ -28,9 +23,7 @@ de la muchii, dacă vrei să economisești spațiu.
 <!-- SCREENSHOT: widget AmBilet pe home screen cu numere -->
 ![Widget Android](./screenshots/26-widget.png)
 
-**Design**: gradient roșu bordo (identitate AmBilet), colțuri rotunjite,
-pill status subliniat. Font-uri mai mici decât în versiunea inițială
-pentru densitate mare a informației într-un tile compact.
+**Design**: gradient roșu bordo (identitate AmBilet), colțuri rotunjite, pill status subliniat. Font-uri mai mici decât în versiunea inițială pentru densitate mare a informației într-un tile compact.
 
 ---
 
@@ -51,8 +44,7 @@ pentru densitate mare a informației într-un tile compact.
 
 ## 3. Ce face tap pe widget
 
-**Un tap** → deschide aplicația AmBilet. La această deschidere te duce
-direct pe Panou (nu pe login, dacă ești deja logat).
+**Un tap** → deschide aplicația AmBilet. La această deschidere te duce direct pe Panou (nu pe login, dacă ești deja logat).
 
 Deep-link către evenimentul specific = feature viitor.
 
@@ -62,22 +54,16 @@ Deep-link către evenimentul specific = feature viitor.
 
 **Două ritmuri**:
 
-**A) Aplicația e deschisă** (chiar și în fundal): widget-ul se
-actualizează **în ~30 secunde** de la fiecare sync al aplicației. Când
-tu ai app-ul pornit, cifrele din widget sunt aproape live — sub un
-minut de întârziere.
+**A) Aplicația e deschisă** (chiar și în fundal): widget-ul se actualizează **în ~30 secunde** de la fiecare sync al aplicației. Când
+tu ai app-ul pornit, cifrele din widget sunt aproape live — sub un minut de întârziere.
 
-**B) Aplicația e complet închisă** (swipe out din task manager): widget
-merge pe **ritmul Android de 30 min** — limită de sistem impusă pentru
-a proteja bateria. Nu putem coborî sub 30 min din config.
+**B) Aplicația e complet închisă** (swipe out din task manager): widget merge pe **ritmul Android de 30 min** — limită de sistem impusă pentru a proteja bateria. Nu putem coborî sub 30 min din config.
 
 **Timp update afișat**: „acum 2 min" / „acum 15 min" / „acum 1 h" / etc.
 
-**Refresh manual**: nu există buton explicit. Cea mai bună metodă:
-deschide app-ul → forțează sync → widget preia în ~30s.
+**Refresh manual**: nu există buton explicit. Cea mai bună metodă: deschide app-ul → forțează sync → widget preia în ~30s.
 
-**Recomandare**: la evenimente active, lasă app-ul deschis pe device
-(nu-l închide) — widget-ul rămâne live.
+**Recomandare**: la evenimente active, lasă app-ul deschis pe device (nu-l închide) — widget-ul rămâne live.
 
 ---
 
@@ -94,16 +80,14 @@ deschide app-ul → forțează sync → widget preia în ~30s.
 3. Selectează un eveniment activ (bara roșie sus)
 4. Așteaptă ~30 secunde — widget-ul se completează
 
-Dacă widget-ul rămâne „fără date" mai mult de 1 minut chiar cu app-ul
-deschis, e semn că sync-ul cu serverul n-a mers — verifică
+Dacă widget-ul rămâne „fără date" mai mult de 1 minut chiar cu app-ul deschis, e semn că sync-ul cu serverul n-a mers — verifică
 conexiunea la internet.
 
 ---
 
 ## 6. Cifra „bilete vândute"
 
-Widget-ul arată **total bilete vândute la evenimentul selectat**
-(cumulativ, nu doar azi).
+Widget-ul arată **total bilete vândute la evenimentul selectat** (cumulativ, nu doar azi).
 
 Cum se calculează:
 - Total_sold de la server (agregat pe eveniment)
@@ -114,8 +98,7 @@ Nu include:
 - Vânzări anulate / refundate
 - Bilete de test
 
-**Notă**: eticheta „bilete vândute" e generică — arată totalul, nu
-diferențiază între „azi" și „istoric". Pentru cifre specifice pe zi,
+**Notă**: eticheta „bilete vândute" e generică — arată totalul, nu diferențiază între „azi" și „istoric". Pentru cifre specifice pe zi, 
 deschide Rapoartele ([cap. 15](./15_rapoarte.md)).
 
 ---
@@ -124,36 +107,30 @@ deschide Rapoartele ([cap. 15](./15_rapoarte.md)).
 
 Widget-ul arată numele **evenimentului curent selectat în aplicație**.
 
-Dacă schimbi evenimentul selectat din app-ul deschis, widget-ul se
-actualizează la următorul refresh (până la 30 min).
+Dacă schimbi evenimentul selectat din app-ul deschis, widget-ul se actualizează la următorul refresh (până la 30 min).
 
-**Sfat**: menține pe device un singur eveniment activ pentru a vedea
-cifre consistente pe widget.
+**Sfat**: menține pe device un singur eveniment activ pentru a vedea cifre consistente pe widget.
 
 ---
 
 ## 8. Widget-ul necesită logat
 
-Widget-ul e util doar dacă ai un cont activ în aplicație. Dacă te
-deconectezi, va arăta ultima stare cachă (nu se resetează la logout).
+Widget-ul e util doar dacă ai un cont activ în aplicație. Dacă te deconectezi, va arăta ultima stare cachă (nu se resetează la logout).
 
-**Sfat siguranță**: dacă vinzi telefonul, șterge datele aplicației
-înainte pentru a curăța și widget-ul.
+**Sfat siguranță**: dacă vinzi telefonul, șterge datele aplicației înainte pentru a curăța și widget-ul.
 
 ---
 
 ## 9. Multiple widget-uri?
 
-Da, poți pune **mai multe instanțe** ale widget-ului. Toate arată
-aceleași cifre (evenimentul curent). Nu poți configura widget-uri
+Da, poți pune **mai multe instanțe** ale widget-ului. Toate arată aceleași cifre (evenimentul curent). Nu poți configura widget-uri 
 separate pentru evenimente diferite.
 
 ---
 
 ## 10. Dezinstalare widget
 
-**Ține apăsat** pe widget → alege „Elimină" / „Remove". Widget-ul
-dispare, aplicația AmBilet rămâne.
+**Ține apăsat** pe widget → alege „Elimină" / „Remove". Widget-ul dispare, aplicația AmBilet rămâne.
 
 ---
 
@@ -161,8 +138,7 @@ dispare, aplicația AmBilet rămâne.
 
 - **Doar Android** — iOS nu are (deocamdată)
 - **Update la 30 min** — Android system limit, nu poate fi redus
-- **Fără interactivitate directă** — doar tap → deschide app; nu poți
-  scana din widget
+- **Fără interactivitate directă** — doar tap → deschide app; nu poți scana din widget
 - **Un eveniment** — nu poți afișa mai multe simultan
 
 ---
@@ -170,8 +146,7 @@ dispare, aplicația AmBilet rămâne.
 ## 12. Probleme frecvente
 
 **„Widget arată `—` deși am vândut bilete"**
-- Nu s-a sincronizat încă. Așteaptă până la 30 min sau deschide
-  aplicația forțat (declanșează sync)
+- Nu s-a sincronizat încă. Așteaptă până la 30 min sau deschide aplicația forțat (declanșează sync)
 
 **„Widget arată alt eveniment decât cel selectat curent"**
 - Cache 30 min. Va prinde următorul refresh.
@@ -194,8 +169,7 @@ dispare, aplicația AmBilet rămâne.
 4. Trage widget-ul pe home screen
 5. Vezi cifrele (sau `—` la prima instalare)
 6. **Deschide aplicația** o dată → logat + selectat eveniment
-7. Așteaptă 30 min sau **repornește dispozitivul** → widget-ul se
-   completează
+7. Așteaptă 30 min sau **repornește dispozitivul** → widget-ul se completează
 
 ---
 

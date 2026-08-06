@@ -1,8 +1,6 @@
 # Capitolul 21 — Tura de lucru
 
-**Tura** e sesiunea ta de muncă la eveniment. O deschizi la început, o
-pauzezi la nevoie, o închizi la final cu sumar. Toate acțiunile tale
-(vânzări, scanări) sunt legate de tura activă.
+**Tura** e sesiunea ta de muncă la eveniment. O deschizi la început, o pauzezi la nevoie, o închizi la final cu sumar. Toate acțiunile tale (vânzări, scanări) sunt legate de tura activă.
 
 Timp de citit: **~3 minute**.
 
@@ -25,13 +23,10 @@ Timp de citit: **~3 minute**.
 
 ## 2. Deschide tura
 
-**Auto la prima acțiune** — la prima scanare sau vânzare, tura se
-deschide automat, fără să apeși ceva.
+**Auto la prima acțiune** — la prima scanare sau vânzare, tura se deschide automat, fără să apeși ceva.
 
-**Explicit** — dacă vrei să pornești tura fără să faci încă nicio
-acțiune:
-- Din **Panou → Acțiuni Rapide** poți uneori vedea buton `Deschide
-  tură` (dependent de rol)
+**Explicit** — dacă vrei să pornești tura fără să faci încă nicio acțiune:
+- Din **Panou → Acțiuni Rapide** poți uneori vedea buton `Deschide tură` (dependent de rol)
 - Sau automat la prima activitate
 
 Cronometrul începe să curgă instant.
@@ -62,11 +57,9 @@ Sunt vizibile:
 - Butonul devine `Reia`
 - Bara se colorează diferit (mai discret)
 
-**Util pentru**: masă, apă, coadă de la toaletă, discuții mai lungi
-cu clienți fără scanare.
+**Util pentru**: masă, apă, coadă de la toaletă, discuții mai lungi cu clienți fără scanare.
 
-**Reia**: tap pe `Reia` → cronometrul continuă de unde a rămas,
-scanarea reactivă.
+**Reia**: tap pe `Reia` → cronometrul continuă de unde a rămas, scanarea reactivă.
 
 ---
 
@@ -84,8 +77,7 @@ scanarea reactivă.
 <!-- SCREENSHOT: modal Sumar Tură cu cifre cash + card + scanări + durată -->
 ![Sumar tură](./screenshots/21-summary.png)
 
-**Sfat**: fă screenshot la sumar înainte să apeși OK. Rămâne dovadă
-pentru contabilitate / raport la superior.
+**Sfat**: fă screenshot la sumar înainte să apeși OK. Rămâne dovadă pentru contabilitate / raport la superior.
 
 ---
 
@@ -95,38 +87,30 @@ Butonul `Logout` (Setări, jos, roșu) are text:
 - **„Închide Tura & Deconectare"** — dacă ai tura activă
 - **„Deconectare"** — dacă n-ai tură
 
-**Închide Tura & Deconectare**: face automat pașii **închidere tură +
-logout**. Convenabil la finalul zilei.
+**Închide Tura & Deconectare**: face automat pașii **închidere tură + logout**. Convenabil la finalul zilei.
 
-**Efect asupra credentialelor**: acest buton **șterge emailul și parola
-salvate** pe telefon. Data viitoare când deschizi aplicația, form-ul de
-login e gol — util la predarea telefonului către un alt operator.
+**Efect asupra credentialelor**: acest buton **șterge emailul și parola salvate** pe telefon. Data viitoare când deschizi aplicația, form-ul de login e gol — util la predarea telefonului către un alt operator.
 
-Auto-logout după inactivitate ([cap. 23](./23_securitate.md)) NU șterge
-credentialele — le păstrează pentru re-login rapid.
+Auto-logout după inactivitate ([cap. 23](./23_securitate.md)) NU șterge credentialele — le păstrează pentru re-login rapid.
 
 ---
 
 ## 7. Tura și auto-logout
 
-Auto-logout după inactivitate ([cap. 23](./23_securitate.md)) **NU se
-declanșează** în timpul turei active dacă:
+Auto-logout după inactivitate ([cap. 23](./23_securitate.md)) **NU se declanșează** în timpul turei active dacă:
 - Ai un scan/vânzare în ultimele minute
 - Ai un modal de plată deschis
 - Ai un raport urgență în progres
 
-Deci nu-ți întrerupe activitatea în mijlocul evenimentului. Doar dacă
-lași telefonul pe masă timp de X minute cu nimic în lucru.
+Deci nu-ți întrerupe activitatea în mijlocul evenimentului. Doar dacă lași telefonul pe masă timp de X minute cu nimic în lucru.
 
 ---
 
 ## 8. Multi-device, aceeași tură?
 
-**Nu**. Fiecare device deschide **propria tură**. Dacă ai 3 casierii pe
-3 telefoane cu 3 conturi, sunt 3 ture separate cu 3 sumare separate.
+**Nu**. Fiecare device deschide **propria tură**. Dacă ai 3 casierii pe 3 telefoane cu 3 conturi, sunt 3 ture separate cu 3 sumare separate.
 
-**Same login pe 2 devices** e problematic (nu recomandat). Fiecare
-tură pe device se închide independent.
+**Same login pe 2 devices** e problematic (nu recomandat). Fiecare tură pe device se închide independent.
 
 ---
 
@@ -134,8 +118,7 @@ tură pe device se închide independent.
 
 **Sumarul turei** e per operator, per device. Vezi doar ce ai făcut tu.
 
-**Rapoartele** ([cap. 15](./15_rapoarte.md)) sunt globale — totalurile
-evenimentului (toți casierii).
+**Rapoartele** ([cap. 15](./15_rapoarte.md)) sunt globale — totalurile evenimentului (toți casierii).
 
 Ambele coexistă:
 - Casierul închide tura → primește sumar personal
@@ -145,11 +128,8 @@ Ambele coexistă:
 
 ## 10. Limitări
 
-- **Nu poți vedea sumar retroactive** — odată închisă, tura dispare
-  din interfața ta. Cifrele rămân în rapoarte globale, dar nu poți
-  reafișa modalul de sumar.
-- **Fără edit după închidere** — greșeli găsite ulterior trebuie
-  corectate din admin-ul web
+- **Nu poți vedea sumar retroactive** — odată închisă, tura dispare din interfața ta. Cifrele rămân în rapoarte globale, dar nu poți reafișa modalul de sumar.
+- **Fără edit după închidere** — greșeli găsite ulterior trebuie corectate din admin-ul web
 
 ---
 
@@ -167,16 +147,14 @@ Ambele coexistă:
 - Tura nu e activă. Fă prima acțiune să o pornești.
 
 **„Vreau să transfer tura la alt casier"**
-- Nu se poate. Închide tura ta → colegul se loghează cu contul lui →
-  își deschide propria tură.
+- Nu se poate. Închide tura ta → colegul se loghează cu contul lui → își deschide propria tură.
 
 ---
 
 ## 12. Testează pe viu
 
 1. Deschide app-ul, mergi pe Panou
-2. Fă o **acțiune** (poate un scan test sau vânzare test) → tura
-   pornește automat
+2. Fă o **acțiune** (poate un scan test sau vânzare test) → tura pornește automat
 3. Verifică bara roșie sus cu cronometrul
 4. Apasă `Pauză` → cronometrul se oprește
 5. Apasă `Reia` → continuă

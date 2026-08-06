@@ -1,7 +1,6 @@
 # Capitolul 22 — Aspect (temă vizuală)
 
-Alegi cum arată aplicația: **Standard** (alb + roșu), **Contrast Mărit**
-(text mai puternic pe alb) sau **Noapte** (fundal întunecat).
+Alegi cum arată aplicația: **Standard** (alb + roșu), **Contrast Mărit** (text mai puternic pe alb) sau **Noapte** (fundal întunecat).
 
 Timp de citit: **~2 minute**.
 
@@ -20,8 +19,7 @@ Timp de citit: **~2 minute**.
 
 ### 🟥 Standard
 
-Culorile identității AmBilet: **alb curat** cu **roșu brand** (`#9A1B22`)
-ca accent. Recomandat **ziua**, în lumină bună.
+Culorile identității AmBilet: **alb curat** cu **roșu brand** (`#9A1B22`) ca accent. Recomandat **ziua**, în lumină bună.
 
 ### ⚪ Contrast Mărit
 
@@ -52,60 +50,48 @@ Recomandat pentru:
 > **Aspect salvat.**
 > Repornește complet aplicația pentru a aplica noua temă.
 
-**Închide app-ul complet** (swipe out din recente) și **redeschide-l** →
-tema nouă e activă.
+**Închide app-ul complet** (swipe out din recente) și **redeschide-l** → tema nouă e activă.
 
 ---
 
 ## 4. De ce cere repornire
 
-Motiv tehnic (invizibil pentru tine): stilurile ecranelor se
-„congelează" la momentul deschiderii aplicației. Schimbarea temei
-necesită o repornire completă ca schimbările să prindă peste tot.
+Motiv tehnic (invizibil pentru tine): stilurile ecranelor se „congelează" la momentul deschiderii aplicației. Schimbarea temei necesită o repornire completă ca schimbările să prindă peste tot.
 
-**Fără repornire**: unele ecrane vor arăta cu tema nouă, altele vechea
-— experiența e inconsistentă. Repornirea rezolvă totul.
+**Fără repornire**: unele ecrane vor arăta cu tema nouă, altele vechea — experiența e inconsistentă. Repornirea rezolvă totul.
 
 ---
 
 ## 5. Setarea persistă
 
-Alegerea ta rămâne salvată **permanent** pe telefon. La orice deschidere
-ulterioară a app-ului, tema aleasă e aplicată automat. Nu trebuie s-o
-resetezi.
+Alegerea ta rămâne salvată **permanent** pe telefon. La orice deschidere ulterioară a app-ului, tema aleasă e aplicată automat. Nu trebuie s-o resetezi.
 
 ---
 
 ## 6. Alte device-uri, aceeași temă?
 
-**Nu**. Tema e salvată local per device. Dacă lucrezi pe 2 telefoane,
-setezi tema pe fiecare separat.
+**Nu**. Tema e salvată local per device. Dacă lucrezi pe 2 telefoane, setezi tema pe fiecare separat.
 
 ---
 
 ## 7. Limitări
 
 - **Nu poți crea temă proprie** — doar cele 3 predefinite
-- **Nu urmează automat setarea sistemului** (dark mode al Android-ului
-  nu forțează tema Noapte în app)
-- **Splash screen** (animație de pornire) rămâne mereu în identitatea
-  originală AmBilet — indiferent de temă
+- **Nu urmează automat setarea sistemului** (dark mode al Android-ului nu forțează tema Noapte în app)
+- **Splash screen** (animație de pornire) rămâne mereu în identitatea originală AmBilet — indiferent de temă
 
 ---
 
 ## 8. Probleme frecvente
 
 **„Am schimbat tema dar arată jumate light, jumate dark"**
-- N-ai făcut repornire completă. Închide app-ul din recente și
-  redeschide-l.
+- N-ai făcut repornire completă. Închide app-ul din recente și redeschide-l.
 
 **„Nu văd bine unele elemente în modul Noapte"**
-- Raportează la echipa AmBilet dacă e un ecran specific ilegibil.
-  Modul Noapte e verificat pe ecrane comune dar pot fi cazuri edge.
+- Raportează la echipa AmBilet dacă e un ecran specific ilegibil. Modul Noapte e verificat pe ecrane comune dar pot fi cazuri edge.
 
 **„Vreau să comut rapid ziua/noaptea"**
-- Schimbă din Setări → Aspect. Sper să adaug scurtătură rapidă în
-  update viitor.
+- Schimbă din Setări → Aspect. Sper să adaug scurtătură rapidă în update viitor.
 
 ---
 
@@ -116,8 +102,7 @@ setezi tema pe fiecare separat.
 3. Confirmă alert-ul
 4. **Închide complet** aplicația (swipe out din task manager)
 5. Redeschide → totul e negru cu text alb
-6. Reintră în Setări → Aspect → alege **Standard** pentru a te
-   întoarce
+6. Reintră în Setări → Aspect → alege **Standard** pentru a te întoarce
 7. Repornește din nou
 
 ---

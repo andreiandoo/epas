@@ -1,8 +1,6 @@
 # Capitolul 5 — Vânzarea cu locuri (seating)
 
-Pentru evenimente unde biletele sunt **legate de un loc specific**
-(scaun, rând, secțiune) — concerte în sală, teatre, arene. Fluxul e ușor
-diferit față de vânzarea normală.
+Pentru evenimente unde biletele sunt **legate de un loc specific** (scaun, rând, secțiune) — concerte în sală, teatre, arene. Fluxul e ușor diferit față de vânzarea normală.
 
 Timp de citit: **~4 minute**.
 
@@ -24,11 +22,10 @@ Dacă biletul nu are locuri, e vânzare normală ([cap. 4](./04_vanzare_bilete.m
 
 ## 2. Deschide harta locurilor
 
-**Tap pe cardul cu locuri** → se deschide **harta interactivă** a sălii,
-plin ecran:
+**Tap pe cardul cu locuri** → se deschide **harta interactivă** a sălii, plin ecran:
 
 - Secțiuni, rânduri, scaune desenate ca puncte
-- **Verde** = disponibil, **gri** = deja vândut, **roșu** = blocat/rezervat
+- **nuante bilete** = disponibil, **gri** = deja vândut, **roșu** = blocat/rezervat
 - **Zoom cu 2 degete**, pan cu un deget
 - Sus e **legenda** cu prețuri per zonă
 
@@ -39,16 +36,14 @@ plin ecran:
 
 ## 3. Selectează locuri
 
-**Tap pe un scaun verde** → devine roșu (selectat) și apare într-un
-**mini-coș** jos:
+**Tap pe un scaun verde** → devine roșu (selectat) și apare într-un **mini-coș** jos:
 
 - Secțiunea (ex. „Balcon Central")
 - Rândul (ex. „Rând 3")
 - Locul (ex. „Loc 12")
 - Prețul
 
-Poți selecta **mai multe locuri** — se adună toate în același coș, cu
-suma totală actualizată live.
+Poți selecta **mai multe locuri** — se adună toate în același coș, cu suma totală actualizată live.
 
 **Tap pe un loc deja selectat** → îl deselectezi.
 
@@ -61,30 +56,22 @@ Butonul `Confirmă X locuri` jos → merge la coș final.
 
 ## 4. Coșul cu locuri
 
-După confirmare, revii în ecranul de vânzare în vederea **„Locuri
-Selectate"**:
+După confirmare, revii în ecranul de vânzare în vederea **„Locuri Selectate"**:
 
 - Titlu clar: **„Locuri Selectate"** (nu „Coș")
 - Lista: fiecare loc cu **Secțiunea · Rând · Loc**
-- Butoanele +/- **nu sunt disponibile** (nu poți schimba cantitate — un
-  loc = un bilet)
+- Butoanele +/- **nu sunt disponibile** (nu poți schimba cantitate — un loc = un bilet)
 - Poți doar **anula** un loc dacă vrei să-l scoți
 
-<!-- SCREENSHOT: vedere Locuri Selectate cu 3 locuri detaliate + total -->
-![Locuri Selectate în coș](./screenshots/05-seat-cart.png)
-
-Sub listă apar metodele de plată — Numerar, Card POS, Card NFC — la fel
-ca la [vânzarea normală](./04_vanzare_bilete.md).
+Sub listă apar metodele de plată — Numerar, Card POS, Card NFC — la fel ca la [vânzarea normală](./04_vanzare_bilete.md).
 
 ---
 
 ## 5. Butonul înapoi (special pentru seating)
 
-Săgeata `←` din stânga sus (când ești pe „Locuri Selectate") se comportă
-diferit față de vânzarea normală:
+Săgeata `←` din stânga sus (când ești pe „Locuri Selectate") se comport diferit față de vânzarea normală:
 
-- **Prima apăsare** → te duce înapoi în **harta locurilor** (poți alege
-  alte locuri sau schimba selecția)
+- **Prima apăsare** → te duce înapoi în **harta locurilor** (poți allege alte locuri sau schimba selecția)
 - **Nu golește** coșul până când te întorci la grid-ul de bilete
 
 Așa poți jongla între hartă și coș fără să pierzi selecția.
@@ -93,19 +80,15 @@ Așa poți jongla între hartă și coș fără să pierzi selecția.
 
 ## 6. Plata
 
-Identică cu [capitolul 4](./04_vanzare_bilete.md) — Numerar / Card POS /
-Card NFC. Confirmare cu modal, aceleași reguli.
+Identică cu [capitolul 4](./04_vanzare_bilete.md) — Numerar / Card POS / Card NFC. Confirmare cu modal, aceleași reguli.
 
-**Diferență importantă la Anulează**: dacă apeși `Anulează` din modalul
-de confirmare, coșul se golește **și** locurile se eliberează instant
-în hartă (redevin verzi).
+**Diferență importantă la Anulează**: dacă apeși `Anulează` din modalul de confirmare, coșul se golește **și** locurile se eliberează instant în hartă (redevin verzi).
 
 ---
 
 ## 7. Ecranul de succes
 
-Similar cu vânzarea normală. **Bilet cu loc pe QR / email** — clientul
-primește un bilet cu **Secțiunea, Rândul și Locul** menționate explicit.
+Similar cu vânzarea normală. **Bilet cu loc pe QR / email** — clientul primește un bilet cu **Secțiunea, Rândul și Locul** menționate explicit.
 
 ---
 
@@ -115,20 +98,15 @@ Poți combina:
 - 2 bilete **VIP la loc** (selectate din hartă)
 - 3 bilete **General fără loc** (adăugate din grid)
 
-Toate merg în același coș. Vederea „Locuri Selectate" arată **AMBELE**
-tipuri, cu detaliile potrivite pentru fiecare (loc pentru cele seated,
-cantitate pentru cele generale).
+Toate merg în același coș. Vederea „Locuri Selectate" arată **AMBELE** tipuri, cu detaliile potrivite pentru fiecare (loc pentru cele seated, cantitate pentru cele generale).
 
 ---
 
 ## 9. Limitări
 
-- **Fără internet**: harta locurilor **NU** se poate încărca. Selecția
-  de locuri necesită sync live cu serverul pentru a evita conflictele
+- **Fără internet**: harta locurilor **NU** se poate încărca. Selecția de locuri necesită sync live cu serverul pentru a evita conflictele
   („doi casieri vând același loc simultan"). Locurile nu merg offline.
-- **Timp de hold**: după ce selectezi un loc, este **rezervat pentru
-  tine 10 minute**. Dacă nu finalizezi plata în 10 minute, se
-  eliberează automat.
+- **Timp de hold**: după ce selectezi un loc, este **rezervat pentru tine 10 minute**. Dacă nu finalizezi plata în 10 minute, se eliberează automat.
 - **Un loc = un bilet**: nu poți vinde „2x locul X".
 
 ---

@@ -1,8 +1,6 @@
 # Capitolul 28 — Comutarea între organizatori
 
-Dacă lucrezi pentru **mai multe brand-uri / organizatori** (ex. tu ești
-manager la 3 firme de evenimente diferite), aplicația îți permite să
-comuti între ele fără să faci logout+login.
+Dacă lucrezi pentru **mai multe brand-uri / organizatori** (ex. tu ești manager la 3 firme de evenimente diferite), aplicația îți permite să comuti între ele fără să faci logout+login.
 
 Timp de citit: **~2 minute**.
 
@@ -10,19 +8,16 @@ Timp de citit: **~2 minute**.
 
 ## 1. Când apare selectorul
 
-**Doar dacă emailul tău e asociat la 2+ organizatori** din același
-marketplace (AmBilet, Bilete Online, Tics).
+**Doar dacă emailul tău e asociat la 2+ organizatori** din același marketplace (AmBilet, Bilete Online, Tics).
 
 - **1 organizator** → app-ul te loghează direct, fără selector
-- **2+ organizatori** → apare selectorul după login sau accesibil din
-  header
+- **2+ organizatori** → apare selectorul după login sau accesibil din header
 
 ---
 
 ## 2. Cum arată în header
 
-**Sub logo**, lângă indicatorul Live/Offline, ai un **buton cu numele
-organizatorului curent** + săgeată jos:
+**Sub logo**, lângă indicatorul Live/Offline, ai un **buton cu numele organizatorului curent** + săgeată jos:
 
 <!-- SCREENSHOT: header cu buton nume organizator + săgeată jos -->
 ![Selector organizator](./screenshots/28-header.png)
@@ -75,16 +70,13 @@ Poți fi:
 - **Staff** la Organizator B
 - **Manager** la Organizator C
 
-Fiecare comutare ajustează permisiunile: la A vezi Rapoarte, la B nu
-vezi tab-ul Rapoarte, etc.
+Fiecare comutare ajustează permisiunile: la A vezi Rapoarte, la B nu vezi tab-ul Rapoarte, etc.
 
 ---
 
 ## 6. Parola e partajată
 
-**Aceeași parolă pentru toți organizatorii** cu același email. Dacă
-schimbi parola din unul (Setări → Reset parolă în echipă), se schimbă
-automat la toți.
+**Aceeași parolă pentru toți organizatorii** cu același email. Dacă schimbi parola din unul (Setări → Reset parolă în echipă), se schimbă automat la toți.
 
 ---
 
@@ -107,34 +99,27 @@ Un login = acces la toți. Comută după evenimentul curent.
 
 La schimbare, aplicația refresh-uiește multe date. Poate dura 1-2 secunde.
 
-**Nu e nevoie să te loghezi din nou** — token-ul de autentificare e
-valid pentru toți organizatorii asociați.
+**Nu e nevoie să te loghezi din nou** — token-ul de autentificare e valid pentru toți organizatorii asociați.
 
 ---
 
 ## 9. Limitări
 
-- **Necesită internet** pentru comutare (verifică tokenul + fetch new
-  event data)
-- **Nu poți vinde simultan pe 2 organizatori** — pentru fiecare vânzare
-  e organizatorul curent
-- **Notificările primite** sunt izolate per organizator — dacă ai
-  urgență la Organizator A, comuți la B → nu mai vezi acea notificare
-  în panou (dar rămâne salvată la A)
+- **Necesită internet** pentru comutare (verifică tokenul + fetch new event data)
+- **Nu poți vinde simultan pe 2 organizatori** — pentru fiecare vânzare e organizatorul curent
+- **Notificările primite** sunt izolate per organizator — dacă ai urgență la Organizator A, comuți la B → nu mai vezi acea notificare în panou (dar rămâne salvată la A)
 
 ---
 
 ## 10. Probleme frecvente
 
 **„Nu văd butonul de switcher"**
-- Emailul tău e asociat la 1 singur organizator. Cere admin să te
-  adauge la altul.
+- Emailul tău e asociat la 1 singur organizator. Cere admin să te adauge la altul.
 - Sau delog + login din nou
 
 **„Am comutat, dar cifrele arată tot de la vechi"**
 - Trage Panoul în jos (refresh forțat)
-- Verifică că indicatorul din header afișează într-adevăr noul
-  organizator
+- Verifică că indicatorul din header afișează într-adevăr noul organizator
 
 **„Vreau să comut fără să părăsesc un modal deschis"**
 - Închide modalul întâi, apoi comută. Sau așteaptă finalul acțiunii.
@@ -162,5 +147,4 @@ Am ajuns la finalul manualului! 🎉
 
 📚 [Înapoi la cuprins →](./00_cuprins.md)
 
-Vrei să contribui cu o secțiune nouă / corecție / feedback?
-Scrie echipei AmBilet la [contact standard].
+Vrei să contribui cu o secțiune nouă / corecție / feedback? Scrie echipei AmBilet la [contact standard].

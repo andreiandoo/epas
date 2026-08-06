@@ -74,9 +74,42 @@ const CHAPTERS = [
 // crash), astfel incat placeholder-ele `![...](./screenshots/XX.png)` din
 // capitolele in lucru nu strica capitolul.
 const SCREENSHOTS = {
-  '01-splash.png':          require('../../../docs/manual/screenshots/01-splash.png'),
-  '01-login.png':           require('../../../docs/manual/screenshots/01-login.png'),
-  '01-dashboard-tour.png':  require('../../../docs/manual/screenshots/01-dashboard-tour.png'),
+  // Chapter 01 — Bine ai venit
+  '01-splash.png':           require('../../../docs/manual/screenshots/01-splash.png'),
+  '01-login.png':            require('../../../docs/manual/screenshots/01-login.png'),
+  '01-dashboard-tour.png':   require('../../../docs/manual/screenshots/01-dashboard-tour.png'),
+  // Chapter 02 — Tur rapid
+  '02-panou.png':            require('../../../docs/manual/screenshots/02-panou.png'),
+  '02-scanare.png':          require('../../../docs/manual/screenshots/02-scanare.png'),
+  '02-vanzare.png':          require('../../../docs/manual/screenshots/02-vanzare.png'),
+  '02-rapoarte.png':         require('../../../docs/manual/screenshots/02-rapoarte.png'),
+  '02-setari.png':           require('../../../docs/manual/screenshots/02-setari.png'),
+  // Chapter 03 — Selectie eveniment
+  '03-event-bar.png':        require('../../../docs/manual/screenshots/03-event-bar.png'),
+  '03-events-modal.png':     require('../../../docs/manual/screenshots/03-events-modal.png'),
+  '03-past-selector.png':    require('../../../docs/manual/screenshots/03-past-selector.png'),
+  // Chapter 04 — Vanzare bilete
+  '04-sales-empty.png':      require('../../../docs/manual/screenshots/04-sales-empty.png'),
+  '04-cart.png':             require('../../../docs/manual/screenshots/04-cart.png'),
+  '04-payment-modal.png':    require('../../../docs/manual/screenshots/04-payment-modal.png'),
+  '04-cash-confirm.png':     require('../../../docs/manual/screenshots/04-cash-confirm.png'),
+  '04-card-confirm.png':     require('../../../docs/manual/screenshots/04-card-confirm.png'),
+  '04-success.png':          require('../../../docs/manual/screenshots/04-success.png'),
+  '04-sales-today.png':      require('../../../docs/manual/screenshots/04-sales-today.png'),
+  // Chapter 05 — Vanzare locuri (seating)
+  '05-seated-card.png':      require('../../../docs/manual/screenshots/05-seated-card.png'),
+  '05-seating-map.png':      require('../../../docs/manual/screenshots/05-seating-map.png'),
+  '05-selected-seats.png':   require('../../../docs/manual/screenshots/05-selected-seats.png'),
+  // Chapter 07 — Bilete eveniment
+  '07-bar.png':              require('../../../docs/manual/screenshots/07-bar.png'),
+  // Chapter 08 — Bilete test
+  '08-test-card.png':        require('../../../docs/manual/screenshots/08-test-card.png'),
+  // Chapter 09 — Scanare camera
+  '09-scanner-frame.png':    require('../../../docs/manual/screenshots/09-scanner-frame.png'),
+  // Chapter 10 — Scanare manuala
+  '10-name-search.png':      require('../../../docs/manual/screenshots/10-name-search.png'),
+  // Chapter 13 — Panou control
+  '13-panou-full.png':       require('../../../docs/manual/screenshots/13-panou-full.png'),
 };
 
 // Custom markdown rules — override the default image renderer so relative

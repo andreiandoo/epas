@@ -1,7 +1,6 @@
 # Capitolul 16 — Personalul (adăugare, roluri, parole)
 
-Adaugi și gestionezi echipa care va lucra la eveniment: casieri,
-scanere, manageri. Fiecare are un rol care determină ce poate face.
+Adaugi și gestionezi echipa care va lucra la eveniment: casieri, scanere, manageri. Fiecare are un rol care determină ce poate face.
 
 **Vizibil doar pentru admin** (proprietar sau admin cu permisiuni team).
 
@@ -53,8 +52,7 @@ Fiecare membru din listă:
 - `team` — gestionează personalul
 - `checkin` — face check-in la evenimente
 
-Admin ia automat toate cele 5. Restul rolurilor primesc doar ce le
-alegi tu.
+Admin ia automat toate cele 5. Restul rolurilor primesc doar ce le alegi tu.
 
 ---
 
@@ -72,8 +70,7 @@ Formularul jos are câmpuri:
 <!-- SCREENSHOT: formular Adaugă Personal Nou cu câmpuri completate -->
 ![Formular adăugare](./screenshots/16-add-form.png)
 
-Apasă **Adaugă → membrul e creat instant ca `Activ`** + primește pe
-email credentialele (dacă bifezi „Trimite email").
+Apasă **Adaugă → membrul e creat instant ca `Activ`** + primește pe email credentialele (dacă bifezi „Trimite email").
 
 ---
 
@@ -83,13 +80,11 @@ email credentialele (dacă bifezi „Trimite email").
 
 ### Schimbă poarta asignată
 
-Chip-uri sub „Alocă la poartă". Tap pentru a asigna sau schimba. Tap
-pe „Niciuna" pentru a scoate asignarea.
+Chip-uri sub „Alocă la poartă". Tap pentru a asigna sau schimba. Tap pe „Niciuna" pentru a scoate asignarea.
 
 ### Schimbă rolul
 
-Sub „Schimbă rol", 3 chips: Admin / Manager / Staff. Tap pe cel dorit
-→ rolul se schimbă instant.
+Sub „Schimbă rol", 3 chips: Admin / Manager / Staff. Tap pe cel droit → rolul se schimbă instant.
 
 Automat, permisiunile se ajustează după rol.
 
@@ -99,8 +94,7 @@ Sub „Resetează parola", câmp de parolă nouă + buton `Salvează`:
 - Introdu parola nouă (min 6 caractere)
 - Apasă `Salvează`
 - Membrul se poate loga acum cu noua parolă
-- Sync cross-organizator: dacă are cont la mai mulți, se resetează
-  peste tot
+- Sync cross-organizator: dacă are cont la mai mulți, se resetează peste tot
 
 <!-- SCREENSHOT: card extins cu rol picker + password reset -->
 ![Card extins](./screenshots/16-expand.png)
@@ -117,8 +111,7 @@ Dacă e Staff sau Manager (nu Admin), poți limita la anumite evenimente:
 
 ## 6. Activează un membru pending
 
-Dacă adăugarea a mers prin invitație (nu direct add), membrul apare
-inițial ca **🟡 Pending**. Trebuie **activat**:
+Dacă adăugarea a mers prin invitație (nu direct add), membrul apare inițial ca **🟡 Pending**. Trebuie **activat**:
 
 1. Tap pe pill-ul **Activează** (verde) din cardul lui
 2. Apare input pentru parolă
@@ -140,8 +133,7 @@ Butonul `×` (roșu) din colțul cardului:
 
 ## 8. Numărul de membri (counter în Setări)
 
-În **Setări → Comenzi Admin**, rândul „Asignare Personal" arată un
-**counter** cu numărul de membri activi.
+În **Setări → Comenzi Admin**, rândul „Asignare Personal" arată un **counter** cu numărul de membri activi.
 
 <!-- SCREENSHOT: Setări cu rândul Asignare Personal + counter „6" -->
 ![Counter personal](./screenshots/16-counter.png)
@@ -154,38 +146,31 @@ Se actualizează automat la închidere modal.
 
 ### Sync cross-organizator
 
-Dacă același email e folosit la **mai mulți organizatori** (persoană
-care lucrează pentru mai multe brand-uri):
+Dacă același email e folosit la **mai mulți organizatori** (persoană care lucrează pentru mai multe brand-uri):
 
-- Parola e **partajată** — reset într-un organizator o resetează peste
-  tot
+- Parola e **partajată** — reset într-un organizator o resetează peste tot
 - Rolurile sunt **separate** — poate fi Admin într-unul, Staff într-altul
 
 Comutarea între organizatori — [cap. 28](./28_comutare_organizatori.md).
 
 ### Multi-marketplace
 
-Personalul e per **marketplace client** (ex. AmBilet, Bilete Online,
-Tics). Chiar dacă e vorba de același email, contul e izolat între ele.
+Personalul e per **marketplace client**. Chiar dacă e vorba de același email, contul e izolat între ele.
 
 ---
 
 ## 10. Limitări
 
-- **Necesită internet** — orice acțiune (add, edit, remove) trebuie
-  sync live
-- **Max 50 membri** per organizator (arhitectura curentă — dacă ai
-  nevoie de mai mulți, contactează suport)
-- **Nu poți schimba email-ul** unui membru — trebuie șters și
-  readăugat cu noul email
+- **Necesită internet** — orice acțiune (add, edit, remove) trebuie sync live
+- **Max 50 membri** per organizator (arhitectura curentă — dacă ai nevoie de mai mulți, contactează suport)
+- **Nu poți schimba email-ul** unui membru — trebuie șters și readăugat cu noul email
 
 ---
 
 ## 11. Probleme frecvente
 
 **„Am adăugat un membru, dar nu vede evenimentele mele"**
-- Verifică Whitelist evenimente — dacă e limitat la unele evenimente,
-  restul nu-i sunt vizibile
+- Verifică Whitelist evenimente — dacă e limitat la unele evenimente, restul nu-i sunt vizibile
 
 **„Am schimbat rolul din Admin în Staff, dar tot vede Rapoarte"**
 - Force logout + login pentru a reîmprospăta permisiunile
@@ -193,20 +178,17 @@ Tics). Chiar dacă e vorba de același email, contul e izolat între ele.
 
 **„Reset parolă spune Eroare"**
 - Parola sub 6 caractere?
-- Membrul e cel Proprietar? Nu poți reseta parola proprietarului din
-  aplicație (trebuie prin web-admin)
+- Membrul e cel Proprietar? Nu poți reseta parola proprietarului din aplicație (trebuie prin web-admin)
 
 **„Vreau să adaug 20 de membri deodată"**
-- Nu există import CSV în aplicație. Foloseste web-admin sau
-  contactează suport AmBilet.
+- Nu există import CSV în aplicație. Foloseste web-admin sau contactează suport AmBilet.
 
 ---
 
 ## 12. Testează pe viu
 
 1. Deschide **Setări** → **Asignare Personal**
-2. Adaugă un membru fictiv (ex. „Test Staff / test-staff@ambilet.local
-   / parolatest / Staff")
+2. Adaugă un membru fictiv (ex. „Test Staff / test-staff@ambilet.local / parolatest / Staff")
 3. Verifică apare în listă
 4. Tap pe cardul lui → extinde
 5. Schimbă rolul din Staff → Manager

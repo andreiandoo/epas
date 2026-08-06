@@ -1,7 +1,6 @@
 # Capitolul 14 — Ritmul vânzărilor în timp real
 
-Vezi **cât de repede** vinzi bilete pe minut, cu direcție (crește sau
-scade). Card mic pe Panou care îți spune „stăm bine sau nu?".
+Vezi **cât de repede** vinzi bilete pe minut, cu direcție (crește sau scade). Card mic pe Panou care îți spune „stăm bine sau nu?".
 
 Timp de citit: **~2 minute**.
 
@@ -31,10 +30,8 @@ ultimele 10 min · vs 3.6/min anterior
 
 ## 2. Cum se calculează
 
-- **Rata curentă**: bilete vândute în ultimele **10 minute**, împărțit
-  la 10 → bilete/min
-- **Rata anterioară**: bilete vândute în intervalul **10-20 min în urmă**,
-  la fel împărțit la 10
+- **Rata curentă**: bilete vândute în ultimele **10 minute**, împărțit la 10 → bilete/min
+- **Rata anterioară**: bilete vândute în intervalul **10-20 min în urmă**, la fel împărțit la 10
 - **Delta %**: (curent − anterior) / anterior × 100
 
 Refresh la fiecare 30 secunde — nu trebuie să apeși nimic.
@@ -56,14 +53,10 @@ Refresh la fiecare 30 secunde — nu trebuie să apeși nimic.
 
 **Scenarii concrete**:
 
-- **Deschide-poarta, ~30 min**: dacă rata crește constant, adaugă un
-  casier / o cameră de scanare
-- **Vârf trecut**: rata scade (verde → roșu), val principal a intrat,
-  poți trage aer
-- **Aproape sold-out**: rata rămâne foarte ridicată dar Disponibile
-  scade — comunică cu marketing / oprește promo
-- **Fereastră de vânzare târzie**: aproape de startul evenimentului,
-  rata sare vizibil — anticipați valul „late arrivals"
+- **Deschide-poarta, ~30 min**: dacă rata crește constant, adaugă un casier / o cameră de scanare
+- **Vârf trecut**: rata scade (verde → roșu), val principal a intrat, poți trage aer
+- **Aproape sold-out**: rata rămâne foarte ridicată dar Disponibile scade — comunică cu marketing / oprește promo
+- **Fereastră de vânzare târzie**: aproape de startul evenimentului, rata sare vizibil — anticipați valul „late arrivals"
 
 ---
 
@@ -71,8 +64,7 @@ Refresh la fiecare 30 secunde — nu trebuie să apeși nimic.
 
 Cardul e ascuns dacă:
 
-- **Nu ai făcut încă nicio vânzare** pe device-ul curent — nu are ce
-  arăta
+- **Nu ai făcut încă nicio vânzare** pe device-ul curent — nu are ce arăta
 - Ești în **modul Reports-Only** (eveniment trecut selectat)
 
 După prima vânzare, cardul apare pentru sesiunea curentă.
@@ -81,14 +73,11 @@ După prima vânzare, cardul apare pentru sesiunea curentă.
 
 ## 6. Limitări importante
 
-**Rata reflectă doar acest device**. Dacă mai vinzi pe alte casierii /
-alte telefoane, fiecare are propriul ritm.
+**Rata reflectă doar acest device**. Dacă mai vinzi pe alte casierii / alte telefoane, fiecare are propriul ritm.
 
-**Nu e statistica evenimentului**. Pentru cifre globale (toate
-casieriile împreună), uită-te la [Rapoarte](./15_rapoarte.md).
+**Nu e statistica evenimentului**. Pentru cifre globale (toate casieriile împreună), uită-te la [Rapoarte](./15_rapoarte.md).
 
-**Ferestre fixe de 10 min**. Nu poți schimba la 5 min sau 30 min din
-setări (deocamdată).
+**Ferestre fixe de 10 min**. Nu poți schimba la 5 min sau 30 min din setări (deocamdată).
 
 ---
 

@@ -1,7 +1,6 @@
 # Capitolul 3 — Selectarea evenimentului
 
-Toate cifrele — vânzări, scanări, statistici — sunt legate de **un
-singur eveniment selectat**. Iată cum îl schimbi.
+Toate cifrele — vânzări, scanări, statistici — sunt legate de **un singur eveniment selectat**. Iată cum îl schimbi.
 
 Timp de citit: **~3 minute**.
 
@@ -14,7 +13,7 @@ Pe **Panou**, sus, imediat sub header, vezi o **bară roșie** cu:
 - **Data scurtă** (ex. „15 Mar")
 - **Numele evenimentului**
 - **Locul** (venue + oraș)
-- Un **badge de status**: 🟢 LIVE / Azi / Viitor / Încheiat / Nepublicat
+- Un **badge de status**: 🟢 LIVE / Azi / Viitor / Încheiat / Nepublicat 
 - **Săgeată spre dreapta** — sugestie că e clickabilă
 
 <!-- SCREENSHOT: bara roșie cu eveniment selectat + badge LIVE pulsat -->
@@ -34,8 +33,7 @@ Un modal sheet care alunecă de jos. **3 filtre** sus:
 
 Fiecare filtru arată numărul de evenimente între paranteze.
 
-**Sub filtre e o bară de căutare** — tastează numele evenimentului,
-venue-ul sau orașul. Rezultatele se filtrează instant.
+**Sub filtre e o bară de căutare** — tastează numele evenimentului, venue-ul sau orașul. Rezultatele se filtrează instant.
 
 <!-- SCREENSHOT: modalul selector cu filtre Curente/Draft/Trecute + search -->
 ![Selector evenimente](./screenshots/03-events-modal.png)
@@ -67,12 +65,9 @@ Tap pe orice rând → **selecția se schimbă instant** și modalul se închide
 
 ## 4. Refresh automat + manual
 
-**Automat**: la fiecare deschidere a modalului, aplicația verifică
-serverul pentru evenimente noi. Deci dacă tocmai ai publicat unul din
-admin-ul web, îl vezi imediat aici.
+**Automat**: la fiecare deschidere a modalului, aplicația verifică serverul pentru evenimente noi. Deci dacă tocmai ai publicat unul din admin-ul web, îl vezi imediat aici.
 
-**Manual**: trage-l în jos în listă (pull-to-refresh) → refresh cerut
-explicit.
+**Manual**: trage-l în jos în listă (pull-to-refresh) → refresh cerut explicit.
 
 ---
 
@@ -104,8 +99,7 @@ Deci de obicei aterizezi direct pe evenimentul potrivit.
 
 ## 7. Selectorul de eveniment trecut (în Rapoarte)
 
-Rapoartele au **propriul selector** de „Eveniment trecut" — găsești
-acolo lista evenimentelor încheiate cu bară de căutare.
+Rapoartele au **propriul selector** de „Eveniment trecut" — găsești acolo lista evenimentelor încheiate cu bară de căutare.
 
 <!-- SCREENSHOT: selector din Rapoarte cu evenimente trecute + search -->
 ![Selector evenimente trecute în Rapoarte](./screenshots/03-past-selector.png)
@@ -119,16 +113,14 @@ Detalii în [capitolul 15](./15_rapoarte.md).
 ## 8. Probleme frecvente
 
 **„Nu văd un eveniment pe care tocmai l-am publicat"**
-- Aplicația a cachat lista veche. Deschide selectorul (se refresh-uiește
-  automat), sau trage-o în jos.
+- Aplicația a cachat lista veche. Deschide selectorul (se refresh-uiește automat), sau trage-o în jos.
 - Verifică că evenimentul e într-adevăr **publicat** (nu draft) în admin.
 
 **„Văd doar drafturi, nu văd evenimentele live"**
 - Ești pe filtrul greșit. Selectează **Curente**.
 
 **„Am 100+ evenimente, nu găsesc unul anume"**
-- Folosește **bara de căutare** — tastează 2-3 litere din nume, venue
-  sau oraș, se filtrează instant.
+- Folosește **bara de căutare** — tastează 2-3 litere din nume, venue sau oraș, se filtrează instant.
 
 **„Am schimbat evenimentul, dar cifrele arată tot pe cel vechi"**
 - Trage Panoul în jos (pull-to-refresh)

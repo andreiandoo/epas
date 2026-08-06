@@ -1,10 +1,8 @@
 # Capitolul 18 — Raportarea unei urgențe (foto + notă vocală)
 
-Ceva merge prost la eveniment? Alertezi instant proprietarul și
-administratorii, cu poză și/sau notă vocală opțional atașate.
+Ceva merge prost la eveniment? Alertezi instant proprietarul și administratorii, cu poză și/sau notă vocală opțional atașate.
 
-**Accesibil din 2 locuri**: panoul de notificări (mereu disponibil,
-nu ai nevoie de tură activă) SAU bara turei (dacă lucrezi în tură).
+**Accesibil din 2 locuri**: panoul de notificări (mereu disponibil, nu ai nevoie de tură activă) SAU bara turei (dacă lucrezi în tură).
 
 Timp de citit: **~4 minute**.
 
@@ -14,10 +12,8 @@ Timp de citit: **~4 minute**.
 
 ### Metoda 1 — din Notificări (recomandat, mereu disponibil)
 
-**Tap pe clopoțelul din header** → se deschide panoul de notificări.
-Jos, sub secțiunea de apeluri telefonice, e o zonă titrată
-**„Alertă în aplicație (către admini)"** cu butoane de atașament +
-grid de tipuri de urgențe.
+**Tap pe clopoțelul din header** → se deschide panoul de notificări. Jos, sub secțiunea de apeluri telefonice, e o zonă titrată
+**„Alertă în aplicație (către admini)"** cu butoane de atașament + grid de tipuri de urgențe.
 
 <!-- SCREENSHOT: panoul de notificări cu Alertă în aplicație vizibilă jos -->
 ![Alertă în aplicație din Notificări](./screenshots/18-notif-panel.png)
@@ -29,14 +25,12 @@ grid de tipuri de urgențe.
 
 ### Metoda 2 — din bara turei
 
-**Doar când tura ta e pornită**, sus, în bara turei, ai un buton **⚠️
-roșu** lângă cronometrul turei:
+**Doar când tura ta e pornită**, sus, în bara turei, ai un buton **⚠️ roșu** lângă cronometrul turei:
 
 <!-- SCREENSHOT: bara turei cu cronometru + Pauză + ⚠️ evidențiat -->
 ![Bara turei cu buton urgență](./screenshots/18-shift-bar.png)
 
-**Tap** → se deschide sheet-ul „Raportează Problemă" de jos, cu același
-conținut ca Metoda 1.
+**Tap** → se deschide sheet-ul „Raportează Problemă" de jos, cu același conținut ca Metoda 1.
 
 ---
 
@@ -46,8 +40,7 @@ Sus:
 - Iconă roșie ⚠️ + titlu **„Raportează Problemă"**
 - **X** dreapta pentru închide
 
-**Nou (v2.2)** — Deasupra grid-ului de urgențe, **2 butoane opționale
-de atașament**:
+**Nou (v2.2)** — Deasupra grid-ului de urgențe, **2 butoane opționale de atașament**:
 
 - **📷 Foto** — atașezi o poză de la locul incidentului
 - **🎤 Ține pentru notă** — hold-to-record notă vocală (max ~30s)
@@ -104,20 +97,16 @@ Butonul se transformă într-un chip mov: **`Notă 12s`** cu `×` de șters.
 
 **Când folosești**:
 - Zgomot mare, nu poți tasta
-- Situație complexă cerută de explicat rapid („e o bătaie între 5
-  oameni la standul cu bere, avem nevoie de bodyguards")
+- Situație complexă cerută de explicat rapid („e o bătaie între 5 oameni la standul cu bere, avem nevoie de bodyguards")
 - Muzica prea puternică, hands-free
 
-**Format**: `.m4a`, ~120KB pentru 30s. Se trimite prin internet, deci
-verifică semnalul.
+**Format**: `.m4a`, ~120KB pentru 30s. Se trimite prin internet, deci verifică semnalul.
 
 ---
 
 ## 5. Trimite raportul
 
-După ce ai atașat (opțional) foto și/sau notă, **tap pe unul din cele
-8 tipuri de urgență** din grid → raportul se trimite instant cu tot
-ce ai atașat.
+După ce ai atașat (opțional) foto și/sau notă, **tap pe unul din cele 8 tipuri de urgență** din grid → raportul se trimite instant cu tot ce ai atașat.
 
 Vezi apoi:
 - Ecran verde **„Raport trimis cu succes"**
@@ -129,13 +118,11 @@ Poți continua să lucrezi.
 
 ## 6. Cine primește raportul
 
-**Toți admin și proprietari** ai organizatorului evenimentului primesc
-notificarea:
+**Toți admin și proprietari** ai organizatorului evenimentului primesc notificarea:
 - În **panoul de notificări** al aplicației lor (cap. 20)
 - Cu **iconă alertă roșie** (severity high) sau amber (medium)
 - Cu **numele tău** ca reporter și **poarta ta** (dacă e asignată)
-- Cu **poza (thumbnail)** și **butonul Play** pentru nota vocală (dacă
-  le-ai atașat) — vizibile direct în notificare
+- Cu **poza (thumbnail)** și **butonul Play** pentru nota vocală (dacă le-ai atașat) — vizibile direct în notificare
 
 Ex. text notificare primită de admin:
 ```
@@ -149,8 +136,7 @@ acum 30 sec
 
 ## 7. Câmpul „inclusiv pe telefonul tău"
 
-Chiar dacă tu ești logat ca **admin/proprietar**, propriul tău raport
-apare și în panoul TĂU de notificări. Vezi și tu că a ajuns.
+Chiar dacă tu ești logat ca **admin/proprietar**, propriul tău raport apare și în panoul TĂU de notificări. Vezi și tu că a ajuns.
 
 Motiv: în echipe cu mai mulți admin, oricine poate reacționa.
 
@@ -163,10 +149,7 @@ La primire, aplicația destinatarilor:
 - **Vibrează** — pattern lung pentru urgențe
 - **Apare instant** în panoul de notificări
 
-**Notă**: dacă app-ul e în background sau închis, notificarea nu apare
-încă (Push Notifications reale sunt lucrare viitoare — vezi
-NOUTATI_v2.2.md → recomandări viitor). Pentru acum, admin trebuie să
-aibă app-ul deschis pe fundal.
+**Notă**: dacă app-ul e în background sau închis, notificarea nu apare încă (Push Notifications reale sunt lucrare viitoare — vezi NOUTATI_v2.2.md → recomandări viitor). Pentru acum, admin trebuie să aibă app-ul deschis pe fundal.
 
 ---
 
@@ -175,21 +158,18 @@ aibă app-ul deschis pe fundal.
 - **Necesită internet** pentru transmisia raportului
 - **Foto max 5MB** — se comprimă automat înainte de upload
 - **Audio max 2MB** — echivalent ~60 secunde la calitate mică
-- **Fără internet**: raportul se afișează local ca notificare la tine,
-  dar NU ajunge la admini. Reîncearcă când revine semnalul.
-- **Nu poți edita/șterge** un raport trimis. Dacă a fost greșit, trimite
-  altul cu explicație.
+- **Fără internet**: raportul se afișează local ca notificare la tine, dar NU ajunge la admini. Reîncearcă când revine semnalul.
+- **Nu poți edita/șterge** un raport trimis. Dacă a fost greșit, trimite altul cu explicație.
 
 ---
 
 ## 10. Probleme frecvente
 
 **„Butonul ⚠️ din bara turei nu apare"**
-- Nu ai tura pornită. Deschide tura din Panou. **SAU** folosește
-  Metoda 1 (din Notificări) — merge fără tură.
+- Nu ai tura pornită. Deschide tura din Panou. **SAU** folosește Metoda 1 (din Notificări) — merge fără tură.
 
 **„Nu văd secțiunea Alertă în aplicație în Notificări"**
-- Panoul de notificări e scurt? Trebuie să faci scroll în jos.
+- Panoul de notificări e scurt? Trebuie să faci scroll în jos. 
 - Verifică că build-ul e v2.2 sau mai recent.
 
 **„Camera nu deschide când tap Foto"**
@@ -207,8 +187,7 @@ aibă app-ul deschis pe fundal.
 - Contactează direct prin telefon la contactele urgențe din Setări
 
 **„Vreau să anulez un raport trimis din greșeală"**
-- Nu se poate. Trimite altul cu explicație:
-  „Raportul anterior a fost o greșeală, nu era o urgență reală".
+- Nu se poate. Trimite altul cu explicație: „Raportul anterior a fost o greșeală, nu era o urgență reală".
 
 ---
 
@@ -216,14 +195,12 @@ aibă app-ul deschis pe fundal.
 
 1. Deschide tura ta ([cap. 21](./21_tura.md))
 2. Din bara turei, apasă **⚠️**
-3. Tap pe **📷 Foto** → fă o poză la ceva random (masa ta, nimic
-   sensibil)
+3. Tap pe **📷 Foto** → fă o poză la ceva random (masa ta, nimic sensibil)
 4. Ține apăsat pe **🎤 Ține pentru notă** ~5 secunde, spune „test test"
 5. Dă drumul → apare chip cu „Notă 5s"
 6. Tap pe **🔧 Problemă Tehnică**
 7. Vezi mesajul „Raport trimis"
-8. Deschide panoul de notificări → verifică că apare acolo (inclusiv
-   tu, dacă ești admin)
+8. Deschide panoul de notificări → verifică că apare acolo (inclusive tu, dacă ești admin)
 
 ---
 

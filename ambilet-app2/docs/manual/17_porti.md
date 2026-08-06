@@ -1,8 +1,6 @@
 # Capitolul 17 — Porțile de acces
 
-**Porțile** sunt intrările fizice ale venue-ului tău — Entrance Main,
-VIP, POS, Ieșire. Le configurezi în app și asignezi personalul pentru
-raportare separată per poartă.
+**Porțile** sunt intrările fizice ale venue-ului tău — Entrance Main, VIP, POS, Ieșire. Le configurezi în app și asignezi personalul pentru raportare separată per poartă.
 
 **Vizibil doar pentru admin** cu permisiuni.
 
@@ -14,8 +12,7 @@ Timp de citit: **~4 minute**.
 
 **Setări → Comenzi Admin → Administrare Porți** — apasă rândul.
 
-Sau din Panou (dacă apare): **Acțiuni Rapide → Poartă** (nu întotdeauna
-vizibilă).
+Sau din Panou (dacă apare): **Acțiuni Rapide → Poartă** (nu întotdeauna vizibilă).
 
 Se deschide **modalul Porți** al venue-ului evenimentului curent.
 
@@ -89,28 +86,22 @@ Apasă `Adaugă` → poarta apare în listă instant, ca Activă.
 
 Fiecare card are un **switch verde/gri**:
 - **Verde = Activă** — poartă în funcțiune, apare în rapoarte
-- **Gri = Inactivă** — poartă închisă temporar, nu apare la personalul
-  care asignează
+- **Gri = Inactivă** — poartă închisă temporar, nu apare la personalul care asignează
 
-Ex.: dacă închizi poarta VIP pentru 2 ore la mijlocul evenimentului,
-faci switch off. Nu trebuie s-o ștergi.
+Ex.: dacă închizi poarta VIP pentru 2 ore la mijlocul evenimentului, faci switch off. Nu trebuie s-o ștergi.
 
 ---
 
 ## 7. Asignează-mă la poartă
 
-Butonul `Asignează-mă` (violet, cu iconă persoană) leagă contul tău
-curent de acea poartă. Util pentru:
+Butonul `Asignează-mă` (violet, cu iconă persoană) leagă contul tău curent de acea poartă. Util pentru:
 
 - **Rapoarte per personal** — vezi câte a scanat fiecare, per poartă
-- **Etichetare check-in-urilor** — la scan, tot ce scanezi tu se
-  contabilizează la poarta ta
+- **Etichetare check-in-urilor** — la scan, tot ce scanezi tu se contabilizează la poarta ta
 
-**Cum se desasignează**: `Asignează-mă` la o altă poartă → prima se
-eliberează automat.
+**Cum se desasignează**: `Asignează-mă` la o altă poartă → prima se eliberează automat.
 
-**Prin selector de personal**: admin poate asigna orice membru la orice
-poartă din ecranul de personal ([cap. 16](./16_personal.md)).
+**Prin selector de personal**: admin poate asigna orice membru la orice poartă din ecranul de personal ([cap. 16](./16_personal.md)).
 
 ---
 
@@ -118,16 +109,13 @@ poartă din ecranul de personal ([cap. 16](./16_personal.md)).
 
 Butonul `Șterge` (roșu, iconă coș) → confirmare → poartă e eliminată.
 
-**Atenție**: dacă poarta are check-in-uri istorice, ele **rămân** în
-rapoarte (aparțin evenimentelor deja închise). Doar poarta ca entitate
-dispare.
+**Atenție**: dacă poarta are check-in-uri istorice, ele **rămân** în rapoarte (aparțin evenimentelor deja închise). Doar poarta ca entitate dispare.
 
 ---
 
 ## 9. Counter în Setări
 
-**Setări → Comenzi Admin → Administrare Porți** — rândul are un
-**counter** cu numărul de porți.
+**Setări → Comenzi Admin → Administrare Porți** — rândul are un **counter** cu numărul de porți.
 
 Se actualizează automat la închidere modal.
 
@@ -137,8 +125,7 @@ Se actualizează automat la închidere modal.
 
 **Fiecare scan** se etichetează cu poarta operatorului. Dacă:
 
-- Ești asignat la „Poarta VIP" → toate scanurile tale se contabilizează
-  acolo
+- Ești asignat la „Poarta VIP" → toate scanurile tale se contabilizează acolo
 - Nu ești asignat la nimic → scanurile apar sub „Fără poartă" în rapoarte
 
 **Cum vezi**: [cap. 15 — Rapoarte / Performanța Porților](./15_rapoarte.md).
@@ -147,8 +134,7 @@ Se actualizează automat la închidere modal.
 
 ## 11. Limitări
 
-- Porțile sunt per **venue**, nu per eveniment — dacă venue-ul găzduiește
-  10 evenimente, toate 10 folosesc aceleași porți
+- Porțile sunt per **venue**, nu per eveniment — dacă venue-ul găzduiește 10 evenimente, toate 10 folosesc aceleași porți
 - Max ~50 porți per venue (limită practică, nu tehnică)
 - **Necesită internet** pentru orice modificare
 
@@ -158,8 +144,7 @@ Se actualizează automat la închidere modal.
 
 **„Nu văd modalul Porți"**
 - Setări → Comenzi Admin apare doar pentru admin/proprietar
-- Verifică că evenimentul selectat are un venue asociat (unele
-  evenimente vechi Ambilet n-au)
+- Verifică că evenimentul selectat are un venue asociat (unele evenimente vechi Ambilet n-au)
 
 **„Am schimbat poarta unui casier, dar rapoartele arată tot vechea"**
 - Cache 30s. Așteaptă sau refresh Rapoarte.
@@ -171,16 +156,14 @@ Se actualizează automat la închidere modal.
 
 **„Butonul Asignează-mă nu răspunde"**
 - Verifică internetul
-- Verifică că ești logat ca user care poate opera (nu just admin
-  ceremonial)
+- Verifică că ești logat ca user care poate opera (nu just admin ceremonial)
 
 ---
 
 ## 13. Testează pe viu
 
 1. Deschide **Setări → Administrare Porți**
-2. Adaugă o poartă test: nume „Test Gate", tip „Intrare", locație
-   „Colț nord"
+2. Adaugă o poartă test: nume „Test Gate", tip „Intrare", locație „Colț nord"
 3. Verifică apare în listă cu switch verde
 4. Tap pe nume → editează, schimbă tipul în „VIP"
 5. Salvează, verifică că badge-ul devine amber

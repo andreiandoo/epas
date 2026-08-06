@@ -1,8 +1,6 @@
 # Capitolul 20 — Panoul de notificări
 
-Panou dropdown pentru **notificări** — alerte, check-in-uri
-importante, sync-uri, rapoarte urgențe primite. Plus, jos, butoane de
-apel-rapid pentru urgențe.
+Panou dropdown pentru **notificări** — alerte, check-in-uri importante, sync-uri, rapoarte urgențe primite. Plus, jos, butoane de apel-rapid pentru urgențe.
 
 Timp de citit: **~3 minute**.
 
@@ -28,14 +26,11 @@ Sus:
 - Titlu **„Notificări"** + badge roșu cu număr necitite
 - Link **„Marchează toate citite"** dreapta (dacă ai necitite)
 
-**Sub**: listă notificări în ordine cronologică descendentă (cele mai
-recente sus).
+**Sub**: listă notificări în ordine cronologică descendentă (cele mai recente sus).
 
 **Jos, două secțiuni**:
-- **„Sună la Contact Urgență"** — 3 butoane pentru apel telefonic
-  ([cap. 19](./19_contact_urgente.md))
-- **„Alertă în aplicație (către admini)"** — trimite raport in-app cu
-  opțiune de foto + notă vocală ([cap. 18](./18_raportare_urgente.md))
+- **„Sună la Contact Urgență"** — 3 butoane pentru apel telefonic ([cap. 19](./19_contact_urgente.md))
+- **„Alertă în aplicație (către admini)"** — trimite raport in-app cu opțiune de foto + notă vocală ([cap. 18](./18_raportare_urgente.md))
 
 <!-- SCREENSHOT: panou notificări complet cu listă + butoane apel jos -->
 ![Panou notificări](./screenshots/20-panel.png)
@@ -94,8 +89,7 @@ Contorul din header scade după fiecare marchează.
 
 ## 7. Notificarea despre urgențe primite
 
-Dacă un coleg de echipă raportează urgență ([cap. 18](./18_raportare_urgente.md)),
-tu (admin/proprietar) primești în panou:
+Dacă un coleg de echipă raportează urgență ([cap. 18](./18_raportare_urgente.md)), tu (admin/proprietar) primești în panou:
 
 ```
 [⚠️] Urgență: Problemă Tehnică
@@ -114,8 +108,7 @@ Cu iconă roșie alert. Include:
 
 ## 8. Sunet + vibrație la primire
 
-Când o notificare nouă apare **live** (în timp ce e app-ul deschis),
-aplicația:
+Când o notificare nouă apare **live** (în timp ce e app-ul deschis), aplicația:
 
 - **Sună** (respectă toggle-ul „Efecte Sonore" din Setări → Scanner)
 - **Vibrează** — pattern lung pentru alerte, scurt pentru info
@@ -138,8 +131,7 @@ Fiecare arată numărul setat sau „Nesetat". Detalii în
 
 ## 10. Panoul rămâne poziționat sub tab bar
 
-Panoul se deschide de sub header în partea dreaptă, dar **nu suprapune**
-tab bar-ul de jos. Vezi mereu unde ești în app.
+Panoul se deschide de sub header în partea dreaptă, dar **nu suprapune** tab bar-ul de jos. Vezi mereu unde ești în app.
 
 Închiderea:
 - **Tap în afara panoului** (zona întunecată)
@@ -149,12 +141,9 @@ tab bar-ul de jos. Vezi mereu unde ești în app.
 
 ## 11. Limitări
 
-- Notificările locale se **pierd** la închiderea completă a app-ului
-  (nu sunt persistate) — versiune curentă. Push-uri persistate =
-  lucrare viitoare
+- Notificările locale se **pierd** la închiderea completă a app-ului (nu sunt persistate) — versiune curentă. Push-uri persistate = lucrare viitoare
 - Max ~50 notificări afișate; cele foarte vechi sunt curățate automat
-- Nu poți șterge o notificare individual (deocamdată — folosește
-  „Marchează toate citite")
+- Nu poți șterge o notificare individual (deocamdată — folosește „Marchează toate citite")
 
 ---
 
@@ -164,8 +153,7 @@ tab bar-ul de jos. Vezi mereu unde ești în app.
 - Bug rar de cache. Închide și redeschide panoul.
 
 **„Am primit notificare urgență, dar fără poză"**
-- Renderer de media pentru notificări = lucrare viitoare (în roadmap).
-  Deocamdată doar textul.
+- Renderer de media pentru notificări = lucrare viitoare (în roadmap). Deocamdată doar textul.
 
 **„Nu aud sunetul de notificare"**
 - Verifică toggle-ul „Efecte Sonore" din Setări scanner

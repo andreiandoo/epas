@@ -1,7 +1,6 @@
 # Capitolul 24 — Setări scanner (sunet, vibrație, auto-confirm)
 
-Personalizezi cum se comportă scanner-ul: sunete, vibrație, mod
-auto-confirmare pentru bilete valide.
+Personalizezi cum se comportă scanner-ul: sunete, vibrație, mod auto-confirmare pentru bilete valide.
 
 Timp de citit: **~2 minute**.
 
@@ -13,8 +12,7 @@ Timp de citit: **~2 minute**.
 
 - **Vibrație**
 - **Efecte Sonore**
-- **Auto-confirmare Valide** (dacă evenimentul e azi/live — altfel
-  automat OFF)
+- **Auto-confirmare Valide** (dacă evenimentul e azi/live — altfel automat OFF)
 
 <!-- SCREENSHOT: Setări → Scanner cu 3 toggle-uri -->
 ![Setări Scanner](./screenshots/24-settings.png)
@@ -40,12 +38,9 @@ Timp de citit: **~2 minute**.
 - „Error" grav = invalid
 - Plus sunet la notificări noi
 
-**OFF** — fără sunete. Util în zgomot mare (nu se aude oricum) sau în
-locuri liniștite (biserică, teatru).
+**OFF** — fără sunete. Util în zgomot mare (nu se aude oricum) sau în locuri liniștite (biserică, teatru).
 
-**Atenție**: opreșrea **sunet-ul de notificări** înseamnă că nu vei
-auzi când primești o alertă de urgență de la coleg. Verifică des
-panoul de notificări dacă ai sound OFF.
+**Atenție**: opreșrea **sunet-ul de notificări** înseamnă că nu vei auzi când primești o alertă de urgență de la coleg. Verifică des panoul de notificări dacă ai sound OFF.
 
 ---
 
@@ -57,8 +52,7 @@ panoul de notificări dacă ai sound OFF.
 - Cardul de rezultat nu mai apare
 - Aplicația e gata instant pentru următorul scan
 
-**OFF** (implicit) — vezi mereu cardul de rezultat verde pentru fiecare
-scan valid. Mai lent, dar sigur (poți verifica manual numele/tipul).
+**OFF** (implicit) — vezi mereu cardul de rezultat verde pentru fiecare scan valid. Mai lent, dar sigur (poți verifica manual numele/tipul).
 
 **Când folosești ON**:
 - Eveniment cu ritm mare de scanare (>5/min)
@@ -73,12 +67,9 @@ scan valid. Mai lent, dar sigur (poți verifica manual numele/tipul).
 
 ## 5. Auto-confirmare dezactivată forțat pentru evenimente viitoare
 
-**Regulă de siguranță**: dacă selectezi un eveniment **VIITOR** (nu azi,
-nu live), aplicația **forțează OFF** auto-confirmarea, indiferent de
-setare.
+**Regulă de siguranță**: dacă selectezi un eveniment **VIITOR** (nu azi, nu live), aplicația **forțează OFF** auto-confirmarea, indiferent de setare.
 
-Motiv: nu vrei să lași pe cineva să treacă printr-un bilet valid pentru
-un eveniment care abia peste 3 zile începe.
+Motiv: nu vrei să lași pe cineva să treacă printr-un bilet valid pentru un eveniment care abia peste 3 zile începe.
 
 **La schimbarea în „azi" / „live"**, poți reactiva manual din Setări.
 
@@ -86,8 +77,7 @@ un eveniment care abia peste 3 zile începe.
 
 ## 6. Prompt pe Panou pentru evenimente azi/live
 
-Dacă evenimentul selectat e **azi sau live** și **Auto-confirmarea e
-OFF**, Panoul afișează un **card verde** care sugerează activarea:
+Dacă evenimentul selectat e **azi sau live** și **Auto-confirmarea e OFF**, Panoul afișează un **card verde** care sugerează activarea:
 
 > **Pornești auto-validarea biletelor la intrare?**
 > Biletele vândute la intrare se marchează automat ca scanate. Apasă
@@ -96,15 +86,13 @@ OFF**, Panoul afișează un **card verde** care sugerează activarea:
 <!-- SCREENSHOT: Panou cu card verde de sugestie auto-confirm -->
 ![Prompt auto-confirm](./screenshots/24-prompt.png)
 
-**Tap** → te duce la Setări. **X-uri dreapta** dacă vrei să-l dismisezi
-pentru sesiunea curentă.
+**Tap** → te duce la Setări. **X-uri dreapta** dacă vrei să-l dismisezi pentru sesiunea curentă.
 
 ---
 
 ## 7. Setarea persistă
 
-Alegerile rămân salvate pe telefon. La orice deschidere, se reaplică
-automat.
+Alegerile rămân salvate pe telefon. La orice deschidere, se reaplică automat.
 
 ---
 
@@ -114,15 +102,13 @@ Efectele sonore controlează **ambele**:
 - Sunete la scan (ding/warning/error)
 - Sunete la notificări noi
 
-Deci OFF-ul unifică toate. Dacă vrei să auzi doar notificările dar nu
-scan-ul (sau invers), momentan nu se poate — e un toggle unic.
+Deci OFF-ul unifică toate. Dacă vrei să auzi doar notificările dar nu scan-ul (sau invers), momentan nu se poate — e un toggle unic.
 
 ---
 
 ## 9. Limitări
 
-- **Nu poți schimba** sunetele individuale (fișiere .mp3 sunt fixe în
-  app)
+- **Nu poți schimba** sunetele individuale (fișiere .mp3 sunt fixe în app)
 - **Nu poți customiza volumul** — folosește volumul telefonului
 - **Vibrație pattern** nu se poate customiza
 
@@ -132,12 +118,10 @@ scan-ul (sau invers), momentan nu se poate — e un toggle unic.
 
 **„Am setat sunet OFF, dar tot sună la scan"**
 - Închide și redeschide tab-ul Scanare
-- Verifică că nu ai activate „Sunete de sistem" din Android care
-  suprapun (ex. click de tastatură)
+- Verifică că nu ai activate „Sunete de sistem" din Android care suprapun (ex. click de tastatură)
 
 **„Vibrația e prea slabă"**
-- Vibrația e fixă. Depinde de motor-ul telefonului tău. Pe telefoane
-  vechi e mai slabă.
+- Vibrația e fixă. Depinde de motor-ul telefonului tău. Pe telefoane vechi e mai slabă.
 
 **„Auto-confirmare e ON dar tot văd card la scan valid"**
 - Verifică că evenimentul selectat e „azi" sau „live", nu viitor
@@ -148,11 +132,9 @@ scan-ul (sau invers), momentan nu se poate — e un toggle unic.
 ## 11. Testează pe viu
 
 1. **Setări → Scanner**
-2. Toggle **Efecte Sonore** OFF → deschide Scanare, scanează → fără
-   sunet
+2. Toggle **Efecte Sonore** OFF → deschide Scanare, scanează → fără sunet
 3. Toggle back ON → scanează → sunet OK
-4. Toggle **Auto-confirmare** ON → scanează valid → doar flash, fără
-   card
+4. Toggle **Auto-confirmare** ON → scanează valid → doar flash, fără card
 5. Toggle OFF → scanează → card verde apare 3 secunde
 
 ---

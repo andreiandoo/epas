@@ -1,7 +1,6 @@
 # Capitolul 23 — Securitate (auto-logout)
 
-Aplicația te **deconectează automat** dacă lași telefonul neatins un
-timp — protecție dacă cineva îl ridică când tu nu ești atent.
+Aplicația te **deconectează automat** dacă lași telefonul neatins un timp — protecție dacă cineva îl ridică când tu nu ești atent.
 
 Timp de citit: **~2 minute**.
 
@@ -9,8 +8,7 @@ Timp de citit: **~2 minute**.
 
 ## 1. Cum ajungi
 
-**Setări → Securitate**. Vezi opțiunea **„Auto-logout după inactivitate"**
-cu 5 chip-uri de selecție:
+**Setări → Securitate**. Vezi opțiunea **„Auto-logout după inactivitate"** cu 5 chip-uri de selecție:
 
 - **Oprit** — fără auto-logout
 - **5 min** (implicit)
@@ -25,8 +23,7 @@ cu 5 chip-uri de selecție:
 
 ## 2. Cum funcționează
 
-**Timer-ul se resetează** la fiecare atingere a ecranului. Cât timp
-folosești app-ul activ, nu se scurge.
+**Timer-ul se resetează** la fiecare atingere a ecranului. Cât timp folosești app-ul activ, nu se scurge.
 
 **Când începe să curgă**:
 - Nu atingi ecranul (nu scrolluiești, nu apeși nimic)
@@ -36,8 +33,7 @@ folosești app-ul activ, nu se scurge.
 - Deconectare automată → redirect la ecranul de login
 - Cifrele turei rămân salvate — nu pierzi date
 - La next login, tura se reia de unde a rămas (dacă era activă)
-- **Emailul și parola rămân completate pe ecranul de login** — apeși
-  doar `Autentificare` și continui. Nu retasti nimic.
+- **Emailul și parola rămân completate pe ecranul de login** — apeși doar `Autentificare` și continui. Nu retasti nimic.
 
 ---
 
@@ -48,14 +44,9 @@ folosești app-ul activ, nu se scurge.
 | **Auto-logout** (după 5-30 min inactivitate) | Rămân salvate în telefon — pre-fill la next login |
 | **Setări → „Încheie Tura & Deconectare"** | Sunt **șterse complet** — form-ul e gol data viitoare |
 
-Auto-logout e pentru **pauze scurte** (mergi la baie, ai lăsat telefonul
-pe masă). „Încheie Tura" e pentru **predare de tură** către alt operator
-sau **sfârșit de eveniment** — credențialele tale nu mai trebuie să
-zacă pe device.
+Auto-logout e pentru **pauze scurte** (mergi la baie, ai lăsat telefonul pe masă). „Încheie Tura" e pentru **predare de tură** către alt operator sau **sfârșit de eveniment** — credențialele tale nu mai trebuie să zacă pe device.
 
-Credentialele sunt salvate în **SecureStore** (Android Keystore /
-iOS Keychain) — criptate la nivelul sistemului, nu ies niciodată din
-telefon.
+Credentialele sunt salvate în **SecureStore** (Android Keystore / iOS Keychain) — criptate la nivelul sistemului, nu ies niciodată din telefon.
 
 ---
 
@@ -89,14 +80,12 @@ Așa **nu te scoate mid-tranzacție** când clientul e la cardul POS.
 
 ## 5. Cold-start check
 
-Dacă telefonul stă în buzunar 20 de minute cu app-ul închis, la
-redeschidere aplicația verifică:
+Dacă telefonul stă în buzunar 20 de minute cu app-ul închis, la redeschidere aplicația verifică:
 
 - Cât timp a trecut de la ultima activitate?
 - Dacă e peste timeout → deconectare imediată la deschidere
 
-Așa nu poate cineva să ia telefonul de pe masă, să-l deschidă și să
-găsească app-ul deschis de acum 2 ore.
+Așa nu poate cineva să ia telefonul de pe masă, să-l deschidă și să găsească app-ul deschis de acum 2 ore.
 
 ---
 
@@ -113,20 +102,17 @@ Confirmi → login screen. Te loghezi din nou cu credentialele.
 ## 7. Tura se salvează
 
 **Cifrele turei rămâne persistate** — la relogin, aplicația reia:
-- Cronometrul (adăugat timpul cât ai fost logout)? Nu — pauzat.
-  Redeschide manual.
+- Cronometrul (adăugat timpul cât ai fost logout)? Nu — pauzat. Redeschide manual.
 - Vânzările și scanările făcute în tură rămân în rapoarte.
 
-**Recomandare**: la relogin, **închide manual tura veche** din Panou și
-deschide una nouă. Așa cifrele se atribuie clar (înainte/după login).
+**Recomandare**: la relogin, **închide manual tura veche** din Panou și deschide una nouă. Așa cifrele se atribuie clar (înainte/după login).
 
 ---
 
 ## 8. Recomandări din teren
 
 - **Ture solo, la casierie fixă**: 15-30 min OK, tu ești acolo mereu
-- **Multi-casier cu roll-uri**: 5 min — evită ca colegul să folosească
-  accidental contul tău
+- **Multi-casier cu roll-uri**: 5 min — evită ca colegul să folosească accidental contul tău
 - **Test / instruire**: Oprit — nu te enerva cu logout-uri repetate
 - **Eveniment mare cu presiune**: 5 min — max protecție
 
@@ -134,11 +120,9 @@ deschide una nouă. Așa cifrele se atribuie clar (înainte/după login).
 
 ## 9. Limitări
 
-- **Nu are biometric unlock** — la logout, trebuie tastat parola (nu
-  amprentă / față)
+- **Nu are biometric unlock** — la logout, trebuie tastat parola (nu amprentă / față)
 - **Nu se comută automat la ora nopții** — tu setezi o valoare, rămâne
-- **Nu poți exclude anumite ecrane** — timer-ul se aplică peste tot
-  (dar cu pauzele critice descrise)
+- **Nu poți exclude anumite ecrane** — timer-ul se aplică peste tot (dar cu pauzele critice descrise)
 
 ---
 
@@ -146,16 +130,14 @@ deschide una nouă. Așa cifrele se atribuie clar (înainte/după login).
 
 **„M-a deconectat deși tocmai făceam ceva"**
 - Verifică că modalul relevant era deschis (payment / emergency etc.)
-- Dacă nu, e bug — raportează la AmBilet cu screenshot al Setări
-  Securitate + ora exactă
+- Dacă nu, e bug — raportează la AmBilet cu screenshot al Setări Securitate + ora exactă
 
 **„Vreau să nu mă mai deconecteze deloc temporar"**
 - Setează **Oprit** pentru sesiunea curentă
 - La final de eveniment, revino la 5 min pentru siguranță zilnică
 
 **„Am pierdut cifrele turei după relogin"**
-- Cifrele **globale** rămân în rapoarte. Doar sumar-ul personal e
-  pierdut. Facem screenshot data viitoare.
+- Cifrele **globale** rămân în rapoarte. Doar sumar-ul personal e pierdut. Facem screenshot data viitoare.
 
 ---
 

@@ -1,8 +1,6 @@
 # Capitolul 7 — Bilete Eveniment (istoric vânzări)
 
-Vezi și verifici **toate** biletele vândute la evenimentul curent, în
-timp real. Util pentru: căutare rapidă, check-in manual, verificare
-status.
+Vezi și verifici **toate** biletele vândute la evenimentul curent, în timp real. Util pentru: căutare rapidă, check-in manual, verificare status.
 
 Timp de citit: **~3 minute**.
 
@@ -15,8 +13,7 @@ Din tab-ul **Vânzare**, sus, apasă pe bara **„Bilete eveniment"**:
 <!-- SCREENSHOT: bara Bilete Eveniment în ecran Vânzare, cu iconă listă -->
 ![Bara Bilete Eveniment](./screenshots/07-bar.png)
 
-Se deschide un ecran plin cu **lista tuturor biletelor** — vândute
-online + la ușă + invitații.
+Se deschide un ecran plin cu **lista tuturor biletelor** — vândute online + la ușă + invitații.
 
 ---
 
@@ -33,15 +30,11 @@ Fiecare bilet e un card cu:
   - 🔴 **Invalid** — anulat / refunded
 - Un **buton `Check-in`** roșu (dacă biletul nu e validat)
 
-<!-- SCREENSHOT: listă bilete cu 3 statusuri: 1 checked-in, 1 nevalidat, 1 invalid -->
-![Listă bilete cu statusuri](./screenshots/07-list.png)
-
 ---
 
 ## 3. Data + ora check-in-ului
 
-Sub badge-ul verde **„Checked-in"**, dacă biletul a fost deja validat,
-vezi **când**:
+Sub badge-ul verde **„Checked-in"**, dacă biletul a fost deja validat, vezi **când**:
 
 ```
 Checked-in
@@ -65,8 +58,7 @@ Dacă un client vine la tine cu problema **„nu funcționează codul meu"**:
 4. Apasă butonul **`Check-in`** din dreapta cardului
 5. Biletul se validează instant, badge devine 🟢
 
-**Alternative**: poți face același lucru din ecranul Scanare cu căutarea
-după nume ([cap. 10](./10_scanare_manuala.md)).
+**Alternative**: poți face același lucru din ecranul Scanare cu căutarea după nume ([cap. 10](./10_scanare_manuala.md)).
 
 ---
 
@@ -76,10 +68,6 @@ după nume ([cap. 10](./10_scanare_manuala.md)).
 
 - **Total bilete**: câte s-au vândut la eveniment
 - **Checked-in**: câte au intrat efectiv
-- **Procent**: rata de intrare (ex. „78% checked-in")
-
-<!-- SCREENSHOT: header Bilete Eveniment cu statistici mari -->
-![Header Bilete Eveniment cu stats](./screenshots/07-header-stats.png)
 
 ---
 
@@ -87,8 +75,7 @@ după nume ([cap. 10](./10_scanare_manuala.md)).
 
 Trage lista în jos → se reîncarcă cu ultimele vânzări.
 
-Aplicația face refresh automat la fiecare 30 secunde când e deschis
-ecranul.
+Aplicația face refresh automat la fiecare 30 secunde când e deschis ecranul.
 
 ---
 
@@ -100,12 +87,9 @@ Sus-stânga, un buton `×` te întoarce la ecranul de Vânzare.
 
 ## 8. Limitări
 
-- **Fără internet**: lista nu se poate încărca live. Vezi doar ce s-a
-  cachat anterior.
-- **Bilete anulate / refunded**: apar cu badge roșu „Invalid", NU pot
-  fi check-in-uite
-- **Bilete de test** (Test POS): apar cu ștampila TEST vizibilă, dar
-  altfel funcționează la fel
+- **Fără internet**: lista nu se poate încărca live. Vezi doar ce s-a cachat anterior.
+- **Bilete anulate / refunded**: apar cu badge roșu „Invalid", NU pot fi check-in-uite
+- **Bilete de test** (Test POS): apar cu ștampila TEST vizibilă, dar altfel funcționează la fel
 
 ---
 

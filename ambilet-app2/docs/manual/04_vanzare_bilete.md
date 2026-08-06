@@ -1,9 +1,6 @@
 # Capitolul 4 — Vânzarea normală de bilete
 
-Fluxul standard pentru vânzarea la ușă. Cash, card POS extern, card
-prin NFC (Stripe Tap). Pentru evenimente **fără locuri asignate**
-(bilete generale). Pentru evenimente cu locuri, vezi
-[capitolul 5](./05_vanzare_locuri.md).
+Fluxul standard pentru vânzarea la ușă. Cash, card POS extern, card prin NFC (Stripe Tap). Pentru evenimente **fără locuri asignate** (bilete generale). Pentru evenimente cu locuri, vezi [capitolul 5](./05_vanzare_locuri.md).
 
 Timp de citit: **~5 minute**.
 
@@ -13,8 +10,7 @@ Timp de citit: **~5 minute**.
 
 Din meniul de jos, apasă **Vânzare**. Vezi:
 
-- Sus, **„Bilete eveniment"** — link către istoricul biletelor vândute la
-  acest eveniment (vezi [capitolul 7](./07_bilete_eveniment.md))
+- Sus, **„Bilete eveniment"** — link către istoricul biletelor vândute la acest eveniment (vezi [capitolul 7](./07_bilete_eveniment.md))
 - Titlul **„Selectează Bilete"**
 - **Grid cu tipurile de bilete** disponibile (cardurile cu preț)
 
@@ -52,8 +48,7 @@ Sub grid apare **coșul** cu:
 <!-- SCREENSHOT: Vânzare cu 3 bilete diferite în coș + total vizibil -->
 ![Coș cu bilete](./screenshots/04-cart.png)
 
-**Comisioane**: dacă evenimentul are comisioane per bilet, ele apar sub
-total (informativ, nu se schimbă).
+**Comisioane**: dacă evenimentul are comisioane per bilet, ele apar sub total (informativ, nu se schimbă).
 
 ---
 
@@ -62,7 +57,7 @@ total (informativ, nu se schimbă).
 Apasă `Continuă →`. Intri în **modalul „Locuri Selectate" / „Coș"** cu:
 
 - Lista biletelor
-- **Total mare** (roșu)
+- **Total mare** 
 - Secțiunea **„Metodă de Plată"** cu până la 3 butoane:
   - **Card POS** — folosești terminal card fizic
   - **Numerar** — încasezi cash direct
@@ -87,15 +82,13 @@ Apasă `Continuă →`. Intri în **modalul „Locuri Selectate" / „Coș"** cu
 ![Confirmare cash](./screenshots/04-cash-confirm.png)
 
 - `Confirmă` → înregistrează vânzarea, biletele se emit
-- `Anulează` → coșul se **golește complet** (protecție împotriva
-  vânzărilor greșite: e ca „reset" total la casă)
+- `Anulează` → coșul se **golește complet** (protecție împotriva vânzărilor greșite: e ca „reset" total la casă)
 
 ---
 
 ## 6. Metoda 2: Card POS extern
 
-**Tap pe `Card POS`** → apare **același modal** de confirmare, dar
-adaptat:
+**Tap pe `Card POS`** → apare **același modal** de confirmare, dar adaptat:
 
 - Iconă cu card violet
 - „**Confirmă încasarea**"
@@ -118,9 +111,7 @@ Dacă tranzacția pe POS e refuzată → apasă `Anulează`, coșul se șterge.
 
 ## 7. Metoda 3: Card prin NFC (Stripe Tap)
 
-**Doar dacă e activat** din Setări → „Card prin NFC" (admin only). Când
-e activ, apare un al treilea buton `Card prin NFC` cu subtitlul
-„Furnizat de Stripe".
+**Doar dacă e activat** din Setări → „Card prin NFC" (admin only). Când e activ, apare un al treilea buton `Card prin NFC` cu subtitlul „Furnizat de Stripe".
 
 **Cum funcționează**:
 1. Tap pe `Card prin NFC`
@@ -144,14 +135,12 @@ După confirmare, apare **overlay-ul verde „Plată Reușită!"** cu:
 - Suma încasată în verde deschis
 - Buton `Finalizează`
 
-Dacă evenimentul are **claim URL**, apare și un **cod QR** — clientul îl
-scanează cu telefonul lui și primește biletele pe email direct.
+Dacă evenimentul are **claim URL**, apare și un **cod QR** — clientul îl scanează cu telefonul lui și primește biletele pe email direct.
 
 <!-- SCREENSHOT: ecran verde Plată Reușită cu QR + sumă mare -->
 ![Plată reușită](./screenshots/04-success.png)
 
-**Alt buton opțional**: `Trimite pe email` — introduci emailul
-clientului și biletele merg direct pe adresa lui.
+**Alt buton opțional**: `Trimite pe email` — introduci emailul clientului și biletele merg direct pe adresa lui.
 
 Tap `Finalizează` → te întorci la Vânzare, gata pentru următorul client.
 
@@ -174,9 +163,7 @@ Util să vezi rapid „azi am făcut 3500 lei".
 
 ## 10. Butonul de coș plutitor (FAB)
 
-Dacă ești pe grid-ul de bilete și **ai deja bilete în coș**, jos-dreapta
-apare un **buton rotund roșu cu numărul** de bilete. Tap → sari direct
-la vederea Coș.
+Dacă ești pe grid-ul de bilete și **ai deja bilete în coș**, jos-dreapta apare un **buton rotund roșu cu numărul** de bilete. Tap → sari direct la vederea Coș.
 
 Vederea coș are săgeată `←` sus-stânga pentru a te întoarce la grid.
 
@@ -184,8 +171,7 @@ Vederea coș are săgeată `←` sus-stânga pentru a te întoarce la grid.
 
 ## 11. Limitări
 
-- **Fără internet**: doar Numerar și Card POS. NFC nu merge offline
-  ([cap. 6](./06_vanzare_offline.md))
+- **Fără internet**: doar Numerar și Card POS. NFC nu merge offline ([cap. 6](./06_vanzare_offline.md))
 - **Comisioane**: se calculează server-side, nu se pot modifica din app
 - **Discount / cupoane**: nu sunt disponibile în POS mobil (doar pe website)
 - **Refund**: se face din admin web, nu din aplicație
@@ -199,14 +185,12 @@ Vederea coș are săgeată `←` sus-stânga pentru a te întoarce la grid.
 - Ai internet slab? Poți da retry sau ieși din modal și reintri.
 
 **„Am confirmat cash din greșeală, cum anulez?"**
-- Vânzarea e deja înregistrată. Refund se face din **admin web** de către
-  proprietar.
+- Vânzarea e deja înregistrată. Refund se face din **admin web** de către proprietar.
 - Pentru viitor: folosește `Anulează` **înainte** de a apăsa Confirmă.
 
 **„Clientul nu a primit QR-ul pe email"**
 - Ai introdus email corect? Verifică spam-ul clientului.
-- Dacă era offline: se trimite după sync. Verifică pastila galbenă din
-  header ([cap. 6](./06_vanzare_offline.md)).
+- Dacă era offline: se trimite după sync. Verifică pastila galbenă din header ([cap. 6](./06_vanzare_offline.md)).
 
 **„Terminalul POS a aprobat dar am uitat să apăs Confirmă"**
 - Nu e o problemă. Bani sunt pe card, dar bilete NU s-au emis.

@@ -8,14 +8,11 @@ Timp de citit: **~3 minute**.
 
 ## 1. Instalarea
 
-Aplicația se numește **AmBilet** (sau **AmBilet** dacă
-testezi versiunea nouă). O găsești ca APK trimis pe email sau prin
-link WhatsApp de la echipa AmBilet.
+Aplicația se numește **AmBilet** (sau **AmBilet** dacă testezi versiunea nouă). O găsești ca APK trimis pe email sau prin link WhatsApp de la echipa AmBilet.
 
 **Cerințe minime**: Android 7+ / iOS 13+. Merge pe telefoane și tablete.
 
-După instalare, deschide aplicația — vei vedea un scurt splash animat,
-apoi ecranul de login.
+După instalare, deschide aplicația — vei vedea un scurt splash animat, apoi ecranul de login.
 
 <!-- SCREENSHOT: splash screen animat cu efectul QR-scan + logo AmBilet -->
 ![Splash AmBilet](./screenshots/01-splash.png)
@@ -24,8 +21,7 @@ apoi ecranul de login.
 
 ## 2. Login-ul
 
-Folosește **emailul și parola** primite de la echipa AmBilet sau de la
-proprietarul contului (dacă ești staff angajat).
+Folosește **emailul și parola** primite de la echipa AmBilet sau de la proprietarul contului (dacă ești staff angajat).
 
 - Emailul e cel folosit în contul de organizator de pe web
 - Parola e cea setată la primirea invitației (sau resetată de un admin)
@@ -33,19 +29,13 @@ proprietarul contului (dacă ești staff angajat).
 <!-- SCREENSHOT: ecranul de login cu câmpuri email + parolă + buton Login -->
 ![Ecranul de login](./screenshots/01-login.png)
 
-**Ai uitat parola?** Contactează proprietarul contului (owner) — poate
-reseta parola direct din aplicație, capitolul [16. Personal](./16_personal.md).
+**Ai uitat parola?** Contactează proprietarul contului (owner) — poate reseta parola direct din aplicație, capitolul [16. Personal](./16_personal.md).
 
-**Ești la mai mulți organizatori?** După login, dacă emailul tău e
-asociat la mai multe conturi, aplicația îți afișează un selector.
+**Ești la mai mulți organizatori?** După login, dacă emailul tău e asociat la mai multe conturi, aplicația îți afișează un selector.
 Detalii în [capitolul 28](./28_comutare_organizatori.md).
 
-**La deschiderile următoare**, aplicația **completează automat email +
-parolă** din prima ta autentificare — apeși direct `Autentificare` și
-intri. Credentialele sunt criptate în telefon (SecureStore), nu se
-transmit nicăieri. Se șterg doar când apeși explicit *„Încheie Tura &
-Deconectare"* din Setări — util pentru predare de tură. Vezi
-[capitolul 23](./23_securitate.md) pentru detalii.
+**La deschiderile următoare**, aplicația **completează automat email + parolă** din prima ta autentificare — apeși direct `Autentificare` și intri. Credentialele sunt criptate în telefon (SecureStore), nu se transmit nicăieri. Se șterg doar când apeși explicit *„Încheie Tura & Deconectare"* din Setări — util pentru predare de tură. 
+Vezi [capitolul 23](./23_securitate.md) pentru detalii.
 
 ---
 
@@ -74,16 +64,11 @@ Jos e **meniul principal** cu 5 tab-uri:
 
 ## 4. Ce trebuie să faci prima dată
 
-**Pas 1**: verifică că ai selectat evenimentul corect (bara roșie de sus)
-→ dacă nu, apasă și alege din listă. Detalii în
-[capitolul 3](./03_selectie_eveniment.md).
+**Pas 1**: verifică că ai selectat evenimentul corect (bara roșie de sus) → dacă nu, apasă și alege din listă. Detalii în [capitolul 3](./03_selectie_eveniment.md).
 
-**Pas 2**: verifică că ești **Online** (pastilă verde în header). Dacă
-apare 🔴 **Offline**, ai probleme de semnal — dar aplicația merge oricum
-(vezi [capitolul 6 — vânzare offline](./06_vanzare_offline.md)).
+**Pas 2**: verifică că ești **Online** (pastilă verde în header). Dacă apare 🔴 **Offline**, ai probleme de semnal — dar aplicația merge oricum (vezi [capitolul 6 — vânzare offline](./06_vanzare_offline.md)).
 
-**Pas 3**: dacă ești casier și pornești tura → apasă butonul de
-deschidere tură (detalii în [capitolul 21](./21_tura.md)).
+**Pas 3**: dacă ești casier și pornești tura → apasă butonul de deschidere tură (detalii în [capitolul 21](./21_tura.md)).
 
 **Pas 4**: gata, poți începe să lucrezi.
 
@@ -106,10 +91,8 @@ Uită-te sus, mereu vizibil peste toate ecranele:
 ## 6. Ai probleme?
 
 - **App-ul nu se deschide** → reboot telefon
-- **Login refuză credentialele** → verifică că emailul e scris corect,
-  cere reset de parolă
-- **Nu văd niciun eveniment după login** → cere admin să te asocieze la
-  organizator sau să publice un eveniment
+- **Login refuză credentialele** → verifică că emailul e scris correct, cere reset de parolă
+- **Nu văd niciun eveniment după login** → cere admin să te asocieze la organizator sau să publice un eveniment
 - **Alt device și nu recunoaște parola** → contactează owner-ul organizatorului
 
 Pentru probleme neacoperite: scrie-i echipei AmBilet la [contact standard].

@@ -2,88 +2,63 @@
 
 > *„Semnalul cade tocmai când vine coada mare. Ce fac?"*
 
-Din **AmBilet** poți încasa bilete fără internet. Vânzările se
-salvează pe telefon și se trimit la server automat când revine semnalul.
-Casierul nu se blochează niciodată — coada continuă să curgă.
+Din **AmBilet** poți încasa bilete fără internet. Vânzările se salvează pe telefon și se trimit la server automat când revine semnalul. Casierul nu se blochează niciodată — coada continuă să curgă.
 
-Timp estimat pentru citirea acestui capitol: **~4 minute**.
-Timp până funcționezi cu vânzarea offline: **0 secunde**. Merge din prima.
+Timp estimat pentru citirea acestui capitol: **~4 minute**. Timp până funcționezi cu vânzarea offline: **0 secunde**. Merge din prima.
 
 ---
 
 ## 1. De unde știi că ești offline
 
-Sus pe ecran, lângă clopoțelul de notificări, e o pastilă mică ce arată
-starea conexiunii:
+Sus pe ecran, lângă clopoțelul de notificări, e o pastilă mică ce arată starea conexiunii:
 
 - 🟢 **Online** — ai semnal, totul merge live
 - 🔴 **Offline** — ai pierdut semnalul, aplicația a intrat automat în modul offline
 
-<!-- SCREENSHOT: header cu pastila roșie "Offline" evidențiată -->
-![Header în starea Offline](./screenshots/01-header-offline.png)
-
-**Nu trebuie să apeși nimic** — aplicația detectează singură când cade
-semnalul (Wi-Fi sau date mobile) și trece automat pe offline. Toate
-funcțiile importante — vânzare, check-in, raportare urgențe — continuă
-să meargă.
+**Nu trebuie să apeși nimic** — aplicația detectează singură când cade semnalul (Wi-Fi sau date mobile) și trece automat pe offline. Toate funcțiile importante — vânzare, check-in, raportare urgențe — continua să meargă.
 
 ---
 
 ## 2. Vinzi normal, cu 2 excepții
 
-Fluxul e identic cu vânzarea online. Deschizi tabul **Vânzare**,
-adaugi biletele în coș, apeși **Numerar** sau **Card POS**, confirmi
-încasarea. Aplicația salvează vânzarea local și îți afișează ecranul de
-plată reușită.
+Fluxul e identic cu vânzarea online. Deschizi tabul **Vânzare**, adaugi biletele în coș, apeși **Numerar** sau **Card POS**, confirmi încasarea. Aplicația salvează vânzarea local și îți afișează ecranul de plată reușită.
 
 ### Ce se schimbă vizibil
 
 **a) Plata cu Card prin NFC (Stripe Tap) nu funcționează.**
-Are nevoie de conexiune la Stripe pentru autorizarea cardului. Dacă
-apeși butonul offline, primești un mesaj clar și îți sugerează Numerar
-sau Card POS.
+Are nevoie de conexiune la Stripe pentru autorizarea cardului. Dacă apeși butonul offline, primești un mesaj clar și îți sugerează Numerar sau Card POS.
 
 **b) Ecranul de succes NU generează QR pentru trimis pe email.**
-La vânzarea online, apărea un cod QR pe care clientul îl scana ca să
-primească biletele pe email. Offline nu putem face asta — biletele
-ajung pe email după ce se sincronizează cu serverul (când revine
-semnalul).
+La vânzarea online, apărea un cod QR pe care clientul îl scana ca să primească biletele pe email. Offline nu putem face asta — biletele ajung pe email după ce se sincronizează cu serverul (când revine semnalul).
 
 Restul e identic: coșul, numărătoarea, statisticile turei, totul.
 
 <!-- SCREENSHOT: ecranul Vânzare cu 3 bilete în coș + butonul Numerar activ, în modul offline -->
-![Vânzare offline — coș cu 3 bilete](./screenshots/01-cart-offline.png)
+![Vânzare offline — coș cu 3 bilete](./screenshots/06-cart-offline.png)
 
 ---
 
 ## 3. Cum arată succesul offline
 
-După ce confirmi încasarea (fie cash, fie card POS), vezi același ecran
-verde „**Plată Reușită!**" cu suma încasată. Aplicația a salvat
-vânzarea pe telefon și a adăugat-o la totalurile turei.
+După ce confirmi încasarea (fie cash, fie card POS), vezi același ecran verde „**Plată Reușită!**" cu suma încasată. Aplicația a salvat vânzarea pe telefon și a adăugat-o la totalurile turei.
 
 <!-- SCREENSHOT: ecran verde Plată Reușită! cu sumă + notă discretă că e offline -->
-![Succes vânzare offline](./screenshots/01-success-offline.png)
+![Succes vânzare offline](./screenshots/06-success-offline.png)
 
-Apeși **Finalizează** și te întorci în ecranul de vânzare, gata pentru
-următorul client.
+Apeși **Finalizează** și te întorci în ecranul de vânzare, gata pentru următorul client.
 
 ---
 
 ## 4. „X în așteptare" — cum urmărești ce nu s-a sincronizat
 
-De îndată ce ai o vânzare (sau scanare) offline, sus pe ecran apare o
-**pastilă galbenă** cu numărul de operațiuni nesincronizate:
+De îndată ce ai o vânzare (sau scanare) offline, sus pe ecran apare o **pastilă galbenă** cu numărul de operațiuni nesincronizate:
 
 <!-- SCREENSHOT: header cu pastila galbenă "3 în așteptare" evidențiată -->
-![Badge 3 în așteptare](./screenshots/01-pending-badge.png)
+![Badge 3 în așteptare](./screenshots/06-pending-badge.png)
 
-Această pastilă îți spune că **X vânzări/scanări sunt salvate pe
-telefon și așteaptă internet**. Nu ai pierdut nimic — pur și simplu
-n-au ajuns încă la server.
+Această pastilă îți spune că **X vânzări/scanări sunt salvate pe telefon și așteaptă internet**. Nu ai pierdut nimic — pur și simplu n-au ajuns încă la server.
 
-**Un tap pe pastilă** forțează sincronizarea manuală (util dacă crezi
-că ai semnal dar aplicația n-a observat încă).
+**Un tap pe pastilă** forțează sincronizarea manuală (util dacă crezi că ai semnal dar aplicația n-a observat încă).
 
 ---
 
@@ -96,24 +71,18 @@ că ai semnal dar aplicația n-a observat încă).
 3. Pe rând, pastila galbenă scade — „3 în așteptare" → „2" → „1" → dispare
 4. Biletele clienților ajung acum pe email (dacă au dat email la vânzare)
 
-Toate astea în câteva secunde, fără să apeși nimic. Poți continua să
-vinzi în paralel — sincronizarea rulează pe fundal.
+Toate astea în câteva secunde, fără să apeși nimic. Poți continua să vinzi în paralel — sincronizarea rulează pe fundal.
 
 <!-- SCREENSHOT: header cu pastila verde Online + pastila galbenă în scădere -->
-![Sincronizare în progres](./screenshots/01-syncing.png)
+![Sincronizare în progres](./screenshots/06-syncing.png)
 
 ---
 
 ## 6. Protecție împotriva dublei încasări
 
-Un lucru important pe care echipa AmBilet l-a construit special pentru
-tine: chiar dacă aplicația retrimite aceeași vânzare de mai multe ori
-(din cauza unui semnal instabil), serverul recunoaște vânzarea și
-**NU creează bilete duplicate**.
+Un lucru important pe care echipa AmBilet l-a construit special pentru tine: chiar dacă aplicația retrimite aceeași vânzare de mai multe ori (din cauza unui semnal instabil), serverul recunoaște vânzarea și **NU creează bilete duplicate**.
 
-Fiecare vânzare are un cod unic generat pe telefon. Serverul îl
-verifică — dacă îl vede a doua oară, întoarce comanda existentă în loc
-să creeze una nouă. **Clientul NU va fi taxat de două ori.**
+Fiecare vânzare are un cod unic generat pe telefon. Serverul îl verifică — dacă îl vede a doua oară, întoarce comanda existentă în loc să creeze una nouă. **Clientul NU va fi taxat de două ori.**
 
 ---
 

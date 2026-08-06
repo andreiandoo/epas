@@ -1,9 +1,6 @@
 # Manual AmBilet — cuprins
 
-Manualul complet al aplicației mobile AmBilet pentru organizatori și
-personal. Fiecare capitol e scurt (3-8 minute de citit) și se poate
-folosi și separat. La final, aproape fiecare are o secțiune „Testează pe
-viu" cu link care te duce direct în ecranul respectiv al aplicației.
+Manualul complet al aplicației mobile AmBilet pentru organizatori și personal. Fiecare capitol e scurt (3-8 minute de citit) și se poate folosi și separat. La final, aproape fiecare are o secțiune „Testează pe viu" cu link care te duce direct în ecranul respectiv al plicației.
 
 ---
 
@@ -81,14 +78,11 @@ viu" cu link care te duce direct în ecranul respectiv al aplicației.
 - **Numele tab-urilor** apar așa: **Panou**, **Scanare**, **Vânzare**,
   **Rapoarte**, **Setări**
 - **Numele butoanelor** apar așa: `Numerar`, `Confirmă`, `Anulează`
-- Linkurile „**Testează pe viu →**" te duc direct în ecranul respectiv
-  al aplicației (funcționează doar în manualul deschis din app; în
-  fișierul MD static sunt inerte)
+- Linkurile „**Testează pe viu →**" te duc direct în ecranul respective al aplicației (funcționează doar în manualul deschis din app; în fișierul MD static sunt inerte)
 
 ## Cum să folosești manualul
 
-- **Nou pe aplicație?** Începe cu capitolele 1-3, apoi sari la ce te
-  interesează
+- **Nou pe aplicație?** Începe cu capitolele 1-3, apoi sari la ce te interesează
 - **Casier la eveniment?** Citește capitolele 4, 9, 10, 21
 - **Admin de organizator?** Adaugă capitolele 15, 16, 17, 18, 19
 - **Vrei să știi ce e nou?** Vezi [NOUTATI_v2.2.md](../../NOUTATI_v2.2.md)

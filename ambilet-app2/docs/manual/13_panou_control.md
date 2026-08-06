@@ -1,8 +1,6 @@
 # Capitolul 13 — Panoul de control
 
-**Panou** e ecranul-tablou de bord: toate cifrele importante ale
-evenimentului tău, într-un singur loc. Fiecare card e clickabil pentru
-detalii.
+**Panou** e ecranul-tablou de bord: toate cifrele importante ale evenimentului tău, într-un singur loc. Fiecare card e clickabil pentru detalii.
 
 Timp de citit: **~5 minute**.
 
@@ -11,8 +9,7 @@ Timp de citit: **~5 minute**.
 ## 1. Ce vezi pe Panou (de sus în jos)
 
 - **Bara evenimentului** (roșie) — care eveniment e activ
-- **Dacă e azi/live**: un prompt verde te întreabă dacă vrei să activezi
-  auto-validarea biletelor
+- **Dacă e azi/live**: un prompt verde te întreabă dacă vrei să activezi auto-validarea biletelor
 - **Grid cu 4 cifre-cheie**: Scanați / Vândute / Încasări / Disponibile
 - **Capacitate** — bară de progres a stocului
 - **Ritm vânzare** — dacă ai deja vânzări azi
@@ -40,28 +37,24 @@ Grid 2×2 în partea superioară:
 
 - **Cifra mare**: total bilete vândute la eveniment
 - **Sub-text**: „bilete"
-- **Tap** → deschide modalul cu **breakdown per tip de bilet** (câte
-  General, câte VIP, etc.)
+- **Tap** → deschide modalul cu **breakdown per tip de bilet** (câte General, câte VIP, etc.)
 
 ### 💰 Încasări
 
 - **Cifra mare**: suma totală încasată (format RON)
 - **Sub-text**: „total"
-- **Tap** → deschide modalul cu detalii de venituri (online + POS,
-  breakdown per metodă plată)
+- **Tap** → deschide modalul cu detalii de venituri (online + POS, breakdown per metodă plată)
 
 ### ⏳ Disponibile
 
 - **Cifra mare**: bilete rămase pe stoc
 - **Sub-text**: „bilete"
-- **Tap** → deschide modalul cu **rămase per tip** (câte General mai
-  sunt, câte VIP, etc.)
+- **Tap** → deschide modalul cu **rămase per tip** (câte General mai sunt, câte VIP, etc.)
 
 <!-- SCREENSHOT: cele 4 carduri cu cifre reale + iconițe roșii -->
 ![Grid 4 carduri](./screenshots/13-4-cards.png)
 
-**Notă**: dacă un eveniment n-are capacitate configurată, „Disponibile"
-arată `—` și cardul nu e clickabil.
+**Notă**: dacă un eveniment n-are capacitate configurată, „Disponibile" arată `—` și cardul nu e clickabil.
 
 ---
 
@@ -82,8 +75,7 @@ Dacă evenimentul e fără capacitate limitată, cardul nu apare.
 
 ## 4. Ritm vânzare (dacă ai vânzări)
 
-Card apare doar după prima ta vânzare pe device-ul curent. Descris în
-detaliu în [capitolul 14](./14_ritm_vanzare.md).
+Card apare doar după prima ta vânzare pe device-ul curent. Descris în detaliu în [capitolul 14](./14_ritm_vanzare.md).
 
 ---
 
@@ -99,9 +91,7 @@ Fiecare segment arată numărul și procentul.
 <!-- SCREENSHOT: bară Online vs La ușă cu 1086 (73%) online + 400 (27%) ușă -->
 ![Online vs la ușă](./screenshots/13-online-door.png)
 
-**Tap pe un segment** → se **expandează sub bară** o listă cu tipurile
-de bilete vândute pe canalul respectiv. Al doilea tap pe același
-segment → colapsează.
+**Tap pe un segment** → se **expandează sub bară** o listă cu tipurile de bilete vândute pe canalul respectiv. Al doilea tap pe același segment → colapsează.
 
 Util să vezi „care tip de bilete se vinde mai bine la ușă vs. online".
 
@@ -136,8 +126,7 @@ O listă cu **ultimele 10 activități**:
 
 Include check-in-uri și scanări invalide.
 
-**Long-press pe un rând** → copiază codul biletului în clipboard (util
-să-l trimiți colegului pe WhatsApp).
+**Long-press pe un rând** → copiază codul biletului în clipboard (util să-l trimiți colegului pe WhatsApp).
 
 <!-- SCREENSHOT: listă activitate recentă cu 3 rânduri + long-press context -->
 ![Activitate recentă](./screenshots/13-activity.png)
@@ -146,15 +135,13 @@ să-l trimiți colegului pe WhatsApp).
 
 ## 8. Închide Tura (dacă e pornită)
 
-Jos de tot, buton roșu **`Închide tura`** care oprește tura curentă.
-Vezi [capitolul 21](./21_tura.md).
+Jos de tot, buton roșu **`Închide tura`** care oprește tura curentă. Vezi [capitolul 21](./21_tura.md).
 
 ---
 
 ## 9. Auto-refresh
 
-Panoul se **reîmprospătează automat** la fiecare 30 secunde. Vezi
-cifrele mereu la zi fără să apeși nimic.
+Panoul se **reîmprospătează automat** la fiecare 30 secunde. Vezi cifrele mereu la zi fără să apeși nimic.
 
 **Pull-to-refresh**: trage ecranul în jos → refresh forțat imediat.
 
@@ -166,8 +153,7 @@ cifrele mereu la zi fără să apeși nimic.
 - Scanări (WebSocket instant)
 - Rambursări / cancelări (WebSocket)
 
-Deci dacă alt casier de la altă intrare face un scan, îl vezi apărând
-în Activitate Recentă în ~1-2 secunde.
+Deci dacă alt casier de la altă intrare face un scan, îl vezi apărând în Activitate Recentă în ~1-2 secunde.
 
 ---
 
@@ -189,11 +175,9 @@ Nu vezi cifrele altor casieri sau totalurile globale ale evenimentului.
 
 ## 12. Sincronizare — indicator „Sinc. acum X"
 
-Sub numele evenimentului, bara roșie afișează un timestamp discret:
-**„Sinc. acum 5s"** sau **„Sinc. acum 2m"**.
+Sub numele evenimentului, bara roșie afișează un timestamp discret: **„Sinc. acum 5s"** sau **„Sinc. acum 2m"**.
 
-Îți spune **cât de proaspăt** e ce vezi. Dacă zice „acum 5s", cifrele
-sunt live. Dacă zice „acum 15m", refresh manual (pull-to-refresh).
+Îți spune **cât de proaspăt** e ce vezi. Dacă zice „acum 5s", cifrele sunt live. Dacă zice „acum 15m", refresh manual (pull-to-refresh).
 
 ---
 
@@ -201,19 +185,16 @@ sunt live. Dacă zice „acum 15m", refresh manual (pull-to-refresh).
 
 **„Cifrele arată diferit de ce văd în admin web"**
 - Cache pe device — trage în jos (refresh)
-- Alte cifre: web-admin poate include date filtrate diferit (ex. cu/fără
-  test)
+- Alte cifre: web-admin poate include date filtrate diferit (ex. cu/fără test)
 
 **„Am doar Scanați, nu văd Vândute / Încasări"**
 - Ești logat ca staff scanner, nu admin. Rolul îți limitează vederea.
 
 **„Cardul Disponibile arată `—`"**
-- Evenimentul nu are capacitate configurată. Cere admin să o seteze
-  din web-admin.
+- Evenimentul nu are capacitate configurată. Cere admin să o seteze din web-admin.
 
 **„Ritm vânzare nu apare"**
-- Nu ai făcut încă nicio vânzare **de pe acest device**. Cardul se
-  activează după prima vânzare a ta.
+- Nu ai făcut încă nicio vânzare **de pe acest device**. Cardul se activează după prima vânzare a ta.
 
 ---
 
