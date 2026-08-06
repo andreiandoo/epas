@@ -1813,6 +1813,11 @@ class MarketplaceTaxTemplate extends Model
             // they shrank a decont to a subset. The label and totals are
             // now in lock-step with the per-payout snapshot used everywhere
             // else.
+            // Also track a priceKey→qty map alongside $breakdownParts so the
+            // included-mode Fix 4 block below can merge refunded tickets into
+            // 1b (matching 1a's "gross including refunded" semantic) without
+            // reparsing the rendered label string.
+            $priceQtyMap = [];
             foreach ($ticketBreakdown as $item) {
                 $ttId = $item['ticket_type_id'] ?? null;
                 if ($ttId && isset($posTypeIdsSet[$ttId])) {
@@ -1830,6 +1835,8 @@ class MarketplaceTaxTemplate extends Model
                 if ($price <= 0) continue;
                 $totalTicketsSold += $qty;
                 $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
+                $priceKey = number_format($price, 2, '.', '');
+                $priceQtyMap[$priceKey] = ($priceQtyMap[$priceKey] ?? 0) + $qty;
             }
 
             // Wrap every 5 parts with <br> so multi-type deconts don't blow
@@ -2051,30 +2058,98 @@ class MarketplaceTaxTemplate extends Model
             // Included-mode override. In this mode the ticket price ALREADY
             // contains the marketplace commission — customer pays 170, of
             // which 10.20 is Ambilet's cut and 159.80 belongs to organizer.
-            // The decont template expresses this as:
-            //   A (1a) = customer gross (13,550)
-            //   B (2a) = refunds (170)
-            //   C      = advance (0)
-            //   D      = 0        (no separate invoice — commission is baked in)
-            //   E      = A − B − C − D = customer gross − refunds − advance
             //
-            // Old behavior used organizerNetFromTickets which — after Fix 1 —
-            // returns the breakdown NET (12,737 = gross minus commission).
-            // For an included payout that produced E = 12,737 instead of the
-            // 13,380 the operator expects. Override both {{payout_amount}}
-            // (E) and {{payout_commission_amount}} (D) to match the mode
-            // semantic here. On-top payouts and net_override payouts stay
-            // on the existing path unchanged.
+            // Semantic the operator asked for (confirmed on 3125, a fully-
+            // refunded decont, and 3254, a partial-refund decont):
+            //   A (1a) = total customer money that entered for this decont,
+            //            INCLUDING the value of tickets that were later
+            //            refunded (so "1a includes refunded" and the
+            //            arithmetic on the PDF makes sense at a glance)
+            //   B (2a) = refunds returned to customers
+            //   C      = advance already paid
+            //   D      = 0 (no separate invoice — commission is baked in and
+            //            billed to organizer through generate_invoice_organizer)
+            //   E      = A − B − C − D = money kept from customers
+            //
+            // For 3125 (all 3 tickets refunded, snapshot empty):
+            //   A = 0 + 357 = 357, B = 357, E = 0 ✓
+            //
+            // For 3254 (86 valid, 1 refunded, snapshot=14,230):
+            //   A = 14,230 + 170 = 14,400, B = 170, E = 14,230 ✓
+            //
+            // Snapshot gross by design excludes tickets whose status flipped
+            // to 'refunded', so we ADD refundDeduction to get the "ever sold"
+            // figure the operator wants at 1a. E in turn stops subtracting
+            // refund (it's now consumed by 1a inclusion), keeping the label
+            // "E = A − B − C − D" arithmetically consistent with the value
+            // rendered.
+            //
+            // On-top payouts and net_override payouts stay on the existing
+            // path unchanged.
             $isIncluded = ($payout->commission_mode ?? 'included') !== 'added_on_top';
             if ($isIncluded && $payout->net_override === null) {
                 $totals = $payout->getBreakdownTotals();
                 $grossAll = ($totals['online']['gross'] ?? 0) + ($totals['pos']['gross'] ?? 0);
+                $grossIncludingRefunded = $grossAll + $refundDeduction;
 
+                $variables['payout_gross_amount'] = number_format(
+                    max(0.0, $grossIncludingRefunded),
+                    2
+                );
                 $variables['payout_amount'] = number_format(
-                    max(0.0, $grossAll - $refundDeduction - $advanceDeduction),
+                    max(0.0, $grossIncludingRefunded - $refundDeduction - $advanceDeduction),
                     2
                 );
                 $variables['payout_commission_amount'] = number_format(0, 2);
+
+                // 1b + tuple: merge refunded tickets into the sold count and
+                // label so 1b matches the 1a "sold-including-refunded" total.
+                // For a fully-refunded decont like 3125 this changes
+                //   1b: 0 → 3 with tuple "(119lei*3)"
+                // For a partial-refund decont like 3254 the 1 refunded Abon
+                // General merges into the existing 73-count for that price:
+                //   1b: 86 → 87 with tuple "(170lei*74+140lei*13)"
+                // Uses the same refund_items collection the aggregate refund
+                // block above computed (with legacy fallback). If none exist
+                // we leave 1b as-is.
+                if ($payout->event_id && ($refundCount ?? 0) > 0) {
+                    $refundQ = \App\Models\MarketplaceRefundItem::query()
+                        ->whereHas('refundRequest', function ($q) use ($payout) {
+                            $q->whereIn('status', ['refunded', 'partially_refunded'])
+                              ->where('marketplace_payout_id', $payout->id);
+                        })
+                        ->where('status', 'refunded');
+                    $refundedTicketsForMerge = $refundQ->get();
+                    if ($refundedTicketsForMerge->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
+                        $refundedTicketsForMerge = self::fetchLegacyPeriodRefundItems($payout);
+                    }
+
+                    if ($refundedTicketsForMerge->isNotEmpty()) {
+                        // Merge into the priceQtyMap we tracked in parallel
+                        // with breakdownParts.
+                        foreach ($refundedTicketsForMerge as $it) {
+                            $price = (float) $it->face_value;
+                            if ($price <= 0) continue;
+                            $priceKey = number_format($price, 2, '.', '');
+                            $priceQtyMap[$priceKey] = ($priceQtyMap[$priceKey] ?? 0) + 1;
+                        }
+
+                        // Rebuild tuple parts, sorted by price desc for
+                        // readability (matches buildPayoutSalesBreakdownRows).
+                        krsort($priceQtyMap, SORT_NUMERIC);
+                        $mergedParts = [];
+                        foreach ($priceQtyMap as $pk => $q) {
+                            $mergedParts[] = $formatPrice((float) $pk) . 'lei*' . $q;
+                        }
+                        if (!empty($mergedParts)) {
+                            $chunks = array_chunk($mergedParts, 5);
+                            $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
+                            $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
+                        }
+
+                        $variables['total_tickets_sold'] = array_sum($priceQtyMap);
+                    }
+                }
             }
             // Sortat după număr de utilizări desc, "COD (xN)" format.
             arsort($promoCodes);
