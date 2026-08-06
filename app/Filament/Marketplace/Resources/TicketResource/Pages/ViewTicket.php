@@ -223,16 +223,22 @@ class ViewTicket extends ViewRecord
                     $ticket = $this->record;
                     $oldStatus = $ticket->status;
                     $newStatus = $data['status'];
+                    $hadCheckIn = $ticket->checked_in_at !== null || $ticket->scanned_at !== null;
 
-                    if ($oldStatus === $newStatus) {
+                    // A ticket scanned at the gate keeps status='valid' and only
+                    // gets checked_in_at, so "already valid + checked in" is a
+                    // real change to make, not a no-op. Bailing out here is what
+                    // made it impossible to undo an accidental check-in.
+                    if ($oldStatus === $newStatus && ! ($newStatus === 'valid' && $hadCheckIn)) {
                         Notification::make()->title('Statusul nu s-a schimbat')->info()->send();
                         return;
                     }
 
                     $ticket->update([
                         'status' => $newStatus,
-                        'checked_in_at' => $newStatus === 'valid' ? null : $ticket->checked_in_at,
-                    ]);
+                    ] + ($newStatus === 'valid' ? self::clearedCheckInAttributes() : []));
+
+                    $clearedCheckIn = $newStatus === 'valid' && $hadCheckIn;
 
                     activity('tenant')
                         ->performedOn($ticket)
@@ -240,18 +246,84 @@ class ViewTicket extends ViewRecord
                             'old_status' => $oldStatus,
                             'new_status' => $newStatus,
                             'ticket_code' => $ticket->code ?? $ticket->barcode,
+                            'check_in_cleared' => $clearedCheckIn,
                         ])
                         ->log("Ticket status changed: {$oldStatus} → {$newStatus}");
 
                     Notification::make()
                         ->title('Status actualizat')
-                        ->body("Biletul a fost schimbat din {$oldStatus} în {$newStatus}")
+                        ->body($clearedCheckIn
+                            ? "Biletul este {$newStatus} și check-in-ul a fost anulat."
+                            : "Biletul a fost schimbat din {$oldStatus} în {$newStatus}")
                         ->success()
                         ->send();
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Schimbă statusul biletului')
                 ->modalDescription('Ești sigur că vrei să schimbi statusul acestui bilet?'),
+
+            // Check-in lives on its own axis (checked_in_at / scanned_at), not
+            // on `status` — a scanned ticket stays status='valid'. So undoing an
+            // accidental gate scan needs its own action rather than a fake
+            // "Nevalidat" entry in the status dropdown, which would allow
+            // impossible combinations like "not checked in + cancelled".
+            Actions\Action::make('undo_checkin')
+                ->label('Anulează check-in')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('danger')
+                ->visible(fn () => $this->record->checked_in_at !== null || $this->record->scanned_at !== null)
+                ->requiresConfirmation()
+                ->modalHeading('Anulează check-in-ul biletului')
+                ->modalDescription('Biletul redevine nevalidat și poate fi scanat din nou la intrare. Folosește asta când un organizator a validat un bilet din greșeală.')
+                ->action(function () {
+                    $ticket = $this->record;
+                    $checkedInAt = $ticket->checked_in_at;
+                    $oldStatus = $ticket->status;
+
+                    // The operator panel flips status to 'used' when it scans,
+                    // so undoing that scan has to walk the status back too.
+                    $attributes = self::clearedCheckInAttributes();
+                    if ($oldStatus === 'used') {
+                        $attributes['status'] = 'valid';
+                    }
+
+                    $ticket->update($attributes);
+
+                    activity('tenant')
+                        ->performedOn($ticket)
+                        ->withProperties([
+                            'ticket_code' => $ticket->code ?? $ticket->barcode,
+                            'checked_in_at' => $checkedInAt?->toDateTimeString(),
+                            'old_status' => $oldStatus,
+                            'new_status' => $ticket->status,
+                        ])
+                        ->log('Ticket check-in undone');
+
+                    Notification::make()
+                        ->title('Check-in anulat')
+                        ->body('Biletul este din nou nevalidat și poate fi scanat la intrare.')
+                        ->success()
+                        ->send();
+                }),
+        ];
+    }
+
+    /**
+     * Every column that marks a ticket as having passed the gate.
+     *
+     * Two independent flows write check-in state: the organizer scan apps set
+     * checked_in_at/by/via, while App\Filament\Operator\Pages\CheckIn sets
+     * scanned_at/scanned_by_user_id. Clearing only one set leaves the ticket
+     * looking un-scanned in one panel and scanned in the other.
+     */
+    protected static function clearedCheckInAttributes(): array
+    {
+        return [
+            'checked_in_at' => null,
+            'checked_in_by' => null,
+            'checked_in_via' => null,
+            'scanned_at' => null,
+            'scanned_by_user_id' => null,
         ];
     }
 

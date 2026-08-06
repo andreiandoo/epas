@@ -68,6 +68,55 @@ class ViewTicket extends ViewRecord
                         ->send();
                 }),
 
+            // Mirrors the marketplace panel's action. Check-in is tracked on
+            // checked_in_at / scanned_at, not on `status`, so a ticket scanned
+            // by mistake stays status='valid' and cannot be reverted through
+            // any status edit. See App\Filament\Marketplace\Resources\
+            // TicketResource\Pages\ViewTicket for the full rationale.
+            Actions\Action::make('undo_checkin')
+                ->label('Undo Check-in')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('danger')
+                ->visible(fn ($record) => $record->checked_in_at !== null || $record->scanned_at !== null)
+                ->requiresConfirmation()
+                ->modalHeading('Undo ticket check-in')
+                ->modalDescription('The ticket becomes un-scanned again and can be checked in at the gate. Use this when a ticket was validated by mistake.')
+                ->action(function ($record) {
+                    $checkedInAt = $record->checked_in_at;
+                    $oldStatus = $record->status;
+
+                    $attributes = [
+                        'checked_in_at' => null,
+                        'checked_in_by' => null,
+                        'checked_in_via' => null,
+                        'scanned_at' => null,
+                        'scanned_by_user_id' => null,
+                    ];
+
+                    // The operator panel sets status='used' when it scans.
+                    if ($oldStatus === 'used') {
+                        $attributes['status'] = 'valid';
+                    }
+
+                    $record->update($attributes);
+
+                    activity('tenant')
+                        ->performedOn($record)
+                        ->withProperties([
+                            'ticket_code' => $record->code ?? $record->barcode,
+                            'checked_in_at' => $checkedInAt?->toDateTimeString(),
+                            'old_status' => $oldStatus,
+                            'new_status' => $record->status,
+                        ])
+                        ->log('Ticket check-in undone');
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('Check-in undone')
+                        ->body('The ticket is valid again and can be scanned at the gate.')
+                        ->success()
+                        ->send();
+                }),
+
             Actions\Action::make('see_event')
                 ->label('See Event')
                 ->icon('heroicon-o-calendar')

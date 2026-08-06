@@ -38,6 +38,12 @@ class Ticket extends Model
         'checked_in_at',
         'checked_in_by',
         'checked_in_via',
+        // Operator-panel scan columns. They were missing here, so every
+        // $ticket->update(['scanned_at' => ...]) in App\Filament\Operator\
+        // Pages\CheckIn was silently dropped by mass-assignment guarding —
+        // scanned_at stayed null and the double-scan check never fired.
+        'scanned_at',
+        'scanned_by_user_id',
     ];
 
     protected $casts = [
@@ -45,6 +51,7 @@ class Ticket extends Model
         'is_cancelled' => 'boolean',
         'cancelled_at' => 'datetime',
         'checked_in_at' => 'datetime',
+        'scanned_at' => 'datetime',
     ];
 
     public function order(): BelongsTo
