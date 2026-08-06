@@ -684,22 +684,25 @@ class ViewPayout extends ViewRecord
                     return 'Se va genera o factură către clientul general pentru comisioanele încasate pe acest decont: '
                         . $fmt($preview['total']) . $breakdown . '.';
                 })
-                // Only appears on on_top payouts: this action creates the
-                // general-client invoice for the commission the customer
-                // paid on top of the ticket price. On included events the
-                // commission is baked into the ticket price and billed
-                // exclusively to the organizer via generate_invoice_organizer,
-                // so this button has nothing to bill and previously fell
-                // through to creating a redundant organizer invoice with
-                // different math — hidden now.
+                // Only appears on on_top payouts WITH something to bill: this
+                // action creates the general-client invoice for the commission
+                // the customer paid on top of the ticket price. Hidden on:
+                //   - included events (commission is baked in — billed to
+                //     organizer via generate_invoice_organizer instead)
+                //   - on_top payouts with getGeneralClientInvoicePreview.total
+                //     = 0, e.g. PAY-LBUNOLUZ-3130 (fully-refunded on_top payout
+                //     with no linked refunds and no kept commission on the
+                //     event). Would just hit the early-return notification if
+                //     clicked; better to not show the button at all.
                 ->visible(function () {
                     $mode = $this->record->commission_mode
                         ?? $this->record->event?->getEffectiveCommissionMode()
                         ?? 'included';
-                    return $mode === 'added_on_top'
-                        && $this->record->decontDocument !== null
-                        && $this->record->invoice === null
-                        && !in_array($this->record->status, ['rejected', 'cancelled']);
+                    if ($mode !== 'added_on_top') return false;
+                    if ($this->record->decontDocument === null) return false;
+                    if ($this->record->invoice !== null) return false;
+                    if (in_array($this->record->status, ['rejected', 'cancelled'])) return false;
+                    return ($this->record->getGeneralClientInvoicePreview()['total'] ?? 0) > 0.01;
                 })
                 ->action(function () {
                     $payout = $this->record;

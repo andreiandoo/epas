@@ -1651,25 +1651,31 @@ class MarketplacePayout extends Model
             ?? 'included';
         if ($modeForStep === 'added_on_top') {
             $preview = $this->getGeneralClientInvoicePreview();
-            $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
-            $parts = [];
-            if ($preview['commission'] > 0.01) {
-                $parts[] = 'comision online: ' . $fmt($preview['commission']);
-            }
-            if ($preview['kept'] > 0.01) {
-                $parts[] = 'comision reținut din rambursări: ' . $fmt($preview['kept']);
-            }
-            $hint = ($preview['total'] ?? 0) > 0.01
-                ? 'Total de facturat (client general): ' . $fmt($preview['total'])
-                    . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '')
-                : null;
+            // Only emit the step when there's actually something to invoice.
+            // Prevents PAY-LBUNOLUZ-3130 (fully-refunded on_top payout with
+            // no commissions AT ALL — snapshot empty, refund_items linked =
+            // 0, kept commission on event = 0) from showing a dead-end
+            // "Generează factura" step that would trip the empty-subtotal
+            // early return once clicked.
+            if (($preview['total'] ?? 0) > 0.01) {
+                $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+                $parts = [];
+                if ($preview['commission'] > 0.01) {
+                    $parts[] = 'comision online: ' . $fmt($preview['commission']);
+                }
+                if ($preview['kept'] > 0.01) {
+                    $parts[] = 'comision reținut din rambursări: ' . $fmt($preview['kept']);
+                }
+                $hint = 'Total de facturat (client general): ' . $fmt($preview['total'])
+                    . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '');
 
-            $steps[] = [
-                'key' => 'generate_invoice',
-                'label' => 'Generează factura',
-                'done' => $this->invoice !== null,
-                'hint' => $hint,
-            ];
+                $steps[] = [
+                    'key' => 'generate_invoice',
+                    'label' => 'Generează factura',
+                    'done' => $this->invoice !== null,
+                    'hint' => $hint,
+                ];
+            }
         }
 
         // Organizer-invoice step appears only when the event is finished AND
