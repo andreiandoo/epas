@@ -706,8 +706,23 @@ class ViewPayout extends ViewRecord
                     $organizer = $payout->organizer;
                     $marketplace = $payout->marketplaceClient;
 
-                    $recipientType = $payout->invoice_recipient_type
-                        ?? ($payout->commission_mode === 'added_on_top' ? 'general_client' : 'organizer');
+                    // On on_top payouts the recipient is ALWAYS general_client —
+                    // Ambilet collected commission from the customer at sale time
+                    // and the invoice is a paper record for that collected amount
+                    // (plus any kept commission from refunds). Organizer never
+                    // owes anything on on_top mode. The invoice_recipient_type
+                    // column can still override for included mode, where the
+                    // operator might steer the invoice either way.
+                    //
+                    // Concrete case: payout 3125 (event 4520, on_top) had
+                    // invoice_recipient_type='organizer' set at creation, which
+                    // routed the generate_invoice action to organizer and
+                    // silently skipped the kept-commission lines. Invoice 3034
+                    // came out empty. Forcing general_client on on_top prevents
+                    // that class of misroute.
+                    $recipientType = $payout->commission_mode === 'added_on_top'
+                        ? 'general_client'
+                        : ($payout->invoice_recipient_type ?? 'organizer');
 
                     if ($recipientType === 'general_client') {
                         $client = [
@@ -759,6 +774,21 @@ class ViewPayout extends ViewRecord
                         }
                         $keptCommission = round($keptCommission, 2);
                         $commissionSubtotal = round($commissionSubtotal + $keptCommission, 2);
+                    }
+
+                    // Early-return guard: don't create empty invoices with 0 subtotal.
+                    // Concrete case: payout 3125 pre-fix had commissionSubtotal=0
+                    // (empty snapshot) AND recipient wrongly set to organizer so the
+                    // kept-commission branch never ran → invoice 3034 was emitted
+                    // with subtotal=0 and empty items[]. Guard here catches that
+                    // regardless of the recipient/mode combination.
+                    if ($commissionSubtotal <= 0.005) {
+                        Notification::make()
+                            ->title('Nu există comisioane de facturat')
+                            ->body('Decontul nu are comisioane online sau reținute din rambursări care să justifice o factură.')
+                            ->warning()
+                            ->send();
+                        return;
                     }
 
                     $vatRate = $marketplace->vat_payer ? 19 : 0;
