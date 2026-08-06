@@ -35,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->sidebarCollapsibleOnDesktop()
-            ->login()
+            ->login(\App\Filament\Auth\TixelloLogin::class)
             ->profile()
             ->authGuard('web')
             ->colors([
@@ -91,6 +91,7 @@ class AdminPanelProvider extends PanelProvider
             ->assets([
                 Css::make('tailwind-theme', \Illuminate\Support\Facades\Vite::asset('resources/css/filament/admin/theme.css')),
                 Css::make('epas-skin', asset('css/epas-skin.css?v=' . @filemtime(public_path('css/epas-skin.css')))),
+                Css::make('tixello-auth', asset('css/tixello-auth.css?v=' . @filemtime(public_path('css/tixello-auth.css')))),
                 Js::make('epas-skin', asset('js/epas-skin.js?v=' . @filemtime(public_path('js/epas-skin.js')))),
             ])
 

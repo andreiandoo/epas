@@ -70,7 +70,7 @@ class MarketplacePanelProvider extends PanelProvider
             ->id('marketplace')
             ->path('marketplace')
             ->sidebarCollapsibleOnDesktop()
-            ->login()
+            ->login(\App\Filament\Auth\TixelloLogin::class)
             ->authGuard('marketplace_admin')
             ->colors([
                 'primary' => Color::Emerald,
@@ -190,6 +190,7 @@ class MarketplacePanelProvider extends PanelProvider
             ->assets([
                 Css::make('tailwind-theme', \Illuminate\Support\Facades\Vite::asset('resources/css/filament/marketplace/theme.css')),
                 Css::make('epas-skin', asset('css/epas-skin.css')),
+                Css::make('tixello-auth', asset('css/tixello-auth.css?v=' . @filemtime(public_path('css/tixello-auth.css')))),
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 

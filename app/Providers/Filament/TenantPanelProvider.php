@@ -69,7 +69,7 @@ class TenantPanelProvider extends PanelProvider
             ->id('tenant')
             ->path('tenant')
             ->sidebarCollapsibleOnDesktop()
-            ->login()
+            ->login(\App\Filament\Auth\TixelloLogin::class)
             ->authGuard('web')
             ->colors([
                 'primary' => Color::Indigo,
@@ -119,6 +119,7 @@ class TenantPanelProvider extends PanelProvider
             ->assets([
                 Css::make('tailwind-theme', \Illuminate\Support\Facades\Vite::asset('resources/css/filament/tenant/theme.css')),
                 Css::make('epas-skin', asset('css/epas-skin.css')),
+                Css::make('tixello-auth', asset('css/tixello-auth.css?v=' . @filemtime(public_path('css/tixello-auth.css')))),
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
