@@ -306,7 +306,14 @@ class PayoutResource extends Resource
                                     ->columnSpanFull(),
                             ])
                             ->extraAttributes(['class' => 'ep-breakdown-section'])
-                            ->visible(fn ($record) => !empty($record->ticket_breakdown)),
+                            // Also show when there are only refunds and no valid tickets left
+                            // (fully-refunded payouts like PAY-DC3HSEDV-3125 whose snapshot is
+                            // NULL). The blade renders the "Bilete rambursate" subsection
+                            // independently of $ticket_breakdown so the operator can still see
+                            // the returned tickets even when Detalii bilete's main table has
+                            // nothing to render.
+                            ->visible(fn ($record) => !empty($record->ticket_breakdown)
+                                || (float) ($record->refund_amount ?? 0) > 0.01),
 
                         // Financial summary — split clearly into two parts:
                         //   1. "Acest decont"    — values for THIS payout only (from
