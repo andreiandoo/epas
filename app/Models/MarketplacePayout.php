@@ -1163,14 +1163,14 @@ class MarketplacePayout extends Model
      * action visible()/modal callbacks hit it on the same render.
      */
     /**
-     * Total POS commission for THE ENTIRE EVENT (not the payout slice). POS
-     * commission is billed once per event via a single invoice — see
-     * getEventPosInvoice() — so the amount shown on each decont's "Generează
-     * factură POS" button reflects what the single invoice will charge for
-     * all POS sales of the event, regardless of which decont triggers it.
+     * Total POS commission for THIS PAYOUT'S SLICE (period_start /
+     * period_end on paid_at). Every payout that carries POS sales in its
+     * window gets its own invoice — changed 2026-08-06 from event-wide
+     * ("one invoice per event") to per-payout after the operator confirmed
+     * each decont has its own invoice.
      *
-     * Returns 0 when the event has no POS sales, or when there's no event
-     * link. Memoized per instance.
+     * Returns 0 when the payout period has no POS sales, or when there's
+     * no event link. Memoized per instance.
      */
     public function getPosCommissionTotal(): float
     {
@@ -1181,9 +1181,8 @@ class MarketplacePayout extends Model
             return $this->posCommissionCache = 0.0;
         }
 
-        // No period bounds — POS is billed event-wide.
         $rows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->buildPosForPayout($this->event, null, null);
+            ->buildPosForPayout($this->event, $this->period_start, $this->period_end);
 
         $total = 0.0;
         foreach ($rows as $row) {
@@ -1193,11 +1192,11 @@ class MarketplacePayout extends Model
     }
 
     /**
-     * The POS invoice for this payout's EVENT (if any), regardless of which
-     * decont actually triggered the generation. Used so the button hides on
-     * every payout of the event after the first emission, and so the other
-     * payouts can show a "Vezi factura POS (Decont #X)" link to the one
-     * that owns it.
+     * @deprecated 2026-08-06. Organizer invoices are per-payout now — use
+     * $this->posInvoice (HasOne on THIS payout). This method returns any
+     * organizer invoice for the same event+organizer combo; retained only
+     * for external tooling that may still probe it. New code paths must
+     * not use it.
      */
     public function getEventPosInvoice(): ?\App\Models\Invoice
     {
@@ -1218,33 +1217,29 @@ class MarketplacePayout extends Model
      * Per-ticket-type aggregation of commission for refund items where the
      * commission WAS returned to the customer (`commission_refunded = true`).
      * Marketplace lost that commission via the Stripe refund — it bills the
-     * organizer for it on the unified "Factură organizator". Item status is
-     * 'refunded' (per-item flag — the parent request may be partially or
-     * fully refunded). Scoped to this payout's event + organizer.
+     * organizer for it on this payout's organizer invoice.
+     *
+     * Scoped strictly to refund_requests that are LINKED TO THIS PAYOUT via
+     * `marketplace_payout_id`. This changed on 2026-08-06 from event-wide
+     * to per-payout after the operator confirmed each decont has its own
+     * invoice (see payout 3133 confusion: it showed 30 lei that actually
+     * belonged partly to sibling 3079 and partly to unlinked refund_items).
+     * If the linkage on a real refund is missing, backfill it with
+     * `syncIncludedRefunds([...])` on the target payout instead of
+     * widening the scope here.
      *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
      */
-    public function getRefundedCommissionRowsForEvent(): array
+    public function getRefundedCommissionRowsForPayout(): array
     {
         if (!$this->event_id || !$this->marketplace_organizer_id) {
             return [];
         }
 
-        // Filter by event via the ORDER (which always has event_id /
-        // marketplace_event_id), not via the refund_request column.
-        // marketplace_refund_requests.marketplace_event_id is nullable
-        // and legacy refunds were created without it being backfilled,
-        // so a strict `where marketplace_event_id = X` skipped real
-        // refunded commissions. The order is the source of truth.
         $items = \App\Models\MarketplaceRefundItem::query()
             ->whereHas('refundRequest', function ($q) {
-                $q->whereHas('order', function ($oq) {
-                    $oq->where(function ($w) {
-                        $w->where('event_id', $this->event_id)
-                          ->orWhere('marketplace_event_id', $this->event_id);
-                    });
-                })
-                ->where('marketplace_organizer_id', $this->marketplace_organizer_id);
+                $q->where('marketplace_payout_id', $this->id)
+                  ->whereIn('status', ['refunded', 'partially_refunded']);
             })
             ->where('commission_refunded', true)
             ->where('status', 'refunded')
@@ -1283,10 +1278,10 @@ class MarketplacePayout extends Model
      * price (full refunds). Event-wide. Used to decide whether the unified
      * "Factură organizator" should appear even when there are no POS sales.
      */
-    public function getRefundedCommissionTotalForEvent(): float
+    public function getRefundedCommissionTotalForPayout(): float
     {
         $total = 0.0;
-        foreach ($this->getRefundedCommissionRowsForEvent() as $row) {
+        foreach ($this->getRefundedCommissionRowsForPayout() as $row) {
             $total += (float) $row['commission_amount'];
         }
         return round($total, 2);
@@ -1296,23 +1291,25 @@ class MarketplacePayout extends Model
      * Per-ticket-type ONLINE commission for included-mode events. On included
      * mode, the commission was baked into the customer-facing ticket price so
      * the organizer never sent Ambilet the 6% separately at sale time — the
-     * unified organizer invoice recovers it via these lines.
+     * organizer invoice on THIS decont recovers it via these lines.
      *
      * On on_top mode this always returns [] because online commission on
      * those events is billed to the marketplace_client (general client) via
      * a separate invoice, not to the organizer.
      *
-     * Event-wide slice (no period bounds) — the organizer invoice covers the
-     * whole event, not just this decont, so all valid online tickets on the
-     * event contribute regardless of which decont holds them.
+     * Scoped to THIS PAYOUT'S PERIOD (paid_at bounds) via
+     * SalesBreakdownService::build with excludePos:true — so a decont only
+     * carries commission from tickets sold in its own slice of time.
+     * Changed on 2026-08-06 from event-wide to per-payout after the operator
+     * confirmed each decont has its own invoice.
      *
-     * Scoped by SalesBreakdownService::build with excludePos:true, so
-     * partially_refunded orders' still-valid tickets are included and the
-     * refunded ticket itself is excluded (via the 'valid'/'used' filter).
+     * partially_refunded orders' still-valid tickets are included (via the
+     * PAID_ORDER_STATUSES constant); refunded tickets themselves are excluded
+     * (via the 'valid'/'used' ticket-status filter inside the service).
      *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
      */
-    public function getOnlineIncludedCommissionRowsForEvent(): array
+    public function getOnlineIncludedCommissionRowsForPayout(): array
     {
         if (!$this->event_id || !$this->event) {
             return [];
@@ -1325,7 +1322,7 @@ class MarketplacePayout extends Model
         }
 
         $bd = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->build($this->event, null, null, excludePos: true);
+            ->build($this->event, $this->period_start, $this->period_end, excludePos: true, dateColumn: 'paid_at');
 
         $result = [];
         foreach (($bd['per_type'] ?? []) as $row) {
@@ -1352,30 +1349,37 @@ class MarketplacePayout extends Model
         return $result;
     }
 
-    public function getOnlineIncludedCommissionTotalForEvent(): float
+    public function getOnlineIncludedCommissionTotalForPayout(): float
     {
         $total = 0.0;
-        foreach ($this->getOnlineIncludedCommissionRowsForEvent() as $row) {
+        foreach ($this->getOnlineIncludedCommissionRowsForPayout() as $row) {
             $total += (float) $row['commission_amount'];
         }
         return round($total, 2);
     }
 
     /**
-     * Per-ticket-type commission Ambilet KEPT from partial refunds where the
+     * Per-ticket-type commission Ambilet KEPT from refunds where the
      * operator chose "fara taxa" (`commission_refunded=false`). Those cases
      * mean the customer got only the face value back, and Ambilet retained
-     * the commission portion from the processor — so that commission is
-     * already in Ambilet's treasury.
+     * the commission portion from the processor.
      *
-     * The unified organizer invoice SUBTRACTS this total (as a negative
-     * line) because otherwise Ambilet would be billing the organizer for
-     * commission that Ambilet already collected. See PAY-WIS2QBQ2-3254
-     * for the concrete case: 1 × 10.20 kept from a partial-refund order.
+     * Depending on commission mode, this total shows up on a different
+     * invoice line:
+     *   - included: SUBTRACTED from the organizer invoice (Ambilet already
+     *     holds the money — billing the organizer would double-charge).
+     *     See PAY-WIS2QBQ2-3254 (10.20 storno line).
+     *   - on_top:   ADDED to the general_client invoice as extra Ambilet
+     *     revenue Ambilet earned by keeping the commission at refund time.
+     *     See PAY-WF8XUUZ9-3256 (8 lei kept added on top of 103 base).
+     *
+     * Scoped strictly to refund_requests LINKED TO THIS PAYOUT via
+     * `marketplace_payout_id`. Changed 2026-08-06 from event-wide to per-
+     * payout after the operator confirmed each decont has its own invoice.
      *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
      */
-    public function getKeptCommissionRowsForEvent(): array
+    public function getKeptCommissionRowsForPayout(): array
     {
         if (!$this->event_id || !$this->marketplace_organizer_id) {
             return [];
@@ -1383,13 +1387,8 @@ class MarketplacePayout extends Model
 
         $items = \App\Models\MarketplaceRefundItem::query()
             ->whereHas('refundRequest', function ($q) {
-                $q->whereHas('order', function ($oq) {
-                    $oq->where(function ($w) {
-                        $w->where('event_id', $this->event_id)
-                          ->orWhere('marketplace_event_id', $this->event_id);
-                    });
-                })
-                ->where('marketplace_organizer_id', $this->marketplace_organizer_id);
+                $q->where('marketplace_payout_id', $this->id)
+                  ->whereIn('status', ['refunded', 'partially_refunded']);
             })
             ->where('commission_refunded', false)
             ->where('status', 'refunded')
@@ -1425,10 +1424,10 @@ class MarketplacePayout extends Model
         return array_values($byType);
     }
 
-    public function getKeptCommissionTotalForEvent(): float
+    public function getKeptCommissionTotalForPayout(): float
     {
         $total = 0.0;
-        foreach ($this->getKeptCommissionRowsForEvent() as $row) {
+        foreach ($this->getKeptCommissionRowsForPayout() as $row) {
             $total += (float) $row['commission_amount'];
         }
         return round($total, 2);
@@ -1470,7 +1469,7 @@ class MarketplacePayout extends Model
         }
 
         $commission = round((float) $this->getCommissionExclPos(), 2);
-        $kept = round((float) $this->getKeptCommissionTotalForEvent(), 2);
+        $kept = round((float) $this->getKeptCommissionTotalForPayout(), 2);
 
         return [
             'is_on_top' => true,
@@ -1506,9 +1505,9 @@ class MarketplacePayout extends Model
         $isIncluded = $mode !== 'added_on_top';
 
         $pos = $this->getPosCommissionTotal();
-        $refunded = $this->getRefundedCommissionTotalForEvent();
-        $online = $isIncluded ? $this->getOnlineIncludedCommissionTotalForEvent() : 0.0;
-        $kept = $isIncluded ? $this->getKeptCommissionTotalForEvent() : 0.0;
+        $refunded = $this->getRefundedCommissionTotalForPayout();
+        $online = $isIncluded ? $this->getOnlineIncludedCommissionTotalForPayout() : 0.0;
+        $kept = $isIncluded ? $this->getKeptCommissionTotalForPayout() : 0.0;
 
         $total = round($pos + $refunded + $online - $kept, 2);
 
@@ -1710,7 +1709,7 @@ class MarketplacePayout extends Model
                 $steps[] = [
                     'key' => 'generate_invoice_organizer',
                     'label' => 'Generează factura organizator',
-                    'done' => $this->getEventPosInvoice() !== null,
+                    'done' => $this->posInvoice !== null,
                     'hint' => $hint,
                 ];
             }

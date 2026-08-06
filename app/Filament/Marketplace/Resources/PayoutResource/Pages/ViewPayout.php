@@ -771,7 +771,7 @@ class ViewPayout extends ViewRecord
                     $keptRowsForGeneralClient = [];
                     if ($isGeneralClient && ($payout->commission_mode === 'added_on_top'
                         || $payout->event?->getEffectiveCommissionMode() === 'added_on_top')) {
-                        $keptRowsForGeneralClient = $payout->getKeptCommissionRowsForEvent();
+                        $keptRowsForGeneralClient = $payout->getKeptCommissionRowsForPayout();
                         foreach ($keptRowsForGeneralClient as $row) {
                             $keptCommission += (float) ($row['commission_amount'] ?? 0);
                         }
@@ -991,51 +991,23 @@ class ViewPayout extends ViewRecord
                         $parts[] = 'minus comision reținut din rambursări parțiale (rămâne în vistieria Ambilet): −' . $fmt($preview['kept']);
                     }
                     $breakdown = !empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '';
-                    return 'Se va genera o singură factură către organizator pentru toate comisioanele datorate pe acest eveniment: '
+                    return 'Se va genera o factură către organizator pentru comisioanele datorate pe acest decont: '
                         . $fmt($preview['total']) . $breakdown
-                        . '. După emitere, butonul dispare de pe toate deconturile evenimentului.';
+                        . '. Facturile organizator sunt emise per decont — dacă evenimentul mai are alte deconturi, fiecare are propria factură.';
                 })
-                // Bill ONCE per event: as soon as any decont of this event has
-                // emitted the organizer invoice, hide the button on every
-                // sibling decont too. The invoice is event-wide (covers POS +
-                // online-included + refunded − kept commissions across the
-                // event's whole life), so a second one would double-bill.
-                // Operators can still reach the emitted invoice via the
-                // "Vezi factura organizator (Decont #X)" cross-link below.
-                ->visible(fn () => $this->record->getEventPosInvoice() === null
+                // Bill ONCE per PAYOUT — each decont has its own invoice
+                // (changed 2026-08-06). Previously the invoice was event-wide
+                // and hiding the button on siblings was a guard against
+                // double-bill; now each decont's slice is scoped by
+                // period/marketplace_payout_id so a per-payout invoice is
+                // the natural unit.
+                ->visible(fn () => $this->record->posInvoice === null
                     && $this->record->isEventFinished()
                     && ($this->record->getOrganizerInvoicePreview()['total'] ?? 0) > 0.01
                     && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $this->generatePosInvoice();
                 }),
-
-            // When the organizer invoice was emitted on ANOTHER decont of the
-            // same event, surface a one-click jump so the operator can see /
-            // manage it without hunting through deconts.
-            Actions\Action::make('view_event_organizer_invoice_elsewhere')
-                ->label(function () {
-                    $inv = $this->record->getEventPosInvoice();
-                    $payoutId = $inv?->marketplace_payout_id;
-                    return $payoutId
-                        ? "Vezi factura organizator (Decont #{$payoutId})"
-                        : 'Vezi factura organizator';
-                })
-                ->icon('heroicon-o-arrow-top-right-on-square')
-                ->color('gray')
-                ->visible(function () {
-                    $inv = $this->record->getEventPosInvoice();
-                    return $inv !== null
-                        && $inv->marketplace_payout_id !== $this->record->id;
-                })
-                ->url(function () {
-                    $inv = $this->record->getEventPosInvoice();
-                    if (!$inv) return null;
-                    // Link to the decont that owns the organizer invoice — from
-                    // there the operator can view/download/send through the
-                    // existing organizer-invoice group actions.
-                    return PayoutResource::getUrl('view', ['record' => $inv->marketplace_payout_id]);
-                }, shouldOpenInNewTab: true),
 
             Actions\ActionGroup::make([
                 Actions\Action::make('view_invoice_pos')
@@ -1156,9 +1128,9 @@ class ViewPayout extends ViewRecord
         // after the event has finished and no prior organizer invoice exists.
         $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
             ->buildPosForPayout($payout->event, null, null);
-        $refundedRows = $payout->getRefundedCommissionRowsForEvent();
-        $onlineIncludedRows = $payout->getOnlineIncludedCommissionRowsForEvent();
-        $keptRows = $payout->getKeptCommissionRowsForEvent();
+        $refundedRows = $payout->getRefundedCommissionRowsForPayout();
+        $onlineIncludedRows = $payout->getOnlineIncludedCommissionRowsForPayout();
+        $keptRows = $payout->getKeptCommissionRowsForPayout();
 
         if (empty($posRows) && empty($refundedRows) && empty($onlineIncludedRows) && empty($keptRows)) {
             Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
