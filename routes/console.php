@@ -1113,3 +1113,10 @@ Schedule::job(new \App\Jobs\Shorts\AggregateShortAnalyticsJob)
     ->dailyAt('03:50')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
+
+// Archives expired shorts (stories included) and external embeds whose source
+// was deleted. Hourly: a broken frame in the middle of an infinite feed is
+// invisible to us and obvious to the viewer, and nobody reports it.
+Schedule::job(new \App\Jobs\Shorts\CheckShortHealthJob)
+    ->hourly()
+    ->withoutOverlapping();

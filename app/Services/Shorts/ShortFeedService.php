@@ -147,6 +147,9 @@ class ShortFeedService
     {
         $query = Short::query()
             ->published()
+            // Stories live in their own tray, played tap-through; mixing them
+            // into infinite scroll would break both surfaces (B8).
+            ->excludingStories()
             // event.venue is loaded because the geo signal and the "nearby"
             // segment both read the city off the venue.
             ->with(['owner', 'event.venue', 'captions']);

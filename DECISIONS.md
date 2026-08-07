@@ -854,3 +854,77 @@ eager-loadează.
 care nu se vede la un test cu un singur short.
 
 **Impact.** Testat în ambele direcții (încărcat → track-uri, neîncărcat → gol).
+
+---
+
+## D-054 — Un story E un short, nu un model separat
+
+**Context.** B8 cere stories efemere de 24h.
+
+**Alegere.** `shorts.is_story` + `expires_at`. `scopeStories()` cere expirare validă —
+un story fără `expires_at` nu e story.
+
+**Alternative.** Tabel separat — ar fi însemnat duplicarea redării, telemetriei, moderării
+și a întregului pipeline video odată cu el, pentru o diferență care e o fereastră de timp.
+
+**Impact.** Story-urile moștenesc gratis tot ce are un short. Costul: trebuie **excluse
+explicit** din feed-ul principal, ceea ce e o linie ușor de uitat — de aceea are test
+dedicat (vezi D-055).
+
+---
+
+## D-055 — Un patch aplicat pe o linie mutată = eșec tăcut
+
+**Context.** Excluderea story-urilor din feed-ul principal a fost adăugată printr-o
+înlocuire de text în `baseQuery()`. O modificare din Faza 8 mutase linia pe care se baza
+patch-ul, deci înlocuirea n-a produs niciun efect — și n-a raportat nimic.
+
+**Ce a prins-o.** `test_stories_stay_out_of_the_main_feed`. Fără el, story-urile ar fi
+apărut în infinite scroll în producție, iar tava și feed-ul s-ar fi stricat amândouă.
+
+**Concluzie păstrată aici pentru că se repetă:** testele de fază nu sunt formalitate —
+sunt singurul lucru care prinde o editare care a raportat succes fără să facă nimic.
+
+---
+
+## D-056 — Colecțiile fără marketplace sunt editoriale, nu orfane
+
+**Context.** `short_collections.marketplace_client_id` e nullable.
+
+**Alegere.** `null` = colecție editorială, vizibilă pe **orice** marketplace; cu valoare =
+vizibilă doar acolo. `scopeForClient()` face `whereNull OR = clientId`.
+
+**Alternative.** Tratarea lui `null` ca „neatribuită, deci ascunsă" — atunci curatorierea
+centrală („Weekend în București") n-ar avea unde să existe.
+
+**Impact.** Curatorierea traversează tenanți prin definiție, deci resursa Filament stă
+doar în core admin. Testat pe toate patru combinațiile.
+
+---
+
+## D-057 — Tava de stories vine grupată pe owner, cu numărul de segmente
+
+**Context.** Tava randează un avatar per owner; tap-ul redă story-urile acelui owner în ordine.
+
+**Alegere.** `GET tenant-client/stories` întoarce direct grupurile, fiecare cu `count`.
+
+**Alternative.** Listă plată — clientul ar trebui să grupeze și să numere singur, adică să
+reimplementeze regula pe fiecare platformă.
+
+**Impact.** Contractul reflectă interfața reală.
+
+---
+
+## D-058 — O eroare de rețea NU înseamnă „video șters"
+
+**Context.** `CheckShortHealthJob` arhivează embed-urile externe moarte.
+
+**Alegere.** Doar un `404` explicit contează ca mort. Orice excepție (timeout, DNS,
+conexiune refuzată) întoarce `false`.
+
+**Alternative.** Tratarea oricărui eșec ca moarte — un blip de rețea ar arhiva în masă
+short-uri perfect sănătoase, iar recuperarea ar fi manuală.
+
+**Impact.** Testat cu o excepție de conexiune: short-ul rămâne publicat. Sonda folosită
+e endpoint-ul de thumbnail YouTube — gratuit și fără autentificare. `TODO(owner)`: o sondă
+echivalentă pentru IG/FB, când apare tokenul Meta.

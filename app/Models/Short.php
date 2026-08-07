@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -82,6 +83,7 @@ class Short extends Model
         'content_flags',
         'is_generated',
         'render_job_id',
+        'is_story',
     ];
 
     protected $casts = [
@@ -90,6 +92,7 @@ class Short extends Model
         'ready' => 'boolean',
         'is_featured' => 'boolean',
         'is_generated' => 'boolean',
+        'is_story' => 'boolean',
         'trending_score' => 'decimal:3',
         'duration' => 'integer',
         'width' => 'integer',
@@ -170,6 +173,12 @@ class Short extends Model
         return $this->hasMany(ShortCaption::class);
     }
 
+    public function collections(): BelongsToMany
+    {
+        return $this->belongsToMany(ShortCollection::class, 'short_collection_items')
+            ->withPivot('sort');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Scopes
@@ -204,6 +213,27 @@ class Short extends Model
     public function scopeFeatured(Builder $query): Builder
     {
         return $query->where('is_featured', true);
+    }
+
+    /**
+     * Live stories only. A story without an expiry would just be a short with a
+     * flag, so the window is part of the definition, not an optional extra.
+     */
+    public function scopeStories(Builder $query): Builder
+    {
+        return $query
+            ->where('is_story', true)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>', now());
+    }
+
+    /**
+     * The regular feed is not the stories tray — a story belongs in the tray at
+     * the top, played tap-through, not mixed into infinite scroll.
+     */
+    public function scopeExcludingStories(Builder $query): Builder
+    {
+        return $query->where('is_story', false);
     }
 
     /*

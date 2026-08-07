@@ -4130,3 +4130,14 @@ Route::prefix('marketplace-client/customer/follows')
         Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\FollowsController::class, 'toggle'])
             ->name('api.marketplace-client.customer.follows.toggle');
     });
+
+// Shorts — colecții editoriale (B7) + tava de stories (B8). Citiri publice, ca
+// restul feed-ului: navigarea se întâmplă înainte de login.
+Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+    Route::get('/short-collections', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'index'])
+        ->name('api.tenant-client.short-collections.index');
+    Route::get('/short-collections/{slug}', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'show'])
+        ->name('api.tenant-client.short-collections.show');
+    Route::get('/stories', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'stories'])
+        ->name('api.tenant-client.stories');
+});

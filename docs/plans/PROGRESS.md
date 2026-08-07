@@ -31,9 +31,12 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   seen-store durabil + explorare în ranker, nudge-uri comportamentale opt-in.
 - **Faza 8** — auto-generare din media evenimentului (cu „poster short" ca MVP),
   captions, și pagina de analytics pentru organizator cu pâlnie + retenție.
-  **94 de teste, 247 aserțiuni, toate verzi.**
+- **Faza 9** — colecții editoriale, stories efemere (grupate pe owner, excluse din
+  feed-ul principal) și igiena feed-ului: expirare + detecția embed-urilor moarte.
+  **103 teste, 271 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 9 — collections (B7) + stories (B8).
+**Urmează.** Faza 10 (Val 3) — promovate (D3), drepturi/licențiere (D7), guardrails
+de cost (D8), UGC (B9), A/B pe cover (B10).
 
 **Blocaje / de știut.**
 
@@ -337,10 +340,40 @@ rezolvă din container, deci devenea o eroare de boot pe orice mediu fără chei
 practică — containerul leagă `NullVideoRenderer` și rulează poster short. Driverul de
 transcriere pentru captions e tot un `TODO(owner)`.
 
-## Faza 9 — Collections + Stories ⏳
+## Faza 9 — Collections + Stories ✅
 
-- [ ] B7 `short_collections` + items + API
-- [ ] B8 `is_story` + `GET tenant-client/stories` + `CheckShortHealthJob`
+**B7 — colecții editoriale**
+- [x] `short_collections` + `short_collection_items` (ordine în pivot) + `ShortCollection`
+- [x] Slug derivat din titlu când lipsește
+- [x] Scop: o colecție fără `marketplace_client_id` e editorială și se vede pe orice
+      marketplace; una cu client se vede doar acolo
+- [x] `GET tenant-client/short-collections` (cu preview per colecție, ca ecranul de
+      discovery să randeze rail-uri într-un singur drum) + `GET .../{slug}`
+- [x] Doar short-uri publicate intră în colecție
+- [x] Resursă Filament în core admin (colecțiile traversează tenanți prin definiție)
+
+**B8 — stories efemere**
+- [x] `shorts.is_story` — un story **este** un short cu expirare; un tabel separat ar
+      fi însemnat duplicarea redării, telemetriei și moderării odată cu el
+- [x] `scopeStories()` cere expirare validă: un story fără `expires_at` nu e story
+- [x] `GET tenant-client/stories` — grupat pe owner, cu numărul de segmente, exact
+      cum randează tava
+- [x] Story-urile sunt **excluse** din feed-ul principal — tava se joacă tap-through,
+      nu în infinite scroll
+
+**Igienă (§14)**
+- [x] `CheckShortHealthJob` orar — arhivează ce a trecut de `expires_at` (inclusiv
+      stories) și embed-urile externe al căror video a fost șters
+- [x] O eroare de rețea NU e tratată ca „video mort" — un blip nu are voie să
+      arhiveze un short sănătos
+
+- [x] Teste: 9 (slug + ordine, doar publicate, scoping, grupare stories, excluderea
+      din feed, expirare, embed mort, blip de rețea, resursă Filament)
+
+> **Bug prins de teste:** filtrul de stories nu se aplicase pe `baseQuery()` —
+> o modificare de fază anterioară mutase linia pe care se baza patch-ul, iar
+> story-urile ar fi apărut în feed. Fără testul „stories stay out of the main feed"
+> ar fi ajuns în producție tăcut.
 
 ## Faza 10 — Val 3 (bani & compliance) ⏳
 
