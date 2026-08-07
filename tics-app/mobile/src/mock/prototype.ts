@@ -239,7 +239,7 @@ export const VEN={
   (function(){const SCMAP={coldplay:'concert',celestial:'party',swan:'theatre',salina:'cave',atv:'nature',wine:'wine',nordvale:'festival',smiley:'concert',untold:'festival',delia:'party'};
     Object.keys(SCMAP).forEach(k=>{if(EV[k])EV[k].sc=SCMAP[k];if(TICS[k])TICS[k].sc=SCMAP[k];});
     FEST.sc='festival';Object.values(VEN).forEach(v=>v.sc='city');
-    export const CATSC={'Concerte':'concert','Experiențe':'nature','Teatru':'theatre','Festival':'festival','Stand-up':'standup','Petrecere':'party'};
+    const CATSC={'Concerte':'concert','Experiențe':'nature','Teatru':'theatre','Festival':'festival','Stand-up':'standup','Petrecere':'party'};
     if(typeof CATPOOLS!=='undefined')CATPOOLS.forEach(c=>c.pool.forEach(it=>{if(!it.sc)it.sc=CATSC[c.name]||'concert';}));
     Object.values(EV).forEach(e=>{if(e.gallery)e.gallery=galFor(e);});
     Object.values(TICS).forEach(t=>{if(t.gallery)t.gallery=galFor(t);});

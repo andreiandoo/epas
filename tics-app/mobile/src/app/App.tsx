@@ -7,7 +7,7 @@ import { IconSprite } from '../design/icons/Icon';
 import { useSession } from '../store/session';
 import { LoginScreen } from '../features/auth/LoginScreen';
 import { ChooserScreen } from '../features/identity/ChooserScreen';
-import { ClientShell } from '../features/client/ClientShell';
+import { ClientRoot } from '../features/client/ClientRoot';
 import { OrgShell } from '../features/org/OrgShell';
 import { LeisureShell } from '../features/leisure/LeisureShell';
 
@@ -25,7 +25,7 @@ export function App() {
   let body: React.ReactNode;
   if (!authed) body = <LoginScreen />;
   else if (mode === 'chooser') body = <ChooserScreen />;
-  else if (mode === 'client') body = <ClientShell />;
+  else if (mode === 'client') body = <ClientRoot />;
   else body = account === 'venue' ? <LeisureShell /> : <OrgShell />;
 
   return (

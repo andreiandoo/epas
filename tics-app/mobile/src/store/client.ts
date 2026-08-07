@@ -1,0 +1,109 @@
+/* =========================================================
+   Starea clientului — oglindeste obiectul `ST` din client-app.html
+   (§12.3: "replica structura de stare si fluxurile").
+   Valorile initiale sunt copiate din prototip, ca ecranele sa porneasca
+   in exact aceeasi stare ca macheta.
+   ========================================================= */
+import { create } from 'zustand';
+import { ST as PROTO_ST } from '../mock/prototype';
+
+type ProtoSt = {
+  prefs: string[];
+  prefsSel: string[];
+  ev: string;
+  seats: string[];
+  obStep: number;
+  cart: { protect: boolean; cultural: boolean; discount: number; nameOnTicket: boolean };
+  balance: number;
+  points: number;
+  stayPin: number;
+  expDate: number;
+  expDay: number;
+  addons: Record<string, boolean>;
+  calDay: number;
+  fStage: number;
+  fDay: string;
+  saved: string[];
+  revRating: number;
+  revTab: number;
+  rateStars: number;
+};
+
+const seed = PROTO_ST as unknown as ProtoSt;
+
+type ClientState = ProtoSt & {
+  /** contoarele de bilete de pe ecranul de tipuri (ST._ttCounts din prototip) */
+  ttCounts: Record<string, number[]>;
+  toast: string | null;
+
+  toggleSaved: (id: string) => void;
+  isSaved: (id: string) => boolean;
+  setEv: (id: string) => void;
+  toggleSeat: (id: string) => void;
+  setTtCount: (evId: string, idx: number, delta: number, len: number) => void;
+  togglePref: (p: string) => void;
+  setObStep: (n: number) => void;
+  toggleAddon: (key: string) => void;
+  setCart: (patch: Partial<ProtoSt['cart']>) => void;
+  showToast: (m: string) => void;
+};
+
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+export const useClient = create<ClientState>((set, get) => ({
+  prefs: [...seed.prefs],
+  prefsSel: [...seed.prefsSel],
+  ev: seed.ev,
+  seats: [...seed.seats],
+  obStep: seed.obStep,
+  cart: { ...seed.cart },
+  balance: seed.balance,
+  points: seed.points,
+  stayPin: seed.stayPin,
+  expDate: seed.expDate,
+  expDay: seed.expDay,
+  addons: { ...seed.addons },
+  calDay: seed.calDay,
+  fStage: seed.fStage,
+  fDay: seed.fDay,
+  saved: [...seed.saved],
+  revRating: seed.revRating,
+  revTab: seed.revTab,
+  rateStars: seed.rateStars,
+
+  ttCounts: {},
+  toast: null,
+
+  toggleSaved: (id) =>
+    set((s) => ({ saved: s.saved.includes(id) ? s.saved.filter((x) => x !== id) : [...s.saved, id] })),
+  isSaved: (id) => get().saved.includes(id),
+  setEv: (ev) => set({ ev }),
+
+  toggleSeat: (id) =>
+    set((s) => ({ seats: s.seats.includes(id) ? s.seats.filter((x) => x !== id) : [...s.seats, id] })),
+
+  /** Prototip: primul tip de bilet porneste cu 1, restul cu 0. */
+  setTtCount: (evId, idx, delta, len) =>
+    set((s) => {
+      const cur = s.ttCounts[evId] ?? Array.from({ length: len }, (_, i) => (i === 0 ? 1 : 0));
+      const next = [...cur];
+      next[idx] = Math.max(0, (next[idx] || 0) + delta);
+      return { ttCounts: { ...s.ttCounts, [evId]: next } };
+    }),
+
+  togglePref: (p) =>
+    set((s) => ({ prefsSel: s.prefsSel.includes(p) ? s.prefsSel.filter((x) => x !== p) : [...s.prefsSel, p] })),
+  setObStep: (obStep) => set({ obStep }),
+  toggleAddon: (key) => set((s) => ({ addons: { ...s.addons, [key]: !s.addons[key] } })),
+  setCart: (patch) => set((s) => ({ cart: { ...s.cart, ...patch } })),
+
+  showToast: (toast) => {
+    set({ toast });
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => set({ toast: null }), 2200);
+  },
+}));
+
+/** Contoarele curente pentru un eveniment, cu valorile implicite din prototip. */
+export const ttCountsFor = (evId: string, len: number) =>
+  useClient.getState().ttCounts[evId] ?? Array.from({ length: len }, (_, i) => (i === 0 ? 1 : 0));

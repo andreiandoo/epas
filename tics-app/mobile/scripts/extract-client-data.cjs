@@ -78,9 +78,13 @@ for (let i = 0; i < block.length; i++) {
   }
 }
 
-/* Exportam declaratiile de nivel superior. `const A=..,B=..` primeste un singur
-   `export` in fata — valid in TS pentru declaratii multiple pe aceeasi linie. */
-const exported = kept.map((l) => l.replace(/^(\s*)(const|let|function)\s/, '$1export $2 '));
+/* Exportam DOAR declaratiile de nivel superior. In prototip acelea sunt
+   indentate cu exact 2 spatii (corpul IIFE-ului principal); orice indentare mai
+   mare inseamna o declaratie dintr-un bloc interior, unde `export` ar fi
+   ilegal si ar rupe build-ul.
+   `const A=..,B=..` primeste un singur `export` — valid pentru declaratii
+   multiple pe aceeasi linie. */
+const exported = kept.map((l) => l.replace(/^ {2}(const|let|function)\s/, '  export $1 '));
 
 const header = `/* =========================================================
    CLIENT — DATE SI HELPERE VIZUALE, PORTATE VERBATIM din
