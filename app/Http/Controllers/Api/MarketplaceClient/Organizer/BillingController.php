@@ -197,68 +197,34 @@ class BillingController extends BaseController
 
         $dbCount = $dbQuery->count();
 
-        if ($dbCount > 0) {
-            $dbInvoices = $dbQuery
-                ->skip(($page - 1) * $perPage)
-                ->take($perPage)
-                ->get()
-                ->map(fn (Invoice $inv) => [
-                    'id' => $inv->id,
-                    'number' => $inv->number,
-                    'date' => $inv->issue_date?->format('Y-m-d'),
-                    'description' => $inv->description,
-                    'amount' => (float) $inv->amount,
-                    'status' => $inv->status === 'outstanding' ? 'pending' : $inv->status,
-                ])
-                ->values()
-                ->toArray();
-
-            return ['data' => $dbInvoices, 'total' => $dbCount];
+        // Only real DB-persisted invoices are shown to the organizer. The
+        // former "synthesize INV-{organizer}-{yearmonth} from order history"
+        // fallback (removed 2026-08-07) was a stopgap from when invoices
+        // weren't persisted yet — it kept generating ghost rows on every
+        // request, and after the 2026 bulk delete of legacy INV- invoices it
+        // was resurrecting them here so they still appeared in the ambilet
+        // organizer portal even though core.tixello.com no longer listed
+        // them. Return empty when there's nothing real to show.
+        if ($dbCount === 0) {
+            return ['data' => [], 'total' => 0];
         }
 
-        // Fallback: generate from order history
-        $allOrders = $organizer->orders()
-            ->where('status', 'completed')
-            ->orderByDesc('created_at')
-            ->get();
+        $dbInvoices = $dbQuery
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get()
+            ->map(fn (Invoice $inv) => [
+                'id' => $inv->id,
+                'number' => $inv->number,
+                'date' => $inv->issue_date?->format('Y-m-d'),
+                'description' => $inv->description,
+                'amount' => (float) $inv->amount,
+                'status' => $inv->status === 'outstanding' ? 'pending' : $inv->status,
+            ])
+            ->values()
+            ->toArray();
 
-        $invoices = [];
-        $grouped = $allOrders->groupBy(function ($order) {
-            return $order->paid_at ? $order->paid_at->format('Y-m') : $order->created_at->format('Y-m');
-        });
-
-        $invoiceId = 1;
-        foreach ($grouped as $month => $orders) {
-            $totalAmount = $orders->sum('total');
-            $commissionRate = $organizer->getEffectiveCommissionRate();
-            $commissionAmount = round($totalAmount * $commissionRate / 100, 2);
-
-            $monthDate = Carbon::parse($month . '-01');
-            $isPaid = $monthDate->endOfMonth()->lt(Carbon::now()->subMonth());
-            $invoiceStatus = $isPaid ? 'paid' : 'pending';
-
-            if ($status && $status !== 'all' && $invoiceStatus !== $status) {
-                continue;
-            }
-
-            $invoices[] = [
-                'id' => $invoiceId,
-                'number' => 'INV-' . $organizer->id . '-' . $monthDate->format('Ym'),
-                'date' => $monthDate->format('Y-m-d'),
-                'description' => 'Comision vânzări ' . $monthDate->format('F Y'),
-                'amount' => $commissionAmount,
-                'status' => $invoiceStatus,
-            ];
-            $invoiceId++;
-        }
-
-        $total = count($invoices);
-        $offset = ($page - 1) * $perPage;
-
-        return [
-            'data' => array_slice($invoices, $offset, $perPage),
-            'total' => $total,
-        ];
+        return ['data' => $dbInvoices, 'total' => $dbCount];
     }
 
     /**
@@ -322,56 +288,11 @@ class BillingController extends BaseController
             ];
         }
 
-        // Fallback: generate from order history
-        $invoices = $this->getOrganizerInvoices($organizer, null, 100, 1);
-
-        foreach ($invoices['data'] as $invoice) {
-            if ($invoice['id'] === $invoiceId) {
-                $monthStr = substr($invoice['number'], -6);
-                $year = substr($monthStr, 0, 4);
-                $month = substr($monthStr, 4, 2);
-                $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-                $endDate = Carbon::create($year, $month, 1)->endOfMonth();
-
-                $orders = $organizer->orders()
-                    ->where('status', 'completed')
-                    ->whereBetween('created_at', [$startDate, $endDate])
-                    ->get();
-
-                $totalAmount = $orders->sum('total');
-                $commissionRate = $organizer->getEffectiveCommissionRate();
-                $commissionAmount = round($totalAmount * $commissionRate / 100, 2);
-                $vatRate = $marketplace->vat_payer ? 19 : 0;
-                $vatAmount = $vatRate > 0 ? round($commissionAmount * $vatRate / 100, 2) : 0;
-
-                return [
-                    'id' => $invoice['id'],
-                    'number' => $invoice['number'],
-                    'date' => $invoice['date'],
-                    'due_date' => Carbon::parse($invoice['date'])->endOfMonth()->format('Y-m-d'),
-                    'status' => $invoice['status'],
-                    'issuer' => $this->buildIssuerData($marketplace),
-                    'client' => [
-                        'name' => $organizer->company_name ?? $organizer->name,
-                        'address' => $this->formatAddress($organizer),
-                        'cui' => $organizer->company_tax_id ?? '',
-                    ],
-                    'items' => [
-                        [
-                            'description' => "Comision vânzări bilete ({$commissionRate}%)",
-                            'quantity' => $orders->count(),
-                            'price' => $orders->count() > 0 ? round($commissionAmount / $orders->count(), 2) : 0,
-                            'total' => $commissionAmount,
-                        ],
-                    ],
-                    'subtotal' => $commissionAmount,
-                    'vat_rate' => $vatRate,
-                    'vat' => $vatAmount,
-                    'total' => $commissionAmount + $vatAmount,
-                ];
-            }
-        }
-
+        // Synthetic-invoice fallback removed 2026-08-07 — same rationale as
+        // getOrganizerInvoices(): once real invoices are the source of truth,
+        // fabricating a detail view from order history would keep the
+        // deleted INV- ghosts openable via URL guessing. Return null so the
+        // caller yields a clean 404.
         return null;
     }
 
