@@ -34,18 +34,9 @@ class EditOrganizerInvoice extends EditRecord
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Închide'),
 
-            Actions\Action::make('downloadPdf')
-                ->label('Descarcă PDF')
-                ->icon('heroicon-o-arrow-down-tray')
-                ->color('gray')
-                ->visible(function () {
-                    $meta = $this->record->meta ?? [];
-                    return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
-                })
-                ->url(function () {
-                    $meta = $this->record->meta ?? [];
-                    return $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
-                }, shouldOpenInNewTab: true),
+            // "Descarcă PDF" button removed 2026-08-07 — redundant with the
+            // dedicated PDF Proformă / PDF Factură Fiscală buttons that show
+            // for each accounting document actually generated.
 
             Actions\DeleteAction::make()
                 ->label('Șterge factura')
@@ -514,9 +505,16 @@ class EditOrganizerInvoice extends EditRecord
                 ],
             ],
             'lines' => array_map(function ($item) {
+                // New split (2026-08-07): item['name'] = canonical article
+                // title shown as product_name in Oblio; item['description'] =
+                // per-payout event/decont context stored as the article's
+                // description. Legacy items with only 'description' fall
+                // back to using the same text for both (old behaviour).
+                $name = $item['name'] ?? $item['description'] ?? '';
+                $desc = $item['description'] ?? '';
                 return [
-                    'product_name' => $item['description'] ?? '',
-                    'description' => $item['description'] ?? '',
+                    'product_name' => $name,
+                    'description' => $desc,
                     'quantity' => (float) ($item['quantity'] ?? 1),
                     'unit_price' => (float) ($item['price'] ?? $item['unit_price'] ?? 0),
                     'tax_rate' => 19,
@@ -572,12 +570,43 @@ class EditOrganizerInvoice extends EditRecord
                     \Log::info("PDF not yet available for {$result['external_ref']}: {$e->getMessage()}");
                 }
 
+                // When a fiscal invoice is issued and a proforma exists, the
+                // proforma is superseded — delete it from the provider so it
+                // doesn't linger as a shadow document. Only providers that
+                // return supported=true actually perform the delete; others
+                // are logged for manual cleanup.
+                $proformaCleanupNote = '';
+                if ($docType === 'invoice' && !empty($meta['accounting_proforma']['external_ref'])) {
+                    $proformaRef = $meta['accounting_proforma']['external_ref'];
+                    $del = $service->deleteMarketplaceInvoice($marketplace->id, $proformaRef, 'proforma');
+                    if ($del['success'] ?? false) {
+                        // Preserve a stub in meta for audit; drop external_ref/pdf_url
+                        // so the derived "Tip" column flips from proforma → fiscala.
+                        $meta['accounting_proforma_deleted'] = array_merge(
+                            $meta['accounting_proforma'],
+                            ['deleted_at' => now()->toIso8601String()]
+                        );
+                        unset($meta['accounting_proforma']);
+                        $proformaCleanupNote = ' Proforma ' . $proformaRef . ' ștearsă din contabilitate.';
+                    } elseif (($del['supported'] ?? true) === false) {
+                        \Log::info("Proforma cleanup not supported by provider for invoice {$invoice->id}: {$del['message']}");
+                        $proformaCleanupNote = ' Șterge manual proforma ' . $proformaRef . ' din contabilitate.';
+                    } else {
+                        \Log::warning("Proforma cleanup failed for invoice {$invoice->id}", [
+                            'proforma_ref' => $proformaRef,
+                            'error' => $del['message'] ?? 'unknown',
+                        ]);
+                        $proformaCleanupNote = ' Atenție: ștergerea proformei ' . $proformaRef . ' a eșuat (' . ($del['message'] ?? 'necunoscut') . ').';
+                    }
+                }
+
                 $invoice->update(['meta' => $meta]);
 
                 $msg = "Nr. extern: {$result['invoice_number']}";
                 if (!empty($meta[$metaKey]['pdf_url'])) {
                     $msg .= ' — PDF disponibil.';
                 }
+                $msg .= $proformaCleanupNote;
 
                 Notification::make()->success()
                     ->title($docType === 'proforma' ? 'Proformă trimisă' : 'Factură fiscală trimisă')

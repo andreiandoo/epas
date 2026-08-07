@@ -382,17 +382,31 @@ class OrganizerInvoiceResource extends Resource
                     })
                     ->html(),
 
-                Tables\Columns\TextColumn::make('type')
+                // "Tip" reflects the accounting-provider (Oblio) state, not
+                // the local DB `type` — the local type is really "the intended
+                // shape at creation", not what's been submitted. We show:
+                //   - nevalidata: nothing sent to Oblio yet
+                //   - proforma:   sent as proforma (no fiscala yet)
+                //   - fiscala:    sent as fiscala (regardless of prior proforma)
+                Tables\Columns\TextColumn::make('accounting_state')
                     ->label('Tip')
                     ->badge()
+                    ->state(function ($record): string {
+                        $meta = $record->meta ?? [];
+                        if (!empty($meta['accounting']['external_ref'])) return 'fiscala';
+                        if (!empty($meta['accounting_proforma']['external_ref'])) return 'proforma';
+                        return 'nevalidata';
+                    })
                     ->color(fn (string $state): string => match ($state) {
-                        'fiscal' => 'info',
+                        'fiscala' => 'info',
                         'proforma' => 'warning',
+                        'nevalidata' => 'gray',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'fiscal' => 'Fiscală',
+                        'fiscala' => 'Fiscală',
                         'proforma' => 'Proforma',
+                        'nevalidata' => 'Nevalidată',
                         default => $state,
                     }),
 
@@ -468,12 +482,29 @@ class OrganizerInvoiceResource extends Resource
                         'paid' => 'Achitată',
                     ]),
 
-                Tables\Filters\SelectFilter::make('type')
+                Tables\Filters\SelectFilter::make('accounting_state')
                     ->label('Tip')
                     ->options([
-                        'fiscal' => 'Fiscală',
+                        'nevalidata' => 'Nevalidată',
                         'proforma' => 'Proforma',
-                    ]),
+                        'fiscala' => 'Fiscală',
+                    ])
+                    ->query(function (\Illuminate\Database\Eloquent\Builder $q, array $data) {
+                        $value = $data['value'] ?? null;
+                        if (!$value) return;
+                        // meta is JSON in DB; use whereJsonContains-style keys.
+                        // We match by presence/absence of accounting external_ref
+                        // and accounting_proforma external_ref inside meta.
+                        if ($value === 'fiscala') {
+                            $q->whereNotNull('meta->accounting->external_ref');
+                        } elseif ($value === 'proforma') {
+                            $q->whereNull('meta->accounting->external_ref')
+                              ->whereNotNull('meta->accounting_proforma->external_ref');
+                        } elseif ($value === 'nevalidata') {
+                            $q->whereNull('meta->accounting->external_ref')
+                              ->whereNull('meta->accounting_proforma->external_ref');
+                        }
+                    }),
             ])
             ->actions([
                 EditAction::make(),

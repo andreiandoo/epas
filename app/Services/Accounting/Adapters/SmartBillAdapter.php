@@ -389,6 +389,20 @@ class SmartBillAdapter implements AccountingAdapterInterface
     /**
      * {@inheritdoc}
      */
+    public function deleteInvoice(string $externalRef, string $docType = 'invoice'): array
+    {
+        // SmartBill: no known public API delete endpoint. Return unsupported
+        // so callers know to skip cleanup rather than error out.
+        return [
+            'success' => false,
+            'message' => 'Ștergerea automată nu este suportată de acest conector — șterge manual din SmartBill.',
+            'supported' => false,
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {
         if (!$this->authenticated) {

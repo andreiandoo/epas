@@ -267,6 +267,15 @@ class FgoAdapter implements AccountingAdapterInterface
     /**
      * {@inheritdoc}
      */
+    public function deleteInvoice(string $externalRef, string $docType = 'invoice'): array
+    {
+        return [
+            'success' => false,
+            'message' => 'Ștergerea automată nu este suportată de acest conector — șterge manual din FGO.',
+            'supported' => false,
+        ];
+    }
+
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {
         if (!$this->authenticated) {

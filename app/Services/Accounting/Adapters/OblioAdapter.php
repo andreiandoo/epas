@@ -373,6 +373,49 @@ class OblioAdapter implements AccountingAdapterInterface
 
     /**
      * {@inheritdoc}
+     *
+     * Oblio supports deletion of proformas via DELETE /api/docs/proforma.
+     * Fiscal invoices can only be storno-ed (via createCreditNote), not
+     * deleted — trying to delete one would fail server-side; we surface
+     * that as supported=false so the caller knows to skip / use storno.
+     */
+    public function deleteInvoice(string $externalRef, string $docType = 'invoice'): array
+    {
+        if (!$this->authenticated) {
+            return ['success' => false, 'message' => 'Nu este autentificat.', 'supported' => false];
+        }
+        if ($docType !== 'proforma') {
+            return [
+                'success' => false,
+                'message' => 'Oblio nu permite ștergerea facturilor fiscale — folosește storno (createCreditNote).',
+                'supported' => false,
+            ];
+        }
+
+        try {
+            $parts = explode('/', $externalRef);
+            $seriesName = $parts[0] ?? $this->proformaSeriesName;
+            $number = $parts[1] ?? $externalRef;
+
+            $this->apiRequest('DELETE', '/api/docs/proforma', [
+                'cif' => $this->cif,
+                'seriesName' => $seriesName,
+                'number' => $number,
+            ]);
+
+            return ['success' => true, 'message' => 'Proforma ștearsă din Oblio.', 'supported' => true];
+        } catch (\Exception $e) {
+            Log::warning('Oblio deleteInvoice failed', [
+                'error' => $e->getMessage(),
+                'external_ref' => $externalRef,
+                'doc_type' => $docType,
+            ]);
+            return ['success' => false, 'message' => $e->getMessage(), 'supported' => true];
+        }
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {

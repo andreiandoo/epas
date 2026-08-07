@@ -349,6 +349,29 @@ class AccountingService
     }
 
     /**
+     * Delete an invoice / proforma from the accounting provider for a
+     * marketplace client. Returns {success, message, supported} — safe to
+     * call on adapters that don't implement deletion.
+     */
+    public function deleteMarketplaceInvoice(int $marketplaceClientId, string $externalRef, string $docType = 'proforma'): array
+    {
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+        if (!$connector) {
+            return ['success' => false, 'message' => 'Fără conector activ.', 'supported' => false];
+        }
+        try {
+            $auth = json_decode(Crypt::decryptString($connector->auth), true);
+            $adapter = $this->getAdapter($connector->provider, $auth);
+            return $adapter->deleteInvoice($externalRef, $docType);
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage(), 'supported' => true];
+        }
+    }
+
+    /**
      * Get invoice PDF
      */
     public function getInvoicePdf(string $tenantId, string $externalRef): array

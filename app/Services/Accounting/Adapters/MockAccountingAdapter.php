@@ -68,6 +68,15 @@ class MockAccountingAdapter implements AccountingAdapterInterface
         ];
     }
 
+    public function deleteInvoice(string $externalRef, string $docType = 'invoice'): array
+    {
+        return [
+            'success' => true,
+            'message' => "[MOCK] Deleted {$docType} {$externalRef}",
+            'supported' => true,
+        ];
+    }
+
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {
         return [

@@ -728,10 +728,16 @@ class ViewPayout extends ViewRecord
                         : ($payout->invoice_recipient_type ?? 'organizer');
 
                     if ($recipientType === 'general_client') {
+                        // "Client Divers - Persoana Fizică" is the Romanian
+                        // legal-standard name for bulk B2C invoices where the
+                        // buyers are unnamed individuals. Hardcoded because
+                        // this is required by law, not a per-marketplace
+                        // preference. Address and CUI remain blank — OblioAdapter
+                        // treats non-numeric CIF (we send "vanzare online") as B2C.
                         $client = [
-                            'name' => $marketplace->settings['general_invoice_client_name'] ?? 'Client general',
-                            'cui' => $marketplace->settings['general_invoice_client_cui'] ?? '',
-                            'address' => $marketplace->settings['general_invoice_client_address'] ?? '',
+                            'name' => 'Client Divers - Persoana Fizică',
+                            'cui' => '',
+                            'address' => '',
                         ];
                     } else {
                         $client = [
@@ -801,7 +807,7 @@ class ViewPayout extends ViewRecord
                     // accountant expects to see on the printed factură. The
                     // sequence label ("1 din 2") only shows when more than
                     // one decont exists for this event+organizer.
-                    [$description, $itemDescription] = $this->buildGeneralClientInvoiceTexts($payout, $isGeneralClient);
+                    [$description, $itemDescription, $itemName] = $this->buildGeneralClientInvoiceTexts($payout, $isGeneralClient);
 
                     $invoice = Invoice::create([
                         'marketplace_client_id' => $marketplace->id,
@@ -830,7 +836,7 @@ class ViewPayout extends ViewRecord
                             ],
                             'client' => $client,
                             'recipient_type' => $recipientType,
-                            'items' => (function () use ($itemDescription, $commissionSubtotal, $keptCommission, $keptRowsForGeneralClient, $isGeneralClient) {
+                            'items' => (function () use ($itemName, $itemDescription, $commissionSubtotal, $keptCommission, $keptRowsForGeneralClient, $isGeneralClient) {
                                 // Base line: total commission MINUS kept portion so the
                                 // main "Taxa ticketing" reflects only revenue from valid
                                 // tickets. Kept commission gets its own line(s) below
@@ -845,6 +851,7 @@ class ViewPayout extends ViewRecord
                                 $items = [];
                                 if ($baseAmount > 0.005) {
                                     $items[] = [
+                                        'name' => $itemName,
                                         'description' => $itemDescription,
                                         'quantity' => 1,
                                         'unit_price' => $baseAmount,
@@ -861,6 +868,7 @@ class ViewPayout extends ViewRecord
                                             continue;
                                         }
                                         $items[] = [
+                                            'name' => 'Comision reținut din rambursare',
                                             'description' => 'Comision reținut din rambursare bilet(e) "'
                                                 . ($row['ticket_type_name'] ?? 'Bilet') . '"',
                                             'quantity' => $qty,
@@ -1177,6 +1185,7 @@ class ViewPayout extends ViewRecord
             $subtotal += $lineTotal;
 
             $items[] = [
+                'name' => 'Taxa ticketing (POS)',
                 'description' => trim('Prestari servicii invitatii/bilete online acces POS, taxa ticketing '
                     . $contractFragment . $eventFragment),
                 'quantity' => $qty,
@@ -1200,6 +1209,7 @@ class ViewPayout extends ViewRecord
             $subtotal += $lineTotal;
 
             $items[] = [
+                'name' => 'Comision bilet rambursat integral',
                 'description' => trim('Comision pentru bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
                     . '" rambursat integral (comision returnat clientului), taxa ticketing '
                     . $contractFragment . $eventFragment),
@@ -1224,6 +1234,7 @@ class ViewPayout extends ViewRecord
             $subtotal += $lineTotal;
 
             $items[] = [
+                'name' => 'Comision online inclus în preț bilet',
                 'description' => trim('Comision inclus în preț bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
                     . '" vândut online, taxa ticketing '
                     . $contractFragment . $eventFragment),
@@ -1249,6 +1260,7 @@ class ViewPayout extends ViewRecord
             $subtotal -= $lineTotal;
 
             $items[] = [
+                'name' => 'Storno comision reținut din rambursare parțială',
                 'description' => trim('Storno: comision reținut de Ambilet la rambursarea parțială a biletului "'
                     . ($row['ticket_type_name'] ?? 'Bilet')
                     . '" (fără rambursarea comisionului) — deja în vistieria Ambilet, se scade din total, taxa ticketing '
@@ -1492,27 +1504,37 @@ class ViewPayout extends ViewRecord
             . ' cu referinta ' . $reference
             . $headerEventFragment;
 
-        // Line item text: only emitted in the general-client phrasing the
-        // user defined. For organizer-recipient invoices we keep the old
-        // short "Comision servicii ticketing - REF" line, since the
-        // accountant context is different there.
+        // Line item split into article NAME (product_name in Oblio) and
+        // ARTICLE DESCRIPTION (description field). This keeps the invoice
+        // readable — the accountant sees a single canonical article name
+        // repeated across invoices, while the per-payout event context lives
+        // in the description underneath.
+        // For general_client (public sale): user-defined phrasing.
+        // For organizer-recipient: shorter "Comision servicii ticketing - REF".
+        // Returns a 3-tuple: [header_description, item_name, item_description]
+        // The historical 2-tuple caller destructures [$desc, $itemDesc] — we
+        // preserve that by putting $itemName in a 3rd slot the caller can
+        // ignore or opt into. See generate_invoice consumer below.
         if ($isGeneralClient) {
+            $itemName = 'Taxa ticketing pt bilete vândute online';
             $itemEventFragment = $ev['name'] !== ''
-                ? ' pentru evenimentul "' . $ev['name'] . '"'
-                    . ($ev['date'] !== '' ? ' din ' . $ev['date'] : '')
-                    . ($ev['venue'] !== '' && $ev['city'] !== ''
-                        ? ' la ' . $ev['venue'] . ', ' . $ev['city']
-                        : ($ev['venue'] !== '' ? ' la ' . $ev['venue'] : ''))
+                ? 'pentru evenimentul: ' . $ev['name']
                 : '';
-            $itemDescription = 'Taxa ticketing bilete vandute online'
-                . $itemEventFragment
-                . ' // Conform decont nr. ' . $series
-                . ($createdAt !== '' ? ' din data ' . $createdAt : '');
+            if ($ev['venue'] !== '') {
+                $itemEventFragment = trim($itemEventFragment . ' @' . $ev['venue']);
+            }
+            if ($ev['date'] !== '') {
+                $itemEventFragment = trim($itemEventFragment . ' ' . $ev['date']);
+            }
+            $itemDescription = trim($itemEventFragment
+                . ' //Conform decont nr. ' . $series
+                . ($createdAt !== '' ? ' din data ' . $createdAt : ''));
         } else {
+            $itemName = 'Comision servicii ticketing';
             $itemDescription = 'Comision servicii ticketing - ' . $reference;
         }
 
-        return [$description, $itemDescription];
+        return [$description, $itemDescription, $itemName];
     }
 
     /**

@@ -66,6 +66,21 @@ interface AccountingAdapterInterface
     public function createCreditNote(string $invoiceExternalRef, array $refund): array;
 
     /**
+     * Delete an invoice / proforma from the accounting provider.
+     * Used when a proforma is superseded by a fiscal invoice so we don't
+     * leave orphan proformas behind in Oblio.
+     *
+     * Adapters that don't support deletion (or where deletion is illegal
+     * for fiscal invoices per local law) should return
+     * {success: false, message: '...', supported: false} instead of throwing.
+     *
+     * @param string $externalRef Full reference like "SERIES/NUMBER"
+     * @param string $docType 'invoice' | 'proforma'
+     * @return array {success: bool, message: string, supported: bool}
+     */
+    public function deleteInvoice(string $externalRef, string $docType = 'invoice'): array;
+
+    /**
      * Get customer list (for sync/import)
      *
      * @return array [{id, name, vat_number, ...}]
