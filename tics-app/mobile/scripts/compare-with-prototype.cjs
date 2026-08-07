@@ -27,6 +27,16 @@ const ROUTES = {
   tickets: { proto: ['tab:tickets'], app: [{ nav: 'tickets' }] },
   wallet: { proto: ['tab:wallet'], app: [{ nav: 'wallet' }] },
   profile: { proto: ['tab:profile'], app: [{ nav: 'profile' }] },
+  ticket: {
+    proto: ['tab:tickets', 'go:ticket:coldplay:0'],
+    app: [{ nav: 'tickets' }, { text: 'Coldplay' }],
+  },
+  transfer: {
+    proto: ['tab:tickets', 'go:ticket:coldplay:0', 'go:transfer:coldplay:0'],
+    app: [{ nav: 'tickets' }, { text: 'Coldplay' }, { text: 'Transferă biletul' }],
+  },
+  topup: { proto: ['tab:wallet', 'go:topup'], app: [{ nav: 'wallet' }, { text: 'Încarcă' }] },
+  payqr: { proto: ['tab:wallet', 'go:payqr'], app: [{ nav: 'wallet' }, { text: 'Plătește' }] },
 };
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -152,7 +162,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await clickText(a, 'Conectare');
   await clickText(a, 'Andrei Popescu');
   await wait(700);
-  for (const step of route.app) if (step.nav) await clickNav(a, step.nav);
+  for (const step of route.app) {
+    if (step.nav) await clickNav(a, step.nav);
+    else if (step.text) {
+      const ok = await clickText(a, step.text);
+      if (!ok) console.log(`   nu am gasit in aplicatie: "${step.text}"`);
+    }
+  }
   const ah = await shots(a, `app-${SCREEN}`, '.app-client .screen', null);
 
   console.log('');

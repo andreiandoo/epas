@@ -16,6 +16,7 @@ import { Explore } from './screens/Explore';
 import { Tickets } from './screens/Tickets';
 import { PayQr, Topup, Wallet } from './screens/Wallet';
 import { Profile } from './screens/Profile';
+import { TicketDetail, Transfer } from './screens/TicketDetail';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
@@ -28,6 +29,8 @@ const SCREENS: Record<string, ScreenFn> = {
   topup: () => <Topup />,
   payqr: () => <PayQr />,
   profile: () => <Profile />,
+  ticket: (d) => <TicketDetail id={d.id as string} pi={d.pi as number} />,
+  transfer: (d) => <Transfer id={d.id as string} pi={d.pi as number} />,
 };
 
 function Placeholder({ id }: { id: string }) {
