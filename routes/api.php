@@ -4035,3 +4035,63 @@ Route::prefix('leisure')->middleware(['throttle:60,1'])->group(function () {
         [App\Http\Controllers\Api\Leisure\AvailabilityController::class, 'slots'])
         ->name('api.leisure.availability.slots');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Shorts — vertical short-form video feed (mobile app only)
+|--------------------------------------------------------------------------
+|
+| See docs/plans/shorts.md. Reads are public so the app can browse before
+| login; a bearer token, when present, enriches the payload with the viewer's
+| like/save state. Interactions live under the authenticated customer prefix.
+|
+*/
+
+Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+    Route::get('/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'index'])
+        ->name('api.tenant-client.shorts.index');
+
+    // Batched, fire-and-forget telemetry. Higher throttle: the client flushes
+    // a queue of events per scroll session, guests included.
+    Route::post('/shorts/events', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'events'])
+        ->middleware('throttle:300,1')
+        ->name('api.tenant-client.shorts.events');
+
+    Route::get('/shorts/{short}', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'show'])
+        ->whereNumber('short')
+        ->name('api.tenant-client.shorts.show');
+
+    Route::get('/events/{slug}/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'forEvent'])
+        ->name('api.tenant-client.shorts.by-event');
+
+    Route::get('/artists/{slug}/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'forArtist'])
+        ->name('api.tenant-client.shorts.by-artist');
+});
+
+Route::prefix('marketplace-client/customer/shorts')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::get('/feed', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'feed'])
+            ->name('api.marketplace-client.customer.shorts.feed');
+        Route::get('/saved', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'saved'])
+            ->name('api.marketplace-client.customer.shorts.saved');
+        Route::post('/{short}/like', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'toggleLike'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.like');
+        Route::post('/{short}/save', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'toggleSave'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.save');
+    });
+
+// Direct-upload session for native shorts (organiser/admin). The file goes
+// straight to the video provider; only the session hand-off happens here.
+Route::post('tenant/shorts/upload-url', [\App\Http\Controllers\Api\Shorts\ShortUploadController::class, 'store'])
+    ->middleware(['throttle:30,1', 'auth:sanctum'])
+    ->name('api.tenant.shorts.upload-url');
+
+// Provider callback ("asset ready"). Unauthenticated by nature — the shared
+// secret is verified inside the controller and the payload is only ever a
+// trigger for an authoritative re-read.
+Route::post('webhooks/video/{provider}', \App\Http\Controllers\Api\Shorts\VideoWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('api.webhooks.video');

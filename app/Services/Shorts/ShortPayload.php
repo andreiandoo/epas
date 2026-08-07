@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Services\Shorts;
+
+use App\Models\Short;
+use Illuminate\Support\Collection;
+
+/**
+ * Turns Short models into the JSON shape the mobile feed consumes
+ * (docs/plans/shorts.md §5).
+ *
+ * Playback URLs for managed assets are signed here, per request — they are
+ * short-lived and must never be cached or persisted.
+ */
+class ShortPayload
+{
+    /**
+     * @param  Collection<int, Short>  $shorts
+     * @param  array<int, int>  $likedIds
+     * @param  array<int, int>  $savedIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function collection(Collection $shorts, array $likedIds = [], array $savedIds = [], ?string $feed = null): array
+    {
+        $liked = array_flip($likedIds);
+        $saved = array_flip($savedIds);
+
+        return $shorts
+            ->map(fn (Short $short) => $this->one(
+                $short,
+                isset($liked[$short->id]),
+                isset($saved[$short->id]),
+                $feed,
+            ))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function one(Short $short, bool $liked = false, bool $saved = false, ?string $feed = null): array
+    {
+        return [
+            'id' => $short->id,
+            'source' => $short->source,
+            'feed' => $feed,
+            'playback' => [
+                'hls_url' => $short->is_external ? null : $short->playback_url,
+                'poster_url' => $short->poster_url,
+            ],
+            'embed_html' => $short->is_external ? $short->embed_html : null,
+            'source_url' => $short->is_external ? $short->source_url : null,
+            'duration' => $short->duration,
+            'aspect' => $short->aspect,
+            'title' => $short->title,
+            'caption' => $short->caption,
+            'hashtags' => $short->hashtags ?? [],
+            'language' => $short->language,
+            'music_credit' => $short->music_credit,
+            'owner' => $this->owner($short),
+            'event' => $this->event($short),
+            'cta' => $this->cta($short),
+            'stats' => [
+                'likes' => (int) $short->likes,
+                'views' => (int) $short->views,
+                'shares' => (int) $short->shares,
+            ],
+            'viewer' => [
+                'liked' => $liked,
+                'saved' => $saved,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function owner(Short $short): ?array
+    {
+        $owner = $short->relationLoaded('owner') ? $short->owner : $short->owner()->first();
+
+        if (! $owner) {
+            return null;
+        }
+
+        return [
+            'type' => $this->morphAlias($short->owner_type),
+            'id' => $owner->getKey(),
+            'slug' => $owner->slug ?? null,
+            'name' => $owner->name ?? $owner->title ?? null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function event(Short $short): ?array
+    {
+        $event = $short->relationLoaded('event') ? $short->event : null;
+
+        if (! $event) {
+            return null;
+        }
+
+        return [
+            'id' => $event->id,
+            'slug' => $event->slug ?? null,
+            'title' => $event->title ?? $event->name ?? null,
+            'date' => $event->event_date?->toDateString() ?? null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function cta(Short $short): ?array
+    {
+        if ($short->cta_type === 'none' || $short->cta_type === null) {
+            return null;
+        }
+
+        return [
+            'type' => $short->cta_type,
+            'label' => $short->cta_label,
+            'url' => $short->cta_url,
+            'ticket_type_id' => $short->cta_ticket_type_id,
+            'promo_code' => $short->promo_code,
+        ];
+    }
+
+    /**
+     * Short, stable type token for the client ("event", "artist", ...) instead
+     * of leaking the FQCN.
+     */
+    protected function morphAlias(?string $type): ?string
+    {
+        if (! $type) {
+            return null;
+        }
+
+        return str(class_basename($type))->snake()->toString();
+    }
+}

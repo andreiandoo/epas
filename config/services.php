@@ -165,4 +165,31 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Managed video pipeline (Shorts)
+    |--------------------------------------------------------------------------
+    |
+    | Native shorts are uploaded straight to a managed provider which transcodes
+    | to HLS and serves playback from its own CDN — no ffmpeg and no video egress
+    | on this server. Bunny Stream is the chosen provider (docs/plans/shorts.md §C).
+    |
+    | Without credentials the container falls back to a no-op provider, so dev and
+    | CI keep booting; external (embed) shorts are unaffected either way.
+    |
+    */
+    'video' => [
+        'driver' => env('VIDEO_DRIVER', 'bunny'),
+        // TTL (seconds) for the signed playback/poster URLs handed to the app.
+        'signed_url_ttl' => (int) env('VIDEO_SIGNED_URL_TTL', 3600),
+    ],
+
+    'bunny' => [
+        'stream_library_id'     => env('BUNNY_STREAM_LIBRARY_ID'),
+        'stream_api_key'        => env('BUNNY_STREAM_API_KEY'),
+        'stream_pull_zone'      => env('BUNNY_STREAM_PULL_ZONE'),      // vz-xxxxxxxx-xxx.b-cdn.net
+        'stream_token_key'      => env('BUNNY_STREAM_TOKEN_KEY'),      // pull zone token auth key
+        'stream_webhook_secret' => env('BUNNY_STREAM_WEBHOOK_SECRET'),
+    ],
+
 ];
