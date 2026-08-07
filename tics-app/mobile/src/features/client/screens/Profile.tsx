@@ -15,7 +15,7 @@ import { BottomNav } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
-import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../../ota';
+import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, otaDiagnostics, type OtaState } from '../../../ota';
 
 /** [emoji, eticheta, actiune] — exact lista din prototip. */
 const MENU: [string, string, string][] = [
@@ -39,6 +39,7 @@ function UpdateRow() {
   const showToast = useClient((s) => s.showToast);
   const [ota, setOta] = useState<OtaState>(getOtaState);
   const [busy, setBusy] = useState(false);
+  const [showLog, setShowLog] = useState(false);
 
   useEffect(() => onOtaChange(setOta), []);
 
@@ -53,31 +54,54 @@ function UpdateRow() {
   const sub = `conținut ${ota.current === 'builtin' ? 'inclus în APK' : ota.current}${ota.native ? ` · aplicație ${ota.native}` : ''}`;
 
   return (
-    <div
-      className="listitem"
-      style={sx('cursor:pointer')}
-      onClick={async () => {
-        if (ota.pending) return void applyPendingUpdate();
-        setBusy(true);
-        showToast(await checkForUpdate());
-        setBusy(false);
-      }}
-    >
+    <>
       <div
-        style={sx('width:38px;height:38px;border-radius:12px;background:var(--surface-3);display:grid;place-items:center;font-size:17px')}
+        className="listitem"
+        style={sx('cursor:pointer')}
+        onClick={async () => {
+          if (ota.pending) return void applyPendingUpdate();
+          setBusy(true);
+          showToast(await checkForUpdate());
+          setBusy(false);
+        }}
       >
-        {ota.pending ? '🔄' : '⬇️'}
-      </div>
-      <div style={sx('flex:1;min-width:0')}>
-        <div style={sx('font-weight:500;font-size:14px')}>{label}</div>
-        <div className="muted" style={sx('font-size:11px;margin-top:2px')}>
-          {sub}
+        <div
+          style={sx('width:38px;height:38px;border-radius:12px;background:var(--surface-3);display:grid;place-items:center;font-size:17px')}
+        >
+          {ota.error ? '⚠️' : ota.pending ? '🔄' : '⬇️'}
         </div>
+        <div style={sx('flex:1;min-width:0')}>
+          <div style={sx('font-weight:500;font-size:14px')}>{label}</div>
+          <div className="muted" style={sx('font-size:11px;margin-top:2px')}>
+            {sub}
+          </div>
+          {ota.error ? (
+            <div style={sx('font-size:11px;margin-top:3px;color:var(--red)')}>{ota.error}</div>
+          ) : null}
+        </div>
+        <span
+          className="muted"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowLog((v) => !v);
+          }}
+          style={sx('padding:6px')}
+        >
+          {showLog ? '▾' : 'ⓘ'}
+        </span>
       </div>
-      <span className="muted">
-        <Ic svg={I.arrow} />
-      </span>
-    </div>
+
+      {/* Jurnalul de diagnostic: singurul mod de a vedea de ce esueaza OTA
+          pe un telefon la care nu avem adb. */}
+      {showLog ? (
+        <div
+          className="card"
+          style={sx('padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.5;color:var(--ink-2);white-space:pre-wrap;word-break:break-word')}
+        >
+          {otaDiagnostics()}
+        </div>
+      ) : null}
+    </>
   );
 }
 

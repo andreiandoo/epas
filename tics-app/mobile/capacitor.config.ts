@@ -29,7 +29,6 @@ const config: CapacitorConfig = {
       updateUrl: 'https://core.tixello.com/tics-app/updates.php',
       autoUpdate: true,
       appReadyTimeout: 10000,
-      responseTimeout: 20,
       // La update de versiune nativa (APK nou din store/sideload), arunca
       // bundle-urile OTA vechi si porneste de la assets-urile din APK.
       resetWhenUpdate: true,

@@ -81,6 +81,17 @@ Write-Host '[2/4] Impachetez dist\ ...' -ForegroundColor Cyan
 $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
   $distFull = (Resolve-Path $dist).Path.TrimEnd('\')
+
+  # Intrari de DIRECTOR, explicit. Fara ele, unele implementari de unzip (inclusiv
+  # cele bazate pe ZipInputStream de pe Android) nu creeaza subfolderele si
+  # fisierele din assets/ nu se scriu -> bundle incomplet -> ecran alb -> rollback,
+  # totul fara niciun mesaj de eroare.
+  $dirs = Get-ChildItem $distFull -Recurse -Directory
+  foreach ($d in $dirs) {
+    $rel = $d.FullName.Substring($distFull.Length + 1).Replace('\', '/') + '/'
+    [void]$zip.CreateEntry($rel)
+  }
+
   $files = Get-ChildItem $distFull -Recurse -File
   foreach ($f in $files) {
     $rel = $f.FullName.Substring($distFull.Length + 1).Replace('\', '/')
@@ -92,7 +103,7 @@ try {
     }
     finally { $in.Dispose() }
   }
-  Write-Host ("  {0} fisiere" -f $files.Count)
+  Write-Host ("  {0} directoare, {1} fisiere" -f $dirs.Count, $files.Count)
 }
 finally { $zip.Dispose() }
 
