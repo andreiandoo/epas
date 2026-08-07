@@ -7,18 +7,20 @@
      "Experiente" (banda verde) · card festival · "Radar" · bottom nav
    ========================================================= */
 import { Ic, sx } from '../../../design/sx';
-import { CATS, EV, FEST, I, TICS } from '../../../mock/prototype';
+import { CATS, EV, FEST, I } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { eventBackground } from '../../../api/tenantClient';
 import { EvMini, ExpCard, FeaturedCard, RadarCard } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
+import { useRadarList } from '../radarData';
 
 /* EV vine dintr-un dump verbatim (@ts-nocheck), deci fara index signature. */
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
 
 export function Home() {
   const { go } = useNav();
+  const { items: radar } = useRadarList(3);
 
   const f = ev('coldplay');
   const forYou = ['coldplay', 'celestial', 'swan'].map(ev);
@@ -194,8 +196,9 @@ export function Home() {
           more={['Vezi tot', () => go('ticslist')]}
         />
         <div className="rail">
-          {Object.values(TICS).map((t) => (
-            <RadarCard key={(t as { id: string }).id} t={t as never} />
+          {/* aceleasi date reale ca ecranul Radar (app.tics.ro), doar trei */}
+          {radar.map((t) => (
+            <RadarCard key={t.id} t={t} />
           ))}
         </div>
       </div>

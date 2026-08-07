@@ -3,27 +3,49 @@
      S.ticslist   (1147) lista Radar din toata piata
      S.ticsoffers  (800) detaliu cu ofertele marketplace-urilor
      S.calendar   (1160) grila lunii + evenimentele zilei selectate
+
+   Datele sunt REALE: vin din TICS Radar (app.tics.ro) prin api/ticsRadar.
+   Structura si stilurile raman cele din prototip; se schimba doar sursa.
    ========================================================= */
+import { useState } from 'react';
 import { Ic, sx } from '../../../design/sx';
-import { ART, CAL_COUNTS, CAL_DAY, CAL_DOTS, I, TICS, bgv } from '../../../mock/prototype';
+import { ART, CAL_DAY, CAL_DOTS, I, bgv } from '../../../mock/prototype';
 import { RadarCard } from '../cards';
 import { BottomNav, DBar, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useLightbox } from '../lightbox';
+import { fmtK, useRadarDay, useRadarEvent, useRadarList, useRadarMonth, useRadarStats } from '../radarData';
+import type { RadarItem } from '../../../api/ticsRadar';
 
 type Ev = Record<string, any>;
+
+/** Cat se economiseste, in medie, fata de mediana pietei. */
+function avgSaving(items: RadarItem[]): number | null {
+  const multi = items.filter((t) => t.offers.length > 1);
+  if (!multi.length) return null;
+  const pct = multi.map((t) => {
+    const prices = t.offers.map((o) => o[1]);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return max > 0 ? 1 - min / max : 0;
+  });
+  return Math.round((pct.reduce((a, b) => a + b, 0) / pct.length) * 100);
+}
 
 /* =========================================================
    S.ticslist
    ========================================================= */
 export function TicsList() {
   const { go, back } = useNav();
-  const items = [...Object.values(TICS as Record<string, Ev>), ...Object.values(TICS as Record<string, Ev>)].slice(0, 6);
+  const { items } = useRadarList(6);
+  const live = useRadarStats();
+  const saving = avgSaving(items);
+
   const stats: [string, string][] = [
-    ['3.2k', 'evenimente'],
-    ['20', 'platforme'],
-    ['−22%', 'sub medie'],
+    [live ? fmtK(live.liveEvents) : '3.2k', 'evenimente'],
+    [live ? String(live.platforms) : '20', 'platforme'],
+    [saving !== null ? `−${saving}%` : '−22%', 'sub medie'],
   ];
 
   return (
@@ -110,11 +132,23 @@ export function TicsOffers({ id }: { id?: string }) {
   const { go } = useNav();
   const lb = useLightbox();
   const showToast = useClient((s) => s.showToast);
-  const t = ((TICS as Record<string, Ev>)[id || ''] || (TICS as Record<string, Ev>).smiley) as Ev;
+  const t = useRadarEvent(id) as RadarItem & Ev;
   const sorted = [...(t.offers as [string, number, string][])].sort((a, b) => a[1] - b[1]);
-  const ch = sorted[0][1];
-  const med = Math.round(ch * 1.28);
-  const savePct = Math.round((1 - ch / med) * 100);
+  const ch = sorted[0]?.[1] ?? 0;
+  /* Cand avem mai multe platforme, "mediana pietei" e chiar cea mai scumpa
+     oferta reala. Cu o singura oferta n-avem cu ce compara, deci pastram
+     estimarea prototipului (+28%) ca ecranul sa ramana intreg. */
+  const med = sorted.length > 1 ? sorted[sorted.length - 1][1] : Math.round(ch * 1.28);
+  const savePct = med > 0 ? Math.round((1 - ch / med) * 100) : 0;
+
+  /* Butonul "Mergi" duce pe site-ul platformei. window.open(_blank) e
+     interceptat de Capacitor si deschis in browserul sistemului. */
+  const goToOffer = (platform: string) => {
+    const url = t.urls?.[platform];
+    if (!url) return showToast('Mergi la ' + platform);
+    showToast('Deschid ' + platform);
+    window.open(url, '_blank');
+  };
 
   return (
     <div style={sx('min-height:100%;background:var(--bg);padding-bottom:2px')}>
@@ -132,17 +166,24 @@ export function TicsOffers({ id }: { id?: string }) {
         }
       />
 
-      <div className="poster" style={{ background: bgv(t), height: 320, borderRadius: '0 0 30px 30px' }}>
+      <div
+        className="poster"
+        style={{
+          background: t.poster ? `url('${t.poster}') center/cover, #14101f` : bgv(t),
+          height: 320,
+          borderRadius: '0 0 30px 30px',
+        }}
+      >
         <div style={sx('position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 30%,rgba(11,9,18,.96))')} />
         <div style={sx('position:absolute;left:20px;right:20px;bottom:20px')}>
           <span className="badge" style={sx('background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff')}>
-            {t.cat} · ⭐ {t.rat}
+            {[t.cat, t.rat && t.rat !== '—' ? `⭐ ${t.rat}` : ''].filter(Boolean).join(' · ')}
           </span>
           <div style={sx('font-size:23px;font-weight:600;letter-spacing:-.03em;margin-top:10px;line-height:1.14')}>
             {t.s}
           </div>
           <div style={sx('font-size:12.5px;color:rgba(255,255,255,.82);margin-top:4px')}>
-            {t.city} · {t.day} {t.mon} · {t.time}
+            {[t.city, `${t.day} ${t.mon}`.trim(), t.time].filter(Boolean).join(' · ')}
           </div>
         </div>
       </div>
@@ -157,7 +198,7 @@ export function TicsOffers({ id }: { id?: string }) {
               <div style={sx('font-size:12.5px;font-weight:500')}>
                 {t.day} {t.mon}
               </div>
-              <div style={sx('font-size:11px;color:var(--muted)')}>Ora {t.time}</div>
+              <div style={sx('font-size:11px;color:var(--muted)')}>{t.time ? `Ora ${t.time}` : 'Oră neanunțată'}</div>
             </div>
           </div>
           <div className="row" style={sx('gap:9px')}>
@@ -205,10 +246,16 @@ export function TicsOffers({ id }: { id?: string }) {
           </>
         ) : null}
 
-        <div className="h2" style={sx('margin-top:22px;font-size:15px')}>
-          Despre
-        </div>
-        <p style={sx('color:var(--ink-2);font-size:13.5px;line-height:1.62;margin-top:8px')}>{t.desc}</p>
+        {/* Radarul agrega preturi, nu descrieri — sectiunea apare doar cand
+            sursa chiar are text, ca sa nu ramana un titlu peste gol. */}
+        {t.desc ? (
+          <>
+            <div className="h2" style={sx('margin-top:22px;font-size:15px')}>
+              Despre
+            </div>
+            <p style={sx('color:var(--ink-2);font-size:13.5px;line-height:1.62;margin-top:8px')}>{t.desc}</p>
+          </>
+        ) : null}
 
         {t.gallery?.length ? (
           <>
@@ -355,7 +402,7 @@ export function TicsOffers({ id }: { id?: string }) {
                   </div>
                   <button
                     className="gpill"
-                    onClick={() => showToast('Mergi la ' + o[0])}
+                    onClick={() => goToOffer(o[0])}
                     style={
                       i === 0
                         ? { marginTop: 7, background: 'linear-gradient(135deg,var(--green),#16a34a)', borderColor: 'transparent' }
@@ -415,14 +462,71 @@ export function TicsOffers({ id }: { id?: string }) {
    S.calendar
    ========================================================= */
 const WEEKDAYS = ['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'];
-const START_BLANK = 5;
+const MONTHS_FULL = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+];
+/** culoarea bulinei, pe categorie — aceeasi paleta ca in CAL_DOTS */
+const DOT_COLOR: Record<string, string> = {
+  Concerte: '#8b5cf6',
+  Festival: '#22c55e',
+  Teatru: '#3b82f6',
+  'Stand-up': '#f59e0b',
+  Petrecere: '#ec4899',
+  Sport: '#12b3a6',
+  Film: '#6366f1',
+  Altele: '#94a3b8',
+};
+
+/** Luni = 0, ca in grila prototipului (L Ma Mi J V S D). */
+const startBlank = (y: number, m: number) => (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7;
+const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
 
 export function Calendar() {
   const { go, back } = useNav();
   const calDay = useClient((s) => s.calDay);
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const counts = CAL_COUNTS as Record<number, number>;
-  const dots = CAL_DOTS as Record<number, string[]>;
+
+  const now = new Date();
+  const [ym, setYm] = useState<[number, number]>([now.getFullYear(), now.getMonth()]);
+  const [year, month] = ym;
+  const shiftMonth = (d: number) => {
+    const t = new Date(Date.UTC(year, month + d, 1));
+    setYm([t.getUTCFullYear(), t.getUTCMonth()]);
+  };
+
+  const { data, loading } = useRadarMonth(year, month);
+  const stats = useRadarStats();
+
+  const days = Array.from({ length: daysInMonth(year, month) }, (_, i) => i + 1);
+  const START_BLANK = startBlank(year, month);
+  const counts = data?.counts ?? {};
+  const byDay = data?.byDay ?? {};
+  /* Bulinele arata ce fel de evenimente sunt in ziua respectiva; cand luna
+     inca se incarca, ramanem pe cele din prototip ca grila sa nu palpaie. */
+  const dots: Record<number, string[]> = data
+    ? Object.fromEntries(
+        Object.entries(byDay).map(([d, list]) => [d, list.map((e) => DOT_COLOR[e.cat] ?? DOT_COLOR.Altele)])
+      )
+    : (CAL_DOTS as Record<number, string[]>);
+  const dayEvents = useRadarDay(byDay[calDay] ?? []);
+
+  /* Randurile zilei au exact forma tuplului din prototip (CAL_DAY):
+     [categorie, titlu, meta, pret, platforma, culoare] + id-ul, pentru nav. */
+  type Row = [string, string, string, string, string, string, string];
+  const rows: Row[] = data
+    ? dayEvents.map((e): Row => {
+        const best = e.offers[0];
+        return [
+          e.cat,
+          e.s,
+          [e.time, e.venName || e.city].filter(Boolean).join(' · ') || '—',
+          best ? String(best[1]) : '—',
+          best ? best[0] : '—',
+          DOT_COLOR[e.cat] ?? DOT_COLOR.Altele,
+          e.id,
+        ];
+      })
+    : (CAL_DAY as [string, string, string, string, string, string][]).map((r): Row => [...r, 'smiley']);
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -434,7 +538,7 @@ export function Calendar() {
           <div>
             <div className="h2">Calendar</div>
             <div className="muted" style={sx('font-size:11.5px')}>
-              Tot ce se întâmplă · 3.210 live
+              Tot ce se întâmplă · {stats ? stats.liveEvents.toLocaleString('ro-RO') : '3.210'} live
             </div>
           </div>
         </div>
@@ -452,12 +556,19 @@ export function Calendar() {
       <div className="pad" style={sx('margin-top:14px')}>
         <div className="between" style={sx('margin-bottom:10px')}>
           <div className="row" style={sx('gap:10px')}>
-            <span className="muted">‹</span>
-            <div style={sx('font-weight:600;font-size:15px')}>August 2026</div>
-            <span className="muted">›</span>
+            <span className="muted" style={sx('cursor:pointer')} onClick={() => shiftMonth(-1)}>
+              ‹
+            </span>
+            <div style={sx('font-weight:600;font-size:15px')}>
+              {MONTHS_FULL[month].replace(/^./, (c) => c.toUpperCase())} {year}
+            </div>
+            <span className="muted" style={sx('cursor:pointer')} onClick={() => shiftMonth(1)}>
+              ›
+            </span>
           </div>
           <span className="muted" style={sx('font-size:11px')}>
-            1.328 ev.
+            {/* `capped` = am atins plafonul de paginare, deci numaram doar ce am vazut */}
+            {loading ? '…' : `${data?.capped ? '+' : ''}${(data?.total ?? 0).toLocaleString('ro-RO')} ev.`}
           </span>
         </div>
         <div style={sx('display:grid;grid-template-columns:repeat(7,1fr);gap:5px')}>
@@ -510,7 +621,9 @@ export function Calendar() {
               <div className="muted" style={sx('font-size:10.5px;font-weight:600;text-transform:uppercase')}>
                 Ziua selectată
               </div>
-              <div style={sx('font-weight:600;font-size:18px')}>{calDay} august</div>
+              <div style={sx('font-weight:600;font-size:18px')}>
+                {calDay} {MONTHS_FULL[month]}
+              </div>
             </div>
             <div style={sx('text-align:right')}>
               <div style={sx('font-weight:600;font-size:18px;color:var(--green-2)')}>{counts[calDay] || 0}</div>
@@ -521,8 +634,8 @@ export function Calendar() {
           </div>
 
           <div style={sx('margin-top:12px;display:flex;flex-direction:column;gap:12px')}>
-            {(CAL_DAY as [string, string, string, string, string, string][]).map((e) => (
-              <div key={e[1]} className="row" onClick={() => go('ticsoffers', { id: 'smiley' })} style={sx('gap:11px;cursor:pointer')}>
+            {rows.map((e) => (
+              <div key={e[6]} className="row" onClick={() => go('ticsoffers', { id: e[6] })} style={sx('gap:11px;cursor:pointer')}>
                 <div
                   style={{
                     width: 44,
@@ -561,6 +674,11 @@ export function Calendar() {
                 </div>
               </div>
             ))}
+            {!rows.length ? (
+              <div className="muted" style={sx('font-size:12px;text-align:center;padding:6px 0')}>
+                {loading ? 'Se încarcă…' : 'Nimic programat în ziua asta.'}
+              </div>
+            ) : null}
           </div>
 
           <button className="cta green" style={sx('margin-top:14px;padding:13px')} onClick={() => go('ticslist')}>

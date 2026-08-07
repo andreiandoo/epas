@@ -3,6 +3,7 @@ package ro.tixello.app;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.WebView;
 
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -11,6 +12,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.WebViewListener;
 
 /**
  * Chrome-ul de sistem al aplicatiei.
@@ -32,6 +34,13 @@ import com.getcapacitor.BridgeActivity;
  * urce pana sus.
  */
 public class MainActivity extends BridgeActivity {
+
+    /** Ultimele margini citite, in px CSS. Le retinem ca sa le putem RE-injecta
+     *  dupa fiecare incarcare de pagina: variabilele CSS stau pe <html> si se
+     *  pierd la reload (aplicarea unui bundle OTA, de exemplu), iar listener-ul
+     *  de insets nu se mai declanseaza daca marginile n-au variat. */
+    private int safeTop = 0;
+    private int safeBottom = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -61,20 +70,34 @@ public class MainActivity extends BridgeActivity {
                     | WindowInsetsCompat.Type.displayCutout()
             );
             float d = getResources().getDisplayMetrics().density;
-            applyInsets(Math.round(bars.top / d), Math.round(bars.bottom / d));
+            safeTop = Math.round(bars.top / d);
+            safeBottom = Math.round(bars.bottom / d);
+            applyInsets();
             // NU consumam: alte view-uri pot avea nevoie de ele
             return windowInsets;
+        });
+
+        // Variabilele CSS traiesc pe <html> si dispar la orice reincarcare de
+        // pagina (de ex. cand se aplica un bundle OTA). Listener-ul de insets nu
+        // se mai declanseaza dupa reload daca marginile n-au variat, asa ca
+        // fara asta ecranele porneau cu --safe-top = 0 si urcau sub ora.
+        getBridge().addWebViewListener(new WebViewListener() {
+            @Override
+            public void onPageLoaded(WebView webView) {
+                applyInsets();
+            }
         });
     }
 
     /** Scrie --safe-top / --safe-bottom pe <html>, in px CSS. */
-    private void applyInsets(final int top, final int bottom) {
+    private void applyInsets() {
         if (getBridge() == null || getBridge().getWebView() == null) return;
+        final WebView wv = getBridge().getWebView();
         final String js =
             "(function(){var r=document.documentElement.style;" +
-            "r.setProperty('--safe-top','" + top + "px');" +
-            "r.setProperty('--safe-bottom','" + bottom + "px');})()";
-        getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(js, null));
+            "r.setProperty('--safe-top','" + safeTop + "px');" +
+            "r.setProperty('--safe-bottom','" + safeBottom + "px');})()";
+        wv.post(() -> wv.evaluateJavascript(js, null));
     }
 
     @Override

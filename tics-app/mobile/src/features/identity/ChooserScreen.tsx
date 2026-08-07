@@ -44,7 +44,12 @@ export function ChooserScreen() {
   const firstName = (properties.find((p) => p.kind === 'client')?.name ?? 'Andrei').split(' ')[0];
 
   return (
-    <div className="screen" style={{ padding: '26px 20px', display: 'flex', flexDirection: 'column' }}>
+    // ecranul n-are appbar, deci nu primeste spatiul de sus de acolo — il adaugam
+    // la padding, ca sa nu se lipeasca logo-ul de ora si iconitele de sistem
+    <div
+      className="screen"
+      style={{ padding: 'calc(var(--safe-top, 0px) + 26px) 20px 26px', display: 'flex', flexDirection: 'column' }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 22 }}>
         <span className="brand-logo" style={{ fontSize: 18 }}>
           Tixello

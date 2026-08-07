@@ -12,6 +12,7 @@
 import { Ic, cn, sx } from '../../design/sx';
 import { I, VEN, money } from '../../mock/prototype';
 import { eventBackground, type UiEvent } from '../../api/tenantClient';
+import type { RadarItem as TicsRadarItem } from '../../api/ticsRadar';
 import { useClient } from '../../store/client';
 import { useNav } from './nav';
 
@@ -103,18 +104,10 @@ export function ExpCard({ ev }: { ev: UiEvent }) {
 /* ---------- radarCard(t, st) ---------- */
 const MPCOL = ['#7c3aed', '#0e7490', '#b45309', '#be185d'];
 
-type RadarItem = {
-  id: string;
-  s: string;
-  city: string;
-  day: string;
-  mon: string;
-  g: string;
-  rat: string;
-  tone?: string;
-  sc?: string;
-  offers: [string, number, string][];
-};
+/* Forma e cea din api/ticsRadar (sursa reala) — datasetul prototipului o
+   respecta si el, deci cardul randeaza la fel din oricare din ele. */
+type RadarItem = Pick<TicsRadarItem, 'id' | 's' | 'city' | 'day' | 'mon' | 'g' | 'rat' | 'offers'> &
+  Partial<Pick<TicsRadarItem, 'tone' | 'sc' | 'poster'>>;
 
 export function RadarCard({ t, st }: { t: RadarItem; st?: string }) {
   const { go } = useNav();
