@@ -98,6 +98,13 @@ class LeisureSocietyDecontService
         $discountAmount = (float) ($built['totals']['discount'] ?? 0);
         $commissionMode = $built['commission_mode'] ?? ($event->getEffectiveCommissionMode() ?: 'included');
 
+        // Decont amount: for commission-INCLUDED tickets the society is owed the
+        // FULL gross it collected — the marketplace invoices its commission back
+        // to the society separately (operator issues that invoice manually). For
+        // added_on_top the commission was charged on top of the ticket price, so
+        // the society's decont is the net (base) price.
+        $decontAmount = $commissionMode === 'added_on_top' ? $finalNet : $finalGross;
+
         // Bank account for THIS society (source of truth), then fall back to the
         // organizer's primary account so we never persist a null IBAN.
         $bank = MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizer->id)
@@ -120,7 +127,7 @@ class LeisureSocietyDecontService
             'marketplace_organizer_id' => $organizer->id,
             'event_id' => $event->id,
             'issuing_company' => $issuer,
-            'amount' => $finalNet,
+            'amount' => $decontAmount,
             'currency' => 'RON',
             'period_start' => $from->toDateString(),
             'period_end' => $to->toDateString(),

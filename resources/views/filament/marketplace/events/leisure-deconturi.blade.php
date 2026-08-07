@@ -178,11 +178,15 @@
                     @forelse ($decontButtons as $skey => $srow)
                         @php
                             $sName = $srow['name'] ?? ($skey === 'primary' ? 'Societatea 1' : 'Societatea 2');
+                            $sGross = (float) ($srow['online_revenue'] ?? 0);
+                            $sComm = (float) ($srow['online_commission'] ?? 0);
                             $sNet = (float) ($srow['ambilet_owes_venue'] ?? 0);
                             $sTickets = (int) ($srow['tickets'] ?? 0);
                             $confirmMsg = 'Generezi decontul pentru ' . $sName . ' (' . $roDate($p['from']) . ' – ' . $roDate($p['to']) . ')?'
-                                . "\n\nVenit online net: " . $fmt($sNet) . ' ' . $cur . '  ·  ' . $sTickets . ' bilete.'
-                                . "\nSe creează decontul + documentul PDF pe această societate.";
+                                . "\n\nVânzări online (brut, = suma decont): " . $fmt($sGross) . ' ' . $cur . '  ·  ' . $sTickets . ' bilete'
+                                . "\nComision inclus (de facturat separat către societate): " . $fmt($sComm) . ' ' . $cur
+                                . "\nNet efectiv (după comision): " . $fmt($sNet) . ' ' . $cur
+                                . "\n\nSe creează decontul + documentul PDF pe această societate.";
                         @endphp
                         <button type="button"
                             wire:click="generateSocietyDecont('{{ $skey }}', '{{ $p['from'] }}', '{{ $p['to'] }}')"

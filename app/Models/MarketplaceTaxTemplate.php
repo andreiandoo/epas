@@ -1709,6 +1709,17 @@ class MarketplaceTaxTemplate extends Model
             $payoutCommission = $hasBreakdown ? $commissionExclPos : (float) ($payout->commission_amount ?? 0);
             $payoutAmount = $hasBreakdown ? $netExclPos : (float) ($payout->amount ?? 0);
 
+            // Leisure per-society decont on commission-INCLUDED tickets settles
+            // the GROSS the society collected (the marketplace invoices its
+            // commission to the society separately). So the decont's headline
+            // amount = gross, not net. Scoped to issuing_company-tagged payouts so
+            // ordinary (net) deconturi are unaffected. payout_gross_amount /
+            // payout_commission_amount remain available for the template to show
+            // the commission line that gets invoiced back.
+            if (($payout->issuing_company ?? null) && ($payout->commission_mode ?? 'included') !== 'added_on_top') {
+                $payoutAmount = $payoutGross;
+            }
+
             // Prefer the configurable decont series; fall back to the
             // PAY-... reference for older payouts that have no series.
             $variables['decont_series'] = $payout->decont_series ?? '';
