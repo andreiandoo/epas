@@ -35,8 +35,15 @@ return [
             'geo' => (float) env('SHORTS_W_GEO', 1.0),
             'freshness' => (float) env('SHORTS_W_FRESH', 1.0),
             'featured' => (float) env('SHORTS_W_FEATURED', 0.75),
+            'trending' => (float) env('SHORTS_W_TRENDING', 1.25),
             'seen_penalty' => (float) env('SHORTS_W_SEEN', 4.0),
         ],
+
+        // Epsilon-greedy exploration (D5): the share of each page reserved for
+        // shorts with too few impressions to have earned a score yet. Without
+        // it the ranker is rich-get-richer and new shorts can never surface.
+        'exploration_rate' => (float) env('SHORTS_EXPLORATION_RATE', 0.15),
+        'exploration_impression_threshold' => (int) env('SHORTS_EXPLORATION_THRESHOLD', 50),
 
         // Half-life (hours) used by the freshness decay.
         'freshness_half_life_hours' => (int) env('SHORTS_FRESH_HALF_LIFE', 72),

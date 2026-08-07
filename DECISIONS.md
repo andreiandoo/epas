@@ -678,3 +678,106 @@ fără cheie (inclusiv CI) devenea o eroare de boot a feature-ului.
 
 **Impact.** Serviciul se comportă acum ca `TikTokService`/`FacebookService`, care tratau
 deja cheia lipsă ca „neconfigurat" în loc să crape.
+
+---
+
+## D-043 — Trending = velocitate raportată la baseline, nu totaluri
+
+**Context.** D4 cere un `trending_score`.
+
+**Alegere.** `(engagement recent / oră) / (engagement mai vechi / oră + 1)`. Un short
+care tocmai a pornit scorează mare chiar de la o bază absolută mică; unul constant stă în
+jur de 1. Ce n-are engagement în fereastră e resetat la zero la fiecare rulare.
+
+**Alternative.** Ordonarea pe totaluri — așa osifică un feed în jurul hiturilor lui vechi:
+un short cu un milion de vizionări istorice nu e „trending".
+
+**Impact.** Testat că un short în creștere depășește unul mai mare, dar constant. Rulează
+la 15 minute: destul de des cât să prindă un short care decolează în aceeași sesiune.
+
+---
+
+## D-044 — Seen-store distilat, care supraviețuiește prune-ului
+
+**Context.** Penalizarea „deja văzut" din ranker citea `short_events`. D6 șterge acele
+rânduri după 90 de zile.
+
+**Alegere.** `short_impressions` — un rând per (spectator, short), populat de
+`SyncShortImpressionsJob`. Rankerul îl citește primul și cade pe telemetria brută pentru
+intervalul dintre două rulări.
+
+**Alternative.** Doar telemetria brută — un short ar reapărea în feed-ul cuiva după 90 de
+zile pur și simplu pentru că dovada că l-a văzut a fost ștearsă.
+
+**Impact.** Un rând per pereche, nu unul per redare. Testat exact pe cazul „raw șters,
+seen-store rămas".
+
+---
+
+## D-045 — Explorare epsilon-greedy, care deplasează din coada paginii
+
+**Context.** Popularitatea e un termen în scor, deci un short fără impresii nu poate
+acumula semnalul de care ar avea nevoie ca să fie clasat. Rich-get-richer.
+
+**Alegere.** O felie configurabilă din fiecare pagină (implicit 15%) e rezervată
+short-urilor sub pragul de impresii, indiferent de scor. Locurile se iau **de la coada**
+paginii, niciodată din vârf.
+
+**Alternative.** (a) Fără explorare — conținutul nou nu iese niciodată la suprafață.
+(b) Deplasare din vârf — explorarea l-ar costa pe spectator cel mai bun lucru pe care
+îl aveam pentru el.
+
+**Impact.** Testat: un short fără niciun semnal intră în pagină alături de patru cu
+istoric puternic.
+
+---
+
+## D-046 — Prune-ul șterge în bucăți
+
+**Context.** `short_events` e cel mai rapid crescător tabel din feature — o sesiune de
+scroll scrie zeci de rânduri.
+
+**Alegere.** `DELETE` în bucăți de 5000, cu plafon de 200 de bucăți per rulare.
+
+**Alternative.** Un singur `DELETE` nemărginit — blochează tabelul și expiră pe worker
+exact în ziua în care contează.
+
+**Impact.** Prune-ul e mărginit ca durată. Dacă rămâne restanță, o recuperează a doua zi.
+
+---
+
+## D-047 — Nudge-urile comportamentale sunt opt-in, cu default **oprit**
+
+**Context.** D12 cere trigger-e din comportamentul de vizionare.
+
+**Alegere.** `notification_preferences` cu default per tip. Pentru
+`shorts_abandoned` („ai văzut, n-ai cumpărat") default-ul e **oprit** — e nudge-ul cel mai
+susceptibil să pară supraveghere. Absența unui rând înseamnă „folosește default-ul", deci
+tabelul crește doar când cineva chiar schimbă ceva.
+
+**Garduri suplimentare.** Quiet hours, cooldown de 14 zile per (user, eveniment), și
+verificarea că nu a cumpărat deja evenimentul. Când verificarea de comandă nu poate fi
+făcută, răspunsul e „a cumpărat" — o stare incertă nu are voie să producă un mesaj care îi
+spune cuiva să cumpere ce are deja.
+
+**Impact.** Patru teste acoperă exact aceste garduri.
+
+**Deschis.** `TODO(owner)`: înrolarea în `AutomationWorkflow` (ca marketingul să editeze
+copy și cadență fără deploy) nu e cablată — evaluarea trigger-ului și gardurile sunt, și
+ele sunt partea care trebuie să fie corectă. Tot `TODO(owner)`: quiet hours folosesc fusul
+aplicației, nu al destinatarului — `marketplace_customers` n-are coloană de timezone.
+
+---
+
+## D-048 — Partiționarea lunară a telemetriei rămâne o decizie de owner
+
+**Context.** D6 sugerează partiționarea `short_events` pe lună.
+
+**Alegere.** Nu am făcut-o. Rollup-ul, prune-ul și eșantionarea — care sunt cele care
+țin tabelul mic — sunt livrate.
+
+**De ce.** Partiționarea declarativă pe Postgres cere migrarea datelor existente și o
+decizie despre cheia de partiționare, ambele luate în funcție de volumul real. Fără acces
+la producție, ar fi o migrație riscantă scrisă în orb, exact ce interzic gardurile.
+
+**Impact.** Notat ca `TODO(owner)` în `PROGRESS.md`, cu contextul necesar.

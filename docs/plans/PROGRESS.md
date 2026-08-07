@@ -27,10 +27,11 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   config, segmentele `following` / `nearby`, geamăn tenant în Filament cu moderare.
 - **Faza 6** — ingestie externă prin link (YouTube / TikTok / Meta) + seed automat din
   canalele YouTube ale artiștilor, cu regula „niciodată re-host" respectată.
-  **68 de teste, 198 aserțiuni, toate verzi.**
+- **Faza 7 (Val 2)** — trending pe velocitate, curba de retenție, prune de telemetrie,
+  seen-store durabil + explorare în ranker, nudge-uri comportamentale opt-in.
+  **81 de teste, 216 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 7 (Val 2) — retenție/trending (D4), scalarea telemetriei (D6),
-evoluția rankerului (D5), notificări comportamentale (D12).
+**Urmează.** Faza 8 — auto-gen din media (B3), captions (B6), analytics organizator (B5).
 
 **Blocaje / de știut.**
 
@@ -255,12 +256,48 @@ double-tap = like și swipe-up pe CTA.
 Nu se vedea cât timp serviciul era construit doar cu `new`; `ShortIngestService` îl
 rezolvă din container, deci devenea o eroare de boot pe orice mediu fără cheie.
 
-## Faza 7 — Val 2 (măsurare & scalare) ⏳
+## Faza 7 — Val 2 (măsurare & scalare) ✅
 
-- [ ] D4 retenție / atribuire pe segment / trending
-- [ ] D6 partiționare, rollup, prune, sampling
-- [ ] D5 evoluția rankerului (explorare, seen-store, diversitate)
-- [ ] D12 notificări comportamentale prin `AutomationWorkflow`
+**D4 — retenție, atribuire pe segment, trending**
+- [x] `short_retention` + `AggregateShortRetentionJob` — curba de drop-off în decile;
+      re-rularea înlocuiește ziua, deci nu poate dubla
+- [x] `shorts.trending_score` + `ComputeTrendingJob` la 15 min — **velocitate raportată
+      la baseline**, nu totaluri: un short cu un milion de vizionări istorice nu e
+      „trending"; ce nu mai are engagement în fereastră decade la zero
+- [x] Atribuirea pe segment de feed (`orders.source_feed`) — livrată în Faza 4
+- [x] Termen `trending` în ranker, cu pondere proprie în config
+
+**D6 — scalarea telemetriei**
+- [x] `PruneShortEventsJob` zilnic — șterge în bucăți de 5000 (un DELETE nemărginit
+      peste luni de rânduri blochează tabelul și expiră pe worker)
+- [x] Eșantionarea impresiilor și pragurile de credibilitate — livrate în Faza 1
+- [ ] Partiționare pe lună — `TODO(owner)`: e o decizie de DBA pe Postgres
+      (partiționare declarativă + migrarea datelor existente), nu ceva de făcut
+      orbește fără acces la volumul real
+
+**D5 — evoluția rankerului**
+- [x] `short_impressions` + `SyncShortImpressionsJob` — seen-store distilat, care
+      **supraviețuiește prune-ului**; fără el, un short reapare în feed după 90 de zile
+      doar pentru că dovada a fost ștearsă
+- [x] Explorare epsilon-greedy — o felie din fiecare pagină e rezervată short-urilor
+      cu prea puține impresii ca să fi apucat să câștige un scor; fără asta rankerul
+      e rich-get-richer și un short nou nu poate ieși niciodată la suprafață
+- [x] Explorarea deplasează de la **coada** paginii, nu din vârf
+
+**D12 — notificări comportamentale**
+- [x] `notification_preferences` — absența unui rând înseamnă „folosește default-ul
+      tipului", deci tabelul crește doar când cineva chiar schimbă ceva
+- [x] `EvaluateBehaviouralTriggersJob` — trigger-ul „a văzut N short-uri pentru
+      același eveniment și n-a cumpărat", cu: opt-in (default **oprit** pentru acest
+      tip), quiet hours, cooldown de 14 zile per (user, eveniment), și verificarea
+      că nu a cumpărat deja
+- [ ] Înrolarea în `AutomationWorkflow` — `TODO(owner)`: evaluarea trigger-ului și
+      gardurile sunt gata; ce lipsește sunt șabloanele de workflow prin care
+      marketingul editează copy-ul și cadența fără deploy
+
+- [x] Teste: 13 (trending, decay, retenție, idempotență, prune, seen-store,
+      supraviețuire la prune, explorare, prag de intenție, deja-cumpărat, opt-in,
+      cooldown, default-uri de preferințe)
 
 ## Faza 8 — Auto-gen + captions + analytics organizator ⏳
 

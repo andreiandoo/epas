@@ -75,7 +75,7 @@ class ShortFeedService
         $hasMore = $rows->count() > $limit;
 
         $items = $ranked
-            ? $this->ranker->rank($rows, $customer)->take($limit)
+            ? $this->ranker->rank($rows, $customer, $limit)->take($limit)
             : $rows->take($limit);
 
         [$likedIds, $savedIds] = $this->viewerState($items, $customer);

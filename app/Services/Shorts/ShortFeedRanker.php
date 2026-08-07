@@ -29,7 +29,7 @@ class ShortFeedRanker
      * @param  Collection<int, Short>  $candidates
      * @return Collection<int, Short> ordered best-first, diversified
      */
-    public function rank(Collection $candidates, ?MarketplaceCustomer $customer): Collection
+    public function rank(Collection $candidates, ?MarketplaceCustomer $customer, ?int $pageLimit = null): Collection
     {
         if ($candidates->isEmpty()) {
             return $candidates;
@@ -47,6 +47,8 @@ class ShortFeedRanker
                 'geo' => $weights['geo'] * $this->geo($short, $profile),
                 'freshness' => $weights['freshness'] * $this->freshness($short),
                 'featured' => $weights['featured'] * ($short->is_featured ? 1.0 : 0.0),
+                // Velocity relative to baseline, recomputed by ComputeTrendingJob.
+                'trending' => ($weights['trending'] ?? 0) * min((float) $short->trending_score / 5, 1.0),
                 // The only negative term: something already watched should not
                 // crowd out something new.
                 'seen' => -$weights['seen_penalty'] * (isset($seen[$short->id]) ? 1.0 : 0.0),
@@ -61,6 +63,10 @@ class ShortFeedRanker
         $ordered = $scored->sortByDesc(fn (Short $short) => $short->getAttribute('feed_score'))->values();
 
         $this->explain($ordered);
+
+        if ($pageLimit !== null) {
+            $ordered = $this->explore($ordered, $pageLimit);
+        }
 
         return config('shorts.feed.diversity_enabled', true)
             ? $this->diversify($ordered)
@@ -153,6 +159,12 @@ class ShortFeedRanker
     /**
      * Shorts this viewer already saw, so they can be pushed down.
      *
+     * Reads the distilled seen store first: it is one row per (viewer, short)
+     * rather than one per playback, and it survives the telemetry prune — without
+     * it a short would start reappearing in someone's feed 90 days later purely
+     * because the evidence was deleted. Raw telemetry is the fallback so the
+     * penalty still works between two runs of SyncShortImpressionsJob.
+     *
      * @param  array<int, int>  $candidateIds
      * @return array<int, bool>
      */
@@ -162,8 +174,22 @@ class ShortFeedRanker
             return [];
         }
 
+        $seen = [];
+
         try {
-            return ShortEvent::query()
+            $seen = DB::table('short_impressions')
+                ->where('marketplace_customer_id', $customer->id)
+                ->whereIn('short_id', $candidateIds)
+                ->pluck('short_id')
+                ->flip()
+                ->map(fn () => true)
+                ->all();
+        } catch (\Throwable $e) {
+            Log::debug('ShortFeedRanker: seen store unavailable', ['error' => $e->getMessage()]);
+        }
+
+        try {
+            $recent = ShortEvent::query()
                 ->where('marketplace_customer_id', $customer->id)
                 ->whereIn('short_id', $candidateIds)
                 ->whereIn('type', [ShortEvent::TYPE_VIEW, ShortEvent::TYPE_COMPLETE])
@@ -172,11 +198,61 @@ class ShortFeedRanker
                 ->flip()
                 ->map(fn () => true)
                 ->all();
+
+            $seen += $recent;
         } catch (\Throwable $e) {
             Log::debug('ShortFeedRanker: seen lookup failed', ['error' => $e->getMessage()]);
-
-            return [];
         }
+
+        return $seen;
+    }
+
+    /**
+     * Reserve a slice of the page for shorts nobody has watched yet (D5).
+     *
+     * Without this the ranker is rich-get-richer: popularity is a term in the
+     * score, so a short with no impressions can never accumulate the signal it
+     * would need to rank. Epsilon-greedy — a fixed fraction of slots goes to
+     * low-impression shorts regardless of score.
+     *
+     * @param  Collection<int, Short>  $ordered
+     * @return Collection<int, Short>
+     */
+    protected function explore(Collection $ordered, int $limit): Collection
+    {
+        $rate = (float) config('shorts.ranker.exploration_rate', 0.15);
+
+        if ($rate <= 0 || $ordered->count() <= $limit) {
+            return $ordered;
+        }
+
+        $slots = (int) floor($limit * $rate);
+
+        if ($slots < 1) {
+            return $ordered;
+        }
+
+        $threshold = (int) config('shorts.ranker.exploration_impression_threshold', 50);
+
+        $head = $ordered->take($limit);
+        $tail = $ordered->slice($limit);
+
+        // Fresh candidates that missed the cut purely for lack of signal.
+        $fresh = $tail
+            ->filter(fn (Short $short) => $short->impressions < $threshold)
+            ->take($slots);
+
+        if ($fresh->isEmpty()) {
+            return $ordered;
+        }
+
+        // Displace from the bottom of the page, never the top: exploration must
+        // not cost the viewer the best thing we had for them.
+        $kept = $head->take($limit - $fresh->count());
+
+        return $kept->concat($fresh)->concat($tail->reject(
+            fn (Short $short) => $fresh->contains(fn (Short $f) => $f->is($short))
+        ))->values();
     }
 
     /**

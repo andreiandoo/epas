@@ -1072,3 +1072,37 @@ Schedule::call(function () {
     ->weeklyOn(2, '03:15') // Tuesday 03:15
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
+
+// Trending score — velocity relative to baseline, not raw totals. Every 15
+// minutes: fast enough that a short taking off surfaces the same session, cheap
+// enough that it is two grouped counts over a bounded window.
+Schedule::job(new \App\Jobs\Shorts\ComputeTrendingJob)
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
+// Distils "who saw what" so the ranker's seen penalty survives the telemetry
+// prune — otherwise a short reappears in someone's feed 90 days later purely
+// because the evidence was deleted.
+Schedule::job(new \App\Jobs\Shorts\SyncShortImpressionsJob)
+    ->everyThirtyMinutes()
+    ->withoutOverlapping();
+
+// Yesterday's drop-off curve. Daily and idempotent — it replaces that day's rows.
+Schedule::job(new \App\Jobs\Shorts\AggregateShortRetentionJob)
+    ->dailyAt('03:40')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Prunes raw telemetry past its retention window. short_events is the fastest
+// growing table in the feature and everything worth keeping is already rolled up.
+Schedule::job(new \App\Jobs\Shorts\PruneShortEventsJob)
+    ->dailyAt('04:10')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Behavioural nudges. Twice a day rather than hourly: this is re-engagement, not
+// an alert, and the job enforces its own quiet hours and per-event cooldown.
+Schedule::job(new \App\Jobs\Shorts\EvaluateBehaviouralTriggersJob)
+    ->cron('0 11,18 * * *')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
