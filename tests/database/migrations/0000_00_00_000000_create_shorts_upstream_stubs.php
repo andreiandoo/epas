@@ -134,6 +134,16 @@ return new class extends Migration
             });
         }
 
+        // YouTubeService reads its API key from Setting::current() before
+        // falling back to config, so the singleton row has to be reachable.
+        if (! Schema::hasTable('settings')) {
+            Schema::create('settings', function (Blueprint $table) {
+                $table->id();
+                $table->string('youtube_api_key')->nullable();
+                $table->timestamps();
+            });
+        }
+
         // spatie/laravel-activitylog writes here whenever a logged model (e.g.
         // TicketType) is touched — without it every create() in the suite dies.
         if (! Schema::hasTable('activity_log')) {

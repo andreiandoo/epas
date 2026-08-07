@@ -5,11 +5,13 @@ namespace App\Filament\Resources\Shorts;
 use App\Filament\Resources\Shorts\Pages\CreateShort;
 use App\Filament\Resources\Shorts\Pages\EditShort;
 use App\Filament\Resources\Shorts\Pages\ListShorts;
+use App\Jobs\Shorts\IngestShortJob;
 use App\Models\Artist;
 use App\Models\Event;
 use App\Models\Short;
 use App\Models\Tenant;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -349,6 +351,22 @@ class ShortResource extends Resource
                 Tables\Filters\TernaryFilter::make('ready')->label('Asset ready'),
             ])
             ->recordActions([
+                // "Fetch from link" — reads metadata, embed code and thumbnail
+                // from the platform. The video file is never downloaded; that
+                // would break ToS and copyright on all four platforms.
+                Action::make('ingest')
+                    ->label('Fetch from link')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->visible(fn (Short $record) => $record->source !== Short::SOURCE_UPLOAD && $record->source_url)
+                    ->action(function (Short $record) {
+                        IngestShortJob::dispatch($record->id);
+
+                        Notification::make()
+                            ->title('Fetching — the short fills in shortly')
+                            ->info()
+                            ->send();
+                    }),
+
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -387,6 +405,27 @@ class ShortResource extends Resource
                         ->icon('heroicon-o-archive-box')
                         ->requiresConfirmation()
                         ->action(fn (Collection $records) => $records->each->update(['status' => Short::STATUS_ARCHIVED])),
+
+                    BulkAction::make('ingest')
+                        ->label('Fetch from link')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->action(function (Collection $records) {
+                            $queued = 0;
+
+                            foreach ($records as $record) {
+                                if ($record->source === Short::SOURCE_UPLOAD || ! $record->source_url) {
+                                    continue;
+                                }
+
+                                IngestShortJob::dispatch($record->id);
+                                $queued++;
+                            }
+
+                            Notification::make()
+                                ->title("Fetching {$queued} short(s)")
+                                ->info()
+                                ->send();
+                        }),
 
                     BulkAction::make('feature')
                         ->label('Toggle featured')

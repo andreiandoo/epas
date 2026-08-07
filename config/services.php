@@ -184,6 +184,18 @@ return [
         'signed_url_ttl' => (int) env('VIDEO_SIGNED_URL_TTL', 3600),
     ],
 
+    /*
+    | Meta oEmbed Read — Instagram Reels + Facebook video ingestion.
+    |
+    | TODO(owner): needs a Meta app with the oEmbed Read product approved; the
+    | value here is that app's access token. Until it is set, IG/FB links are
+    | reported as unsupported rather than half-ingested. Meta's policy on this
+    | product has changed repeatedly — confirm availability before app review.
+    */
+    'meta' => [
+        'oembed_token' => env('META_OEMBED_TOKEN'),
+    ],
+
     'bunny' => [
         'stream_library_id'     => env('BUNNY_STREAM_LIBRARY_ID'),
         'stream_api_key'        => env('BUNNY_STREAM_API_KEY'),

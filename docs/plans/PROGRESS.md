@@ -25,9 +25,12 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   atribuire last-touch idempotentă cu reversare la refund, CTR/CVR/venit în admin.
 - **Faza 5 (B2)** — graf de urmărire polimorf, ranker „For You" explicabil cu ponderi în
   config, segmentele `following` / `nearby`, geamăn tenant în Filament cu moderare.
-  **59 de teste, 166 aserțiuni, toate verzi.**
+- **Faza 6** — ingestie externă prin link (YouTube / TikTok / Meta) + seed automat din
+  canalele YouTube ale artiștilor, cu regula „niciodată re-host" respectată.
+  **68 de teste, 198 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 6 — ingestie externă (YouTube → TikTok → Meta) + seed YouTube (B4).
+**Urmează.** Faza 7 (Val 2) — retenție/trending (D4), scalarea telemetriei (D6),
+evoluția rankerului (D5), notificări comportamentale (D12).
 
 **Blocaje / de știut.**
 
@@ -222,11 +225,35 @@ double-tap = like și swipe-up pe CTA.
 
 - [x] Teste: 13 (follow toggle, segmente, ranker, diversitate, cursor, geo, resursă)
 
-## Faza 6 — Ingestie externă + seed YouTube (B4) ⏳
+## Faza 6 — Ingestie externă + seed YouTube (B4) ✅
 
-- [ ] `ShortIngestService` (YouTube → TikTok → Meta)
-- [ ] `IngestShortJob`, `PullChannelShortsJob`
-- [ ] Acțiuni Filament „Preia din link" / „Importă Shorts YouTube"
+> **Regula de aur respectată:** metadate + thumbnail + cod de embed. Fișierul video
+> NU e descărcat și NU e re-hostat niciodată — ar încălca ToS-ul și dreptul de autor
+> la toate cele patru platforme.
+
+- [x] `ShortIngestService` — detecție de platformă + ingestie normalizată
+  - **YouTube**: `YouTubeService::extractVideoId()` (prinde deja `/shorts/`) +
+    `getVideosStats` (cache 6h → respectă cota Data API); embed `youtube-nocookie`
+  - **TikTok**: oEmbed public, fără cheie și fără app review; cache 24h
+  - **Meta (IG/FB)**: oEmbed Read — întoarce `null` cât timp tokenul lipsește,
+    ca adminul să vadă „platformă neconectată", nu un short pe jumătate completat
+- [x] `IngestShortJob` — completează embed/titlu/durată, **cache-uiește thumbnail-ul
+      local** (URL-urile de CDN ale platformelor expiră), nu suprascrie niciodată un
+      titlu scris de mână, lasă short-ul în `draft` (ingestia nu e curatoriere)
+- [x] `PullChannelShortsJob` — seed din canalul YouTube al unui artist; filtrează
+      strict la ≤60s (un live set de 40 de minute n-are ce căuta într-un feed vertical),
+      dedup pe `(source, source_video_id)`, leagă de următorul eveniment al artistului
+- [x] Programat săptămânal, doar pentru artiștii **cu evenimente viitoare** — cota
+      Data API e zilnică și n-are rost arsă pe short-uri pe care nu le curatorează nimeni
+- [x] Acțiuni Filament „Fetch from link" (per rând + bulk)
+- [x] `services.meta.oembed_token` + `META_OEMBED_TOKEN` placeholder
+- [x] Teste: 9 (detecție, YouTube, TikTok, Meta fără token, platforme necunoscute,
+      durate ISO-8601, job de ingestie, titlu păstrat, link inutilizabil)
+
+**Fix colateral:** `YouTubeService::__construct` arunca `TypeError` când
+`YOUTUBE_API_KEY` lipsea (`config()` întoarce `null`, proprietatea e tipată `string`).
+Nu se vedea cât timp serviciul era construit doar cu `new`; `ShortIngestService` îl
+rezolvă din container, deci devenea o eroare de boot pe orice mediu fără cheie.
 
 ## Faza 7 — Val 2 (măsurare & scalare) ⏳
 

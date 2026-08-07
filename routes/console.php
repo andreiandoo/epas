@@ -1056,3 +1056,19 @@ Schedule::job(new \App\Jobs\Shorts\AggregateShortStatsJob)
 Schedule::job(new \App\Jobs\Shorts\FireDropRemindersJob)
     ->everyMinute()
     ->withoutOverlapping();
+
+// Seeds the feed from the YouTube channels of artists who have an upcoming
+// event. Weekly, and only for artists actually playing soon: the Data API has a
+// daily quota, and pulling for the whole roster would burn it on shorts nobody
+// is going to curate. Everything lands as draft.
+Schedule::call(function () {
+    \App\Models\Artist::query()
+        ->whereNotNull('youtube_id')
+        ->whereHas('events', fn ($q) => $q->whereDate('event_date', '>=', now()->toDateString()))
+        ->pluck('id')
+        ->each(fn (int $id) => \App\Jobs\Shorts\PullChannelShortsJob::dispatch($id));
+})
+    ->name('shorts:pull-artist-youtube')
+    ->weeklyOn(2, '03:15') // Tuesday 03:15
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();

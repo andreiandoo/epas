@@ -600,3 +600,81 @@ singur organizator poate strica experiența pentru toți.
 
 **Impact.** Statusul e read-only în panoul tenant, deci nu poate fi ocolit prin payload.
 Costul: moderarea devine o sarcină recurentă pentru core admin.
+
+---
+
+## D-038 — Meta (IG/FB) întoarce `null`, nu un short pe jumătate completat
+
+**Context.** oEmbed Read de la Meta cere app + review; tokenul nu există.
+
+**Alegere.** `ShortIngestService::meta()` verifică tokenul și întoarce `null` când
+lipsește. Adminul vede „nu s-a putut citi nimic din link", nu un short cu titlu dar fără
+embed.
+
+**Alternative.** Scraping de Open Graph — fragil, și pe muchia ToS-ului.
+
+**Impact.** YouTube și TikTok merg azi. IG/FB sunt o singură variabilă de config distanță.
+`TODO(owner)` în serviciu și în config.
+
+---
+
+## D-039 — Thumbnail-urile se copiază local, embed-ul nu
+
+**Context.** Regula de aur: fără re-host de video. Thumbnail-urile sunt altceva —
+`social-video-ingestion.md` §0 le marchează explicit ca „uz uzual, acceptat".
+
+**Alegere.** `IngestShortJob` descarcă thumbnail-ul pe disk-ul `public` și
+declanșează `GenerateBlurhashJob` pe el. Embed-ul rămâne al platformei.
+
+**Alternative.** Hotlink la CDN-ul platformei — URL-urile se rotesc, iar feed-ul rămâne
+cu goluri.
+
+**Impact.** Feed-ul nu se strică atunci când o platformă schimbă CDN-ul. Fișierul video nu
+e atins niciodată.
+
+---
+
+## D-040 — Pull-ul de canal filtrează strict la 60 de secunde
+
+**Context.** `getRecentVideos()` întoarce ultimele uploaduri, nu doar Shorts.
+
+**Alegere.** `PullChannelShortsJob` sare peste orice depășește 60s (pragul YouTube pentru
+Shorts) și peste orice fără durată cunoscută.
+
+**Alternative.** Import complet + curatoriere manuală — un live set de 40 de minute într-un
+feed vertical e datorie de curatoriere, nu acoperire.
+
+**Impact.** Ce ajunge în coada de curatoriere e plauzibil. Deduplicarea pe
+`(source, source_video_id)` face re-rularea sigură.
+
+---
+
+## D-041 — Pull programat doar pentru artiștii cu evenimente viitoare
+
+**Context.** YouTube Data API are cotă zilnică.
+
+**Alegere.** Task-ul săptămânal iterează doar artiștii cu `youtube_id` **și** cu un
+eveniment viitor.
+
+**Alternative.** Tot rosterul — arde cota pe short-uri de la artiști care nu joacă nicăieri
+și pe care nu-i curatorează nimeni.
+
+**Impact.** Cota se cheltuie pe conținut care poate vinde un bilet. Short-urile pulled sunt
+legate automat de următorul eveniment al artistului.
+
+---
+
+## D-042 — Reparat un `TypeError` latent în `YouTubeService`
+
+**Context.** Constructorul face `$this->apiKey = $settings->youtube_api_key ?: config(...)`
+pe o proprietate tipată `string`. Când `YOUTUBE_API_KEY` lipsește, `config()` întoarce
+`null` → `TypeError` la construcție.
+
+**Alegere.** Cast la `string`. Trei linii, plus comentariul care spune de ce.
+
+**De ce acum.** Nu se vedea cât timp serviciul era construit doar explicit cu `new` în
+joburi. `ShortIngestService` îl injectează, deci containerul îl rezolvă — și pe orice mediu
+fără cheie (inclusiv CI) devenea o eroare de boot a feature-ului.
+
+**Impact.** Serviciul se comportă acum ca `TikTokService`/`FacebookService`, care tratau
+deja cheia lipsă ca „neconfigurat" în loc să crape.
