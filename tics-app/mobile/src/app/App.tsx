@@ -5,7 +5,7 @@
 import { useEffect } from 'react';
 import { IconSprite } from '../design/icons/Icon';
 import { useSession } from '../store/session';
-import { LoginScreen } from '../features/auth/LoginScreen';
+import { AuthFlow } from '../features/auth/AuthFlow';
 import { ChooserScreen } from '../features/identity/ChooserScreen';
 import { ClientRoot } from '../features/client/ClientRoot';
 import { OrgShell } from '../features/org/OrgShell';
@@ -28,10 +28,11 @@ export function App() {
    * asta, cele doua prototipuri — care dau acelasi nume unor clase diferite —
    * isi scurg stiluri unul in celalalt. ClientRoot isi pune singur containerul.
    */
-  const isClient = authed && mode === 'client';
+  /* Fluxul de auth foloseste CSS-ul de client, deci nu primeste `.app-org`. */
+  const isClient = !authed || mode === 'client';
 
   let body: React.ReactNode;
-  if (!authed) body = <LoginScreen />;
+  if (!authed) body = <AuthFlow />;
   else if (mode === 'chooser') body = <ChooserScreen />;
   else if (mode === 'client') body = <ClientRoot />;
   else body = account === 'venue' ? <LeisureShell /> : <OrgShell />;

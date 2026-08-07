@@ -54,6 +54,11 @@ const ROUTES = {
   prefsEdit: { proto: ['tab:profile', 'prefsEdit'], app: [{ nav: 'profile' }, { text: 'Preferințele mele' }] },
   settings: { proto: ['tab:profile', 'go:settings'], app: [{ nav: 'profile' }, { text: 'Setări cont' }] },
   ticslist: { proto: ['go:ticslist'], app: [{ nav: 'explore' }, { text: 'Radar prețuri' }] },
+  festival: { proto: ['go:festival'], app: [{ text: 'Nordvale Festival 2026' }] },
+  stay22: {
+    proto: ['go:event:coldplay', 'go:stay22:arena'],
+    app: [{ text: 'Coldplay' }, { text: 'Cazare & cum ajung' }],
+  },
   calendar: { proto: ['tab:explore', 'go:calendar'], app: [{ nav: 'explore' }, { text: 'Calendar' }] },
   ticsoffers: { proto: ['go:ticsoffers:smiley'], app: [{ nav: 'explore' }, { text: 'Radar prețuri' }, { text: 'Smiley Live' }] },
   setPayment: {
@@ -200,8 +205,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   console.log('aplicatie:');
   const a = await newPage(390, 844);
   await a.goto(APP, { waitUntil: 'networkidle0' });
-  await wait(700);
-  await clickText(a, 'Conectare');
+  // acelasi traseu ca in prototip: splash se auto-avanseaza, sarim onboarding-ul
+  await wait(2700);
+  await clickText(a, 'Sari peste');
+  await clickText(a, 'Autentificare');
+  await wait(600);
+  // §3: emailul demo are mai multe proprietati -> apare pasul "Alege contul"
   await clickText(a, 'Andrei Popescu');
   await wait(700);
   for (const step of route.app) {

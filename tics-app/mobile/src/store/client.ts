@@ -42,6 +42,13 @@ type ClientState = ProtoSt & {
   /** filtrele de categorie + categoria pentru care sunt valabile (ST._catFor) */
   catF: CatFilters;
   catFor: string | null;
+  /** ST.stayF — filtrele hartii Stay22 */
+  stayF: { type: string; sort: 'dist' | 'price' | 'rating'; maxPrice: number };
+  stayFltOpen: boolean;
+  setStayF: (patch: Partial<ClientState['stayF']>) => void;
+  setStayPin: (i: number) => void;
+  toggleStayFlt: () => void;
+  resetStayF: () => void;
   setCat: (cat: string) => void;
   setCatF: (patch: Partial<CatFilters>) => void;
   resetCatF: () => void;
@@ -89,7 +96,14 @@ export const useClient = create<ClientState>((set, get) => ({
   ttCounts: {},
   catF: { ...CAT_DEFAULTS },
   catFor: null,
+  stayF: { type: 'Toate', sort: 'dist', maxPrice: 500 },
+  stayFltOpen: false,
   toast: null,
+
+  setStayF: (patch) => set((s) => ({ stayF: { ...s.stayF, ...patch } })),
+  setStayPin: (stayPin) => set({ stayPin }),
+  toggleStayFlt: () => set((s) => ({ stayFltOpen: !s.stayFltOpen })),
+  resetStayF: () => set({ stayF: { type: 'Toate', sort: 'dist', maxPrice: 500 } }),
 
   /** Prototip: filtrele se reseteaza cand se schimba categoria. */
   setCat: (cat) =>
