@@ -136,6 +136,8 @@ export async function fetchShortsFeed(opts: {
   cursor?: string | null;
   limit?: number;
   tenant?: number;
+  /** Pentru segmentul „nearby" — bate orasul din profil. */
+  city?: string;
   signal?: AbortSignal;
 } = {}): Promise<ShortsPage> {
   const params = new URLSearchParams();
@@ -143,6 +145,7 @@ export async function fetchShortsFeed(opts: {
   if (opts.cursor) params.set('cursor', opts.cursor);
   if (opts.limit) params.set('limit', String(opts.limit));
   if (opts.tenant) params.set('tenant', String(opts.tenant));
+  if (opts.city) params.set('city', opts.city);
 
   const query = params.toString();
   const body = await request<Envelope<ShortsPage>>(`/tenant-client/shorts${query ? `?${query}` : ''}`, {
@@ -350,6 +353,49 @@ export async function reportCtaClick(
     return body.data;
   } catch {
     // Nu blocam navigarea spre checkout pentru o problema de raportare.
+    return null;
+  }
+}
+
+/* ---------- val 2: graful de urmarire (B2) ---------- */
+
+export type FollowableType = 'artist' | 'tenant' | 'venue';
+
+export type FollowItem = {
+  id: number;
+  type: FollowableType | null;
+  followable_id: number;
+  name: string | null;
+  slug: string | null;
+  followed_at: string | null;
+};
+
+export async function fetchFollows(): Promise<FollowItem[]> {
+  try {
+    const body = await request<Envelope<{ items: FollowItem[] }>>('/marketplace-client/customer/follows');
+
+    return body.data.items;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Toggle de urmarire. Serverul decide starea finala si o intoarce — clientul nu
+ * o deduce, ca doua tap-uri rapide sa nu poata desincroniza butonul.
+ */
+export async function toggleFollow(
+  type: FollowableType,
+  id: number,
+): Promise<{ following: boolean } | null> {
+  try {
+    const body = await request<Envelope<{ following: boolean }>>('/marketplace-client/customer/follows', {
+      method: 'POST',
+      body: JSON.stringify({ type, id }),
+    });
+
+    return body.data;
+  } catch {
     return null;
   }
 }

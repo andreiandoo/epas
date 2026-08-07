@@ -23,9 +23,11 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   anti-abuz (D11), accesibilitate (D10).
 - **Faza 4 (Shoppable, B1)** — CTA cu bilet + promo, `orders.source_short_id`/`source_feed`,
   atribuire last-touch idempotentă cu reversare la refund, CTR/CVR/venit în admin.
-  **46 de teste, 144 aserțiuni, toate verzi.**
+- **Faza 5 (B2)** — graf de urmărire polimorf, ranker „For You" explicabil cu ponderi în
+  config, segmentele `following` / `nearby`, geamăn tenant în Filament cu moderare.
+  **59 de teste, 166 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 5 — following + ranker „For You" (B2) + geamăn tenant în Filament.
+**Urmează.** Faza 6 — ingestie externă (YouTube → TikTok → Meta) + seed YouTube (B4).
 
 **Blocaje / de știut.**
 
@@ -186,11 +188,39 @@ double-tap = like și swipe-up pe CTA.
 > controllerul de checkout (1700+ linii, fluxuri de plată reale) fără să pot rula
 > un test de checkout end-to-end pe schema completă.
 
-## Faza 5 — Following + ranker For You (B2) ⏳
+## Faza 5 — Following + ranker For You (B2) ✅
 
-- [ ] `marketplace_follows` + API
-- [ ] `ShortFeedRanker` (afinitate, popularitate, watch, geo, prospețime, diversitate)
-- [ ] Geamăn tenant `ShortResource` (scoped pe `tenant_id`)
+**Graf de urmărire**
+- [x] `marketplace_follows` (polimorf: Artist / Tenant / Venue, unic pe triplet)
+- [x] `MarketplaceFollow` — API vorbește tokenuri scurte („artist"), nu nume de clase
+- [x] `GET`/`POST marketplace-client/customer/follows` (toggle, 404 pe țintă inexistentă)
+- [x] Un follow invalidează imediat cache-ul de profil — apare în pagina următoare
+
+**Ranker „For You"**
+- [x] `ShortFeedRanker` — scor explicabil pe termeni numiți, cu ponderi din config:
+      afinitate (follow / favorit / eveniment cumpărat), popularitate (velocitate,
+      comprimată logaritmic), watch ratio, geo, prospețime (decay cu half-life),
+      featured, penalizare pentru „deja văzut"
+- [x] `ShortAffinityProfile` — gustul spectatorului, construit o dată per pagină și
+      cache-uit 5 minute; citește ce există deja (follows, favorite, comenzi, oraș)
+- [x] Diversitate: niciodată două short-uri consecutive de la același owner, **fără**
+      să scurteze pagina (cele amânate merg la coadă, nu la gunoi)
+- [x] Cursorul avansă pe keyset-ul de recență, nu pe ordinea rankată — altfel
+      re-scorarea între pagini ar sări sau ar repeta rânduri
+- [x] Cold start: fără semnale → featured + prospețime + popularitate
+
+**Segmente noi de feed**
+- [x] `following` — doar owner-i urmăriți; gol onest când nu urmărești pe nimeni
+- [x] `nearby` — orașul vine de pe **venue** (`events` n-are coloană `city`);
+      `?city=` din client bate orașul din profil
+
+**Geamăn tenant Filament**
+- [x] `App\Filament\Tenant\Resources\ShortResource` — scoped pe `tenant_id`
+- [x] Short-urile organizatorului intră în `pending_review`, nu direct în feed;
+      editarea unuia publicat îl trimite înapoi la review
+- [x] Coloane de performanță: views, watch %, CTA, Sales, Revenue
+
+- [x] Teste: 13 (follow toggle, segmente, ranker, diversitate, cursor, geo, resursă)
 
 ## Faza 6 — Ingestie externă + seed YouTube (B4) ⏳
 

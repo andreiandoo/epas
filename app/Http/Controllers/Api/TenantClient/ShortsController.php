@@ -39,6 +39,7 @@ class ShortsController extends Controller
             'limit' => ['nullable', 'integer', 'min:1', 'max:30'],
             'event_id' => ['nullable', 'integer'],
             'language' => ['nullable', 'string', 'max:8'],
+            'city' => ['nullable', 'string', 'max:120'],
         ]);
 
         $result = $this->feed->page(
@@ -49,6 +50,7 @@ class ShortsController extends Controller
             filters: array_filter([
                 'event_id' => $validated['event_id'] ?? null,
                 'language' => $validated['language'] ?? null,
+                'city' => $validated['city'] ?? null,
                 'marketplace_client_id' => $this->marketplaceClientId($request),
             ]),
         );

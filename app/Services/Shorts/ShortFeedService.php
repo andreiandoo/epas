@@ -23,7 +23,17 @@ class ShortFeedService
 {
     public const FEEDS = ['for_you', 'featured', 'nearby', 'following', 'event', 'artist'];
 
-    public function __construct(private readonly ShortPayload $payload) {}
+    public function __construct(
+        private readonly ShortPayload $payload,
+        private readonly ShortFeedRanker $ranker,
+    ) {}
+
+    /**
+     * Segments whose ordering is decided by the ranker rather than by recency.
+     * The cursor contract is unchanged either way — only the candidate ordering
+     * differs (see the "ranked pages" note on page()).
+     */
+    private const RANKED_FEEDS = ['for_you', 'following', 'nearby'];
 
     /**
      * @param  array<string, mixed>  $filters
@@ -47,23 +57,36 @@ class ShortFeedService
             $this->applyCursor($query, $decoded);
         }
 
-        // Fetch one extra row to know whether another page exists.
+        // Ranked segments score a bounded candidate pool and reorder it; the
+        // cursor still walks the underlying recency keyset, so pagination stays
+        // duplicate-free while each page arrives in personalised order.
+        $ranked = in_array($feed, self::RANKED_FEEDS, true);
+        $fetch = $ranked
+            ? max($limit + 1, min((int) config('shorts.feed.candidate_pool', 200), 200))
+            : $limit + 1;
+
         $rows = $query
             ->orderByDesc('is_featured')
             ->orderByDesc('published_at')
             ->orderByDesc('id')
-            ->limit($limit + 1)
+            ->limit($fetch)
             ->get();
 
         $hasMore = $rows->count() > $limit;
-        $items = $rows->take($limit);
+
+        $items = $ranked
+            ? $this->ranker->rank($rows, $customer)->take($limit)
+            : $rows->take($limit);
 
         [$likedIds, $savedIds] = $this->viewerState($items, $customer);
 
         return [
             'feed' => $feed,
             'items' => $this->payload->collection($items, $likedIds, $savedIds, $feed),
-            'next_cursor' => $hasMore ? $this->cursorFor($items->last()) : null,
+            // The cursor always advances along the recency keyset, never along
+            // the ranked order — otherwise re-scoring between two pages would
+            // make it skip or repeat rows.
+            'next_cursor' => $hasMore ? $this->cursorFor($rows->take($limit)->last()) : null,
         ];
     }
 
@@ -124,7 +147,9 @@ class ShortFeedService
     {
         $query = Short::query()
             ->published()
-            ->with(['owner', 'event']);
+            // event.venue is loaded because the geo signal and the "nearby"
+            // segment both read the city off the venue.
+            ->with(['owner', 'event.venue']);
 
         // A marketplace only ever sees its own shorts plus the editorial ones
         // that were never bound to a marketplace.
@@ -157,11 +182,68 @@ class ShortFeedService
         match ($feed) {
             'featured' => $query->where('is_featured', true),
             'event' => isset($filters['event_id']) ? $query->where('event_id', (int) $filters['event_id']) : null,
-            // "nearby" and "following" need geo + the follow graph; until those
-            // land (later phases) they degrade to the default ordering rather
-            // than returning an empty feed.
+            'following' => $this->applyFollowing($query, $customer),
+            'nearby' => $this->applyNearby($query, $customer, $filters),
             default => null,
         };
+    }
+
+    /**
+     * Only shorts owned by someone this viewer follows.
+     *
+     * A viewer who follows nobody gets an empty "Following" — that is the honest
+     * answer, and the client shows a "follow someone" state rather than a feed
+     * that silently pretends to be personalised.
+     */
+    protected function applyFollowing(Builder $query, ?MarketplaceCustomer $customer): void
+    {
+        if (! $customer) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $follows = ShortFeedRanker::followedOwners($customer);
+
+        if ($follows === []) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->where(function (Builder $q) use ($follows) {
+            foreach ($follows as $follow) {
+                $q->orWhere(function (Builder $inner) use ($follow) {
+                    $inner->where('owner_type', $follow['type'])
+                        ->where('owner_id', $follow['id']);
+                });
+            }
+        });
+    }
+
+    /**
+     * Shorts whose event happens in the viewer's city.
+     *
+     * The city lives on the VENUE, not on the event — `events` has no city
+     * column — so the filter goes event → venue. City rather than lat/lng
+     * because a radius search would need coordinates the schema does not carry
+     * reliably. An explicit ?city= from the client wins over the profile.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    protected function applyNearby(Builder $query, ?MarketplaceCustomer $customer, array $filters): void
+    {
+        $city = $filters['city'] ?? $customer?->city;
+
+        if (! $city) {
+            // No location to filter on — fall through to the default ordering
+            // rather than showing an empty feed.
+            return;
+        }
+
+        $needle = mb_strtolower((string) $city);
+
+        $query->whereHas('event.venue', fn (Builder $q) => $q->whereRaw('LOWER(city) = ?', [$needle]));
     }
 
     protected function applyCursor(Builder $query, ShortFeedCursor $cursor): void

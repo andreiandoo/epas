@@ -4120,3 +4120,13 @@ Route::prefix('marketplace-client/customer/shorts')
         Route::post('/watched', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'watched'])
             ->name('api.marketplace-client.customer.shorts.watched');
     });
+
+// Shorts — graful de urmărire din spatele segmentului „Following" (B2).
+Route::prefix('marketplace-client/customer/follows')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\FollowsController::class, 'index'])
+            ->name('api.marketplace-client.customer.follows.index');
+        Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\FollowsController::class, 'toggle'])
+            ->name('api.marketplace-client.customer.follows.toggle');
+    });

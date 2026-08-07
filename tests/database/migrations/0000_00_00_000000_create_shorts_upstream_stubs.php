@@ -85,10 +85,12 @@ return new class extends Migration
             Schema::create('events', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('tenant_id')->nullable();
+                $table->foreignId('venue_id')->nullable();
                 $table->string('slug')->nullable();
                 $table->string('title')->nullable();
                 $table->date('event_date')->nullable();
-                $table->string('city')->nullable();
+                // Stamped by Event::booted() on create.
+                $table->string('event_series')->nullable();
                 $table->timestamps();
             });
         }
@@ -98,8 +100,21 @@ return new class extends Migration
                 $table->id();
                 $table->string('name')->nullable();
                 $table->string('slug')->nullable();
+                // Set by the model's booted() hook on create.
+                $table->string('letter', 4)->nullable();
                 $table->string('youtube_id')->nullable();
                 $table->string('youtube_url')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        if (! Schema::hasTable('venues')) {
+            Schema::create('venues', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('tenant_id')->nullable();
+                $table->string('name')->nullable();
+                $table->string('slug')->nullable();
+                $table->string('city')->nullable();
                 $table->timestamps();
             });
         }

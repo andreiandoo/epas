@@ -510,3 +510,93 @@ redusă (D-002) nu acoperă checkout-ul.
 
 **Impact.** Tot ce ține de Shorts e complet și testat; rămâne o singură linie într-un fișier
 pe care nu-l pot verifica aici. Riscul e vizibil în PROGRESS, nu ascuns într-un diff.
+
+---
+
+## D-032 — Graf de urmărire dedicat, nu `favoriteArtists` ca proxy
+
+**Context.** `shorts.md` B2 sugerează că `favoriteArtists` poate ține loc de „following"
+la început.
+
+**Alegere.** Tabel polimorf `marketplace_follows` (Artist / Tenant / Venue) de la bun
+început. `favoriteArtists` rămâne folosit de ranker, ca semnal **mai slab** decât un follow.
+
+**Alternative.** Doar favorite — acoperă exclusiv artiștii; cine urmărește un organizator
+sau o locație n-are unde să pună asta, iar segmentul „Following" e orb la ei.
+
+**Impact.** Segmentul e complet din prima. API-ul vorbește tokenuri scurte („artist"), nu
+nume de clase, deci clientul nu depinde de namespace-urile serverului.
+
+---
+
+## D-033 — Rankerul e un scor explicabil, nu un model
+
+**Context.** §6 cere „ține-l explicabil (loghează scorul în dev)".
+
+**Alegere.** Termeni numiți (`affinity`, `popularity`, `watch`, `geo`, `freshness`,
+`featured`, `seen`), fiecare cu pondere în `config/shorts.php`; defalcarea per short se
+loghează când `shorts.ranker.explain` e pornit (niciodată în producție).
+
+**Impact.** Când un short ajunge pe poziția 1, cineva poate spune de ce. Ponderile se
+reglează fără deploy de cod.
+
+---
+
+## D-034 — Cursorul rămâne pe keyset-ul de recență, nu pe ordinea rankată
+
+**Context.** Rankerul reordonează candidații; paginarea trebuie să rămână fără duplicate.
+
+**Alegere.** Interogarea aduce un pool mărginit ordonat pe recență, rankerul reordonează
+**doar pagina**, iar `next_cursor` se ia din ultimul rând al ferestrei de recență — nu din
+ultimul rând rankat.
+
+**Alternative.** Cursor pe scor — scorul se schimbă între două cereri (prospețime, „deja
+văzut"), deci cursorul ar sări sau ar repeta rânduri.
+
+**Impact.** Testat: două pagini rankate consecutive nu repetă niciun short.
+
+---
+
+## D-035 — Diversitatea reordonează, nu scurtează
+
+**Context.** Regula „niciodată două consecutive de la același owner" poate elimina rânduri
+dacă un singur owner domină pool-ul.
+
+**Alegere.** Short-urile care ar încălca regula sunt **amânate**, re-admise imediat ce nu
+mai se ciocnesc, iar ce rămâne la final se pune la coadă.
+
+**Alternative.** Eliminarea lor — pagina s-ar micșora tăcut și feed-ul infinit s-ar opri
+mai devreme decât are date.
+
+**Impact.** Testat: 6 short-uri intrate, 6 ieșite, primele două de la owneri diferiți.
+
+---
+
+## D-036 — „Nearby" filtrează pe orașul VENUE-ului
+
+**Context.** Prima implementare a citit `events.city`. Coloana nu există — orașul stă pe
+`venues.city` (evenimentele au `venue_id`).
+
+**Alegere.** Filtrul merge `event → venue`, iar `event.venue` e eager-loaded în
+`baseQuery()` ca semnalul geo din ranker să nu declanșeze o interogare per short.
+
+**Alternative.** Radius pe lat/lng — coordonatele nu sunt purtate fiabil de schemă.
+
+**Impact.** Prins de test (`test_nearby_filters_by_the_viewers_city`), nu în producție.
+`?city=` din client bate orașul din profil, pentru cine călătorește.
+
+---
+
+## D-037 — Short-urile organizatorilor intră în `pending_review`
+
+**Context.** `shorts.md` §17 lasă deschisă întrebarea: direct în feed sau prin moderare?
+
+**Alegere.** Moderare. `CreateShort` din panoul tenant forțează `pending_review` și
+stampilează `tenant_id` din utilizatorul autentificat, nu din formular. Editarea unui short
+deja publicat îl trimite înapoi la review.
+
+**Alternative.** Publicare directă — feed-ul global e o suprafață editorială comună; un
+singur organizator poate strica experiența pentru toți.
+
+**Impact.** Statusul e read-only în panoul tenant, deci nu poate fi ocolit prin payload.
+Costul: moderarea devine o sarcină recurentă pentru core admin.
