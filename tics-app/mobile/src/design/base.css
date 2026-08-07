@@ -47,7 +47,9 @@ button {
   position: relative;
   background: var(--bg);
   overflow: hidden;
-  /* marginile de sistem se aplica nativ, in MainActivity */
+  /* Fara padding pentru bara de status: aplicatia deseneaza edge-to-edge, ca
+     fundalul paginii sa urce sub ora si iconitele de sistem. Spatiul se face
+     din interior — .appbar (organizator) si .safe-top (client). */
 }
 .app-org .screen {
   flex: 1;
@@ -132,6 +134,9 @@ button {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px 12px;
+  /* Dupa shorthand, altfel l-ar suprascrie. Tine locul barei reale de status
+     (--safe-top vine din MainActivity) + aceiasi 10px de respiro. */
+  padding-top: calc(10px + var(--safe-top, 0px));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
@@ -510,7 +515,7 @@ button {
   display: flex;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 8px 6px 10px;
+  padding: 8px 6px calc(10px + var(--safe-bottom, 0px));
 }
 .app-org .tab {
   flex: 1;

@@ -8,6 +8,7 @@
 import { useMemo } from 'react';
 import { Ic, cn, sx } from '../../../design/sx';
 import { I, STAY, STAYSORTS, STAYTYPES, VEN } from '../../../mock/prototype';
+import { SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -84,6 +85,7 @@ export function Stay22({ id }: { id?: string }) {
 
         <div style={sx('position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none;width:66px;height:66px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.28)')} />
 
+        <SafeTop />
         <div className="between pad" style={sx('position:relative;padding-top:4px;z-index:5')}>
           <div className="icon-btn glass" onClick={back}>
             <Ic svg={I.back} />

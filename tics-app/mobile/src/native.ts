@@ -14,9 +14,12 @@ import { useSession } from './store/session';
 export function initNative() {
   if (!Capacitor.isNativePlatform()) return;
 
-  /* bara de status — dark-first, se reactualizeaza la schimbarea temei */
+  /* Bara de status: TRANSPARENTA si suprapusa peste WebView, ca fundalul
+     paginii sa urce sub ora si iconitele de sistem.
+     Anterior ii setam culoarea la #151122, ceea ce desena exact banda gri
+     inchis raportata, separata de fundalul paginii. */
+  StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
   StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-  StatusBar.setBackgroundColor({ color: '#151122' }).catch(() => {});
 
   /* butonul hardware Back: inchide modalul, apoi urca in ierarhie */
   CapApp.addListener('backButton', ({ canGoBack }) => {

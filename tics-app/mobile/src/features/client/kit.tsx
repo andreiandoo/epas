@@ -8,17 +8,24 @@ import { Ic, cn, sx } from '../../design/sx';
 import { I } from '../../mock/prototype';
 import { useNav } from './nav';
 
-/* ---------- sb() — NU se porteaza ----------
-   Prototipul deseneaza o bara de status falsa ("9:41" + semnal/wifi/baterie)
-   pentru ca rula intr-o rama de telefon desenata. Pe telefonul real exista
-   bara de status a sistemului, deci cea simulata ar fi dubla.
-   Locul ei e tinut de safe-area-inset-top, aplicat in client.css pe
-   .stickytop si .dbar — asa continutul incepe exact sub bara reala. */
+/* ---------- sb() -> SafeTop ----------
+   Prototipul deseneaza o bara de status falsa ("9:41" + semnal/wifi/baterie),
+   pentru ca rula intr-o rama de telefon desenata. Pe telefonul real avem bara
+   reala a sistemului, deci CONTINUTUL ei nu se porteaza — dar LOCUL ei da.
+
+   `sb()` are `padding:15px 26px 4px`: ocupa inaltimea barei si lasa 4px pana
+   la titlu. Reproducem exact asta: inaltimea reala a barei (--safe-top, pusa
+   de MainActivity) plus aceiasi 4px de respiro.
+
+   Se pune fix unde era `sb()` in prototip — asa toate ecranele pornesc din
+   acelasi punct, iar fundalul paginii urca sub ora si iconitele de sistem. */
+export const SafeTop = () => <div className="safe-top" aria-hidden="true" />;
 
 /* ---------- topbar(inner, below) ---------- */
 export function TopBar({ children, below }: { children: ReactNode; below?: ReactNode }) {
   return (
     <div className="stickytop">
+      <SafeTop />
       <div className="hrow">{children}</div>
       {below}
     </div>
@@ -30,6 +37,7 @@ export function DBar({ right, title }: { right?: ReactNode; title?: string }) {
   const { back } = useNav();
   return (
     <div className="dbar" data-dbar="">
+      <SafeTop />
       <div className="between pad" style={sx('padding-top:4px')}>
         <div className="icon-btn glass" onClick={back}>
           <Ic svg={I.back} />

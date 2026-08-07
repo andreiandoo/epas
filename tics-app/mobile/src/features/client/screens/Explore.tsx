@@ -10,7 +10,7 @@ import { Ic, sx } from '../../../design/sx';
 import { CATPOOLS, EV, FEST, I, bgv } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvMini } from '../cards';
-import { BottomNav, SecH } from '../kit';
+import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -89,6 +89,7 @@ export function Explore() {
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
       <div className="stickytop">
+        <SafeTop />
         <div className="hrow">
           <div>
             <div className="eyebrow">Descoperă</div>

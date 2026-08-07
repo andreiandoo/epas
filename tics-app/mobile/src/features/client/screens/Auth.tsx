@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { I, OBALL, PEMO, PREFGROUPS, facebook, google, txMark } from '../../../mock/prototype';
+import { SafeTop } from '../kit';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
 import type { IdentityKind } from '../../../api/client';
@@ -95,6 +96,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="ob grid">
+      <SafeTop />
       <div className="between pad" style={sx('padding-top:4px')}>
         <div className="row" style={sx('gap:6px;font-weight:600;font-size:16px;color:var(--ink)')}>
           <Raw html={txMark('var(--indigo-2)', 18)} /> tixello
@@ -198,6 +200,7 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
       <div className="login-top">
         <div className="gridfx" />
         <div className="mesh" />
+        <SafeTop />
         <div style={sx('position:relative;padding:20px 24px 0')}>
           <div style={sx('width:50px;height:50px;border-radius:16px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;backdrop-filter:blur(8px)')}>
             <Raw html={txMark('#fff', 28)} />
@@ -275,6 +278,7 @@ export function Register({ onBack }: { onBack: () => void }) {
       <div className="login-top" style={sx('height:224px')}>
         <div className="gridfx" />
         <div className="mesh" />
+        <SafeTop />
         <div style={sx('position:relative;padding:20px 24px 0')}>
           <div
             className="icon-btn glass"
@@ -374,6 +378,7 @@ export function Forgot({ onBack }: { onBack: () => void }) {
       <div className="login-top" style={sx('height:180px')}>
         <div className="gridfx" />
         <div className="mesh" />
+        <SafeTop />
         <div style={sx('position:relative;padding:20px 24px 0')}>
           <div
             className="icon-btn glass"

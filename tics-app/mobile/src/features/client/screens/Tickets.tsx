@@ -10,7 +10,7 @@
    ========================================================= */
 import { Ic, Raw, sx } from '../../../design/sx';
 import { EV, I, MYTIX, VEN, poster } from '../../../mock/prototype';
-import { BottomNav } from '../kit';
+import { BottomNav, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { Qr } from '../qr';
 
@@ -25,6 +25,7 @@ export function Tickets() {
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
       <div className="stickytop">
+        <SafeTop />
         <div className="hrow">
           <div className="row" style={sx('gap:12px;min-width:0')}>
             <div className="icon-btn" onClick={sback}>

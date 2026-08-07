@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { Ic, sx } from '../../../design/sx';
 import { AFF, I } from '../../../mock/prototype';
-import { BottomNav } from '../kit';
+import { BottomNav, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
@@ -127,6 +127,7 @@ export function Profile() {
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
+      <SafeTop />
       <div style={sx('display:flex;flex-direction:column;align-items:center;padding:14px 20px 20px')}>
         <div
           style={sx('width:86px;height:86px;border-radius:28px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-size:28px;font-weight:600;box-shadow:var(--sh-p)')}

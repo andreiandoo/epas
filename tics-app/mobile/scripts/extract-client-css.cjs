@@ -154,6 +154,29 @@ ${SCOPE} {
    Asa, layout-ul ramane exact cel din prototip. */
 const footer = `
 
+/* ---- Marginile de sistem ----
+   MainActivity scrie --safe-top / --safe-bottom pe <html> (WebView-ul de pe
+   Android nu raporteaza fiabil env(safe-area-inset-*)). Aplicatia deseneaza
+   edge-to-edge, deci fundalul paginii urca sub ora si iconitele de sistem;
+   spatiul se face din interior, nu prin insetarea WebView-ului. */
+${SCOPE} .safe-top {
+  /* tine locul lui sb(): inaltimea barei reale + cei 4px de respiro pe care
+     ii avea padding-ul lui sb() pana la titlu */
+  height: calc(var(--safe-top, 0px) + 4px);
+  flex: none;
+}
+/* Butoanele de jos urca deasupra barei de sistem prin OFFSET, nu prin padding
+   interior — padding-ul ar descentra iconitele fata de pastila. */
+${SCOPE} .bnav {
+  bottom: calc(10px + var(--safe-bottom, 0px));
+}
+${SCOPE} .dock {
+  padding-bottom: calc(18px + var(--safe-bottom, 0px));
+}
+${SCOPE} .ob .foot {
+  padding-bottom: calc(30px + var(--safe-bottom, 0px));
+}
+
 /* ---- Ajustari de integrare, NU de design ----
    Doua elemente sunt pozitionate absolut si aveau un offset de 52px calculat
    ca sa treaca de bara de status SIMULATA a prototipului (~35px inaltime).
@@ -161,10 +184,10 @@ const footer = `
    pentru ca insetam nativ. Scadem cei 35px ca sa pastram acelasi spatiu
    vizual fata de marginea de sus a continutului. */
 ${SCOPE} .shtop {
-  top: 17px;
+  top: calc(var(--safe-top, 0px) + 17px);
 }
 ${SCOPE} #lightbox .lbtop {
-  padding-top: 17px;
+  padding-top: calc(var(--safe-top, 0px) + 17px);
 }
 `;
 

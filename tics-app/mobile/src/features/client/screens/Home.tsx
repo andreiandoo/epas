@@ -11,7 +11,7 @@ import { CATS, EV, FEST, I, TICS } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { eventBackground } from '../../../api/tenantClient';
 import { EvMini, ExpCard, FeaturedCard, RadarCard } from '../cards';
-import { BottomNav, SecH } from '../kit';
+import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 
 /* EV vine dintr-un dump verbatim (@ts-nocheck), deci fara index signature. */
@@ -27,8 +27,8 @@ export function Home() {
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
-      {/* stickytop — fara sb(), locul barei reale e tinut de safe-area (client.css) */}
       <div className="stickytop">
+        <SafeTop />
         <div className="hdr" style={sx('padding:4px 20px 11px')}>
           <div className="row" style={sx('gap:11px')}>
             <div className="avatar">AP</div>

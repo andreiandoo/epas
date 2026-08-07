@@ -10,7 +10,7 @@ import { Ic, cn, sx } from '../../../design/sx';
 import { ART, ARTX, EV, I, SOCIC, SOCLIST, SORTLBL, VEN, bgv } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvRow } from '../cards';
-import { BottomNav, BackTitle, DBar, SecH, TopBar } from '../kit';
+import { BottomNav, BackTitle, DBar, SafeTop, SecH, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -180,6 +180,7 @@ export function Search() {
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
+      <SafeTop />
       <div className="row pad" style={sx('padding-top:8px;gap:11px')}>
         <div className="icon-btn" onClick={back}>
           <Ic svg={I.back} />

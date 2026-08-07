@@ -11,7 +11,7 @@
 import { useEffect, useRef } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ADDONS, EV, EXPDAYS, I, VEN, lei, occInfo, poster } from '../../../mock/prototype';
-import { TopBar, BackTitle } from '../kit';
+import { TopBar, BackTitle, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { useClient, ttCountsFor } from '../../../store/client';
 
@@ -780,6 +780,7 @@ export function Success() {
 
   return (
     <div className="grid" style={sx('min-height:100%;display:flex;flex-direction:column')}>
+      <SafeTop />
       <div className="confetti" ref={confetti} />
       <div
         style={sx('flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;position:relative;z-index:5')}

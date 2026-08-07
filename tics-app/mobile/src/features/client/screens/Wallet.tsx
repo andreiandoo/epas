@@ -4,7 +4,7 @@
    ========================================================= */
 import { Ic, sx } from '../../../design/sx';
 import { I, TX, lei } from '../../../mock/prototype';
-import { BottomNav, TopBar } from '../kit';
+import { BottomNav, SafeTop, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { Qr } from '../qr';
@@ -19,6 +19,7 @@ export function Wallet() {
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
       <div className="stickytop">
+        <SafeTop />
         <div className="hrow">
           <div className="row" style={sx('gap:12px;min-width:0')}>
             <div className="icon-btn" onClick={sback}>
