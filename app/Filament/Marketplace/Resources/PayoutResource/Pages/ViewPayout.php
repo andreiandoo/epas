@@ -1009,8 +1009,16 @@ class ViewPayout extends ViewRecord
                 // double-bill; now each decont's slice is scoped by
                 // period/marketplace_payout_id so a per-payout invoice is
                 // the natural unit.
+                //
+                // isEventFinished() was removed 2026-08-07: it was a leftover
+                // guard from the per-event era (only bill after the event
+                // ends, since it covered all future decont slices). With
+                // per-payout scope, each decont's period IS the settlement
+                // moment — the event's own state is irrelevant. Example that
+                // exposed the bug: payout 3262 on event 4605 had 162 RON of
+                // included commission ready to bill, but the button stayed
+                // hidden because the event date hadn't passed yet.
                 ->visible(fn () => $this->record->posInvoice === null
-                    && $this->record->isEventFinished()
                     && ($this->record->getOrganizerInvoicePreview()['total'] ?? 0) > 0.01
                     && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
