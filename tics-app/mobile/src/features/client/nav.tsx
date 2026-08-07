@@ -20,6 +20,18 @@ export const TAB_SCREENS = ['home', 'explore', 'tickets', 'wallet', 'profile'];
 /** Durata tranzitiei din client.css (.screen { transition: ... .4s }). */
 const EXIT_MS = 420;
 
+/**
+ * Cat era derulat fiecare cadru, dupa cheia lui.
+ *
+ * Ecranele se DEMONTEAZA cand navighezi mai departe (asa functioneaza stiva
+ * prototipului), deci pozitia de scroll se pierde: te intorci din Setari in
+ * Profil si esti aruncat in capul paginii. Cheia cadrului supravietuieste
+ * insa in stiva, asa ca o folosim ca sa punem scroll-ul inapoi la remontare.
+ */
+const scrollMemory = new Map<number, number>();
+export const rememberScroll = (key: number, top: number) => scrollMemory.set(key, top);
+export const recallScroll = (key: number) => scrollMemory.get(key) ?? 0;
+
 type NavApi = {
   stack: Frame[];
   /** cadrul care iese, cat timp dureaza animatia */
@@ -84,13 +96,26 @@ export function NavProvider({ initial = 'home', children }: { initial?: string; 
     [scheduleExit],
   );
 
-  /** tab(): daca suntem pe un ecran de tab, il INLOCUIM; altfel resetam stiva. */
+  /**
+   * tab(): daca ecranul cerut e DEJA in stiva ne intoarcem la el, ca sa nu-l
+   * dublam si ca sa-si pastreze pozitia de scroll (Profil -> Portofel -> tab
+   * Profil trebuie sa aduca acelasi Profil, nu unul nou, derulat sus).
+   * Altfel: pe un ecran de tab il inlocuim; pe orice altceva resetam stiva.
+   */
   const tab = useCallback(
     (id: string) => {
-      setDir('forward');
       setStack((s) => {
         const cur = s[s.length - 1];
         if (cur.id === id) return s;
+
+        const at = s.findIndex((f) => f.id === id);
+        if (at >= 0) {
+          setDir('back');
+          scheduleExit(cur, 'back');
+          return s.slice(0, at + 1);
+        }
+
+        setDir('forward');
         scheduleExit(cur, 'forward');
         if (TAB_SCREENS.includes(cur.id)) {
           return [...s.slice(0, -1), { id, key: seq.current++ }];

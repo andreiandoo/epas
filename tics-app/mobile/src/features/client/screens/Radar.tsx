@@ -8,15 +8,16 @@
    Structura si stilurile raman cele din prototip; se schimba doar sursa.
    ========================================================= */
 import { useState } from 'react';
-import { Ic, sx } from '../../../design/sx';
+import { Ic, cn, sx } from '../../../design/sx';
 import { ART, CAL_DAY, CAL_DOTS, I, bgv } from '../../../mock/prototype';
 import { RadarCard } from '../cards';
 import { BottomNav, DBar, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useLightbox } from '../lightbox';
-import { fmtK, useRadarDay, useRadarEvent, useRadarList, useRadarMonth, useRadarStats } from '../radarData';
-import type { RadarItem } from '../../../api/ticsRadar';
+import { fmtK, useRadarCities, useRadarDay, useRadarEvent, useRadarList, useRadarMonth, useRadarStats } from '../radarData';
+import { CAT_TO_TYPE, GENRE_OPTIONS, TYPE_OPTIONS, type RadarItem } from '../../../api/ticsRadar';
+import { PickerChip, PickerSheet, type Option } from '../picker';
 
 type Ev = Record<string, any>;
 
@@ -36,11 +37,27 @@ function avgSaving(items: RadarItem[]): number | null {
 /* =========================================================
    S.ticslist
    ========================================================= */
-export function TicsList() {
+export function TicsList({ cat }: { cat?: string }) {
   const { go, back } = useNav();
-  const { items } = useRadarList(6);
+  const city = useClient((s) => s.city);
+  const f = useClient((s) => s.radarF);
+  const setRadarF = useClient((s) => s.setRadarF);
+  const resetRadarF = useClient((s) => s.resetRadarF);
+
+  /* "Alege un vibe" intra aici cu o categorie; o traducem in event_type. */
+  const type = cat ? CAT_TO_TYPE[cat] : undefined;
+  const { items, loading } = useRadarList({
+    limit: 6,
+    city: city || undefined,
+    type,
+    when: f.when,
+    maxPrice: f.maxPrice || undefined,
+    scarce: f.scarce || undefined,
+  });
+
   const live = useRadarStats();
   const saving = avgSaving(items);
+  const noFilter = f.when === 'all' && !f.maxPrice && !f.scarce;
 
   const stats: [string, string][] = [
     [live ? fmtK(live.liveEvents) : '3.2k', 'evenimente'],
@@ -56,9 +73,9 @@ export function TicsList() {
             <Ic svg={I.back} />
           </div>
           <div>
-            <div className="h2">Radar</div>
+            <div className="h2">{cat ?? 'Radar'}</div>
             <div className="muted" style={sx('font-size:11.5px')}>
-              Din toată România · prețuri live
+              {city || 'Din toată România'} · prețuri live
             </div>
           </div>
         </div>
@@ -101,23 +118,54 @@ export function TicsList() {
       </div>
 
       <div className="filterbar" style={sx('margin-top:14px')}>
-        <div className="flt on">
+        <div className={cn('flt', noFilter && 'on')} onClick={resetRadarF}>
           <Ic svg={I.slider} /> Toate
         </div>
-        <div className="flt">
+        <div
+          className={cn('flt', f.when === 'today' && 'on')}
+          onClick={() => setRadarF({ when: f.when === 'today' ? 'all' : 'today' })}
+        >
           <Ic svg={I.cal} /> Azi
         </div>
-        <div className="flt">Weekend</div>
-        <div className="flt">
+        <div
+          className={cn('flt', f.when === 'weekend' && 'on')}
+          onClick={() => setRadarF({ when: f.when === 'weekend' ? 'all' : 'weekend' })}
+        >
+          Weekend
+        </div>
+        <div
+          className={cn('flt', f.maxPrice > 0 && 'on')}
+          onClick={() => setRadarF({ maxPrice: f.maxPrice ? 0 : 100 })}
+        >
           <Ic svg={I.tag} /> Sub 100 lei
         </div>
-        <div className="flt">🔥 Aproape sold-out</div>
+        <div className={cn('flt', f.scarce && 'on')} onClick={() => setRadarF({ scarce: !f.scarce })}>
+          🔥 Aproape sold-out
+        </div>
       </div>
 
       <div className="pad" style={sx('margin-top:16px;display:flex;flex-direction:column;gap:14px')}>
         {items.map((t, i) => (
           <RadarCard key={t.id + i} t={t as never} st="width:100%" />
         ))}
+        {!items.length ? (
+          <div className="card" style={sx('padding:22px;text-align:center')}>
+            <div style={sx('font-size:30px')}>{loading ? '📡' : '🤷'}</div>
+            <div className="h2" style={sx('font-size:14px;margin-top:8px')}>
+              {loading ? 'Caut prețuri…' : 'Nimic pentru filtrele astea'}
+            </div>
+            {!loading ? (
+              <>
+                <div className="muted" style={sx('font-size:12px;margin-top:6px;line-height:1.5')}>
+                  Încearcă fără filtre sau alege alt oraș din antetul de pe Acasă.
+                </div>
+                <button className="cta ghost" style={sx('margin-top:14px;padding:11px')} onClick={resetRadarF}>
+                  Șterge filtrele
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div style={sx('height:8px')} />
       <BottomNav active="" />
@@ -494,8 +542,20 @@ export function Calendar() {
     setYm([t.getUTCFullYear(), t.getUTCMonth()]);
   };
 
-  const { data, loading } = useRadarMonth(year, month);
+  const calF = useClient((s) => s.calF);
+  const setCalF = useClient((s) => s.setCalF);
+  const cities = useRadarCities();
+  const [sheet, setSheet] = useState<'city' | 'type' | 'genre' | null>(null);
+
+  const { data, loading } = useRadarMonth(year, month, {
+    city: calF.city || undefined,
+    type: calF.type || undefined,
+    genre: calF.genre || undefined,
+  });
   const stats = useRadarStats();
+
+  const cityOptions: Option[] = [['', 'Toate orașele'], ...cities.map((c) => [c, c] as Option)];
+  const labelOf = (opts: Option[], v: string, fallback: string) => opts.find((o) => o[0] === v)?.[1] ?? fallback;
 
   const days = Array.from({ length: daysInMonth(year, month) }, (_, i) => i + 1);
   const START_BLANK = startBlank(year, month);
@@ -548,10 +608,53 @@ export function Calendar() {
       </TopBar>
 
       <div className="filterbar" style={sx('margin-top:12px')}>
-        <div className="flt">📍 Toate orașele</div>
-        <div className="flt">🎫 Toate tipurile</div>
-        <div className="flt">🎵 Genuri</div>
+        <PickerChip
+          icon="📍"
+          label={calF.city || 'Toate orașele'}
+          active={!!calF.city}
+          onClick={() => setSheet('city')}
+        />
+        <PickerChip
+          icon="🎫"
+          label={labelOf(TYPE_OPTIONS, calF.type, 'Toate tipurile')}
+          active={!!calF.type}
+          onClick={() => setSheet('type')}
+        />
+        <PickerChip
+          icon="🎵"
+          label={calF.genre ? labelOf(GENRE_OPTIONS, calF.genre, calF.genre) : 'Genuri'}
+          active={!!calF.genre}
+          onClick={() => setSheet('genre')}
+        />
       </div>
+
+      {sheet === 'city' ? (
+        <PickerSheet
+          title="Alege orașul"
+          options={cityOptions}
+          value={calF.city}
+          onPick={(city) => setCalF({ city })}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+      {sheet === 'type' ? (
+        <PickerSheet
+          title="Tipul evenimentului"
+          options={TYPE_OPTIONS}
+          value={calF.type}
+          onPick={(type) => setCalF({ type })}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+      {sheet === 'genre' ? (
+        <PickerSheet
+          title="Genul muzical"
+          options={GENRE_OPTIONS}
+          value={calF.genre}
+          onPick={(genre) => setCalF({ genre })}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
 
       <div className="pad" style={sx('margin-top:14px')}>
         <div className="between" style={sx('margin-bottom:10px')}>

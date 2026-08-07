@@ -51,6 +51,9 @@ function CatCard({ c }: { c: Pool }) {
     // route are forma "go:category:Concerte" / "go:ticslist"
     const parts = c.route.split(':');
     if (parts[0] !== 'go') return;
+    /* "Alege un vibe" trebuie sa duca in Radar, filtrat pe categoria aleasa —
+       acolo sunt evenimentele reale, cu preturi comparate pe platforme. */
+    if (parts[1] === 'category' || parts[1] === 'ticslist') return go('ticslist', { cat: c.name });
     go(parts[1], parts[2] ? { id: parts[2] } : undefined);
   };
 

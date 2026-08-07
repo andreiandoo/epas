@@ -18,27 +18,20 @@ type Pass = { name: string; code: string; checkedIn?: string };
 type Ticket = { ev: string; passes: Pass[]; seat: string; cat: string };
 
 export function Tickets() {
-  const { go, back, tab, stack } = useNav();
-  /** sback din prototip: inapoi daca exista stiva, altfel spre Acasa. */
-  const sback = () => (stack.length > 1 ? back() : tab('home'));
+  const { go } = useNav();
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
+      {/* Antet de ecran-radacina, ca pe Acasa si Explorează: fara sageata de
+          back — Biletele mele e un tab, se ajunge acolo din bara de jos. */}
       <div className="stickytop">
         <SafeTop />
         <div className="hrow">
-          <div className="row" style={sx('gap:12px;min-width:0')}>
-            <div className="icon-btn" onClick={sback}>
-              <Ic svg={I.back} />
-            </div>
-            <div>
-              <h1 className="h1" style={sx('font-size:23px')}>
-                Biletele mele
-              </h1>
-              <p className="muted" style={sx('margin-top:2px;font-size:12px')}>
-                Bilete QR individuale
-              </p>
-            </div>
+          <div>
+            <div className="eyebrow">Bilete QR individuale</div>
+            <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
+              Biletele mele
+            </h1>
           </div>
           <div className="icon-btn">
             <Ic svg={I.qr} />

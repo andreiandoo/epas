@@ -18,9 +18,9 @@
    1. per_page e plafonat la 50 (peste asta raspunde cu redirect, nu JSON).
    2. NU exista filtru de data si nici sortare configurabila: lista vine
       mereu crescator dupa `starts_at`, incepand din 2018. Primele pagini
-      sunt istorie. Gasim inceputul viitorului printr-o cautare binara pe
-      index (log2(6000) ~ 13 cereri de cate un element), rezultat pe care il
-      tinem in cache pe zi — vezi upcomingOffset().
+      sunt istorie. Gasim inceputul viitorului printr-o cautare binara peste
+      pagini (~7 cereri), cu rezultatul tinut in cache pe zi — vezi
+      upcomingOffset().
    3. Lista NU include platformele/preturile; alea vin doar din detaliu.
       Deci hidratam separat, in paralel, doar cardurile pe care le afisam.
 
@@ -109,10 +109,63 @@ const TYPE_MAP: Record<string, { cat: string; sc: string; g: string; tone: strin
   party: { cat: 'Petrecere', sc: 'party', g: '🪩', tone: 'linear-gradient(150deg,#6d28d9,#2a1065)' },
   sport: { cat: 'Sport', sc: 'city', g: '🏟', tone: 'linear-gradient(150deg,#0f4c4a,#12b3a6)' },
   film: { cat: 'Film', sc: 'theatre', g: '🎬', tone: 'linear-gradient(150deg,#312e81,#6366f1)' },
+  kids: { cat: 'Copii', sc: 'theatre', g: '🧸', tone: 'linear-gradient(150deg,#7e22ce,#f0abfc)' },
+  'food-drink': { cat: 'Food & drink', sc: 'wine', g: '🍷', tone: 'linear-gradient(150deg,#4c1d95,#b45309)' },
+  charity: { cat: 'Caritate', sc: 'city', g: '💜', tone: 'linear-gradient(150deg,#3b0764,#a78bfa)' },
   other: { cat: 'Altele', sc: 'city', g: '🎟', tone: 'linear-gradient(150deg,#2a2440,#4c1d95)' },
 };
 
 const typeInfo = (t: string | null) => TYPE_MAP[(t ?? '').toLowerCase()] ?? TYPE_MAP.other;
+
+/**
+ * Categoriile din "Alege un vibe" -> `event_type`-ul TICS.
+ *
+ * ATENTIE la proportii, masurate pe date reale (esantion de 200 de
+ * evenimente viitoare): `event_type` e 'other' in ~70% din cazuri, iar
+ * `genre` e null in ~78%. Un filtru pe tip ascunde deci majoritatea
+ * catalogului — de aia "Toate" ramane implicit peste tot.
+ * Tipuri intalnite: other, theater, concert, festival, kids, sport,
+ * standup, food-drink, party, dance, charity.
+ */
+export const CAT_TO_TYPE: Record<string, string> = {
+  Concerte: 'concert',
+  Teatru: 'theater',
+  Festival: 'festival',
+  'Stand-up': 'standup',
+  Petrecere: 'party',
+  Sport: 'sport',
+  Copii: 'kids',
+  Film: 'other',
+  Experiențe: 'food-drink',
+};
+
+/** Tipurile oferite in filtrul de tip, cu eticheta lor. */
+export const TYPE_OPTIONS: [value: string, label: string][] = [
+  ['', 'Toate tipurile'],
+  ['concert', 'Concerte'],
+  ['theater', 'Teatru'],
+  ['festival', 'Festivaluri'],
+  ['standup', 'Stand-up'],
+  ['party', 'Petreceri'],
+  ['dance', 'Dance'],
+  ['sport', 'Sport'],
+  ['kids', 'Copii'],
+  ['food-drink', 'Food & drink'],
+  ['other', 'Altele'],
+];
+
+/** Genurile cele mai frecvente. Filtrul e client-side: API-ul ignora `genre`. */
+export const GENRE_OPTIONS: [value: string, label: string][] = [
+  ['', 'Toate genurile'],
+  ['electronic', 'Electronic'],
+  ['pop', 'Pop'],
+  ['rock', 'Rock'],
+  ['manele', 'Manele'],
+  ['classical', 'Clasic'],
+  ['jazz', 'Jazz'],
+  ['folk', 'Folk'],
+  ['hip-hop', 'Hip-hop'],
+];
 
 const STOCK_RO: Record<string, string> = {
   available: 'Disponibil',
@@ -239,26 +292,28 @@ const qs = (o: Record<string, string | number | undefined>) => {
    Unde incepe viitorul
 
    Lista e crescatoare dupa data si fara filtru de data, deci cautam prin
-   injumatatire primul index cu `starts_at >= azi`. Cu per_page=1 fiecare
-   sondaj costa un element, iar rezultatul il tinem pe zi in localStorage:
-   in practica se face o singura data pe zi, per set de filtre.
+   injumatatire prima PAGINA care incepe in viitor, apoi pozitia exacta in
+   pagina de dinaintea ei. Rezultatul se tine pe zi in localStorage, deci in
+   practica se face o singura data pe zi, per set de filtre.
    ========================================================= */
 const todayStamp = () => new Date().toISOString().slice(0, 10);
 
-function cacheGet(key: string): number | null {
+/* Retinem si `total`: e util pentru diagnosticare si tine cheia de cache
+   auto-descriptiva. Offsetul e valabil o zi. */
+function cacheGet(key: string): { offset: number; total: number } | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
-    const v = JSON.parse(raw) as { stamp: string; offset: number };
-    return v.stamp === todayStamp() ? v.offset : null;
+    const v = JSON.parse(raw) as { stamp: string; offset: number; total?: number };
+    return v.stamp === todayStamp() ? { offset: v.offset, total: v.total ?? 0 } : null;
   } catch {
     return null;
   }
 }
 
-function cacheSet(key: string, offset: number) {
+function cacheSet(key: string, offset: number, total: number) {
   try {
-    localStorage.setItem(key, JSON.stringify({ stamp: todayStamp(), offset }));
+    localStorage.setItem(key, JSON.stringify({ stamp: todayStamp(), offset, total }));
   } catch {
     /* fara cache, doar mai lent */
   }
@@ -270,16 +325,17 @@ function todayUtc() {
   return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-/* Doua cautari pe aceeasi lista (ziua de azi pentru Radar, intai de luna
-   pentru Calendar) ating multi indecsi comuni — le tinem, ca sa nu platim
-   aceeasi cerere de doua ori intr-un minut, cu limitarea de rata a API-ului. */
-const probeCache = new Map<string, ListResponse | null>();
+/* Paginile deja aduse. Cautarea de mai jos si listarea propriu-zisa ating
+   aceleasi pagini, iar API-ul limiteaza la ~60 de cereri pe minut — deci
+   fiecare pagina se aduce o singura data pe sesiune. */
+const pageCache = new Map<string, ListResponse>();
 
-async function probe(filters: Record<string, string | undefined>, page: number) {
+async function getPage(filters: Record<string, string | undefined>, page: number) {
   const k = `${qs(filters)}#${page}`;
-  if (probeCache.has(k)) return probeCache.get(k)!;
-  const r = await get<ListResponse>(`/api/v1/events?${qs({ ...filters, per_page: 1, page })}`);
-  if (r) probeCache.set(k, r);
+  const hit = pageCache.get(k);
+  if (hit) return hit;
+  const r = await get<ListResponse>(`/api/v1/events?${qs({ ...filters, per_page: PER_PAGE, page })}`);
+  if (r) pageCache.set(k, r);
   return r;
 }
 
@@ -288,57 +344,102 @@ const isFuture = (e: ApiRadarEvent, from: number) => {
   return !!d && !Number.isNaN(d.getTime()) && d.getTime() >= from;
 };
 
-/** Indexul (0-based) primului eveniment care nu a trecut inca, sau null. */
+/**
+ * Indexul (0-based) primului eveniment care nu a trecut inca, sau null.
+ *
+ * Cautam peste PAGINI de cate 50, nu peste elemente: ~121 de pagini in loc de
+ * ~6000 de pozitii inseamna log2(121) ~ 7 cereri in loc de 13, iar paginile
+ * atinse raman in cache si le refoloseste chiar listarea de dupa.
+ *
+ * (Am incercat si o cautare pornita dintr-o estimare proportionala, plecand de
+ * la lista nefiltrata. Masurat pe date reale nu se plateste: 12 -> 9 cereri
+ * pentru Bucuresti, dar 10 -> 11 pentru concerte, fiindca subseturile nu sunt
+ * distribuite in timp la fel ca intregul.)
+ */
 async function upcomingOffset(filters: Record<string, string | undefined>, from = todayUtc()): Promise<number | null> {
   // `from` INTRA in cheie: calendarul cauta inceputul unei luni, lista cauta
   // ziua de azi — acelasi set de filtre, indecsi complet diferiti.
   const key = `tics.radar.offset:${from}:${qs(filters)}`;
   const cached = cacheGet(key);
-  if (cached !== null) return cached;
+  if (cached) return cached.offset;
 
-  const first = await probe(filters, 1);
-  const total = first?.meta?.total ?? 0;
-  if (!total || !first?.data?.length) return null;
-  if (isFuture(first.data[0], from)) {
-    cacheSet(key, 0);
-    return 0;
+  const first = await getPage(filters, 1);
+  if (!first?.data?.length) return null;
+  const total = first.meta.total;
+  const last = first.meta.last_page;
+
+  const inFirst = first.data.findIndex((e) => isFuture(e, from));
+  if (inFirst >= 0) {
+    cacheSet(key, inFirst, total);
+    return inFirst;
   }
 
-  let lo = 0;
-  let hi = total - 1;
-  let ans = total; // total = nimic in viitor
+  /* prima pagina care INCEPE in viitor; granita e atunci in pagina de dinaintea ei */
+  let lo = 2;
+  let hi = last;
+  let firstFuturePage = last + 1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    const r = await probe(filters, mid + 1);
+    const r = await getPage(filters, mid);
     if (!r?.data?.length) {
       hi = mid - 1;
       continue;
     }
     if (isFuture(r.data[0], from)) {
-      ans = mid;
+      firstFuturePage = mid;
       hi = mid - 1;
     } else {
       lo = mid + 1;
     }
   }
+  if (firstFuturePage > last) return null;
+
+  const target = Math.max(1, firstFuturePage - 1);
+  const r = await getPage(filters, target);
+  const i = r?.data?.findIndex((e) => isFuture(e, from)) ?? -1;
+  const ans = i >= 0 ? (target - 1) * PER_PAGE + i : (firstFuturePage - 1) * PER_PAGE;
 
   if (ans >= total) return null;
-  cacheSet(key, ans);
+  cacheSet(key, ans, total);
   return ans;
 }
 
-/** Evenimente de la un index incolo, paginand cat e nevoie. */
-async function fromOffset(filters: Record<string, string | undefined>, offset: number, want: number) {
+/**
+ * Evenimente de la un index incolo, paginand cat e nevoie.
+ * `until` opreste scanarea cand am trecut de o data (filtrele "Azi"/"Weekend",
+ * pe care API-ul nu le poate face singur).
+ * `keep` filtreaza client-side ce API-ul nu stie sa filtreze (ex. `genre`).
+ */
+async function fromOffset(
+  filters: Record<string, string | undefined>,
+  offset: number,
+  want: number,
+  opts: { until?: number; keep?: (e: ApiRadarEvent) => boolean; maxPages?: number } = {}
+) {
   const out: ApiRadarEvent[] = [];
   let page = Math.floor(offset / PER_PAGE) + 1;
   let skip = offset % PER_PAGE;
 
-  for (let i = 0; i < MAX_PAGES && out.length < want; i++) {
-    const r = await get<ListResponse>(`/api/v1/events?${qs({ ...filters, per_page: PER_PAGE, page })}`);
+  for (let i = 0; i < (opts.maxPages ?? MAX_PAGES) && out.length < want; i++) {
+    const r = await getPage(filters, page);
     if (!r?.data?.length) break;
-    out.push(...r.data.slice(skip));
+
+    let past = false;
+    for (const e of r.data.slice(skip)) {
+      if (opts.until !== undefined) {
+        const t = e.starts_at ? new Date(e.starts_at).getTime() : NaN;
+        if (Number.isFinite(t) && t >= opts.until) {
+          past = true;
+          break;
+        }
+      }
+      if (opts.keep && !opts.keep(e)) continue;
+      out.push(e);
+      if (out.length >= want) break;
+    }
+
     skip = 0;
-    if (page >= r.meta.last_page) break;
+    if (past || page >= r.meta.last_page) break;
     page++;
   }
   return out.slice(0, want);
@@ -361,8 +462,15 @@ export async function fetchRadarEvent(id: string): Promise<RadarItem | null> {
   return item;
 }
 
-/** Cereri in paralel, dar in valuri, ca sa nu deschidem 20 de conexiuni. */
-async function hydrate(events: ApiRadarEvent[], concurrency = 6): Promise<RadarItem[]> {
+/**
+ * Cereri in paralel, dar in valuri, ca sa nu deschidem 20 de conexiuni.
+ *
+ * ATENTIE la cache: daca cererea de detaliu esueaza (429), evenimentul ajunge
+ * fara oferte. NU-l punem in cache in cazul asta — altfel o singura limitare
+ * de rata il lasa gol pana la repornirea aplicatiei, si ecranul il arunca
+ * (filtrele pastreaza doar evenimentele cu oferte).
+ */
+async function hydrate(events: ApiRadarEvent[], concurrency = 5): Promise<RadarItem[]> {
   const out: RadarItem[] = [];
   for (let i = 0; i < events.length; i += concurrency) {
     const wave = events.slice(i, i + concurrency);
@@ -372,11 +480,12 @@ async function hydrate(events: ApiRadarEvent[], concurrency = 6): Promise<RadarI
         if (cached) return cached;
         const r = await get<DetailResponse>(`/api/v1/events/${e.id}`);
         const item = normalizeRadar(r?.data ?? e);
-        detailCache.set(item.id, item);
+        if (r?.data) detailCache.set(item.id, item);
         return item;
       })
     );
     out.push(...done);
+    if (i + concurrency < events.length) await sleep(120);
   }
   return out;
 }
@@ -396,7 +505,7 @@ export async function withOffers(items: RadarItem[], concurrency = 4): Promise<R
           const cached = detailCache.get(it.id);
           if (cached) return cached;
           const r = await get<DetailResponse>(`/api/v1/events/${it.id}`);
-          if (!r?.data) return it;
+          if (!r?.data) return it; // cerere cazuta: pastram ce aveam, fara sa cachem un gol
           const full = normalizeRadar(r.data);
           detailCache.set(full.id, full);
           return full;
@@ -421,33 +530,132 @@ export async function fetchRadarStats(): Promise<RadarStats | null> {
   return get<RadarStats>('/api/public-stats');
 }
 
+/** Filtrele ecranului Radar. `when` acopera chip-urile Azi / Weekend. */
+export type RadarQuery = {
+  limit?: number;
+  city?: string;
+  type?: string;
+  genre?: string;
+  search?: string;
+  when?: 'all' | 'today' | 'weekend';
+  /** pretul cel mai mic sa fie sub pragul asta (chip-ul "Sub 100 lei") */
+  maxPrice?: number;
+  /** doar stoc pe terminate (chip-ul "Aproape sold-out") */
+  scarce?: boolean;
+};
+
+/** Intervalul [de la, pana la) pentru chip-urile de data. */
+function whenRange(when: RadarQuery['when']): { from: number; until?: number } {
+  const from = todayUtc();
+  if (when === 'today') return { from, until: from + 86400000 };
+  if (when === 'weekend') {
+    const n = new Date(from);
+    // 6 = sambata; daca azi e deja weekend, weekendul incepe azi
+    const dow = n.getUTCDay();
+    const toSat = dow === 6 || dow === 0 ? 0 : 6 - dow;
+    const start = from + toSat * 86400000;
+    // sambata + duminica; daca suntem duminica, doar ziua curenta
+    const days = dow === 0 ? 1 : 2;
+    return { from: start, until: start + days * 86400000 };
+  }
+  return { from };
+}
+
+const SCARCE = new Set(['Puține', 'Ultimele', 'Sold out']);
+
 /**
  * Lista Radar: evenimente viitoare, cu preturile de pe fiecare platforma.
  * Cele cu mai multe platforme urca primele — comparatia de pret e tot rostul
  * ecranului, iar un eveniment cu o singura oferta nu are ce compara.
+ *
+ * `city` si `type` merg prin API. `genre`, pretul si stocul NU pot: primul e
+ * ignorat de API, celelalte doua exista abia dupa hidratare. Pe alea le
+ * filtram aici si, daca nu ies destule, mai tragem candidati.
  */
 export async function fetchRadarList(
-  opts: { limit?: number; city?: string; type?: string; search?: string } = {}
+  opts: RadarQuery = {}
 ): Promise<{ items: RadarItem[]; source: 'tics' | 'prototype' }> {
   const limit = opts.limit ?? 6;
   const filters = { city: opts.city, event_type: opts.type, q: opts.search };
+  const { from, until } = whenRange(opts.when);
+  const needsPost = !!opts.maxPrice || !!opts.scarce;
+
+  /* Plasa de siguranta (datasetul prototipului) se intinde DOAR cand nu s-a
+     cerut niciun filtru. Daca utilizatorul a filtrat si nu iese nimic,
+     raspunsul corect e "nimic gasit", nu trei evenimente inventate. */
+  const unfiltered =
+    !opts.city && !opts.type && !opts.genre && !opts.search && !opts.maxPrice && !opts.scarce &&
+    (!opts.when || opts.when === 'all');
+  const empty = () => ({ items: unfiltered ? protoItems() : [], source: unfiltered ? ('prototype' as const) : ('tics' as const) });
 
   // cautarea are propriul set de rezultate, deja restrans: nu mai sarim in viitor
-  const offset = opts.search ? 0 : await upcomingOffset(filters);
-  if (offset === null) return { items: protoItems(), source: 'prototype' };
+  const offset = opts.search ? 0 : await upcomingOffset(filters, from);
+  if (offset === null) return empty();
 
   /* Luam ceva mai multe decat afisam, ca sa avem din ce alege mai jos — dar
      nu mult mai multe: fiecare candidat costa o cerere de detaliu, iar
-     app.tics.ro limiteaza la ~60 pe minut. */
-  const raw = await fromOffset(filters, offset, Math.min(limit * 2, 12));
-  if (!raw.length) return { items: protoItems(), source: 'prototype' };
+     app.tics.ro limiteaza la ~60 pe minut. Cand filtram si dupa pret/stoc,
+     rata de pastrare scade, deci cerem mai multi candidati. */
+  const want = Math.min(limit * (needsPost ? 3 : 2), needsPost ? 18 : 12);
+  const raw = await fromOffset(filters, offset, want, {
+    until,
+    keep: opts.genre ? (e) => (e.genre ?? '').toLowerCase() === opts.genre!.toLowerCase() : undefined,
+  });
+  if (!raw.length) return empty();
 
   const hydrated = await hydrate(raw);
-  const usable = hydrated.filter((i) => i.offers.length > 0);
-  if (!usable.length) return { items: protoItems(), source: 'prototype' };
+  let usable = hydrated.filter((i) => i.offers.length > 0);
+  if (opts.maxPrice) usable = usable.filter((i) => i.offers[0][1] <= opts.maxPrice!);
+  if (opts.scarce) usable = usable.filter((i) => i.offers.some((o) => SCARCE.has(o[2])));
+  if (!usable.length) return empty();
 
   usable.sort((a, b) => b.offers.length - a.offers.length);
   return { items: usable.slice(0, limit), source: 'tics' };
+}
+
+/* =========================================================
+   Orasele in care chiar se intampla ceva
+
+   API-ul n-are endpoint de orase (`/api/public-stats` da doar numarul lor),
+   asa ca le deducem din evenimentele viitoare si le ordonam dupa cate au.
+   Rezultatul se tine pe zi — nu e o lista care se schimba de la o ora la alta.
+   ========================================================= */
+export const CITY_FALLBACK = [
+  'București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Brașov',
+  'Constanța', 'Sibiu', 'Oradea', 'Craiova', 'Galați',
+];
+
+export async function fetchRadarCities(): Promise<string[]> {
+  const lsKey = 'tics.radar.cities.v1';
+  try {
+    const raw = localStorage.getItem(lsKey);
+    if (raw) {
+      const v = JSON.parse(raw) as { stamp: string; cities: string[] };
+      if (v.stamp === todayStamp() && v.cities.length) return v.cities;
+    }
+  } catch {
+    /* cache stricat: reincarcam */
+  }
+
+  const offset = await upcomingOffset({});
+  if (offset === null) return CITY_FALLBACK;
+
+  const raw = await fromOffset({}, offset, 250, { maxPages: 5 });
+  const counts = new Map<string, number>();
+  for (const e of raw) {
+    const c = e.city;
+    if (!c || c === 'Necunoscut') continue;
+    counts.set(c, (counts.get(c) ?? 0) + 1);
+  }
+  if (!counts.size) return CITY_FALLBACK;
+
+  const cities = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+  try {
+    localStorage.setItem(lsKey, JSON.stringify({ stamp: todayStamp(), cities }));
+  } catch {
+    /* fara cache, doar mai lent */
+  }
+  return cities;
 }
 
 /* =========================================================
@@ -467,8 +675,16 @@ export type MonthData = {
 
 const monthCache = new Map<string, MonthData>();
 
-export async function fetchRadarMonth(year: number, month: number): Promise<MonthData | null> {
-  const key = `${year}-${month}`;
+/** Filtrele calendarului. `genre` se aplica local — API-ul il ignora. */
+export type MonthQuery = { city?: string; type?: string; genre?: string };
+
+export async function fetchRadarMonth(
+  year: number,
+  month: number,
+  q: MonthQuery = {}
+): Promise<MonthData | null> {
+  const filters = { city: q.city, event_type: q.type };
+  const key = `${year}-${month}#${qs(filters)}#${q.genre ?? ''}`;
   const hit = monthCache.get(key);
   if (hit) return hit;
 
@@ -490,8 +706,9 @@ export async function fetchRadarMonth(year: number, month: number): Promise<Mont
 
   const start = Date.UTC(year, month, 1);
   const end = Date.UTC(year, month + 1, 1);
-  const offset = await upcomingOffset({}, start);
-  if (offset === null) return null;
+  const offset = await upcomingOffset(filters, start);
+  if (offset === null) return { counts: {}, byDay: {}, total: 0, capped: false };
+  const genre = q.genre?.toLowerCase();
 
   const counts: Record<number, number> = {};
   const byDay: Record<number, RadarItem[]> = {};
@@ -504,7 +721,7 @@ export async function fetchRadarMonth(year: number, month: number): Promise<Mont
   let incomplete = false;
 
   for (let i = 0; i < MONTH_MAX_PAGES; i++) {
-    const r = await get<ListResponse>(`/api/v1/events?${qs({ per_page: PER_PAGE, page })}`);
+    const r = await getPage(filters, page);
     if (!r?.data?.length) {
       if (r === null) incomplete = true;
       else capped = false;
@@ -521,6 +738,7 @@ export async function fetchRadarMonth(year: number, month: number): Promise<Mont
         break;
       }
       if (t < start) continue;
+      if (genre && (e.genre ?? '').toLowerCase() !== genre) continue;
 
       const day = d.getUTCDate();
       counts[day] = (counts[day] ?? 0) + 1;

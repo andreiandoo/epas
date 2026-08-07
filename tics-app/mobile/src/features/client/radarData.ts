@@ -7,6 +7,8 @@
    ========================================================= */
 import { useEffect, useState } from 'react';
 import {
+  CITY_FALLBACK,
+  fetchRadarCities,
   fetchRadarEvent,
   fetchRadarList,
   fetchRadarMonth,
@@ -14,13 +16,20 @@ import {
   PROTO_RADAR,
   withOffers,
   type MonthData,
+  type MonthQuery,
   type RadarItem,
+  type RadarQuery,
   type RadarStats,
 } from '../../api/ticsRadar';
 
 const protoItems = (): RadarItem[] => Object.values(PROTO_RADAR).map((t) => ({ ...t, live: false }));
 
-export function useRadarList(limit = 6) {
+/**
+ * Lista Radar. `q` poate contine oras, tip, gen, interval si praguri —
+ * vezi RadarQuery. Se refetch-uieste ori de cate ori se schimba filtrele.
+ */
+export function useRadarList(q: RadarQuery = {}) {
+  const limit = q.limit ?? 6;
   const [items, setItems] = useState<RadarItem[]>(() => {
     const p = protoItems();
     // prototipul are 3 evenimente, ecranul afiseaza 6 — le repetam ca in prototip
@@ -29,21 +38,44 @@ export function useRadarList(limit = 6) {
   const [source, setSource] = useState<'tics' | 'prototype'>('prototype');
   const [loading, setLoading] = useState(true);
 
+  /* Cheia serializeaza filtrele: obiectul e recreat la fiecare randare, deci
+     nu poate sta direct in lista de dependinte fara bucla infinita. */
+  const key = JSON.stringify([limit, q.city, q.type, q.genre, q.search, q.when, q.maxPrice, q.scarce]);
+
   useEffect(() => {
     let alive = true;
-    fetchRadarList({ limit })
+    setLoading(true);
+    fetchRadarList({ ...q, limit })
       .then((r) => {
-        if (!alive || r.source !== 'tics') return;
+        if (!alive) return;
         setItems(r.items);
-        setSource('tics');
+        setSource(r.source);
       })
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [limit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   return { items, source, loading };
+}
+
+/**
+ * Orasele in care chiar se intampla ceva, dupa cate evenimente au.
+ * Pornim de la o lista fixa, ca selectorul sa nu apara gol: lista reala cere
+ * cautarea binara + cateva pagini si poate intarzia cateva secunde.
+ */
+export function useRadarCities() {
+  const [cities, setCities] = useState<string[]>(CITY_FALLBACK);
+  useEffect(() => {
+    let alive = true;
+    fetchRadarCities().then((c) => alive && setCities(c));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return cities;
 }
 
 export function useRadarStats() {
@@ -77,21 +109,23 @@ export function useRadarEvent(id?: string) {
   return item;
 }
 
-export function useRadarMonth(year: number, month: number) {
+export function useRadarMonth(year: number, month: number, q: MonthQuery = {}) {
   const [data, setData] = useState<MonthData | null>(null);
   const [loading, setLoading] = useState(true);
+  const key = JSON.stringify([year, month, q.city, q.type, q.genre]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setData(null);
-    fetchRadarMonth(year, month)
+    fetchRadarMonth(year, month, q)
       .then((d) => alive && setData(d))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [year, month]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   return { data, loading };
 }

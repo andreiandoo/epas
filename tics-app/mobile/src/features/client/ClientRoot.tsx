@@ -7,10 +7,10 @@
    un placeholder explicit, ca sa se vada clar ce lipseste — nu pe o
    aproximare care ar putea trece drept "gata".
    ========================================================= */
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { cn } from '../../design/sx';
 import { useScreenChrome } from './useScreenChrome';
-import { NavProvider, useNav, type Frame } from './nav';
+import { NavProvider, recallScroll, rememberScroll, useNav, type Frame } from './nav';
 import { useClient } from '../../store/client';
 import { Home } from './screens/Home';
 import { Explore } from './screens/Explore';
@@ -82,7 +82,7 @@ const SCREENS: Record<string, ScreenFn> = {
   setTerms: () => <SetTerms />,
   setPrivacy: () => <SetPrivacy />,
   setRate: () => <SetRate />,
-  ticslist: () => <TicsList />,
+  ticslist: (d) => <TicsList cat={d.cat as string | undefined} />,
   ticsoffers: (d) => <TicsOffers id={d.id as string} />,
   calendar: () => <Calendar />,
   festival: () => <Festival />,
@@ -118,12 +118,48 @@ function LeavingScreen({ frame, cls }: { frame: Frame; cls: string }) {
 function ActiveScreen({ frame, cls, entered }: { frame: Frame; cls: string; entered: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useScreenChrome(ref);
+  useScrollMemory(ref, frame.key);
   const render = SCREENS[frame.id];
   return (
     <div ref={ref} className={cn('screen', !entered && cls)}>
       {render ? render(frame.data ?? {}) : <Placeholder id={frame.id} />}
     </div>
   );
+}
+
+/**
+ * Pune ecranul inapoi unde era cand l-ai parasit.
+ *
+ * Restaurarea se face in doua etape pentru ca inaltimea continutului creste
+ * dupa montare (imagini, date venite din retea): daca setam scrollTop o
+ * singura data, containerul e inca prea scurt si valoarea e taiata la maxim.
+ */
+function useScrollMemory(ref: RefObject<HTMLDivElement>, key: number) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const want = recallScroll(key);
+    let raf = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (want > 0) {
+      const restore = () => {
+        if (el.scrollTop < want) el.scrollTop = want;
+      };
+      restore();
+      raf = requestAnimationFrame(restore);
+      timer = setTimeout(restore, 260);
+    }
+
+    const onScroll = () => rememberScroll(key, el.scrollTop);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      if (timer) clearTimeout(timer);
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, [ref, key]);
 }
 
 /**

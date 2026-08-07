@@ -36,12 +36,38 @@ const seed = PROTO_ST as unknown as ProtoSt;
 export type CatFilters = { sort: 'rec' | 'price' | 'rating'; maxPrice: number; city: string; seated: boolean };
 const CAT_DEFAULTS: CatFilters = { sort: 'rec', maxPrice: 500, city: '', seated: false };
 
+/* ---------- Radar (date reale din app.tics.ro) ---------- */
+
+/** Chip-urile din bara de filtre a Radarului. */
+export type RadarFilters = {
+  when: 'all' | 'today' | 'weekend';
+  /** pragul chip-ului "Sub 100 lei"; 0 = fara prag */
+  maxPrice: number;
+  /** chip-ul "Aproape sold-out" */
+  scarce: boolean;
+};
+const RADAR_DEFAULTS: RadarFilters = { when: 'all', maxPrice: 0, scarce: false };
+
+/** Filtrele calendarului: oras / tip / gen. */
+export type CalFilters = { city: string; type: string; genre: string };
+const CAL_DEFAULTS: CalFilters = { city: '', type: '', genre: '' };
+
 type ClientState = ProtoSt & {
   /** contoarele de bilete de pe ecranul de tipuri (ST._ttCounts din prototip) */
   ttCounts: Record<string, number[]>;
   /** filtrele de categorie + categoria pentru care sunt valabile (ST._catFor) */
   catF: CatFilters;
   catFor: string | null;
+  /** orasul ales din antetul de pe Acasa; '' = toata tara */
+  city: string;
+  setCity: (city: string) => void;
+  /** filtrele ecranului Radar */
+  radarF: RadarFilters;
+  setRadarF: (patch: Partial<RadarFilters>) => void;
+  resetRadarF: () => void;
+  /** filtrele calendarului */
+  calF: CalFilters;
+  setCalF: (patch: Partial<CalFilters>) => void;
   /** ST.stayF — filtrele hartii Stay22 */
   stayF: { type: string; sort: 'dist' | 'price' | 'rating'; maxPrice: number };
   stayFltOpen: boolean;
@@ -96,6 +122,9 @@ export const useClient = create<ClientState>((set, get) => ({
   ttCounts: {},
   catF: { ...CAT_DEFAULTS },
   catFor: null,
+  city: '',
+  radarF: { ...RADAR_DEFAULTS },
+  calF: { ...CAL_DEFAULTS },
   stayF: { type: 'Toate', sort: 'dist', maxPrice: 500 },
   stayFltOpen: false,
   toast: null,
@@ -110,6 +139,11 @@ export const useClient = create<ClientState>((set, get) => ({
     set((s) => (s.catFor === cat ? {} : { catFor: cat, catF: { ...CAT_DEFAULTS } })),
   setCatF: (patch) => set((s) => ({ catF: { ...s.catF, ...patch } })),
   resetCatF: () => set({ catF: { ...CAT_DEFAULTS } }),
+
+  setCity: (city) => set({ city }),
+  setRadarF: (patch) => set((s) => ({ radarF: { ...s.radarF, ...patch } })),
+  resetRadarF: () => set({ radarF: { ...RADAR_DEFAULTS } }),
+  setCalF: (patch) => set((s) => ({ calF: { ...s.calF, ...patch } })),
 
   toggleSaved: (id) =>
     set((s) => ({ saved: s.saved.includes(id) ? s.saved.filter((x) => x !== id) : [...s.saved, id] })),

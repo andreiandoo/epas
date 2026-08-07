@@ -13,14 +13,21 @@ import { eventBackground } from '../../../api/tenantClient';
 import { EvMini, ExpCard, FeaturedCard, RadarCard } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
-import { useRadarList } from '../radarData';
+import { useRadarCities, useRadarList } from '../radarData';
+import { PickerSheet, type Option } from '../picker';
+import { useClient } from '../../../store/client';
+import { useState } from 'react';
 
 /* EV vine dintr-un dump verbatim (@ts-nocheck), deci fara index signature. */
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
 
 export function Home() {
   const { go } = useNav();
-  const { items: radar } = useRadarList(3);
+  const city = useClient((s) => s.city);
+  const setCity = useClient((s) => s.setCity);
+  const cities = useRadarCities();
+  const [picker, setPicker] = useState(false);
+  const { items: radar } = useRadarList({ limit: 3, city: city || undefined });
 
   const f = ev('coldplay');
   const forYou = ['coldplay', 'celestial', 'swan'].map(ev);
@@ -34,12 +41,13 @@ export function Home() {
         <div className="hdr" style={sx('padding:4px 20px 11px')}>
           <div className="row" style={sx('gap:11px')}>
             <div className="avatar">AP</div>
-            <div>
+            {/* orasul filtreaza Radarul; lista vine din evenimentele reale */}
+            <div style={sx('cursor:pointer')} onClick={() => setPicker(true)}>
               <div className="loc-l">
                 <Ic svg={I.pin} /> Locația ta
               </div>
               <div className="loc-v">
-                Cluj-Napoca{' '}
+                {city || 'Toată România'}{' '}
                 <svg
                   width="13"
                   height="13"
@@ -202,6 +210,16 @@ export function Home() {
           ))}
         </div>
       </div>
+
+      {picker ? (
+        <PickerSheet
+          title="Unde ești?"
+          options={[['', 'Toată România'], ...cities.map((c) => [c, c] as Option)]}
+          value={city}
+          onPick={setCity}
+          onClose={() => setPicker(false)}
+        />
+      ) : null}
 
       <BottomNav active="home" />
     </div>

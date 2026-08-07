@@ -19,8 +19,8 @@ import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, otaDiagno
 
 /** [emoji, eticheta, actiune] — exact lista din prototip. */
 const MENU: [string, string, string][] = [
-  ['🎟', 'Biletele mele', 'tab:tickets'],
-  ['💳', 'Portofel & carduri', 'tab:wallet'],
+  ['🎟', 'Biletele mele', 'go:tickets'],
+  ['💳', 'Portofel & carduri', 'go:wallet'],
   ['⭐', 'Puncte & recompense', 'go:points'],
   ['📝', 'Recenziile mele', 'go:reviews'],
   ['🎯', 'Preferințele mele', 'prefsEdit'],
