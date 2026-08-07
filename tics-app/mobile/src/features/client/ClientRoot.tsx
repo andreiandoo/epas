@@ -82,7 +82,7 @@ const SCREENS: Record<string, ScreenFn> = {
   setTerms: () => <SetTerms />,
   setPrivacy: () => <SetPrivacy />,
   setRate: () => <SetRate />,
-  ticslist: (d) => <TicsList cat={d.cat as string | undefined} />,
+  ticslist: (d) => <TicsList cat={d.cat as string | undefined} type={d.type as string | undefined} day={d.day as number | undefined} />,
   ticsoffers: (d) => <TicsOffers id={d.id as string} />,
   calendar: () => <Calendar />,
   festival: () => <Festival />,

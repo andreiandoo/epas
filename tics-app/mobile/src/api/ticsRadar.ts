@@ -27,7 +27,7 @@
    Ca peste tot in aplicatie, daca sursa cade ramanem cu datasetul
    prototipului, sa nu ajungem cu ecrane goale.
    ========================================================= */
-import { TICS, galFor } from '../mock/prototype';
+import { TICS } from '../mock/prototype';
 
 export const RADAR_ROOT = import.meta.env.VITE_TICS_RADAR ?? 'https://app.tics.ro';
 
@@ -112,6 +112,12 @@ const TYPE_MAP: Record<string, { cat: string; sc: string; g: string; tone: strin
   kids: { cat: 'Copii', sc: 'theatre', g: '🧸', tone: 'linear-gradient(150deg,#7e22ce,#f0abfc)' },
   'food-drink': { cat: 'Food & drink', sc: 'wine', g: '🍷', tone: 'linear-gradient(150deg,#4c1d95,#b45309)' },
   charity: { cat: 'Caritate', sc: 'city', g: '💜', tone: 'linear-gradient(150deg,#3b0764,#a78bfa)' },
+  workshop: { cat: 'Workshop', sc: 'city', g: '🛠', tone: 'linear-gradient(150deg,#1e3a5f,#3b82f6)' },
+  musical: { cat: 'Musical', sc: 'theatre', g: '🎼', tone: 'linear-gradient(150deg,#4c1d95,#ec4899)' },
+  conference: { cat: 'Conferințe', sc: 'city', g: '🎧', tone: 'linear-gradient(150deg,#0f4c4a,#0e7490)' },
+  circus: { cat: 'Circ', sc: 'festival', g: '🎪', tone: 'linear-gradient(150deg,#b45309,#f59e0b)' },
+  wellness: { cat: 'Wellness', sc: 'nature', g: '🧘', tone: 'linear-gradient(150deg,#065f46,#22c55e)' },
+  classical: { cat: 'Clasic', sc: 'theatre', g: '🎻', tone: 'linear-gradient(150deg,#312e81,#818cf8)' },
   other: { cat: 'Altele', sc: 'city', g: '🎟', tone: 'linear-gradient(150deg,#2a2440,#4c1d95)' },
 };
 
@@ -244,7 +250,10 @@ export function normalizeRadar(e: ApiRadarEvent): RadarItem {
     urls,
   };
 
-  item.gallery = item.poster ? [`url('${item.poster}') center/cover, #14101f`, ...galFor(item)] : galFor(item);
+  /* TICS Radar da un singur poster per eveniment. Nu-l completam cu scene
+     procedurale: o "galerie" din poza reala + trei desene ar fi o minciuna
+     vizuala. Ecranul ascunde sectiunea cand nu are ce arata. */
+  item.gallery = item.poster ? [`url('${item.poster}') center/cover, #14101f`] : [];
   return item;
 }
 
@@ -538,14 +547,19 @@ export type RadarQuery = {
   genre?: string;
   search?: string;
   when?: 'all' | 'today' | 'weekend';
+  /** o zi anume, ca timestamp UTC la miezul noptii (din Calendar) */
+  day?: number;
+  /** cate rezultate sa sara peste — pentru "Incarca mai multe" */
+  offset?: number;
   /** pretul cel mai mic sa fie sub pragul asta (chip-ul "Sub 100 lei") */
   maxPrice?: number;
   /** doar stoc pe terminate (chip-ul "Aproape sold-out") */
   scarce?: boolean;
 };
 
-/** Intervalul [de la, pana la) pentru chip-urile de data. */
-function whenRange(when: RadarQuery['when']): { from: number; until?: number } {
+/** Intervalul [de la, pana la) pentru chip-urile de data si pentru ziua din calendar. */
+function whenRange(when: RadarQuery['when'], day?: number): { from: number; until?: number } {
+  if (day !== undefined) return { from: day, until: day + 86400000 };
   const from = todayUtc();
   if (when === 'today') return { from, until: from + 86400000 };
   if (when === 'weekend') {
@@ -577,7 +591,7 @@ export async function fetchRadarList(
 ): Promise<{ items: RadarItem[]; source: 'tics' | 'prototype' }> {
   const limit = opts.limit ?? 6;
   const filters = { city: opts.city, event_type: opts.type, q: opts.search };
-  const { from, until } = whenRange(opts.when);
+  const { from, until } = whenRange(opts.when, opts.day);
   const needsPost = !!opts.maxPrice || !!opts.scarce;
 
   /* Plasa de siguranta (datasetul prototipului) se intinde DOAR cand nu s-a
@@ -585,7 +599,7 @@ export async function fetchRadarList(
      raspunsul corect e "nimic gasit", nu trei evenimente inventate. */
   const unfiltered =
     !opts.city && !opts.type && !opts.genre && !opts.search && !opts.maxPrice && !opts.scarce &&
-    (!opts.when || opts.when === 'all');
+    opts.day === undefined && !opts.offset && (!opts.when || opts.when === 'all');
   const empty = () => ({ items: unfiltered ? protoItems() : [], source: unfiltered ? ('prototype' as const) : ('tics' as const) });
 
   // cautarea are propriul set de rezultate, deja restrans: nu mai sarim in viitor
@@ -596,7 +610,8 @@ export async function fetchRadarList(
      nu mult mai multe: fiecare candidat costa o cerere de detaliu, iar
      app.tics.ro limiteaza la ~60 pe minut. Cand filtram si dupa pret/stoc,
      rata de pastrare scade, deci cerem mai multi candidati. */
-  const want = Math.min(limit * (needsPost ? 3 : 2), needsPost ? 18 : 12);
+  const skip = opts.offset ?? 0;
+  const want = skip + Math.min(limit * (needsPost ? 3 : 2), needsPost ? 18 : 12);
   const raw = await fromOffset(filters, offset, want, {
     until,
     keep: opts.genre ? (e) => (e.genre ?? '').toLowerCase() === opts.genre!.toLowerCase() : undefined,
@@ -610,7 +625,7 @@ export async function fetchRadarList(
   if (!usable.length) return empty();
 
   usable.sort((a, b) => b.offers.length - a.offers.length);
-  return { items: usable.slice(0, limit), source: 'tics' };
+  return { items: usable.slice(skip, skip + limit), source: 'tics' };
 }
 
 /* =========================================================
@@ -656,6 +671,63 @@ export async function fetchRadarCities(): Promise<string[]> {
     /* fara cache, doar mai lent */
   }
   return cities;
+}
+
+/* =========================================================
+   Categoriile reale, deduse din date
+
+   API-ul n-are endpoint de categorii, iar site-ul nu-si expune lista. Le
+   deducem din `event_type`-urile evenimentelor viitoare — 17 distincte
+   masurate, dominate de 'other'. Iese si o lista de exemple per categorie,
+   pe care ecranul Exploreaza le foloseste ca imagini de card (inainte punea
+   evenimente din prototip).
+   ========================================================= */
+export type RadarCategory = { type: string; cat: string; g: string; count: number; samples: RadarItem[] };
+
+const CAT_LS = 'tics.radar.cats.v1';
+
+export async function fetchRadarCategories(): Promise<RadarCategory[]> {
+  try {
+    const raw = localStorage.getItem(CAT_LS);
+    if (raw) {
+      const v = JSON.parse(raw) as { stamp: string; cats: RadarCategory[] };
+      if (v.stamp === todayStamp() && v.cats.length) return v.cats;
+    }
+  } catch {
+    /* cache stricat: reincarcam */
+  }
+
+  const offset = await upcomingOffset({});
+  if (offset === null) return [];
+  const raw = await fromOffset({}, offset, 300, { maxPages: 6 });
+  if (!raw.length) return [];
+
+  const byType = new Map<string, { count: number; samples: ApiRadarEvent[] }>();
+  for (const e of raw) {
+    const t = (e.event_type ?? 'other').toLowerCase();
+    const slot = byType.get(t) ?? { count: 0, samples: [] };
+    slot.count++;
+    // pastram doar exemple cu poster: cardul de categorie e o imagine
+    if (slot.samples.length < 4 && e.poster_url) slot.samples.push(e);
+    byType.set(t, slot);
+  }
+
+  const cats: RadarCategory[] = [...byType.entries()]
+    .map(([type, v]) => {
+      const info = typeInfo(type);
+      return { type, cat: info.cat, g: info.g, count: v.count, samples: v.samples.map(normalizeRadar) };
+    })
+    .filter((c) => c.samples.length > 0)
+    /* 'other' e cel mai numeros (~70%), dar "Altele" e o categorie proasta de
+       pus prima — o coboram la final si lasam categoriile reale in fata. */
+    .sort((a, b) => (a.type === 'other' ? 1 : b.type === 'other' ? -1 : b.count - a.count));
+
+  try {
+    localStorage.setItem(CAT_LS, JSON.stringify({ stamp: todayStamp(), cats }));
+  } catch {
+    /* fara cache, doar mai lent */
+  }
+  return cats;
 }
 
 /* =========================================================
@@ -713,48 +785,58 @@ export async function fetchRadarMonth(
   const counts: Record<number, number> = {};
   const byDay: Record<number, RadarItem[]> = {};
   let total = 0;
-  let page = Math.floor(offset / PER_PAGE) + 1;
-  let skip = offset % PER_PAGE;
+  const firstPage = Math.floor(offset / PER_PAGE) + 1;
+  const firstSkip = offset % PER_PAGE;
   let capped = true;
   /* O pagina cazuta (429 chiar si dupa reincercare) inseamna date cu gauri:
      le aratam, dar NU le salvam ca si cum ar fi luna completa. */
   let incomplete = false;
+  let done = false;
 
-  for (let i = 0; i < MONTH_MAX_PAGES; i++) {
-    const r = await getPage(filters, page);
-    if (!r?.data?.length) {
-      if (r === null) incomplete = true;
-      else capped = false;
-      break;
-    }
+  /* Paginile se aduc in VALURI PARALELE, nu una cate una: o luna are ~15-26 de
+     pagini, iar secvential inseamna 5-6 secunde de ecran gol. In valuri de 4
+     scade la ~1.5s si tot ramanem sub limita de rata. */
+  const WAVE = 4;
+  for (let w = 0; w < Math.ceil(MONTH_MAX_PAGES / WAVE) && !done; w++) {
+    const pages = Array.from({ length: WAVE }, (_, k) => firstPage + w * WAVE + k);
+    const results = await Promise.all(pages.map((p) => getPage(filters, p)));
 
-    let passedMonth = false;
-    for (const e of r.data.slice(skip)) {
-      const d = e.starts_at ? new Date(e.starts_at) : null;
-      if (!d || Number.isNaN(d.getTime())) continue;
-      const t = d.getTime();
-      if (t >= end) {
-        passedMonth = true;
+    for (let k = 0; k < results.length; k++) {
+      const r = results[k];
+      if (!r?.data?.length) {
+        if (r === null) incomplete = true;
+        else capped = false;
+        done = true;
         break;
       }
-      if (t < start) continue;
-      if (genre && (e.genre ?? '').toLowerCase() !== genre) continue;
 
-      const day = d.getUTCDate();
-      counts[day] = (counts[day] ?? 0) + 1;
-      total++;
-      // pastram doar cateva pe zi: ecranul afiseaza o lista scurta
-      if ((byDay[day] ??= []).length < 4) byDay[day].push(normalizeRadar(e));
-    }
+      const slice = w === 0 && k === 0 ? r.data.slice(firstSkip) : r.data;
+      for (const e of slice) {
+        const d = e.starts_at ? new Date(e.starts_at) : null;
+        if (!d || Number.isNaN(d.getTime())) continue;
+        const t = d.getTime();
+        if (t >= end) {
+          capped = false;
+          done = true;
+          break;
+        }
+        if (t < start) continue;
+        if (genre && (e.genre ?? '').toLowerCase() !== genre) continue;
 
-    skip = 0;
-    if (passedMonth || page >= r.meta.last_page) {
-      capped = false;
-      break;
+        const day = d.getUTCDate();
+        counts[day] = (counts[day] ?? 0) + 1;
+        total++;
+        // pastram doar cateva pe zi: ecranul afiseaza o lista scurta
+        if ((byDay[day] ??= []).length < 4) byDay[day].push(normalizeRadar(e));
+      }
+      if (done) break;
+      if (pages[k] >= r.meta.last_page) {
+        capped = false;
+        done = true;
+        break;
+      }
     }
-    page++;
-    // ritmam scanarea ca sa nu intram in limitarea de rata a API-ului
-    await sleep(150);
+    if (!done) await sleep(120);
   }
 
   const data: MonthData = { counts, byDay, total, capped: capped || incomplete };

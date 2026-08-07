@@ -13,10 +13,26 @@ import { EvMini } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
+import { useRadarCategories } from '../radarData';
+import type { RadarCategory } from '../../../api/ticsRadar';
 
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
 
 type Pool = { name: string; count: number; c: string; route: string; pool: Record<string, unknown>[] };
+
+/* Culorile pastilei de categorie — se rotesc, ca in prototip. */
+const CAT_COLORS = ['#be185d', '#0f766e', '#0e7490', '#b45309', '#6d28d9', '#dc2626', '#4338ca', '#0891b2'];
+
+/** Categoriile reale (TICS Radar) aduse la forma pe care o asteapta CatCard. */
+function poolsFromCategories(cats: RadarCategory[]): Pool[] {
+  return cats.map((c, i) => ({
+    name: c.cat,
+    count: c.count,
+    c: CAT_COLORS[i % CAT_COLORS.length],
+    route: `go:ticslist:${c.type}`,
+    pool: c.samples as unknown as Record<string, unknown>[],
+  }));
+}
 
 /**
  * Cardul de categorie. INIT.explore roteste imaginea la 5s: opacity -> 0,
@@ -48,12 +64,14 @@ function CatCard({ c }: { c: Pool }) {
   const it = c.pool[k] as { g: string; s: string };
 
   const onClick = () => {
-    // route are forma "go:category:Concerte" / "go:ticslist"
+    // route are forma "go:ticslist:<event_type>" (categorii reale) sau, pentru
+    // datasetul prototipului, "go:category:Concerte" / "go:festival"
     const parts = c.route.split(':');
     if (parts[0] !== 'go') return;
-    /* "Alege un vibe" trebuie sa duca in Radar, filtrat pe categoria aleasa —
-       acolo sunt evenimentele reale, cu preturi comparate pe platforme. */
-    if (parts[1] === 'category' || parts[1] === 'ticslist') return go('ticslist', { cat: c.name });
+    /* "Alege un vibe" duce in Radar, filtrat pe categoria aleasa — acolo sunt
+       evenimentele reale, cu preturi comparate pe platforme. */
+    if (parts[1] === 'ticslist') return go('ticslist', { cat: c.name, type: parts[2] });
+    if (parts[1] === 'category') return go('ticslist', { cat: c.name });
     go(parts[1], parts[2] ? { id: parts[2] } : undefined);
   };
 
@@ -61,7 +79,13 @@ function CatCard({ c }: { c: Pool }) {
     <div className="catcard" onClick={onClick}>
       <div
         className="cover catcover"
-        style={{ background: bgv(it), height: 150, opacity: visible ? 1 : 0 }}
+        style={{
+          background: (it as { poster?: string }).poster
+            ? `url('${(it as { poster?: string }).poster}') center/cover, #14101f`
+            : bgv(it),
+          height: 150,
+          opacity: visible ? 1 : 0,
+        }}
       >
         <span className="em catem">{it.g}</span>
         <div className="scrim" />
@@ -86,6 +110,10 @@ function CatCard({ c }: { c: Pool }) {
 
 export function Explore() {
   const { go } = useNav();
+  const cats = useRadarCategories();
+  /* Pana raspunde app.tics.ro ramanem pe categoriile prototipului, ca sectiunea
+     sa nu apara goala; apoi le inlocuim cu cele reale (17 tipuri masurate). */
+  const pools = cats.length ? poolsFromCategories(cats) : (CATPOOLS as unknown as Pool[]);
   const prefsSel = useClient((s) => s.prefsSel);
   const rec = ['coldplay', 'salina', 'swan'].map(ev);
 
@@ -202,7 +230,7 @@ export function Explore() {
         <SecH icon="🧭" icbg="var(--surface-3)" iccol="var(--ink)" title="Alege un vibe" sub="Tot ce se întâmplă, pe categorii" />
         <div className="pad">
           <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-            {(CATPOOLS as unknown as Pool[]).map((c) => (
+            {pools.map((c) => (
               <CatCard key={c.name} c={c} />
             ))}
           </div>

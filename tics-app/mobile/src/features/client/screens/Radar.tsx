@@ -37,27 +37,48 @@ function avgSaving(items: RadarItem[]): number | null {
 /* =========================================================
    S.ticslist
    ========================================================= */
-export function TicsList({ cat }: { cat?: string }) {
+const PAGE = 12;
+
+/** Ziua aleasa in Calendar, formatata pentru subtitlu. */
+const dayLabel = (day?: number) => {
+  if (day === undefined) return null;
+  const d = new Date(day);
+  return `${d.getUTCDate()} ${MONTHS_FULL[d.getUTCMonth()]}`;
+};
+
+export function TicsList({ cat, type: typeArg, day }: { cat?: string; type?: string; day?: number }) {
   const { go, back } = useNav();
   const city = useClient((s) => s.city);
+  const setCity = useClient((s) => s.setCity);
   const f = useClient((s) => s.radarF);
   const setRadarF = useClient((s) => s.setRadarF);
   const resetRadarF = useClient((s) => s.resetRadarF);
+  const cities = useRadarCities();
 
-  /* "Alege un vibe" intra aici cu o categorie; o traducem in event_type. */
-  const type = cat ? CAT_TO_TYPE[cat] : undefined;
+  /* Panoul complet de filtre: chip-ul "Toate" il deschide. */
+  const [panel, setPanel] = useState(false);
+  const [sheet, setSheet] = useState<'city' | 'type' | 'genre' | null>(null);
+  const [shown, setShown] = useState(PAGE);
+
+  /* "Alege un vibe" intra fie cu o categorie, fie direct cu event_type. */
+  const type = typeArg ?? (cat ? CAT_TO_TYPE[cat] : undefined) ?? f.type ?? undefined;
   const { items, loading } = useRadarList({
-    limit: 6,
+    limit: shown,
     city: city || undefined,
-    type,
-    when: f.when,
+    type: type || undefined,
+    genre: f.genre || undefined,
+    day,
+    when: day === undefined ? f.when : undefined,
     maxPrice: f.maxPrice || undefined,
     scarce: f.scarce || undefined,
   });
 
   const live = useRadarStats();
   const saving = avgSaving(items);
-  const noFilter = f.when === 'all' && !f.maxPrice && !f.scarce;
+  const noFilter = f.when === 'all' && !f.maxPrice && !f.scarce && !f.genre && !city;
+  const activeCount = (f.when !== 'all' ? 1 : 0) + (f.maxPrice ? 1 : 0) + (f.scarce ? 1 : 0) + (f.genre ? 1 : 0) + (city ? 1 : 0);
+  const cityOptions: Option[] = [['', 'Toată România'], ...cities.map((c) => [c, c] as Option)];
+  const labelOf = (opts: Option[], v: string, fb: string) => opts.find((o) => o[0] === v)?.[1] ?? fb;
 
   const stats: [string, string][] = [
     [live ? fmtK(live.liveEvents) : '3.2k', 'evenimente'],
@@ -75,7 +96,7 @@ export function TicsList({ cat }: { cat?: string }) {
           <div>
             <div className="h2">{cat ?? 'Radar'}</div>
             <div className="muted" style={sx('font-size:11.5px')}>
-              {city || 'Din toată România'} · prețuri live
+              {[dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ')} · prețuri live
             </div>
           </div>
         </div>
@@ -118,8 +139,8 @@ export function TicsList({ cat }: { cat?: string }) {
       </div>
 
       <div className="filterbar" style={sx('margin-top:14px')}>
-        <div className={cn('flt', noFilter && 'on')} onClick={resetRadarF}>
-          <Ic svg={I.slider} /> Toate
+        <div className={cn('flt', (panel || !noFilter) && 'on')} onClick={() => setPanel((v) => !v)}>
+          <Ic svg={I.slider} /> Toate{activeCount ? ` · ${activeCount}` : ''}
         </div>
         <div
           className={cn('flt', f.when === 'today' && 'on')}
@@ -144,10 +165,71 @@ export function TicsList({ cat }: { cat?: string }) {
         </div>
       </div>
 
+      {panel ? (
+        <div className="pad" style={sx('margin-top:12px')}>
+          <div className="card" style={sx('padding:15px')}>
+            <div className="between" style={sx('margin-bottom:10px')}>
+              <span className="label" style={sx('margin:0')}>
+                Toate filtrele
+              </span>
+              <button className="chip" onClick={() => { resetRadarF(); setCity(''); }} style={sx('padding:5px 11px;font-size:11px')}>
+                Resetează
+              </button>
+            </div>
+            <div className="scroll-x" style={sx('padding:2px 0;margin:0 -4px')}>
+              <PickerChip icon="📍" label={city || 'Toată România'} active={!!city} onClick={() => setSheet('city')} />
+              <PickerChip
+                icon="🎫"
+                label={labelOf(TYPE_OPTIONS, f.type ?? '', 'Toate tipurile')}
+                active={!!f.type}
+                onClick={() => setSheet('type')}
+              />
+              <PickerChip
+                icon="🎵"
+                label={f.genre ? labelOf(GENRE_OPTIONS, f.genre, f.genre) : 'Toate genurile'}
+                active={!!f.genre}
+                onClick={() => setSheet('genre')}
+              />
+            </div>
+            <div className="muted" style={sx('font-size:11px;margin-top:10px;line-height:1.5')}>
+              Chip-urile de sus filtrează după dată, preț și stoc. Aici alegi oraș, tip și gen.
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {sheet === 'city' ? (
+        <PickerSheet title="Alege orașul" options={cityOptions} value={city} onPick={setCity} onClose={() => setSheet(null)} />
+      ) : null}
+      {sheet === 'type' ? (
+        <PickerSheet
+          title="Tipul evenimentului"
+          options={TYPE_OPTIONS}
+          value={f.type ?? ''}
+          onPick={(t) => setRadarF({ type: t })}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+      {sheet === 'genre' ? (
+        <PickerSheet
+          title="Genul muzical"
+          options={GENRE_OPTIONS}
+          value={f.genre ?? ''}
+          onPick={(g) => setRadarF({ genre: g })}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+
       <div className="pad" style={sx('margin-top:16px;display:flex;flex-direction:column;gap:14px')}>
         {items.map((t, i) => (
           <RadarCard key={t.id + i} t={t as never} st="width:100%" />
         ))}
+
+        {items.length >= shown ? (
+          <button className="cta ghost" onClick={() => setShown((n) => n + PAGE)} style={sx('padding:13px')}>
+            {loading ? 'Se încarcă…' : 'Încarcă mai multe'}
+          </button>
+        ) : null}
         {!items.length ? (
           <div className="card" style={sx('padding:22px;text-align:center')}>
             <div style={sx('font-size:30px')}>{loading ? '📡' : '🤷'}</div>
@@ -180,6 +262,8 @@ export function TicsOffers({ id }: { id?: string }) {
   const { go } = useNav();
   const lb = useLightbox();
   const showToast = useClient((s) => s.showToast);
+  const toggleSaved = useClient((s) => s.toggleSaved);
+  const saved = useClient((s) => s.saved.includes(id ?? ''));
   const t = useRadarEvent(id) as RadarItem & Ev;
   const sorted = [...(t.offers as [string, number, string][])].sort((a, b) => a[1] - b[1]);
   const ch = sorted[0]?.[1] ?? 0;
@@ -191,6 +275,24 @@ export function TicsOffers({ id }: { id?: string }) {
 
   /* Butonul "Mergi" duce pe site-ul platformei. window.open(_blank) e
      interceptat de Capacitor si deschis in browserul sistemului. */
+  /* Share: pe telefon exista foaia nativa; in browser cade pe clipboard. */
+  const share = async () => {
+    const best = t.offers[0];
+    const url = (best && t.urls?.[best[0]]) || 'https://app.tics.ro';
+    const text = `${t.s}${best ? ` — de la ${best[1]} lei` : ''}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t.s, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text}
+${url}`);
+      showToast('Link copiat');
+    } catch {
+      /* utilizatorul a inchis foaia de share — nu e o eroare */
+    }
+  };
+
   const goToOffer = (platform: string) => {
     const url = t.urls?.[platform];
     if (!url) return showToast('Mergi la ' + platform);
@@ -204,10 +306,18 @@ export function TicsOffers({ id }: { id?: string }) {
         title={t.s}
         right={
           <>
-            <div className="icon-btn glass">
+            <div className="icon-btn glass" onClick={share}>
               <Ic svg={I.share} />
             </div>
-            <div className="icon-btn glass" onClick={() => showToast('Salvat')}>
+            <div
+              className="icon-btn glass"
+              onClick={() => {
+                if (!id) return;
+                toggleSaved(id);
+                showToast(saved ? 'Scos din salvate' : 'Salvat');
+              }}
+              style={saved ? sx('color:var(--indigo-2);background:var(--indigo-soft);border-color:var(--indigo)') : undefined}
+            >
               <Ic svg={I.save} />
             </div>
           </>
@@ -305,7 +415,7 @@ export function TicsOffers({ id }: { id?: string }) {
           </>
         ) : null}
 
-        {t.gallery?.length ? (
+        {t.gallery?.length > 1 ? (
           <>
             <div className="between" style={sx('margin-top:22px')}>
               <div className="h2" style={sx('font-size:15px')}>
@@ -784,7 +894,11 @@ export function Calendar() {
             ) : null}
           </div>
 
-          <button className="cta green" style={sx('margin-top:14px;padding:13px')} onClick={() => go('ticslist')}>
+          <button
+            className="cta green"
+            style={sx('margin-top:14px;padding:13px')}
+            onClick={() => go('ticslist', { day: Date.UTC(year, month, calDay) })}
+          >
             Vezi toate ({counts[calDay] || 0}) <Ic svg={I.arrow} />
           </button>
         </div>

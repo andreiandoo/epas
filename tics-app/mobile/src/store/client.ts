@@ -45,8 +45,11 @@ export type RadarFilters = {
   maxPrice: number;
   /** chip-ul "Aproape sold-out" */
   scarce: boolean;
+  /** din panoul complet de filtre */
+  type: string;
+  genre: string;
 };
-const RADAR_DEFAULTS: RadarFilters = { when: 'all', maxPrice: 0, scarce: false };
+const RADAR_DEFAULTS: RadarFilters = { when: 'all', maxPrice: 0, scarce: false, type: '', genre: '' };
 
 /** Filtrele calendarului: oras / tip / gen. */
 export type CalFilters = { city: string; type: string; genre: string };

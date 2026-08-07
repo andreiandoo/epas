@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import {
   CITY_FALLBACK,
+  fetchRadarCategories,
   fetchRadarCities,
   fetchRadarEvent,
   fetchRadarList,
@@ -17,6 +18,7 @@ import {
   withOffers,
   type MonthData,
   type MonthQuery,
+  type RadarCategory,
   type RadarItem,
   type RadarQuery,
   type RadarStats,
@@ -40,7 +42,7 @@ export function useRadarList(q: RadarQuery = {}) {
 
   /* Cheia serializeaza filtrele: obiectul e recreat la fiecare randare, deci
      nu poate sta direct in lista de dependinte fara bucla infinita. */
-  const key = JSON.stringify([limit, q.city, q.type, q.genre, q.search, q.when, q.maxPrice, q.scarce]);
+  const key = JSON.stringify([limit, q.city, q.type, q.genre, q.search, q.when, q.maxPrice, q.scarce, q.day, q.offset]);
 
   useEffect(() => {
     let alive = true;
@@ -59,6 +61,19 @@ export function useRadarList(q: RadarQuery = {}) {
   }, [key]);
 
   return { items, source, loading };
+}
+
+/** Categoriile reale, cu exemple din care ecranul isi ia imaginile de card. */
+export function useRadarCategories() {
+  const [cats, setCats] = useState<RadarCategory[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetchRadarCategories().then((c) => alive && setCats(c));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return cats;
 }
 
 /**
