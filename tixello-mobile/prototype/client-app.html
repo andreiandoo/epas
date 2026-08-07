@@ -479,7 +479,9 @@
 
   const ST={prefs:['Rock','Electronic','Experiențe'],prefsSel:['Concerte','Experiențe','Rock','Electronic','Cluj-Napoca','Vineri','Cu prietenii'],ev:'coldplay',seats:['D4','D5'],obStep:0,cart:{protect:false,cultural:false,discount:0,nameOnTicket:false},balance:162.00,points:1240,_ttCounts:null,_ttEv:null,stayPin:0,expDate:0,expDay:4,addons:{},calDay:8,fStage:0,fDay:'Joi 10',saved:['celestial','atv','swan','wine'],revRating:0,revTab:0,rateStars:0,
     cards:[{brand:'Visa',last:'4218',exp:'07/27',grad:'linear-gradient(135deg,#1a1f71,#4b56d2)',primary:true},{brand:'Mastercard',last:'9902',exp:'11/26',grad:'linear-gradient(135deg,#c0392b,#e67e22)',primary:false}],
-    stayF:{type:'Toate',sort:'dist',maxPrice:500}};
+    stayF:{type:'Toate',sort:'dist',maxPrice:500},
+    homeCity:'Cluj-Napoca',
+    plan:{city:'Cluj-Napoca',budget:250,mood:'Cu prietenii',seed:0,seen:false}};
   // "tx" lettermark în Outfit — currentColor => merge alb/negru. (SVG-ul oficial tixello.com a fost blocat de politica de egress; se poate înlocui 1:1)
   const txMark=(c,s)=>{s=s||26;return `<svg width="${s}" height="${s}" viewBox="0 0 40 40" fill="none" style="display:block"><text x="20" y="29" text-anchor="middle" font-family="Outfit,sans-serif" font-weight="700" font-size="29" letter-spacing="-1.6" fill="${c||'currentColor'}">tx</text></svg>`;};
 
@@ -489,6 +491,7 @@
     save:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
     share:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>',
     info:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+    refresh:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>',
     pin:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
     cal:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
     clock:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -1337,11 +1340,11 @@
   function pushNotif(ic,t,s,cat,go){ST.notifs.unshift({ic,t,s,time:'acum',cat,un:1,go});}
   // i18n — dicționar pentru chrome (demo pe 5 limbi)
   const T={
-    ro:{descopera:'Descoperă',exploreaza:'Explorează',aiRec:'Recomandări AI',aiQ:'Ce ai chef să faci?',aiSub:'Alege un vibe, iar AI-ul îți alege evenimentele.',planNight:'Planifică-mi seara cu AI',forYou:'Pentru tine',personalize:'personalizează',radarSub:'Cel mai bun preț din toată piața · live',calSub:'Tot ce se întâmplă, pe zile',vibe:'Alege un vibe',vibeSub:'Explorează pe categorii',trend:'În trend',trendSub:'Cele mai căutate acum',allRadar:'Tot radarul',seeMonth:'Vezi luna',lang:'Limbă',assistant:'Asistent AI'},
-    en:{descopera:'Discover',exploreaza:'Explore',aiRec:'AI picks',aiQ:'What are you in the mood for?',aiSub:'Pick a vibe and let AI choose the events for you.',planNight:'Plan my night with AI',forYou:'For you',personalize:'personalize',radarSub:'Best price across the whole market · live',calSub:'Everything happening, by day',vibe:'Pick a vibe',vibeSub:'Explore by category',trend:'Trending',trendSub:'Most searched right now',allRadar:'Full radar',seeMonth:'See month',lang:'Language',assistant:'AI assistant'},
-    de:{descopera:'Entdecken',exploreaza:'Entdecken',aiRec:'KI-Tipps',aiQ:'Worauf hast du Lust?',aiSub:'Wähle eine Stimmung, die KI sucht die Events für dich.',planNight:'Plane meinen Abend mit KI',forYou:'Für dich',personalize:'anpassen',radarSub:'Bester Preis am ganzen Markt · live',calSub:'Alles, was passiert, nach Tag',vibe:'Wähle eine Stimmung',vibeSub:'Nach Kategorie entdecken',trend:'Im Trend',trendSub:'Gerade am meisten gesucht',allRadar:'Ganzes Radar',seeMonth:'Monat ansehen',lang:'Sprache',assistant:'KI-Assistent'},
-    fr:{descopera:'Découvrir',exploreaza:'Explorer',aiRec:'Choix IA',aiQ:'Tu as envie de quoi ?',aiSub:'Choisis une ambiance, l’IA sélectionne les événements.',planNight:'Planifier ma soirée avec l’IA',forYou:'Pour toi',personalize:'personnaliser',radarSub:'Le meilleur prix de tout le marché · live',calSub:'Tout ce qui se passe, par jour',vibe:'Choisis une ambiance',vibeSub:'Explorer par catégorie',trend:'Tendances',trendSub:'Les plus recherchés maintenant',allRadar:'Tout le radar',seeMonth:'Voir le mois',lang:'Langue',assistant:'Assistant IA'},
-    es:{descopera:'Descubre',exploreaza:'Explora',aiRec:'Elección IA',aiQ:'¿Qué te apetece?',aiSub:'Elige un ambiente y la IA elige los eventos por ti.',planNight:'Planea mi noche con IA',forYou:'Para ti',personalize:'personaliza',radarSub:'El mejor precio de todo el mercado · en vivo',calSub:'Todo lo que pasa, por día',vibe:'Elige un ambiente',vibeSub:'Explora por categoría',trend:'Tendencia',trendSub:'Lo más buscado ahora',allRadar:'Radar completo',seeMonth:'Ver el mes',lang:'Idioma',assistant:'Asistente IA'}};
+    ro:{descopera:'Descoperă',exploreaza:'Explorează',aiRec:'Recomandări AI',aiQ:'Ce ai chef să faci?',aiSub:'Alege un vibe, iar AI-ul îți alege evenimentele.',planNight:'Planifică-mi seara',forYou:'Pentru tine',personalize:'personalizează',radarSub:'Cel mai bun preț din toată piața · live',calSub:'Tot ce se întâmplă, pe zile',vibe:'Alege un vibe',vibeSub:'Explorează pe categorii',trend:'În trend',trendSub:'Cele mai căutate acum',allRadar:'Tot radarul',seeMonth:'Vezi luna',lang:'Limbă',assistant:'Asistent AI'},
+    en:{descopera:'Discover',exploreaza:'Explore',aiRec:'AI picks',aiQ:'What are you in the mood for?',aiSub:'Pick a vibe and let AI choose the events for you.',planNight:'Plan my night',forYou:'For you',personalize:'personalize',radarSub:'Best price across the whole market · live',calSub:'Everything happening, by day',vibe:'Pick a vibe',vibeSub:'Explore by category',trend:'Trending',trendSub:'Most searched right now',allRadar:'Full radar',seeMonth:'See month',lang:'Language',assistant:'AI assistant'},
+    de:{descopera:'Entdecken',exploreaza:'Entdecken',aiRec:'KI-Tipps',aiQ:'Worauf hast du Lust?',aiSub:'Wähle eine Stimmung, die KI sucht die Events für dich.',planNight:'Plane meinen Abend',forYou:'Für dich',personalize:'anpassen',radarSub:'Bester Preis am ganzen Markt · live',calSub:'Alles, was passiert, nach Tag',vibe:'Wähle eine Stimmung',vibeSub:'Nach Kategorie entdecken',trend:'Im Trend',trendSub:'Gerade am meisten gesucht',allRadar:'Ganzes Radar',seeMonth:'Monat ansehen',lang:'Sprache',assistant:'KI-Assistent'},
+    fr:{descopera:'Découvrir',exploreaza:'Explorer',aiRec:'Choix IA',aiQ:'Tu as envie de quoi ?',aiSub:'Choisis une ambiance, l’IA sélectionne les événements.',planNight:'Planifier ma soirée',forYou:'Pour toi',personalize:'personnaliser',radarSub:'Le meilleur prix de tout le marché · live',calSub:'Tout ce qui se passe, par jour',vibe:'Choisis une ambiance',vibeSub:'Explorer par catégorie',trend:'Tendances',trendSub:'Les plus recherchés maintenant',allRadar:'Tout le radar',seeMonth:'Voir le mois',lang:'Langue',assistant:'Assistant IA'},
+    es:{descopera:'Descubre',exploreaza:'Explora',aiRec:'Elección IA',aiQ:'¿Qué te apetece?',aiSub:'Elige un ambiente y la IA elige los eventos por ti.',planNight:'Planea mi noche',forYou:'Para ti',personalize:'personaliza',radarSub:'El mejor precio de todo el mercado · en vivo',calSub:'Todo lo que pasa, por día',vibe:'Elige un ambiente',vibeSub:'Explora por categoría',trend:'Tendencia',trendSub:'Lo más buscado ahora',allRadar:'Radar completo',seeMonth:'Ver el mes',lang:'Idioma',assistant:'Asistente IA'}};
   const t=k=>((T[ST.lang]||T.ro)[k]||T.ro[k]||k);
   const langName=()=>((LANGS.find(l=>l[0]===ST.lang)||LANGS[0])[2]);
   // skeleton loading (o dată per ecran)
@@ -1353,27 +1356,54 @@
   function spark(id,base){let s=0;for(let i=0;i<id.length;i++)s+=id.charCodeAt(i);const pts=[];let v=base*1.18;for(let i=0;i<12;i++){s=(s*48271+i*7)%2147483647;v=Math.max(base*.98,v-(s/2147483647-0.34)*base*.06);pts.push(v);}pts[11]=base;const mn=Math.min(...pts),mx=Math.max(...pts),W=280,H=44;const xy=pts.map((p,i)=>[8+i*((W-16)/11),H-4-((p-mn)/((mx-mn)||1))*(H-10)]);const d=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');const area=d+` L${xy[11][0].toFixed(1)} ${H} L${xy[0][0].toFixed(1)} ${H} Z`;
     return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--green-2)" stop-opacity=".28"/><stop offset="1" stop-color="var(--green-2)" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#sg)"/><path d="${d}" fill="none" stroke="var(--green-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${xy[11][0].toFixed(1)}" cy="${xy[11][1].toFixed(1)}" r="3.5" fill="var(--green-2)"/></svg>`;}
 
-  /* ===== ASISTENT AI (concierge) ===== */
-  const AIPLANS={
-    'Diseară':{lead:'Am compus o seară completă în Cluj-Napoca pentru diseară, sub 250 lei:',ev:'coldplay',pre:'wine',stay:true},
-    'Weekend relaxant':{lead:'Un weekend lejer, cu ritm de vacanță și fără stres:',ev:'salina',pre:'wine',stay:false},
-    'Cu prietenii':{lead:'Ceva cu energie mare, numai bun de gașcă:',ev:'celestial',pre:'atv',stay:false},
-    'Sub 100 lei':{lead:'Trei opțiuni bune sub 100 lei, alese pe gusturile tale:',ev:'salina',pre:null,stay:false},
-    'Ceva cultural':{lead:'O seară cu clasă, la teatru:',ev:'swan',pre:'wine',stay:false},
-    'Lângă mine':{lead:'Aproape de tine, chiar în weekendul ăsta:',ev:'nordvale',pre:null,stay:true}};
-  S.aiplanner=(d)=>{const q=(d&&d.q)||'Diseară';const pl=AIPLANS[q]||AIPLANS['Diseară'];const ev=EV[pl.ev];const pre=pl.pre?EV[pl.pre]:null;const cost=(ev?ev.from:0)+(pre?pre.from:0);
+  /* ===== ASISTENT AI (concierge) — planner dinamic ===== */
+  // Presetări intrare din chips-urile de mood (Explorează) → stare inițială a planner-ului
+  const AIPRESETS={
+    'Diseară':{mood:'Cu prietenii',budget:250,city:'Cluj-Napoca'},
+    'Weekend relaxant':{mood:'Cu familia',budget:500,city:'Turda'},
+    'Cu prietenii':{mood:'Cu prietenii',budget:250,city:'Cluj-Napoca'},
+    'Sub 100 lei':{mood:'Singur',budget:100,city:'Cluj-Napoca'},
+    'Ceva cultural':{mood:'Date',budget:250,city:'Cluj-Napoca'},
+    'Lângă mine':{mood:'Singur',budget:250,city:'Cluj-Napoca'}};
+  const PLAN_MOODS=[{k:'Singur',ic:'🧑‍🎤',pre:false,prefPre:[]},{k:'Cu prietenii',ic:'🥂',pre:true,prefPre:['atv','celestial']},{k:'Cu familia',ic:'👨‍👩‍👧',pre:true,prefPre:['salina']},{k:'Date',ic:'💕',pre:true,prefPre:['wine']}];
+  const PLAN_BUDGETS=[100,250,500,9999];
+  const PLAN_CITIES=['Cluj-Napoca','Nuremberg','Turda','Alba','Apuseni'];
+  const _normCity=c=>c.replace('-Napoca','').trim();
+  const _homeCity=c=>_normCity(c)===_normCity(ST.homeCity);
+  const _whoPhrase=m=>({'Singur':'pentru tine','Cu prietenii':'cu gașca','Cu familia':'cu familia','Date':'pentru voi doi'}[m]||'pentru tine');
+  function genPlan(){const p=ST.plan;const all=Object.values(EV);const inCity=e=>_normCity(e.city)===_normCity(p.city);const b=p.budget;
+    let mains=all.filter(e=>e.type==='event'&&inCity(e)&&e.from<=b);
+    if(!mains.length)mains=all.filter(e=>inCity(e)&&e.from<=b);
+    if(!mains.length)mains=all.filter(e=>inCity(e));
+    if(!mains.length)mains=all.filter(e=>e.type==='event'&&e.from<=b);
+    if(!mains.length)mains=all.filter(e=>e.type==='event');
+    const ev=mains[p.seed%mains.length];
+    let pre=null;const mc=PLAN_MOODS.find(m=>m.k===p.mood)||PLAN_MOODS[0];
+    if(mc.pre){const remain=Math.max(0,b-ev.from);let pres=all.filter(e=>e.type==='experience'&&e.id!==ev.id&&e.from<=remain);const pref=(mc.prefPre||[]).map(id=>pres.find(e=>e.id===id)).filter(Boolean);const rest=pres.filter(e=>!(mc.prefPre||[]).includes(e.id));pres=[...pref,...rest];if(pres.length)pre=pres[p.seed%pres.length];}
+    const stay=!_homeCity(p.city);const cost=(ev?ev.from:0)+(pre?pre.from:0);return {ev,pre,stay,cost};}
+  function planLead(){const p=ST.plan;const bud=p.budget>=9999?'':`, sub ${p.budget} lei`;const pl=genPlan();return `Am compus un plan ${_whoPhrase(p.mood)} în ${p.city}${bud}${pl.stay?' (cu cazare, că e alt oraș)':''}:`;}
+  S.aiplanner=()=>{const p=ST.plan;const pl=genPlan();const ev=pl.ev,pre=pl.pre;
     const step=(tag,e)=>`<div class="card" data-a="go:event:${e.id}" style="padding:11px;display:flex;gap:12px;cursor:pointer;align-items:center">${poster(e,'','width:56px;height:56px;border-radius:15px;flex:none')}<div style="flex:1;min-width:0"><span class="chip-mini">${tag}</span><div style="font-weight:600;font-size:14px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.s}</div><div class="metaline" style="margin-top:4px">${I.pin}<span>${e.city}</span><span class="dot"></span>${I.cal}<span>${e.d}</span></div></div><div style="text-align:right;flex:none"><div style="font-weight:700;color:var(--indigo-2);font-size:13.5px">${money(e.from)} lei</div></div></div>`;
-    return `<div class="grid" style="min-height:100%">${topbar(`<div class="row" style="gap:11px"><div class="icon-btn" data-a="back">${I.back}</div><div class="row" style="gap:8px"><div style="width:32px;height:32px;border-radius:11px;background:linear-gradient(135deg,#7c3aed,#0e7490);display:grid;place-items:center;font-size:16px">🤖</div><div><div class="h2" style="font-size:15px">${t('assistant')}</div><div class="row" style="gap:5px;font-size:10.5px;color:var(--green-2)"><span class="livedot"></span>Tixello AI</div></div></div></div><div class="icon-btn" data-a="noop">${I.info}</div>`)}
-      <div class="chat"><div class="bub me">${q} — ce-mi recomanzi?</div><div class="bub ai" id="aiLead"><span class="typing"><i></i><i></i><i></i></span></div></div>
+    const chips=(items,cur,act,fmt)=>`<div class="scroll-x" style="padding:0 0 2px;margin:0 -2px">${items.map(it=>`<button class="chip ${(''+cur)===(''+it.v)?'ind on':''}" data-a="${act}:${it.v}">${fmt(it)}</button>`).join('')}</div>`;
+    const moodItems=PLAN_MOODS.map(m=>({v:m.k,ic:m.ic,label:m.k}));
+    const cityItems=PLAN_CITIES.map(c=>({v:c,label:c}));
+    const budgetItems=PLAN_BUDGETS.map(b=>({v:b,label:b>=9999?'Oricât':b+' lei'}));
+    return `<div class="grid" style="min-height:100%">${topbar(`<div class="row" style="gap:11px"><div class="icon-btn" data-a="back">${I.back}</div><div class="row" style="gap:8px"><div style="width:32px;height:32px;border-radius:11px;background:linear-gradient(135deg,#7c3aed,#0e7490);display:grid;place-items:center;font-size:16px">🤖</div><div><div class="h2" style="font-size:15px">${t('assistant')}</div><div class="row" style="gap:5px;font-size:10.5px;color:var(--green-2)"><span class="livedot"></span>Tixello AI</div></div></div></div><button class="icon-btn" data-a="planRefresh" title="Alte sugestii">${I.refresh}</button>`)}
+      <div class="chat"><div class="bub me">Planifică-mi seara ${_whoPhrase(p.mood)} · ${p.city}</div><div class="bub ai" id="aiLead"><span class="typing"><i></i><i></i><i></i></span></div></div>
+      <div class="pad"><div class="card" style="padding:13px 13px 6px;background:linear-gradient(135deg,var(--indigo-soft),var(--surface-solid));border-color:var(--indigo-line)">
+        <div class="between" style="margin-bottom:7px"><span class="label" style="margin:0">Cu cine</span></div>${chips(moodItems,p.mood,'planMood',it=>`${it.ic} ${it.label}`)}
+        <div class="between" style="margin:11px 0 7px"><span class="label" style="margin:0">Oraș</span><span class="muted" style="font-size:10.5px">${_homeCity(p.city)?'orașul tău · fără cazare':'alt oraș · include cazare'}</span></div>${chips(cityItems,p.city,'planCity',it=>it.label)}
+        <div class="between" style="margin:11px 0 7px"><span class="label" style="margin:0">Buget / persoană</span></div>${chips(budgetItems,p.budget,'planBudget',it=>it.label)}
+      </div></div>
       <div id="aiPlan" style="display:none">
         <div class="pad"><div class="label" style="margin:2px 0 9px">Planul tău</div><div style="display:flex;flex-direction:column;gap:10px">
           ${pre?step('1 · Înainte',pre):''}${step((pre?'2':'1')+' · Evenimentul',ev)}
           ${pl.stay?`<div class="card" data-a="go:stay22:${ev.ven}" style="padding:11px;display:flex;gap:12px;cursor:pointer;align-items:center"><div class="iconbadge" style="background:linear-gradient(135deg,#0f766e,#12b3a6);color:#fff">${I.bed}</div><div style="flex:1"><span class="chip-mini">${pre?'3':'2'} · Cazare</span><div style="font-weight:600;font-size:14px;margin-top:5px">Hoteluri lângă ${VEN[ev.ven].name}</div><div class="metaline" style="margin-top:4px">${I.pin}<span>de la 120 lei/noapte</span></div></div>${I.arrow}</div>`:''}</div>
-          <div class="card" style="margin-top:12px;padding:14px;background:linear-gradient(135deg,var(--indigo-soft),var(--surface-solid));border-color:var(--indigo-line)"><div class="between"><div><div class="muted" style="font-size:11px">Cost estimativ / persoană</div><div style="font-weight:700;font-size:22px;margin-top:2px">${cost} <span style="font-size:13px;color:var(--muted)">lei</span></div></div><button class="cta" data-a="go:tickettypes" style="width:auto;padding:12px 20px">Rezervă tot ${I.arrow}</button></div></div>
-          <div class="muted" style="font-size:10.5px;text-align:center;margin-top:12px">🤖 Am analizat prețuri, distanțe și preferințele tale.</div></div>
-        <div class="pad" style="margin-top:16px"><div class="label" style="margin-bottom:8px">Ajustează planul</div><div class="scroll-x" style="padding:0 0 4px">${['Mai ieftin','Altă zi','Cu prietenii','Mai aproape','Fără cazare'].map(c=>`<button class="chip" data-a="aiplan:${q}">${c}</button>`).join('')}</div></div></div>
+          <div class="card" style="margin-top:12px;padding:14px;background:linear-gradient(135deg,var(--indigo-soft),var(--surface-solid));border-color:var(--indigo-line)"><div class="between"><div><div class="muted" style="font-size:11px">Cost estimativ / persoană</div><div style="font-weight:700;font-size:22px;margin-top:2px">${pl.cost} <span style="font-size:13px;color:var(--muted)">lei</span></div></div><button class="cta" data-a="planBook" style="width:auto;padding:12px 20px">Rezervă tot ${I.arrow}</button></div></div>
+          <button class="cta ghost" data-a="planRefresh" style="margin-top:10px;padding:12px">${I.refresh} Dă-mi altă sugestie</button>
+          <div class="muted" style="font-size:10.5px;text-align:center;margin-top:10px">🤖 Am analizat prețuri, distanțe și preferințele tale.</div></div></div>
       <div style="height:14px"></div>${nav('')}</div>`;};
-  INIT.aiplanner=(el,d)=>{const q=(d&&d.q)||'Diseară';const pl=AIPLANS[q]||AIPLANS['Diseară'];const lead=$('#aiLead',el),plan=$('#aiPlan',el);if(!lead)return;setTimeout(()=>{lead.textContent=pl.lead;if(plan)plan.style.display='block';},RM?60:950);};
+  INIT.aiplanner=(el)=>{const lead=$('#aiLead',el),plan=$('#aiPlan',el);if(!lead)return;const show=()=>{lead.textContent=planLead();if(plan)plan.style.display='block';ST.plan.seen=true;};if(RM||ST.plan.seen){show();}else{setTimeout(show,950);}};
 
   /* ===== RADAR — Urmărite (watchlist + alerte) ===== */
   S.watchlist=()=>{const w=ST.watch.map(id=>TICS[id]).filter(Boolean);const wl=ST.waitlist.map(id=>TICS[id]).filter(Boolean);
@@ -1521,7 +1551,12 @@
     if(a==='fltToggle'){const p=$('#fltPanel');if(p)p.style.display=p.style.display==='none'?'block':'none';el.classList.toggle('on');return;}
     if(a==='logout'){ST.obStep=0;return reset('login');}
     if(a==='share'){const url='https://tixello.ro/'+(arg?arg+'/':'')+'app';try{if(navigator.share){navigator.share({title:'Tixello',text:'Am găsit ceva pe Tixello 👀',url}).catch(()=>toast('Link copiat · tixello.ro 🔗'));return;}}catch(_){}try{navigator.clipboard&&navigator.clipboard.writeText(url);}catch(_){}return toast('Link copiat · tixello.ro 🔗');}
-    if(a==='aiplan')return go('aiplanner',{q:arg});
+    if(a==='aiplan'){const pr=AIPRESETS[arg]||{};ST.plan={city:pr.city||'Cluj-Napoca',budget:pr.budget||250,mood:pr.mood||'Cu prietenii',seed:0,seen:false};return go('aiplanner');}
+    if(a==='planMood'){ST.plan.mood=arg;ST.plan.seed=0;return rerender();}
+    if(a==='planCity'){ST.plan.city=arg;ST.plan.seed=0;return rerender();}
+    if(a==='planBudget'){ST.plan.budget=+arg;ST.plan.seed=0;return rerender();}
+    if(a==='planRefresh'){ST.plan.seed++;toast('Alt plan generat 🤖');return rerender();}
+    if(a==='planBook'){const pl=genPlan();if(pl.ev)ST.ev=pl.ev.id;return go('tickettypes');}
     if(a==='watch'){const i=ST.watch.indexOf(arg);if(i>=0){ST.watch.splice(i,1);toast('Nu mai urmărești prețul');}else{ST.watch.push(arg);pushNotif('🔔','Urmărești prețul','Te anunțăm când scade la '+(TICS[arg]?TICS[arg].s:'acest eveniment'),'Radar','go:ticsoffers:'+arg);toast('Urmărești prețul ✓ 🔔');}return rerender();}
     if(a==='waitlist'){if(!ST.waitlist.includes(arg)){ST.waitlist.push(arg);pushNotif('⏳','Ești pe lista de așteptare',(TICS[arg]?TICS[arg].s:'Eveniment')+' · te anunțăm când reapar bilete','Radar','go:watchlist');}toast('Ești pe lista de așteptare ⏳');return rerender();}
     if(a==='notifRead'){ST.notifs.forEach(n=>n.un=0);return rerender();}
