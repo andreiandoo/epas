@@ -20,6 +20,7 @@ import { Profile } from './screens/Profile';
 import { TicketDetail, Transfer } from './screens/TicketDetail';
 import { Event } from './screens/Event';
 import { Cart, ExpDate, SeatMap, Success, TicketTypes } from './screens/Purchase';
+import { Artist, Category, Search, Venue } from './screens/Discovery';
 import { LightboxProvider } from './lightbox';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
@@ -41,6 +42,10 @@ const SCREENS: Record<string, ScreenFn> = {
   seatmap: () => <SeatMap />,
   cart: () => <Cart />,
   success: () => <Success />,
+  category: (d) => <Category id={d.id as string} />,
+  search: () => <Search />,
+  artist: (d) => <Artist id={d.id as string} />,
+  venue: (d) => <Venue id={d.id as string} />,
 };
 
 function Placeholder({ id }: { id: string }) {

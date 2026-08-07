@@ -31,9 +31,19 @@ type ProtoSt = {
 
 const seed = PROTO_ST as unknown as ProtoSt;
 
+/** ST.catF din prototip — filtrele ecranului de categorie. */
+export type CatFilters = { sort: 'rec' | 'price' | 'rating'; maxPrice: number; city: string; seated: boolean };
+const CAT_DEFAULTS: CatFilters = { sort: 'rec', maxPrice: 500, city: '', seated: false };
+
 type ClientState = ProtoSt & {
   /** contoarele de bilete de pe ecranul de tipuri (ST._ttCounts din prototip) */
   ttCounts: Record<string, number[]>;
+  /** filtrele de categorie + categoria pentru care sunt valabile (ST._catFor) */
+  catF: CatFilters;
+  catFor: string | null;
+  setCat: (cat: string) => void;
+  setCatF: (patch: Partial<CatFilters>) => void;
+  resetCatF: () => void;
   toast: string | null;
 
   toggleSaved: (id: string) => void;
@@ -72,7 +82,15 @@ export const useClient = create<ClientState>((set, get) => ({
   rateStars: seed.rateStars,
 
   ttCounts: {},
+  catF: { ...CAT_DEFAULTS },
+  catFor: null,
   toast: null,
+
+  /** Prototip: filtrele se reseteaza cand se schimba categoria. */
+  setCat: (cat) =>
+    set((s) => (s.catFor === cat ? {} : { catFor: cat, catF: { ...CAT_DEFAULTS } })),
+  setCatF: (patch) => set((s) => ({ catF: { ...s.catF, ...patch } })),
+  resetCatF: () => set({ catF: { ...CAT_DEFAULTS } }),
 
   toggleSaved: (id) =>
     set((s) => ({ saved: s.saved.includes(id) ? s.saved.filter((x) => x !== id) : [...s.saved, id] })),

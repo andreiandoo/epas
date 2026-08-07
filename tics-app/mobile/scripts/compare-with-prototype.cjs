@@ -45,6 +45,16 @@ const ROUTES = {
     app: [{ text: 'Coldplay' }, { text: 'Alege bilete' }, { text: 'Continuă ·' }],
   },
   expdate: { proto: ['go:event:salina', 'go:expdate'], app: [{ text: 'Salina Turda' }, { text: 'Alege data' }] },
+  category: { proto: ['go:category:Concerte'], app: [{ nav: 'explore' }, { text: 'Concerte' }] },
+  // artist/venue sunt accesibile DOAR din pagina de eveniment
+  artist: {
+    proto: ['go:event:coldplay', 'go:artist:coldplay'],
+    app: [{ text: 'Coldplay' }, { text: 'Headliner' }],
+  },
+  venue: {
+    proto: ['go:event:coldplay', 'go:venue:arena'],
+    app: [{ text: 'Coldplay' }, { text: 'Vezi locația' }],
+  },
   topup: { proto: ['tab:wallet', 'go:topup'], app: [{ nav: 'wallet' }, { text: 'Încarcă' }] },
   payqr: { proto: ['tab:wallet', 'go:payqr'], app: [{ nav: 'wallet' }, { text: 'Plătește' }] },
 };
