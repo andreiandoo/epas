@@ -65,8 +65,22 @@ class TrackingSettings extends Page
             return;
         }
 
-        // Load existing integrations
-        $integrations = TrackingIntegration::where('marketplace_client_id', $marketplace->id)->get();
+        // Load existing integrations.
+        //
+        // marketplace_organizer_id must be NULL here: this screen edits the
+        // marketplace-level rows, but the same table also holds per-organizer
+        // pixel rows (the "Pixeli organizator" section on the organizer edit
+        // page). Without the guard, ->where('provider', ...)->first() below
+        // could return an organizer's row instead of the marketplace one, so
+        // the form filled with that organizer's (usually empty) values and
+        // every save looked like it had been discarded on reload.
+        //
+        // save() already scopes its updateOrCreate this way, and
+        // Settings::loadTrackingFill() already reads it this way — only this
+        // mount() was left behind.
+        $integrations = TrackingIntegration::where('marketplace_client_id', $marketplace->id)
+            ->whereNull('marketplace_organizer_id')
+            ->get();
 
         $formData = [];
         foreach (['ga4', 'gtm', 'meta', 'tiktok'] as $provider) {
@@ -324,42 +338,53 @@ class TrackingSettings extends Page
 
         foreach ($providers as $provider => $config) {
             $toggleEnabled = (bool) ($data["{$provider}_enabled"] ?? false);
-            $providerId = $data["{$provider}_id"] ?? '';
+            $providerId = trim((string) ($data["{$provider}_id"] ?? ''));
 
-            $settings = [
-                $config['id_field'] => $providerId,
-                'inject_at' => $data["{$provider}_inject_at"] ?? 'head',
-                'page_scope' => $data["{$provider}_page_scope"] ?? 'public',
-                'toggle_enabled' => $toggleEnabled,
-            ];
-
-            // GA4-only: cross-domain linker. Store the raw CSV; consumer
-            // (ConfigController::generateGA4Script) splits on save.
-            if ($provider === 'ga4' && !empty($data['ga4_linker_domains'])) {
-                $settings['linker_domains'] = trim((string) $data['ga4_linker_domains']);
-            }
-
-            // enabled = true only when toggle is on AND provider ID exists
-            // toggle_enabled in settings stores the UI toggle state.
-            //
             // Match by client_id + provider + organizer_id=NULL explicitly so
             // we don't accidentally update an organizer-scoped integration
             // when saving the marketplace-level settings. Without this guard,
             // if a single organizer happened to have a GA4 integration row,
-            // updateOrCreate would clobber THAT row and the marketplace-level
-            // one would never be created — silent breakage.
-            TrackingIntegration::updateOrCreate(
-                [
-                    'marketplace_client_id' => $marketplace->id,
-                    'marketplace_organizer_id' => null,
-                    'provider' => $provider,
-                ],
-                [
-                    'enabled' => $toggleEnabled && !empty($providerId),
-                    'consent_category' => $config['consent_category'],
-                    'settings' => $settings,
-                ]
-            );
+            // we would clobber THAT row and the marketplace-level one would
+            // never be created — silent breakage.
+            $row = TrackingIntegration::firstOrNew([
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => null,
+                'provider' => $provider,
+            ]);
+
+            // Merge into the stored blob instead of replacing it. The settings
+            // JSON also carries keys this form never renders — notably the
+            // encrypted server-side credentials (GA4 api_secret, TikTok
+            // access_token) written from the Settings page via
+            // setCredential(). Rebuilding the array from scratch here wiped
+            // them on every save from this screen.
+            $settings = $row->getSettings();
+            $settings[$config['id_field']] = $providerId;
+            $settings['inject_at'] = $data["{$provider}_inject_at"] ?? 'head';
+            $settings['page_scope'] = $data["{$provider}_page_scope"] ?? 'public';
+            $settings['toggle_enabled'] = $toggleEnabled;
+
+            // GA4-only: cross-domain linker. Store the raw CSV; consumer
+            // (ConfigController::generateGA4Script) splits on read. Emptying
+            // the field has to remove the key — now that we merge, a
+            // conditional write would leave a stale value forever.
+            if ($provider === 'ga4') {
+                $linker = trim((string) ($data['ga4_linker_domains'] ?? ''));
+                if ($linker !== '') {
+                    $settings['linker_domains'] = $linker;
+                } else {
+                    unset($settings['linker_domains']);
+                }
+            }
+
+            // enabled = true only when toggle is on AND provider ID exists.
+            // toggle_enabled in settings stores the raw UI toggle state, so a
+            // half-configured provider (toggled on, ID not typed yet) still
+            // reloads with the toggle where the admin left it.
+            $row->enabled = $toggleEnabled && $providerId !== '';
+            $row->consent_category = $config['consent_category'];
+            $row->settings = $settings;
+            $row->save();
         }
 
         Notification::make()
