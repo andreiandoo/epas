@@ -82,8 +82,11 @@
 
   /* ---- Chrome ---- */
   --tabbar-h: 62px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Marginile de sistem NU se trateaza din CSS: WebView-ul de pe Android nu
+     raporteaza fiabil env(safe-area-inset-*). Se aplica nativ, pe view-ul
+     radacina, in MainActivity.java. Tokenurile raman 0 ca sa nu dubleze. */
+  --safe-top: 0px;
+  --safe-bottom: 0px;
 }
 
 /* ---- Tema: Standard (Tixello light — indigo pe alb/lavanda) ---- */

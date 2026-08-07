@@ -268,18 +268,24 @@ export function Register({ onBack }: { onBack: () => void }) {
 
   return (
     <div style={sx('min-height:100%;background:var(--bg);padding-bottom:26px')}>
+      {/* Hero aliniat cu Login: butonul de back sta exact unde sta patratul cu
+          logo pe Login (padding:20px 24px 0, 50x50). Fara "tixello" in mijloc —
+          in prototip acolo era nevoie de un reper, pentru ca bara de status
+          simulata ocupa randul de deasupra. */}
       <div className="login-top" style={sx('height:224px')}>
         <div className="gridfx" />
         <div className="mesh" />
-        <div className="between pad" style={sx('position:relative;padding-top:4px')}>
-          <div className="icon-btn glass" onClick={onBack}>
+        <div style={sx('position:relative;padding:20px 24px 0')}>
+          <div
+            className="icon-btn glass"
+            onClick={onBack}
+            style={sx('width:50px;height:50px;border-radius:16px')}
+          >
             <Ic svg={I.back} />
           </div>
-          <div style={sx('font-weight:600;font-size:16px;letter-spacing:-.02em;color:#fff')}>tixello</div>
-          <div style={sx('width:42px')} />
-        </div>
-        <div style={sx('position:relative;padding:22px 24px 0')}>
-          <div style={sx('font-size:25px;font-weight:600;letter-spacing:-.03em')}>Creează-ți contul 🎉</div>
+          <div style={sx('font-size:25px;font-weight:600;letter-spacing:-.03em;margin-top:14px')}>
+            Creează-ți contul 🎉
+          </div>
           <div style={sx('font-size:13px;color:rgba(255,255,255,.82);margin-top:5px')}>
             Un cont, toate biletele și portofelul cashless.
           </div>
@@ -364,20 +370,21 @@ export function Forgot({ onBack }: { onBack: () => void }) {
 
   return (
     <div style={sx('min-height:100%;background:var(--bg);padding-bottom:26px')}>
+      {/* Acelasi hero ca la Inregistrare: back-ul in pozitia logo-ului de pe Login. */}
       <div className="login-top" style={sx('height:180px')}>
         <div className="gridfx" />
         <div className="mesh" />
-        <div className="between pad" style={sx('position:relative;padding-top:4px')}>
-          <div className="icon-btn glass" onClick={onBack}>
+        <div style={sx('position:relative;padding:20px 24px 0')}>
+          <div
+            className="icon-btn glass"
+            onClick={onBack}
+            style={sx('width:50px;height:50px;border-radius:16px')}
+          >
             <Ic svg={I.back} />
           </div>
-          <div className="row" style={sx('gap:6px;font-weight:600;font-size:15px;color:#fff')}>
-            <Raw html={txMark('#fff', 18)} /> tixello
+          <div style={sx('font-size:24px;font-weight:600;letter-spacing:-.03em;margin-top:14px')}>
+            Ți-ai uitat parola? 🔑
           </div>
-          <div style={sx('width:42px')} />
-        </div>
-        <div style={sx('position:relative;padding:14px 24px 0')}>
-          <div style={sx('font-size:24px;font-weight:600;letter-spacing:-.03em')}>Ți-ai uitat parola? 🔑</div>
           <div style={sx('font-size:13px;color:rgba(255,255,255,.82);margin-top:4px')}>
             Îți trimitem un link de resetare pe email.
           </div>

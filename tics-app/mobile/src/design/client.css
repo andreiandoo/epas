@@ -288,12 +288,15 @@
   .app-client .short .gdots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);transition:.2s}.app-client .short .gdots span.on{background:#fff;width:16px;border-radius:3px}
   @media(prefers-reduced-motion:reduce){.app-client .short .kb{animation:none}.app-client .short .vbar i{animation:none;width:45%}}
 
-/* Integrare cu telefonul real (nu design): prototipul rula intr-o rama fara
-   notch software, aplicatia are safe-area. */
-.app-client .stickytop,
-.app-client .dbar {
-  padding-top: env(safe-area-inset-top, 0px);
+/* ---- Ajustari de integrare, NU de design ----
+   Doua elemente sunt pozitionate absolut si aveau un offset de 52px calculat
+   ca sa treaca de bara de status SIMULATA a prototipului (~35px inaltime).
+   Aceasta nu mai exista — bara reala a sistemului e in afara WebView-ului,
+   pentru ca insetam nativ. Scadem cei 35px ca sa pastram acelasi spatiu
+   vizual fata de marginea de sus a continutului. */
+.app-client .shtop {
+  top: 17px;
 }
-.app-client .bnav {
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+.app-client #lightbox .lbtop {
+  padding-top: 17px;
 }

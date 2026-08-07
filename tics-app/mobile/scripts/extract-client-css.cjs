@@ -144,16 +144,27 @@ ${SCOPE} {
 
 `;
 
+/* Nicio ajustare de safe-area aici.
+   Marginile de sistem (bara de status, bara de navigatie, notch) se aplica
+   NATIV, pe view-ul radacina, in MainActivity.java. WebView-ul de pe Android
+   nu raporteaza fiabil `env(safe-area-inset-*)`, iar incercarea de a le trata
+   din CSS producea chiar problemele raportate: fundalul barei de jos ajungea
+   sub butoanele telefonului, iar padding-ul adaugat in interiorul ei
+   descentra iconitele fata de pastila.
+   Asa, layout-ul ramane exact cel din prototip. */
 const footer = `
 
-/* Integrare cu telefonul real (nu design): prototipul rula intr-o rama fara
-   notch software, aplicatia are safe-area. */
-${SCOPE} .stickytop,
-${SCOPE} .dbar {
-  padding-top: env(safe-area-inset-top, 0px);
+/* ---- Ajustari de integrare, NU de design ----
+   Doua elemente sunt pozitionate absolut si aveau un offset de 52px calculat
+   ca sa treaca de bara de status SIMULATA a prototipului (~35px inaltime).
+   Aceasta nu mai exista — bara reala a sistemului e in afara WebView-ului,
+   pentru ca insetam nativ. Scadem cei 35px ca sa pastram acelasi spatiu
+   vizual fata de marginea de sus a continutului. */
+${SCOPE} .shtop {
+  top: 17px;
 }
-${SCOPE} .bnav {
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+${SCOPE} #lightbox .lbtop {
+  padding-top: 17px;
 }
 `;
 

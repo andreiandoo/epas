@@ -47,7 +47,7 @@ button {
   position: relative;
   background: var(--bg);
   overflow: hidden;
-  padding-top: var(--safe-top);
+  /* marginile de sistem se aplica nativ, in MainActivity */
 }
 .app-org .screen {
   flex: 1;
@@ -510,7 +510,7 @@ button {
   display: flex;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 8px 6px calc(10px + var(--safe-bottom));
+  padding: 8px 6px 10px;
 }
 .app-org .tab {
   flex: 1;
@@ -655,7 +655,7 @@ button {
   display: flex;
   flex-direction: column;
   animation: slideup 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
-  padding-bottom: var(--safe-bottom);
+  /* fara safe-area: se aplica nativ */
 }
 @keyframes slideup {
   from {
@@ -698,7 +698,7 @@ button {
   display: flex;
   flex-direction: column;
   animation: fade 0.16s ease;
-  padding-top: var(--safe-top);
+  /* marginile de sistem se aplica nativ, in MainActivity */
 }
 .app-org .modal-topbar {
   display: flex;
@@ -733,7 +733,7 @@ button {
   position: absolute;
   left: 16px;
   right: 16px;
-  bottom: calc(88px + var(--safe-bottom));
+  bottom: 88px;
   z-index: 95;
   background: var(--text);
   color: var(--bg);
