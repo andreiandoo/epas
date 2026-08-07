@@ -21,7 +21,12 @@ param(
   [switch]$SkipWebBuild,
   # Setezi asta cand bundle-ul cere un plugin nativ nou: telefoanele cu APK
   # mai vechi nu vor primi update-ul (altfel ar crapa la runtime).
-  [string]$MinVersionBuild = ''
+  [string]$MinVersionBuild = '',
+  # Checksum-ul e OPTIONAL in protocolul plugin-ului si e scos implicit:
+  # daca versiunea de plugin il calculeaza altfel decat sha256 pe zip,
+  # update-ul esueaza IN TACERE, ceea ce e greu de diagnosticat fara device.
+  # Il repunem doar dupa ce confirmam pe telefon ca formatul e acceptat.
+  [switch]$WithChecksum
 )
 
 $ErrorActionPreference = 'Stop'
@@ -101,10 +106,10 @@ Write-Host '[4/4] Scriu manifest.json...' -ForegroundColor Cyan
 $manifest = [ordered]@{
   version   = $Version
   url       = "https://core.tixello.com/tics-app/bundles/tixello-$Version.zip"
-  checksum  = $sha
   size      = (Get-Item $zipPath).Length
   published = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 }
+if ($WithChecksum) { $manifest['checksum'] = $sha }
 if ($MinVersionBuild -ne '') { $manifest['min_version_build'] = $MinVersionBuild }
 
 $json = ($manifest | ConvertTo-Json -Depth 4)

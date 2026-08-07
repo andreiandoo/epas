@@ -35,6 +35,7 @@ const ROUTES = {
     proto: ['tab:tickets', 'go:ticket:coldplay:0', 'go:transfer:coldplay:0'],
     app: [{ nav: 'tickets' }, { text: 'Coldplay' }, { text: 'Transferă biletul' }],
   },
+  event: { proto: ['go:event:coldplay'], app: [{ text: 'Coldplay' }] },
   topup: { proto: ['tab:wallet', 'go:topup'], app: [{ nav: 'wallet' }, { text: 'Încarcă' }] },
   payqr: { proto: ['tab:wallet', 'go:payqr'], app: [{ nav: 'wallet' }, { text: 'Plătește' }] },
 };

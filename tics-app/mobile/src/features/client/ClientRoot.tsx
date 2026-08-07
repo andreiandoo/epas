@@ -17,6 +17,8 @@ import { Tickets } from './screens/Tickets';
 import { PayQr, Topup, Wallet } from './screens/Wallet';
 import { Profile } from './screens/Profile';
 import { TicketDetail, Transfer } from './screens/TicketDetail';
+import { Event } from './screens/Event';
+import { LightboxProvider } from './lightbox';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
@@ -31,6 +33,7 @@ const SCREENS: Record<string, ScreenFn> = {
   profile: () => <Profile />,
   ticket: (d) => <TicketDetail id={d.id as string} pi={d.pi as number} />,
   transfer: (d) => <Transfer id={d.id as string} pi={d.pi as number} />,
+  event: (d) => <Event id={d.id as string} />,
 };
 
 function Placeholder({ id }: { id: string }) {
@@ -97,9 +100,11 @@ export function ClientRoot() {
   const toast = useClient((s) => s.toast);
   return (
     <div className="app-client">
-      <NavProvider initial="home">
-        <Stack />
-      </NavProvider>
+      <LightboxProvider>
+        <NavProvider initial="home">
+          <Stack />
+        </NavProvider>
+      </LightboxProvider>
       <div id="toast" className={toast ? 'show' : ''}>
         {toast}
       </div>

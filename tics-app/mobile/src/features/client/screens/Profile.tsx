@@ -8,12 +8,14 @@
    prototipului, deci arata nativ, si apare DOAR daca emailul are si
    proprietati de organizator.
    ========================================================= */
+import { useEffect, useState } from 'react';
 import { Ic, sx } from '../../../design/sx';
 import { AFF, I } from '../../../mock/prototype';
 import { BottomNav } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
+import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../../ota';
 
 /** [emoji, eticheta, actiune] — exact lista din prototip. */
 const MENU: [string, string, string][] = [
@@ -27,6 +29,57 @@ const MENU: [string, string, string][] = [
   ['⚙️', 'Setări cont', 'go:settings'],
   ['↩︎', 'Deconectare', 'logout'],
 ];
+
+/**
+ * Rand de actualizari — NU exista in prototip, dar e necesar operational:
+ * fara el nu se poate vedea ce versiune de continut ruleaza pe telefon si nu
+ * se poate forta verificarea. Randat cu .listitem, ca sa arate nativ.
+ */
+function UpdateRow() {
+  const showToast = useClient((s) => s.showToast);
+  const [ota, setOta] = useState<OtaState>(getOtaState);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => onOtaChange(setOta), []);
+
+  const label = ota.pending
+    ? `Versiunea ${ota.pending} e gata — atinge pentru repornire`
+    : ota.downloading
+      ? `Se descarcă… ${Math.round(ota.progress)}%`
+      : busy
+        ? 'Se verifică…'
+        : 'Verifică actualizările';
+
+  const sub = `conținut ${ota.current === 'builtin' ? 'inclus în APK' : ota.current}${ota.native ? ` · aplicație ${ota.native}` : ''}`;
+
+  return (
+    <div
+      className="listitem"
+      style={sx('cursor:pointer')}
+      onClick={async () => {
+        if (ota.pending) return void applyPendingUpdate();
+        setBusy(true);
+        showToast(await checkForUpdate());
+        setBusy(false);
+      }}
+    >
+      <div
+        style={sx('width:38px;height:38px;border-radius:12px;background:var(--surface-3);display:grid;place-items:center;font-size:17px')}
+      >
+        {ota.pending ? '🔄' : '⬇️'}
+      </div>
+      <div style={sx('flex:1;min-width:0')}>
+        <div style={sx('font-weight:500;font-size:14px')}>{label}</div>
+        <div className="muted" style={sx('font-size:11px;margin-top:2px')}>
+          {sub}
+        </div>
+      </div>
+      <span className="muted">
+        <Ic svg={I.arrow} />
+      </span>
+    </div>
+  );
+}
 
 export function Profile() {
   const { go, tab } = useNav();
@@ -125,6 +178,8 @@ export function Profile() {
             </div>
           </>
         ) : null}
+
+        <UpdateRow />
 
         {MENU.map((m) => (
           <div key={m[1]} className="listitem" onClick={() => run(m[2])} style={sx('cursor:pointer')}>

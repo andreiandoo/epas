@@ -80,6 +80,23 @@ td:first-child{white-space:nowrap;padding-right:14px}
     la backend-ul real.
   </p>
 
+  <div class="card" style="border-color:var(--cyan-border);background:linear-gradient(160deg,var(--cyan-tint),var(--surface))">
+    <h2><span class="n" style="background:var(--cyan-tint);color:var(--cyan)">i</span> Două versiuni diferite</h2>
+    <p style="font-size:13.5px;color:var(--text-2);line-height:1.65">
+      <b>APK-ul</b> e doar carcasa nativă (cameră, NFC, plăți). Se schimbă rar și
+      <b>se instalează o singură dată</b> — de aceea rămâne la 0.2.0.
+    </p>
+    <p style="font-size:13.5px;color:var(--text-2);line-height:1.65;margin-top:9px">
+      <b>Conținutul</b> (toate ecranele) vine prin OTA și se schimbă des. Versiunea publicată acum:
+      <b id="bundlev" style="color:var(--cyan)">se verifică…</b>
+    </p>
+    <p style="font-size:13px;color:var(--text-3);line-height:1.6;margin-top:9px">
+      Dacă în aplicație vezi ecrane vechi: deschide <b>Profil → rândul de actualizări</b>, care îți arată ce
+      versiune de conținut rulezi și îți permite să forțezi verificarea. Actualizarea automată se aplică la
+      <b>următoarea pornire</b> a aplicației — închide-o complet din multitasking, nu doar minimiz-o.
+    </p>
+  </div>
+
   <div class="card">
     <a class="dl" href="tixello-debug-0.2.0.apk" download>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -87,7 +104,7 @@ td:first-child{white-space:nowrap;padding-right:14px}
       Descarcă APK-ul
     </a>
     <div class="meta">
-      <span class="pill">v0.2.0 · Faza 0</span>
+      <span class="pill">APK v0.2.0</span>
       <span class="pill">6,41 MB</span>
       <span class="pill">Android 6.0+</span>
       <span class="pill g">OTA activ</span>
@@ -174,5 +191,21 @@ td:first-child{white-space:nowrap;padding-right:14px}
   </div>
 
 </div>
+<script>
+  // Versiunea de continut se citeste live din manifest, ca pagina sa nu ramana
+  // in urma la fiecare publicare de bundle.
+  fetch('manifest.json', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (m) {
+      var el = document.getElementById('bundlev');
+      if (!el) return;
+      var when = m.published ? new Date(m.published).toLocaleString('ro-RO') : '';
+      el.textContent = m.version + (when ? ' (' + when + ')' : '');
+    })
+    .catch(function () {
+      var el = document.getElementById('bundlev');
+      if (el) el.textContent = 'indisponibil';
+    });
+</script>
 </body>
 </html>
