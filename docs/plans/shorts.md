@@ -348,7 +348,7 @@ Pagină/widget Filament (panoul tenant): per short → views, avg watch %, compl
 6. **Îmbogățiri**: auto-gen din media (§10), seed artiști (§11), analytics organizator (§12), moderare/health (§14), captions/collections/stories.
 
 ## 17. Decizii deschise (de confirmat înainte de start)
-1. **Provider video** managed: Cloudflare Stream / Bunny / Mux? (recomand Cloudflare sau Bunny pt cost).
+1. ✅ **REZOLVAT — provider video = Bunny Stream** (cel mai ieftin pt bibliotecă mereu-disponibilă + trafic mobil low-bitrate). Implementarea concretă: **Partea C**.
 2. Shorts = **tab principal** de discovery sau doar rail pe Home? (recomand tab, fiind mobile-only).
 3. Moderare: shorts organizatori merg direct în feed sau prin `pending_review`?
 4. `following` are nevoie de „urmărire artist/organizator" — îl construim odată cu shorts sau reutilizăm `favoriteArtists` ca proxy la început?
@@ -715,3 +715,218 @@ Schema::create('short_poster_variants', function (Blueprint $t) {
 6. **Analytics organizator** (B5) + **captions** (B6).
 7. **Collections** (B7) + **Stories** (B8).
 8. **UGC verificat** (B9) + moderare + **A/B cover** (B10).
+
+---
+
+# PARTEA C — Bunny Stream: implementare `VideoProvider`
+
+Provider ales pentru upload native → HLS. Bunny Stream encodează, generează thumbnails și livrează HLS prin Bunny CDN. Externele (YT/TikTok/IG/FB) **nu** trec pe aici (rămân embed).
+
+## C0. Precondiții în dashboard-ul Bunny (o singură dată)
+1. Creează un **Video Library** (Stream) → notează **Library ID** și **API Key** (din setările library-ului).
+2. Library-ul are automat o **Pull Zone** cu hostname `vz-xxxxxxxx-xxx.b-cdn.net` → notează hostname-ul.
+3. Activează **Token Authentication** pe pull zone (ca URL-urile brute cu `guid` să nu fie publice) → notează **Token Security Key**.
+4. (Opțional) setează rezoluțiile encodate (ex. 240/360/480/720/1080) și „MP4 fallback" pe library.
+5. Setează **Webhook URL** pe library → `https://api.tixello.ro/webhooks/video/bunny?secret=...`.
+
+## C1. Config
+```php
+// config/services.php
+'bunny' => [
+    'stream_library_id'     => env('BUNNY_STREAM_LIBRARY_ID'),
+    'stream_api_key'        => env('BUNNY_STREAM_API_KEY'),
+    'stream_pull_zone'      => env('BUNNY_STREAM_PULL_ZONE'),      // ex. vz-abc123-def.b-cdn.net
+    'stream_token_key'      => env('BUNNY_STREAM_TOKEN_KEY'),      // pull zone token auth key
+    'stream_webhook_secret' => env('BUNNY_STREAM_WEBHOOK_SECRET'),
+],
+// config('services.video.driver') = 'bunny'
+```
+Pe `Short`: `video_provider='bunny'`, `provider_asset_id = {guid}`. **NU** stoca `hls_url`/`poster_url` statice — se semnează la runtime, per cerere (TTL scurt). `ready` vine din webhook.
+
+## C2. `app/Services/Video/BunnyStreamProvider.php` (implements `VideoProvider`)
+```php
+use Illuminate\Support\Facades\Http;
+
+class BunnyStreamProvider implements VideoProvider
+{
+    private string $api = 'https://video.bunnycdn.com';
+    public function __construct(
+        private string $lib,       // config services.bunny.stream_library_id
+        private string $key,       // stream_api_key
+        private string $pullZone,  // stream_pull_zone (host)
+        private string $tokenKey,  // stream_token_key
+    ) {}
+
+    /** Upload direct din app (TUS resumable) — fișierul NU trece prin Laravel. */
+    public function createDirectUpload(array $meta): array
+    {
+        // 1) creează obiectul video → primești guid
+        $guid = Http::withHeaders(['AccessKey' => $this->key, 'accept' => 'application/json'])
+            ->post("{$this->api}/library/{$this->lib}/videos", ['title' => $meta['title'] ?? 'short'])
+            ->json('guid');
+
+        // 2) presemnează sesiunea TUS (client urcă direct la Bunny)
+        $expire = now()->addHour()->timestamp;
+        $signature = hash('sha256', $this->lib . $this->key . $expire . $guid);
+
+        return [
+            'asset_id'    => $guid,
+            'upload_url'  => 'https://video.bunnycdn.com/tusupload',
+            'tus_headers' => [
+                'AuthorizationSignature' => $signature,
+                'AuthorizationExpire'    => (string) $expire,
+                'LibraryId'              => $this->lib,
+                'VideoId'                => $guid,
+            ],
+        ];
+    }
+
+    /** Ingest server-side dintr-un URL (folosit de B3 auto-gen: mp4 randat → Bunny). */
+    public function ingestFromUrl(string $url, ?string $title = null): string
+    {
+        $guid = Http::withHeaders(['AccessKey' => $this->key])
+            ->post("{$this->api}/library/{$this->lib}/videos", ['title' => $title ?? 'short'])
+            ->json('guid');
+        Http::withHeaders(['AccessKey' => $this->key])
+            ->post("{$this->api}/library/{$this->lib}/videos/{$guid}/fetch", ['url' => $url]);
+        return $guid;
+    }
+
+    /** Stare + metadate (apelat din webhook/job). status 4 = Finished. */
+    public function getPlayback(string $guid): array
+    {
+        $v = Http::withHeaders(['AccessKey' => $this->key, 'accept' => 'application/json'])
+            ->get("{$this->api}/library/{$this->lib}/videos/{$guid}")->json();
+        return [
+            'ready'    => (int)($v['status'] ?? 0) === 4,
+            'duration' => (int)($v['length'] ?? 0),
+            'width'    => $v['width']  ?? null,
+            'height'   => $v['height'] ?? null,
+        ];
+    }
+
+    /** URL-uri semnate pt redare (token auth pe pull zone), TTL scurt, per request. */
+    public function signedHls(string $guid, int $ttl = 3600): string
+    {
+        return $this->sign("/{$guid}/playlist.m3u8", $ttl);
+    }
+    public function signedPoster(string $guid, int $ttl = 3600): string
+    {
+        return $this->sign("/{$guid}/thumbnail.jpg", $ttl);
+    }
+    private function sign(string $path, int $ttl): string
+    {
+        $expires = time() + $ttl;
+        // Bunny CDN Token Authentication (confirmă schema exactă în setările pull zone-ului:
+        // SHA256(security_key + path + expires), base64 url-safe fără padding):
+        $hash  = hash('sha256', $this->tokenKey . $path . $expires, true);
+        $token = rtrim(strtr(base64_encode($hash), '+/', '-_'), '=');
+        return "https://{$this->pullZone}{$path}?token={$token}&expires={$expires}";
+    }
+
+    public function delete(string $guid): void
+    {
+        Http::withHeaders(['AccessKey' => $this->key])
+            ->delete("{$this->api}/library/{$this->lib}/videos/{$guid}");
+    }
+
+    public function verifyWebhook(\Illuminate\Http\Request $r): bool
+    {
+        // Webhook-ul Bunny Stream nu e semnat implicit → strategie defensivă:
+        //  (a) verifică ?secret= din URL == config stream_webhook_secret
+        //  (b) tratează webhook-ul doar ca declanșator; RE-CITEȘTE starea via getPlayback() (autoritativ)
+        return hash_equals(config('services.bunny.stream_webhook_secret'), (string) $r->query('secret'));
+    }
+}
+```
+> Notă: URL HLS Bunny = `https://{pullZone}/{guid}/playlist.m3u8`; thumbnail = `/{guid}/thumbnail.jpg`, preview = `/{guid}/preview.webp`. Confirmă schema exactă de token la momentul implementării (setările pull zone-ului).
+
+## C3. Endpoint upload-url (app cere sesiune de upload)
+```
+POST tenant/shorts/upload-url            // (auth organizator) sau marketplace-client/customer/shorts/upload-url (UGC)
+// controller:
+$out = app(VideoProvider::class)->createDirectUpload(['title' => $request->title]);
+$short = Short::create([
+    'video_provider'    => 'bunny',
+    'provider_asset_id' => $out['asset_id'],
+    'source'            => 'upload',
+    'owner_type'/'id'   => ...,   // event/artist/etc
+    'status'            => 'draft',
+    'ready'             => false,
+]);
+return ['short_id' => $short->id] + $out;   // upload_url + tus_headers
+```
+
+## C4. Upload din mobil (TUS resumable, direct la Bunny)
+```ts
+// React/Capacitor — tus-js-client
+import * as tus from 'tus-js-client'
+const { upload_url, tus_headers, short_id } = await api.post('shorts/upload-url', { title })
+new tus.Upload(file, {
+  endpoint: upload_url,
+  headers: tus_headers,                       // AuthorizationSignature, AuthorizationExpire, LibraryId, VideoId
+  metadata: { filetype: file.type, title },
+  onSuccess: () => { /* rămâne 'draft' până la webhook 'ready' */ },
+}).start()
+```
+Fișierul merge **direct** la Bunny (nu prin Laravel) → zero egress/CPU pe serverul tău.
+
+## C5. Webhook „ready" + job
+```
+POST webhooks/video/bunny?secret=...        // fără CSRF; VerifyBunnyWebhook middleware
+// body: { "VideoLibraryId": <int>, "VideoGuid": "<guid>", "Status": <int> }  (4 = Finished, 5/6 = error)
+```
+```php
+// Controller
+if (! app(VideoProvider::class)->verifyWebhook($request)) abort(403);
+$guid = $request->input('VideoGuid');
+if ((int) $request->input('Status') === 4) {
+    SyncShortPlaybackJob::dispatch($guid);       // autoritativ: re-citește via getPlayback()
+} elseif (in_array((int)$request->input('Status'), [5,6])) {
+    Short::where('provider_asset_id',$guid)->update(['status'=>'rejected']);
+}
+return response()->noContent();
+```
+```php
+// app/Jobs/SyncShortPlaybackJob.php  (queue: database; șablon FetchArtistSocialStats)
+$p = app(VideoProvider::class)->getPlayback($guid);
+Short::where('provider_asset_id',$guid)->update([
+    'ready'    => $p['ready'],
+    'duration' => $p['duration'],
+    'width'    => $p['width'],
+    'height'   => $p['height'],
+]);   // status rămâne 'draft'/'pending_review' → publicare separată
+```
+
+## C6. Servirea în feed (URL-uri semnate la runtime)
+La construirea payload-ului de feed (§5), pentru short-urile Bunny gata (`ready`):
+```php
+$provider = app(VideoProvider::class);
+$playback = [
+    'hls_url'    => $provider->signedHls($short->provider_asset_id, ttl: 3600),
+    'poster_url' => $provider->signedPoster($short->provider_asset_id, ttl: 3600),
+];
+```
+- **Nu** stoca URL-uri semnate (expiră). Generează-le per cerere, TTL 1–6h.
+- Mobil redă `hls_url` cu **hls.js** (Android/WebView) / HLS nativ (iOS). Poster = `poster_url`.
+
+## C7. Integrare cu îmbogățirile
+- **B3 (auto-gen)**: rendererul produce un `mp4` → `ingestFromUrl($mp4Url)` → guid → același flux webhook/`ready`.
+- **B6 (captions)**: Bunny Stream poate genera/urca subtitrări pe video (`.../videos/{guid}/captions/{srclang}`); `GenerateCaptionsJob` le atașează sau le urcă (VTT). Confirmă suportul de auto-captions curent din Bunny.
+- **B9 (UGC)**: upload-url pe ruta de customer, `is_ugc=true`, `status='pending_review'` → moderare înainte de publicare.
+- **A/B poster (B10)**: Bunny permite setarea unui thumbnail custom (`.../videos/{guid}/thumbnail`) — încarci variante și le testezi.
+
+## C8. Checklist de mediu (.env)
+```
+BUNNY_STREAM_LIBRARY_ID=
+BUNNY_STREAM_API_KEY=
+BUNNY_STREAM_PULL_ZONE=vz-xxxxxxxx-xxx.b-cdn.net
+BUNNY_STREAM_TOKEN_KEY=
+BUNNY_STREAM_WEBHOOK_SECRET=
+```
+
+## C9. Costuri — reglaje care contează
+- Limitează rezoluțiile encodate la ce are sens pe mobil vertical (ex. max 720p sau 1080p) → mai puțină stocare și bandwidth.
+- Activează „MP4 fallback" doar dacă îți trebuie (altfel dublezi stocarea).
+- Token auth cu TTL scurt (anti-hotlinking → nu-ți irosești bandwidth-ul pe emb-eduri externe).
+- Bunny **volume tier** (dacă traficul e mare) reduce la ~$0.005/GB.
