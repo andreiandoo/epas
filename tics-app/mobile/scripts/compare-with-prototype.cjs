@@ -71,9 +71,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     return ok;
   };
 
-  /** In aplicatie, tab-urile se apasa dupa iconita din .bnav (a n-a pozitie). */
+  /** In aplicatie, tab-urile se apasa dupa iconita din .bnav.
+      ATENTIE: .bnav .nav are DOAR 4 elemente — FAB-ul (wallet) e .fab, separat. */
   const clickNav = async (page, id) => {
-    const order = ['home', 'explore', null, 'tickets', 'profile'];
+    const order = ['home', 'explore', 'tickets', 'profile'];
     const idx = order.indexOf(id);
     const ok = await page.evaluate(
       (i, isWallet) => {

@@ -27,7 +27,22 @@ const start = lines.findIndex((l) => /^\s*const VEN=\{/.test(l));
 const end = lines.findIndex((l) => /^\s*const S=\{\},INIT=\{\};/.test(l));
 if (start < 0 || end < 0) throw new Error('Nu gasesc granitele blocului de date.');
 
+/* Cateva seturi de date stau DUPA blocul principal, intercalate printre
+   definitiile de ecrane (prototipul le declara acolo unde le foloseste prima
+   data). Le culegem dupa nume, oriunde ar fi, la nivel superior. */
+const EXTRA_DECLS = ['MYTIX', 'OB', 'OBALL', 'SORTLBL', 'MPCOL'];
+
 const block = lines.slice(start, end);
+const extras = [];
+for (const name of EXTRA_DECLS) {
+  const re = new RegExp(`^ {2}const ${name}=`);
+  const idx = lines.findIndex((l) => re.test(l));
+  if (idx < 0) {
+    console.log(`  ATENTIE: nu gasesc declaratia ${name}`);
+    continue;
+  }
+  extras.push({ name, idx });
+}
 
 /* Helpere cuplate la DOM sau la runtime-ul prototipului — nu intra in modul.
    Se recunosc dupa numele declarat pe linia respectiva. */
@@ -48,7 +63,9 @@ const DOM_COUPLED = [
    3 randuri). Sarim de la linia care declanseaza pana cand acoladele si
    backtick-urile acumulate revin in echilibru. */
 const balance = (s) => {
-  let braces = 0;
+  // Se urmaresc TOATE cele trei perechi: `const OB=[` are acoladele echilibrate
+  // dar continua pe randurile urmatoare printr-o paranteza dreapta deschisa.
+  let depth = 0;
   let ticks = 0;
   let inTick = false;
   for (const ch of s) {
@@ -56,11 +73,11 @@ const balance = (s) => {
       inTick = !inTick;
       ticks++;
     } else if (!inTick) {
-      if (ch === '{') braces++;
-      else if (ch === '}') braces--;
+      if (ch === '{' || ch === '[' || ch === '(') depth++;
+      else if (ch === '}' || ch === ']' || ch === ')') depth--;
     }
   }
-  return { braces, balanced: braces === 0 && ticks % 2 === 0 };
+  return { depth, balanced: depth === 0 && ticks % 2 === 0 };
 };
 
 const kept = [];
@@ -76,6 +93,19 @@ for (let i = 0; i < block.length; i++) {
     i++;
     acc += '\n' + block[i];
   }
+}
+
+/* Culegem declaratiile suplimentare, tot block-aware (pot fi multi-linie). */
+for (const { name, idx } of extras) {
+  let acc = lines[idx];
+  let j = idx;
+  while (!balance(acc).balanced && j + 1 < lines.length) {
+    j++;
+    acc += '\n' + lines[j];
+  }
+  kept.push('');
+  kept.push(`  /* ${name} — declarat mai jos in prototip, langa ecranul care il foloseste */`);
+  kept.push(...acc.split('\n'));
 }
 
 /* Exportam DOAR declaratiile de nivel superior. In prototip acelea sunt
@@ -121,6 +151,8 @@ const checks = [
   ['are I (iconite)', /export const I=/.test(out)],
   ['are EV', /export const EV=/.test(out)],
   ['are CATPOOLS', /export const CATPOOLS=/.test(out)],
+  ['are MYTIX', /export const MYTIX=/.test(out)],
+  ['are OB/OBALL', /export const OB=/.test(out) && /export const OBALL=/.test(out)],
   ['fara toast DOM', !/const toast=m=>\{toastEl/.test(out)],
   ['fara lbEl', !/const lbEl=/.test(out)],
 ];

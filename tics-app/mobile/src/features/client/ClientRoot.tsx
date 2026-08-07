@@ -13,6 +13,7 @@ import { NavProvider, useNav, type Frame } from './nav';
 import { useClient } from '../../store/client';
 import { Home } from './screens/Home';
 import { Explore } from './screens/Explore';
+import { Tickets } from './screens/Tickets';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
@@ -20,6 +21,7 @@ type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 const SCREENS: Record<string, ScreenFn> = {
   home: () => <Home />,
   explore: () => <Explore />,
+  tickets: () => <Tickets />,
 };
 
 function Placeholder({ id }: { id: string }) {

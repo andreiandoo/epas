@@ -244,3 +244,33 @@ export const VEN={
     Object.values(EV).forEach(e=>{if(e.gallery)e.gallery=galFor(e);});
     Object.values(TICS).forEach(t=>{if(t.gallery)t.gallery=galFor(t);});
     FEST.gallery=galFor(FEST);})();
+
+
+  /* MYTIX — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const MYTIX=[{ev:'coldplay',passes:[{name:'Andrei Popescu',code:'TIX-CP-8841'},{name:'Maria Ionescu',code:'TIX-CP-8842',checkedIn:'19 Apr · 22:14 · Poarta A'}],seat:'B2, B3',cat:'Categoria I'},{ev:'salina',passes:[{name:'Andrei Popescu',code:'TIX-SL-2240'}],seat:'—',cat:'Bilet Adult',date:'9 Aug',slot:'09:00–17:00',people:'1 adult'}];
+
+  /* OB — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const OB=[
+    {art:`<div class="obart" style="background:linear-gradient(160deg,#171326,#0f0d18);display:grid;place-items:center">
+        <div style="position:relative;width:180px;height:160px">
+          <div style="position:absolute;left:4px;top:22px;width:100px;height:126px;border-radius:18px;background:${EV.coldplay.tone};transform:rotate(-9deg);box-shadow:var(--sh)"></div>
+          <div style="position:absolute;right:0;top:14px;width:100px;height:126px;border-radius:18px;background:${EV.salina.tone};transform:rotate(9deg);box-shadow:var(--sh)"></div>
+          <div style="position:absolute;left:40px;top:4px;width:100px;height:132px;border-radius:18px;background:${EV.swan.tone};box-shadow:var(--sh);display:grid;place-items:center;font-size:42px">🎟</div></div></div>`,
+      h:'Evenimente ȘI experiențe',p:'Concerte, teatru, stand-up — plus tururi, aventuri și degustări. Totul într-un singur loc.'},
+    {art:`<div class="obart" style="background:linear-gradient(160deg,#241a44,#7c3aed)">
+        <div style="position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:12px;padding-bottom:26px">${[60,92,72,112,82].map((h,i)=>`<span style="width:13px;height:${h}px;border-radius:9px;background:linear-gradient(180deg,#e9d5ff,#a78bfa);opacity:${.62+i*.08}"></span>`).join('')}</div>
+        <div style="position:absolute;top:18px;left:18px;color:#fff;font-weight:600">🎪 Nordvale · 4 zile</div><div style="position:absolute;bottom:16px;right:16px;background:rgba(255,255,255,.18);color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px">Cashless</div></div>`,
+      h:'Festivaluri & portofel cashless',p:'Program, lineup, brățară cashless și portofel electronic — fără cash, fără cozi.'},
+    {art:`<div class="obart" style="background:linear-gradient(160deg,#171326,#0f0d18);display:grid;place-items:center">
+        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(var(--indigo) 0 70%, #241f3a 0);display:grid;place-items:center"><div style="width:112px;height:112px;border-radius:50%;background:#0f0d18;display:grid;place-items:center;text-align:center"><div><div style="font-size:32px">🤖</div><div style="font-weight:600;font-size:13px;color:var(--indigo-2);margin-top:2px">Pentru tine</div></div></div></div></div>`,
+      h:'Sugestii AI, doar pentru tine',p:'Adunăm ce se întâmplă în toată România și îți recomandăm exact ce ți se potrivește. Cu cât ne spui mai multe, cu atât nimerim mai bine.'},
+  ];
+
+  /* OBALL — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const OBALL=[...OB,...PREFGROUPS.map((g,gi)=>({pref:true,group:gi}))];
+
+  /* SORTLBL — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const SORTLBL={rec:'Recomandate',price:'Preț ↑',rating:'Rating ★'};
+
+  /* MPCOL — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const MPCOL=['#7c3aed','#0e7490','#b45309','#be185d'];
