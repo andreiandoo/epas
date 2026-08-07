@@ -36,6 +36,15 @@ const ROUTES = {
     app: [{ nav: 'tickets' }, { text: 'Coldplay' }, { text: 'Transferă biletul' }],
   },
   event: { proto: ['go:event:coldplay'], app: [{ text: 'Coldplay' }] },
+  tickettypes: {
+    proto: ['go:event:coldplay', 'go:tickettypes'],
+    app: [{ text: 'Coldplay' }, { text: 'Alege bilete' }],
+  },
+  seatmap: {
+    proto: ['go:event:coldplay', 'go:tickettypes', 'go:seatmap'],
+    app: [{ text: 'Coldplay' }, { text: 'Alege bilete' }, { text: 'Continuă ·' }],
+  },
+  expdate: { proto: ['go:event:salina', 'go:expdate'], app: [{ text: 'Salina Turda' }, { text: 'Alege data' }] },
   topup: { proto: ['tab:wallet', 'go:topup'], app: [{ nav: 'wallet' }, { text: 'Încarcă' }] },
   payqr: { proto: ['tab:wallet', 'go:payqr'], app: [{ nav: 'wallet' }, { text: 'Plătește' }] },
 };

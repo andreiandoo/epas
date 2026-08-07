@@ -7,8 +7,9 @@
    un placeholder explicit, ca sa se vada clar ce lipseste — nu pe o
    aproximare care ar putea trece drept "gata".
    ========================================================= */
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '../../design/sx';
+import { useScreenChrome } from './useScreenChrome';
 import { NavProvider, useNav, type Frame } from './nav';
 import { useClient } from '../../store/client';
 import { Home } from './screens/Home';
@@ -18,6 +19,7 @@ import { PayQr, Topup, Wallet } from './screens/Wallet';
 import { Profile } from './screens/Profile';
 import { TicketDetail, Transfer } from './screens/TicketDetail';
 import { Event } from './screens/Event';
+import { Cart, ExpDate, SeatMap, Success, TicketTypes } from './screens/Purchase';
 import { LightboxProvider } from './lightbox';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
@@ -34,6 +36,11 @@ const SCREENS: Record<string, ScreenFn> = {
   ticket: (d) => <TicketDetail id={d.id as string} pi={d.pi as number} />,
   transfer: (d) => <Transfer id={d.id as string} pi={d.pi as number} />,
   event: (d) => <Event id={d.id as string} />,
+  expdate: () => <ExpDate />,
+  tickettypes: () => <TicketTypes />,
+  seatmap: () => <SeatMap />,
+  cart: () => <Cart />,
+  success: () => <Success />,
 };
 
 function Placeholder({ id }: { id: string }) {
@@ -60,6 +67,18 @@ function LeavingScreen({ frame, cls }: { frame: Frame; cls: string }) {
   return <div className={cn('screen', cls)}>{render ? render(frame.data ?? {}) : <Placeholder id={frame.id} />}</div>;
 }
 
+/** Ecran activ: primeste comportamentele de chrome din paint() (vezi useScreenChrome). */
+function ActiveScreen({ frame, cls, entered }: { frame: Frame; cls: string; entered: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useScreenChrome(ref);
+  const render = SCREENS[frame.id];
+  return (
+    <div ref={ref} className={cn('screen', !entered && cls)}>
+      {render ? render(frame.data ?? {}) : <Placeholder id={frame.id} />}
+    </div>
+  );
+}
+
 /**
  * Ecran care intra: se monteaza cu .enter-* (opacity 0 + translate din
  * client.css) si scapa de clasa la frame-ul urmator, ceea ce porneste
@@ -75,12 +94,7 @@ function EnteringScreen({ frame, cls }: { frame: Frame; cls: string }) {
     const raf = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(raf);
   }, []);
-  const render = SCREENS[frame.id];
-  return (
-    <div className={cn('screen', !entered && cls)}>
-      {render ? render(frame.data ?? {}) : <Placeholder id={frame.id} />}
-    </div>
-  );
+  return <ActiveScreen frame={frame} cls={cls} entered={entered} />;
 }
 
 function Stack() {
