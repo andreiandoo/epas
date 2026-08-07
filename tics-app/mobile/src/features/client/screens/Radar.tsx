@@ -1,0 +1,580 @@
+/* =========================================================
+   RADAR & CALENDAR — port 1:1 din client-app.html:
+     S.ticslist   (1147) lista Radar din toata piata
+     S.ticsoffers  (800) detaliu cu ofertele marketplace-urilor
+     S.calendar   (1160) grila lunii + evenimentele zilei selectate
+   ========================================================= */
+import { Ic, sx } from '../../../design/sx';
+import { ART, CAL_COUNTS, CAL_DAY, CAL_DOTS, I, TICS, bgv } from '../../../mock/prototype';
+import { RadarCard } from '../cards';
+import { BottomNav, DBar, TopBar } from '../kit';
+import { useNav } from '../nav';
+import { useClient } from '../../../store/client';
+import { useLightbox } from '../lightbox';
+
+type Ev = Record<string, any>;
+
+/* =========================================================
+   S.ticslist
+   ========================================================= */
+export function TicsList() {
+  const { go, back } = useNav();
+  const items = [...Object.values(TICS as Record<string, Ev>), ...Object.values(TICS as Record<string, Ev>)].slice(0, 6);
+  const stats: [string, string][] = [
+    ['3.2k', 'evenimente'],
+    ['20', 'platforme'],
+    ['−22%', 'sub medie'],
+  ];
+
+  return (
+    <div className="grid" style={sx('min-height:100%')}>
+      <TopBar>
+        <div className="row" style={sx('gap:12px')}>
+          <div className="icon-btn" onClick={back}>
+            <Ic svg={I.back} />
+          </div>
+          <div>
+            <div className="h2">Radar</div>
+            <div className="muted" style={sx('font-size:11.5px')}>
+              Din toată România · prețuri live
+            </div>
+          </div>
+        </div>
+        <div className="icon-btn" onClick={() => go('calendar')}>
+          <Ic svg={I.cal} />
+        </div>
+      </TopBar>
+
+      <div className="pad" style={sx('margin-top:12px')}>
+        <div
+          style={sx('border-radius:22px;overflow:hidden;background:radial-gradient(120% 130% at 100% 0%,rgba(45,214,238,.18),transparent 55%),linear-gradient(140deg,#10222b,#0b1420);border:1px solid rgba(45,214,238,.28);padding:17px 16px;position:relative')}
+        >
+          <div style={sx('position:absolute;right:-6px;top:-8px;font-size:78px;opacity:.14')}>📡</div>
+          <div
+            className="row"
+            style={sx('gap:7px;color:var(--cyan);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase')}
+          >
+            <span className="livedot" />
+            Radar live
+          </div>
+          <div style={sx('font-size:17px;font-weight:600;margin-top:8px;letter-spacing:-.02em')}>
+            Cel mai bun preț din toată piața
+          </div>
+          <div className="row" style={sx('gap:20px;margin-top:14px')}>
+            {stats.map((s) => (
+              <div key={s[1]}>
+                <div style={sx('font-size:19px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums')}>
+                  {s[0]}
+                </div>
+                <div
+                  className="muted"
+                  style={sx('font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:1px')}
+                >
+                  {s[1]}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="filterbar" style={sx('margin-top:14px')}>
+        <div className="flt on">
+          <Ic svg={I.slider} /> Toate
+        </div>
+        <div className="flt">
+          <Ic svg={I.cal} /> Azi
+        </div>
+        <div className="flt">Weekend</div>
+        <div className="flt">
+          <Ic svg={I.tag} /> Sub 100 lei
+        </div>
+        <div className="flt">🔥 Aproape sold-out</div>
+      </div>
+
+      <div className="pad" style={sx('margin-top:16px;display:flex;flex-direction:column;gap:14px')}>
+        {items.map((t, i) => (
+          <RadarCard key={t.id + i} t={t as never} st="width:100%" />
+        ))}
+      </div>
+      <div style={sx('height:8px')} />
+      <BottomNav active="" />
+    </div>
+  );
+}
+
+/* =========================================================
+   S.ticsoffers
+   ========================================================= */
+export function TicsOffers({ id }: { id?: string }) {
+  const { go } = useNav();
+  const lb = useLightbox();
+  const showToast = useClient((s) => s.showToast);
+  const t = ((TICS as Record<string, Ev>)[id || ''] || (TICS as Record<string, Ev>).smiley) as Ev;
+  const sorted = [...(t.offers as [string, number, string][])].sort((a, b) => a[1] - b[1]);
+  const ch = sorted[0][1];
+  const med = Math.round(ch * 1.28);
+  const savePct = Math.round((1 - ch / med) * 100);
+
+  return (
+    <div style={sx('min-height:100%;background:var(--bg);padding-bottom:2px')}>
+      <DBar
+        title={t.s}
+        right={
+          <>
+            <div className="icon-btn glass">
+              <Ic svg={I.share} />
+            </div>
+            <div className="icon-btn glass" onClick={() => showToast('Salvat')}>
+              <Ic svg={I.save} />
+            </div>
+          </>
+        }
+      />
+
+      <div className="poster" style={{ background: bgv(t), height: 320, borderRadius: '0 0 30px 30px' }}>
+        <div style={sx('position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 30%,rgba(11,9,18,.96))')} />
+        <div style={sx('position:absolute;left:20px;right:20px;bottom:20px')}>
+          <span className="badge" style={sx('background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff')}>
+            {t.cat} · ⭐ {t.rat}
+          </span>
+          <div style={sx('font-size:23px;font-weight:600;letter-spacing:-.03em;margin-top:10px;line-height:1.14')}>
+            {t.s}
+          </div>
+          <div style={sx('font-size:12.5px;color:rgba(255,255,255,.82);margin-top:4px')}>
+            {t.city} · {t.day} {t.mon} · {t.time}
+          </div>
+        </div>
+      </div>
+
+      <div className="pad" style={sx('margin-top:16px')}>
+        <div className="row" style={sx('gap:22px')}>
+          <div className="row" style={sx('gap:9px')}>
+            <div className="icon-btn" style={sx('width:38px;height:38px')}>
+              <Ic svg={I.cal} />
+            </div>
+            <div>
+              <div style={sx('font-size:12.5px;font-weight:500')}>
+                {t.day} {t.mon}
+              </div>
+              <div style={sx('font-size:11px;color:var(--muted)')}>Ora {t.time}</div>
+            </div>
+          </div>
+          <div className="row" style={sx('gap:9px')}>
+            <div className="icon-btn" style={sx('width:38px;height:38px')}>
+              <Ic svg={I.pin} />
+            </div>
+            <div>
+              <div style={sx('font-size:12.5px;font-weight:500')}>{t.venName}</div>
+              <div style={sx('font-size:11px;color:var(--muted)')}>{t.city}</div>
+            </div>
+          </div>
+        </div>
+
+        {t.artists?.length ? (
+          <>
+            <div className="h2" style={sx('margin-top:22px;font-size:15px')}>
+              Artiști
+            </div>
+            <div className="scroll-x" style={sx('margin-top:11px;padding:0')}>
+              {(t.artists as string[]).map((aid) => {
+                const a = (ART as Record<string, Ev>)[aid];
+                if (!a) return null;
+                return (
+                  <div key={aid} onClick={() => go('artist', { id: aid })} style={sx('min-width:90px;text-align:center;cursor:pointer')}>
+                    <div
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 24,
+                        margin: '0 auto',
+                        background: a.tone,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '28px',
+                      }}
+                    >
+                      {a.g}
+                    </div>
+                    <div style={sx('font-weight:500;font-size:12.5px;margin-top:7px')}>{a.name}</div>
+                    <div style={sx('font-size:10.5px;color:var(--muted)')}>{a.role}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
+        <div className="h2" style={sx('margin-top:22px;font-size:15px')}>
+          Despre
+        </div>
+        <p style={sx('color:var(--ink-2);font-size:13.5px;line-height:1.62;margin-top:8px')}>{t.desc}</p>
+
+        {t.gallery?.length ? (
+          <>
+            <div className="between" style={sx('margin-top:22px')}>
+              <div className="h2" style={sx('font-size:15px')}>
+                Galerie
+              </div>
+              <span className="muted" style={sx('font-size:11px;font-weight:600')}>
+                atinge pentru mărire
+              </span>
+            </div>
+            <div className="scroll-x" style={sx('margin-top:11px;padding:0')}>
+              {(t.gallery as string[]).map((g, i) => (
+                <div
+                  key={i}
+                  onClick={() => lb.open(t.gallery, i, t.g)}
+                  style={{
+                    minWidth: 150,
+                    height: 108,
+                    borderRadius: 16,
+                    background: g,
+                    boxShadow: 'var(--sh)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                  }}
+                >
+                  <span
+                    style={sx('position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:50%;background:rgba(10,7,20,.5);backdrop-filter:blur(6px);display:grid;place-items:center;color:#fff')}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                    </svg>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      <div className="pad" style={sx('margin-top:22px')}>
+        <div className="listitem" style={sx('background:var(--cyan-soft);border-color:rgba(45,214,238,.3)')}>
+          <div style={sx('width:40px;height:40px;border-radius:12px;background:rgba(45,214,238,.2);display:grid;place-items:center;color:var(--cyan)')}>
+            <Ic svg={I.layers} />
+          </div>
+          <div style={sx('flex:1')}>
+            <div style={sx('font-weight:600;font-size:13px')}>Cel mai bun preț, garantat</div>
+            <div className="muted" style={sx('font-size:11.5px')}>
+              Urmărim {t.offers.length} oferte în timp real și te trimitem direct la cea mai avantajoasă.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pretul fata de piata */}
+      <div className="pad" style={sx('margin-top:14px')}>
+        <div className="card" style={sx('padding:15px')}>
+          <div className="between" style={sx('margin-bottom:11px')}>
+            <div className="h2" style={sx('font-size:14px')}>
+              Prețul față de piață
+            </div>
+            <span className="badge" style={sx('background:var(--green-soft);color:var(--green-2)')}>
+              -{savePct}% sub medie
+            </span>
+          </div>
+          <div style={sx('height:9px;border-radius:9px;background:var(--surface-3);position:relative;margin:8px 0')}>
+            <div style={sx('position:absolute;left:0;top:0;bottom:0;width:38%;background:linear-gradient(90deg,var(--green),var(--green-2));border-radius:9px')} />
+            <div style={sx('position:absolute;left:38%;top:-4px;width:17px;height:17px;border-radius:50%;background:#fff;border:3px solid var(--green);transform:translateX(-50%);box-shadow:0 4px 10px rgba(0,0,0,.4)')} />
+          </div>
+          <div className="between" style={sx('font-size:11px;color:var(--faint);font-weight:600')}>
+            <span>de la {ch} lei</span>
+            <span>mediana pieței {med} lei</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Unde gasesti bilete */}
+      <div className="pad" style={sx('margin-top:22px')}>
+        <div className="between" style={sx('margin-bottom:12px')}>
+          <div className="h2" style={sx('font-size:16px')}>
+            Unde găsești bilete
+          </div>
+          <span className="row" style={sx('gap:5px;font-size:11px;font-weight:600;color:var(--green-2)')}>
+            <span className="stockdot" style={sx('background:var(--green-2)')} />
+            {t.offers.length} oferte · stoc live
+          </span>
+        </div>
+        <div className="card" style={sx('overflow:hidden')}>
+          {sorted.map((o, i) => {
+            const amber = /ultim|puține|6/i.test(o[2]);
+            return (
+              <div
+                key={o[0]}
+                className="selrow"
+                style={{
+                  borderTop: i > 0 ? '1px solid var(--line)' : undefined,
+                  background: i === 0 ? 'var(--green-soft)' : undefined,
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background: i === 0 ? 'rgba(34,197,94,.2)' : 'var(--surface-3)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: 700,
+                    fontSize: '15px',
+                    color: i === 0 ? 'var(--green-2)' : 'var(--indigo-2)',
+                    flex: 'none',
+                  }}
+                >
+                  {o[0][0].toUpperCase()}
+                </div>
+                <div style={sx('flex:1;min-width:0')}>
+                  <div className="row" style={sx('gap:6px')}>
+                    <span style={sx('font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                      {o[0]}
+                    </span>
+                    {i === 0 ? (
+                      <span className="chip-mini" style={sx('background:var(--green);color:#05230f')}>
+                        cel mai ieftin
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="metaline" style={sx('margin-top:4px')}>
+                    <span className="stockdot" style={{ background: amber ? 'var(--amber)' : 'var(--green-2)' }} />
+                    <span>{o[2]}</span>
+                  </div>
+                </div>
+                <div style={sx('text-align:right;flex:none')}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: '17px',
+                      color: i === 0 ? 'var(--green-2)' : 'var(--ink)',
+                      lineHeight: 1,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {o[1]}
+                    <small style={sx('font-size:10px;color:var(--muted);font-weight:600')}> lei</small>
+                  </div>
+                  <button
+                    className="gpill"
+                    onClick={() => showToast('Mergi la ' + o[0])}
+                    style={
+                      i === 0
+                        ? { marginTop: 7, background: 'linear-gradient(135deg,var(--green),#16a34a)', borderColor: 'transparent' }
+                        : { marginTop: 7, background: 'var(--surface-3)', borderColor: 'var(--line-2)', color: 'var(--indigo-2)' }
+                    }
+                  >
+                    Mergi <Ic svg={I.ext} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="muted" style={sx('font-size:10.5px;text-align:center;margin-top:10px')}>
+          💚 Economisești până la <b style={sx('color:var(--green-2)')}>{med - ch} lei</b> față de mediana pieței
+        </div>
+      </div>
+
+      {/* Detaliu pret */}
+      {(() => {
+        const base = Math.round(ch / 1.03);
+        const proc = ch - base;
+        return (
+          <div className="pad" style={sx('margin-top:14px')}>
+            <div className="card" style={sx('padding:14px')}>
+              <div className="h2" style={sx('font-size:13.5px;margin-bottom:9px')}>
+                Detaliu preț · {sorted[0][0]}
+              </div>
+              <div className="between" style={sx('padding:5px 0;font-size:12.5px')}>
+                <span className="muted">Preț bază bilet</span>
+                <span style={sx('font-weight:500')}>{base} lei</span>
+              </div>
+              <div className="between" style={sx('padding:5px 0;font-size:12.5px')}>
+                <span className="muted">Taxă procesare</span>
+                <span style={sx('font-weight:500')}>{proc} lei</span>
+              </div>
+              <div className="between" style={sx('padding:8px 0 2px;border-top:1px solid var(--line);margin-top:4px')}>
+                <span style={sx('font-weight:600')}>Total de plată</span>
+                <span style={sx('font-weight:600;color:var(--green-2)')}>{ch} lei</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="pad" style={sx('margin-top:14px')}>
+        <div className="muted" style={sx('font-size:11px;text-align:center;line-height:1.5')}>
+          Prețurile și stocul sunt urmărite automat, în timp real. Achiziția se finalizează pe site-ul ofertei alese.
+        </div>
+      </div>
+      <BottomNav active="" />
+    </div>
+  );
+}
+
+/* =========================================================
+   S.calendar
+   ========================================================= */
+const WEEKDAYS = ['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'];
+const START_BLANK = 5;
+
+export function Calendar() {
+  const { go, back } = useNav();
+  const calDay = useClient((s) => s.calDay);
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const counts = CAL_COUNTS as Record<number, number>;
+  const dots = CAL_DOTS as Record<number, string[]>;
+
+  return (
+    <div className="grid" style={sx('min-height:100%')}>
+      <TopBar>
+        <div className="row" style={sx('gap:12px')}>
+          <div className="icon-btn" onClick={back}>
+            <Ic svg={I.back} />
+          </div>
+          <div>
+            <div className="h2">Calendar</div>
+            <div className="muted" style={sx('font-size:11.5px')}>
+              Tot ce se întâmplă · 3.210 live
+            </div>
+          </div>
+        </div>
+        <div className="icon-btn" onClick={() => go('ticslist')}>
+          <Ic svg={I.layers} />
+        </div>
+      </TopBar>
+
+      <div className="filterbar" style={sx('margin-top:12px')}>
+        <div className="flt">📍 Toate orașele</div>
+        <div className="flt">🎫 Toate tipurile</div>
+        <div className="flt">🎵 Genuri</div>
+      </div>
+
+      <div className="pad" style={sx('margin-top:14px')}>
+        <div className="between" style={sx('margin-bottom:10px')}>
+          <div className="row" style={sx('gap:10px')}>
+            <span className="muted">‹</span>
+            <div style={sx('font-weight:600;font-size:15px')}>August 2026</div>
+            <span className="muted">›</span>
+          </div>
+          <span className="muted" style={sx('font-size:11px')}>
+            1.328 ev.
+          </span>
+        </div>
+        <div style={sx('display:grid;grid-template-columns:repeat(7,1fr);gap:5px')}>
+          {WEEKDAYS.map((d) => (
+            <div key={d} style={sx('text-align:center;font-size:10px;font-weight:600;color:var(--faint);padding-bottom:2px')}>
+              {d}
+            </div>
+          ))}
+          {Array.from({ length: START_BLANK }).map((_, i) => (
+            <div key={`b${i}`} />
+          ))}
+          {days.map((d) => {
+            const cnt = counts[d];
+            const on = d === calDay;
+            const dd = dots[d] || (cnt ? ['#8b5cf6', '#22c55e', '#3b82f6'] : []);
+            return (
+              <div
+                key={d}
+                onClick={() => useClient.setState({ calDay: d })}
+                style={{
+                  aspectRatio: '1',
+                  borderRadius: 11,
+                  border: `1px solid ${on ? 'var(--indigo)' : 'var(--line)'}`,
+                  background: on ? 'var(--indigo-soft)' : 'var(--surface-solid)',
+                  padding: '4px 5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <div className="between">
+                  <span style={sx('font-size:11.5px;font-weight:600')}>{d}</span>
+                  {cnt ? <span style={sx('font-size:8px;color:var(--green-2);font-weight:600')}>{cnt}</span> : null}
+                </div>
+                <div className="row" style={sx('gap:2px;margin-top:auto')}>
+                  {dd.slice(0, 5).map((c, k) => (
+                    <span key={k} style={{ width: 4, height: 4, borderRadius: '50%', background: c }} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="pad" style={sx('margin-top:16px')}>
+        <div className="card" style={sx('padding:14px')}>
+          <div className="between">
+            <div>
+              <div className="muted" style={sx('font-size:10.5px;font-weight:600;text-transform:uppercase')}>
+                Ziua selectată
+              </div>
+              <div style={sx('font-weight:600;font-size:18px')}>{calDay} august</div>
+            </div>
+            <div style={sx('text-align:right')}>
+              <div style={sx('font-weight:600;font-size:18px;color:var(--green-2)')}>{counts[calDay] || 0}</div>
+              <div className="muted" style={sx('font-size:10px')}>
+                evenimente
+              </div>
+            </div>
+          </div>
+
+          <div style={sx('margin-top:12px;display:flex;flex-direction:column;gap:12px')}>
+            {(CAL_DAY as [string, string, string, string, string, string][]).map((e) => (
+              <div key={e[1]} className="row" onClick={() => go('ticsoffers', { id: 'smiley' })} style={sx('gap:11px;cursor:pointer')}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: e[5] + '22',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '18px',
+                  }}
+                >
+                  🎟
+                </div>
+                <div style={sx('flex:1;min-width:0')}>
+                  <div className="row" style={sx('gap:6px')}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: e[5] }} />
+                    <span className="muted" style={sx('font-size:9.5px;font-weight:600')}>
+                      {e[0]}
+                    </span>
+                  </div>
+                  <div style={sx('font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                    {e[1]}
+                  </div>
+                  <div className="muted" style={sx('font-size:11px')}>
+                    {e[2]}
+                  </div>
+                </div>
+                <div style={sx('text-align:right')}>
+                  <div style={sx('font-weight:600;color:var(--green-2);font-size:13px')}>
+                    {e[3]}
+                    {e[3] !== '—' ? ' RON' : ''}
+                  </div>
+                  <div className="muted" style={sx('font-size:9.5px')}>
+                    {e[4] !== '—' ? 'pe ' + e[4] : '—'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button className="cta green" style={sx('margin-top:14px;padding:13px')} onClick={() => go('ticslist')}>
+            Vezi toate ({counts[calDay] || 0}) <Ic svg={I.arrow} />
+          </button>
+        </div>
+      </div>
+
+      <div className="pad" style={sx('margin-top:12px')}>
+        <div className="muted" style={sx('font-size:11px;text-align:center;line-height:1.5')}>
+          Cele mai bune prețuri din toată piața, urmărite automat în timp real.
+        </div>
+      </div>
+      <BottomNav active="" />
+    </div>
+  );
+}

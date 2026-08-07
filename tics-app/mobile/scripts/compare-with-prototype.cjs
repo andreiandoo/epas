@@ -53,6 +53,9 @@ const ROUTES = {
   notif: { proto: ['tab:profile', 'go:notif'], app: [{ nav: 'profile' }, { text: 'Notificări' }] },
   prefsEdit: { proto: ['tab:profile', 'prefsEdit'], app: [{ nav: 'profile' }, { text: 'Preferințele mele' }] },
   settings: { proto: ['tab:profile', 'go:settings'], app: [{ nav: 'profile' }, { text: 'Setări cont' }] },
+  ticslist: { proto: ['go:ticslist'], app: [{ nav: 'explore' }, { text: 'Radar prețuri' }] },
+  calendar: { proto: ['tab:explore', 'go:calendar'], app: [{ nav: 'explore' }, { text: 'Calendar' }] },
+  ticsoffers: { proto: ['go:ticsoffers:smiley'], app: [{ nav: 'explore' }, { text: 'Radar prețuri' }, { text: 'Smiley Live' }] },
   setPayment: {
     proto: ['tab:profile', 'go:settings', 'go:setPayment'],
     app: [{ nav: 'profile' }, { text: 'Setări cont' }, { text: 'Carduri & plată' }],

@@ -35,6 +35,7 @@ import {
   SetTerms,
   Settings,
 } from './screens/Settings';
+import { Calendar, TicsList, TicsOffers } from './screens/Radar';
 import { LightboxProvider } from './lightbox';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
@@ -78,6 +79,9 @@ const SCREENS: Record<string, ScreenFn> = {
   setTerms: () => <SetTerms />,
   setPrivacy: () => <SetPrivacy />,
   setRate: () => <SetRate />,
+  ticslist: () => <TicsList />,
+  ticsoffers: (d) => <TicsOffers id={d.id as string} />,
+  calendar: () => <Calendar />,
 };
 
 function Placeholder({ id }: { id: string }) {
