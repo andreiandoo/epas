@@ -7,13 +7,19 @@ import { I, TX, lei } from '../../../mock/prototype';
 import { BottomNav, SafeTop, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
+import { useAccountStats } from '../accountData';
 import { Qr } from '../qr';
 
 /* ---------- S.wallet ---------- */
 export function Wallet() {
   const { go, back, tab, stack } = useNav();
+  const stats = useAccountStats();
   const balance = useClient((s) => s.balance);
+  /* Punctele vin din gamification (API-ul de cont), cand exista un cont real
+     conectat; soldul cashless ramane deocamdata local — nu exista inca un
+     portofel pe partea de server. */
   const points = useClient((s) => s.points);
+  const livePoints = stats?.points ?? points;
   const sback = () => (stack.length > 1 ? back() : tab('home'));
 
   return (
@@ -84,7 +90,7 @@ export function Wallet() {
             <Ic svg={I.star} />
           </div>
           <div style={sx('flex:1')}>
-            <div style={sx('font-weight:600;font-size:14px')}>{points} puncte Tixello</div>
+            <div style={sx('font-weight:600;font-size:14px')}>{livePoints} puncte Tixello</div>
             <div className="muted" style={sx('font-size:11.5px')}>
               Convertești în reduceri la bilete
             </div>

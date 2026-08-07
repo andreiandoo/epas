@@ -197,6 +197,19 @@ export function Sales() {
         ) : null}
       </div>
 
+      {/* randul catre lista de bilete a evenimentului — lipsea din port */}
+      <div className="row" style={{ cursor: 'pointer' }} onClick={() => openModal('ticketlist')}>
+        <Icon name="list" size={18} className="chev" />
+        <div className="grow">
+          <div className="name">Bilete eveniment</div>
+          <div className="meta">Istoric vânzări &amp; check-in inline</div>
+        </div>
+        <Icon name="chev" size={16} className="chev" />
+      </div>
+      <div className="h2" style={{ marginTop: 4 }}>
+        Selectează Bilete
+      </div>
+
       {c.tt.map((t, i) => {
         const soldOut = t.s >= t.q;
         return (
@@ -234,21 +247,22 @@ export function Sales() {
         );
       })}
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        <Button variant="ghost" icon="list" style={{ flex: 1 }} onClick={() => openModal('ticketlist')}>
-          Bilete eveniment
-        </Button>
-        <Button variant="ghost" icon="chart" style={{ flex: 1 }} onClick={() => openModal('breakdown')}>
-          Vânzări azi
-        </Button>
+      {/* Prototipul are aici "Vânzări azi" cu doua randuri, nu o lista de
+          "vânzări recente" cu trei; iar accesul la lista de bilete se face din
+          randul de sus, nu din butoane. */}
+      <div>
+        {/* section-head cu totalul zilei, ca in prototip */}
+        <div className="section-head">
+          <h3>Vânzări azi</h3>
+          <span className="tag" style={{ background: 'var(--accent-tint)', color: 'var(--accent-accent)' }}>
+            {money(1240)}
+          </span>
+        </div>
+        <Card style={{ padding: '6px 14px' }}>
+          <SaleRow m="cash" desc="2× Abonament General" time="acum 3 min" amt={money(300)} />
+          <SaleRow m="card" desc="1× VIP" time="acum 11 min" amt={money(350)} last />
+        </Card>
       </div>
-
-      <SectionHead title="Vânzări recente" />
-      <Card style={{ padding: '6px 14px' }}>
-        <SaleRow m="cash" desc="2× Acces 1 zi" time="acum 3 min" amt={money(180)} />
-        <SaleRow m="card" desc="1× VIP" time="acum 11 min" amt={money(350)} />
-        <SaleRow m="cash" desc="1× Abonament General" time="acum 18 min" amt={money(150)} last />
-      </Card>
 
       {count > 0 ? (
         <Button variant="primary" icon="cart" onClick={() => setSale('cart')}>

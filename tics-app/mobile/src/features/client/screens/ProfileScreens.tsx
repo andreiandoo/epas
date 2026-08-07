@@ -28,6 +28,7 @@ import {
 import { BottomNav, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
+import { useNotifications } from '../accountData';
 
 type Ev = Record<string, any>;
 const evOf = (id: string) => (EV as Record<string, Ev>)[id];
@@ -698,6 +699,21 @@ export function Review({ id }: { id?: string }) {
    ========================================================= */
 export function Notif() {
   const { back } = useNav();
+  const live = useNotifications();
+
+  /* Notificarile reale, aduse la forma tuplului din prototip:
+     [emoji, titlu, text, cand, necitit]. */
+  type Row = [string, string, string, string, number];
+  const rows: Row[] = live
+    ? live.map((n): Row => [
+        n.type === 'order' ? '🎟' : n.type === 'event' ? '📅' : '🔔',
+        n.title ?? 'Notificare',
+        n.body ?? n.message ?? '',
+        n.created_at ? new Date(n.created_at).toLocaleDateString('ro-RO') : '',
+        n.read ? 0 : 1,
+      ])
+    : (NOTI as Row[]);
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <TopBar>
@@ -711,9 +727,9 @@ export function Notif() {
       </TopBar>
 
       <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:10px')}>
-        {(NOTI as [string, string, string, string, number][]).map((n) => (
+        {rows.map((n, i) => (
           <div
-            key={n[1]}
+            key={`${n[1]}-${i}`}
             className="listitem"
             style={n[4] ? { background: 'var(--indigo-soft)', borderColor: 'var(--indigo-line)' } : undefined}
           >
@@ -730,6 +746,11 @@ export function Notif() {
             {n[4] ? <span style={sx('width:8px;height:8px;border-radius:50%;background:var(--indigo)')} /> : null}
           </div>
         ))}
+        {!rows.length ? (
+          <div className="muted" style={sx('font-size:12.5px;text-align:center;padding:20px 0')}>
+            Nicio notificare.
+          </div>
+        ) : null}
       </div>
       <BottomNav active="" />
     </div>

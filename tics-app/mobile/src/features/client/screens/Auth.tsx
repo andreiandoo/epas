@@ -15,6 +15,7 @@ import { I, OBALL, PEMO, PREFGROUPS, facebook, google, txMark } from '../../../m
 import { SafeTop } from '../kit';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
+import { customerLogin } from '../../../api/customer';
 import type { IdentityKind } from '../../../api/client';
 
 type Ev = Record<string, any>;
@@ -191,9 +192,32 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
   const login = useSession((s) => s.login);
   const [email, setEmail] = useState('andrei@tixello.ro');
   const [pass, setPass] = useState('password');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  /* §3: nu mergem direct in Acasa — session.login() alege chooser vs intrare directa */
-  const submit = () => login(identityFor(email));
+  /**
+   * Intai incercam contul REAL (EPAS, /tenant-client/auth/login). Daca API-ul
+   * nu recunoaste datele — sau nu raspunde — intram pe contul demo, ca
+   * aplicatia sa ramana navigabila fara credentiale.
+   *
+   * §3: nu mergem direct in Acasa — session.login() alege chooser vs intrare
+   * directa, dupa cate proprietati are emailul.
+   */
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const real = await customerLogin(email.trim(), pass);
+      if (!real) setErr('Cont demonstrativ — datele n-au fost recunoscute.');
+      login(identityFor(email));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Butoanele sociale n-au inca backend: intra direct pe contul demo. */
+  const demo = () => login(identityFor(email));
 
   return (
     <div style={sx('min-height:100%;background:var(--bg);padding-bottom:26px')}>
@@ -214,10 +238,10 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
 
       <div className="login-sheet stagger">
         <div className="row" style={sx('gap:11px')}>
-          <button className="sbtn" onClick={submit}>
+          <button className="sbtn" onClick={demo}>
             <Raw html={google} /> Google
           </button>
-          <button className="sbtn" onClick={submit}>
+          <button className="sbtn" onClick={demo}>
             <Raw html={facebook} /> Facebook
           </button>
         </div>
@@ -246,8 +270,13 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
             Ai uitat parola?
           </span>
         </div>
+        {err ? (
+          <div className="muted" style={sx('font-size:11.5px;margin:10px 2px 0;color:var(--amber)')}>
+            {err}
+          </div>
+        ) : null}
         <button className="cta" onClick={submit} style={sx('margin-top:16px')}>
-          Autentificare
+          {busy ? 'Se verifică…' : 'Autentificare'}
         </button>
       </div>
 

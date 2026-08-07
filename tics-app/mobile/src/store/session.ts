@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import type { OrgProperty, Property } from '../api/types';
 import { identityProps, type IdentityKind } from '../api/client';
+import { clearCustomer } from '../api/customer';
 import { SCAN_CYCLE, type ScanState } from '../mock/org';
 
 export type AppMode = 'chooser' | 'client' | 'organizer';
@@ -205,6 +206,7 @@ export const useSession = create<SessionState>((set, get) => ({
   },
 
   logout: () => {
+    clearCustomer();
     try {
       localStorage.removeItem(SESSION_LS);
     } catch {

@@ -8,17 +8,20 @@
      numarul de bilete), apoi o linie punctata cu doua "perforatii" si cate un
      rand per bilet individual, fiecare cu mini-QR.
    ========================================================= */
-import { Ic, Raw, sx } from '../../../design/sx';
-import { EV, I, MYTIX, VEN, poster } from '../../../mock/prototype';
+import { useState } from 'react';
+import { Ic, Raw, cn, sx } from '../../../design/sx';
+import { EV, I, VEN, poster } from '../../../mock/prototype';
 import { BottomNav, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { Qr } from '../qr';
-
-type Pass = { name: string; code: string; checkedIn?: string };
-type Ticket = { ev: string; passes: Pass[]; seat: string; cat: string };
+import { useTickets } from '../accountData';
 
 export function Tickets() {
   const { go } = useNav();
+  const { groups, live, loading } = useTickets();
+  const [tab, setTab] = useState<'active' | 'past'>('active');
+
+  const shown = groups.filter((g) => (tab === 'active' ? g.upcoming : !g.upcoming));
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
@@ -40,27 +43,42 @@ export function Tickets() {
       </div>
 
       <div className="scroll-x" style={sx('margin-top:14px')}>
-        <button className="chip ind on">Active</button>
-        <button className="chip">Trecute</button>
+        <button className={cn('chip ind', tab === 'active' && 'on')} onClick={() => setTab('active')}>
+          Active
+        </button>
+        <button className={cn('chip ind', tab === 'past' && 'on')} onClick={() => setTab('past')}>
+          Trecute
+        </button>
         <button className="chip">Transferate</button>
       </div>
 
       <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:14px')}>
-        {(MYTIX as unknown as Ticket[]).map((tk) => {
+        {shown.map((tk) => {
+          /* Grupurile reale n-au corespondent in datasetul local, deci titlul,
+             locul si data vin din API; pentru cele demo raman cele din EV. */
           const ev = (EV as Record<string, Record<string, unknown>>)[tk.ev];
-          const venue = (VEN as Record<string, { name: string }>)[ev.ven as string];
+          const venue = ev ? (VEN as Record<string, { name: string }>)[ev.ven as string] : undefined;
+          const title = tk.live ? tk.title : (ev?.s as string) ?? tk.title;
+          const when = tk.live ? [tk.date, tk.time].filter(Boolean).join(' · ') : `${ev?.d} · ${ev?.time}`;
+          const place = tk.live ? tk.venue : venue?.name ?? '';
           return (
             <div key={tk.ev} className="card" style={sx('overflow:hidden')}>
               <div style={sx('display:flex;gap:12px;padding:13px')} onClick={() => go('ticket', { id: tk.ev, pi: 0 })}>
-                <Raw html={poster(ev, '', 'width:56px;height:56px;border-radius:15px;flex:none', undefined)} />
-                <div style={sx('flex:1')}>
-                  <div style={sx('font-weight:600;font-size:14px')}>{ev.s as string}</div>
-                  <div className="row muted" style={sx('gap:5px;font-size:11.5px;margin-top:3px')}>
-                    <Ic svg={I.cal} /> {ev.d as string} · {ev.time as string}
-                  </div>
-                  <div className="row muted" style={sx('gap:5px;font-size:11.5px;margin-top:2px')}>
-                    <Ic svg={I.pin} /> {venue?.name}
-                  </div>
+                <Raw
+                  html={poster(ev ?? { tone: 'linear-gradient(150deg,#4c1d95,#8b5cf6)', sc: 'concert', g: '🎟' }, '', 'width:56px;height:56px;border-radius:15px;flex:none', undefined)}
+                />
+                <div style={sx('flex:1;min-width:0')}>
+                  <div style={sx('font-weight:600;font-size:14px')}>{title}</div>
+                  {when ? (
+                    <div className="row muted" style={sx('gap:5px;font-size:11.5px;margin-top:3px')}>
+                      <Ic svg={I.cal} /> {when}
+                    </div>
+                  ) : null}
+                  {place ? (
+                    <div className="row muted" style={sx('gap:5px;font-size:11.5px;margin-top:2px')}>
+                      <Ic svg={I.pin} /> {place}
+                    </div>
+                  ) : null}
                 </div>
                 <span
                   className="badge"
@@ -103,7 +121,38 @@ export function Tickets() {
             </div>
           );
         })}
+        {!shown.length ? (
+          <div className="card" style={sx('padding:24px;text-align:center')}>
+            <div style={sx('font-size:30px')}>{loading ? '🎟' : tab === 'active' ? '🎫' : '🕓'}</div>
+            <div className="h2" style={sx('font-size:14px;margin-top:8px')}>
+              {loading
+                ? 'Îți aduc biletele…'
+                : tab === 'active'
+                  ? 'Niciun bilet activ'
+                  : 'Niciun bilet trecut'}
+            </div>
+            {!loading && tab === 'active' ? (
+              <>
+                <div className="muted" style={sx('font-size:12px;margin-top:6px;line-height:1.5')}>
+                  Biletele cumpărate apar automat aici, cu QR-ul lor.
+                </div>
+                <button className="cta ghost" style={sx('margin-top:14px;padding:11px')} onClick={() => go('ticslist')}>
+                  Caută evenimente
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+
+      {/* cand rulam pe contul demo, spunem asta in loc s-o dam drept realitate */}
+      {!live ? (
+        <div className="pad" style={sx('margin-top:12px')}>
+          <div className="muted" style={sx('font-size:10.5px;text-align:center;line-height:1.5')}>
+            Bilete demonstrative. Conectează-te cu contul tău ca să vezi biletele reale.
+          </div>
+        </div>
+      ) : null}
 
       <BottomNav active="tickets" />
     </div>

@@ -15,6 +15,7 @@ import { BottomNav, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
+import { customerName, initialsOf, useAccountStats, useCustomer } from '../accountData';
 import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, otaDiagnostics, type OtaState } from '../../../ota';
 
 /** [emoji, eticheta, actiune] — exact lista din prototip. */
@@ -111,6 +112,12 @@ export function Profile() {
   const { properties, switchMode, goChooser, logout } = useSession();
   const hasOrg = properties.some((p) => p.kind === 'org');
 
+  /* Contul real, cand exista; altfel ramanem pe cel demo din prototip. */
+  const customer = useCustomer();
+  const stats = useAccountStats();
+  const name = customerName(customer) ?? 'Andrei Popescu';
+  const email = customer?.email ?? 'andrei@tixello.ro';
+
   const run = (action: string) => {
     if (action === 'logout') return logout();
     if (action === 'prefsEdit') return go('prefsEdit');
@@ -119,10 +126,10 @@ export function Profile() {
     if (kind === 'go') return go(id);
   };
 
-  const stats: [string | number, string][] = [
-    ['12', 'Bilete'],
-    [points, 'Puncte'],
-    ['162', 'Sold lei'],
+  const tiles: [string | number, string][] = [
+    [stats?.upcoming_tickets ?? '12', 'Bilete'],
+    [stats?.points ?? points, 'Puncte'],
+    [stats ? Math.round(stats.total_spent) : '162', 'Cheltuit lei'],
   ];
 
   return (
@@ -132,14 +139,14 @@ export function Profile() {
         <div
           style={sx('width:86px;height:86px;border-radius:28px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-size:28px;font-weight:600;box-shadow:var(--sh-p)')}
         >
-          AP
+          {initialsOf(name)}
         </div>
-        <div style={sx('font-weight:600;font-size:19px;margin-top:12px')}>Andrei Popescu</div>
+        <div style={sx('font-weight:600;font-size:19px;margin-top:12px')}>{name}</div>
         <div className="muted" style={sx('font-size:13px')}>
-          andrei@tixello.ro
+          {email}
         </div>
         <div className="row" style={sx('gap:10px;margin-top:16px')}>
-          {stats.map((s) => (
+          {tiles.map((s) => (
             <div key={s[1]} className="card" style={sx('text-align:center;min-width:84px;padding:12px')}>
               <div style={sx('font-size:18px;font-weight:600')}>{s[0]}</div>
               <div

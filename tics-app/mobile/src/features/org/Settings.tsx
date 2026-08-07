@@ -7,9 +7,10 @@ import { useEffect, useState } from 'react';
 import { Button, Card, Icon, InfoRow, SectionHead, Toggle, type IconName } from '../../design/components';
 import { useSession, isAdminRole, type AppTheme, type SettingsFlags } from '../../store/session';
 import { useCtx } from './OrgChrome';
+import { STAFF } from '../../mock/org';
 import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../ota';
 
-const APP_VERSION = 'Tixello · Cont organizator v0.2.0';
+const APP_VERSION = 'Tixello · Cont organizator';
 
 /** Card „Actualizări" — OTA self-hosted (§14). Vizibil in ambele shell-uri. */
 export function UpdateCard() {
@@ -110,7 +111,7 @@ function ThemeRow({ t, label, last }: { t: AppTheme; label: string; last?: boole
   );
 }
 
-function AdminRow({ label, badge, onClick, last }: { label: string; badge?: string | number; onClick: () => void; last?: boolean }) {
+function AdminRow({ label, badge, hint, onClick, last }: { label: string; badge?: string | number; hint?: string; onClick: () => void; last?: boolean }) {
   return (
     <div
       onClick={onClick}
@@ -125,6 +126,7 @@ function AdminRow({ label, badge, onClick, last }: { label: string; badge?: stri
     >
       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {hint ? <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{hint}</span> : null}
         {badge !== undefined ? (
           <span
             style={{
@@ -145,7 +147,7 @@ function AdminRow({ label, badge, onClick, last }: { label: string; badge?: stri
   );
 }
 
-function MenuRow({ icon, label, onClick, last }: { icon: IconName; label: string; onClick: () => void; last?: boolean }) {
+function MenuRow({ icon, label, sub, onClick, last }: { icon: IconName; label: string; sub?: string; onClick: () => void; last?: boolean }) {
   return (
     <div
       onClick={onClick}
@@ -161,18 +163,25 @@ function MenuRow({ icon, label, onClick, last }: { icon: IconName; label: string
       <span style={{ color: 'var(--accent)' }}>
         <Icon name={icon} size={18} />
       </span>
-      <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+        {sub ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{sub}</div> : null}
+      </div>
       <Icon name="chev" size={16} className="chev" />
     </div>
   );
 }
 
 export function Settings() {
-  const { role, ctx, account, online, openModal, goChooser, logout, showToast } = useSession();
-  const c = useCtx();
+  const { role, ctx, account, set, openModal, goChooser, logout, showToast } = useSession();
+  useCtx();
   const admin = isAdminRole(role);
   const isFestival = account !== 'venue' && ctx === 'festival';
   const roleLabel = role === 'admin' ? 'Administrator' : role === 'manager' ? 'Manager' : 'Staff';
+  /* Numele afisat e al membrului de personal cu rolul curent, ca in prototip —
+     nu al contului de client. */
+  const staffName = STAFF.find((m) => m.role === role)?.nm ?? 'Mihai Coman';
+  const [autoLogout, setAutoLogout] = useState('5 min');
 
   return (
     <div className="screen pad stack">
@@ -182,41 +191,60 @@ export function Settings() {
 
       <SectionHead title="Cont" />
       <Card style={{ padding: '4px 16px' }}>
-        <InfoRow label="Nume" value="Andrei Popescu" />
-        <InfoRow label="Organizație" value={account === 'venue' ? 'Delta Adventure Park' : c.org} />
+        <InfoRow label="Nume" value={staffName} />
         <InfoRow label="Rol" value={<span className={`tag tag-${role === 'admin' ? 'admin' : role === 'manager' ? 'mgr' : 'staff'}`}>{roleLabel}</span>} />
-        <InfoRow label="Poartă" value="Poarta 1" />
-        <AdminRow label="Comută tipul de cont" onClick={goChooser} last />
+        <InfoRow label="Poartă Asignată" value="Poarta 1" />
+        <AdminRow label="Comută tipul de cont" hint="client / organizator" onClick={goChooser} last />
       </Card>
 
       <SectionHead title="Scanner" />
       <Card style={{ padding: '4px 16px' }}>
-        <ToggleRow label="Vibrație la scanare" k="vibr" />
-        <ToggleRow label="Sunet la scanare" k="sound" />
-        <ToggleRow label="Auto-confirmare" k="autoconf" />
-        <ToggleRow label="Scanner Bluetooth" k="bt" last />
+        <ToggleRow label="Vibrație" k="vibr" />
+        <ToggleRow label="Efecte Sonore" k="sound" />
+        <ToggleRow label="Auto-confirmare Valide" k="autoconf" />
+        <ToggleRow label="Scanner Bluetooth (portabil)" k="bt" last />
       </Card>
 
       {admin ? (
         <>
           <SectionHead title="Vânzare POS" />
           <Card style={{ padding: '4px 16px' }}>
-            <ToggleRow label="Card prin NFC (Stripe Tap to Pay)" k="nfc" last />
+            <ToggleRow label="Card prin NFC (Stripe Tap)" k="nfc" last />
+          </Card>
+          <Card pad>
+            <div style={{ display: 'flex', gap: 10, background: 'var(--cyan-tint)', borderRadius: 12, padding: 12 }}>
+              <span style={{ color: 'var(--cyan)', flex: '0 0 auto' }}>
+                <Icon name="nfc" size={18} />
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
+                Adaugă în ecranul Vânzare butonul „Card prin NFC". Dezactivat = doar Numerar și Card POS.
+              </span>
+            </div>
           </Card>
         </>
       ) : null}
 
-      <SectionHead title="Mod offline & sincronizare" />
+      <SectionHead title="Mod Offline & sincronizare" />
       <Card style={{ padding: '4px 16px' }}>
-        <ToggleRow label="Activează modul offline" k="offline" />
-        <AdminRow label="Coadă de sincronizare" badge={online ? 0 : 3} onClick={() => openModal('sync')} last />
+        <ToggleRow label="Activează Modul Offline" k="offline" />
+        <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '0 0 10px' }}>
+          {set.offline
+            ? '1.486 bilete în cache local · scanezi fără internet'
+            : 'Descarcă biletele pentru a scana fără internet'}
+        </div>
+        <AdminRow label="Coadă de sincronizare" badge="3 în așteptare" onClick={() => openModal('sync')} last />
       </Card>
 
       {admin ? (
         <>
           <SectionHead title="Imprimantă" />
           <Card style={{ padding: '4px 16px' }}>
-            <ToggleRow label="Imprimantă termică Bluetooth" k="printer" />
+            <ToggleRow label="Imprimantă termică" k="printer" />
+            <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '0 0 10px' }}>
+              {set.printer
+                ? 'Star mC-Print3 · Bluetooth · conectată'
+                : 'Bonuri, bilete la ușă și badge-uri / acreditări'}
+            </div>
             <AdminRow label="Test print badge" onClick={() => openModal('printbadge')} last />
           </Card>
         </>
@@ -230,28 +258,62 @@ export function Settings() {
       </Card>
 
       <SectionHead title="Securitate" />
-      <Card style={{ padding: '4px 16px' }}>
-        <InfoRow label="Auto-logout" value="după 30 min inactivitate" last />
+      <Card pad>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>
+          Auto-logout după inactivitate
+        </div>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {['Oprit', '5 min', '10 min', '15 min', '30 min'].map((o) => (
+            <span
+              key={o}
+              className={`typechip ${o === autoLogout ? 'on' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setAutoLogout(o)}
+            >
+              {o}
+            </span>
+          ))}
+        </div>
       </Card>
 
       <SectionHead title="Actualizări" />
       <UpdateCard />
 
-      <SectionHead title="Ajutor" />
+      <SectionHead title="Manual utilizare" />
       <Card style={{ padding: '4px 16px' }}>
-        <MenuRow icon="book" label="Manual utilizare" onClick={() => openModal('manual')} last />
+        <MenuRow
+          icon="book"
+          label="Manual utilizare"
+          sub="Ghid complet — 28 capitole"
+          onClick={() => openModal('manual')}
+          last
+        />
       </Card>
 
       {admin ? (
         <>
           <SectionHead title="Comenzi Admin" />
           <Card style={{ padding: '4px 16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 0',
+                borderBottom: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ color: 'var(--accent)' }}>
+                <Icon name="cog" size={16} />
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Acces Administrator</span>
+            </div>
             <AdminRow label="Administrare Porți" badge={4} onClick={() => openModal('gates')} />
             <AdminRow label="Asignare Personal" badge={4} onClick={() => openModal('staff')} />
             <AdminRow label="Difuzare către staff" onClick={() => openModal('broadcast')} />
             <AdminRow label="Ocupare pe zone" badge="1 alertă" onClick={() => openModal('occupancy')} />
             <AdminRow label="Reconciliere casă" onClick={() => openModal('cashcount')} />
-            <AdminRow label="Listă neagră" badge={2} onClick={() => openModal('banlist')} />
+            <AdminRow label="Listă neagră (blocări)" badge={2} onClick={() => openModal('banlist')} />
             {isFestival ? (
               <AdminRow label="Vendori festival" badge={38} onClick={() => openModal('vendors')} last />
             ) : (
