@@ -177,8 +177,17 @@ class BillingController extends BaseController
      */
     protected function getOrganizerInvoices(MarketplaceOrganizer $organizer, ?string $status, int $perPage, int $page): array
     {
-        // Try DB-persisted invoices first
+        // Try DB-persisted invoices first.
+        //
+        // Only invoices ADDRESSED TO THE ORGANIZER belong in the organizer's
+        // "Istoric facturi". On added_on_top commission the invoice recipient is
+        // Ambilet's general client (meta.recipient_type = 'general_client') — the
+        // organizer neither owes nor receives those, so they must not surface in
+        // this history. Keep 'organizer' AND legacy/manual rows that have no
+        // recipient_type key (they default to the organizer). `IS DISTINCT FROM`
+        // is NULL-safe on Postgres, so the keyless rows are retained.
         $dbQuery = Invoice::where('marketplace_organizer_id', $organizer->id)
+            ->whereRaw("(meta->>'recipient_type') IS DISTINCT FROM 'general_client'")
             ->orderByDesc('issue_date');
 
         if ($status && $status !== 'all') {
@@ -284,8 +293,10 @@ class BillingController extends BaseController
     {
         $marketplace = $organizer->marketplaceClient;
 
-        // Try DB first
+        // Try DB first. Same recipient guard as the list: an organizer must not
+        // be able to open a general_client invoice by guessing its id.
         $dbInvoice = Invoice::where('marketplace_organizer_id', $organizer->id)
+            ->whereRaw("(meta->>'recipient_type') IS DISTINCT FROM 'general_client'")
             ->where('id', $invoiceId)
             ->first();
 
