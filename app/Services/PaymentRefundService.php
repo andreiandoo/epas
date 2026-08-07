@@ -219,10 +219,13 @@ class PaymentRefundService
         $commissionByType = [];
         foreach ($commissionDetails as $cd) {
             $key = $cd['ticket_type'] ?? '';
+            $mode = $cd['commission_mode'] ?? null;
             $commissionByType[$key] = [
                 'amount_per_unit' => (float) ($cd['commission_amount'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
+                'mode' => in_array($mode, ['on_top', 'add_on_top', 'added_on_top'], true) ? 'on_top' : 'included',
             ];
         }
+        $fallbackMode = $order->getOrderFallbackCommissionMode();
 
         $items = [];
         $totalRefund = 0;
@@ -235,14 +238,19 @@ class PaymentRefundService
             $typeName = $ticket->ticketType?->name ?? '';
             $cd = $commissionByType[$typeName] ?? null;
             $commission = $cd ? round($cd['amount_per_unit'], 2) : 0;
-            $refundAmount = $refundCommission ? ($faceValue + $commission) : $faceValue;
+            // Included tickets MUST refund with commission (face price already includes it);
+            // a face-only refund would return LESS than the customer paid. On_top tickets
+            // follow the operator's choice.
+            $ticketMode = $cd['mode'] ?? $fallbackMode;
+            $effectiveRefundCommission = ($ticketMode === 'included') ? true : $refundCommission;
+            $refundAmount = $effectiveRefundCommission ? ($faceValue + $commission) : $faceValue;
 
             $items[] = [
                 'ticket' => $ticket,
                 'face_value' => round($faceValue, 2),
                 'commission_amount' => round($commission, 2),
                 'refund_amount' => round($refundAmount, 2),
-                'commission_refunded' => $refundCommission,
+                'commission_refunded' => $effectiveRefundCommission,
             ];
             $totalRefund += $refundAmount;
         }
@@ -284,7 +292,7 @@ class PaymentRefundService
                 'status' => 'processing',
                 'refund_method' => 'original_payment',
                 'payment_processor' => $order->payment_processor,
-                'commission_refund' => $refundCommission ? collect($items)->sum('commission_amount') : 0,
+                'commission_refund' => collect($items)->filter(fn ($i) => $i['commission_refunded'])->sum('commission_amount'),
                 'organizer_deduction' => collect($items)->sum('face_value'),
                 'requested_at' => now(),
             ]);

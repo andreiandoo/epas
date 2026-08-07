@@ -509,11 +509,41 @@ class OrderResource extends Resource
                     ->visible(fn ($record) => in_array($record->status, ['completed', 'paid', 'confirmed']) && !in_array($record->status, ['refunded', 'partially_refunded']) && $record->source !== 'external_import')
                     ->requiresConfirmation()
                     ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
-                    ->modalDescription(fn ($record) => 'Rambursare completă pentru comanda ' . ($record->order_number ?? '#' . $record->id) . '. Total: ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON'))
-                    ->form([
-                        \Filament\Forms\Components\Radio::make('refund_variant')
-                            ->label('Tip rambursare')
-                            ->options(function ($record) {
+                    ->modalDescription(function ($record) {
+                        $profile = $record->getRefundCommissionProfile();
+                        $base = 'Rambursare completă pentru comanda ' . ($record->order_number ?? '#' . $record->id) . '. Total: ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON');
+                        if ($profile === 'mixed') {
+                            return $base . ' — comanda are bilete cu tipuri de comision diferite; folosește pagina comenzii pentru selecție per bilet.';
+                        }
+                        return $base;
+                    })
+                    ->form(function ($record) {
+                        $profile = $record->getRefundCommissionProfile();
+                        $schema = [];
+
+                        // Mixed orders can't be quick-refunded in bulk: some tickets
+                        // are included (must refund with commission) and some are
+                        // on_top (operator picks). Force the operator to open the
+                        // order and use the per-ticket selection modal.
+                        if ($profile === 'mixed') {
+                            $schema[] = \Filament\Forms\Components\Placeholder::make('mixed_block')
+                                ->hiddenLabel()
+                                ->content(new \Illuminate\Support\HtmlString(
+                                    '<div style="padding:12px 14px;border:1px solid #ef4444;background:#fef2f2;border-radius:8px;color:#991b1b;">'
+                                    . '<div style="font-weight:600;margin-bottom:4px;">⚠️ Comandă cu tipuri de comision diferite</div>'
+                                    . '<div style="font-size:12px;">Această comandă are atât bilete cu comision inclus în preț, cât și bilete cu comision peste preț. Rambursarea rapidă nu se aplică aici — <strong>deschide comanda</strong> și folosește butonul „Rambursare" pentru a selecta individual biletele.</div>'
+                                    . '</div>'
+                                ));
+                            return $schema;
+                        }
+
+                        $variantOptions = $profile === 'included'
+                            ? (function () use ($record) {
+                                $tot = (float) ($record->total ?? 0);
+                                $cur = $record->currency ?? 'RON';
+                                return ['with_commission' => 'Ramburs integral — ' . number_format($tot, 2) . ' ' . $cur . ' (obligatoriu; biletele au comision inclus în preț)'];
+                            })()
+                            : (function () use ($record) {
                                 $sub = (float) ($record->subtotal ?? 0) - (float) ($record->discount_amount ?? 0);
                                 $tot = (float) ($record->total ?? 0);
                                 $cur = $record->currency ?? 'RON';
@@ -521,11 +551,25 @@ class OrderResource extends Resource
                                     'face_only' => 'Ramburs fără comision — ' . number_format($sub, 2) . ' ' . $cur . ' (comisionul rămâne la organizator)',
                                     'with_commission' => 'Ramburs total — ' . number_format($tot, 2) . ' ' . $cur . ' (inclusiv comisionul, clientul primește toată suma)',
                                 ];
-                            })
-                            ->default('face_only')
+                            })();
+
+                        if ($profile === 'included') {
+                            $schema[] = \Filament\Forms\Components\Placeholder::make('included_note')
+                                ->hiddenLabel()
+                                ->content(new \Illuminate\Support\HtmlString(
+                                    '<div style="padding:10px 12px;border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;color:#92400e;font-size:12px;">'
+                                    . '⚠️ Bilete cu comision inclus în preț — se rambursează întotdeauna integral (cu comision).'
+                                    . '</div>'
+                                ));
+                        }
+
+                        $schema[] = \Filament\Forms\Components\Radio::make('refund_variant')
+                            ->label('Tip rambursare')
+                            ->options($variantOptions)
+                            ->default($profile === 'included' ? 'with_commission' : 'face_only')
                             ->required()
-                            ->inline(false),
-                        \Filament\Forms\Components\Select::make('reason_category')
+                            ->inline(false);
+                        $schema[] = \Filament\Forms\Components\Select::make('reason_category')
                             ->label('Motiv')
                             ->options([
                                 'event_cancelled' => 'Eveniment anulat',
@@ -535,9 +579,20 @@ class OrderResource extends Resource
                                 'technical_issue' => 'Problemă tehnică',
                                 'other' => 'Alt motiv',
                             ])
-                            ->nullable(),
-                    ])
+                            ->nullable();
+
+                        return $schema;
+                    })
                     ->action(function ($record, array $data) {
+                        // Block mixed-profile orders — operator must use the per-ticket modal.
+                        if ($record->getRefundCommissionProfile() === 'mixed') {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('Deschide comanda')
+                                ->body('Comanda are bilete cu tipuri de comision diferite. Deschide-o și rambursează per bilet.')
+                                ->send();
+                            return;
+                        }
                         $refundService = app(\App\Services\PaymentRefundService::class);
                         $refundCommission = ($data['refund_variant'] ?? 'face_only') === 'with_commission';
                         $reasonLabels = [
@@ -627,14 +682,38 @@ class OrderResource extends Resource
                             $multiEventOrders = $records->whereIn('id', $multiEventOrderIds);
                             $multiEventCount = $multiEventOrders->count();
 
+                            // Detect commission-mode profile for each order:
+                            //  - 'mixed' orders can't be bulk-refunded because the
+                            //    same refund_variant can't apply to both types →
+                            //    force-skip them, tell the operator to handle
+                            //    each one from the order page.
+                            //  - 'included' orders lock refund_variant to
+                            //    with_commission (face_only would return LESS than
+                            //    the customer paid). If ANY order is included,
+                            //    face_only must be hidden for the whole bulk.
+                            $mixedOrderIds = [];
+                            $includedOrderIds = [];
+                            foreach ($records as $o) {
+                                $p = $o->getRefundCommissionProfile();
+                                if ($p === 'mixed') $mixedOrderIds[] = $o->id;
+                                elseif ($p === 'included') $includedOrderIds[] = $o->id;
+                            }
+                            $forceWithCommission = !empty($includedOrderIds);
+                            $mixedOrders = $records->whereIn('id', $mixedOrderIds);
+                            $mixedCount = $mixedOrders->count();
+
+                            $variantOptions = $forceWithCommission
+                                ? ['with_commission' => 'Ramburs total (obligatoriu — sunt comenzi cu comision inclus în preț)']
+                                : [
+                                    'face_only' => 'Ramburs fără comision (comisionul rămâne la organizator)',
+                                    'with_commission' => 'Ramburs total (clientul primește toată suma, inclusiv comisionul)',
+                                ];
+
                             $schema = [
                                 \Filament\Forms\Components\Radio::make('refund_variant')
                                     ->label('Tip rambursare aplicat la TOATE comenzile selectate')
-                                    ->options([
-                                        'face_only' => 'Ramburs fără comision (comisionul rămâne la organizator)',
-                                        'with_commission' => 'Ramburs total (clientul primește toată suma, inclusiv comisionul)',
-                                    ])
-                                    ->default('face_only')
+                                    ->options($variantOptions)
+                                    ->default($forceWithCommission ? 'with_commission' : 'face_only')
                                     ->required()
                                     ->inline(false),
                                 \Filament\Forms\Components\Select::make('reason_category')
@@ -649,6 +728,40 @@ class OrderResource extends Resource
                                     ])
                                     ->nullable(),
                             ];
+
+                            // Included-mode info banner (top of modal)
+                            if ($forceWithCommission) {
+                                $includedCount = count($includedOrderIds);
+                                $includedNoun = $includedCount === 1 ? 'comandă are' : 'comenzi au';
+                                $includedHtml = '<div style="padding:12px 14px;border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;color:#92400e;">'
+                                    . '<div style="font-weight:600;margin-bottom:6px;">⚠️ ' . $includedCount . ' ' . $includedNoun . ' comision inclus în preț</div>'
+                                    . '<div style="font-size:12px;">Bulk-refund pentru aceste comenzi se face <strong>doar cu comision</strong>. Varianta „fără comision" e dezactivată pentru toate comenzile selectate (uniformitate).</div>'
+                                    . '</div>';
+                                array_unshift($schema, \Filament\Forms\Components\Placeholder::make('included_warning')
+                                    ->hiddenLabel()
+                                    ->content(new \Illuminate\Support\HtmlString($includedHtml)));
+                            }
+
+                            // Mixed-mode block — auto-skip these orders.
+                            if ($mixedCount > 0) {
+                                $mixedList = $mixedOrders
+                                    ->map(fn ($o) => $o->order_number ?? ('#' . $o->id))
+                                    ->take(20)
+                                    ->implode(', ');
+                                if ($mixedCount > 20) {
+                                    $mixedList .= ', + încă ' . ($mixedCount - 20);
+                                }
+                                $mixedHtml = '<div style="padding:12px 14px;border:1px solid #ef4444;background:#fef2f2;border-radius:8px;color:#991b1b;">'
+                                    . '<div style="font-weight:600;margin-bottom:6px;">🚫 ' . $mixedCount . ' comand' . ($mixedCount === 1 ? 'ă va fi ignorată' : 'i vor fi ignorate') . ' (bilete cu tipuri de comision diferite)</div>'
+                                    . '<div style="font-size:12px;margin-bottom:6px;">Aceste comenzi conțin atât bilete cu comision inclus, cât și bilete cu comision peste preț. Nu pot fi procesate uniform în bulk — deschide fiecare comandă în parte și rambursează cu selecție per bilet.</div>'
+                                    . '<div style="font-size:12px;font-family:monospace;color:#7f1d1d;">' . e($mixedList) . '</div>'
+                                    . '</div>';
+                                array_unshift($schema, \Filament\Forms\Components\Placeholder::make('mixed_warning')
+                                    ->hiddenLabel()
+                                    ->content(new \Illuminate\Support\HtmlString($mixedHtml)));
+                                $schema[] = \Filament\Forms\Components\Hidden::make('_mixed_ids')
+                                    ->default(implode(',', $mixedOrderIds));
+                            }
 
                             if ($multiEventCount > 0) {
                                 $list = $multiEventOrders
@@ -697,12 +810,22 @@ class OrderResource extends Resource
                                 $skipIds = array_filter(array_map('intval', explode(',', $data['_multi_event_ids'])));
                             }
 
+                            // Mixed-profile orders are ALWAYS skipped in bulk.
+                            $mixedSkipIds = !empty($data['_mixed_ids'])
+                                ? array_filter(array_map('intval', explode(',', $data['_mixed_ids'])))
+                                : [];
+
                             $success = 0;
                             $failed = 0;
                             $skipped = 0;
                             $skippedMultiEvent = 0;
+                            $skippedMixed = 0;
 
                             foreach ($records as $order) {
+                                if (in_array($order->id, $mixedSkipIds, true)) {
+                                    $skippedMixed++;
+                                    continue;
+                                }
                                 if (in_array($order->id, $skipIds, true)) {
                                     $skippedMultiEvent++;
                                     continue;
@@ -728,6 +851,7 @@ class OrderResource extends Resource
                             if ($failed > 0) $msg .= " {$failed} eșuate.";
                             if ($skipped > 0) $msg .= " {$skipped} ignorate (deja rambursate sau neplătite).";
                             if ($skippedMultiEvent > 0) $msg .= " {$skippedMultiEvent} sărite (bilete pe mai multe evenimente).";
+                            if ($skippedMixed > 0) $msg .= " {$skippedMixed} sărite (tipuri de comision mixte — necesită refund per bilet).";
                             \Filament\Notifications\Notification::make()
                                 ->title($msg)
                                 ->color($failed > 0 ? 'warning' : 'success')

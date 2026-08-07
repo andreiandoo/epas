@@ -171,6 +171,73 @@ class Order extends Model
             ->latest();
     }
 
+    /**
+     * Returns [ticket_type_name => 'included'|'on_top'] mode map for this order.
+     * Reads from meta.commission_details snapshot; falls back to meta/event mode
+     * for legacy orders that lack commission_details (POS orders, older data).
+     */
+    public function getCommissionModeByTicketType(): array
+    {
+        $map = [];
+        foreach (($this->meta['commission_details'] ?? []) as $cd) {
+            $name = $cd['ticket_type'] ?? null;
+            if (!$name) continue;
+            $mode = $cd['commission_mode'] ?? null;
+            $map[$name] = in_array($mode, ['on_top', 'add_on_top', 'added_on_top'], true) ? 'on_top' : 'included';
+        }
+        return $map;
+    }
+
+    public function getOrderFallbackCommissionMode(): string
+    {
+        $mode = $this->meta['commission_mode']
+            ?? $this->event?->commission_mode
+            ?? 'included';
+        return in_array($mode, ['on_top', 'add_on_top', 'added_on_top'], true) ? 'on_top' : 'included';
+    }
+
+    /**
+     * Returns 'included' | 'on_top' | 'mixed' based on the commission mode of
+     * all non-refunded tickets in the order.
+     *  - included: every ticket has commission baked into the face price
+     *  - on_top:   every ticket has commission added on top of the face price
+     *  - mixed:    the order contains BOTH modes (rare but possible when a
+     *              ticket_type's mode was toggled after the sale)
+     */
+    public function getRefundCommissionProfile(): string
+    {
+        $modes = collect();
+        $map = $this->getCommissionModeByTicketType();
+        $fallback = $this->getOrderFallbackCommissionMode();
+
+        $tickets = $this->relationLoaded('tickets')
+            ? $this->tickets
+            : $this->tickets()->with('ticketType')->get();
+
+        foreach ($tickets as $t) {
+            if (($t->refund_status ?? null) === 'refunded') continue;
+            $name = $t->ticketType?->name ?? null;
+            $mode = ($name && isset($map[$name])) ? $map[$name] : $fallback;
+            $modes->push($mode);
+        }
+
+        $unique = $modes->unique()->values();
+        if ($unique->count() === 0) return $fallback;
+        if ($unique->count() === 1) return $unique->first();
+        return 'mixed';
+    }
+
+    /**
+     * True when at least one non-refunded ticket has commission baked into the price.
+     * Included tickets can NEVER be partially refunded (fără comision) — refunding
+     * face-only would return LESS than the customer actually paid.
+     */
+    public function hasIncludedCommissionTickets(): bool
+    {
+        $profile = $this->getRefundCommissionProfile();
+        return in_array($profile, ['included', 'mixed'], true);
+    }
+
     protected static function booted(): void
     {
         static::saving(function (Order $order) {
