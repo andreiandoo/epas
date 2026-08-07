@@ -5,6 +5,9 @@
 # Unele configuratii Laravel seteaza DirectoryIndex doar pe index.php.
 DirectoryIndex index.html index.php
 
+# Fara listare de directoare (ex. /tics-app/bundles/).
+Options -Indexes
+
 # Tip MIME corect pentru APK (altfel unele browsere incearca sa-l randeze).
 <IfModule mod_mime.c>
     AddType application/vnd.android.package-archive .apk

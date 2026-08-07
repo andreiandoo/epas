@@ -3,11 +3,62 @@
    Vanzare POS, Mod offline & sincronizare, Imprimanta, Aspect,
    Securitate, Manual, Comenzi Admin, incheie tura.
    ========================================================= */
+import { useEffect, useState } from 'react';
 import { Button, Card, Icon, InfoRow, SectionHead, Toggle, type IconName } from '../../design/components';
 import { useSession, isAdminRole, type AppTheme, type SettingsFlags } from '../../store/session';
 import { useCtx } from './OrgChrome';
+import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../ota';
 
-const APP_VERSION = 'Tixello · Cont organizator v0.1.0';
+const APP_VERSION = 'Tixello · Cont organizator v0.2.0';
+
+/** Card „Actualizări" — OTA self-hosted (§14). Vizibil in ambele shell-uri. */
+export function UpdateCard() {
+  const showToast = useSession((s) => s.showToast);
+  const [ota, setOta] = useState<OtaState>(getOtaState);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => onOtaChange(setOta), []);
+
+  return (
+    <Card style={{ padding: '4px 16px' }}>
+      <InfoRow label="Versiune conținut" value={ota.current === 'builtin' ? 'inclusă în APK' : ota.current} />
+      <InfoRow label="Versiune aplicație" value={ota.native || '0.2.0'} />
+      {ota.downloading ? (
+        <InfoRow label="Se descarcă" value={`${Math.round(ota.progress)}%`} last={!ota.pending} />
+      ) : null}
+      {ota.pending ? (
+        <div style={{ padding: '13px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span className="chip-i chip-green" style={{ width: 32, height: 32 }}>
+              <Icon name="download" size={16} />
+            </span>
+            <div style={{ flex: 1, fontSize: 13.5, color: 'var(--text)' }}>
+              Versiunea <b>{ota.pending}</b> e descărcată și gata de aplicat.
+            </div>
+          </div>
+          <Button variant="primary" icon="swap" onClick={() => void applyPendingUpdate()}>
+            Repornește și actualizează
+          </Button>
+        </div>
+      ) : (
+        <div style={{ padding: '13px 0' }}>
+          <Button
+            variant="ghost"
+            icon="download"
+            disabled={busy || ota.downloading}
+            onClick={async () => {
+              setBusy(true);
+              showToast(await checkForUpdate());
+              setBusy(false);
+            }}
+          >
+            {busy ? 'Se verifică…' : 'Verifică actualizările'}
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function ToggleRow({ label, k, last }: { label: string; k: keyof SettingsFlags; last?: boolean }) {
   const { set, toggleSet } = useSession();
@@ -182,6 +233,9 @@ export function Settings() {
       <Card style={{ padding: '4px 16px' }}>
         <InfoRow label="Auto-logout" value="după 30 min inactivitate" last />
       </Card>
+
+      <SectionHead title="Actualizări" />
+      <UpdateCard />
 
       <SectionHead title="Ajutor" />
       <Card style={{ padding: '4px 16px' }}>

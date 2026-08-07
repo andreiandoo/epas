@@ -7,6 +7,7 @@ import { Avatar, Button, Card, Icon, InfoRow, SectionHead } from '../../design/c
 import { CLIENT_PROFILE } from '../../mock/client';
 import { useSession } from '../../store/session';
 import { SwitchBanner } from './SwitchBanner';
+import { UpdateCard } from '../org/Settings';
 
 function MenuRow({
   icon,
@@ -90,6 +91,9 @@ export function ClientProfile() {
         <MenuRow icon="list" label="Salvate" onClick={() => showToast('Evenimente salvate — Faza 1')} last />
       </Card>
 
+      <SectionHead title="Actualizări" />
+      <UpdateCard />
+
       <SectionHead title="Aplicație" />
       <Card style={{ padding: '4px 16px' }}>
         <InfoRow label="Limbă" value="Română" />
@@ -111,7 +115,7 @@ export function ClientProfile() {
       </Button>
 
       <div className="center sub" style={{ fontSize: 11.5, color: 'var(--text-4)', paddingBottom: 8 }}>
-        Tixello · Cont client v0.1.0
+        Tixello · Cont client v0.2.0
       </div>
     </div>
   );

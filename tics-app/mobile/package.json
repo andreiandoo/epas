@@ -21,6 +21,7 @@
     "@capacitor/network": "^6.0.3",
     "@capacitor/preferences": "^6.0.3",
     "@capacitor/status-bar": "^6.0.2",
+    "@capgo/capacitor-updater": "^6.50.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.5"

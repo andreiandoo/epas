@@ -1,5 +1,8 @@
 ext {
-    minSdkVersion = 22
+    // 23 (Android 6.0) e cerut de @capgo/capacitor-updater prin
+    // com.google.android.gms:play-services-tasks:18.4.1. Fara asta,
+    // manifest merger-ul opreste build-ul.
+    minSdkVersion = 23
     // SDK-ul local are platformele 35/36 instalate (nu si 34) — cmdline-tools
     // lipseste, deci nu putem rula sdkmanager. 35 e disponibil si compatibil.
     compileSdkVersion = 35
