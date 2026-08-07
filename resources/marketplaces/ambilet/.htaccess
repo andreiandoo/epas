@@ -11,6 +11,11 @@ DirectoryIndex index.php index.html
 # fails to issue certs for mail./webmail./cpanel. subdomains.
 RewriteRule ^\.well-known/ - [L]
 
+# XML sitemaps. Declared early so they can never be swallowed by the vanity /
+# city catch-all further down. robots.txt is a real file and needs no rule.
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^sitemap-(pages|events|venues|artists)\.xml$ sitemap.php?type=$1 [L]
+
 # Redirect old WP email tracking links and ticket downloads to old.ambilet.ro
 RewriteCond %{REQUEST_URI} ^/wp-json/wp-mail-smtp/ [NC]
 RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]

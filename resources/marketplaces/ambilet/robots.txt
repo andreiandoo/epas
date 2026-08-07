@@ -1,0 +1,45 @@
+User-agent: *
+
+# Private / transactional areas — no indexable content, and crawling them
+# only burns crawl budget on pages that redirect to a login form.
+Disallow: /cont/
+Disallow: /organizator/
+Disallow: /artist/cont/
+Disallow: /artist/login
+Disallow: /artist/inregistrare
+Disallow: /artist/parola-uitata
+Disallow: /artist/resetare-parola
+Disallow: /artist/verifica-email
+Disallow: /artist/in-asteptare
+Disallow: /autentificare
+Disallow: /inregistrare
+Disallow: /parola-uitata
+Disallow: /resetare-parola
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /email-confirmat
+Disallow: /cos
+Disallow: /finalizare
+Disallow: /multumim
+Disallow: /thank-you
+Disallow: /plata/
+Disallow: /view/
+Disallow: /dezabonare
+
+# Embeddable widget pages — duplicates of the public event pages, meant to be
+# iframed on organizer sites. Indexing them splits ranking signals.
+Disallow: /embed/
+
+# Internal endpoints.
+Disallow: /api/
+Disallow: /includes/
+Disallow: /check/
+
+# On-site search: infinite URL space, thin results.
+Disallow: /cauta
+
+# /pentru-organizatori is the public landing page and lives under a path we
+# otherwise block, so re-allow it explicitly.
+Allow: /organizator/landing
+
+Sitemap: https://ambilet.ro/sitemap.xml
