@@ -4141,3 +4141,21 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/stories', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'stories'])
         ->name('api.tenant-client.stories');
 });
+
+// Shorts — UGC de la participanți verificați (B9) + raportare (§14).
+Route::prefix('marketplace-client/customer/shorts')
+    ->middleware(['throttle:60,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::get('/can-post', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortUgcController::class, 'eligibility'])
+            ->name('api.marketplace-client.customer.shorts.can-post');
+        Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortUgcController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('api.marketplace-client.customer.shorts.store');
+    });
+
+// Raportarea rămâne deschisă și pentru guest: cine nu e logat vede același feed,
+// iar a cere cont ca să raportezi conținut dăunător protejează doar conținutul.
+Route::post('tenant-client/shorts/{short}/report', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortUgcController::class, 'report'])
+    ->whereNumber('short')
+    ->middleware(['throttle:20,1', 'tenant.client.cors'])
+    ->name('api.tenant-client.shorts.report');

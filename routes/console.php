@@ -1120,3 +1120,16 @@ Schedule::job(new \App\Jobs\Shorts\AggregateShortAnalyticsJob)
 Schedule::job(new \App\Jobs\Shorts\CheckShortHealthJob)
     ->hourly()
     ->withoutOverlapping();
+
+// Bunny bandwidth guardrails. Every six hours: usage does not spike within an
+// hour, and without this the first signal a feed went viral is the invoice.
+Schedule::job(new \App\Jobs\Shorts\PollBunnyUsageJob)
+    ->everySixHours()
+    ->withoutOverlapping();
+
+// Ends cover A/B tests that have enough sample. Daily — calling a winner early
+// permanently discards the variant that might have been better.
+Schedule::job(new \App\Jobs\Shorts\PickPosterWinnerJob)
+    ->dailyAt('04:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();

@@ -26,6 +26,7 @@ class ShortFeedService
     public function __construct(
         private readonly ShortPayload $payload,
         private readonly ShortFeedRanker $ranker,
+        private readonly ShortRightsGuard $rights,
     ) {}
 
     /**
@@ -49,7 +50,7 @@ class ShortFeedService
         $feed = in_array($feed, self::FEEDS, true) ? $feed : 'for_you';
         $limit = max(1, min($limit, (int) config('shorts.feed.max_page_size', 30)));
 
-        $query = $this->baseQuery($filters);
+        $query = $this->baseQuery($filters + ['customer' => $customer]);
         $this->applyFeedSegment($query, $feed, $customer, $filters);
 
         $decoded = ShortFeedCursor::decode($cursor);
@@ -103,7 +104,7 @@ class ShortFeedService
     ): array {
         $feed = str(class_basename($owner))->snake()->toString();
 
-        $query = $this->baseQuery()->where(function (Builder $q) use ($owner) {
+        $query = $this->baseQuery(['customer' => $customer])->where(function (Builder $q) use ($owner) {
             $q->where(function (Builder $inner) use ($owner) {
                 $inner->where('owner_type', $owner->getMorphClass())
                     ->where('owner_id', $owner->getKey());
@@ -153,6 +154,10 @@ class ShortFeedService
             // event.venue is loaded because the geo signal and the "nearby"
             // segment both read the city off the venue.
             ->with(['owner', 'event.venue', 'captions']);
+
+        // Licence window, territory and age gate — applied as constraints, not a
+        // post-filter, so pagination counts stay honest (D7).
+        $this->rights->apply($query, $filters['customer'] ?? null, $filters['country'] ?? null);
 
         // A marketplace only ever sees its own shorts plus the editorial ones
         // that were never bound to a marketplace.

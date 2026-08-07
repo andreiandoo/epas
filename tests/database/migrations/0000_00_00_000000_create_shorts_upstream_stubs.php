@@ -48,6 +48,9 @@ return new class extends Migration
                 $table->string('last_name')->nullable();
                 $table->string('city')->nullable();
                 $table->string('country')->nullable();
+                // The age gate reads this; without a verified date, restricted
+                // shorts stay hidden (D7).
+                $table->date('birth_date')->nullable();
                 $table->string('locale')->nullable();
                 $table->string('status')->default('active');
                 $table->json('settings')->nullable();
@@ -144,6 +147,21 @@ return new class extends Migration
             Schema::create('settings', function (Blueprint $table) {
                 $table->id();
                 $table->string('youtube_api_key')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        // Attendance proof for UGC eligibility (B9): a ticket for the event,
+        // owned by the poster, that was actually scanned at the door.
+        if (! Schema::hasTable('tickets')) {
+            Schema::create('tickets', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('event_id')->nullable();
+                $table->foreignId('order_id')->nullable();
+                $table->foreignId('current_owner_customer_id')->nullable();
+                $table->boolean('checked_in')->default(false);
+                $table->timestamp('checked_in_at')->nullable();
+                $table->string('status')->nullable();
                 $table->timestamps();
             });
         }

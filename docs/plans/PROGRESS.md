@@ -33,10 +33,11 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   captions, și pagina de analytics pentru organizator cu pâlnie + retenție.
 - **Faza 9** — colecții editoriale, stories efemere (grupate pe owner, excluse din
   feed-ul principal) și igiena feed-ului: expirare + detecția embed-urilor moarte.
-  **103 teste, 271 aserțiuni, toate verzi.**
+- **Faza 10 (Val 3)** — shorts promovate cu pacing și frequency capping, drepturi și
+  licențiere (teritoriu + age gate), guardrails de cost Bunny, UGC de la participanți
+  verificați cu moderare, A/B pe cover. **120 de teste, 316 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 10 (Val 3) — promovate (D3), drepturi/licențiere (D7), guardrails
-de cost (D8), UGC (B9), A/B pe cover (B10).
+**Toate cele 10 faze din `shorts-START-PROMPT.md` sunt livrate.**
 
 **Blocaje / de știut.**
 
@@ -375,12 +376,53 @@ transcriere pentru captions e tot un `TODO(owner)`.
 > story-urile ar fi apărut în feed. Fără testul „stories stay out of the main feed"
 > ar fi ajuns în producție tăcut.
 
-## Faza 10 — Val 3 (bani & compliance) ⏳
+## Faza 10 — Val 3 (bani & compliance) ✅
 
-- [ ] D3 shorts promovate (CPM/CPC, pacing, frequency capping)
-- [ ] D7 drepturi / licențiere / age-gating / geo
-- [ ] D8 guardrails de cost Bunny
-- [ ] B9 UGC verificat + moderare · B10 A/B pe cover
+**D3 — shorts promovate**
+- [x] `short_promotions` + `short_promotion_events` (dovada de facturare stă separat de
+      `short_events`, care e tăiat de retenție)
+- [x] CPM (bid/1000 per impresie) și CPC; bugetul epuizat oprește imediat difuzarea
+- [x] **Pacing** — un flight înaintea curbei sale stă pe bară, ca să nu ardă bugetul
+      unei săptămâni în prima oră
+- [x] **Frequency capping** — 3 afișări/zi/utilizator per promoție
+- [x] Injectare pe slot fix, nu în scor, și **întotdeauna etichetat „Sponsorizat"**:
+      banii n-au voie să devină tăcut relevanță
+
+**D7 — drepturi & licențiere**
+- [x] `rights_holder`, `license_type`, `usage_expires_at`, `territories`, `age_rating`
+- [x] `ShortRightsGuard` — fereastră de licență (când expiră dreptul **nostru** de a
+      arăta, nu expirarea short-ului), teritoriu allow/deny, age gate pe dată de naștere
+      verificată
+- [x] Aplicat ca **constrângeri de query**, nu post-filtru: altfel paginile ies scurte
+      și cursorul se strică
+- [x] Locație necunoscută ≠ „oriunde e ok" — se servesc doar short-urile nerestricționate
+
+**D8 — guardrails de cost**
+- [x] `CostGuardService` + `PollBunnyUsageJob` la 6h
+- [x] Proiecție la sfârșit de lună, nu consum curent („60% pe 5" e problema, „60% pe 28"
+      nu e)
+- [x] Peste prag → data-saver global (max 480p, prefetch 0), plus kill switch manual
+- [x] Fără plafon configurat = fără guardrail (nu presupune limite pe care nimeni nu le-a cerut)
+
+**B9 — UGC verificat + moderare**
+- [x] Poți posta doar pentru un eveniment la care **ai fost**, dovedit cu un bilet
+      scanat pe care îl deții — asta face din UGC o buclă de creștere, nu o suprafață de spam
+- [x] Verificarea eșuată = **fără** permisiune (fail-closed)
+- [x] Rate limit zilnic per (user, eveniment); tot ce se încarcă intră în `pending_review`
+- [x] `short_reports` + auto-ascundere la N rapoarte: a ascunde câteva ore ceva bun costă
+      mult mai puțin decât a lăsa sus ceva dăunător
+- [x] Raportarea rămâne deschisă și pentru guest
+
+**B10 — A/B pe cover**
+- [x] `short_poster_variants` + `PickPosterWinnerJob` zilnic
+- [x] Câștigătorul se declară doar când **fiecare** variantă are eșantion suficient —
+      a decide la 100 de impresii înseamnă a alege zgomot și a arunca definitiv varianta
+      care poate era mai bună
+- [x] O singură variantă nu e test
+
+- [x] Teste: 17 (injectare + etichetă, pacing, buget epuizat, CPM, frequency cap,
+      licență expirată, age gate ×3, teritorii ambele sensuri, proiecție, data-saver,
+      fără plafon, eligibilitate UGC ×4, auto-hide, motiv normalizat, A/B ×2)
 
 ---
 

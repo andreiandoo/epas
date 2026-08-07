@@ -84,6 +84,13 @@ class Short extends Model
         'is_generated',
         'render_job_id',
         'is_story',
+        'rights_holder',
+        'license_type',
+        'usage_expires_at',
+        'territories',
+        'age_rating',
+        'is_ugc',
+        'author_marketplace_customer_id',
     ];
 
     protected $casts = [
@@ -93,6 +100,11 @@ class Short extends Model
         'is_featured' => 'boolean',
         'is_generated' => 'boolean',
         'is_story' => 'boolean',
+        'is_ugc' => 'boolean',
+        'territories' => 'array',
+        'age_rating' => 'integer',
+        'reports_count' => 'integer',
+        'usage_expires_at' => 'datetime',
         'trending_score' => 'decimal:3',
         'duration' => 'integer',
         'width' => 'integer',
@@ -171,6 +183,26 @@ class Short extends Model
     public function captions(): HasMany
     {
         return $this->hasMany(ShortCaption::class);
+    }
+
+    public function posterVariants(): HasMany
+    {
+        return $this->hasMany(ShortPosterVariant::class);
+    }
+
+    public function promotions(): HasMany
+    {
+        return $this->hasMany(ShortPromotion::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ShortReport::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCustomer::class, 'author_marketplace_customer_id');
     }
 
     public function collections(): BelongsToMany

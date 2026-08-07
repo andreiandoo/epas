@@ -203,6 +203,39 @@ class ShortResource extends Resource
                                 ->default(0),
                         ]),
 
+                    SC\Section::make('Rights & safety')
+                        ->description('Who owns it, where we may show it, and to whom.')
+                        ->schema([
+                            Forms\Components\TextInput::make('rights_holder')
+                                ->maxLength(255),
+
+                            Forms\Components\Select::make('license_type')
+                                ->options([
+                                    'owned' => 'Owned',
+                                    'licensed' => 'Licensed',
+                                    'ugc' => 'User-generated',
+                                    'artist' => 'Artist',
+                                    'partner' => 'Partner',
+                                ])
+                                ->default('owned'),
+
+                            Forms\Components\DateTimePicker::make('usage_expires_at')
+                                ->label('Licence expires')
+                                ->seconds(false)
+                                ->helperText('When OUR right to show it ends — not the same as the short expiring.'),
+
+                            Forms\Components\Select::make('age_rating')
+                                ->label('Age rating')
+                                ->options([0 => 'All ages', 16 => '16+', 18 => '18+'])
+                                ->default(0)
+                                ->helperText('Restricted shorts are hidden from viewers with no verified date of birth.'),
+
+                            Forms\Components\TagsInput::make('content_flags')
+                                ->label('Content flags')
+                                ->suggestions(['flashing', 'alcohol', 'smoking', 'strong_language'])
+                                ->helperText('"flashing" triggers a photosensitivity warning in the app.'),
+                        ]),
+
                     SC\Section::make('Attachment')
                         ->description('Leave the owner empty for an editorial short.')
                         ->schema([

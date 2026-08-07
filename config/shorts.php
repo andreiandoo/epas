@@ -100,6 +100,26 @@ return [
     ],
 
     /*
+    | Moderation (see §14, B9).
+    */
+    'moderation' => [
+        // Reports that auto-hide a published short pending human review. Hiding
+        // something good for a few hours costs far less than leaving something
+        // harmful up.
+        'auto_hide_reports' => (int) env('SHORTS_AUTO_HIDE_REPORTS', 3),
+    ],
+
+    /*
+    | Bunny cost guardrails (see D8).
+    */
+    'cost' => [
+        'monthly_bandwidth_cap_gb' => (int) env('BUNNY_MONTHLY_BANDWIDTH_CAP_GB', 0),
+        'alert_threshold_pct' => (int) env('BUNNY_ALERT_THRESHOLD_PCT', 80),
+        // Above this share of the cap, the platform drops quality for everyone.
+        'data_saver_threshold_pct' => (int) env('BUNNY_DATA_SAVER_THRESHOLD_PCT', 90),
+    ],
+
+    /*
     | Player UX (see D9) — surfaced to the client through the feed payload so a
     | tuning change does not need an app release.
     */

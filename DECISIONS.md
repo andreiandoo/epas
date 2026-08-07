@@ -928,3 +928,142 @@ short-uri perfect sănătoase, iar recuperarea ar fi manuală.
 **Impact.** Testat cu o excepție de conexiune: short-ul rămâne publicat. Sonda folosită
 e endpoint-ul de thumbnail YouTube — gratuit și fără autentificare. `TODO(owner)`: o sondă
 echivalentă pentru IG/FB, când apare tokenul Meta.
+
+---
+
+## D-059 — Un short promovat se injectează pe slot fix și e mereu etichetat
+
+**Context.** D3 cere shorts plătite în feed.
+
+**Alegere.** Promovatul nu intră în scor — se injectează la un slot fix (unul la 5
+organice) și poartă `promoted.label = "Sponsorizat"` în payload, necondiționat.
+
+**Alternative.** Adăugarea unui termen „bid" în ranker — atunci banii devin tăcut
+relevanță, iar spectatorul nu mai poate face diferența. Asta e exact ce nu vrei într-un
+produs în care încrederea în feed e tot ce ai.
+
+**Impact.** Testat că eticheta există. Licitația e simplă (cel mai mare bid câștigă) —
+cu un singur slot și fără preț de rezervă, mecanica second-price ar adăuga aparat fără
+să schimbe cine e servit.
+
+---
+
+## D-060 — Pacing: un flight înaintea curbei stă pe bară
+
+**Context.** Un buget generos poate fi ars în prima oră a unui flight de o săptămână.
+
+**Alegere.** `pacedBudgetCents()` calculează cât *ar trebui* să fi cheltuit până acum;
+dacă a depășit, promoția nu e eligibilă la cererea curentă.
+
+**De ce.** Pentru advertiser, o prezență mică și constantă valorează mai mult decât o
+oră de dominație urmată de șase zile de absență.
+
+**Impact.** Testat: un flight de 10 zile, o zi în, cu 90% cheltuit, nu mai e servit.
+
+---
+
+## D-061 — Dovada de facturare stă separat de telemetrie
+
+**Context.** `short_events` e tăiat de retenție la 90 de zile (D6).
+
+**Alegere.** `short_promotion_events` — tabel propriu, nepruned.
+
+**Alternative.** Un tip de eveniment în `short_events` — dovada pe baza căreia s-a
+facturat ar dispărea exact înaintea unei dispute.
+
+**Impact.** Facturarea se poate reconstrui oricând.
+
+---
+
+## D-062 — Drepturile se aplică drept constrângeri, nu post-filtru
+
+**Context.** D7 cere excluderea din feed pe licență, teritoriu și vârstă.
+
+**Alegere.** `ShortRightsGuard::apply()` adaugă condiții la query.
+
+**Alternative.** Filtrarea colecției după interogare — paginile ies mai scurte decât
+`limit`, iar cursorul (care numără rânduri) începe să sară.
+
+**Impact.** Paginarea rămâne corectă indiferent câte short-uri sunt excluse.
+
+**Notă de portabilitate.** Verificarea de teritoriu e un `LIKE` pe JSON-ul serializat,
+nu un operator JSON — containment-ul nu e portabil între sqlite/pgsql/mysql. Codurile
+sunt de două litere și ghilimelate în JSON, deci `"RO"` nu se poate potrivi accidental
+în alt cuvânt. `TODO(owner)`: pe Postgres, un index GIN + `@>` ar fi mai rapid dacă
+numărul de short-uri cu restricții teritoriale crește.
+
+---
+
+## D-063 — Locație sau vârstă necunoscută = doar conținut nerestricționat
+
+**Context.** Un spectator anonim n-are nici țară, nici dată de naștere.
+
+**Alegere.** Fără țară → doar short-uri fără restricții teritoriale. Fără dată de naștere
+verificată → doar `age_rating = 0`.
+
+**Alternative.** Tratarea necunoscutului ca permisiv — exact modul în care un age gate
+devine decorativ.
+
+**Impact.** Testat pe toate trei stările (anonim, logat fără dată, adult).
+
+---
+
+## D-064 — Guardrail-ul de cost proiectează, nu raportează
+
+**Context.** D8 cere alertare pe bandwidth.
+
+**Alegere.** `projectedUsagePct()` extrapolează consumul de până acum la sfârșitul lunii.
+
+**De ce.** „Suntem la 60% pe 5 ale lunii" e o problemă; „60% pe 28" nu e. Un prag pe
+consumul curent le confundă.
+
+**Impact.** Peste prag → data-saver global (max 480p, prefetch 0), plus un kill switch
+manual care nu așteaptă următorul poll. Fără plafon configurat, guardrail-ul e inactiv —
+nu presupunem limite pe care nimeni nu le-a cerut.
+
+---
+
+## D-065 — Eligibilitatea UGC e fail-closed
+
+**Context.** B9 cere ca doar participanții cu bilet scanat să poată posta.
+
+**Alegere.** `hasCheckedInTicket()` întoarce `false` când verificarea nu se poate face
+(tabel absent, eroare de query).
+
+**Alternative.** Fail-open — ar transforma funcționalitatea într-un endpoint deschis de
+upload exact în momentul în care ceva nu merge.
+
+**Impact.** Testat pe patru stări: fără bilet, bilet nescanat, bilet al altcuiva, bilet
+scanat propriu.
+
+---
+
+## D-066 — Auto-ascundere la N rapoarte
+
+**Context.** §14 cere o coadă de moderare pentru conținut raportat.
+
+**Alegere.** La pragul din config (implicit 3), un short publicat trece automat în
+`pending_review`.
+
+**Compromisul, explicit.** A ascunde câteva ore ceva legitim costă mult mai puțin decât
+a lăsa sus ceva dăunător într-un feed cu autoplay. Pragul e configurabil tocmai pentru
+că raportul corect depinde de volum.
+
+**Impact.** Raportarea rămâne deschisă și pentru guest: cine nu e logat vede același
+feed, iar a cere cont ca să raportezi protejează doar conținutul.
+
+---
+
+## D-067 — Un câștigător de A/B se declară doar cu eșantion pe FIECARE variantă
+
+**Context.** B10 cere alegerea automată a celui mai bun cover.
+
+**Alegere.** `PickPosterWinnerJob` cere ca **minimul** de impresii pe variante să
+depășească pragul, nu maximul.
+
+**Alternative.** Decizia pe leader — o variantă cu 100 de impresii și 40% CTR arată
+spectaculos și e, statistic, zgomot; promovarea ei aruncă definitiv varianta care poate
+era mai bună.
+
+**Impact.** Testat exact pe acest caz. O singură variantă nu e test și nu produce
+câștigător.
