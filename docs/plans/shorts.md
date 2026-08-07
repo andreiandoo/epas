@@ -353,3 +353,365 @@ Pagină/widget Filament (panoul tenant): per short → views, avg watch %, compl
 3. Moderare: shorts organizatori merg direct în feed sau prin `pending_review`?
 4. `following` are nevoie de „urmărire artist/organizator" — îl construim odată cu shorts sau reutilizăm `favoriteArtists` ca proxy la început?
 5. Generare auto (§10): adăugăm un render service (Shotstack/Cloudinary) sau începem cu „poster shorts" (imagine)?
+
+---
+
+# PARTEA B — Îmbogățiri: implementare completă
+
+Fiecare secțiune e autonomă (migrații + model + servicii/joburi + API + admin + mobil). Toate presupun fundația din Partea A (`shorts`, `short_events`, `short_likes/saves`).
+
+---
+
+## B1. Shoppable shorts + atribuire de conversie ⭐
+
+**Obiectiv:** un short vinde direct — „Ia bilet" deschide checkout cu biletul preselectat + cod promo aplicat; măsori bilete și venit generate de fiecare short.
+
+### Model de date
+```php
+// ALTER shorts: (unele există deja din Partea A)
+//   cta_ticket_type_id, promo_code, cta_type, cta_label  ✔ (Partea A)
+// adaugă agregate de conversie:
+Schema::table('shorts', function (Blueprint $t) {
+    $t->unsignedBigInteger('conversions')->default(0);
+    $t->unsignedBigInteger('revenue_cents')->default(0);
+    $t->string('revenue_currency', 3)->nullable();
+});
+// ALTER orders: atribuire (last-touch)
+Schema::table('orders', function (Blueprint $t) {
+    $t->foreignId('source_short_id')->nullable()->index();
+});
+```
+> Verifică numele tabelului de comenzi și FK-ul de bilet: `Order` (`app/Models/Order.php`, `marketplace_customer_id`), `OrderItem`, tipul de bilet (`TicketType`/`PriceTier` — vezi `app/Filament/Resources/PriceTierResource.php`). Folosește sistemul de cupoane existent (`app/Models/Coupon/*`, `docs/PROMO_CODES.md`) pentru `promo_code`.
+
+### Flux
+1. Feed livrează `cta:{type:'buy_tickets', ticket_type_id, promo_code, label}`.
+2. Tap CTA → deep-link în app la checkout cu `ticket_type` preselectat + `promo_code` pre-aplicat + `source_short_id` în context.
+3. La `POST` coș/comandă, propagi `source_short_id` pe `Order` (last-touch în sesiune).
+4. La plata confirmată (webhook Stripe existent), un listener incrementează `shorts.conversions` + `shorts.revenue_cents`.
+
+### API
+```
+POST tenant-client/shorts/{id}/cta-click            // telemetrie (short_events type=cta_click)
+POST marketplace-client/customer/cart {..., source_short_id}   // propagă atribuirea
+```
+Validarea promo → reutilizează serviciul de cupoane existent (nu reimplementa).
+
+### Aggregation & metrics
+- `cta_clicks` din `short_events`; `conversions`/`revenue_cents` din `orders.source_short_id` (listener la „order paid").
+- CTR = `cta_clicks / views`; CVR = `conversions / cta_clicks`.
+
+### Admin
+- În `ShortResource` (table + infolist): `cta_clicks`, `conversions`, `revenue`, CTR, CVR.
+
+### Edge cases
+- **Fereastră de atribuire**: last-touch în sesiune; dacă userul revine peste zile, nu atribui (evită supra-creditarea).
+- Bilet epuizat între click și checkout → checkout arată starea reală (nu bloca CTA-ul, dar semnalează).
+- Refund → scade `conversions`/`revenue_cents` (listener pe refund).
+
+---
+
+## B2. Tab „Shorts" de discovery + „Following" (model de urmărire) ⭐
+
+**Obiectiv:** shorts ca suprafață principală de descoperire, cu segmente `For You / Following / Nearby / Event`. „Following" cere un model de urmărire.
+
+### Model de urmărire (polimorf: Artist, Tenant/organizator, Venue)
+```php
+Schema::create('marketplace_follows', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('marketplace_customer_id')->constrained('marketplace_customers')->cascadeOnDelete();
+    $t->nullableMorphs('followable');   // followable_type / followable_id (Artist|Tenant|Venue)
+    $t->timestamps();
+    $t->unique(['marketplace_customer_id','followable_type','followable_id'], 'mp_follow_unique');
+    $t->index(['followable_type','followable_id']);
+});
+```
+Model `MarketplaceFollow` + pe `MarketplaceCustomer`: `follows()`, `follow($model)`, `unfollow($model)`, `isFollowing($model)`.
+> La început poți folosi `favoriteArtists` ca proxy pentru „following" (există deja), dar modelul dedicat acoperă și organizatori/venue-uri — recomand să-l construiești direct.
+
+### API
+```
+POST   marketplace-client/customer/follows        // {type, id} toggle
+GET    marketplace-client/customer/follows
+GET    tenant-client/shorts?feed=following         // (auth) owner ∈ urmăriți
+GET    tenant-client/shorts?feed=nearby&lat=&lng=  // sau city
+GET    tenant-client/shorts?feed=featured          // is_featured
+```
+
+### Ranker „For You" (query scored, explicabil)
+```php
+// app/Services/Shorts/ShortFeedRanker.php  — pseudo-scor
+$score =
+    W_AFFINITY   * affinity($short, $customer)          // artist/venue/gen favorit/urmărit/cumpărat
+  + W_POPULARITY * popularity48h($short)                // views/completions/likes velocity
+  + W_WATCH      * $short->avg_watch_ratio
+  + W_GEO        * geoProximity($short->event, $customer->city)
+  + W_FRESH      * recencyDecay($short->published_at)
+  - W_SEEN       * seenPenalty($short, $customer);       // deja văzute
+// + diversitate: nu 2 consecutive de la același owner (post-process)
+```
+Ponderi în config (tiparul `GamificationConfig`). Cold start: `featured` + `nearby` + genuri din onboarding. Loghează scorul în dev (explicabilitate).
+
+### Mobil (React/Capacitor)
+- Tab „Shorts" cu segmented control (For You / Following / Nearby / Event).
+- Fiecare segment = feed cursor separat (§5). „Nearby" trimite `lat/lng` (Capacitor Geolocation) sau `city` din profil.
+- Buton „Urmărește" pe overlay-ul owner-ului.
+
+---
+
+## B3. Generare automată de shorts din media existentă ⭐
+
+**Obiectiv:** umple feed-ul pentru evenimente fără video vertical, din poster/galerie + text + music bed.
+
+### Pipeline de render (fără ffmpeg → serviciu managed)
+```php
+// app/Services/Video/VideoRenderer.php (interface)
+interface VideoRenderer {
+    public function render(string $template, array $payload): string;  // → render_job_id
+    public function verifyWebhook(Request $r): bool;                   // → mp4 gata
+}
+// implementări: ShotstackRenderer (JSON timeline) | CloudinaryRenderer | CreatomateRenderer
+```
+Șablon vertical 1080×1920: Ken-Burns pe poster/hero/gallery (max N imagini), overlay titlu + dată + logo, `music_credit`, end-card CTA.
+
+### Job
+```php
+// app/Jobs/GenerateShortFromEventJob.php
+// 1. selectează imagini (poster_url/hero_image_url/gallery[])
+// 2. build payload render (template + text din Event)
+// 3. VideoRenderer::render() → render_job_id (salvat pe un Short draft)
+// 4. webhook render „ready" → mp4 → trece prin VideoProvider (upload managed → HLS)
+//    → completează Short(source=upload, ready=true, status=draft)
+```
+
+### Trigger
+- Acțiune Filament pe `Event`: „Generează short".
+- Bulk/scheduled pentru evenimente viitoare **fără** short (`whereDoesntHave('shorts')`).
+
+### MVP fără render service
+- „Poster short" = imagine verticală + text în feed (`source=upload`, dar imagine, `duration=null`) → randat ca `<img>` cu text overlay. Migrezi la video când adaugi rendererul.
+
+### Config & licențiere
+- `config/services.render.driver` + cheie.
+- **Muzică**: doar bibliotecă royalty-free; stochează `music_credit`. Nu folosi muzică comercială nelicențiată.
+
+---
+
+## B4. Seed automat din YouTube (artiști) ⭐
+
+**Obiectiv:** feed populat automat din Shorts-urile artiștilor cunoscuți.
+
+### Job
+```php
+// app/Jobs/PullChannelShortsJob.php  (per Artist; șablon: FetchArtistSocialStats)
+// 1. $ytId = $artist->youtube_id ?? YouTubeService::resolveChannel($artist->youtube_url)
+// 2. $items = YouTubeService::latestShorts($ytId, limit: 10)  // Data API: uploads playlist + duration<=60s + vertical
+// 3. foreach: firstOrCreate Short by (source='youtube', source_video_id=$id)
+//      owner = $artist; event_id = eveniment viitor al artistului (dacă există relația EventArtist)
+//      status='draft' (curatoriere)
+```
+- Extinde `YouTubeService` cu `latestShorts()` (parsează `/shorts/` există deja).
+- **Dedup**: unic `(source, source_video_id)` pe `shorts`.
+- **Legare la eveniment**: dacă există relația artist↔eveniment (verifică `EventArtist`/pivot), setează `event_id` pentru evenimentele viitoare.
+
+### Trigger
+- Buton Filament pe `Artist`/`Event`: „Importă Shorts YouTube".
+- Scheduled săptămânal pentru artiști cu evenimente viitoare. Respectă cota Data API (cache 6–24h).
+
+---
+
+## B5. Analytics pentru organizator
+
+**Obiectiv:** organizatorul vede performanța fiecărui short și motivația să posteze.
+
+### Agregare (reutilizează tiparul `EventAnalytics*`)
+```php
+Schema::create('short_analytics_daily', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->date('date');
+    $t->unsignedBigInteger('impressions')->default(0);
+    $t->unsignedBigInteger('views')->default(0);
+    $t->unsignedBigInteger('completions')->default(0);
+    $t->unsignedInteger('unique_viewers')->default(0);
+    $t->decimal('avg_watch_ratio', 4, 3)->default(0);
+    $t->unsignedBigInteger('likes')->default(0);
+    $t->unsignedBigInteger('saves')->default(0);
+    $t->unsignedBigInteger('shares')->default(0);
+    $t->unsignedBigInteger('cta_clicks')->default(0);
+    $t->unsignedBigInteger('conversions')->default(0);
+    $t->unsignedBigInteger('revenue_cents')->default(0);
+    $t->unique(['short_id','date']);
+});
+```
+`AggregateShortAnalyticsJob` (scheduled zilnic) rulează peste `short_events` + `orders` → populează tabelul.
+
+### Admin (panoul tenant)
+- Pagină Filament `ShortsAnalytics` (widget-uri): top shorts, **funnel** (impression → view → cta_click → conversion), watch-ratio, venit atribuit, serie temporală.
+
+### API (app organizator — are deja tab Rapoarte)
+```
+GET tenant/shorts/{id}/analytics
+GET tenant/shorts/analytics?event={id}
+```
+
+---
+
+## B6. Captions / subtitrări auto + i18n
+
+**Obiectiv:** accesibilitate + limbi (ai deja en/ro/de/fr/es).
+
+### Model
+```php
+Schema::create('short_captions', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->string('language', 8);
+    $t->string('vtt_path');            // WebVTT pe disk public
+    $t->boolean('auto_generated')->default(true);
+    $t->timestamps();
+    $t->unique(['short_id','language']);
+});
+```
+
+### Generare
+- `GenerateCaptionsJob` după ce asset-ul e `ready`:
+  - dacă providerul video are auto-captions (Cloudflare Stream / Mux) → preia VTT-ul;
+  - altfel transcriere (Whisper / AssemblyAI) → VTT.
+- Traducere opțională în locale-urile app-ului (serviciu de traducere) → mai multe rânduri `short_captions`.
+
+### Mobil
+- `<track kind="subtitles" srclang="ro" src="...vtt">` pe `<video>`; toggle CC; limbă implicită din locale-ul app-ului.
+
+---
+
+## B7. Collections / playlists editoriale
+
+**Obiectiv:** curatoriere („Weekend în București", „Top festivaluri").
+
+### Model
+```php
+Schema::create('short_collections', function (Blueprint $t) {
+    $t->id();
+    $t->string('title'); $t->string('slug')->unique();
+    $t->text('description')->nullable();
+    $t->string('cover_path')->nullable();
+    $t->foreignId('marketplace_client_id')->nullable();   // null = global
+    $t->boolean('is_active')->default(true);
+    $t->unsignedInteger('sort')->default(0);
+    $t->timestamps();
+});
+Schema::create('short_collection_items', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_collection_id')->constrained()->cascadeOnDelete();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->unsignedInteger('sort')->default(0);
+    $t->unique(['short_collection_id','short_id']);
+});
+```
+
+### Admin
+- Resursă core admin `ShortCollectionResource` (grup „Core") cu `Repeater`/relation-manager pentru itemi (drag-sort).
+
+### API & mobil
+```
+GET tenant-client/short-collections
+GET tenant-client/short-collections/{slug}
+```
+- Mobil: rail-uri pe discovery + segment „Collections".
+
+---
+
+## B8. Stories efemere (24h)
+
+**Obiectiv:** promo time-limited de la organizatori/artiști, în tavă de stories deasupra feed-ului.
+
+### Model
+- Reutilizează `shorts` + `expires_at`; adaugă `is_story` boolean.
+- Story = short cu `is_story=true`, `expires_at = published_at + 24h`.
+- `CheckShortHealthJob` (scheduled) → `archived` la expirare.
+
+### API & mobil
+```
+GET tenant-client/stories        // grupate pe owner, doar active (expires_at>now)
+```
+- Mobil: tavă cu avatare circulare (owner) sus; tap → **story viewer** (tap-through, cu progres pe segmente), nu infinite-scroll.
+- Marchează „văzut" per user (`short_events type=view` filtrat pe `is_story`).
+
+---
+
+## B9. UGC de la participanți verificați
+
+**Obiectiv:** participanții postează short-uri de la eveniment (dacă au bilet scanat) — buclă de creștere. Necesită moderare strictă.
+
+### Model
+```php
+Schema::table('shorts', function (Blueprint $t) {
+    $t->boolean('is_ugc')->default(false);
+    $t->foreignId('author_marketplace_customer_id')->nullable()->index();
+    // status folosește 'pending_review' (există în enum din Partea A)
+});
+```
+
+### Eligibilitate & flux
+- Poți posta pentru `Event X` doar dacă ai un `Ticket` cu `checked_in` + `current_owner_customer_id = tu` (verifică `app/Models/Ticket.php`).
+- Flux: înregistrezi/încarci în app → `upload-url` → `Short(source=upload, is_ugc=true, owner=Event, author=tu, status=pending_review)` → coadă de moderare în core admin → `published`.
+
+### Moderare & siguranță
+- Verificări auto: durată max, moderare conținut (provider video moderation sau serviciu extern: nuditate/violență).
+- Rate-limit per user; raportare/block; takedown din core admin.
+- **Recompensă**: puncte via `Gamification` la UGC aprobat (leagă de puntea de identitate din planul friends).
+
+### API
+```
+POST marketplace-client/customer/shorts            // {event_id, asset_id, caption} → pending_review
+POST tenant-client/shorts/{id}/report {reason}
+```
+
+---
+
+## B10. A/B pe cover/thumbnail
+
+**Obiectiv:** maximizează CTR-ul alegând automat cel mai bun cover.
+
+### Model
+```php
+Schema::create('short_poster_variants', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->string('poster_path');
+    $t->string('label')->nullable();
+    $t->unsignedBigInteger('impressions')->default(0);
+    $t->unsignedBigInteger('clicks')->default(0);   // view după impression
+    $t->boolean('is_winner')->default(false);
+    $t->timestamps();
+});
+```
+
+### Mecanism
+- La livrarea în feed, alegi varianta prin `hash(user_id . short_id) % n` (bucketing stabil).
+- `short_events` primește un câmp `poster_variant_id` (adaugă în migrația `short_events` sau într-un câmp `meta` JSON).
+- `PickPosterWinnerJob` (scheduled) după prag de impresii → CTR pe variantă → setează `is_winner` → servești doar câștigătoarea.
+
+---
+
+## B11. Cross-cutting (necesare pentru toate)
+
+- **Config nou** (`config/services.php`): `video.driver` + chei (provider playback), `render.driver` + cheie, `captions.driver`, `video.webhook_secret`.
+- **Joburi (queue = database)**: `SyncShortPlaybackJob`, `IngestShortJob`, `PullChannelShortsJob`, `GenerateShortFromEventJob`, `GenerateCaptionsJob`, `AggregateShortStatsJob`, `AggregateShortAnalyticsJob`, `CheckShortHealthJob`, `PickPosterWinnerJob`. Toate după tiparul `app/Jobs/FetchArtistSocialStats.php`.
+- **Webhooks**: `webhooks/video/{provider}` (asset ready), `webhooks/render/{provider}` (mp4 gata) — semnate.
+- **Permisiuni** (`spatie/laravel-permission`): `shorts.manage` (core admin), `shorts.manage.own` (tenant), moderare UGC = permisiune separată.
+- **Push** (când există layer-ul): „artist urmărit a postat un short", „short-ul tău a fost aprobat".
+- **Deep-links**: `tixello://shorts/{id}`, `tixello://shorts/collection/{slug}` + fallback web „open in app".
+
+---
+
+## B12. Plan de faze (cu îmbogățiri)
+
+1. **Fundație** (Partea A): model + feed + redare native/HLS + telemetrie + tab Shorts (B2 fără „following").
+2. **Shoppable** (B1) + atribuire conversie.
+3. **Following + ranker For You** (B2 complet).
+4. **Ingestie externă** (plan dedicat) + **seed YouTube** (B4).
+5. **Auto-gen din media** (B3) — MVP „poster short" apoi render.
+6. **Analytics organizator** (B5) + **captions** (B6).
+7. **Collections** (B7) + **Stories** (B8).
+8. **UGC verificat** (B9) + moderare + **A/B cover** (B10).
