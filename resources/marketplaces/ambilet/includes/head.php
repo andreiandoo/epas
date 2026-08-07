@@ -358,7 +358,14 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     })();
     </script>
 
-    <!-- Tracking Scripts (head) — deferred until user interaction or 5s (idle-aware) -->
+    <!-- Tracking Scripts (head) — injected on first interaction, else shortly after page load.
+         The scripts live in a JS string rather than the markup so they never compete with
+         critical resources. They used to wait 7s (10s without requestIdleCallback), which meant
+         any visitor who left sooner without touching anything was never measured at all — i.e.
+         precisely the bounces. That undercounted sessions and made bounce rate look far better
+         than it is. Firing on `load` keeps the "don't block rendering" property (everything
+         critical has already finished by then) while shrinking the blind window to ~1s.
+         It also lets Google's tag detector actually find the tag, which it never could before. -->
     <?php
     if (!isset($trackingHeadScripts)) {
         require_once __DIR__ . '/tracking.php';
@@ -377,11 +384,20 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
                 document.head.appendChild(n);
             });
         }
+        // Any real interaction fires immediately — no reason to keep waiting.
         ['scroll','click','touchstart','mousemove','keydown'].forEach(function(e){
             window.addEventListener(e,go,{once:true,passive:true});
         });
-        if('requestIdleCallback' in window){requestIdleCallback(function(){setTimeout(go,7000)});}
-        else{setTimeout(go,10000);}
+        // Otherwise: shortly after load. Guard on readyState because `load` has
+        // already fired by the time a cached page runs this, and a listener
+        // added afterwards would never be called — the tag would then depend
+        // entirely on the visitor interacting.
+        function afterLoad(){setTimeout(go,1000);}
+        if(document.readyState==='complete'){afterLoad();}
+        else{window.addEventListener('load',afterLoad,{once:true});}
+        // Hard backstop: if `load` stalls on a slow third-party resource we
+        // still want the pageview.
+        setTimeout(go,5000);
     })();
     </script>
     <?php endif; ?>
