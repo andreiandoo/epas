@@ -781,3 +781,76 @@ decizie despre cheia de partiționare, ambele luate în funcție de volumul real
 la producție, ar fi o migrație riscantă scrisă în orb, exact ce interzic gardurile.
 
 **Impact.** Notat ca `TODO(owner)` în `PROGRESS.md`, cu contextul necesar.
+
+---
+
+## D-049 — Auto-generarea are două moduri, nu unul amânat
+
+**Context.** B3 cere generarea unui short din poster/galerie. Fără serviciu de render nu
+există video.
+
+**Alegere.** `GenerateShortFromEventJob` verifică dacă rendererul e configurat:
+cu el produce un clip real; fără el produce un **„poster short"** — o imagine verticală
+marcată `ready`, pe care feed-ul o redă ca un card. Ambele intră în `draft`.
+
+**Alternative.** Amânarea întregii funcționalități până apar cheile — evenimentele fără
+video vertical (adică majoritatea) rămân în continuare invizibile în feed.
+
+**Impact.** Feed-ul se poate umple azi. Când apar cheile Shotstack, aceleași evenimente
+încep să producă clipuri reale, fără altă schimbare.
+
+---
+
+## D-050 — O pană de render cade pe poster short, nu pe eroare
+
+**Context.** Apelul de render poate eșua (rețea, cotă, mediu greșit).
+
+**Alegere.** `try/catch`: la eșec, short-ul e marcat `ready` și rămâne poster short.
+
+**Alternative.** Aruncarea excepției — jobul intră în retry și lasă în coada de curatoriere
+un short care nu poate fi redat.
+
+**Impact.** Testat cu un răspuns 500 de la Shotstack: short-ul rămâne redabil.
+
+---
+
+## D-051 — Captions: providerul întâi, transcrierea abia apoi, altfel nimic
+
+**Context.** B6 sugerează auto-captions de la provider sau transcriere (Whisper/AssemblyAI).
+
+**Alegere.** Ordine explicită: (1) ce are deja providerul video — gratis, fără serviciu în
+plus; (2) un driver de transcriere, dacă e configurat; (3) nimic.
+
+**De ce contează (3).** Subtitrările sunt un plus de accesibilitate, nu o precondiție de
+publicare. Un short fără captions se publică; unul blocat de un serviciu de transcriere
+indisponibil nu ajunge nicăieri.
+
+**Impact.** `TODO(owner)` pentru driverul de transcriere; cheile de config există deja.
+
+---
+
+## D-052 — Analytics-ul organizatorului citește rollup-ul, nu telemetria brută
+
+**Context.** B5 cere o pagină cu pâlnie, retenție și top shorts.
+
+**Alegere.** `short_analytics_daily`, populat zilnic. Pagina nu atinge `short_events`.
+
+**De ce.** Rândurile brute sunt tăiate de retenție (D6) — o pagină construită pe ele ar
+arăta din ce în ce mai puțin în timp — și ar deveni mai lentă în fiecare săptămână.
+
+**Impact.** Pagina are cost constant. Ratele (view rate, CTR, CVR) se calculează la
+afișare, nu se stochează: s-ar învechi în clipa în care se mișcă oricare parte a raportului.
+
+---
+
+## D-053 — Payload-ul serializează captions doar când relația e încărcată
+
+**Context.** Feed-ul întoarce 10 short-uri pe pagină.
+
+**Alegere.** `ShortPayload` verifică `relationLoaded('captions')`; `baseQuery()` le
+eager-loadează.
+
+**Alternative.** Accesarea directă a relației — un N+1 ascuns în serializator, exact genul
+care nu se vede la un test cu un singur short.
+
+**Impact.** Testat în ambele direcții (încărcat → track-uri, neîncărcat → gol).

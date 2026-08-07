@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Shorts;
 use App\Filament\Resources\Shorts\Pages\CreateShort;
 use App\Filament\Resources\Shorts\Pages\EditShort;
 use App\Filament\Resources\Shorts\Pages\ListShorts;
+use App\Jobs\Shorts\GenerateCaptionsJob;
+use App\Jobs\Shorts\GenerateShareCardJob;
 use App\Jobs\Shorts\IngestShortJob;
 use App\Models\Artist;
 use App\Models\Event;
@@ -365,6 +367,28 @@ class ShortResource extends Resource
                             ->title('Fetching — the short fills in shortly')
                             ->info()
                             ->send();
+                    }),
+
+                // Subtitles are an enhancement, never a publishing blocker — this
+                // just asks for them, and the short ships either way.
+                Action::make('captions')
+                    ->label('Generate captions')
+                    ->icon('heroicon-o-language')
+                    ->visible(fn (Short $record) => $record->ready && $record->provider_asset_id)
+                    ->action(function (Short $record) {
+                        GenerateCaptionsJob::dispatch($record->id);
+
+                        Notification::make()->title('Captions requested')->info()->send();
+                    }),
+
+                Action::make('share_card')
+                    ->label('Rebuild share card')
+                    ->icon('heroicon-o-photo')
+                    ->visible(fn (Short $record) => (bool) $record->poster_path)
+                    ->action(function (Short $record) {
+                        GenerateShareCardJob::dispatch($record->id);
+
+                        Notification::make()->title('Share card queued')->info()->send();
                     }),
 
                 EditAction::make(),

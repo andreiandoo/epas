@@ -196,6 +196,29 @@ return [
         'oembed_token' => env('META_OEMBED_TOKEN'),
     ],
 
+    /*
+    | Managed video rendering — turns an event's images into a vertical clip (B3).
+    |
+    | Without credentials the container binds a null renderer and auto-generation
+    | falls back to the "poster short" path: a still-image short the feed plays as
+    | a card. That fills the feed today; a real renderer changes nothing else.
+    */
+    'render' => [
+        'driver' => env('RENDER_DRIVER', 'shotstack'),
+        'api_key' => env('SHOTSTACK_API_KEY'),
+        'environment' => env('SHOTSTACK_ENV', 'stage'),
+        'webhook_secret' => env('RENDER_WEBHOOK_SECRET'),
+    ],
+
+    /*
+    | Automatic captions (B6). Without a driver, GenerateCaptionsJob asks the
+    | video provider for captions it may already have and otherwise does nothing.
+    */
+    'captions' => [
+        'driver' => env('CAPTIONS_DRIVER'),
+        'api_key' => env('CAPTIONS_API_KEY'),
+    ],
+
     'bunny' => [
         'stream_library_id'     => env('BUNNY_STREAM_LIBRARY_ID'),
         'stream_api_key'        => env('BUNNY_STREAM_API_KEY'),

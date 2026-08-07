@@ -91,6 +91,10 @@ return new class extends Migration
                 $table->date('event_date')->nullable();
                 // Stamped by Event::booted() on create.
                 $table->string('event_series')->nullable();
+                // Image sources the auto-generation job builds a short from (B3).
+                $table->string('poster_url')->nullable();
+                $table->string('hero_image_url')->nullable();
+                $table->json('gallery')->nullable();
                 $table->timestamps();
             });
         }

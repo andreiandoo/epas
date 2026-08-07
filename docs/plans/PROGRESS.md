@@ -29,9 +29,11 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   canalele YouTube ale artiștilor, cu regula „niciodată re-host" respectată.
 - **Faza 7 (Val 2)** — trending pe velocitate, curba de retenție, prune de telemetrie,
   seen-store durabil + explorare în ranker, nudge-uri comportamentale opt-in.
-  **81 de teste, 216 aserțiuni, toate verzi.**
+- **Faza 8** — auto-generare din media evenimentului (cu „poster short" ca MVP),
+  captions, și pagina de analytics pentru organizator cu pâlnie + retenție.
+  **94 de teste, 247 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 8 — auto-gen din media (B3), captions (B6), analytics organizator (B5).
+**Urmează.** Faza 9 — collections (B7) + stories (B8).
 
 **Blocaje / de știut.**
 
@@ -299,11 +301,41 @@ rezolvă din container, deci devenea o eroare de boot pe orice mediu fără chei
       supraviețuire la prune, explorare, prag de intenție, deja-cumpărat, opt-in,
       cooldown, default-uri de preferințe)
 
-## Faza 8 — Auto-gen + captions + analytics organizator ⏳
+## Faza 8 — Auto-gen + captions + analytics organizator ✅
 
-- [ ] B3 `VideoRenderer` + `GenerateShortFromEventJob` (MVP „poster short")
-- [ ] B6 `short_captions` + `GenerateCaptionsJob`
-- [ ] B5 `short_analytics_daily` + pagină Filament tenant
+**B3 — auto-generare din media existentă**
+- [x] Contract `VideoRenderer` + `ShotstackRenderer` (timeline 1080×1920, Ken-Burns,
+      titlu) + `NullVideoRenderer`
+- [x] `GenerateShortFromEventJob` — două moduri, decise de existența unui renderer:
+      clip vertical real, sau **„poster short"** (imagine redată ca un card în feed)
+- [x] Un renderer picat cade automat pe poster short — o pană de render nu are voie
+      să lase un short neredabil în coadă
+- [x] `render_job_id` — o re-rulare nu poate cere un al doilea render pentru același short
+- [x] Sare peste evenimentele care au deja un short; nu creează nimic fără imagini
+
+**B6 — captions**
+- [x] `short_captions` + `ShortCaption` (unic pe short+limbă)
+- [x] `GenerateCaptionsJob` — întâi ce are deja providerul video (gratis), apoi un
+      driver de transcriere, apoi nimic: subtitrările sunt un plus, niciodată un
+      blocaj la publicare
+- [x] Track-urile ajung în payload-ul de feed doar când relația e eager-loaded
+      (fără N+1 ascuns în serializator)
+- [x] Acțiune Filament „Generate captions"
+
+**B5 — analytics organizator**
+- [x] `short_analytics_daily` + `AggregateShortAnalyticsJob` — telemetrie + conversii
+      într-un singur rând pe zi; **stocat**, nu interogat live, fiindcă rândurile brute
+      din care e construit sunt tăiate de retenție
+- [x] Pagină Filament tenant `ShortsAnalytics`: pâlnie (afișare → vizionare → CTA →
+      vânzare), curbă de retenție pe decile, top shorts cu venit
+- [x] Rate calculate, nu stocate
+
+- [x] Teste: 13 (poster short, render job, fallback la pană, skip, fără imagini,
+      fallback de container, captions ×4, rollup zilnic, idempotență, webhook render)
+
+**TODO(owner):** cheile Shotstack lipsesc, deci calea de render real e neatinsă în
+practică — containerul leagă `NullVideoRenderer` și rulează poster short. Driverul de
+transcriere pentru captions e tot un `TODO(owner)`.
 
 ## Faza 9 — Collections + Stories ⏳
 

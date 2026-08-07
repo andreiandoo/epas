@@ -6,7 +6,10 @@ use App\Services\Push\LogPushSender;
 use App\Services\Push\PushSender;
 use App\Services\Video\BunnyStreamProvider;
 use App\Services\Video\NullVideoProvider;
+use App\Services\Video\NullVideoRenderer;
+use App\Services\Video\ShotstackRenderer;
 use App\Services\Video\VideoProvider;
+use App\Services\Video\VideoRenderer;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -40,6 +43,22 @@ class VideoServiceProvider extends ServiceProvider
             };
 
             return $provider->isConfigured() ? $provider : new NullVideoProvider;
+        });
+
+        // Render service (B3). Same fallback stance as the provider: without
+        // credentials the container binds the null renderer, and auto-generation
+        // degrades to the "poster short" path instead of failing.
+        $this->app->singleton(VideoRenderer::class, function () {
+            $renderer = match (config('services.render.driver')) {
+                'shotstack' => new ShotstackRenderer(
+                    apiKey: (string) config('services.render.api_key', ''),
+                    environment: (string) config('services.render.environment', 'stage'),
+                    webhookSecret: (string) config('services.render.webhook_secret', ''),
+                ),
+                default => new NullVideoRenderer,
+            };
+
+            return $renderer->isConfigured() ? $renderer : new NullVideoRenderer;
         });
 
         // Named binding so webhook routes can address a specific provider even

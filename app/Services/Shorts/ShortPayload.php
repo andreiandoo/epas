@@ -68,6 +68,15 @@ class ShortPayload
             'cta' => $this->cta($short),
             // Drives content warnings and the "no autoplay" opt-out (D7/D10).
             'content_flags' => $short->content_flags ?? [],
+            // Subtitle tracks for <track kind="subtitles"> (B6). Only serialised
+            // when the relation was loaded, so the feed never N+1s for them.
+            'captions' => $short->relationLoaded('captions')
+                ? $short->captions->map(fn ($caption) => [
+                    'language' => $caption->language,
+                    'url' => $caption->url,
+                    'auto_generated' => (bool) $caption->auto_generated,
+                ])->values()->all()
+                : [],
             'stats' => [
                 'likes' => (int) $short->likes,
                 'views' => (int) $short->views,

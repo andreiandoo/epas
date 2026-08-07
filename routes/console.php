@@ -1106,3 +1106,10 @@ Schedule::job(new \App\Jobs\Shorts\EvaluateBehaviouralTriggersJob)
     ->cron('0 11,18 * * *')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
+
+// Daily per-short rollup for the organiser analytics page. Stored rather than
+// queried live, because the raw telemetry it is built from gets pruned.
+Schedule::job(new \App\Jobs\Shorts\AggregateShortAnalyticsJob)
+    ->dailyAt('03:50')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();

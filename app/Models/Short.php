@@ -80,6 +80,8 @@ class Short extends Model
         'share_card_path',
         'blurhash',
         'content_flags',
+        'is_generated',
+        'render_job_id',
     ];
 
     protected $casts = [
@@ -87,6 +89,8 @@ class Short extends Model
         'content_flags' => 'array',
         'ready' => 'boolean',
         'is_featured' => 'boolean',
+        'is_generated' => 'boolean',
+        'trending_score' => 'decimal:3',
         'duration' => 'integer',
         'width' => 'integer',
         'height' => 'integer',
@@ -159,6 +163,11 @@ class Short extends Model
     public function reminders(): HasMany
     {
         return $this->hasMany(ShortReminder::class);
+    }
+
+    public function captions(): HasMany
+    {
+        return $this->hasMany(ShortCaption::class);
     }
 
     /*

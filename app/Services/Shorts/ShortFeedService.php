@@ -149,7 +149,7 @@ class ShortFeedService
             ->published()
             // event.venue is loaded because the geo signal and the "nearby"
             // segment both read the city off the venue.
-            ->with(['owner', 'event.venue']);
+            ->with(['owner', 'event.venue', 'captions']);
 
         // A marketplace only ever sees its own shorts plus the editorial ones
         // that were never bound to a marketplace.
