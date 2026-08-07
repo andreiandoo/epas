@@ -192,3 +192,98 @@ există conflicte de rutare.
 apară în CI, nu în producție.
 
 **Impact.** Un test ieftin care prinde derapajele de API Filament la fiecare upgrade.
+
+---
+
+## D-012 — App-ul mobil e în repo; feed live cu fallback pe prototip
+
+**Context.** `shorts-START-PROMPT.md` presupunea că app-ul mobil s-ar putea să nu fie în
+repo („dacă nu ai încă app-ul mobil în acest repo, livrează componentele ca modul
+separat"). Este: `tics-app/mobile` (React 18 + Capacitor 6 + Vite), cu un ecran
+`Shorts.tsx` („Pe val") deja existent — dar construit integral pe datasetul prototipului
+(`EV`/`ART`/`VEN`), fără video, fără API, fără telemetrie.
+
+**Alegere.** Am construit feed-ul live ca modul propriu (`features/client/shorts/`) și l-am
+pus în fața celui din prototip: `Shorts.tsx` randează `<LiveShorts fallback={<PrototypeShorts/>}>`.
+Când EPAS nu are încă short-uri publicate sau e indisponibil, se vede feed-ul din prototip.
+
+**Alternative.** (a) Înlocuirea ecranului — pierdem fallback-ul și ecranul devine gol pe
+tenanții demo. (b) Modul separat nefolosit — livrare moartă.
+
+**Impact.** Exact convenția deja stabilită în `src/api/tenantClient.ts` („efectiv cablat
+la EPAS, dar rămâne plin când sursa e goală"). Zero regresie vizuală.
+
+---
+
+## D-013 — hls.js prin import dinamic, nu în bundle-ul de pornire
+
+**Context.** hls.js are ~163 kB gzip. `shorts.md` §7 îl cere pentru Android/WebView; iOS
+redă HLS nativ.
+
+**Alegere.** `await import('hls.js')` în `ShortVideo`, apelat doar când
+`video.canPlayType('application/vnd.apple.mpegurl')` e gol. Vite îl scoate într-un chunk
+separat (`hls-*.js`), încărcat la prima deschidere a feed-ului.
+
+**Alternative.** Import static — 163 kB în plus la fiecare pornire, inclusiv pentru
+utilizatorii care nu deschid niciodată feed-ul, și inclusiv pe iOS unde e cod mort.
+
+**Impact.** Bundle-ul de pornire rămâne neschimbat. Verificat: build-ul produce
+`hls-BhNU2oyu.js` separat de `index-*.js`.
+
+---
+
+## D-014 — Detecția HLS prin `canPlayType`, nu prin user agent
+
+**Context.** Trebuie să știm dacă platforma redă HLS nativ.
+
+**Alegere.** `video.canPlayType('application/vnd.apple.mpegurl') !== ''`.
+
+**Alternative.** Sniffing de user agent — se rupe la fiecare schimbare de WebView și
+minte în modurile desktop.
+
+**Impact.** Corect pe iOS, Android WebView și browser desktop, fără listă de excepții.
+
+---
+
+## D-015 — Cel mult 3 elemente `<video>` montate simultan
+
+**Context.** Un feed infinit cu `<video>` per card scurge memorie în WebView.
+
+**Alegere.** `PRELOAD_RADIUS = 1`: doar short-ul activ și vecinii imediați montează
+`ShortVideo`; restul afișează posterul. Vecinii au `preloadOnly`, deci încarcă dar nu
+redau.
+
+**Impact.** Memoria rămâne constantă indiferent cât se derulează. Costul: un scroll foarte
+rapid poate ajunge pe un card care încă încarcă — acoperit de poster, nu de ecran negru.
+
+---
+
+## D-016 — Telemetria pleacă pe `sendBeacon` la moartea paginii
+
+**Context.** Cel mai valoros eveniment (`watch_ratio` la ieșire) e și cel mai expus
+pierderii: se produce exact când utilizatorul părăsește ecranul sau trimite app-ul în
+fundal.
+
+**Alegere.** Coada se golește la `visibilitychange`→hidden și la `pagehide` prin
+`navigator.sendBeacon`; în rest `fetch` cu `keepalive`. Toate erorile sunt înghițite —
+telemetria nu are voie să apară în fața utilizatorului.
+
+**Impact.** Loturile finale ajung la server. Costul: `sendBeacon` nu poartă header de
+`Authorization`, deci ultimul lot e atribuit doar pe `session_id`. Acceptabil: evenimentele
+de identitate (like/save) sunt scrise oricum de server, nu de client.
+
+---
+
+## D-017 — Praguri de „view" oglindite client ↔ server
+
+**Context.** `config/shorts.php` respinge view-urile sub 2s / 25%.
+
+**Alegere.** Clientul folosește aceleași praguri și trimite `skip` în locul unui `view`
+sub prag. Serverul revalidează oricum.
+
+**Alternative.** Client permisiv — ar genera trafic pentru evenimente pe care serverul
+le aruncă oricum.
+
+**Impact.** Mai puțină bandă irosită. Dacă pragurile se schimbă în config, constantele din
+`LiveShorts.tsx` trebuie actualizate — `TODO(owner)`: dacă divergența devine o problemă,
+expune pragurile prin `/tenant-client/config`.

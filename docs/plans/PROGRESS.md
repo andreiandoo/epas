@@ -7,13 +7,20 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 
 ## Rezumat pentru owner
 
-**Gata.** Faza 1 — fundația completă: migrațiile `shorts` / `short_likes` / `short_saves` /
-`short_events`, modelul `Short` (polimorf, fără tenant scope global), abstracția
-`VideoProvider` + `BunnyStreamProvider` (Partea C) cu chei placeholder, resursa Filament
-centrală în grupul „Core", API-ul de feed cu paginare cursor, telemetria batched și
-toggle-urile like/save. **25 de teste, 81 de aserțiuni, toate verzi.**
+**Gata.**
 
-**Urmează.** Faza 2 (modul client de redare verticală), apoi Valul 1 (D1/D2/D9/D11/D10).
+- **Faza 1** — fundația completă: migrațiile `shorts` / `short_likes` / `short_saves` /
+  `short_events`, modelul `Short` (polimorf, fără tenant scope global), abstracția
+  `VideoProvider` + `BunnyStreamProvider` (Partea C) cu chei placeholder, resursa Filament
+  centrală în grupul „Core", API-ul de feed cu paginare cursor, telemetria batched și
+  toggle-urile like/save. **25 de teste, 81 de aserțiuni, toate verzi.**
+- **Faza 2** — redarea pe mobil, în `tics-app/mobile` (app-ul **este** în repo): feed
+  vertical real cu HLS, autoplay, preload, overlay, like/save/share și telemetrie batched,
+  cu fallback pe feed-ul din prototip. `tsc` + `vite build` verzi.
+  Detalii: `docs/plans/shorts-mobile.md`.
+
+**Urmează.** Valul 1 (D1 share/referral, D2 remind/drop, D9 UX player, D11 gamification,
+D10 accesibilitate).
 
 **Blocaje / de știut.**
 
@@ -79,14 +86,31 @@ POST api/webhooks/video/{provider}
 
 ---
 
-## Faza 2 — Redare mobil ⏳
+## Faza 2 — Redare mobil ✅
 
-- [ ] Pager vertical + HLS (hls.js pe Android/WebView, nativ pe iOS)
-- [ ] Autoplay la intrare în viewport, pauză la ieșire, un singur „unmuted"
-- [ ] Preload N+1/N+2, dezmontarea celor îndepărtate
-- [ ] Overlay: caption, hashtags, owner, like/save/share, CTA
-- [ ] Telemetrie batched din client
-- [ ] Documentație de integrare (app-ul mobil nu e în acest repo)
+App-ul mobil **este** în repo: `tics-app/mobile` (React 18 + Capacitor 6 + Vite).
+Detalii complete: `docs/plans/shorts-mobile.md`.
+
+- [x] `src/api/shorts.ts` — client tipat peste endpoint-urile din Faza 1
+- [x] `useShortsFeed` — paginare cursor + prefetch cu 3 short-uri înainte de capăt
+- [x] `useShortTelemetry` — coadă batched, flush la 5s / 25 evenimente / fundal / demontare,
+      `sendBeacon` la moartea paginii
+- [x] `ShortVideo` — hls.js pe Android/WebView (import dinamic → chunk separat), HLS nativ
+      pe iOS, buffer mic (12s) + `capLevelToPlayerSize`
+- [x] Autoplay muted la intrare în viewport, pauză la ieșire, un singur „unmuted" pe feed,
+      fallback pe buton de play când politica de autoplay refuză
+- [x] Preload ±1 ecran; restul nu montează `<video>`
+- [x] `IntersectionObserver` (prag 0.7) pentru short-ul activ
+- [x] Overlay: owner, titlu, caption, hashtags, music credit, CTA · rail like/save/share
+- [x] Telemetrie: impression / view / skip / complete / share / cta_click cu
+      `watch_ms` + `watch_ratio`, praguri identice cu serverul
+- [x] `prefers-reduced-motion` → fără autoplay, poster + play (parte din D10)
+- [x] Feed live cu fallback pe feed-ul din prototip (convenția din `tenantClient.ts`)
+- [x] `tsc --noEmit` + `vite build` verzi
+
+**TODO(owner) rămas pe mobil:** tokenul de client (app-ul e încă pe identitate mock),
+tab dedicat cu segmented control, randarea `embed_html` pentru sursele externe (Faza 6),
+double-tap = like și swipe-up pe CTA.
 
 ## Faza 3 — Val 1 (creștere ieftină) ⏳
 

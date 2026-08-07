@@ -1,0 +1,223 @@
+/* =========================================================
+   Strat de date SHORTS — API-ul real din EPAS (docs/plans/shorts.md §5).
+
+   Endpointuri:
+     GET  /api/tenant-client/shorts?feed=&cursor=&limit=
+     GET  /api/tenant-client/shorts/{id}
+     GET  /api/tenant-client/events/{slug}/shorts
+     POST /api/tenant-client/shorts/events           (batched, accepta guest)
+     POST /api/marketplace-client/customer/shorts/{id}/like
+     POST /api/marketplace-client/customer/shorts/{id}/save
+
+   Citirile sunt publice: feed-ul se poate parcurge inainte de login. Cand
+   exista token, payload-ul vine imbogatit cu starea `viewer` (liked/saved).
+
+   Ca in tenantClient.ts: daca sursa e goala sau indisponibila, apelantul
+   decide fallback-ul — aici nu inventam date.
+   ========================================================= */
+import { API_ROOT } from './tenantClient';
+
+/* ---------- forma din API (docs/plans/shorts.md §5) ---------- */
+export type ShortSource = 'upload' | 'youtube' | 'tiktok' | 'instagram' | 'facebook';
+
+export type ShortFeedSegment = 'for_you' | 'featured' | 'nearby' | 'following' | 'event' | 'artist';
+
+export type ShortEventType =
+  | 'impression'
+  | 'view'
+  | 'complete'
+  | 'like'
+  | 'unlike'
+  | 'save'
+  | 'unsave'
+  | 'share'
+  | 'cta_click'
+  | 'skip';
+
+export type ApiShort = {
+  id: number;
+  source: ShortSource;
+  feed: ShortFeedSegment | null;
+  playback: { hls_url: string | null; poster_url: string | null };
+  embed_html: string | null;
+  source_url: string | null;
+  duration: number | null;
+  aspect: string;
+  title: string | null;
+  caption: string | null;
+  hashtags: string[];
+  language: string | null;
+  music_credit: string | null;
+  owner: { type: string | null; id: number; slug: string | null; name: string | null } | null;
+  event: { id: number; slug: string | null; title: string | null; date: string | null } | null;
+  cta: {
+    type: 'buy_tickets' | 'open_event' | 'open_artist' | 'external';
+    label: string | null;
+    url: string | null;
+    ticket_type_id: number | null;
+    promo_code: string | null;
+  } | null;
+  stats: { likes: number; views: number; shares: number };
+  viewer: { liked: boolean; saved: boolean };
+};
+
+export type ShortsPage = {
+  feed: ShortFeedSegment;
+  items: ApiShort[];
+  next_cursor: string | null;
+};
+
+/** Un eveniment de telemetrie, exact cum il asteapta POST shorts/events. */
+export type ShortTelemetryEvent = {
+  short_id: number;
+  type: ShortEventType;
+  watch_ms?: number;
+  watch_ratio?: number;
+  feed?: ShortFeedSegment | null;
+  meta?: Record<string, unknown>;
+};
+
+/**
+ * Tokenul de `MarketplaceCustomer`.
+ *
+ * TODO(owner): app-ul inca ruleaza pe identitate mock (`api/client.ts` are
+ * USE_MOCK=true), deci nimeni nu apeleaza inca asta si feed-ul merge ca guest —
+ * corect prin design: citirile sunt publice, doar like/save cer cont. Cand
+ * apare loginul real de client, cheama setShortsToken() in acelasi loc in care
+ * se cheama setToken() din api/client.ts.
+ */
+let authToken: string | null = null;
+export const setShortsToken = (token: string | null) => {
+  authToken = token;
+};
+
+/** Sesiune anonima, ca telemetria de guest sa poata fi deduplicata pe device. */
+const SESSION_KEY = 'tixello.shorts.session';
+function sessionId(): string {
+  try {
+    const existing = localStorage.getItem(SESSION_KEY);
+    if (existing) return existing;
+    const fresh = `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(SESSION_KEY, fresh);
+    return fresh;
+  } catch {
+    // Storage blocat (modul privat / WebView restrictiv) — sesiune volatila.
+    return `s-${Date.now().toString(36)}`;
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(API_ROOT + path, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : null),
+      ...init?.headers,
+    },
+  });
+
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
+  return (await res.json()) as T;
+}
+
+type Envelope<T> = { success: boolean; data: T };
+
+/* ---------- citiri ---------- */
+
+export async function fetchShortsFeed(opts: {
+  feed?: ShortFeedSegment;
+  cursor?: string | null;
+  limit?: number;
+  tenant?: number;
+  signal?: AbortSignal;
+} = {}): Promise<ShortsPage> {
+  const params = new URLSearchParams();
+  if (opts.feed) params.set('feed', opts.feed);
+  if (opts.cursor) params.set('cursor', opts.cursor);
+  if (opts.limit) params.set('limit', String(opts.limit));
+  if (opts.tenant) params.set('tenant', String(opts.tenant));
+
+  const query = params.toString();
+  const body = await request<Envelope<ShortsPage>>(`/tenant-client/shorts${query ? `?${query}` : ''}`, {
+    signal: opts.signal,
+  });
+
+  return body.data;
+}
+
+export async function fetchShort(id: number): Promise<ApiShort> {
+  const body = await request<Envelope<ApiShort>>(`/tenant-client/shorts/${id}`);
+  return body.data;
+}
+
+export async function fetchEventShorts(slug: string, cursor?: string | null): Promise<ShortsPage> {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  const body = await request<Envelope<ShortsPage>>(`/tenant-client/events/${encodeURIComponent(slug)}/shorts${query}`);
+  return body.data;
+}
+
+/* ---------- telemetrie ---------- */
+
+/**
+ * Trimite un lot de evenimente. Fire-and-forget prin design: telemetria nu
+ * trebuie sa poata strica redarea, deci esecurile sunt inghitite.
+ *
+ * Foloseste sendBeacon cand pagina moare (ultimul lot la inchiderea app-ului),
+ * altfel fetch normal.
+ */
+export async function sendShortEvents(events: ShortTelemetryEvent[], useBeacon = false): Promise<void> {
+  if (events.length === 0) return;
+
+  const payload = JSON.stringify({ session_id: sessionId(), events });
+  const url = `${API_ROOT}/tenant-client/shorts/events`;
+
+  if (useBeacon && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    try {
+      navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+      return;
+    } catch {
+      // Cade pe fetch mai jos.
+    }
+  }
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : null),
+      },
+      body: payload,
+    });
+  } catch {
+    // Telemetria nu are voie sa arunce in fata utilizatorului.
+  }
+}
+
+/* ---------- interactiuni (necesita token) ---------- */
+
+export type ToggleResult = { short_id: number; active: boolean; count: number };
+
+export async function toggleShortLike(id: number, feed?: ShortFeedSegment | null): Promise<ToggleResult> {
+  const body = await request<Envelope<ToggleResult>>(`/marketplace-client/customer/shorts/${id}/like`, {
+    method: 'POST',
+    body: JSON.stringify({ feed }),
+  });
+
+  return body.data;
+}
+
+export async function toggleShortSave(id: number, feed?: ShortFeedSegment | null): Promise<ToggleResult> {
+  const body = await request<Envelope<ToggleResult>>(`/marketplace-client/customer/shorts/${id}/save`, {
+    method: 'POST',
+    body: JSON.stringify({ feed }),
+  });
+
+  return body.data;
+}
+
+export const isAuthenticated = () => authToken !== null;

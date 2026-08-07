@@ -1,16 +1,22 @@
 /* =========================================================
-   PE VAL (shorts) — port 1:1 al lui S.shorts() + buildFeed() + shortItem()
-   (client-app.html, liniile 1177-1210).
+   PE VAL (shorts).
 
-   Feed vertical cu snap, trei tipuri de card: eveniment (video / galerie /
-   foto), artist si locatie. Ordinea e recalculata la fiecare intrare, cu
-   scoruri influentate de preferintele utilizatorului — exact ca buildFeed().
+   Doua straturi, in ordinea din tenantClient.ts:
+
+   1. FEED LIVE — <LiveShorts>, cablat la /api/tenant-client/shorts: video real
+      prin HLS, autoplay, preload, like/save si telemetrie
+      (docs/plans/shorts.md §5 + §7).
+   2. FALLBACK — feed-ul din prototip de mai jos (eveniment / artist / locatie,
+      pe gradienti), folosit cand EPAS nu are inca short-uri publicate sau e
+      indisponibil. Ecranul nu trebuie sa fie niciodata gol: un ecran gol nu ne
+      spune nimic despre design.
    ========================================================= */
 import { useMemo, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ART, EV, I, VEN, bgv, galFor, money, poster } from '../../../mock/prototype';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
+import { LiveShorts } from '../shorts/LiveShorts';
 
 type Ev = Record<string, any>;
 
@@ -87,6 +93,11 @@ function Act({ children, label, onClick }: { children: React.ReactNode; label?: 
 }
 
 export function Shorts() {
+  return <LiveShorts feed="for_you" fallback={<PrototypeShorts />} />;
+}
+
+/** Feed-ul din prototip — fallback cand EPAS n-are inca short-uri publicate. */
+function PrototypeShorts() {
   const { go } = useNav();
   const prefsSel = useClient((s) => s.prefsSel);
   const toggleSaved = useClient((s) => s.toggleSaved);
