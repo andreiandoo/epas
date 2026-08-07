@@ -7,53 +7,69 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 
 ## Rezumat pentru owner
 
-**Gata.**
+**Toate cele 10 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
+`claude/shorts`.** 120 de teste, 316 aserțiuni, toate verzi. 11 comenzi programate,
+33 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
 
-- **Faza 1** — fundația completă: migrațiile `shorts` / `short_likes` / `short_saves` /
-  `short_events`, modelul `Short` (polimorf, fără tenant scope global), abstracția
-  `VideoProvider` + `BunnyStreamProvider` (Partea C) cu chei placeholder, resursa Filament
-  centrală în grupul „Core", API-ul de feed cu paginare cursor, telemetria batched și
-  toggle-urile like/save. **25 de teste, 81 de aserțiuni, toate verzi.**
-- **Faza 2** — redarea pe mobil, în `tics-app/mobile` (app-ul **este** în repo): feed
-  vertical real cu HLS, autoplay, preload, overlay, like/save/share și telemetrie batched,
-  cu fallback pe feed-ul din prototip. `tsc` + `vite build` verzi.
-  Detalii: `docs/plans/shorts-mobile.md`.
-- **Faza 3 (Val 1)** — creștere ieftină: share cu referral + landing web (D1), remind/drop
-  cu countdown (D2), UX de player cu blurhash/data-saver (D9), gamification cu plafon
-  anti-abuz (D11), accesibilitate (D10).
-- **Faza 4 (Shoppable, B1)** — CTA cu bilet + promo, `orders.source_short_id`/`source_feed`,
-  atribuire last-touch idempotentă cu reversare la refund, CTR/CVR/venit în admin.
-- **Faza 5 (B2)** — graf de urmărire polimorf, ranker „For You" explicabil cu ponderi în
-  config, segmentele `following` / `nearby`, geamăn tenant în Filament cu moderare.
-- **Faza 6** — ingestie externă prin link (YouTube / TikTok / Meta) + seed automat din
-  canalele YouTube ale artiștilor, cu regula „niciodată re-host" respectată.
-- **Faza 7 (Val 2)** — trending pe velocitate, curba de retenție, prune de telemetrie,
-  seen-store durabil + explorare în ranker, nudge-uri comportamentale opt-in.
-- **Faza 8** — auto-generare din media evenimentului (cu „poster short" ca MVP),
-  captions, și pagina de analytics pentru organizator cu pâlnie + retenție.
-- **Faza 9** — colecții editoriale, stories efemere (grupate pe owner, excluse din
-  feed-ul principal) și igiena feed-ului: expirare + detecția embed-urilor moarte.
-- **Faza 10 (Val 3)** — shorts promovate cu pacing și frequency capping, drepturi și
-  licențiere (teritoriu + age gate), guardrails de cost Bunny, UGC de la participanți
-  verificați cu moderare, A/B pe cover. **120 de teste, 316 aserțiuni, toate verzi.**
+| Fază | Ce a intrat |
+|---|---|
+| 1 | Fundație: migrații, model `Short`, `VideoProvider` + Bunny, resursă Filament „Core", feed cursor, telemetrie |
+| 2 | Redare mobil: feed vertical HLS cu autoplay, preload, overlay, like/save/share |
+| 3 | Val 1: share+referral+landing, remind/drop, blurhash + data-saver, gamification, accesibilitate |
+| 4 | Shoppable: CTA cu bilet + promo, atribuire last-touch, CTR/CVR/venit |
+| 5 | Following polimorf + ranker „For You" explicabil + geamăn tenant |
+| 6 | Ingestie externă (YouTube/TikTok/Meta) + seed automat din canale de artiști |
+| 7 | Val 2: trending pe velocitate, retenție, prune telemetrie, seen-store + explorare, nudge-uri |
+| 8 | Auto-gen din media evenimentului, captions, analytics organizator |
+| 9 | Colecții editoriale, stories efemere, igiena feed-ului |
+| 10 | Val 3: promovate cu pacing, drepturi/licențiere, guardrails de cost, UGC verificat, A/B cover |
 
-**Toate cele 10 faze din `shorts-START-PROMPT.md` sunt livrate.**
+### Ce trebuie făcut de tine înainte de producție
 
-**Blocaje / de știut.**
+1. **Rulează migrațiile Shorts pe un dump de dev PostgreSQL.** Istoricul de 747 de
+   migrații nu se poate reda pe SQLite (o migrație preexistentă,
+   `2025_10_31_200100_events_translatables`, face `DROP COLUMN` pe o coloană indexată),
+   iar containerul n-a avut PostgreSQL, MySQL sau Docker. Migrațiile Shorts sunt
+   verificate izolat, pe o schemă redusă (D-002). **Ăsta e singurul lucru din listă
+   care poate ascunde o surpriză.**
+2. **Bunny Stream** — pașii din `shorts.md` §C0 + cheile în `.env`. Fără ele containerul
+   cade pe `NullVideoProvider`: dev/CI pornesc, feed-ul servește shorts externe și
+   self-hosted, dar upload-ul nativ răspunde `503`. Confirmă și schema exactă de token
+   pe pull zone (`TODO(owner)` în `BunnyStreamProvider::sign()`).
+3. **Ultimul pas al atribuirii de conversii** — `CheckoutController` trebuie să treacă
+   `source_short_id` / `source_feed` din payload în `Order::create()`. Coloanele sunt
+   `fillable` și observerul e gata; n-am atins controllerul (1700+ linii de flux de
+   plată real) fără să pot rula un checkout end-to-end (D-031).
+4. **Layer de push** — `PushSender` are azi doar `LogPushSender` (fiecare notificare e
+   logată cu payload complet, deci logica de declanșare e verificabilă). D2 și D12 devin
+   reale în clipa în care legi un transport FCM/APNs.
+5. **Puntea `MarketplaceCustomer ↔ Customer`** (`friends-social.md` §0) — punctele din
+   gamification stau marketplace-side până apare coloana de legătură; după aceea curg
+   singure în ledgerul real, fără schimbări la call-site.
+6. **Opțional:** chei Shotstack (altfel auto-generarea produce „poster shorts"), token
+   Meta oEmbed (altfel IG/FB raportează „neconectat"), driver de transcriere pentru
+   captions, partiționarea lunară a `short_events` (D-048).
 
-1. **Migrațiile nu pot fi verificate pe schema completă.** Istoricul de 747 de migrații
-   nu se poate reda pe SQLite (o migrație preexistentă, `2025_10_31_200100_events_translatables`,
-   face `DROP COLUMN` pe o coloană indexată — SQLite refuză), iar containerul nu are
-   PostgreSQL, MySQL sau daemon Docker. Migrațiile Shorts sunt verificate izolat, pe o
-   schemă redusă (vezi D-002). → **`TODO(owner)`: rulează migrațiile Shorts o dată pe un
-   dump de dev PostgreSQL înainte de deploy.**
-2. **Cheile Bunny sunt placeholder** (gard: fără chei reale). Containerul cade pe
-   `NullVideoProvider` când nu sunt configurate — dev/CI pornesc, feed-ul servește shorts
-   externe și self-hosted. → `TODO(owner)`: pașii din `shorts.md` §C0 în dashboard-ul Bunny.
-3. **Schema exactă a token-ului Bunny** trebuie confirmată pe pull zone când apar cheile
-   reale (`TODO(owner)` marcat în `BunnyStreamProvider::sign()`).
-4. **Convenție obligatorie:** orice migrație Shorts nouă se numește
-   `<timestamp>_shorts_<descriere>.php` — altfel nu intră în schema de test (vezi D-002).
+### Convenție obligatorie
+
+Orice migrație Shorts nouă se numește `<timestamp>_shorts_<descriere>.php`. Sufixul
+`_shorts_` e cum le descoperă suita de teste — fără el, migrația nu intră în schema
+de test și testele trec fals (D-002).
+
+### Cum rulezi local
+
+```bash
+composer install
+npm install && npm run build            # manifestul Vite — altfel panoul Filament nu bootează
+cp .env.example .env && php artisan key:generate
+
+./scripts/shorts-dev-migrate.sh --reset # schemă de dev redusă
+php artisan test --filter=Shorts        # 120 de teste
+./vendor/bin/pint
+```
+
+Deciziile luate autonom sunt în `DECISIONS.md` (67 de intrări, fiecare cu context,
+alegere, alternative și impact).
 
 ---
 
