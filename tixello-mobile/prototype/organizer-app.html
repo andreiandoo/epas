@@ -1,0 +1,757 @@
+<title>Tixello — App Organizator</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#0a0f0d;--bg2:#0e1512;--surface:#121a17;--surface-2:#16211c;--surface-3:#1b2a24;--surface-solid:#101613;
+    --line:#20302a;--line-2:#2a3f37;
+    --text:#eaf3ef;--muted:#8ba69b;--faint:#5c766c;
+    --teal:#00c896;--teal-2:#22e0ac;--teal-soft:rgba(0,200,150,.14);--teal-line:rgba(0,200,150,.32);
+    --amber:#f5b301;--amber-soft:rgba(245,179,1,.14);
+    --red:#ff5a5f;--red-soft:rgba(255,90,95,.14);
+    --green:#22c55e;--green-2:#4ade80;--green-soft:rgba(34,197,94,.14);--green-line:rgba(34,197,94,.3);
+    --blue:#38bdf8;--blue-soft:rgba(56,189,248,.14);
+    --violet:#a78bfa;
+    --sh:0 18px 46px rgba(0,0,0,.5);
+    --grid:linear-gradient(rgba(0,200,150,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,150,.06) 1px,transparent 1px);
+    --font:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  html,body{margin:0;height:100%}
+  body{background:#050807;color:var(--text);font-family:var(--font);display:grid;place-items:center;min-height:100vh;overflow:hidden}
+  @media (prefers-color-scheme:light){body{background:#0a0f0d}}
+
+  /* iPhone frame */
+  .device{width:390px;height:844px;max-height:96vh;position:relative;border-radius:54px;background:#000;padding:12px;box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 2px #1c1c1e,0 0 0 6px #0a0a0b}
+  @media (max-height:880px){.device{transform:scale(calc(96vh / 868));transform-origin:center}}
+  .screenport{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--bg)}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:118px;height:34px;background:#000;border-radius:20px;z-index:60;pointer-events:none}
+  .vp{position:absolute;inset:0;overflow:hidden}
+  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);transition:transform .38s cubic-bezier(.32,.72,.28,1),opacity .3s;-webkit-overflow-scrolling:touch}
+  .screen::-webkit-scrollbar{display:none}
+  .enter-forward{transform:translateX(100%)}.enter-back{transform:translateX(-24%);opacity:.6}
+  .exit-forward{transform:translateX(-24%);opacity:.5}.exit-back{transform:translateX(100%)}
+  @media (prefers-reduced-motion:reduce){.screen{transition:opacity .2s}.enter-forward,.enter-back{transform:none;opacity:0}.exit-forward,.exit-back{opacity:0;transform:none}}
+
+  .sb{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 4px;font-size:14px;font-weight:600;color:var(--text);position:relative;z-index:5}
+  .sb .r{display:flex;gap:6px;align-items:center}
+  .grid{position:relative}
+  .pad{padding:0 18px}
+  .h1{font-size:25px;font-weight:700;letter-spacing:-.03em}
+  .h2{font-size:17px;font-weight:600;letter-spacing:-.02em}
+  .muted{color:var(--muted)}.faint{color:var(--faint)}
+  .label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  .row{display:flex;align-items:center}
+  .between{display:flex;align-items:center;justify-content:space-between}
+  .scroll-x{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.scroll-x::-webkit-scrollbar{display:none}
+
+  .topbar{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--bg) 78%,transparent);padding:46px 16px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .icon-btn{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line);color:var(--text);cursor:pointer;flex:none}
+  .icon-btn:active{transform:scale(.94)}
+  .icon-btn.teal{background:var(--teal-soft);border-color:var(--teal-line);color:var(--teal-2)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;position:relative}
+  .card.pad{padding:14px}
+  .cta{width:100%;border:0;border-radius:15px;background:var(--teal);color:#04120d;font-weight:700;font-size:15px;padding:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font)}
+  .cta:active{transform:scale(.985)}
+  .cta.ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--line-2)}
+  .cta.red{background:var(--red);color:#fff}
+  .cta.amber{background:var(--amber);color:#1a1400}
+  .cta:disabled{opacity:.4}
+  .chip{border:1px solid var(--line-2);background:var(--surface-2);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font);flex:none}
+  .chip.on{background:var(--teal-soft);border-color:var(--teal-line);color:var(--teal-2)}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;font-size:10.5px;font-weight:700;background:var(--surface-3);color:var(--muted)}
+  .badge.green{background:var(--green-soft);color:var(--green-2)}
+  .badge.amber{background:var(--amber-soft);color:var(--amber)}
+  .badge.red{background:var(--red-soft);color:var(--red)}
+  .badge.teal{background:var(--teal-soft);color:var(--teal-2)}
+  .dot{width:3px;height:3px;border-radius:50%;background:var(--faint);margin:0 6px;flex:none}
+  .livedot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(34,197,94,.5);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:13px}
+  .kpi .v{font-size:23px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
+  .kpi .k{font-size:11px;color:var(--muted);font-weight:500}
+  .kpi .t{font-size:10.5px;font-weight:700;margin-top:5px}
+  .prog{height:7px;border-radius:6px;background:var(--surface-3);overflow:hidden;margin-top:8px}
+  .prog>span{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--teal),var(--teal-2))}
+
+  .avatar{border-radius:13px;display:grid;place-items:center;font-weight:700;color:#04120d;flex:none}
+
+  .nav{position:absolute;left:0;right:0;bottom:0;height:84px;background:rgba(10,15,13,.86);backdrop-filter:blur(20px);border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-around;padding:11px 10px 0;z-index:40}
+  .nav .item{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--faint);cursor:pointer;font-size:10px;font-weight:600;flex:1}
+  .nav .item.on{color:var(--teal-2)}
+  .nav .fab{width:58px;height:58px;border-radius:20px;background:linear-gradient(150deg,var(--teal),#059f78);display:grid;place-items:center;color:#04120d;margin-top:-16px;box-shadow:0 12px 26px rgba(0,200,150,.4);cursor:pointer}
+  .navpad{height:96px}
+
+  .listitem{display:flex;gap:12px;align-items:center;padding:12px;border-radius:15px;background:var(--surface);border:1px solid var(--line)}
+  .stepper{display:flex;align-items:center;gap:0;background:var(--surface-3);border-radius:12px;overflow:hidden}
+  .stepper button{width:34px;height:34px;border:0;background:transparent;color:var(--text);font-size:18px;cursor:pointer;display:grid;place-items:center}
+  .stepper .n{min-width:26px;text-align:center;font-weight:700;font-size:15px}
+
+  /* scanner */
+  .scanview{position:relative;height:300px;border-radius:22px;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#0f1b17,#060a08);border:1px solid var(--line-2)}
+  .scanview .grid-fx{position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.5}
+  .reticle{position:absolute;top:50%;left:50%;width:190px;height:190px;transform:translate(-50%,-50%)}
+  .reticle span{position:absolute;width:34px;height:34px;border:3px solid var(--teal-2)}
+  .reticle span:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;border-radius:12px 0 0 0}
+  .reticle span:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;border-radius:0 12px 0 0}
+  .reticle span:nth-child(3){bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 12px}
+  .reticle span:nth-child(4){bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 12px 0}
+  .laser{position:absolute;left:50%;top:50%;width:186px;height:2px;transform:translate(-50%,-95px);background:linear-gradient(90deg,transparent,var(--teal-2),transparent);animation:scanmove 2.4s ease-in-out infinite;box-shadow:0 0 12px var(--teal-2)}
+  @keyframes scanmove{0%,100%{transform:translate(-50%,-95px)}50%{transform:translate(-50%,93px)}}
+  .flash{position:absolute;inset:0;background:var(--teal);opacity:0;pointer-events:none}
+  .flash.f{animation:flashk .5s}@keyframes flashk{0%{opacity:.42}100%{opacity:0}}
+  .flash.red{background:var(--red)}
+
+  .resultcard{border-radius:22px;padding:20px;text-align:center;animation:pop .34s cubic-bezier(.2,1.2,.35,1)}
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+  .resultcard .ic{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px}
+  .rc-ok{background:var(--green-soft);border:1px solid var(--green-line)}
+  .rc-dup{background:var(--amber-soft);border:1px solid rgba(245,179,1,.32)}
+  .rc-bad{background:var(--red-soft);border:1px solid rgba(255,90,95,.32)}
+
+  .bars{display:flex;align-items:flex-end;gap:6px;height:96px}
+  .bars .b{flex:1;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--teal-2),var(--teal));min-height:6px;position:relative}
+  .bars .b.mut{background:var(--surface-3)}
+  .donut{--p:0;width:118px;height:118px;border-radius:50%;background:conic-gradient(var(--teal) calc(var(--p)*1%),var(--surface-3) 0);display:grid;place-items:center}
+  .donut .in{width:88px;height:88px;border-radius:50%;background:var(--surface);display:grid;place-items:center;flex-direction:column;text-align:center}
+
+  #toast{position:absolute;left:50%;bottom:104px;transform:translateX(-50%) translateY(16px);background:#eaf3ef;color:#08110d;padding:12px 18px;border-radius:13px;font-size:13px;font-weight:600;box-shadow:var(--sh);opacity:0;transition:.28s;z-index:80;pointer-events:none;max-width:82%;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .sw{position:absolute;inset:0;background:rgba(4,7,6,.6);backdrop-filter:blur(3px);z-index:70;display:none;align-items:flex-end;opacity:0;transition:opacity .25s}
+  .sw.show{display:flex;opacity:1}
+  .sheet{width:100%;background:var(--bg2);border-radius:24px 24px 0 0;border-top:1px solid var(--line-2);padding:8px 18px calc(env(safe-area-inset-bottom) + 20px);transform:translateY(30px);transition:transform .3s;max-height:78%;overflow-y:auto}
+  .sw.show .sheet{transform:none}
+  .grab{width:38px;height:4px;border-radius:3px;background:var(--line-2);margin:8px auto 12px}
+  .field{display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:13px;padding:12px 13px}
+  .field input{border:0;background:transparent;color:var(--text);font-size:14px;font-family:var(--font);width:100%;outline:none}
+  .fade-up{animation:fu .45s both}@keyframes fu{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  .splash{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 10%,#0f231c,#050807);display:grid;place-items:center}
+  .splash .gridfx{position:absolute;inset:0;background-image:var(--grid);background-size:30px 30px;opacity:.5;mask:radial-gradient(circle at 50% 42%,#000,transparent 70%)}
+</style>
+
+<div class="device"><div class="screenport"><div class="vp" id="vp"></div><div class="island"></div><div id="toast"></div></div></div>
+
+<script>
+(function(){
+  "use strict";
+  const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>[].slice.call((r||document).querySelectorAll(s));
+  const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const vp=$('#vp'), toastEl=$('#toast');
+  let toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),2000);}
+  const money=n=>Math.round(n).toLocaleString('ro-RO');
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+
+  /* ===== ICONS ===== */
+  const I={
+    back:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+    bell:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+    arrow:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    chev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+    info:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+    scan:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M4 12h16"/></svg>',
+    grid:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    ncart:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2.2l2.3 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H5.2"/></svg>',
+    nchart:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+    nuser:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    nscan:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></svg>',
+    check:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+    dup:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg>',
+    bad:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    pin:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+    cal:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    clock:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    users:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg>',
+    seat:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6M4 18h16M6 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"/></svg>',
+    cash:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    plus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    switch:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H8M8 21l-4-4 4-4M4 17h12"/></svg>',
+    logout:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+    undo:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6M3 13a9 9 0 1 0 3-7.7L3 8"/></svg>',
+    kbd:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M9 13h6"/></svg>',
+    dl:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>',
+    tick:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v14"/></svg>',
+    star:'<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>',
+    trend:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>',
+  };
+
+  /* ===== DATA ===== */
+  const ORGS=[
+    {id:1,name:'Ambilet',type:'Organizator',role:'Owner',accent:'#00c896',city:'Cluj-Napoca',tone:'linear-gradient(150deg,#00c896,#059f78)'},
+    {id:2,name:'Teatrul Național',type:'Teatru',role:'Manager',accent:'#a78bfa',city:'Cluj-Napoca',tone:'linear-gradient(150deg,#a78bfa,#6d28d9)'},
+    {id:3,name:'Cluj Arena',type:'Venue',role:'Staff scanare',accent:'#38bdf8',city:'Cluj-Napoca',tone:'linear-gradient(150deg,#38bdf8,#0369a1)'},
+  ];
+  // events per org id
+  const EVENTS={
+    1:[
+      {id:11,name:'Coldplay — Music of the Spheres',venue:'Cluj Arena',date:'19 Apr · 20:00',day:'Azi',status:'live',cap:30000,sold:27450,entered:18240,revenue:4795000,online:24980,door:2470,
+        tt:[{id:1,name:'Fan Pit',price:350,sold:4800,cap:5000,color:'#00c896'},{id:2,name:'Categoria I',price:250,sold:9200,cap:10000,color:'#38bdf8'},{id:3,name:'Categoria II',price:175,sold:11150,cap:12000,color:'#a78bfa'},{id:4,name:'Elev/Student',price:120,sold:2300,cap:3000,color:'#f5b301'}],
+        series:[420,610,880,1240,1760,2320,3010,2640,2180,1520],hours:['12','13','14','15','16','17','18','19','20','21']},
+      {id:12,name:'Untold 2026 — Ziua 1',venue:'Cluj Arena',date:'06 Aug · 16:00',day:'În 3 zile',status:'onsale',cap:80000,sold:62400,entered:0,revenue:31200000,online:61100,door:1300,
+        tt:[{id:1,name:'General Access',price:499,sold:41000,cap:52000,color:'#00c896'},{id:2,name:'VIP',price:1290,sold:14800,cap:18000,color:'#f5b301'},{id:3,name:'Camping',price:690,sold:6600,cap:10000,color:'#a78bfa'}],
+        series:[1200,2100,3400,4800,6200,5400,4100,3600,2800,2200],hours:['','','','','','','','','','']},
+      {id:13,name:'Smiley Live',venue:'BT Arena',date:'02 Mai · 20:00',day:'În 2 săpt.',status:'onsale',cap:9000,sold:5120,entered:0,revenue:512000,online:5020,door:100,
+        tt:[{id:1,name:'Golden Circle',price:180,sold:1800,cap:2000,color:'#00c896'},{id:2,name:'Tribună',price:120,sold:3320,cap:7000,color:'#38bdf8'}],
+        series:[120,240,360,520,680,540,410,360,280,220],hours:['','','','','','','','','','']},
+    ],
+    2:[
+      {id:21,name:'Lacul Lebedelor',venue:'Sala Mare · TN Cluj',date:'18 Apr · 19:00',day:'Mâine',status:'onsale',cap:820,sold:612,entered:0,revenue:61200,online:560,door:52,
+        tt:[{id:1,name:'Parter',price:120,sold:320,cap:400,color:'#a78bfa'},{id:2,name:'Balcon',price:80,sold:292,cap:420,color:'#38bdf8'}],
+        series:[20,40,60,90,120,90,70,60,40,30],hours:['','','','','','','','','','']},
+    ],
+    3:[
+      {id:31,name:'Coldplay — Music of the Spheres',venue:'Cluj Arena',date:'19 Apr · 20:00',day:'Azi',status:'live',cap:30000,sold:27450,entered:18240,revenue:4795000,online:24980,door:2470,
+        tt:[{id:1,name:'Fan Pit',price:350,sold:4800,cap:5000,color:'#00c896'},{id:2,name:'Categoria I',price:250,sold:9200,cap:10000,color:'#38bdf8'}],
+        series:[420,610,880,1240,1760,2320,3010,2640,2180,1520],hours:['12','13','14','15','16','17','18','19','20','21']},
+    ],
+  };
+  const ATTENDEES=['Andrei Pop','Maria Ionescu','David Lung','Rareș Stan','Ana Marin','Vlad Georgescu','Elena Barbu','Cristian Dima','Ioana Neagu','Paul Cheța'];
+  const SEATSECTIONS=['Categoria I','Categoria I','Categoria II','Balcon'];
+
+  const NOTIFS=[
+    {id:1,cat:'Vânzări',ic:'💸',t:'20 bilete vândute în ultima oră',s:'Coldplay — Music of the Spheres',time:'acum 6 min',unread:true},
+    {id:2,cat:'Check-in',ic:'✅',t:'1.240 participanți au intrat',s:'Rata de check-in: 66%',time:'acum 22 min',unread:true},
+    {id:3,cat:'Sistem',ic:'⚙️',t:'Payout programat: 12.400 lei',s:'Va fi virat pe 21 Apr',time:'acum 2 ore',unread:false},
+    {id:4,cat:'Echipă',ic:'👥',t:'Rareș S. s-a alăturat ca scanner',s:'Coldplay — acces staff',time:'ieri',unread:false},
+    {id:5,cat:'Vânzări',ic:'🔥',t:'Categoria II aproape epuizat (93%)',s:'Mai sunt 850 bilete',time:'ieri',unread:false},
+  ];
+  const TEAM=[
+    {n:'Andrei Nastase',r:'Owner',i:'AN',on:true},
+    {n:'Rareș Stan',r:'Scanner',i:'RS',on:true},
+    {n:'Ana Marin',r:'Casier POS',i:'AM',on:false},
+    {n:'Vlad Georgescu',r:'Manager',i:'VG',on:false},
+  ];
+
+  /* ===== STATE ===== */
+  const ST={
+    org:1, ev:11, tab:'dash',
+    scan:{count:18240, log:[], flash:''},
+    pos:{ev:11, cart:{}, autocheckin:true},
+    seats:{sel:[], sectionEv:11},
+    notifs:NOTIFS.map(n=>({...n})),
+    repRange:'Azi',
+  };
+  const org=()=>ORGS.find(o=>o.id===ST.org);
+  const evs=()=>EVENTS[ST.org]||[];
+  const ev=id=>evs().find(e=>e.id===(id||ST.ev))||evs()[0];
+  function setAccent(){document.documentElement.style.setProperty('--teal',org().accent);
+    const a=org().accent;
+    // derive a lighter tone
+    document.documentElement.style.setProperty('--teal-2', a);
+    document.documentElement.style.setProperty('--teal-soft', hexA(a,.15));
+    document.documentElement.style.setProperty('--teal-line', hexA(a,.34));
+  }
+  function hexA(hex,a){const h=hex.replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+
+  /* ===== ROUTER ===== */
+  const S={}, INIT={};
+  let stack=[{id:'splash',data:{}}];
+  const tabScreens=['dash','scan','pos','reports','settings'];
+  const top=()=>stack[stack.length-1].id;
+  function paint(dir){
+    const {id,data}=stack[stack.length-1];
+    const html=(S[id]||S.dash)(data||{});
+    const el=document.createElement('div');
+    el.className='screen '+(dir==='back'?'enter-back':'enter-forward');
+    el.innerHTML=html;
+    const olds=$$('.screen',vp);
+    vp.appendChild(el);
+    void el.offsetWidth;
+    requestAnimationFrame(()=>{
+      el.classList.remove('enter-back','enter-forward');
+      olds.forEach(o=>{o.classList.add(dir==='back'?'exit-back':'exit-forward');setTimeout(()=>o.remove(),400);});
+      (INIT[id]||(()=>{}))(el,data||{});
+    });
+    el.scrollTop=0;
+  }
+  function go(id,data){stack.push({id,data:data||{}});paint('forward');}
+  function back(){if(stack.length>1){stack.pop();paint('back');}}
+  function reset(id){stack=[{id,data:{}}];paint('forward');}
+  function tab(id){ST.tab=id;if(tabScreens.includes(top())){stack[stack.length-1]={id,data:{}};paint('forward');}else reset(id);}
+  function rerender(){const cur=stack[stack.length-1];const el=$('.screen:last-child',vp);if(!el)return;el.innerHTML=(S[cur.id])(cur.data||{});(INIT[cur.id]||(()=>{}))(el,cur.data||{});}
+
+  /* ===== SHARED ===== */
+  const sb=()=>`<div class="sb"><span>9:41</span><div class="r"><svg width="17" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2 8h2v8H2zM7 5h2v11H7zM12 3h2v13h-2zM17 6h2v10h-2z"/></svg><svg width="16" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 3 7 1 10l11 10L23 10c-2-3-6-6-11-6z" opacity=".5"/></svg><svg width="24" height="12" viewBox="0 0 26 13" fill="none"><rect x="1" y="1" width="21" height="11" rx="3" stroke="currentColor" opacity=".5"/><rect x="3" y="3" width="16" height="7" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="5" rx="1" fill="currentColor" opacity=".5"/></svg></div></div>`;
+  function nav(active){
+    const items=[['dash',I.grid,'Panou'],['pos',I.ncart,'Vinde'],['__fab'],['reports',I.nchart,'Rapoarte'],['settings',I.nuser,'Cont']];
+    return `<div class="navpad"></div><div class="nav">
+      ${items.map(it=>it[0]==='__fab'
+        ? `<div class="fab" data-a="tab:scan">${I.scan}</div>`
+        : `<div class="item ${active===it[0]?'on':''}" data-a="tab:${it[0]}">${it[1]}<span>${it[2]}</span></div>`).join('')}
+    </div>`;
+  }
+  const unread=()=>ST.notifs.filter(n=>n.unread).length;
+  function orgHeader(){
+    const o=org();const u=unread();
+    return `<div class="topbar"><div class="row" style="gap:11px" data-a="switcher">
+        <div class="avatar" style="width:42px;height:42px;font-size:16px;background:${o.tone}">${o.name.slice(0,2).toUpperCase()}</div>
+        <div><div class="row" style="gap:6px"><span class="h2" style="font-size:16px">${o.name}</span>${I.chev}</div>
+          <div class="row" style="gap:5px;font-size:11px;color:var(--muted)"><span class="badge teal" style="padding:2px 7px">${o.type}</span><span>·</span><span>${o.role}</span></div></div>
+      </div>
+      <button class="icon-btn" data-a="go:notifs" style="position:relative">${I.bell}${u?`<span style="position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center">${u}</span>`:''}</button>
+    </div>`;
+  }
+  const evStatus=e=>e.status==='live'?'<span class="badge green"><span class="livedot"></span>Live acum</span>':e.status==='onsale'?'<span class="badge teal">La vânzare</span>':'<span class="badge">Încheiat</span>';
+
+  /* ===== SPLASH / LOGIN / SWITCHER ===== */
+  S.splash=()=>`<div class="splash"><div class="gridfx"></div>
+    <div style="position:relative;text-align:center">
+      <div class="avatar" style="width:88px;height:88px;border-radius:26px;margin:0 auto;background:linear-gradient(150deg,#00c896,#059f78);box-shadow:0 20px 50px rgba(0,200,150,.4)">${I.tick}</div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.03em;margin-top:18px">tixello</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:.14em;text-transform:uppercase">Organizator</div>
+    </div></div>`;
+  INIT.splash=el=>{const t=setTimeout(()=>{if(top()==='splash')reset('login');},RM?400:1400);el.onclick=()=>{clearTimeout(t);if(top()==='splash')reset('login');};};
+
+  S.login=()=>`<div style="min-height:100%;background:var(--bg)">
+    <div style="position:relative;height:280px;background:radial-gradient(120% 90% at 30% 0%,#0f231c,#070d0b);overflow:hidden">
+      <div style="position:absolute;inset:0;background-image:var(--grid);background-size:28px 28px;opacity:.5"></div>${sb()}
+      <div style="position:relative;padding:24px 26px 0">
+        <div class="avatar" style="width:52px;height:52px;border-radius:16px;background:linear-gradient(150deg,#00c896,#059f78)">${I.tick}</div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:18px">Panou organizator</div>
+        <div style="font-size:13.5px;color:var(--muted);margin-top:5px;line-height:1.5">Scanează bilete, vinde la ușă și<br>urmărește vânzările în timp real.</div>
+      </div>
+    </div>
+    <div class="pad" style="margin-top:-18px;position:relative">
+      <div class="card pad" style="padding:18px">
+        <div class="label" style="margin-bottom:7px">Email</div><div class="field">${I.nuser}<input value="andrei@ambilet.ro"></div>
+        <div class="label" style="margin:14px 0 7px">Parolă</div><div class="field">${I.kbd}<input type="password" value="parola123"></div>
+        <button class="cta" data-a="login" style="margin-top:18px">Intră în cont ${I.arrow}</button>
+        <div style="text-align:center;font-size:12.5px;color:var(--faint);margin-top:14px;font-weight:600">Ai uitat parola?</div>
+      </div>
+      <div class="row" style="gap:8px;justify-content:center;margin-top:20px;color:var(--faint);font-size:11.5px;font-weight:600">${I.info} Cont staff? Cere invitație managerului tău</div>
+    </div></div>`;
+  INIT.login=()=>{};
+
+  S.switcher=()=>`<div class="grid" style="min-height:100%">
+    <div class="topbar"><button class="icon-btn" data-a="back">${I.back}</button><div class="h2">Schimbă contul</div><div style="width:40px"></div></div>
+    <div class="pad"><div class="muted" style="font-size:12.5px;margin:2px 4px 14px">Un cont, mai multe entități. Alege cu ce lucrezi acum.</div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+      ${ORGS.map(o=>`<div class="listitem" data-a="pickorg:${o.id}" style="cursor:pointer;${o.id===ST.org?'border-color:var(--teal-line);background:var(--teal-soft)':''}">
+        <div class="avatar" style="width:46px;height:46px;font-size:16px;background:${o.tone}">${o.name.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:14.5px">${o.name}</div><div class="row" style="gap:6px;font-size:11.5px;color:var(--muted);margin-top:2px"><span>${o.type}</span><span class="dot"></span><span>${o.role}</span></div></div>
+        ${o.id===ST.org?`<span style="color:var(--teal-2)">${I.check}</span>`:I.chev}
+      </div>`).join('')}
+      </div></div></div>`;
+
+  /* ===== DASHBOARD ===== */
+  S.dash=()=>{
+    const list=evs();
+    const agg=list.reduce((a,e)=>{a.sold+=e.sold;a.rev+=e.revenue;a.entered+=e.entered;a.cap+=e.cap;return a;},{sold:0,rev:0,entered:0,cap:0});
+    const live=list.filter(e=>e.status==='live');
+    return `<div class="grid" style="min-height:100%">${orgHeader()}
+      <div class="pad">
+        <div class="between" style="margin:2px 2px 12px"><span class="label">Azi, pe scurt</span><span class="row" style="gap:5px;font-size:11px;color:var(--green-2)"><span class="livedot"></span>Live</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="kpi"><div class="k">Bilete vândute</div><div class="v">${money(agg.sold)}</div><div class="t" style="color:var(--green-2)">${I.trend} +${money(340)} azi</div></div>
+          <div class="kpi"><div class="k">Încasări</div><div class="v">${money(agg.rev/1000)}<span style="font-size:13px;color:var(--muted)">k lei</span></div><div class="t" style="color:var(--green-2)">${I.trend} +6,2%</div></div>
+          <div class="kpi"><div class="k">Check-in acum</div><div class="v">${money(agg.entered)}</div><div class="t muted">din ${money(agg.sold)} vândute</div></div>
+          <div class="kpi"><div class="k">Ocupare medie</div><div class="v">${pct(agg.sold,agg.cap)}%</div><div class="prog"><span style="width:${pct(agg.sold,agg.cap)}%"></span></div></div>
+        </div>
+      </div>
+      <div class="pad" style="margin-top:16px"><div class="row" style="gap:10px">
+        <button class="cta" data-a="tab:scan" style="flex:1">${I.scan} Scanează</button>
+        <button class="cta ghost" data-a="tab:pos" style="flex:1">${I.ncart} Vinde la ușă</button>
+      </div></div>
+      ${live.length?`<div class="pad" style="margin-top:18px"><div class="between" style="margin-bottom:10px"><span class="label">Live acum</span></div>
+        ${live.map(e=>`<div class="card pad" data-a="go:event:${e.id}" style="cursor:pointer;background:linear-gradient(135deg,var(--teal-soft),var(--surface));border-color:var(--teal-line)">
+          <div class="between"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div><div class="row" style="gap:6px;font-size:11.5px;color:var(--muted);margin-top:4px">${I.pin}<span>${e.venue}</span></div></div>${evStatus(e)}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;text-align:center">
+            <div><div style="font-size:19px;font-weight:700">${pct(e.entered,e.sold)}%</div><div style="font-size:10px;color:var(--muted)">check-in</div></div>
+            <div><div style="font-size:19px;font-weight:700">${money(e.entered)}</div><div style="font-size:10px;color:var(--muted)">intrați</div></div>
+            <div><div style="font-size:19px;font-weight:700">${money(e.sold-e.entered)}</div><div style="font-size:10px;color:var(--muted)">așteptați</div></div>
+          </div></div>`).join('')}
+      </div>`:''}
+      <div class="pad" style="margin-top:18px"><div class="between" style="margin-bottom:10px"><span class="label">Evenimentele tale</span><span class="muted" style="font-size:11.5px">${list.length}</span></div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+        ${list.map(e=>`<div class="listitem" data-a="go:event:${e.id}" style="cursor:pointer">
+          <div class="avatar" style="width:46px;height:46px;border-radius:13px;font-size:13px;background:var(--surface-3);color:var(--teal-2)">${I.tick}</div>
+          <div style="flex:1;min-width:0"><div class="between"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${e.name}</div></div>
+            <div class="row" style="gap:6px;font-size:11.5px;color:var(--muted);margin-top:3px">${I.cal}<span>${e.date}</span><span class="dot"></span><span>${pct(e.sold,e.cap)}% vândut</span></div>
+            <div class="prog" style="margin-top:7px"><span style="width:${pct(e.sold,e.cap)}%"></span></div></div>
+          <div style="text-align:right;flex:none">${e.status==='live'?'<span class="badge green" style="margin-bottom:4px"><span class="livedot"></span></span>':evStatus(e)}<div class="muted" style="font-size:10.5px;margin-top:4px">${e.day}</div></div>
+        </div>`).join('')}
+        </div></div>
+      ${nav('dash')}</div>`;
+  };
+
+  /* ===== EVENT DETAIL ===== */
+  S.event=(d)=>{
+    const e=ev(d.id);const remain=e.sold-e.entered;
+    return `<div class="grid" style="min-height:100%">
+      <div class="topbar"><button class="icon-btn" data-a="back">${I.back}</button>
+        <div style="text-align:center;flex:1;min-width:0"><div class="h2" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div><div class="muted" style="font-size:11px">${e.venue}</div></div>
+        <button class="icon-btn" data-a="noop">${I.info}</button></div>
+      <div class="pad">
+        <div class="card pad" style="background:linear-gradient(135deg,var(--teal-soft),var(--surface));border-color:var(--teal-line)">
+          <div class="between"><div class="row" style="gap:8px">${evStatus(e)}<span class="muted" style="font-size:11.5px">${e.date}</span></div><span class="muted" style="font-size:11.5px">cap. ${money(e.cap)}</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <div><div class="muted" style="font-size:11px">Bilete vândute</div><div style="font-size:26px;font-weight:700">${money(e.sold)}</div><div class="prog"><span style="width:${pct(e.sold,e.cap)}%"></span></div><div class="muted" style="font-size:10px;margin-top:4px">${pct(e.sold,e.cap)}% din capacitate</div></div>
+            <div><div class="muted" style="font-size:11px">Încasări</div><div style="font-size:26px;font-weight:700">${money(e.revenue/1000)}<span style="font-size:14px;color:var(--muted)">k</span></div><div class="muted" style="font-size:10px;margin-top:22px">${money(e.revenue)} lei brut</div></div>
+          </div>
+        </div>
+      </div>
+      ${e.status==='live'?`<div class="pad" style="margin-top:14px"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="kpi" style="text-align:center"><div class="v" style="color:var(--green-2)">${money(e.entered)}</div><div class="k">Intrați</div></div>
+        <div class="kpi" style="text-align:center"><div class="v">${money(remain)}</div><div class="k">Așteptați</div></div>
+        <div class="kpi" style="text-align:center"><div class="v">${pct(e.entered,e.sold)}%</div><div class="k">Check-in</div></div>
+      </div></div>`:''}
+      <div class="pad" style="margin-top:14px"><div class="row" style="gap:10px">
+        <button class="cta" data-a="scanev:${e.id}" style="flex:1">${I.scan} Scanează</button>
+        <button class="cta ghost" data-a="posev:${e.id}" style="flex:1">${I.cash} Vinde la ușă</button>
+      </div>
+      <button class="cta ghost" data-a="go:seatmap:${e.id}" style="margin-top:10px">${I.seat} Hartă locuri & disponibilitate</button>
+      </div>
+      <div class="pad" style="margin-top:18px"><div class="label" style="margin-bottom:10px">Pe categorii de bilet</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+        ${e.tt.map(t=>`<div class="card pad" style="padding:13px">
+          <div class="between"><div class="row" style="gap:9px"><span style="width:10px;height:10px;border-radius:3px;background:${t.color}"></span><span style="font-weight:600;font-size:13.5px">${t.name}</span></div><span style="font-weight:700;font-size:13.5px">${money(t.price)} lei</span></div>
+          <div class="between" style="margin-top:9px"><div class="prog" style="flex:1;margin-top:0"><span style="width:${pct(t.sold,t.cap)}%;background:${t.color}"></span></div><span class="muted" style="font-size:11px;margin-left:10px;flex:none">${money(t.sold)}/${money(t.cap)}</span></div>
+          <div class="muted" style="font-size:10.5px;margin-top:6px">${money(t.cap-t.sold)} rămase · ${money(t.sold*t.price/1000)}k lei încasați</div>
+        </div>`).join('')}
+        </div></div>
+      <div class="pad" style="margin-top:18px"><div class="between" style="margin-bottom:10px"><span class="label">Vânzări pe canal</span></div>
+        <div class="card pad"><div class="row" style="gap:0;height:14px;border-radius:8px;overflow:hidden">
+          <div style="width:${pct(e.online,e.sold)}%;background:var(--teal)"></div><div style="flex:1;background:var(--amber)"></div></div>
+          <div class="between" style="margin-top:11px"><div class="row" style="gap:7px;font-size:12px"><span style="width:9px;height:9px;border-radius:3px;background:var(--teal)"></span>Online <b style="margin-left:4px">${money(e.online)}</b></div>
+          <div class="row" style="gap:7px;font-size:12px"><span style="width:9px;height:9px;border-radius:3px;background:var(--amber)"></span>La ușă <b style="margin-left:4px">${money(e.door)}</b></div></div>
+        </div></div>
+      <div style="height:20px"></div>${nav('')}</div>`;
+  };
+
+  /* ===== SCAN ===== */
+  S.scan=(d)=>{
+    const e=ev(d.evId||ST.ev);
+    const rate=pct(ST.scan.count,e.sold);
+    const isTab=(ST.tab==='scan');
+    return `<div class="grid" style="min-height:100%;background:var(--bg2)">
+      <div class="topbar"><button class="icon-btn" data-a="${isTab?'noop':'back'}">${isTab?I.info:I.back}</button>
+        <div style="text-align:center;flex:1;min-width:0"><div class="h2" style="font-size:15px">Scanare bilete</div><div class="muted" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div></div>
+        <button class="icon-btn" data-a="scanpick">${I.switch}</button></div>
+      <div class="pad">
+        <div class="scanview" id="scanview">
+          <div class="grid-fx"></div>
+          <div class="reticle"><span></span><span></span><span></span><span></span></div>
+          <div class="laser"></div>
+          <div class="flash" id="flash"></div>
+          <div style="position:absolute;top:14px;left:0;right:0;text-align:center;color:var(--muted);font-size:12px;font-weight:600">Îndreaptă camera spre codul QR</div>
+          <div id="scanResult" style="position:absolute;inset:0;display:none;padding:14px;align-items:center;justify-content:center"></div>
+        </div>
+        <div class="row" style="gap:10px;margin-top:14px">
+          <button class="cta" data-a="dosim" style="flex:1">${I.scan} Simulează scanare</button>
+          <button class="icon-btn teal" data-a="manual" style="width:52px;height:52px">${I.kbd}</button>
+        </div>
+        <div class="card pad" style="margin-top:14px;padding:13px"><div class="between">
+          <div><div class="muted" style="font-size:11px">Check-in la acest eveniment</div><div style="font-size:22px;font-weight:700;margin-top:2px">${money(ST.scan.count)} <span style="font-size:12px;color:var(--muted)">/ ${money(e.sold)}</span></div></div>
+          <div class="donut" style="--p:${rate};width:64px;height:64px"><div class="in" style="width:48px;height:48px"><span style="font-size:14px;font-weight:700">${rate}%</span></div></div>
+        </div></div>
+        <div style="margin-top:16px"><div class="between" style="margin-bottom:9px"><span class="label">Ultimele scanări</span>${ST.scan.log.length?`<span class="muted" style="font-size:11px">${ST.scan.log.length}</span>`:''}</div>
+          <div id="scanlog" style="display:flex;flex-direction:column;gap:8px">${scanLogHtml()}</div>
+        </div>
+      </div>
+      <div style="height:18px"></div>${isTab?nav('scan'):'<div class="navpad"></div>'}</div>`;
+  };
+  function scanLogHtml(){
+    if(!ST.scan.log.length)return `<div class="card pad" style="text-align:center;padding:20px;color:var(--faint);font-size:12.5px">Nicio scanare încă. Apasă „Simulează scanare".</div>`;
+    return ST.scan.log.slice(0,6).map(s=>`<div class="listitem" style="padding:10px 12px">
+      <div class="avatar" style="width:34px;height:34px;border-radius:10px;font-size:12px;background:${s.type==='ok'?'var(--green-soft)':s.type==='dup'?'var(--amber-soft)':'var(--red-soft)'};color:${s.type==='ok'?'var(--green-2)':s.type==='dup'?'var(--amber)':'var(--red)'}">${s.type==='ok'?'✓':s.type==='dup'?'!':'✕'}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${s.name}</div><div class="muted" style="font-size:11px">${s.tt} · ${s.seat}</div></div>
+      <div style="text-align:right;flex:none"><div style="font-size:10.5px;color:var(--muted)">${s.time}</div>${s.type==='ok'?`<button class="badge" data-a="undo:${s.uid}" style="margin-top:4px;cursor:pointer">${I.undo} anulează</button>`:''}</div>
+    </div>`).join('');
+  }
+  INIT.scan=()=>{};
+
+  function doScan(kind){
+    const e=ev(ST.ev);
+    const rnd=Math.floor((ST.scan.count*7+ST.scan.log.length*131+Date.now())%997);
+    // 78% ok, 14% dup, 8% invalid — deterministic-ish via seed
+    let type = kind || (rnd%100<78?'ok':rnd%100<92?'dup':'bad');
+    const name=ATTENDEES[rnd%ATTENDEES.length];
+    const tt=e.tt[rnd%e.tt.length];
+    const sec=SEATSECTIONS[rnd%SEATSECTIONS.length];
+    const seat=tt.name.includes('Pit')||tt.name.includes('Access')||tt.name.includes('General')?'General':`${sec} · R${(rnd%14)+1} L${(rnd%26)+1}`;
+    const uid='s'+Date.now();
+    const rv=$('#scanResult'),fl=$('#flash');
+    const box=(cls,ic,title,sub,extra)=>`<div class="resultcard ${cls}" style="width:100%;background:var(--surface-solid)">
+      <div class="ic ${cls==='rc-ok'?'rc-ok':cls}">${ic}</div>
+      <div style="font-size:19px;font-weight:700">${title}</div>
+      <div class="muted" style="font-size:12.5px;margin-top:3px">${sub}</div>
+      ${extra||''}</div>`;
+    const attRow=`<div style="margin-top:13px;text-align:left;background:var(--surface-2);border-radius:13px;padding:12px">
+      <div style="font-weight:600;font-size:14px">${name}</div>
+      <div class="row" style="gap:6px;font-size:11.5px;color:var(--muted);margin-top:4px">${I.tick}<span>${tt.name}</span><span class="dot"></span>${I.seat}<span>${seat}</span></div></div>`;
+    if(fl){fl.className='flash '+(type==='bad'?'red f':'f');setTimeout(()=>fl.className='flash '+(type==='bad'?'red':''),500);}
+    if(type==='ok'){
+      ST.scan.count++;
+      ST.scan.log.unshift({uid,type:'ok',name,tt:tt.name,seat,time:'acum'});
+      rv.innerHTML=box('rc-ok',I.check,'Bilet valid','Acces permis · check-in înregistrat',attRow);
+      rv.querySelector('.ic').style.color='var(--green-2)';
+    } else if(type==='dup'){
+      ST.scan.log.unshift({uid,type:'dup',name,tt:tt.name,seat,time:'acum'});
+      rv.innerHTML=box('rc-dup',I.dup,'Deja scanat','A intrat acum 12 min. Verifică identitatea.',attRow);
+      rv.querySelector('.ic').style.color='var(--amber)';
+    } else {
+      ST.scan.log.unshift({uid,type:'bad',name:'Cod necunoscut',tt:'—',seat:'—',time:'acum'});
+      rv.innerHTML=box('rc-bad',I.bad,'Bilet invalid','Codul nu aparține acestui eveniment.','');
+      rv.querySelector('.ic').style.color='var(--red)';
+    }
+    rv.style.display='flex';
+    if(!RM)navigator.vibrate&&navigator.vibrate(type==='ok'?30:[40,40,40]);
+    clearTimeout(doScan._t);
+    doScan._t=setTimeout(()=>{if($('#scanResult'))$('#scanResult').style.display='none';
+      const log=$('#scanlog');if(log)log.innerHTML=scanLogHtml();
+      // update counter card
+      const cur=$('.screen:last-child',vp);if(cur){const c=cur.querySelector('.donut');}
+      refreshScanCounter();
+    },1700);
+  }
+  function refreshScanCounter(){const cur=$('.screen:last-child',vp);if(!cur)return;const e=ev(ST.ev);const rate=pct(ST.scan.count,e.sold);
+    // re-render just the scan screen if we're on it
+    if(top()==='scan'){rerender();}
+  }
+
+  /* ===== POS ===== */
+  S.pos=(d)=>{
+    if(d.evId)ST.pos.ev=d.evId;
+    const e=ev(ST.pos.ev);
+    const cart=ST.pos.cart;
+    let cnt=0,tot=0;e.tt.forEach(t=>{const q=cart[t.id]||0;cnt+=q;tot+=q*t.price;});
+    const isTab=(ST.tab==='pos');
+    return `<div class="grid" style="min-height:100%">
+      <div class="topbar"><button class="icon-btn" data-a="${isTab?'noop':'back'}">${isTab?I.cash:I.back}</button>
+        <div style="text-align:center;flex:1"><div class="h2" style="font-size:15px">Vinde la ușă</div><div class="muted" style="font-size:11px">POS · plată pe loc</div></div>
+        <button class="icon-btn" data-a="pospick">${I.switch}</button></div>
+      <div class="pad">
+        <div class="card pad" data-a="pospick" style="cursor:pointer;padding:12px;display:flex;gap:11px;align-items:center">
+          <div class="avatar" style="width:40px;height:40px;border-radius:12px;font-size:12px;background:var(--surface-3);color:var(--teal-2)">${I.tick}</div>
+          <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div><div class="muted" style="font-size:11px">${e.venue} · ${e.date}</div></div>${I.chev}
+        </div>
+        <div class="label" style="margin:18px 4px 10px">Alege bilete</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+        ${e.tt.map(t=>{const q=cart[t.id]||0;const avail=t.cap-t.sold;return `<div class="card pad" style="padding:13px;${q?'border-color:var(--teal-line)':''}">
+          <div class="between"><div class="row" style="gap:9px"><span style="width:10px;height:10px;border-radius:3px;background:${t.color}"></span><div><div style="font-weight:600;font-size:14px">${t.name}</div><div class="muted" style="font-size:11px;margin-top:2px">${money(t.price)} lei · ${money(avail)} disp.</div></div></div>
+            <div class="stepper"><button data-a="posdec:${t.id}">−</button><span class="n">${q}</span><button data-a="posinc:${t.id}">+</button></div></div>
+        </div>`;}).join('')}
+        </div>
+        <div class="card pad" style="margin-top:16px;padding:13px">
+          <div class="between" style="font-size:13px"><span class="muted">Autocheck-in la plată</span>
+            <button data-a="postoggle" style="width:46px;height:27px;border-radius:14px;border:0;background:${ST.pos.autocheckin?'var(--teal)':'var(--surface-3)'};position:relative;cursor:pointer;transition:.2s"><span style="position:absolute;top:3px;${ST.pos.autocheckin?'right:3px':'left:3px'};width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s"></span></button>
+          </div>
+          <div class="muted" style="font-size:10.5px;margin-top:7px">Marchează biletele ca intrate imediat — util la poarta de acces.</div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="pad" style="position:sticky;bottom:0;padding-bottom:16px;background:linear-gradient(0deg,var(--bg) 78%,transparent)">
+        <button class="cta" data-a="poscheckout" ${cnt?'':'disabled'} style="padding:16px">${cnt?`Încasează ${money(tot)} lei · ${cnt} ${cnt===1?'bilet':'bilete'}`:'Adaugă bilete'} ${cnt?I.arrow:''}</button>
+      </div>
+      ${isTab?nav('pos'):'<div class="navpad"></div>'}</div>`;
+  };
+
+  S.posdone=(d)=>{
+    const e=ev(d.evId);
+    return `<div class="grid" style="min-height:100%;display:flex;flex-direction:column">
+      <div style="flex:1;display:grid;place-items:center;padding:30px;text-align:center">
+        <div class="fade-up">
+          <div class="ic rc-ok" style="width:88px;height:88px;border-radius:50%;display:grid;place-items:center;margin:0 auto;color:var(--green-2);background:var(--green-soft);border:1px solid var(--green-line)">${I.check}</div>
+          <div style="font-size:23px;font-weight:700;margin-top:18px">Plată reușită</div>
+          <div class="muted" style="font-size:13.5px;margin-top:6px;line-height:1.5">${d.cnt} ${d.cnt===1?'bilet emis':'bilete emise'} · ${money(d.tot)} lei<br>${d.autocheckin?'Marcate ca intrate ✓':'Biletele au fost trimise pe email'}</div>
+          <div class="card pad" style="margin-top:20px;text-align:left;padding:14px">
+            <div class="between"><span class="muted" style="font-size:11.5px">Comandă</span><span style="font-weight:700;font-size:12.5px">#POS-${d.ord}</span></div>
+            <div class="between" style="margin-top:8px"><span class="muted" style="font-size:11.5px">Eveniment</span><span style="font-size:12.5px;font-weight:600">${e.name.split('—')[0].trim()}</span></div>
+            <div class="between" style="margin-top:8px"><span class="muted" style="font-size:11.5px">Metodă</span><span style="font-size:12.5px;font-weight:600">Card / numerar</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="pad" style="padding-bottom:24px;display:flex;flex-direction:column;gap:10px">
+        <button class="cta" data-a="posagain:${e.id}">${I.plus} Vânzare nouă</button>
+        <button class="cta ghost" data-a="tab:dash">Înapoi la panou</button>
+      </div></div>`;
+  };
+
+  /* ===== REPORTS ===== */
+  S.reports=()=>{
+    const e=ev(ST.ev);const list=evs();
+    const totRev=list.reduce((a,e)=>a+e.revenue,0);
+    const totSold=list.reduce((a,e)=>a+e.sold,0);
+    const maxS=Math.max(...e.series);
+    const cir=pct(e.entered,e.sold);
+    return `<div class="grid" style="min-height:100%">${orgHeader()}
+      <div class="pad"><div class="between"><span class="h1" style="font-size:22px">Rapoarte</span>
+        <button class="icon-btn" data-a="export">${I.dl}</button></div>
+        <div class="scroll-x" style="margin-top:14px">${['Azi','7 zile','30 zile','Tot'].map(r=>`<button class="chip ${ST.repRange===r?'on':''}" data-a="reprange:${r}">${r}</button>`).join('')}</div>
+      </div>
+      <div class="pad" style="margin-top:16px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="kpi"><div class="k">Încasări totale</div><div class="v">${money(totRev/1000)}<span style="font-size:12px;color:var(--muted)">k lei</span></div><div class="t" style="color:var(--green-2)">${I.trend} +8,4%</div></div>
+        <div class="kpi"><div class="k">Bilete vândute</div><div class="v">${money(totSold)}</div><div class="t" style="color:var(--green-2)">${I.trend} +5,1%</div></div>
+      </div></div>
+      <div class="pad" style="margin-top:14px"><div class="card pad">
+        <div class="between" style="margin-bottom:4px"><div><span class="label">Vânzări pe oră</span><div class="muted" style="font-size:11px;margin-top:3px">${e.name.split('—')[0].trim()}</div></div><span class="badge teal">${money(e.series.reduce((a,b)=>a+b,0))} azi</span></div>
+        <div class="bars" style="margin-top:14px">${e.series.map((v,i)=>`<div class="b ${v<maxS*.35?'':''}" style="height:${Math.max(8,v/maxS*100)}%"><span style="position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:8.5px;color:var(--faint)">${e.hours[i]||''}</span></div>`).join('')}</div>
+        <div style="height:16px"></div>
+      </div></div>
+      <div class="pad" style="margin-top:14px"><div class="row" style="gap:10px">
+        <div class="card pad" style="flex:1;text-align:center"><div class="label" style="margin-bottom:12px">Rată check-in</div>
+          <div class="donut" style="--p:${cir};margin:0 auto"><div class="in"><span style="font-size:22px;font-weight:700">${cir}%</span><span style="font-size:10px;color:var(--muted)">${money(e.entered)}/${money(e.sold)}</span></div></div>
+        </div>
+        <div class="card pad" style="flex:1"><div class="label" style="margin-bottom:12px">Online vs ușă</div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:6px">
+            <div><div class="between" style="font-size:12px;margin-bottom:5px"><span>Online</span><b>${pct(e.online,e.sold)}%</b></div><div class="prog" style="margin:0"><span style="width:${pct(e.online,e.sold)}%"></span></div></div>
+            <div><div class="between" style="font-size:12px;margin-bottom:5px"><span>La ușă</span><b>${pct(e.door,e.sold)}%</b></div><div class="prog" style="margin:0"><span style="width:${pct(e.door,e.sold)}%;background:var(--amber)"></span></div></div>
+          </div></div>
+      </div></div>
+      <div class="pad" style="margin-top:14px"><div class="label" style="margin-bottom:10px">Cele mai vândute categorii</div>
+        <div class="card pad">${e.tt.slice().sort((a,b)=>b.sold*b.price-a.sold*a.price).map((t,i)=>`<div class="between" style="padding:9px 0;${i?'border-top:1px solid var(--line)':''}">
+          <div class="row" style="gap:9px"><span class="muted" style="font-size:12px;width:14px">${i+1}</span><span style="width:9px;height:9px;border-radius:3px;background:${t.color}"></span><span style="font-weight:600;font-size:13px">${t.name}</span></div>
+          <div style="text-align:right"><div style="font-weight:700;font-size:13px">${money(t.sold*t.price/1000)}k</div><div class="muted" style="font-size:10px">${money(t.sold)} buc.</div></div>
+        </div>`).join('')}</div>
+      </div>
+      <div style="height:20px"></div>${nav('reports')}</div>`;
+  };
+
+  /* ===== SEATMAP ===== */
+  S.seatmap=(d)=>{
+    const e=ev(d.id);
+    if(ST.seats.sectionEv!==e.id){ST.seats.sel=[];ST.seats.sectionEv=e.id;}
+    const rows=8,cols=12;
+    const cells=[];
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const idx=r*cols+c;const seed=(idx*37+e.id*13)%100;
+      let st= seed<58?'sold': seed<70?'held': 'free';
+      const id=`R${r+1}-${c+1}`;
+      cells.push({id,st,r,c});
+    }
+    const sel=ST.seats.sel;
+    return `<div class="grid" style="min-height:100%;background:var(--bg2)">
+      <div class="topbar"><button class="icon-btn" data-a="back">${I.back}</button>
+        <div style="text-align:center;flex:1"><div class="h2" style="font-size:15px">Hartă locuri</div><div class="muted" style="font-size:11px">${e.venue}</div></div>
+        <button class="icon-btn" data-a="noop">${I.info}</button></div>
+      <div class="pad">
+        <div style="text-align:center;margin:4px 0 16px"><div style="height:6px;border-radius:4px;background:linear-gradient(90deg,transparent,var(--teal),transparent);margin:0 30px"></div><div class="muted" style="font-size:11px;font-weight:700;letter-spacing:.16em;margin-top:6px">SCENĂ</div></div>
+        <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:5px;padding:2px">
+        ${cells.map(s=>{const on=sel.includes(s.id);
+          const bg=on?'var(--teal)':s.st==='sold'?'var(--surface-3)':s.st==='held'?'var(--amber-soft)':'var(--surface-2)';
+          const bd=on?'var(--teal)':s.st==='held'?'rgba(245,179,1,.4)':'var(--line-2)';
+          const col=on?'#04120d':s.st==='sold'?'var(--faint)':'var(--muted)';
+          return `<button data-a="${s.st==='sold'?'noop':'seatpick:'+s.id}" style="aspect-ratio:1;border-radius:6px;border:1px solid ${bd};background:${bg};color:${col};font-size:8px;font-weight:700;cursor:${s.st==='sold'?'default':'pointer'};display:grid;place-items:center;${s.st==='sold'?'opacity:.5':''}">${on?'✓':''}</button>`;
+        }).join('')}
+        </div>
+        <div class="row" style="gap:14px;justify-content:center;margin-top:16px;font-size:11px;color:var(--muted);flex-wrap:wrap">
+          <span class="row" style="gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line-2)"></span>Liber</span>
+          <span class="row" style="gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--amber-soft);border:1px solid rgba(245,179,1,.4)"></span>Rezervat</span>
+          <span class="row" style="gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--surface-3)"></span>Vândut</span>
+          <span class="row" style="gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--teal)"></span>Selectat</span>
+        </div>
+      </div>
+      ${sel.length?`<div class="pad" style="position:sticky;bottom:0;padding-bottom:16px;background:linear-gradient(0deg,var(--bg2) 78%,transparent)">
+        <button class="cta" data-a="seatsell:${e.id}">Vinde ${sel.length} ${sel.length===1?'loc selectat':'locuri selectate'} ${I.arrow}</button></div>`:`<div class="pad" style="text-align:center;padding-bottom:20px"><div class="muted" style="font-size:12px">Atinge locurile libere pentru a le selecta.</div></div>`}
+      <div style="height:10px"></div></div>`;
+  };
+
+  /* ===== NOTIFICATIONS ===== */
+  S.notifs=()=>`<div class="grid" style="min-height:100%">
+    <div class="topbar"><button class="icon-btn" data-a="back">${I.back}</button><div class="h2">Notificări</div>
+      <button class="icon-btn" data-a="readall">${I.check}</button></div>
+    <div class="pad"><div style="display:flex;flex-direction:column;gap:10px">
+    ${ST.notifs.map(n=>`<div class="listitem" data-a="opennotif:${n.id}" style="cursor:pointer;${n.unread?'border-color:var(--teal-line)':''}">
+      <div class="avatar" style="width:40px;height:40px;border-radius:12px;font-size:18px;background:var(--surface-3)">${n.ic}</div>
+      <div style="flex:1;min-width:0"><div class="between"><span class="badge" style="font-size:9.5px">${n.cat}</span>${n.unread?'<span style="width:8px;height:8px;border-radius:50%;background:var(--teal)"></span>':''}</div>
+        <div style="font-weight:600;font-size:13.5px;margin-top:6px">${n.t}</div><div class="muted" style="font-size:11.5px;margin-top:2px">${n.s}</div>
+        <div class="faint" style="font-size:10.5px;margin-top:5px">${n.time}</div></div>
+    </div>`).join('')}
+    </div></div><div style="height:20px"></div></div>`;
+
+  /* ===== SETTINGS ===== */
+  S.settings=()=>{
+    const o=org();
+    return `<div class="grid" style="min-height:100%">${orgHeader()}
+      <div class="pad"><span class="h1" style="font-size:22px">Cont</span>
+        <div class="card pad" style="margin-top:14px;display:flex;gap:12px;align-items:center;padding:14px">
+          <div class="avatar" style="width:52px;height:52px;font-size:18px;background:linear-gradient(150deg,#00c896,#059f78)">AN</div>
+          <div style="flex:1"><div style="font-weight:600;font-size:15px">Andrei Nastase</div><div class="muted" style="font-size:12px">andrei@ambilet.ro</div></div>
+          <span class="badge teal">${o.role}</span>
+        </div>
+        <button class="cta ghost" data-a="switcher" style="margin-top:12px;justify-content:space-between;padding:14px">${I.switch} Schimbă organizatorul <span>${I.chev}</span></button>
+      </div>
+      <div class="pad" style="margin-top:18px"><div class="between" style="margin-bottom:10px"><span class="label">Echipă & acces</span><button class="chip" data-a="addteam">${I.plus} Invită</button></div>
+        <div class="card pad" style="padding:6px 14px">
+        ${TEAM.map((m,i)=>`<div class="between" style="padding:11px 0;${i?'border-top:1px solid var(--line)':''}">
+          <div class="row" style="gap:10px"><div class="avatar" style="width:36px;height:36px;border-radius:11px;font-size:12px;background:var(--surface-3);color:var(--teal-2)">${m.i}</div>
+            <div><div style="font-weight:600;font-size:13.5px">${m.n}</div><div class="muted" style="font-size:11px">${m.r}</div></div></div>
+          <span class="row" style="gap:5px;font-size:10.5px;color:${m.on?'var(--green-2)':'var(--faint)'}">${m.on?'<span class="livedot"></span>activ':'offline'}</span>
+        </div>`).join('')}
+        </div>
+      </div>
+      <div class="pad" style="margin-top:18px"><div class="label" style="margin-bottom:10px">Preferințe</div>
+        <div class="card pad" style="padding:4px 14px">
+          ${[['Limbă aplicație','Română',I.info],['Notificări push','Activate',I.bell],['Sunet & vibrație la scanare','Activate',I.scan]].map((r,i)=>`<div class="between" data-a="noop" style="padding:13px 0;${i?'border-top:1px solid var(--line)':''};cursor:pointer">
+            <div class="row" style="gap:10px"><span style="color:var(--muted)">${r[2]}</span><span style="font-size:13.5px;font-weight:500">${r[0]}</span></div>
+            <span class="muted" style="font-size:12px">${r[1]} ${I.chev}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="pad" style="margin-top:18px"><button class="cta ghost" data-a="logout" style="color:var(--red);justify-content:center">${I.logout} Deconectare</button>
+        <div class="faint" style="text-align:center;font-size:11px;margin-top:14px">Tixello Organizator · v1.0 · prototip</div>
+      </div>
+      <div style="height:16px"></div>${nav('settings')}</div>`;
+  };
+
+  /* ===== picker sheet (choose event for scan/pos) ===== */
+  let sheetEl;
+  function openSheet(title,items,action){
+    if(sheetEl)sheetEl.remove();
+    sheetEl=document.createElement('div');sheetEl.className='sw';
+    sheetEl.innerHTML=`<div class="sheet"><div class="grab"></div><div class="h2" style="margin:2px 2px 12px">${title}</div>
+      <div style="display:flex;flex-direction:column;gap:9px">${items.map(e=>`<div class="listitem" data-a="${action}:${e.id}" style="cursor:pointer">
+        <div class="avatar" style="width:40px;height:40px;border-radius:12px;font-size:12px;background:var(--surface-3);color:var(--teal-2)">${I.tick}</div>
+        <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div><div class="muted" style="font-size:11px">${e.date}</div></div>${evStatus(e)}</div>`).join('')}</div>
+      <div style="height:8px"></div></div>`;
+    $('.screenport').appendChild(sheetEl);
+    void sheetEl.offsetWidth;sheetEl.classList.add('show');
+    sheetEl.addEventListener('click', e=>{if(e.target===sheetEl)closeSheet();});
+  }
+  function closeSheet(){if(sheetEl){sheetEl.classList.remove('show');setTimeout(()=>{sheetEl&&sheetEl.remove();sheetEl=null;},260);}}
+
+  /* ===== ACTIONS ===== */
+  document.addEventListener('click',e=>{
+    const el=e.target.closest('[data-a]');if(!el)return;
+    const parts=el.dataset.a.split(':');const a=parts[0],arg=parts[1];
+    if(a==='noop')return;
+    if(a==='back')return back();
+    if(a==='tab')return tab(arg);
+    if(a==='go'){if(arg==='event')ST.ev=+parts[2];return go(arg,parts[2]!==undefined?{id:+parts[2]}:{});}
+    if(a==='login')return reset('dash');
+    if(a==='logout'){ST.org=1;setAccent();return reset('login');}
+    if(a==='switcher')return go('switcher');
+    if(a==='pickorg'){ST.org=+arg;ST.ev=(evs()[0]||{}).id;ST.pos.ev=ST.ev;ST.pos.cart={};ST.scan.log=[];ST.scan.count=(ev(ST.ev)||{}).entered||0;ST.tab='dash';setAccent();reset('dash');setTimeout(()=>toast('Ai schimbat pe '+org().name),120);return;}
+
+    if(a==='scanev'){ST.ev=+arg;return go('scan',{evId:+arg});}
+    if(a==='posev'){ST.pos.ev=+arg;return go('pos',{evId:+arg});}
+    if(a==='scanpick')return openSheet('Scanează la evenimentul',evs().filter(e=>e.status!=='ended'),'pickscan');
+    if(a==='pickscan'){ST.ev=+arg;closeSheet();return rerender();}
+    if(a==='pospick')return openSheet('Vinde la ușă pentru',evs(),'pickpos');
+    if(a==='pickpos'){ST.pos.ev=+arg;ST.pos.cart={};closeSheet();return rerender();}
+
+    if(a==='dosim')return doScan();
+    if(a==='manual')return doScan('ok');
+    if(a==='undo'){const i=ST.scan.log.findIndex(s=>s.uid===arg);if(i>=0){if(ST.scan.log[i].type==='ok')ST.scan.count--;ST.scan.log.splice(i,1);toast('Check-in anulat');rerender();}return;}
+
+    if(a==='posinc'){const t=ev(ST.pos.ev).tt.find(x=>x.id===+arg);const avail=t.cap-t.sold;ST.pos.cart[arg]=Math.min(avail,(ST.pos.cart[arg]||0)+1);return rerender();}
+    if(a==='posdec'){ST.pos.cart[arg]=Math.max(0,(ST.pos.cart[arg]||0)-1);if(!ST.pos.cart[arg])delete ST.pos.cart[arg];return rerender();}
+    if(a==='postoggle'){ST.pos.autocheckin=!ST.pos.autocheckin;return rerender();}
+    if(a==='poscheckout'){const e=ev(ST.pos.ev);let cnt=0,tot=0;e.tt.forEach(t=>{const q=ST.pos.cart[t.id]||0;cnt+=q;tot+=q*t.price;t.sold+=q;e.sold+=q;e.door+=q;e.revenue+=q*t.price;if(ST.pos.autocheckin){e.entered+=q;}});if(!cnt)return;const ord=1000+Math.floor((tot+cnt*7)%9000);const ac=ST.pos.autocheckin;ST.pos.cart={};if(ac)ST.scan.count=ev(ST.ev).entered;return go('posdone',{evId:e.id,cnt,tot,ord,autocheckin:ac});}
+    if(a==='posagain'){ST.pos.ev=+arg;ST.pos.cart={};stack.pop();return go('pos',{evId:+arg});}
+
+    if(a==='seatpick'){const i=ST.seats.sel.indexOf(arg);if(i>=0)ST.seats.sel.splice(i,1);else ST.seats.sel.push(arg);return rerender();}
+    if(a==='seatsell'){const n=ST.seats.sel.length;ST.pos.ev=+arg;ST.seats.sel=[];back();setTimeout(()=>toast(n+' locuri trecute în POS'),200);return;}
+
+    if(a==='opennotif'){const n=ST.notifs.find(x=>x.id===+arg);if(n)n.unread=false;rerender();return;}
+    if(a==='readall'){ST.notifs.forEach(n=>n.unread=false);rerender();return toast('Toate marcate ca citite');}
+    if(a==='reprange'){ST.repRange=arg;rerender();return;}
+    if(a==='export')return toast('Export CSV pregatit 📊');
+    if(a==='addteam')return toast('Invitație de echipă — în curând');
+  });
+
+  setAccent();
+  paint('forward');
+})();
+</script>
