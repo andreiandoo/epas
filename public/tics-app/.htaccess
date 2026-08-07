@@ -1,0 +1,25 @@
+# Pagina de download a build-ului de test Tixello.
+# Servita static: .htaccess-ul din public/ nu rescrie directoarele (RewriteCond !-d),
+# deci cererea ajunge aici, nu la front controller-ul Laravel.
+
+# Unele configuratii Laravel seteaza DirectoryIndex doar pe index.php.
+DirectoryIndex index.html index.php
+
+# Tip MIME corect pentru APK (altfel unele browsere incearca sa-l randeze).
+<IfModule mod_mime.c>
+    AddType application/vnd.android.package-archive .apk
+</IfModule>
+
+# APK-urile sunt versionate in numele fisierului, deci pot fi cache-uite agresiv.
+# Pagina in schimb trebuie sa fie mereu proaspata (versiune/hash se schimba).
+<IfModule mod_headers.c>
+    <FilesMatch "\.apk$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header set Content-Disposition "attachment"
+    </FilesMatch>
+    <FilesMatch "\.html$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+    # Build intern - tinem pagina in afara indexarii.
+    Header set X-Robots-Tag "noindex, nofollow"
+</IfModule>
