@@ -18,6 +18,7 @@ import {
   isAuthenticated,
   recordDailyWatch,
   remindMe,
+  reportCtaClick,
   shareShort,
   toggleShortLike,
   toggleShortSave,
@@ -294,10 +295,12 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
   const onCta = useCallback(
     (short: ApiShort) => {
-      track({ short_id: short.id, type: 'cta_click', feed });
-
       const cta = short.cta;
       if (!cta) return;
+
+      // Raportam imediat (nu batched) si nu asteptam raspunsul: navigarea spre
+      // checkout nu trebuie sa depinda de o cerere de analytics.
+      void reportCtaClick(short.id, feed);
 
       if (cta.type === 'external' && cta.url) {
         window.open(cta.url, '_blank', 'noopener');
@@ -306,11 +309,15 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
       }
 
       if (short.event?.id) {
+        // sourceShortId + sourceFeed calatoresc pana la crearea comenzii; acolo
+        // devin orders.source_short_id / source_feed si inchid bucla de
+        // atribuire (docs/plans/shorts.md B1).
         go('event', {
           id: short.event.id,
           ticketTypeId: cta.ticket_type_id ?? undefined,
           promoCode: cta.promo_code ?? undefined,
           sourceShortId: short.id,
+          sourceFeed: feed,
         });
 
         return;
@@ -318,7 +325,7 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
       if (short.owner?.type === 'artist' && short.owner.id) go('artist', { id: short.owner.id });
     },
-    [track, feed, go],
+    [feed, go],
   );
 
   const activeShort = items[activeIndex];

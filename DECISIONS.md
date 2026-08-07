@@ -430,3 +430,83 @@ preferința (exact utilizatorii care au cerut „niciodată"), și că guest-ii 
 **Impact.** Setarea e activă din prima redare, inclusiv pentru guest. Costul: nu se sincronizează
 între dispozitive — acceptabil, e o preferință legată de ecran și de conexiune.
 `prefers-reduced-motion` bate oricând setarea din app.
+
+---
+
+## D-027 — Atribuirea conversiilor trece prin observer pe `Order`, nu prin eveniment
+
+**Context.** B1 cere incrementarea `shorts.conversions`/`revenue_cents` „la plata
+confirmată". Există `OrderConfirmed`, dar poartă doar `(tenantId, orderRef, orderData)` —
+nu modelul — și nu e emis pe toate căile prin care o comandă ajunge plătită (webhook
+Stripe, comandă gratuită, acțiune de admin).
+
+**Alegere.** `ShortAttributionOrderObserver` pe tranziția de `status`, exact acolo unde
+stă și sincronizarea de bilete din `Order::saved()`. Observerul nu aruncă niciodată.
+
+**Alternative.** Ascultarea `OrderConfirmed` — ar rata căile care nu-l emit, iar
+reconstrucția modelului din `orderRef` e o interogare în plus pentru date pe care
+observerul le are deja.
+
+**Impact.** O atribuire eșuată nu poate da înapoi o comandă plătită. Acoperă toate căile.
+
+---
+
+## D-028 — Idempotența atribuirii stă pe comandă, nu pe agregat
+
+**Context.** Retry-urile de webhook sunt normale; o comandă poate parcurge
+`pending → paid → confirmed → completed`.
+
+**Alegere.** `orders.short_attributed_at`. `credit()` iese devreme dacă e deja stampilat;
+`reverse()` iese devreme dacă nu e. O comandă al cărei short a fost șters e stampilată
+oricum, ca să nu se re-verifice la fiecare schimbare de status.
+
+**Alternative.** Deducerea din agregate — imposibil de spus dacă „conversions = 1" vine de
+la această comandă sau de la alta.
+
+**Impact.** Testat pe trei tranziții succesive spre plătit: un singur credit.
+
+---
+
+## D-029 — Agregatele de conversie se plafonează la zero la reversare
+
+**Context.** Un refund scade `conversions`/`revenue_cents`. Dacă agregatul a fost între
+timp rescris (recalcul, editare manuală), scăderea poate depăși valoarea stocată.
+
+**Alegere.** `CASE WHEN ... THEN ... ELSE 0 END` în SQL: se plafonează la zero, nu trece
+în negativ și nu lasă venit fantomă pentru o comandă rambursată.
+
+**Impact.** Un raport poate arăta zero în loc de o valoare mică, dar niciodată un număr
+negativ de vânzări. Testat în `test_aggregates_never_go_negative`.
+
+---
+
+## D-030 — CTA click e sincron, nu batched
+
+**Context.** Restul telemetriei pleacă în loturi la 5 secunde.
+
+**Alegere.** `POST tenant-client/shorts/{id}/cta-click` trimis imediat, public, și care
+întoarce oferta de onorat (event, tip de bilet, cod promo, `source_short_id`, `source_feed`).
+
+**Alternative.** Batching — tap-ul pe CTA e ultimul lucru dinainte de plecarea din feed;
+la flush ecranul e deja închis și evenimentul se pierde exact pentru clicurile care
+convertesc.
+
+**Impact.** `cta_clicks` e corect, iar clientul primește într-un singur drum tot ce trebuie
+să ducă în checkout. Clientul nu așteaptă răspunsul înainte să navigheze.
+
+---
+
+## D-031 — Nu am atins `CheckoutController` pentru ultimul pas al atribuirii
+
+**Context.** Bucla se închide când `Order::create()` primește `source_short_id`/`source_feed`
+din payload-ul de checkout.
+
+**Alegere.** Coloanele sunt `fillable` și observerul e gata; propagarea propriu-zisă e
+lăsată ca `TODO(owner)` explicit în `PROGRESS.md`.
+
+**Alternative.** Editarea `CheckoutController` (1700+ linii, două căi de `Order::create()`,
+fluxuri reale de plată) fără să pot rula un test de checkout end-to-end — schema de test
+redusă (D-002) nu acoperă checkout-ul.
+
+**Impact.** Tot ce ține de Shorts e complet și testat; rămâne o singură linie într-un fișier
+pe care nu-l pot verifica aici. Riscul e vizibil în PROGRESS, nu ascuns într-un diff.

@@ -98,6 +98,8 @@ class Short extends Model
         'saves' => 'integer',
         'shares' => 'integer',
         'cta_clicks' => 'integer',
+        'conversions' => 'integer',
+        'revenue_cents' => 'integer',
         'avg_watch_ratio' => 'decimal:3',
         'published_at' => 'datetime',
         'expires_at' => 'datetime',

@@ -291,6 +291,36 @@ class ShortResource extends Resource
                     ->numeric()
                     ->toggleable(),
 
+                // CTR and CVR are derived, not stored: they would go stale the
+                // moment either side moved (docs/plans/shorts.md B1).
+                Tables\Columns\TextColumn::make('ctr')
+                    ->label('CTR')
+                    ->state(fn (Short $record) => $record->views > 0
+                        ? number_format($record->cta_clicks / $record->views * 100, 1).'%'
+                        : '—')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('conversions')
+                    ->label('Sales')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('cvr')
+                    ->label('CVR')
+                    ->state(fn (Short $record) => $record->cta_clicks > 0
+                        ? number_format($record->conversions / $record->cta_clicks * 100, 1).'%'
+                        : '—')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('revenue_cents')
+                    ->label('Revenue')
+                    ->state(fn (Short $record) => $record->revenue_cents > 0
+                        ? number_format($record->revenue_cents / 100, 2).' '.($record->revenue_currency ?? '')
+                        : '—')
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('published_at')
                     ->dateTime()
                     ->sortable()

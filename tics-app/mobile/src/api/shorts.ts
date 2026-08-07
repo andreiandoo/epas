@@ -315,3 +315,41 @@ export async function fetchStreak(): Promise<StreakState | null> {
     return null;
   }
 }
+
+/* ---------- val 2: CTA shoppable (B1) ---------- */
+
+export type CtaClickResult = {
+  short_id: number;
+  checkout: {
+    event_id: number | null;
+    ticket_type_id: number | null;
+    promo_code: string | null;
+    source_short_id: number;
+    source_feed: string | null;
+  };
+};
+
+/**
+ * Raporteaza tap-ul pe CTA si primeste inapoi oferta de onorat la checkout.
+ *
+ * NU trece prin coada de telemetrie: e ultimul lucru pe care il face clientul
+ * inainte sa plece din feed spre checkout, iar un flush la 5 secunde ar prinde
+ * ecranul deja inchis. Public — tap-ul se intampla la fel de des inainte de
+ * login ca dupa.
+ */
+export async function reportCtaClick(
+  id: number,
+  feed?: ShortFeedSegment | null,
+): Promise<CtaClickResult | null> {
+  try {
+    const body = await request<Envelope<CtaClickResult>>(`/tenant-client/shorts/${id}/cta-click`, {
+      method: 'POST',
+      body: JSON.stringify({ feed }),
+    });
+
+    return body.data;
+  } catch {
+    // Nu blocam navigarea spre checkout pentru o problema de raportare.
+    return null;
+  }
+}

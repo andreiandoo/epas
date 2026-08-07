@@ -4061,6 +4061,12 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->whereNumber('short')
         ->name('api.tenant-client.shorts.show');
 
+    // CTA click — sent immediately, not batched: it is the last thing the client
+    // does before leaving for checkout, and it hands back the offer to honour.
+    Route::post('/shorts/{short}/cta-click', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'ctaClick'])
+        ->whereNumber('short')
+        ->name('api.tenant-client.shorts.cta-click');
+
     Route::get('/events/{slug}/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'forEvent'])
         ->name('api.tenant-client.shorts.by-event');
 

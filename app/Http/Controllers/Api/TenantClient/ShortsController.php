@@ -7,6 +7,7 @@ use App\Models\Artist;
 use App\Models\Event;
 use App\Models\MarketplaceCustomer;
 use App\Models\Short;
+use App\Models\ShortEvent;
 use App\Services\Shorts\ShortFeedService;
 use App\Services\Shorts\ShortPayload;
 use App\Services\Shorts\ShortTelemetryService;
@@ -119,6 +120,51 @@ class ShortsController extends Controller
                 limit: (int) $request->query('limit', config('shorts.feed.page_size', 10)),
                 customer: $this->viewer($request),
             ),
+        ]);
+    }
+
+    /**
+     * POST tenant-client/shorts/{short}/cta-click
+     *
+     * Separate from the batched telemetry: a CTA click is the last thing the
+     * client does before leaving the feed for checkout, so it must not sit in a
+     * queue that flushes five seconds later — by then the screen is gone.
+     * Public, because the tap happens before login just as often as after.
+     */
+    public function ctaClick(Request $request, int $short): JsonResponse
+    {
+        $model = Short::query()->published()->find($short);
+
+        if (! $model) {
+            return response()->json(['success' => false, 'message' => 'Short not found'], 404);
+        }
+
+        $customer = $this->viewer($request);
+
+        ShortEvent::create([
+            'short_id' => $model->id,
+            'marketplace_customer_id' => $customer?->id,
+            'session_id' => substr((string) $request->input('session_id'), 0, 64) ?: null,
+            'type' => ShortEvent::TYPE_CTA_CLICK,
+            'feed' => $request->input('feed'),
+            'created_at' => now(),
+        ]);
+
+        $model->newQuery()->whereKey($model->id)->increment('cta_clicks');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'short_id' => $model->id,
+                // Everything checkout needs to honour the short's offer.
+                'checkout' => [
+                    'event_id' => $model->event_id,
+                    'ticket_type_id' => $model->cta_ticket_type_id,
+                    'promo_code' => $model->promo_code,
+                    'source_short_id' => $model->id,
+                    'source_feed' => $request->input('feed'),
+                ],
+            ],
         ]);
     }
 

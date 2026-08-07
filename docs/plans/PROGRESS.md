@@ -20,9 +20,12 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   Detalii: `docs/plans/shorts-mobile.md`.
 - **Faza 3 (Val 1)** — creștere ieftină: share cu referral + landing web (D1), remind/drop
   cu countdown (D2), UX de player cu blurhash/data-saver (D9), gamification cu plafon
-  anti-abuz (D11), accesibilitate (D10). **37 de teste, 118 aserțiuni, toate verzi.**
+  anti-abuz (D11), accesibilitate (D10).
+- **Faza 4 (Shoppable, B1)** — CTA cu bilet + promo, `orders.source_short_id`/`source_feed`,
+  atribuire last-touch idempotentă cu reversare la refund, CTR/CVR/venit în admin.
+  **46 de teste, 144 aserțiuni, toate verzi.**
 
-**Urmează.** Faza 4 — shoppable (B1) + atribuirea conversiilor pe `orders.source_short_id`.
+**Urmează.** Faza 5 — following + ranker „For You" (B2) + geamăn tenant în Filament.
 
 **Blocaje / de știut.**
 
@@ -161,11 +164,27 @@ double-tap = like și swipe-up pe CTA.
 - `IdentityBridge` — puntea `MarketplaceCustomer ↔ Customer` lipsește
   (`friends-social.md` §0); punctele stau marketplace-side până apare coloana de legătură
 
-## Faza 4 — Shoppable (B1) ⏳
+## Faza 4 — Shoppable (B1) ✅
 
-- [ ] `shorts.conversions` / `revenue_cents` · `orders.source_short_id`
-- [ ] Propagarea atribuirii last-touch · listener pe „order paid" / refund
-- [ ] CTR / CVR în admin
+- [x] `shorts.conversions` / `revenue_cents` / `revenue_currency`
+- [x] `orders.source_short_id` / `source_feed` / `short_attributed_at` (aditiv, nullable)
+- [x] `ShortAttributionService` — credit + reversare, idempotent prin
+      `short_attributed_at`; agregatele nu pot deveni negative
+- [x] `ShortAttributionOrderObserver` — pe tranziția de status, nu pe eveniment
+      (comenzile ajung „paid" pe mai multe căi; doar modelul le vede pe toate);
+      nu aruncă niciodată — o atribuire eșuată nu are voie să dea înapoi o comandă plătită
+- [x] `POST tenant-client/shorts/{id}/cta-click` — trimis imediat, nu batched;
+      întoarce oferta de onorat (event, ticket type, promo, `source_short_id`, `source_feed`)
+- [x] Client: `reportCtaClick` + `sourceShortId`/`sourceFeed` propagate spre checkout
+- [x] Admin: coloane CTR, Sales, CVR, Revenue — derivate, nu stocate
+- [x] Teste: 9 (click CTA, credit unic, retry-uri de webhook, refund, floor la zero,
+      comenzi fără short, short șters, rate)
+
+> **TODO(owner):** ultimul pas al buclei rămâne de făcut în checkout —
+> `CheckoutController` trebuie să treacă `source_short_id` / `source_feed` din payload
+> în `Order::create()`. Coloanele sunt `fillable`, deci e o linie; nu am atins
+> controllerul de checkout (1700+ linii, fluxuri de plată reale) fără să pot rula
+> un test de checkout end-to-end pe schema completă.
 
 ## Faza 5 — Following + ranker For You (B2) ⏳
 
