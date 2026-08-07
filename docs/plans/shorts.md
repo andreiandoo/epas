@@ -930,3 +930,291 @@ BUNNY_STREAM_WEBHOOK_SECRET=
 - Activează „MP4 fallback" doar dacă îți trebuie (altfel dublezi stocarea).
 - Token auth cu TTL scurt (anti-hotlinking → nu-ți irosești bandwidth-ul pe emb-eduri externe).
 - Bunny **volume tier** (dacă traficul e mare) reduce la ~$0.005/GB.
+
+---
+
+# PARTEA D — Îmbogățiri suplimentare (implementare)
+
+Selectate explicit. Format identic cu B/C. Multe se leagă de sisteme existente (referral, `watchlist`, `Affiliate*`, `Gamification`, `AutomationWorkflow`, grupul feature-flags din `routes/api.php`). Cele care ating identitatea de user presupun **puntea `MarketplaceCustomer` ↔ `Customer`** din `docs/plans/friends-social.md`.
+
+---
+
+## D1. Share-out cu card social brandat + referral în link ⭐
+
+**Obiectiv:** share către WhatsApp/IG/Story → cover brandat + deep-link „vezi în app", cu **codul de referral** al userului în link → buclă de creștere.
+
+> ⚠️ Deși app-ul e mobile-only, share-urile au nevoie de **o pagină web minimă** de landing (OG tags + „Deschide în app" + fallback store). E singura piesă web necesară.
+
+### Model de date
+```php
+Schema::table('shorts', fn(Blueprint $t) => $t->string('share_card_path')->nullable());
+// opțional, pt atribuire de share:
+Schema::create('short_shares', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->foreignId('sharer_customer_id')->nullable();     // MarketplaceCustomer
+    $t->string('channel')->nullable();                   // whatsapp|instagram|copy|...
+    $t->unsignedBigInteger('clicks')->default(0);
+    $t->unsignedBigInteger('installs')->default(0);
+    $t->unsignedBigInteger('conversions')->default(0);
+    $t->timestamps();
+});
+```
+
+### Card brandat
+- `GenerateShareCardJob` (după ce short-ul e `ready`): compune poster Bunny + logo Tixello + glyph play + titlu + `price_from` → PNG 1200×630 (OG) + 1080×1920 (story). Reutilizează `VideoRenderer`/un image-composer sau Bunny thumbnail + overlay. Salvează `share_card_path` (disk `public`).
+
+### Link & landing
+- **Universal/App Links**: `https://l.tixello.ro/s/{shortId}?ref={referralCode}` → deschide app-ul la short; fallback web.
+- **Landing web** `/s/{shortId}`: OG tags (`og:image`=share card, `og:title`, `og:video` opțional), buton „Deschide în app" + store fallback; setează cookie `ref` pt atribuire; loghează click (`short_shares.clicks++`).
+- **Referral**: reutilizează sistemul existent (`Gamification\Referral` / `marketplace_referrals` + `referral_code`). La signup prin link → atribuie referral (flux existent) + opțional auto friend-request (vezi friends plan).
+
+### API & mobil
+```
+POST marketplace-client/customer/shorts/{id}/share   // {channel} → {url (cu ref), card_url}; loghează share
+GET  /s/{shortId}                                     // landing web (OG + redirect)
+```
+- Mobil: Capacitor **Share** plugin cu `url` + `card_url`.
+
+---
+
+## D2. „Remind me" / drop countdown în short ⭐
+
+**Obiectiv:** pt evenimente cu biletele **neînscrise încă** la vânzare — countdown + „Amintește-mi" → watchlist + push la drop.
+
+### Model
+```php
+Schema::create('short_reminders', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('marketplace_customer_id')->constrained('marketplace_customers')->cascadeOnDelete();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->foreignId('event_id')->index();
+    $t->timestamp('remind_at');           // = on_sale_at al evenimentului/tipului de bilet
+    $t->timestamp('notified_at')->nullable();
+    $t->timestamps();
+    $t->unique(['marketplace_customer_id','short_id']);
+});
+```
+> Sursa `on_sale_at`: fereastra de vânzare de pe `TicketType`/`PriceTier` (verifică `sales_start`/`sales_end`). Dacă lipsește, adaug-o.
+
+### Logică
+- Când evenimentul nu e la vânzare → CTA devine **„Amintește-mi"** + countdown client-side până la `on_sale_at`.
+- Tap → creează `short_reminder` + adaugă la `watchlist`/`favoriteEvents` (există).
+- `FireDropRemindersJob` (scheduled, la minut) → pt reminders cu `remind_at<=now && notified_at null` → push „Biletele la {event} sunt live" + `notified_at=now`.
+
+### API & mobil
+```
+POST   marketplace-client/customer/shorts/{id}/remind    // creează reminder
+DELETE marketplace-client/customer/shorts/{id}/remind
+```
+- Mobil: overlay countdown (ticking client-side) + stare buton „Amintește-mi ✓".
+
+---
+
+## D3. Shorts promovate/boostate ⭐
+
+**Obiectiv:** organizatorii plătesc ca să-și urce un short în feed; house-ads; transparență „Sponsorizat".
+
+### Model
+```php
+Schema::create('short_promotions', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->foreignId('tenant_id')->index();
+    $t->enum('model', ['cpm','cpc'])->default('cpm');
+    $t->unsignedBigInteger('bid_cents');                 // per 1000 impresii sau per click
+    $t->unsignedBigInteger('budget_cents');
+    $t->unsignedBigInteger('spent_cents')->default(0);
+    $t->json('targeting')->nullable();                    // {geo, genres, age}
+    $t->timestamp('start_at'); $t->timestamp('end_at');
+    $t->enum('status', ['pending','active','paused','ended','rejected'])->default('pending');
+    $t->timestamps();
+});
+```
+
+### Integrare în ranker (D5)
+- Slot-uri de promovare: injectează 1 la N poziții un short promovat eligibil (targeting + buget rămas + `active` + `now∈[start,end]`), cu **frequency capping** per user; etichetă „Sponsorizat".
+- **Billing**: CPM → taxezi la impresie; CPC → la `cta_click`. Decrementezi `spent_cents`; oprești când `spent>=budget` sau `now>end_at`. **Pacing**: distribuie bugetul pe durata flight-ului (nu-l consuma în 1h).
+- Plată: prepay buget prin Stripe (reutilizează checkout) sau facturare via billing existent. Leagă opțional de `Affiliate*` pt house-ads/comision.
+
+### Admin & API
+- Resursă panou tenant „Promovează short" (+ aprobare în core admin).
+- Feed marchează itemii promovați; impresiile/click-urile lor se loghează separat pt billing (`short_events` + `promotion_id`, sau tabel `promotion_events`).
+
+---
+
+## D4. Retenție per short (drop-off) + atribuire pe segment de feed + trending ⭐
+
+### Retenție (drop-off curve)
+- Mobil emite **progress pings** la 10% intervale (0,10,…,100) SAU raportează `max_watch_ratio` la ieșire (mai ieftin — vezi D6).
+```php
+Schema::create('short_retention', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('short_id')->constrained()->cascadeOnDelete();
+    $t->date('date');
+    $t->unsignedTinyInteger('bucket');     // 0..9 (deciles de watch)
+    $t->unsignedBigInteger('count')->default(0);
+    $t->unique(['short_id','date','bucket']);
+});
+```
+`AggregateShortRetentionJob` populează din `short_events`. Grafic în analytics (B5) → vezi unde pică viewerii.
+
+### Atribuire pe segment de feed
+- `short_events.feed` există deja. Adaugă pe comandă segmentul care a convertit:
+```php
+Schema::table('orders', fn(Blueprint $t) => $t->string('source_feed')->nullable());
+```
+→ raportezi conversii/venit pe `for_you|following|nearby|event|artist` (care feed vinde).
+
+### Trending
+- `ComputeTrendingJob` (scheduled, la 15–30 min): `trending_score` = velocitate (views/completions/likes în fereastră 6–24h) raportată la baseline (z-score/ratio).
+```php
+Schema::table('shorts', fn(Blueprint $t) => $t->decimal('trending_score', 8, 3)->default(0)->index());
+```
+→ feed/hashtag „Trending".
+
+---
+
+## D5. Evoluția rankerului ⭐
+
+De la scored-SQL (§6) la un ranker cu politică:
+- **Pipeline**: candidate-generation → scoring → policy(diversitate + explorare + promovate D3).
+- **Exploration/exploitation**: rezervă ~10–15% sloturi pt short-uri noi/cu impresii puține (epsilon-greedy) → eviți „rich-get-richer".
+- **Seen-store** (anti-repetiție cross-sesiune):
+```php
+Schema::create('short_impressions', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('marketplace_customer_id')->index();
+    $t->foreignId('short_id')->index();
+    $t->timestamp('last_seen');
+    $t->unique(['marketplace_customer_id','short_id']);
+});   // sau set Redis cu TTL, dacă ai Redis
+```
+- **„More like this" / similaritate**: start cu overlap de gen/artist/hashtag; ulterior embeddings (`short_embeddings`) + nearest-neighbor.
+- **Diversitate**: nu 2 consecutive de la același owner; injectează prospețime.
+- **Config + experimente**: ponderi în config (`GamificationConfig`-style) + hook-uri de experiment (feature flags — grupul din `routes/api.php`), cu **holdout**. Explicabil: loghează scorul în dev.
+- Serviciu: `ShortFeedRanker` cu strategii plugabile.
+
+---
+
+## D6. Scalarea telemetriei ⭐
+
+`short_events` devine uriaș → strategie:
+- **Ingest**: batched din client (deja); endpoint lightweight; scriere append-only. Opțional buffer pe coadă.
+- **Partiționare**: `short_events` pe lună (partiționare MySQL sau tabel-per-lună).
+- **Rollup + TTL**: agregă raw → `short_analytics_daily` (B5) + `short_retention` (D4) prin joburi scheduled, apoi **prune** raw după N zile:
+```php
+// PruneShortEventsJob (scheduled): delete where created_at < now()-retention_days (ex. 60–90)
+```
+- **Sampling**: pt impresii (volum uriaș) păstrează 1/N cu weight; `view/complete/cta_click/share/conversion` = 100%.
+- **Anti-fraud** (overlap D11): dedup pe device/sesiune, prag de validitate a view-ului (ex. ≥2s sau ≥25%).
+- **Scale option**: stream către ClickHouse/BigQuery pt analytics grele (flag, nu blocant).
+
+---
+
+## D7. Drepturi & licențiere ⭐
+
+**Obiectiv:** proprietate/uz/teritoriu/vârstă per short; age-gating; geo-restricții; takedown.
+
+### Model
+```php
+Schema::table('shorts', function (Blueprint $t) {
+    $t->string('rights_holder')->nullable();
+    $t->enum('license_type', ['owned','licensed','ugc','artist','partner'])->default('owned');
+    $t->timestamp('usage_expires_at')->nullable();
+    $t->json('territories')->nullable();       // {mode:'allow'|'deny', codes:['RO','MD']}
+    $t->unsignedTinyInteger('age_rating')->default(0);  // 0|16|18
+    $t->json('content_flags')->nullable();     // ['alcohol','flashing',...]
+});
+```
+
+### Aplicare
+- Feed **exclude** short-urile: `usage_expires_at<now`, în afara teritoriului userului (geo/city), și **age-gate 18+** (necesită confirmare/DOB verificat).
+- `CheckShortHealthJob` (B14) expiră și pe fereastra de uz.
+- **UGC**: flux **DMCA/takedown** (report → review → takedown → notificare), verificare muzică/copyright, înregistrarea consimțământului; right-to-be-forgotten (infra de consimțământ există).
+- Admin: câmpurile în `ShortResource` + vedere de review compliance.
+
+---
+
+## D8. Guardrails de cost Bunny ⭐
+
+**Obiectiv:** plafon + alertare pe bandwidth/storage; downgrade automat la spike-uri.
+- `PollBunnyUsageJob` (scheduled): citește Bunny Statistics API (bandwidth/storage) → stochează → **alertă** (Slack/email) când proiecția lunară > prag.
+- `CostGuardService` aplică politică: la apropierea de plafon → **cap rezoluție** (720→480), crește TTL cache, throttle prefetch în app.
+- Feature flag global `data_saver_global` (coboară calitatea platform-wide la spike).
+- Per-video: limitează rezoluțiile encodate (C9), MP4 fallback off.
+- Anti-hotlinking: token TTL scurt + verificare referrer (nu-ți irosești bandwidth pe embed-uri externe).
+```php
+// config: services.bunny.monthly_bandwidth_cap_gb, alert_threshold_pct
+```
+
+---
+
+## D9. UX de player ⭐
+
+**Obiectiv:** redare fluidă, plăcută, tolerantă la rețea slabă.
+- **Blurhash/LQIP**: `shorts.blurhash` (string) calculat la ingest din poster (`GenerateBlurhashJob`). Placeholder blurhash → poster → video.
+- **Prefetch**: pre-încarcă posterele + primul segment HLS al următoarelor 1–2; pe rețea slabă/baterie mică reduce prefetch + pornește la rendition mai jos (hls.js `startLevel`/`capLevelToPlayerSize`).
+- **Data-saver**: toggle manual + auto (Capacitor Network / Network Information).
+- **Scrub**: Bunny `preview.webp`/sprite thumbnails → UI de scrub.
+- **Autoplay**: muted la intrare în viewport, unmute la tap (reține preferința), un singur „unmuted" simultan.
+- Skeletons la load, snap vertical fluid, double-tap = like.
+```php
+Schema::table('shorts', fn(Blueprint $t) => $t->string('blurhash')->nullable());
+```
+
+---
+
+## D10. Accesibilitate ⭐
+
+- **Reduced-motion**: respectă `prefers-reduced-motion`/setarea OS → dezactivează autoplay + tranziții, arată poster + buton play.
+- **Setare „Redare automată"**: Wi-Fi / mereu / niciodată.
+- **Captions on-by-default** (opțiune; leagă B6).
+- **Screen reader**: `accessibilityLabel` pe controale; anunță titlu/autor; ordine de focus; live-region pt schimbarea short-ului.
+- **Tap targets** ≥44px, focus vizibil, **scrim** în spatele textului pt contrast.
+- **Content warnings** pt flashing (epilepsie) din `content_flags` (D7); opțiune „fără autoplay".
+- Audio: niciodată autoplay cu sunet (muted implicit).
+
+---
+
+## D11. Gamification ⭐
+
+**Obiectiv:** puncte/badge-uri/streaks pt watch/share/create → loialitate. Reutilizează `Gamification` (latura `Customer` → via puntea de identitate).
+- **Reguli** (listeners pe `short_events` + aprobare UGC):
+  - +puncte la primul watch al zilei (streak), la **share** (D1), la **UGC aprobat** (B9), la participare la un eveniment descoperit prin short (buclă — leagă `orders.source_short_id`).
+  - Badge-uri: „Explorer" (watch), „Tastemaker" (share care convertește), „Creator" (UGC).
+- **Model**: reutilizează `Gamification\PointsTransaction`/`ExperienceTransaction` cu surse noi (`short_watch|short_share|short_create`); streak pe `CustomerPoints` sau `short_streaks`.
+- **Anti-abuz**: cap puncte/zi, prag de validitate (D6), fără self-referral.
+- Mobil: toast „+X puncte", indicator de streak, badge-uri în Profil.
+
+---
+
+## D12. Notificări comportamentale ⭐
+
+**Obiectiv:** re-engagement pe baza comportamentului în shorts. **Reutilizează `AutomationWorkflow`/`AutomationStep`/`AutomationEnrollment`** (există în cod).
+- **Triggere** (din `short_events` + `follows` + `watchlist`):
+  - ai văzut N shorts de la același event/artist fără să cumperi → nudge „biletele se vând repede";
+  - eveniment cu engagement + stoc mic → urgență;
+  - artist urmărit a postat short (D2/B4);
+  - drop reminder (D2); „trending lângă tine" (D4).
+- **Motor**: `EvaluateBehavioralTriggersJob` (scheduled) înrolează userii în `AutomationWorkflow` → push (FCM/APNs) + email (`EmailTemplate` există).
+- **Preferințe & limite**:
+```php
+Schema::create('notification_preferences', function (Blueprint $t) {
+    $t->id();
+    $t->foreignId('marketplace_customer_id')->constrained('marketplace_customers')->cascadeOnDelete();
+    $t->string('type');            // shorts_dropped|shorts_trending|followed_posted|...
+    $t->boolean('push')->default(true);
+    $t->boolean('email')->default(false);
+    $t->unique(['marketplace_customer_id','type']);
+});
+```
+- **Frequency capping** + quiet hours; totul **opt-in**, respectă consimțământul.
+
+---
+
+## D13. Note de fază (peste B12)
+- **Val 1 (creștere, cost mic):** D1 (share+referral), D2 (remind/drop), D9 (UX player), D11 (gamification), D10 (accesibilitate) — se pot livra devreme, alături de fundație.
+- **Val 2 (măsurare & scalare):** D4 (retenție/atribuire/trending), D6 (telemetrie), D5 (ranker), D12 (notificări comportamentale).
+- **Val 3 (bani & compliance):** D3 (promovate), D7 (drepturi/licențiere), D8 (guardrails cost).
+- **Dependențe cheie:** layer de push (D2/D12), puntea de identitate (D11/D12), landing web pt share (D1).
