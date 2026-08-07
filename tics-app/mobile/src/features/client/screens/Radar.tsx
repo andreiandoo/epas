@@ -62,7 +62,7 @@ export function TicsList({ cat, type: typeArg, day }: { cat?: string; type?: str
 
   /* "Alege un vibe" intra fie cu o categorie, fie direct cu event_type. */
   const type = typeArg ?? (cat ? CAT_TO_TYPE[cat] : undefined) ?? f.type ?? undefined;
-  const { items, loading } = useRadarList({
+  const { items, loading, hasMore } = useRadarList({
     limit: shown,
     city: city || undefined,
     type: type || undefined,
@@ -225,7 +225,18 @@ export function TicsList({ cat, type: typeArg, day }: { cat?: string; type?: str
           <RadarCard key={t.id + i} t={t as never} st="width:100%" />
         ))}
 
-        {items.length >= shown ? (
+        {/* schelete cat timp se incarca — inainte se vedeau evenimente demo */}
+        {loading && !items.length
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={`sk${i}`}
+                className="card"
+                style={sx('height:212px;border-radius:22px;background:var(--surface-2);opacity:.6')}
+              />
+            ))
+          : null}
+
+        {hasMore ? (
           <button className="cta ghost" onClick={() => setShown((n) => n + PAGE)} style={sx('padding:13px')}>
             {loading ? 'Se încarcă…' : 'Încarcă mai multe'}
           </button>
@@ -262,8 +273,8 @@ export function TicsOffers({ id }: { id?: string }) {
   const { go } = useNav();
   const lb = useLightbox();
   const showToast = useClient((s) => s.showToast);
-  const toggleSaved = useClient((s) => s.toggleSaved);
-  const saved = useClient((s) => s.saved.includes(id ?? ''));
+  const toggleSavedRadar = useClient((s) => s.toggleSavedRadar);
+  const saved = useClient((s) => !!s.savedRadar[id ?? '']);
   const t = useRadarEvent(id) as RadarItem & Ev;
   const sorted = [...(t.offers as [string, number, string][])].sort((a, b) => a[1] - b[1]);
   const ch = sorted[0]?.[1] ?? 0;
@@ -313,7 +324,7 @@ ${url}`);
               className="icon-btn glass"
               onClick={() => {
                 if (!id) return;
-                toggleSaved(id);
+                toggleSavedRadar(t);
                 showToast(saved ? 'Scos din salvate' : 'Salvat');
               }}
               style={saved ? sx('color:var(--indigo-2);background:var(--indigo-soft);border-color:var(--indigo)') : undefined}

@@ -588,7 +588,7 @@ const SCARCE = new Set(['Puține', 'Ultimele', 'Sold out']);
  */
 export async function fetchRadarList(
   opts: RadarQuery = {}
-): Promise<{ items: RadarItem[]; source: 'tics' | 'prototype' }> {
+): Promise<{ items: RadarItem[]; source: 'tics' | 'prototype'; hasMore: boolean }> {
   const limit = opts.limit ?? 6;
   const filters = { city: opts.city, event_type: opts.type, q: opts.search };
   const { from, until } = whenRange(opts.when, opts.day);
@@ -600,7 +600,11 @@ export async function fetchRadarList(
   const unfiltered =
     !opts.city && !opts.type && !opts.genre && !opts.search && !opts.maxPrice && !opts.scarce &&
     opts.day === undefined && !opts.offset && (!opts.when || opts.when === 'all');
-  const empty = () => ({ items: unfiltered ? protoItems() : [], source: unfiltered ? ('prototype' as const) : ('tics' as const) });
+  const empty = () => ({
+    items: unfiltered ? protoItems() : [],
+    source: unfiltered ? ('prototype' as const) : ('tics' as const),
+    hasMore: false,
+  });
 
   // cautarea are propriul set de rezultate, deja restrans: nu mai sarim in viitor
   const offset = opts.search ? 0 : await upcomingOffset(filters, from);
@@ -611,7 +615,9 @@ export async function fetchRadarList(
      app.tics.ro limiteaza la ~60 pe minut. Cand filtram si dupa pret/stoc,
      rata de pastrare scade, deci cerem mai multi candidati. */
   const skip = opts.offset ?? 0;
-  const want = skip + Math.min(limit * (needsPost ? 3 : 2), needsPost ? 18 : 12);
+  /* `want` TREBUIE sa creasca odata cu limita, altfel "Incarca mai multe" nu
+     aduce nimic: plafonul fix taia candidatii inainte sa ajunga la ecran. */
+  const want = Math.min(skip + limit * (needsPost ? 3 : 2), 72);
   const raw = await fromOffset(filters, offset, want, {
     until,
     keep: opts.genre ? (e) => (e.genre ?? '').toLowerCase() === opts.genre!.toLowerCase() : undefined,
@@ -625,7 +631,11 @@ export async function fetchRadarList(
   if (!usable.length) return empty();
 
   usable.sort((a, b) => b.offers.length - a.offers.length);
-  return { items: usable.slice(skip, skip + limit), source: 'tics' };
+  /* "Mai sunt?" NU se poate deduce din cate carduri ies pe ecran: multe
+     candidaturi cad la hidratare (fara oferte) sau la filtrele de pret/stoc,
+     deci lista afisata e aproape mereu mai scurta decat ceruta. Semnalul bun e
+     daca am consumat toata cota de candidati. */
+  return { items: usable.slice(skip, skip + limit), source: 'tics', hasMore: raw.length >= want };
 }
 
 /* =========================================================
@@ -635,6 +645,23 @@ export async function fetchRadarList(
    asa ca le deducem din evenimentele viitoare si le ordonam dupa cate au.
    Rezultatul se tine pe zi — nu e o lista care se schimba de la o ora la alta.
    ========================================================= */
+/* Orasele SI categoriile se deduc din acelasi esantion de evenimente
+   viitoare. Inainte faceau doua scanari separate (5 + 12 pagini) la
+   deschiderea aplicatiei — suficient cat sa intram in limitarea de rata. */
+let samplePromise: Promise<ApiRadarEvent[]> | null = null;
+
+async function upcomingSample(): Promise<ApiRadarEvent[]> {
+  if (samplePromise) return samplePromise;
+  samplePromise = (async () => {
+    const offset = await upcomingOffset({});
+    if (offset === null) return [];
+    return fromOffset({}, offset, 600, { maxPages: 12 });
+  })();
+  const r = await samplePromise;
+  if (!r.length) samplePromise = null; // esec: lasam sa se reincerce
+  return r;
+}
+
 export const CITY_FALLBACK = [
   'București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Brașov',
   'Constanța', 'Sibiu', 'Oradea', 'Craiova', 'Galați',
@@ -652,10 +679,9 @@ export async function fetchRadarCities(): Promise<string[]> {
     /* cache stricat: reincarcam */
   }
 
-  const offset = await upcomingOffset({});
-  if (offset === null) return CITY_FALLBACK;
+  const raw = await upcomingSample();
+  if (!raw.length) return CITY_FALLBACK;
 
-  const raw = await fromOffset({}, offset, 250, { maxPages: 5 });
   const counts = new Map<string, number>();
   for (const e of raw) {
     const c = e.city;
@@ -697,9 +723,7 @@ export async function fetchRadarCategories(): Promise<RadarCategory[]> {
     /* cache stricat: reincarcam */
   }
 
-  const offset = await upcomingOffset({});
-  if (offset === null) return [];
-  const raw = await fromOffset({}, offset, 300, { maxPages: 6 });
+  const raw = await upcomingSample();
   if (!raw.length) return [];
 
   const byType = new Map<string, { count: number; samples: ApiRadarEvent[] }>();
@@ -708,7 +732,10 @@ export async function fetchRadarCategories(): Promise<RadarCategory[]> {
     const slot = byType.get(t) ?? { count: 0, samples: [] };
     slot.count++;
     // pastram doar exemple cu poster: cardul de categorie e o imagine
-    if (slot.samples.length < 4 && e.poster_url) slot.samples.push(e);
+    // preferam exemple cu poster, dar NU excludem categoriile fara: altfel
+    // dispareau tipurile rare si ramaneau 12 din 17
+    if (e.poster_url && slot.samples.length < 4) slot.samples.push(e);
+    else if (slot.samples.length < 2) slot.samples.push(e);
     byType.set(t, slot);
   }
 
@@ -717,7 +744,6 @@ export async function fetchRadarCategories(): Promise<RadarCategory[]> {
       const info = typeInfo(type);
       return { type, cat: info.cat, g: info.g, count: v.count, samples: v.samples.map(normalizeRadar) };
     })
-    .filter((c) => c.samples.length > 0)
     /* 'other' e cel mai numeros (~70%), dar "Altele" e o categorie proasta de
        pus prima — o coboram la final si lasam categoriile reale in fata. */
     .sort((a, b) => (a.type === 'other' ? 1 : b.type === 'other' ? -1 : b.count - a.count));

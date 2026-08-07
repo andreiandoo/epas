@@ -297,7 +297,51 @@ export function Saved() {
   const { go, back, tab } = useNav();
   const saved = useClient((s) => s.saved);
   const toggleSaved = useClient((s) => s.toggleSaved);
-  const list = saved.map((id) => evOf(id)).filter(Boolean);
+  const savedRadar = useClient((s) => s.savedRadar);
+  const toggleSavedRadar = useClient((s) => s.toggleSavedRadar);
+
+  /* Salvatele vin din doua surse: datasetul local (rezolvabil dupa id) si TICS
+     Radar (pastrat ca obiect, fiindca n-are corespondent local). Le aducem la
+     aceeasi forma, ca randul sa nu stie de unde vine evenimentul. */
+  type Row = {
+    id: string;
+    s: string;
+    city: string;
+    d: string;
+    type: string;
+    from: number;
+    poster?: string | null;
+    radar: boolean;
+  };
+  const list: Row[] = saved
+    .map((id): Row | null => {
+      const r = savedRadar[id];
+      if (r) {
+        return {
+          id: r.id,
+          s: r.s,
+          city: r.city,
+          d: `${r.day} ${r.mon}`.trim(),
+          type: 'event',
+          from: r.offers[0]?.[1] ?? 0,
+          poster: r.poster,
+          radar: true,
+        };
+      }
+      const e = evOf(id) as Record<string, unknown> | undefined;
+      if (!e) return null;
+      return {
+        id: e.id as string,
+        s: e.s as string,
+        city: e.city as string,
+        d: e.d as string,
+        type: (e.type as string) ?? 'event',
+        from: (e.from as number) ?? 0,
+        poster: null,
+        radar: false,
+      };
+    })
+    .filter((x): x is Row => x !== null);
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -323,14 +367,26 @@ export function Saved() {
           {list.map((ev) => (
             <div key={ev.id} className="card" style={sx('overflow:hidden;display:flex;gap:12px;padding:11px')}>
               <div
-                onClick={() => go('event', { id: ev.id })}
+                onClick={() => go(ev.radar ? 'ticsoffers' : 'event', { id: ev.id })}
                 style={sx('display:flex;gap:12px;flex:1;cursor:pointer;min-width:0')}
               >
-                <Raw html={poster(ev, '', 'width:74px;height:74px;border-radius:16px;flex:none', { tag: 1 })} />
+                {ev.poster ? (
+                  <div
+                    style={{
+                      width: 74,
+                      height: 74,
+                      borderRadius: 16,
+                      flex: 'none',
+                      background: `url('${ev.poster}') center/cover, #14101f`,
+                    }}
+                  />
+                ) : (
+                  <Raw html={poster(ev, '', 'width:74px;height:74px;border-radius:16px;flex:none', { tag: 1 })} />
+                )}
                 <div style={sx('flex:1;min-width:0')}>
                   <div style={sx('font-weight:600;font-size:14px')}>{ev.s}</div>
                   <div className="row muted" style={sx('gap:5px;font-size:11.5px;margin-top:3px')}>
-                    <Ic svg={I.pin} /> {ev.city} · {ev.d}
+                    <Ic svg={I.pin} /> {[ev.city, ev.d].filter(Boolean).join(' · ')}
                   </div>
                   <div
                     style={{
@@ -346,7 +402,7 @@ export function Saved() {
               </div>
               <button
                 className="icon-btn"
-                onClick={() => toggleSaved(ev.id)}
+                onClick={() => (ev.radar ? toggleSavedRadar(savedRadar[ev.id]) : toggleSaved(ev.id))}
                 style={sx('align-self:flex-start;color:var(--red)')}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">

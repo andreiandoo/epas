@@ -169,6 +169,13 @@ ${SCOPE} .safe-top {
    interior — padding-ul ar descentra iconitele fata de pastila. */
 ${SCOPE} .bnav {
   bottom: calc(10px + var(--safe-bottom, 0px));
+  /* cerut dupa testul pe telefon: bara mai ingusta, iconite mai mari */
+  margin-left: 26px;
+  margin-right: 26px;
+}
+${SCOPE} .bnav .nav svg {
+  width: 27px;
+  height: 27px;
 }
 ${SCOPE} .dock {
   padding-bottom: calc(18px + var(--safe-bottom, 0px));

@@ -6,6 +6,27 @@
    ========================================================= */
 import { create } from 'zustand';
 import { ST as PROTO_ST } from '../mock/prototype';
+import type { RadarItem } from '../api/ticsRadar';
+
+/* Salvatele din Radar supravietuiesc repornirii; cele din datasetul local sunt
+   oricum rezolvabile dupa id. */
+const SAVED_LS = 'tixello.savedRadar.v1';
+
+function loadSavedRadar(): Record<string, RadarItem> {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_LS) || '{}') as Record<string, RadarItem>;
+  } catch {
+    return {};
+  }
+}
+
+function saveSavedRadar(v: Record<string, RadarItem>) {
+  try {
+    localStorage.setItem(SAVED_LS, JSON.stringify(v));
+  } catch {
+    /* fara persistenta, doar se pierd la repornire */
+  }
+}
 
 type ProtoSt = {
   prefs: string[];
@@ -61,6 +82,9 @@ type ClientState = ProtoSt & {
   /** filtrele de categorie + categoria pentru care sunt valabile (ST._catFor) */
   catF: CatFilters;
   catFor: string | null;
+  /** evenimentele salvate care vin din TICS Radar (nu-s in datasetul local) */
+  savedRadar: Record<string, RadarItem>;
+  toggleSavedRadar: (item: RadarItem) => void;
   /** orasul ales din antetul de pe Acasa; '' = toata tara */
   city: string;
   setCity: (city: string) => void;
@@ -125,6 +149,7 @@ export const useClient = create<ClientState>((set, get) => ({
   ttCounts: {},
   catF: { ...CAT_DEFAULTS },
   catFor: null,
+  savedRadar: loadSavedRadar(),
   city: '',
   radarF: { ...RADAR_DEFAULTS },
   calF: { ...CAL_DEFAULTS },
@@ -142,6 +167,22 @@ export const useClient = create<ClientState>((set, get) => ({
     set((s) => (s.catFor === cat ? {} : { catFor: cat, catF: { ...CAT_DEFAULTS } })),
   setCatF: (patch) => set((s) => ({ catF: { ...s.catF, ...patch } })),
   resetCatF: () => set({ catF: { ...CAT_DEFAULTS } }),
+
+  /* Evenimentele de Radar nu exista in datasetul local, deci `saved` (care
+     tine doar id-uri) n-ar avea ce rezolva in ecranul Salvate. Pastram si
+     obiectul, ca sa poata fi afisat dupa repornire. */
+  toggleSavedRadar: (item) =>
+    set((s) => {
+      const has = !!s.savedRadar[item.id];
+      const next = { ...s.savedRadar };
+      if (has) delete next[item.id];
+      else next[item.id] = item;
+      saveSavedRadar(next);
+      return {
+        savedRadar: next,
+        saved: has ? s.saved.filter((x) => x !== item.id) : [...s.saved, item.id],
+      };
+    }),
 
   setCity: (city) => set({ city }),
   setRadarF: (patch) => set((s) => ({ radarF: { ...s.radarF, ...patch } })),

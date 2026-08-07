@@ -98,6 +98,72 @@ type SessionState = {
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
+/* =========================================================
+   Sesiunea supravietuieste repornirii WebView-ului
+
+   Cand telefonul intra in standby, Android poate reincarca WebView-ul: starea
+   din memorie dispare, `authed` redevine false si aplicatia arunca omul inapoi
+   in onboarding. Salvam deci strictul necesar ca sa-l ducem direct in shell-ul
+   in care era. NU salvam nimic sensibil — deocamdata identitatea e mock.
+   ========================================================= */
+const SESSION_LS = 'tixello.session.v1';
+
+type Persisted = {
+  authed: boolean;
+  loginIdentity: IdentityKind;
+  mode: AppMode;
+  account: 'organizer' | 'venue';
+  ctx: OrgProperty['ctx'];
+  role: 'admin' | 'manager' | 'staff';
+  activePropKey: string | null;
+  appTheme: AppTheme;
+};
+
+function loadSession(): Partial<SessionState> {
+  try {
+    const raw = localStorage.getItem(SESSION_LS);
+    if (!raw) return {};
+    const v = JSON.parse(raw) as Persisted;
+    if (!v.authed) return {};
+    const properties = identityProps(v.loginIdentity);
+    const activeProp = properties.find((p) => p.key === v.activePropKey) ?? null;
+    // fara proprietatea activa n-avem in ce shell sa intram: reluam alegerea
+    if (v.mode !== 'chooser' && !activeProp) return {};
+    return {
+      authed: true,
+      loginIdentity: v.loginIdentity,
+      properties,
+      activeProp,
+      mode: v.mode,
+      account: v.account,
+      ctx: v.ctx,
+      role: v.role,
+      appTheme: v.appTheme,
+      tab: v.account === 'venue' ? 'VenueEvents' : 'Dashboard',
+    };
+  } catch {
+    return {};
+  }
+}
+
+function saveSession(s: SessionState) {
+  try {
+    const v: Persisted = {
+      authed: s.authed,
+      loginIdentity: s.loginIdentity,
+      mode: s.mode,
+      account: s.account,
+      ctx: s.ctx,
+      role: s.role,
+      activePropKey: s.activeProp?.key ?? null,
+      appTheme: s.appTheme,
+    };
+    localStorage.setItem(SESSION_LS, JSON.stringify(v));
+  } catch {
+    /* fara persistenta, doar se pierde sesiunea la repornire */
+  }
+}
+
 export const useSession = create<SessionState>((set, get) => ({
   authed: false,
   loginIdentity: 'multi',
@@ -138,7 +204,14 @@ export const useSession = create<SessionState>((set, get) => ({
     else get().applyProp(props[0]);
   },
 
-  logout: () => set({ authed: false, mode: 'chooser', activeProp: null, modal: null, toast: null }),
+  logout: () => {
+    try {
+      localStorage.removeItem(SESSION_LS);
+    } catch {
+      /* nimic de curatat */
+    }
+    set({ authed: false, mode: 'chooser', activeProp: null, modal: null, toast: null });
+  },
 
   applyProp: (p) => {
     if (p.kind === 'client') {
@@ -224,7 +297,12 @@ export const useSession = create<SessionState>((set, get) => ({
   venueOpen: (venueEventId) => set({ venueEventId, venueScreen: 'detail' }),
   venueBack: () => set((s) => ({ venueScreen: s.venueScreen === 'ticket' ? 'detail' : 'list' })),
   venueTicket: () => set({ venueScreen: 'ticket' }),
+
+  ...loadSession(),
 }));
+
+/* Salvam la fiecare schimbare relevanta. Ieftin: un JSON de cateva campuri. */
+useSession.subscribe((s) => saveSession(s));
 
 /* ---------- selectori derivati ---------- */
 export const isAdminRole = (r: string) => r === 'admin' || r === 'manager';

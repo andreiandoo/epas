@@ -27,7 +27,7 @@ export function Home() {
   const setCity = useClient((s) => s.setCity);
   const cities = useRadarCities();
   const [picker, setPicker] = useState(false);
-  const { items: radar } = useRadarList({ limit: 3, city: city || undefined });
+  const { items: radar, loading: radarLoading } = useRadarList({ limit: 3, city: city || undefined });
 
   const f = ev('coldplay');
   const forYou = ['coldplay', 'celestial', 'swan'].map(ev);
@@ -208,6 +208,15 @@ export function Home() {
           {radar.map((t) => (
             <RadarCard key={t.id} t={t} />
           ))}
+          {radarLoading && !radar.length
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={`sk${i}`}
+                  className="mcard"
+                  style={sx('min-width:270px;height:212px;background:var(--surface-2);opacity:.6')}
+                />
+              ))
+            : null}
         </div>
       </div>
 

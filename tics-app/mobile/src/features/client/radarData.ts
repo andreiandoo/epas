@@ -24,7 +24,6 @@ import {
   type RadarStats,
 } from '../../api/ticsRadar';
 
-const protoItems = (): RadarItem[] => Object.values(PROTO_RADAR).map((t) => ({ ...t, live: false }));
 
 /**
  * Lista Radar. `q` poate contine oras, tip, gen, interval si praguri —
@@ -32,12 +31,13 @@ const protoItems = (): RadarItem[] => Object.values(PROTO_RADAR).map((t) => ({ .
  */
 export function useRadarList(q: RadarQuery = {}) {
   const limit = q.limit ?? 6;
-  const [items, setItems] = useState<RadarItem[]>(() => {
-    const p = protoItems();
-    // prototipul are 3 evenimente, ecranul afiseaza 6 — le repetam ca in prototip
-    return [...p, ...p].slice(0, limit);
-  });
-  const [source, setSource] = useState<'tics' | 'prototype'>('prototype');
+  /* Pornim GOL, nu cu datasetul prototipului: pana raspundea API-ul se vedeau
+     ~1 secunda evenimente demo, care apoi sareau. Ecranul arata schelete cat
+     timp `loading` e true. Prototipul ramane doar ca raspuns final, cand
+     sursa nefiltrata nu da nimic. */
+  const [items, setItems] = useState<RadarItem[]>([]);
+  const [source, setSource] = useState<'tics' | 'prototype'>('tics');
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
 
   /* Cheia serializeaza filtrele: obiectul e recreat la fiecare randare, deci
@@ -52,6 +52,7 @@ export function useRadarList(q: RadarQuery = {}) {
         if (!alive) return;
         setItems(r.items);
         setSource(r.source);
+        setHasMore(r.hasMore);
       })
       .finally(() => alive && setLoading(false));
     return () => {
@@ -60,7 +61,7 @@ export function useRadarList(q: RadarQuery = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return { items, source, loading };
+  return { items, source, loading, hasMore };
 }
 
 /** Categoriile reale, cu exemple din care ecranul isi ia imaginile de card. */

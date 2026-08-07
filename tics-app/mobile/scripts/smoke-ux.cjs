@@ -78,7 +78,10 @@ const check = (name, ok, extra = '') => {
 
   /* ---------- 2. "Alege un vibe" -> Radar pe categorie ---------- */
   await page.evaluate(() => document.querySelectorAll('.bnav .nav')[1]?.click()); // Exploreaza
-  await wait(1200);
+  await page.waitForFunction(() => document.querySelectorAll('.catcard').length > 12, { timeout: 40000 }).catch(() => {});
+  await wait(800);
+  const nCats = await page.evaluate(() => document.querySelectorAll('.catcard').length);
+  check('categorii reale in "Alege un vibe"', nCats > 6, `${nCats} categorii`);
   const catName = await page.evaluate(() => {
     const c = document.querySelector('.catcard');
     const name = c?.querySelector('.catname')?.textContent?.trim();
@@ -94,23 +97,54 @@ const check = (name, ok, extra = '') => {
   await page.evaluate(() => document.querySelectorAll('.bnav .nav')[0]?.click());
   await wait(1000);
   await clickText('Vezi tot');
-  await wait(2500);
+  // lista porneste goala (fara date demo), deci asteptam cardurile reale
+  await page.waitForFunction(() => document.querySelectorAll('.mcard.radar').length > 0, { timeout: 40000 }).catch(() => {});
+  await wait(1200);
   const before = await titlesNow();
+  check('Radarul incarca evenimente reale', before.length >= 6, `${before.length} carduri`);
+
+  /* "Incarca mai multe" */
+  const more = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find((x) => x.textContent.includes('Incarc') || x.textContent.includes('Încarc'));
+    if (b) b.click();
+    return !!b;
+  });
+  if (more) {
+    await page.waitForFunction((n) => document.querySelectorAll('.mcard.radar').length > n, { timeout: 45000 }, before.length).catch(() => {});
+    const grown = (await titlesNow()).length;
+    check('"Incarca mai multe" aduce evenimente', grown > before.length, `${before.length} -> ${grown}`);
+  } else {
+    check('"Incarca mai multe" exista', false);
+  }
 
   await page.evaluate(() => {
     const f = [...document.querySelectorAll('.filterbar .flt')].find((x) => x.textContent.includes('Sub 100'));
     f?.click();
   });
-  await wait(6000);
+  // dupa "Incarca mai multe" lista e mai mare, deci refetch-ul dureaza mai mult
+  await page
+    .waitForFunction(
+      () => {
+        const p = [...document.querySelectorAll('.mcard.radar .amt')].map((e) => parseInt(e.textContent.replace(/\D/g, ''), 10));
+        return p.length > 0 && p.every((x) => x <= 100);
+      },
+      { timeout: 40000 },
+    )
+    .catch(() => {});
   const after = await titlesNow();
   const chipOn = await page.evaluate(() =>
     [...document.querySelectorAll('.filterbar .flt')].some((x) => x.textContent.includes('Sub 100') && x.classList.contains('on')),
   );
   check('chip "Sub 100 lei" se activeaza', chipOn);
+  // verificam EFECTUL, nu ca lista s-a schimbat: daca toate erau deja ieftine,
+  // e corect sa ramana aceleasi
+  const prices = await page.evaluate(() =>
+    [...document.querySelectorAll('.mcard.radar .amt')].map((e) => parseInt(e.textContent.replace(/\D/g, ''), 10)),
+  );
   check(
-    'filtrul schimba lista',
-    JSON.stringify(before) !== JSON.stringify(after) || after.length === 0,
-    `${before.length} -> ${after.length}`,
+    'filtrul lasa doar preturi sub 100',
+    prices.length > 0 && prices.every((p) => p <= 100),
+    `${after.length} carduri, preturi ${prices.join(', ')}`,
   );
 
   /* ---------- 4 + 5. Profil -> Portofel -> back, cu scroll ---------- */
