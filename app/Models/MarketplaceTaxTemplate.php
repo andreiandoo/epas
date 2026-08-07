@@ -558,6 +558,32 @@ class MarketplaceTaxTemplate extends Model
             $variables['organizer_bank_name'] = $primaryBankAccount->bank_name ?? $organizer->bank_name ?? '';
             $variables['organizer_iban'] = $primaryBankAccount->iban ?? $organizer->iban ?? '';
 
+            // Per-issuing-company override: a settlement (decont) tagged with the
+            // organizer's SECONDARY society must carry that company's legal
+            // identity + its own bank account — not the primary's. Primary-tagged
+            // or untagged (legacy) payouts keep the defaults above, which already
+            // source the primary bank account from the bank_accounts table (the
+            // getIssuerData('primary') legacy iban would reintroduce the stale-IBAN
+            // bug the primary block above guards against, so we do NOT touch it).
+            if ($payout && ($payout->issuing_company ?? null) === 'secondary' && $organizer->has_secondary_issuer) {
+                $issuerData = $organizer->getIssuerData('secondary');
+                $variables['organizer_company_name'] = $issuerData['name'] ?: $variables['organizer_company_name'];
+                $variables['organizer_tax_id'] = $issuerData['tax_id'] ?: $variables['organizer_tax_id'];
+                $variables['organizer_registration_number'] = $issuerData['registration'] ?: $variables['organizer_registration_number'];
+                $variables['organizer_address'] = $issuerData['address'] ?: $variables['organizer_address'];
+                $variables['organizer_city'] = $issuerData['city'] ?: $variables['organizer_city'];
+                $variables['organizer_county'] = $issuerData['county'] ?: $variables['organizer_county'];
+
+                $secBank = \DB::table('marketplace_organizer_bank_accounts')
+                    ->where('marketplace_organizer_id', $organizer->id)
+                    ->where('issuing_company', 'secondary')
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('id')
+                    ->first();
+                $variables['organizer_bank_name'] = $secBank->bank_name ?? $issuerData['bank_name'] ?? $variables['organizer_bank_name'];
+                $variables['organizer_iban'] = $secBank->iban ?? $issuerData['iban'] ?? $variables['organizer_iban'];
+            }
+
             // Guarantor variables
             $variables['guarantor_first_name'] = $organizer->guarantor_first_name ?? '';
             $variables['guarantor_last_name'] = $organizer->guarantor_last_name ?? '';

@@ -2359,4 +2359,75 @@ class EditEvent extends EditRecord
 
         $row->save();
     }
+
+    /**
+     * Direct per-society decont generation from the "Deconturi" tab buttons.
+     * Generates a settlement scoped to ONE issuing company + the given half-month
+     * period, via LeisureSocietyDecontService (which reuses the manual modal's
+     * money pipeline, just filtered to that society's ticket types). Guarded by a
+     * wire:confirm dialog on the button. On success it also flips the period's
+     * "generat" state flag and busts the period cache so totals refresh.
+     */
+    public function generateSocietyDecont(string $issuer, string $periodFrom, string $periodTo): void
+    {
+        $event = $this->record;
+        if (!$event || !$event->isLeisureVenue()) {
+            return;
+        }
+        if (!in_array($issuer, ['primary', 'secondary'], true)
+            || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodFrom)
+            || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodTo)) {
+            return;
+        }
+
+        $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+        if (!$admin) {
+            Notification::make()->title('Neautorizat')->danger()->send();
+            return;
+        }
+
+        try {
+            $payout = app(\App\Services\Marketplace\LeisureSocietyDecontService::class)->generate(
+                $event,
+                $issuer,
+                Carbon::parse($periodFrom, 'Europe/Bucharest')->startOfDay(),
+                Carbon::parse($periodTo, 'Europe/Bucharest')->startOfDay(),
+                (int) $admin->marketplace_client_id,
+                (int) $admin->id,
+            );
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Nu s-a putut genera decontul')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        // Mark the period as generated (state flag) + refresh cached totals so
+        // the accordion badge/numbers reflect the new decont.
+        $flag = LeisureSettlementPeriod::firstOrNew([
+            'event_id' => $event->id,
+            'period_from' => $periodFrom,
+        ]);
+        $flag->period_to = $periodTo;
+        if (!$flag->generated_at) {
+            $flag->generated_at = now();
+        }
+        $flag->save();
+        Cache::forget("leisure_decont_v2_{$event->id}_{$periodFrom}");
+
+        $url = \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $payout]);
+        Notification::make()
+            ->title('Decont generat')
+            ->body("Decontul {$payout->reference} a fost creat cu succes.")
+            ->success()
+            ->actions([
+                \Filament\Notifications\Actions\Action::make('view')
+                    ->label('Vezi decontul')
+                    ->url($url),
+            ])
+            ->send();
+    }
 }

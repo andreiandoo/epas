@@ -163,13 +163,40 @@
                 @endif
 
                 <div class="flex flex-wrap items-center gap-6 mb-4">
-                    @if ($payoutUrl && $eventId)
-                        <a href="{{ $payoutUrl }}?open_decont=1&org={{ $orgId }}&event={{ $eventId }}&from={{ $p['from'] }}&to={{ $p['to'] }}"
-                           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            Generează decont
-                        </a>
-                    @endif
+                    @php
+                        // One direct "Generează decont" button per issuing company
+                        // that has sales this period. Single-society events show
+                        // only the primary button.
+                        $decontButtons = [];
+                        if (!empty($primaryHasData)) {
+                            $decontButtons['primary'] = $primary;
+                        }
+                        if (!empty($hasSecondary) && !empty($secondaryHasData)) {
+                            $decontButtons['secondary'] = $secondary;
+                        }
+                    @endphp
+                    @forelse ($decontButtons as $skey => $srow)
+                        @php
+                            $sName = $srow['name'] ?? ($skey === 'primary' ? 'Societatea 1' : 'Societatea 2');
+                            $sNet = (float) ($srow['ambilet_owes_venue'] ?? 0);
+                            $sTickets = (int) ($srow['tickets'] ?? 0);
+                            $confirmMsg = 'Generezi decontul pentru ' . $sName . ' (' . $roDate($p['from']) . ' – ' . $roDate($p['to']) . ')?'
+                                . "\n\nVenit online net: " . $fmt($sNet) . ' ' . $cur . '  ·  ' . $sTickets . ' bilete.'
+                                . "\nSe creează decontul + documentul PDF pe această societate.";
+                        @endphp
+                        <button type="button"
+                            wire:click="generateSocietyDecont('{{ $skey }}', '{{ $p['from'] }}', '{{ $p['to'] }}')"
+                            wire:confirm="{{ $confirmMsg }}"
+                            wire:target="generateSocietyDecont"
+                            wire:loading.attr="disabled"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <svg wire:loading.remove wire:target="generateSocietyDecont" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <svg wire:loading wire:target="generateSocietyDecont" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 8h4z"></path></svg>
+                            Generează decont · {{ $sName }}
+                        </button>
+                    @empty
+                        <span class="text-xs text-gray-400">Nu există vânzări de decontat în această perioadă.</span>
+                    @endforelse
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="checkbox" wire:click="toggleDecontFlag('{{ $p['from'] }}','generated')" @checked($p['generated_at']) class="w-4 h-4 text-indigo-600 rounded border-gray-300">
                         <span class="text-gray-800 dark:text-gray-200">S-a generat decont?</span>

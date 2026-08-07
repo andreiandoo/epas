@@ -21,6 +21,7 @@ class MarketplacePayout extends Model
         'marketplace_client_id',
         'marketplace_organizer_id',
         'event_id',
+        'issuing_company',
         'reference',
         'decont_series',
         'amount',
