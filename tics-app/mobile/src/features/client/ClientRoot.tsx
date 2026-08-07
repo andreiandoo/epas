@@ -12,12 +12,14 @@ import { cn } from '../../design/sx';
 import { NavProvider, useNav, type Frame } from './nav';
 import { useClient } from '../../store/client';
 import { Home } from './screens/Home';
+import { Explore } from './screens/Explore';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
 /** Registrul de ecrane. Cheile corespund 1:1 cu S.* din prototip. */
 const SCREENS: Record<string, ScreenFn> = {
   home: () => <Home />,
+  explore: () => <Explore />,
 };
 
 function Placeholder({ id }: { id: string }) {
