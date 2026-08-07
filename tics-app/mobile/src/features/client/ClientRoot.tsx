@@ -14,6 +14,7 @@ import { useClient } from '../../store/client';
 import { Home } from './screens/Home';
 import { Explore } from './screens/Explore';
 import { Tickets } from './screens/Tickets';
+import { PayQr, Topup, Wallet } from './screens/Wallet';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
@@ -22,6 +23,9 @@ const SCREENS: Record<string, ScreenFn> = {
   home: () => <Home />,
   explore: () => <Explore />,
   tickets: () => <Tickets />,
+  wallet: () => <Wallet />,
+  topup: () => <Topup />,
+  payqr: () => <PayQr />,
 };
 
 function Placeholder({ id }: { id: string }) {

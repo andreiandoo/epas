@@ -30,7 +30,7 @@ if (start < 0 || end < 0) throw new Error('Nu gasesc granitele blocului de date.
 /* Cateva seturi de date stau DUPA blocul principal, intercalate printre
    definitiile de ecrane (prototipul le declara acolo unde le foloseste prima
    data). Le culegem dupa nume, oriunde ar fi, la nivel superior. */
-const EXTRA_DECLS = ['MYTIX', 'OB', 'OBALL', 'SORTLBL', 'MPCOL'];
+const EXTRA_DECLS = ['MYTIX', 'OB', 'OBALL', 'SORTLBL', 'MPCOL', 'TX'];
 
 const block = lines.slice(start, end);
 const extras = [];

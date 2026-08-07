@@ -274,3 +274,6 @@ export const VEN={
 
   /* MPCOL — declarat mai jos in prototip, langa ecranul care il foloseste */
   export const MPCOL=['#7c3aed','#0e7490','#b45309','#be185d'];
+
+  /* TX — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const TX=[['Top-up card ••8756','Azi 14:20','+200,00',1],['Cashless Bar · 2× Bere','Ieri 22:10','-24,00',0],['Food Truck · Burger','Ieri 21:32','-32,00',0]];

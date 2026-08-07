@@ -125,11 +125,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const route = ROUTES[SCREEN] || ROUTES.home;
 
-  /* ---------- PROTOTIP ---------- */
+  /* ---------- PROTOTIP ----------
+     Rama .device are `height:min(844px, 100vh-64px)` si `aspect-ratio:390/844`,
+     deci la dimensiunea ei implicita ecranul interior are DOAR ~362px latime —
+     mai putin decat un telefon real (390px). Comparat asa, textele se rup
+     diferit si pare o eroare de port, desi nu e.
+     Fortam inaltimea ramei la 896px => latime 414px => screenport exact 390px,
+     identic cu viewport-ul aplicatiei. */
   console.log(`ecran: ${SCREEN}`);
   console.log('prototip:');
-  const p = await newPage(430, 900);
+  const p = await newPage(470, 1000);
   await p.goto(PROTO, { waitUntil: 'networkidle0' });
+  await p.addStyleTag({ content: '.device{height:896px !important}' });
   await wait(2700); // splash-ul se auto-avanseaza la 2200ms
   await clickAttr(p, 'go:login'); // "Sari peste" din onboarding
   await clickText(p, 'Autentificare');
