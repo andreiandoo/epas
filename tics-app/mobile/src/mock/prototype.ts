@@ -277,3 +277,9 @@ export const VEN={
 
   /* TX — declarat mai jos in prototip, langa ecranul care il foloseste */
   export const TX=[['Top-up card ••8756','Azi 14:20','+200,00',1],['Cashless Bar · 2× Bere','Ieri 22:10','-24,00',0],['Food Truck · Burger','Ieri 21:32','-32,00',0]];
+
+  /* PEMO — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const PEMO={'Concerte':'🎵','Festivaluri':'🎪','Teatru':'🎭','Stand-up':'🎙','Sport':'🏟','Experiențe':'⛰','Expoziții':'🖼','Petreceri':'🎉','Operă':'🎻','Film':'🎬','Conferințe':'💼','Familie & copii':'🧸','Singur':'🧍','Cu prietenii':'🫂','Cu familia':'👨‍👩‍👧','La întâlnire':'💘','Cu colegii':'🧑‍💼','Luni':'🗓','Marți':'🗓','Miercuri':'🗓','Joi':'🗓','Vineri':'🍸','Sâmbătă':'✨','Duminică':'☀️'};
+
+  /* NOTI — declarat mai jos in prototip, langa ecranul care il foloseste */
+  export const NOTI=[['🎫','Biletele tale sunt gata','Coldplay · 2× QR în cont','acum 5 min',1],['🤖','Recomandare nouă pentru tine','Salina Turda — pentru că îți plac experiențele','acum 1h',1],['💳','Top-up reușit · +200 lei','Sold nou: 362 lei','azi 14:20',0],['🔥','Coldplay — ultimele bilete','Categoria II aproape epuizată','ieri',0]];

@@ -21,6 +21,20 @@ import { TicketDetail, Transfer } from './screens/TicketDetail';
 import { Event } from './screens/Event';
 import { Cart, ExpDate, SeatMap, Success, TicketTypes } from './screens/Purchase';
 import { Artist, Category, Search, Venue } from './screens/Discovery';
+import { Invite, Notif, Points, PrefsEdit, Review, Reviews, Saved } from './screens/ProfileScreens';
+import {
+  SetAddCard,
+  SetBilling,
+  SetDelete,
+  SetInvoices,
+  SetPayment,
+  SetPersonal,
+  SetPrivacy,
+  SetRate,
+  SetSecurity,
+  SetTerms,
+  Settings,
+} from './screens/Settings';
 import { LightboxProvider } from './lightbox';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
@@ -46,6 +60,24 @@ const SCREENS: Record<string, ScreenFn> = {
   search: () => <Search />,
   artist: (d) => <Artist id={d.id as string} />,
   venue: (d) => <Venue id={d.id as string} />,
+  points: () => <Points />,
+  invite: () => <Invite />,
+  saved: () => <Saved />,
+  prefsEdit: () => <PrefsEdit />,
+  reviews: () => <Reviews />,
+  review: (d) => <Review id={d.id as string} />,
+  notif: () => <Notif />,
+  settings: () => <Settings />,
+  setPersonal: () => <SetPersonal />,
+  setSecurity: () => <SetSecurity />,
+  setPayment: () => <SetPayment />,
+  setAddCard: () => <SetAddCard />,
+  setBilling: () => <SetBilling />,
+  setInvoices: () => <SetInvoices />,
+  setDelete: () => <SetDelete />,
+  setTerms: () => <SetTerms />,
+  setPrivacy: () => <SetPrivacy />,
+  setRate: () => <SetRate />,
 };
 
 function Placeholder({ id }: { id: string }) {

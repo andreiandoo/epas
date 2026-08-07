@@ -27,6 +27,7 @@ type ProtoSt = {
   revRating: number;
   revTab: number;
   rateStars: number;
+  cards: { brand: string; last: string; exp: string; grad: string; primary: boolean }[];
 };
 
 const seed = PROTO_ST as unknown as ProtoSt;
@@ -53,6 +54,9 @@ type ClientState = ProtoSt & {
   setTtCount: (evId: string, idx: number, delta: number, len: number) => void;
   togglePref: (p: string) => void;
   setObStep: (n: number) => void;
+  cardPrimary: (i: number) => void;
+  cardDel: (i: number) => void;
+  setRateStars: (n: number) => void;
   toggleAddon: (key: string) => void;
   setCart: (patch: Partial<ProtoSt['cart']>) => void;
   showToast: (m: string) => void;
@@ -80,6 +84,7 @@ export const useClient = create<ClientState>((set, get) => ({
   revRating: seed.revRating,
   revTab: seed.revTab,
   rateStars: seed.rateStars,
+  cards: seed.cards ? seed.cards.map((c) => ({ ...c })) : [],
 
   ttCounts: {},
   catF: { ...CAT_DEFAULTS },
@@ -112,6 +117,9 @@ export const useClient = create<ClientState>((set, get) => ({
   togglePref: (p) =>
     set((s) => ({ prefsSel: s.prefsSel.includes(p) ? s.prefsSel.filter((x) => x !== p) : [...s.prefsSel, p] })),
   setObStep: (obStep) => set({ obStep }),
+  cardPrimary: (i) => set((s) => ({ cards: s.cards.map((c, k) => ({ ...c, primary: k === i })) })),
+  cardDel: (i) => set((s) => ({ cards: s.cards.filter((_, k) => k !== i) })),
+  setRateStars: (rateStars) => set({ rateStars }),
   toggleAddon: (key) => set((s) => ({ addons: { ...s.addons, [key]: !s.addons[key] } })),
   setCart: (patch) => set((s) => ({ cart: { ...s.cart, ...patch } })),
 

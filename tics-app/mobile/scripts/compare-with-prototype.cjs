@@ -46,6 +46,25 @@ const ROUTES = {
   },
   expdate: { proto: ['go:event:salina', 'go:expdate'], app: [{ text: 'Salina Turda' }, { text: 'Alege data' }] },
   category: { proto: ['go:category:Concerte'], app: [{ nav: 'explore' }, { text: 'Concerte' }] },
+  points: { proto: ['tab:profile', 'go:points'], app: [{ nav: 'profile' }, { text: 'Puncte & recompense' }] },
+  invite: { proto: ['tab:profile', 'go:invite'], app: [{ nav: 'profile' }, { text: 'Invită prieteni, ia puncte' }] },
+  saved: { proto: ['tab:profile', 'go:saved'], app: [{ nav: 'profile' }, { text: 'Salvate' }] },
+  reviews: { proto: ['tab:profile', 'go:reviews'], app: [{ nav: 'profile' }, { text: 'Recenziile mele' }] },
+  notif: { proto: ['tab:profile', 'go:notif'], app: [{ nav: 'profile' }, { text: 'Notificări' }] },
+  prefsEdit: { proto: ['tab:profile', 'prefsEdit'], app: [{ nav: 'profile' }, { text: 'Preferințele mele' }] },
+  settings: { proto: ['tab:profile', 'go:settings'], app: [{ nav: 'profile' }, { text: 'Setări cont' }] },
+  setPayment: {
+    proto: ['tab:profile', 'go:settings', 'go:setPayment'],
+    app: [{ nav: 'profile' }, { text: 'Setări cont' }, { text: 'Carduri & plată' }],
+  },
+  setTerms: {
+    proto: ['tab:profile', 'go:settings', 'go:setTerms'],
+    app: [{ nav: 'profile' }, { text: 'Setări cont' }, { text: 'Termeni & condiții' }],
+  },
+  setSecurity: {
+    proto: ['tab:profile', 'go:settings', 'go:setSecurity'],
+    app: [{ nav: 'profile' }, { text: 'Setări cont' }, { text: 'Parolă & securitate' }],
+  },
   // artist/venue sunt accesibile DOAR din pagina de eveniment
   artist: {
     proto: ['go:event:coldplay', 'go:artist:coldplay'],
