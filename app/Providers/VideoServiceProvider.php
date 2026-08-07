@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Push\LogPushSender;
+use App\Services\Push\PushSender;
 use App\Services\Video\BunnyStreamProvider;
 use App\Services\Video\NullVideoProvider;
 use App\Services\Video\VideoProvider;
@@ -12,11 +14,17 @@ use Illuminate\Support\ServiceProvider;
  * config('services.video.driver'). Falls back to a no-op provider whenever the
  * chosen driver has no usable credentials, so dev/CI keep booting on the
  * placeholder config shipped in .env.example.
+ *
+ * Also binds the push contract Shorts depends on. TODO(owner): EPAS has no
+ * customer-facing push layer yet, so LogPushSender records what would have been
+ * sent — the trigger logic is verifiable, only the transport is missing.
  */
 class VideoServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(PushSender::class, fn () => new LogPushSender);
+
         $this->app->singleton(VideoProvider::class, function () {
             $driver = config('services.video.driver', 'bunny');
 

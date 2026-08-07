@@ -287,3 +287,146 @@ le aruncă oricum.
 **Impact.** Mai puțină bandă irosită. Dacă pragurile se schimbă în config, constantele din
 `LiveShorts.tsx` trebuie actualizate — `TODO(owner)`: dacă divergența devine o problemă,
 expune pragurile prin `/tenant-client/config`.
+
+---
+
+## D-018 — `PushSender` care loghează, nu care tace
+
+**Context.** EPAS n-are layer de push customer-facing (nici credențiale FCM/APNs, nici
+tabel de device tokens). D2 (drop reminders) și D12 (nudge-uri comportamentale) depind de el.
+
+**Alegere.** Contract `PushSender` + `LogPushSender` legat implicit: fiecare trimitere e
+scrisă în log cu payload complet, iar `isConfigured()` întoarce `false`.
+
+**Alternative.** (a) No-op tăcut — logica de declanșare devine neverificabilă și eșecul e
+invizibil. (b) Amânarea D2/D12 — ar bloca două funcționalități pentru o dependență care nu
+ține de Shorts.
+
+**Impact.** Declanșarea e testabilă end-to-end azi (vezi
+`test_drop_job_fires_due_reminders_once_and_only_once`); când apare transportul real,
+se schimbă un singur binding. `TODO(owner)` marcat în `PushSender`.
+
+---
+
+## D-019 — `remind_at` se copiază la creare, nu se rezolvă la fire time
+
+**Context.** Momentul deschiderii vânzării vine din `TicketType.sales_start_at`, care poate
+fi editat sau șters după ce clientul a apăsat „Amintește-mi".
+
+**Alegere.** `remind_at` e copiat pe `short_reminders` la creare.
+
+**Alternative.** Join la fire time — dacă tipul de bilet dispare, reminderul devine orfan;
+dacă se mută, clientul primește o notificare pentru un moment pe care nu l-a cerut.
+
+**Impact.** Reminderul supraviețuiește modificărilor din amonte. Costul: o reprogramare a
+vânzării nu se propagă automat. `TODO(owner)`: dacă reprogramările devin frecvente, adaugă
+un observer pe `TicketType` care rescrie reminderele deschise.
+
+---
+
+## D-020 — Un reminder de drop nu se retrimite niciodată
+
+**Context.** `FireDropRemindersJob` rulează la minut. Fără push real, mesajul doar se
+loghează.
+
+**Alegere.** `notified_at` se stampilează indiferent dacă transportul e configurat.
+
+**Alternative.** Marcarea doar la trimitere reușită — când apare push-ul real, joburile ar
+inunda utilizatorii cu notificări pentru drop-uri vechi de săptămâni.
+
+**Impact.** Un drop pierdut rămâne pierdut; o notificare „biletele sunt live" la trei
+săptămâni după drop e mai rea decât niciuna.
+
+---
+
+## D-021 — Gamification marketplace-side până apare puntea de identitate
+
+**Context.** Ledgerul de puncte (`Gamification\PointsTransaction`) atârnă de `Customer`;
+cumpărătorul din app e `MarketplaceCustomer`. Puntea e decizia deschisă din
+`friends-social.md` §0.
+
+**Alegere.** `short_streaks` ține streak-ul și punctele marketplace-side.
+`ShortGamificationService::forwardToLoyaltyLedger()` scrie în ledgerul real doar când
+`IdentityBridge::isAvailable()` (adică există coloana de legătură).
+
+**Alternative.** (a) Ghicirea legăturii după email — creează atribuiri greșite peste
+tenanți. (b) Amânarea D11 — blochează bucla de loialitate pentru o coloană lipsă.
+
+**Impact.** Bucla funcționează azi; punctele curg în ledgerul real fără schimbări la
+call-site în momentul în care coloana apare. `TODO(owner)` în `IdentityBridge`.
+
+---
+
+## D-022 — Plafon zilnic de puncte, nu doar praguri de validitate
+
+**Context.** Punctele pentru watch/share pot fi farmate cu un script.
+
+**Alegere.** Plafon zilnic (`shorts.gamification.daily_cap`) aplicat în `grant()`, peste
+pragurile de credibilitate din D-009. Bonusul de streak e și el plafonat, ca ziua 400 să
+nu valoreze absurd.
+
+**Impact.** Testat în `test_daily_points_cap_stops_farming` — a treia acordare peste plafon
+întoarce 0.
+
+---
+
+## D-023 — Blurhash aproximat, nu bibliotecă nouă
+
+**Context.** D9 cere un placeholder LQIP. Un BlurHash adevărat cere o implementare DCT.
+
+**Alegere.** `GenerateBlurhashJob` produce `g2x3:<12 culori hex>` — o grilă 2×3 de culori
+medii extrasă cu GD; clientul o randează ca gradient radial.
+
+**Alternative.** (a) `kornrunner/blurhash` — o dependență nouă pentru un placeholder.
+(b) Fără LQIP — dreptunghi negru pe rețea slabă, exact ce D9 vrea să evite.
+
+**Impact.** Zero dependențe noi. Formatul e prefixat cu tipul, deci un BlurHash adevărat
+poate fi adăugat mai târziu fără migrație și fără schimbarea payload-ului.
+`TODO(owner)` notat în job.
+
+---
+
+## D-024 — Landing-ul de share nu redirecționează spre store pe temporizator
+
+**Context.** Tiparul obișnuit e: încearcă deep-link-ul, iar după ~2s trimite în store.
+
+**Alegere.** Încercăm deep-link-ul imediat; dacă nu se întâmplă nimic, rămân butoanele.
+Fără temporizator.
+
+**Alternative.** Redirect pe temporizator — trimite în store și utilizatorii care AU app-ul,
+doar că au răspuns încet la dialogul de sistem. Aterizezi în App Store în loc de conținut.
+
+**Impact.** Un pas manual în plus pentru cine n-are app-ul, zero drumuri greșite pentru cine
+îl are.
+
+---
+
+## D-025 — CSS-ul de shorts stă în `shorts.css`, nu în `client.css`
+
+**Context.** `tics-app/mobile/src/design/client.css` e **generat** din
+`tics-app/client-app.html` (`node scripts/extract-client-css.cjs`). Prima variantă a Fazei 2
+a adăugat regulile de video direct acolo.
+
+**Alegere.** Regulile scrise de mână s-au mutat în `src/design/shorts.css`, importat după
+`client.css` în `main.tsx`. `client.css` a fost readus exact la ce produce generatorul
+(verificat prin rerulare).
+
+**Alternative.** Editarea prototipului `client-app.html` — ar însemna să inventăm UX în
+prototip pentru ceva ce prototipul nu are (video real).
+
+**Impact.** O regenerare a CSS-ului nu mai șterge stilurile feed-ului live.
+
+---
+
+## D-026 — Preferința de autoplay e a dispozitivului, nu a contului
+
+**Context.** D10 cere o setare „Redare automată: mereu / Wi-Fi / niciodată".
+
+**Alegere.** `localStorage`, citită sincron la montarea playerului.
+
+**Alternative.** Pe cont, prin API — ar însemna că prima redare pornește înainte să afle
+preferința (exact utilizatorii care au cerut „niciodată"), și că guest-ii nu pot alege deloc.
+
+**Impact.** Setarea e activă din prima redare, inclusiv pentru guest. Costul: nu se sincronizează
+între dispozitive — acceptabil, e o preferință legată de ecran și de conexiune.
+`prefers-reduced-motion` bate oricând setarea din app.

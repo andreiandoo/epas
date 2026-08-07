@@ -72,5 +72,34 @@ return [
     'deep_link' => [
         'scheme' => env('SHORTS_DEEPLINK_SCHEME', 'tixello'),
         'share_base_url' => env('SHORTS_SHARE_BASE_URL', env('APP_URL', 'http://localhost')),
+        // Store fallbacks on the share landing page when the app is not installed.
+        'ios_store_url' => env('SHORTS_IOS_STORE_URL'),
+        'android_store_url' => env('SHORTS_ANDROID_STORE_URL'),
+    ],
+
+    /*
+    | Points and streaks for shorts activity (see D11).
+    |
+    | The daily cap is the anti-abuse lever: without it, a script can farm the
+    | watch reward indefinitely.
+    */
+    'gamification' => [
+        'enabled' => (bool) env('SHORTS_GAMIFICATION', true),
+        'watch_points' => (int) env('SHORTS_POINTS_WATCH', 5),
+        'share_points' => (int) env('SHORTS_POINTS_SHARE', 10),
+        'ugc_points' => (int) env('SHORTS_POINTS_UGC', 50),
+        'streak_bonus_cap' => (int) env('SHORTS_STREAK_BONUS_CAP', 10),
+        'daily_cap' => (int) env('SHORTS_POINTS_DAILY_CAP', 100),
+    ],
+
+    /*
+    | Player UX (see D9) — surfaced to the client through the feed payload so a
+    | tuning change does not need an app release.
+    */
+    'player' => [
+        // How many shorts ahead the client should prefetch posters for.
+        'prefetch_count' => (int) env('SHORTS_PREFETCH_COUNT', 2),
+        // Platform-wide quality drop, used by the Bunny cost guardrails (D8).
+        'data_saver_global' => (bool) env('SHORTS_DATA_SAVER_GLOBAL', false),
     ],
 ];

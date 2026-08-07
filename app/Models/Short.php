@@ -77,10 +77,14 @@ class Short extends Model
         'sort',
         'published_at',
         'expires_at',
+        'share_card_path',
+        'blurhash',
+        'content_flags',
     ];
 
     protected $casts = [
         'hashtags' => 'array',
+        'content_flags' => 'array',
         'ready' => 'boolean',
         'is_featured' => 'boolean',
         'duration' => 'integer',
@@ -143,6 +147,16 @@ class Short extends Model
     public function saveRecords(): HasMany
     {
         return $this->hasMany(ShortSave::class);
+    }
+
+    public function shares(): HasMany
+    {
+        return $this->hasMany(ShortShare::class);
+    }
+
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(ShortReminder::class);
     }
 
     /*

@@ -18,9 +18,11 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
   vertical real cu HLS, autoplay, preload, overlay, like/save/share și telemetrie batched,
   cu fallback pe feed-ul din prototip. `tsc` + `vite build` verzi.
   Detalii: `docs/plans/shorts-mobile.md`.
+- **Faza 3 (Val 1)** — creștere ieftină: share cu referral + landing web (D1), remind/drop
+  cu countdown (D2), UX de player cu blurhash/data-saver (D9), gamification cu plafon
+  anti-abuz (D11), accesibilitate (D10). **37 de teste, 118 aserțiuni, toate verzi.**
 
-**Urmează.** Valul 1 (D1 share/referral, D2 remind/drop, D9 UX player, D11 gamification,
-D10 accesibilitate).
+**Urmează.** Faza 4 — shoppable (B1) + atribuirea conversiilor pe `orders.source_short_id`.
 
 **Blocaje / de știut.**
 
@@ -112,13 +114,52 @@ Detalii complete: `docs/plans/shorts-mobile.md`.
 tab dedicat cu segmented control, randarea `embed_html` pentru sursele externe (Faza 6),
 double-tap = like și swipe-up pe CTA.
 
-## Faza 3 — Val 1 (creștere ieftină) ⏳
+## Faza 3 — Val 1 (creștere ieftină) ✅
 
-- [ ] D1 share + referral + landing web
-- [ ] D2 remind/drop countdown
-- [ ] D9 UX player (blurhash, prefetch, data-saver)
-- [ ] D11 gamification
-- [ ] D10 accesibilitate
+**D1 — share + referral + landing**
+- [x] `short_shares` (token, canal, clicks/installs/conversions) + `shorts.share_card_path`
+- [x] `ShortShareService` — mintește tokenul, bagă codul de referral existent în link
+- [x] `POST customer/shorts/{id}/share` → `{url, card_url, deep_link, points}`
+- [x] Landing web `GET /s/{id}` — OG tags, „Deschide în aplicație", fallback store,
+      cookie de referral 30 zile, atribuirea click-ului
+- [x] `GenerateShareCardJob` — card 1200×630 din poster + scrim + titlu (GD, fără render service)
+- [x] `ShortDeepLink` — `tixello://shorts/{id}`
+
+**D2 — remind / drop**
+- [x] `short_reminders` (unic pe customer+short, index pe `remind_at`/`notified_at`)
+- [x] `ShortReminderService` — fereastra de vânzare din `TicketType.sales_start_at`,
+      `remind_at` **copiat** la creare (nu rezolvat la fire time), oglindit în watchlist
+- [x] `POST`/`DELETE customer/shorts/{id}/remind` — refuză când biletele sunt deja la vânzare
+- [x] `FireDropRemindersJob` — programat **la minut**; nu retrimite niciodată
+- [x] Payload-ul de feed marchează `cta.pending` + `cta.on_sale_at`
+- [x] Client: `DropCountdown` — countdown + „Amintește-mi" în locul unui buton mort
+
+**D9 — UX player**
+- [x] `shorts.blurhash` + `GenerateBlurhashJob` (grilă 2×3 de culori medii, GD)
+- [x] Client `Blurhash` — gradient sub video până urcă posterul
+- [x] `usePlaybackPreferences` — autoplay (mereu/Wi-Fi/niciodată), data-saver, tip de rețea
+      via `@capacitor/network`
+- [x] Data-saver: buffer 6s, `startLevel: 0`, prefetch 0 (fără vecini montați)
+
+**D11 — gamification**
+- [x] `short_streaks` + `ShortGamificationService` (watch zilnic, share, UGC)
+- [x] Plafon zilnic de puncte (anti-farming) + bonus de streak plafonat
+- [x] `GET customer/shorts/streak`, `POST customer/shorts/watched`
+- [x] Client: ping o dată pe sesiune după primul view credibil + toast „+X puncte"
+
+**D10 — accesibilitate**
+- [x] `prefers-reduced-motion` → fără autoplay, poster + buton de play
+- [x] Setare explicită de autoplay, independentă de cont (preferință de dispozitiv)
+- [x] Ținte de atingere ≥44px, focus vizibil, `aria-pressed` pe toggle-uri
+- [x] Regiune `aria-live` care anunță schimbarea short-ului
+- [x] Avertisment de conținut pentru `flashing` (din `shorts.content_flags`)
+- [x] Niciodată autoplay cu sunet
+
+**Dependențe lipsă, puse ca stub (funcționale, cu `TODO(owner)`)**
+- `PushSender` + `LogPushSender` — EPAS nu are layer de push; fiecare notificare e
+  logată cu payload complet, deci logica de declanșare e verificabilă end-to-end
+- `IdentityBridge` — puntea `MarketplaceCustomer ↔ Customer` lipsește
+  (`friends-social.md` §0); punctele stau marketplace-side până apare coloana de legătură
 
 ## Faza 4 — Shoppable (B1) ⏳
 

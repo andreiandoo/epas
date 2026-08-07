@@ -14,6 +14,8 @@ use Illuminate\Support\Collection;
  */
 class ShortPayload
 {
+    public function __construct(private readonly ShortReminderService $reminders) {}
+
     /**
      * @param  Collection<int, Short>  $shorts
      * @param  array<int, int>  $likedIds
@@ -48,6 +50,9 @@ class ShortPayload
             'playback' => [
                 'hls_url' => $short->is_external ? null : $short->playback_url,
                 'poster_url' => $short->poster_url,
+                // LQIP shown before the poster paints, so a slow network gets a
+                // colour rather than a black hole (D9).
+                'blurhash' => $short->blurhash,
             ],
             'embed_html' => $short->is_external ? $short->embed_html : null,
             'source_url' => $short->is_external ? $short->source_url : null,
@@ -61,6 +66,8 @@ class ShortPayload
             'owner' => $this->owner($short),
             'event' => $this->event($short),
             'cta' => $this->cta($short),
+            // Drives content warnings and the "no autoplay" opt-out (D7/D10).
+            'content_flags' => $short->content_flags ?? [],
             'stats' => [
                 'likes' => (int) $short->likes,
                 'views' => (int) $short->views,
@@ -120,13 +127,25 @@ class ShortPayload
             return null;
         }
 
-        return [
+        $cta = [
             'type' => $short->cta_type,
             'label' => $short->cta_label,
             'url' => $short->cta_url,
             'ticket_type_id' => $short->cta_ticket_type_id,
             'promo_code' => $short->promo_code,
+            'on_sale_at' => null,
+            'pending' => false,
         ];
+
+        // A buy button for tickets that are not on sale yet is a dead end; the
+        // client turns it into a countdown + "remind me" instead (D2).
+        if ($short->cta_type === 'buy_tickets') {
+            $window = $this->reminders->saleWindow($short);
+            $cta['on_sale_at'] = $window['on_sale_at']?->toIso8601String();
+            $cta['pending'] = $window['pending'];
+        }
+
+        return $cta;
     }
 
     /**

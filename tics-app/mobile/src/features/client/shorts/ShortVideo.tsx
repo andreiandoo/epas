@@ -21,17 +21,18 @@ type Props = {
   muted: boolean;
   /** Doar preincarca (vecinul urmator) — nu porni redarea. */
   preloadOnly?: boolean;
-  /** Utilizatorul a cerut explicit redarea (folosit cand autoplay e dezactivat). */
-  forcePlay?: boolean;
+  /**
+   * Autoplay permis de preferintele utilizatorului + setarea de sistem.
+   * Decizia vine din usePlaybackPreferences, ca sa fie una singura pentru tot
+   * feed-ul si sa poata fi schimbata din Setari fara sa atingem playerul.
+   */
+  autoplayAllowed?: boolean;
+  /** Economie de date: porneste de la o rezolutie mica si buffer minim (D9). */
+  dataSaver?: boolean;
   onProgress?: (watchedMs: number, ratio: number) => void;
   onComplete?: () => void;
   onTap?: () => void;
 };
-
-/** Respecta setarea de sistem — nu autoplay daca utilizatorul a cerut mai putina miscare. */
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-}
 
 export function ShortVideo({
   src,
@@ -39,15 +40,17 @@ export function ShortVideo({
   active,
   muted,
   preloadOnly = false,
-  forcePlay = false,
+  autoplayAllowed = true,
+  dataSaver = false,
   onProgress,
   onComplete,
   onTap,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
-  const [reducedMotion] = useState(prefersReducedMotion);
   const [needsTapToPlay, setNeedsTapToPlay] = useState(false);
+  /** Utilizatorul a apasat play desi autoplay e dezactivat. */
+  const [manualPlay, setManualPlay] = useState(false);
 
   /* ---------- atasarea sursei ---------- */
   useEffect(() => {
@@ -76,10 +79,12 @@ export function ShortVideo({
       const hls = new Hls({
         // Feed vertical pe mobil: nu are rost sa buffer-am zeci de secunde
         // dintr-un clip pe care userul il poate parasi in doua secunde.
-        maxBufferLength: 12,
-        maxMaxBufferLength: 30,
+        maxBufferLength: dataSaver ? 6 : 12,
+        maxMaxBufferLength: dataSaver ? 12 : 30,
         capLevelToPlayerSize: true,
-        startLevel: -1,
+        // Cu economie de date pornim de la cea mai mica rendition si urcam doar
+        // daca banda chiar exista; altfel lasam ABR sa decida de la inceput.
+        startLevel: dataSaver ? 0 : -1,
         enableWorker: true,
       });
 
@@ -93,18 +98,23 @@ export function ShortVideo({
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
-  }, [src]);
+  }, [src, dataSaver]);
 
   /* ---------- play / pause dupa starea de viewport ---------- */
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const shouldPlay = active && !preloadOnly && (!reducedMotion || forcePlay);
+    const shouldPlay = active && !preloadOnly && (autoplayAllowed || manualPlay);
 
     if (!shouldPlay) {
       video.pause();
-      if (!active) video.currentTime = 0;
+      if (!active) {
+        video.currentTime = 0;
+        // Iesirea din ecran anuleaza si redarea ceruta manual: la revenire
+        // se aplica din nou politica de autoplay, nu o decizie veche.
+        setManualPlay(false);
+      }
 
       return;
     }
@@ -119,7 +129,7 @@ export function ShortVideo({
         setNeedsTapToPlay(true);
       },
     );
-  }, [active, preloadOnly, muted, reducedMotion, forcePlay]);
+  }, [active, preloadOnly, muted, autoplayAllowed, manualPlay]);
 
   /* ---------- mute fara sa reporneasca redarea ---------- */
   useEffect(() => {
@@ -168,14 +178,15 @@ export function ShortVideo({
         aria-label="Video short"
       />
 
-      {(needsTapToPlay || (reducedMotion && !forcePlay)) && active ? (
+      {active && (needsTapToPlay || (!autoplayAllowed && !manualPlay)) ? (
         <button
           type="button"
           className="shplay"
           aria-label="Redă"
           onClick={(e) => {
             e.stopPropagation();
-            videoRef.current?.play().then(() => setNeedsTapToPlay(false), () => undefined);
+            setManualPlay(true);
+            setNeedsTapToPlay(false);
           }}
         >
           ▶

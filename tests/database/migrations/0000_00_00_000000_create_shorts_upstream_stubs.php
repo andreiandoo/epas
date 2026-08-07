@@ -109,8 +109,51 @@ return new class extends Migration
                 $table->id();
                 $table->foreignId('event_id')->nullable();
                 $table->string('name')->nullable();
+                $table->string('sku')->nullable();
                 $table->integer('price')->default(0);
                 $table->string('currency', 3)->nullable();
+                // Drives the drop countdown + "remind me" CTA (D2).
+                $table->timestamp('sales_start_at')->nullable();
+                $table->timestamp('sales_end_at')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        // spatie/laravel-activitylog writes here whenever a logged model (e.g.
+        // TicketType) is touched — without it every create() in the suite dies.
+        if (! Schema::hasTable('activity_log')) {
+            Schema::create('activity_log', function (Blueprint $table) {
+                $table->id();
+                $table->string('log_name')->nullable();
+                $table->text('description')->nullable();
+                $table->nullableMorphs('subject', 'subject');
+                $table->nullableMorphs('causer', 'causer');
+                $table->string('event')->nullable();
+                $table->json('properties')->nullable();
+                $table->uuid('batch_uuid')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        // The watchlist a reminder mirrors itself into.
+        if (! Schema::hasTable('marketplace_customer_watchlist')) {
+            Schema::create('marketplace_customer_watchlist', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('marketplace_customer_id')->nullable();
+                $table->foreignId('marketplace_client_id')->nullable();
+                $table->foreignId('event_id')->nullable();
+                $table->foreignId('marketplace_event_id')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        if (! Schema::hasTable('marketplace_referral_codes')) {
+            Schema::create('marketplace_referral_codes', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('marketplace_client_id')->nullable();
+                $table->foreignId('marketplace_customer_id')->nullable();
+                $table->string('code', 20)->nullable();
+                $table->boolean('is_active')->default(true);
                 $table->timestamps();
             });
         }

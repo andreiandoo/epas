@@ -288,24 +288,6 @@
   .app-client .short .gdots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);transition:.2s}.app-client .short .gdots span.on{background:#fff;width:16px;border-radius:3px}
   @media(prefers-reduced-motion:reduce){.app-client .short .kb{animation:none}.app-client .short .vbar i{animation:none;width:45%}}
 
-/* ---- Feed LIVE de shorts (video real din EPAS) ----
-   Cardurile din prototip randau doar gradienti; astea sunt regulile in plus de
-   care are nevoie <video>. Restul (.short/.info/.rail/.shcta) se reutilizeaza
-   ca atare, ca feed-ul live sa arate identic cu cel din prototip. */
-  .app-client .short .shvideo{width:100%;height:100%;object-fit:cover;display:block;background:#000}
-  /* Butoanele de pe rail sunt <button> pentru cititoarele de ecran si focus —
-     resetam stilul nativ ca sa arate exact ca <div>-urile din prototip. */
-  .app-client .short .rail button.act{background:none;border:0;padding:0;font:inherit;color:#fff}
-  .app-client .short .shtop button.icon-btn{font-size:16px;line-height:1}
-  .app-client .short .shplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:6;width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:24px;display:grid;place-items:center;cursor:pointer;font-family:inherit}
-  .app-client .short .shplay:active{transform:translate(-50%,-50%) scale(.92)}
-  /* Tinte de atingere ≥44px si focus vizibil (D10 — accesibilitate). */
-  .app-client .short .rail button.act,.app-client .short .shcta{min-height:44px}
-  .app-client .short button:focus-visible{outline:2px solid #fff;outline-offset:3px}
-
-/* Text doar pentru cititoarele de ecran (regiunea live care anunta short-ul). */
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
 /* ---- Marginile de sistem ----
    MainActivity scrie --safe-top / --safe-bottom pe <html> (WebView-ul de pe
    Android nu raporteaza fiabil env(safe-area-inset-*)). Aplicatia deseneaza

@@ -16,6 +16,9 @@ import { Ic, sx } from '../../../design/sx';
 import { I } from '../../../mock/prototype';
 import {
   isAuthenticated,
+  recordDailyWatch,
+  remindMe,
+  shareShort,
   toggleShortLike,
   toggleShortSave,
   type ApiShort,
@@ -26,6 +29,9 @@ import { useClient } from '../../../store/client';
 import { ShortVideo } from './ShortVideo';
 import { useShortsFeed } from './useShortsFeed';
 import { useShortTelemetry } from './useShortTelemetry';
+import { usePlaybackPreferences } from './usePlaybackPreferences';
+import { Blurhash } from './Blurhash';
+import { DropCountdown } from './DropCountdown';
 
 /** Cate ecrane in jurul celui activ tin un <video> montat. */
 const PRELOAD_RADIUS = 1;
@@ -48,8 +54,11 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
   const { go } = useNav();
   const showToast = useClient((s) => s.showToast);
 
+  const { autoplayAllowed, dataSaver, prefetchCount } = usePlaybackPreferences();
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [muted, setMuted] = useState(true);
+  const [reminded, setReminded] = useState<Record<number, boolean>>({});
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const slideRefs = useRef<Array<HTMLElement | null>>([]);
@@ -134,6 +143,9 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
     if (counted) flags.view = true;
   }, [activeIndex, items, track, feed]);
 
+  /** Streak-ul zilnic se raporteaza o singura data pe sesiune; ziua o decide serverul. */
+  const streakPinged = useRef(false);
+
   const handleProgress = useCallback(
     (short: ApiShort, ms: number, ratio: number) => {
       progress.current.set(short.id, { ms, ratio });
@@ -144,9 +156,16 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
       if (!flags.view && (ms >= VIEW_MIN_MS || ratio >= VIEW_MIN_RATIO)) {
         flags.view = true;
         track({ short_id: short.id, type: 'view', watch_ms: ms, watch_ratio: Number(ratio.toFixed(3)), feed });
+
+        if (!streakPinged.current && isAuthenticated()) {
+          streakPinged.current = true;
+          void recordDailyWatch().then((result) => {
+            if (result?.awarded) showToast(`+${result.points} puncte · streak ${result.streak}`);
+          });
+        }
       }
     },
-    [track, feed],
+    [track, feed, showToast],
   );
 
   const handleComplete = useCallback(
@@ -215,9 +234,18 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
   const onShare = useCallback(
     async (short: ApiShort) => {
-      track({ short_id: short.id, type: 'share', feed });
+      // Cand exista cont, serverul minteste tokenul de share si baga codul de
+      // referral in link (D1). Fara cont ramane un link simplu — tot partajabil,
+      // doar fara atribuire.
+      let url = `${window.location.origin}/s/${short.id}`;
 
-      const url = `${window.location.origin}/s/${short.id}`;
+      if (isAuthenticated()) {
+        const result = await shareShort(short.id, 'native', feed);
+        if (result) url = result.url;
+      } else {
+        track({ short_id: short.id, type: 'share', feed });
+      }
+
       const title = short.title ?? 'Tixello';
 
       // Web Share API cand exista (Capacitor o expune in WebView), altfel
@@ -241,6 +269,27 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
       }
     },
     [track, feed, showToast],
+  );
+
+  const onRemind = useCallback(
+    async (short: ApiShort) => {
+      if (!isAuthenticated()) {
+        showToast('Intră în cont ca să primești anunțul');
+
+        return;
+      }
+
+      const ok = await remindMe(short.id);
+      if (!ok) {
+        showToast('Nu am putut seta memento-ul');
+
+        return;
+      }
+
+      setReminded((prev) => ({ ...prev, [short.id]: true }));
+      showToast('Te anunțăm când intră biletele');
+    },
+    [showToast],
   );
 
   const onCta = useCallback(
@@ -274,9 +323,13 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
   const activeShort = items[activeIndex];
 
+  // Cu economie de date sau pe retea mobila, prefetchCount e 0: montam doar
+  // short-ul activ si nu platim banda pentru vecini (D9).
+  const radius = Math.min(PRELOAD_RADIUS, prefetchCount > 0 ? PRELOAD_RADIUS : 0);
+
   const visibleRange = useMemo(
-    () => ({ from: activeIndex - PRELOAD_RADIUS, to: activeIndex + PRELOAD_RADIUS }),
-    [activeIndex],
+    () => ({ from: activeIndex - radius, to: activeIndex + radius }),
+    [activeIndex, radius],
   );
 
   if (unavailable) return <>{fallback}</>;
@@ -309,6 +362,10 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
             aria-label={short.title ?? 'Short'}
             aria-current={isActive ? 'true' : undefined}
           >
+            {/* LQIP sub video: pe retea slaba se vede o culoare plauzibila,
+                nu un dreptunghi negru, pana urca posterul (D9). */}
+            <Blurhash hash={short.playback.blurhash} />
+
             {mounted && hls ? (
               <ShortVideo
                 src={hls}
@@ -316,6 +373,8 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
                 active={isActive}
                 muted={muted}
                 preloadOnly={!isActive}
+                autoplayAllowed={autoplayAllowed}
+                dataSaver={dataSaver}
                 onProgress={(ms, ratio) => handleProgress(short, ms, ratio)}
                 onComplete={() => handleComplete(short)}
                 onTap={() => setMuted((m) => !m)}
@@ -328,10 +387,18 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
                 style={
                   short.playback.poster_url
                     ? { background: `#0b0912 center/cover no-repeat url(${short.playback.poster_url})` }
-                    : sx('background:#0b0912')
+                    : sx('background:transparent')
                 }
               />
             )}
+
+            {/* Avertisment de continut inainte de a porni ceva ce poate
+                declansa fotosensibilitate (D10). */}
+            {short.content_flags.includes('flashing') ? (
+              <span className="mtag" role="note">
+                ⚠ Lumini intermitente
+              </span>
+            ) : null}
 
             <div className="grad" />
 
@@ -377,7 +444,15 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
                 <div style={sx('font-size:11.5px;opacity:.7;margin-top:6px')}>♪ {short.music_credit}</div>
               ) : null}
 
-              {short.cta ? (
+              {short.cta?.pending && short.cta.on_sale_at ? (
+                // Biletele nu sunt inca la vanzare: un buton „Ia bilet" ar fi o
+                // fundatura, deci devine countdown + „Amintește-mi" (D2).
+                <DropCountdown
+                  onSaleAt={short.cta.on_sale_at}
+                  reminded={reminded[short.id] === true}
+                  onRemind={() => void onRemind(short)}
+                />
+              ) : short.cta ? (
                 <button className="shcta" style={sx('margin-top:14px')} onClick={() => onCta(short)}>
                   <Ic svg={I.ticket} /> {short.cta.label ?? 'Vezi detalii'}
                 </button>

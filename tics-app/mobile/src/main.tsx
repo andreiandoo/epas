@@ -7,6 +7,9 @@ import './design/base.css';
 // CSS-ul de client, portat verbatim din prototip si scopat sub .app-client.
 // Se incarca dupa base.css: fiind scopat, nu poate suprascrie organizatorul.
 import './design/client.css';
+
+// Scris de mana (client.css e generat din prototip, care n-are video real).
+import './design/shorts.css';
 import { App } from './app/App';
 import { initNative } from './native';
 import { initOta } from './ota';

@@ -38,7 +38,7 @@ export type ApiShort = {
   id: number;
   source: ShortSource;
   feed: ShortFeedSegment | null;
-  playback: { hls_url: string | null; poster_url: string | null };
+  playback: { hls_url: string | null; poster_url: string | null; blurhash: string | null };
   embed_html: string | null;
   source_url: string | null;
   duration: number | null;
@@ -56,7 +56,12 @@ export type ApiShort = {
     url: string | null;
     ticket_type_id: number | null;
     promo_code: string | null;
+    /** Momentul deschiderii vanzarii, cand biletele nu sunt inca la vanzare (D2). */
+    on_sale_at: string | null;
+    pending: boolean;
   } | null;
+  /** ['flashing','alcohol',...] — avertismente de continut (D7/D10). */
+  content_flags: string[];
   stats: { likes: number; views: number; shares: number };
   viewer: { liked: boolean; saved: boolean };
 };
@@ -221,3 +226,92 @@ export async function toggleShortSave(id: number, feed?: ShortFeedSegment | null
 }
 
 export const isAuthenticated = () => authToken !== null;
+
+/* ---------- val 1: share, remind, streak ---------- */
+
+export type ShareResult = {
+  share_id: number;
+  token: string;
+  url: string;
+  card_url: string | null;
+  deep_link: string;
+  points?: { points: number; awarded: boolean };
+};
+
+/**
+ * Cere serverului un link de share. Serverul minteste tokenul si baga codul de
+ * referral al utilizatorului in URL (D1) — clientul nu construieste linkul de
+ * atribuire singur, ca sa nu existe doua reguli pentru acelasi lucru.
+ */
+export async function shareShort(
+  id: number,
+  channel?: string,
+  feed?: ShortFeedSegment | null,
+): Promise<ShareResult | null> {
+  try {
+    const body = await request<Envelope<ShareResult>>(`/marketplace-client/customer/shorts/${id}/share`, {
+      method: 'POST',
+      body: JSON.stringify({ channel, feed }),
+    });
+
+    return body.data;
+  } catch {
+    return null;
+  }
+}
+
+/** „Amintește-mi cand intra biletele" (D2). */
+export async function remindMe(id: number): Promise<boolean> {
+  try {
+    await request(`/marketplace-client/customer/shorts/${id}/remind`, { method: 'POST' });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function forgetReminder(id: number): Promise<boolean> {
+  try {
+    await request(`/marketplace-client/customer/shorts/${id}/remind`, { method: 'DELETE' });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type StreakResult = { points: number; streak: number; awarded: boolean };
+
+/**
+ * Anunta prima vizionare credibila din sesiune. Serverul decide daca e prima
+ * din zi — ziua e o notiune de server, nu de ceas local (D11).
+ */
+export async function recordDailyWatch(): Promise<StreakResult | null> {
+  try {
+    const body = await request<Envelope<StreakResult>>('/marketplace-client/customer/shorts/watched', {
+      method: 'POST',
+    });
+
+    return body.data;
+  } catch {
+    return null;
+  }
+}
+
+export type StreakState = {
+  current_streak: number;
+  longest_streak: number;
+  total_points: number;
+  last_watch_date: string | null;
+};
+
+export async function fetchStreak(): Promise<StreakState | null> {
+  try {
+    const body = await request<Envelope<StreakState>>('/marketplace-client/customer/shorts/streak');
+
+    return body.data;
+  } catch {
+    return null;
+  }
+}

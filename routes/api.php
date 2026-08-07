@@ -4095,3 +4095,22 @@ Route::post('tenant/shorts/upload-url', [\App\Http\Controllers\Api\Shorts\ShortU
 Route::post('webhooks/video/{provider}', \App\Http\Controllers\Api\Shorts\VideoWebhookController::class)
     ->middleware('throttle:120,1')
     ->name('api.webhooks.video');
+
+// Shorts — interactiuni de val 1: share (D1), remind/drop (D2), streak (D11).
+Route::prefix('marketplace-client/customer/shorts')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::post('/{short}/share', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'share'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.share');
+        Route::post('/{short}/remind', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'remind'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.remind');
+        Route::delete('/{short}/remind', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'forget'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.remind.delete');
+        Route::get('/streak', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'streak'])
+            ->name('api.marketplace-client.customer.shorts.streak');
+        Route::post('/watched', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'watched'])
+            ->name('api.marketplace-client.customer.shorts.watched');
+    });

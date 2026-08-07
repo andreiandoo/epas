@@ -1038,3 +1038,21 @@ Schedule::command('customers:audit-email-mx', [
     ->withoutOverlapping()
     ->runInBackground();
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// Shorts (docs/plans/shorts.md)
+// ─────────────────────────────────────────────────────────────────────────
+
+// Rolls short_events up into the denormalised counters on `shorts`. Every five
+// minutes: the feed reads those counters, and stats that lag by an hour make a
+// short look dead right when it is taking off. The job recomputes from scratch
+// per short, so an overlapping or repeated run cannot double-count.
+Schedule::job(new \App\Jobs\Shorts\AggregateShortStatsJob)
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Fires the "tickets are live" reminders. Every minute, because a drop is a
+// moment — a reminder an hour late arrives after the good tickets are gone.
+Schedule::job(new \App\Jobs\Shorts\FireDropRemindersJob)
+    ->everyMinute()
+    ->withoutOverlapping();

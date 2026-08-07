@@ -862,3 +862,14 @@ Route::get('/leisure/qr-print', [\App\Http\Controllers\Leisure\QrPrintController
 // ─────────────────────────────────────────────────────────────────────────
 Route::get('/embed/leisure/{tenantSlug}', [\App\Http\Controllers\Leisure\EmbedController::class, 'show'])
     ->name('leisure.embed.show');
+
+// ─────────────────────────────────────────────────────────────────────────
+// Shorts — landing pentru un short partajat (docs/plans/shorts.md D1).
+// Singura suprafata web a unei functionalitati altfel mobile-only: preview OG
+// pentru retelele sociale + trecerea in app + atribuirea click-ului catre
+// share-ul care l-a produs.
+// ─────────────────────────────────────────────────────────────────────────
+Route::get('/s/{short}', [\App\Http\Controllers\Shorts\ShortLandingController::class, 'show'])
+    ->whereNumber('short')
+    ->middleware('throttle:120,1')
+    ->name('shorts.landing');
