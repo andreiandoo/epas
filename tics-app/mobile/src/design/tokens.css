@@ -1,0 +1,161 @@
+/* =========================================================
+   TIXELLO DESIGN SYSTEM — tokenuri (§4 din TIXELLO_BUILD_GUIDE.md)
+   Sursa canonica: blocul :root din organizer-app.html / client-app.html.
+   Regula temelor: paleta implicita (dark Tixello) e definita pe :root;
+   temele alternative se aplica prin [data-app-theme] pe containerul .app.
+   Nicio culoare nu traieste doar intr-un @media.
+   ========================================================= */
+
+:root {
+  /* ---- Brand accent — indigo/violet, CONSTANT pe toate verticalele ---- */
+  --accent: #8b5cf6;
+  --accent-700: #7c3aed;
+  --accent-accent: #a996fa;
+  --accent-ink: #c4b5fd;
+  --accent-tint: rgba(139, 92, 246, 0.15);
+  --accent-tint-2: rgba(139, 92, 246, 0.24);
+  --accent-border: rgba(139, 92, 246, 0.34);
+  --accent-glow: rgba(124, 58, 237, 0.6);
+
+  /* ---- Neutrals — DEFAULT = Tixello dark ---- */
+  --bg: #0a0711;
+  --bg-2: #0e0a18;
+  --surface: #151122;
+  --surface-2: #1b1630;
+  --surface-3: #231e39;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.17);
+  --text: #f5f5fa;
+  --text-2: #c4c6d4;
+  --text-3: #8e92a6;
+  --text-4: #5f6379;
+  --track: #231e39;
+  --shadow-color: 0, 0, 0;
+
+  /* ---- Semantic ---- */
+  --green: #22c55e;
+  --green-2: #3ddc97;
+  --green-tint: rgba(34, 197, 94, 0.15);
+  --green-border: rgba(34, 197, 94, 0.34);
+  --amber: #f59e0b;
+  --amber-tint: rgba(245, 158, 11, 0.16);
+  --amber-border: rgba(245, 158, 11, 0.32);
+  --danger: #f0616d;
+  --danger-tint: rgba(240, 97, 109, 0.16);
+  --danger-border: rgba(240, 97, 109, 0.34);
+  --cyan: #2dd6ee;
+  --cyan-tint: rgba(45, 214, 238, 0.14);
+  --cyan-border: rgba(45, 214, 238, 0.32);
+  --blue: #3b82f6;
+  --pink: #ec4899;
+
+  /* ---- Role pills ---- */
+  --role-admin-bg: rgba(240, 97, 109, 0.16);
+  --role-admin-fg: #f0616d;
+  --role-mgr-bg: rgba(34, 197, 94, 0.15);
+  --role-mgr-fg: #3ddc97;
+  --role-staff-bg: rgba(255, 255, 255, 0.08);
+  --role-staff-fg: #c4c6d4;
+
+  /* ---- Avatars ---- */
+  --av-red-bg: rgba(240, 97, 109, 0.18);
+  --av-red-fg: #f0616d;
+  --av-blue-bg: rgba(59, 130, 246, 0.2);
+  --av-blue-fg: #93b4fb;
+  --av-amber-bg: rgba(245, 158, 11, 0.2);
+  --av-amber-fg: #f5b740;
+  --av-purple-bg: rgba(139, 92, 246, 0.22);
+  --av-purple-fg: #c4b5fd;
+  --av-green-bg: rgba(34, 197, 94, 0.2);
+  --av-green-fg: #3ddc97;
+
+  /* ---- Forma / tipografie ---- */
+  --radius: 18px;
+  --radius-lg: 22px;
+  --radius-sm: 12px;
+  --shadow-sm: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
+  --shadow: 0 22px 46px -22px rgba(0, 0, 0, 0.7);
+  --shadow-btn: 0 16px 34px -14px rgba(124, 58, 237, 0.7);
+  --grad: linear-gradient(135deg, var(--accent), var(--accent-700));
+  --font: 'Outfit', ui-rounded, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, Monaco, 'Cascadia Code', monospace;
+
+  /* ---- Chrome ---- */
+  --tabbar-h: 62px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---- Tema: Standard (Tixello light — indigo pe alb/lavanda) ---- */
+[data-app-theme='light'] {
+  --bg: #f4f2fb;
+  --bg-2: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #faf8ff;
+  --surface-3: #f1eefa;
+  --border: #ebe7f5;
+  --border-strong: #ded8ee;
+  --text: #1a1626;
+  --text-2: #5b5570;
+  --text-3: #8b85a0;
+  --text-4: #b8b2c8;
+  --track: #eee9fa;
+  --shadow-color: 60, 40, 110;
+  --accent-tint: #f1ecfd;
+  --accent-tint-2: #e7defb;
+  --accent-border: rgba(124, 58, 237, 0.22);
+  --green-tint: #e7f8ee;
+  --green-border: rgba(22, 163, 74, 0.22);
+  --amber-tint: #fef3e2;
+  --amber-border: rgba(217, 119, 6, 0.22);
+  --danger-tint: #fdebec;
+  --danger-border: rgba(220, 60, 72, 0.22);
+  --cyan-tint: #e3f8fc;
+  --cyan-border: rgba(14, 150, 180, 0.22);
+  --role-admin-bg: #fdebec;
+  --role-admin-fg: #d14350;
+  --role-mgr-bg: #e7f8ee;
+  --role-mgr-fg: #15803d;
+  --role-staff-bg: #eeeaf6;
+  --role-staff-fg: #5b5570;
+  --av-red-bg: #fde7e9;
+  --av-red-fg: #d14350;
+  --av-blue-bg: #e5edfc;
+  --av-blue-fg: #2563eb;
+  --av-amber-bg: #fcefd6;
+  --av-amber-fg: #b45309;
+  --av-purple-bg: #eee7fd;
+  --av-purple-fg: #6d28d9;
+  --av-green-bg: #e3f6ea;
+  --av-green-fg: #15803d;
+  --shadow-sm: 0 1px 2px rgba(60, 40, 110, 0.05);
+  --shadow: 0 1px 2px rgba(60, 40, 110, 0.05), 0 10px 28px -12px rgba(60, 40, 110, 0.14);
+}
+
+/* ---- Tema: Contrast Marit (dark cu borduri/text mai puternice) ---- */
+[data-app-theme='lowlight'] {
+  --surface: #1b1630;
+  --surface-2: #231e39;
+  --surface-3: #2a2442;
+  --border: rgba(255, 255, 255, 0.2);
+  --border-strong: rgba(255, 255, 255, 0.32);
+  --text: #ffffff;
+  --text-2: #dadce8;
+  --text-3: #a2a5b8;
+  --text-4: #787c90;
+  --track: #2a2442;
+}
+
+/* ---- Tema: Noapte (= dark implicit, explicit) ---- */
+[data-app-theme='dark'] {
+  --bg: #0a0711;
+  --surface: #151122;
+  --surface-2: #1b1630;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.17);
+  --text: #f5f5fa;
+  --text-2: #c4c6d4;
+  --text-3: #8e92a6;
+  --text-4: #5f6379;
+  --track: #231e39;
+}

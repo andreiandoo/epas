@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0A0711">
+<title>Tixello — build de test Android</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238B5CF6'/%3E%3Cpath d='M9 11h14M16 11v12' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0A0711;--surface:#151122;--surface-2:#1B1630;
+  --border:rgba(255,255,255,.09);--border-strong:rgba(255,255,255,.17);
+  --text:#F5F5FA;--text-2:#C4C6D4;--text-3:#8E92A6;--text-4:#5F6379;
+  --accent:#8B5CF6;--accent-700:#7C3AED;--accent-2:#A996FA;
+  --accent-tint:rgba(139,92,246,.15);--accent-border:rgba(139,92,246,.34);
+  --green:#22C55E;--green-tint:rgba(34,197,94,.15);--green-border:rgba(34,197,94,.34);
+  --amber:#F59E0B;--amber-tint:rgba(245,158,11,.16);--amber-border:rgba(245,158,11,.32);
+  --cyan:#2DD6EE;--cyan-tint:rgba(45,214,238,.14);--cyan-border:rgba(45,214,238,.32);
+  --grad:linear-gradient(135deg,#8B5CF6,#7C3AED);
+  --radius:18px;--shadow:0 22px 46px -22px rgba(0,0,0,.7);
+  --shadow-btn:0 16px 34px -14px rgba(124,58,237,.7);
+  --font:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,Menlo,Monaco,"Cascadia Code",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:var(--font);color:var(--text);letter-spacing:-.011em;min-height:100vh;
+  background:radial-gradient(820px 520px at 84% -2%,#241a44,transparent 58%),
+             radial-gradient(680px 480px at -6% 102%,#17122e,transparent 55%),var(--bg);
+  -webkit-font-smoothing:antialiased;padding:28px 18px 60px;
+}
+.wrap{max-width:640px;margin:0 auto}
+.brand{display:inline-flex;align-items:center;gap:9px;margin-bottom:26px}
+.logo{font-weight:700;font-size:17px;letter-spacing:-.4px;color:#fff;background:var(--grad);
+  padding:7px 13px;border-radius:12px;box-shadow:0 6px 16px -4px rgba(124,58,237,.6)}
+h1{font-size:27px;font-weight:800;letter-spacing:-.6px;line-height:1.2}
+.sub{font-size:14.5px;color:var(--text-2);margin-top:8px;line-height:1.55}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;margin-top:16px;box-shadow:0 10px 24px -14px rgba(0,0,0,.6)}
+.card h2{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+.n{width:23px;height:23px;border-radius:8px;background:var(--accent-tint);color:var(--accent-2);
+  display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}
+.dl{display:flex;align-items:center;justify-content:center;gap:11px;background:var(--grad);color:#fff;
+  text-decoration:none;font-size:17px;font-weight:700;padding:19px;border-radius:15px;
+  box-shadow:var(--shadow-btn);margin-top:6px;transition:transform .12s}
+.dl:active{transform:scale(.985)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)}
+.pill.g{background:var(--green-tint);border-color:var(--green-border);color:var(--green)}
+ol,ul{margin:0;padding-left:20px}
+li{font-size:14px;color:var(--text-2);line-height:1.65;margin-bottom:8px}
+li b,li strong{color:var(--text);font-weight:600}
+code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);
+  padding:2px 7px;border-radius:6px;color:var(--accent-2);word-break:break-all}
+table{width:100%;border-collapse:collapse;margin-top:4px}
+td{padding:11px 0;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td:first-child{white-space:nowrap;padding-right:14px}
+.note{display:flex;gap:12px;background:var(--amber-tint);border:1px solid var(--amber-border);
+  border-radius:14px;padding:14px 16px;margin-top:16px}
+.note .i{color:var(--amber);flex:none;font-size:16px;line-height:1.4}
+.note p{font-size:13px;color:var(--text-2);line-height:1.55}
+.note b{color:var(--text)}
+.foot{text-align:center;font-size:12px;color:var(--text-4);margin-top:32px;line-height:1.7}
+.hash{font-family:var(--mono);font-size:10.5px;color:var(--text-4);word-break:break-all;margin-top:10px}
+@media(max-width:520px){h1{font-size:23px}.card{padding:17px}td:first-child{white-space:normal}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand"><span class="logo">Tixello</span></div>
+
+  <h1>Build de test — Android</h1>
+  <p class="sub">
+    Aplicația mobilă unică Tixello: <b style="color:var(--text)">client + organizator într-un singur build</b>.
+    Versiunea de mai jos e un build <em>debug</em> pentru testare internă, cu date mock — nu se conectează încă
+    la backend-ul real.
+  </p>
+
+  <div class="card">
+    <a class="dl" href="tixello-debug-0.1.0.apk" download>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Descarcă APK-ul
+    </a>
+    <div class="meta">
+      <span class="pill">v0.1.0 · Faza 0</span>
+      <span class="pill">3,74 MB</span>
+      <span class="pill">Android 5.1+</span>
+      <span class="pill g">debug build</span>
+    </div>
+    <div class="hash">SHA-256: 58a37758a10ed6ce10f35bf8c5fe2f637471e693bf6a5581e88d12b0da860469</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">1</span> Cum îl instalezi</h2>
+    <ol>
+      <li>Deschide pagina asta <b>direct pe telefon</b> și apasă butonul de mai sus.</li>
+      <li>Chrome te avertizează că fișierul „poate dăuna dispozitivului" — e mesajul standard pentru orice APK
+        din afara Play Store. Alege <b>Descarcă oricum</b>.</li>
+      <li>Deschide fișierul din notificarea de descărcare (sau din <b>Fișiere → Descărcări</b>).</li>
+      <li>Android cere permisiunea <b>„Instalare aplicații necunoscute"</b> pentru Chrome/Fișiere —
+        activeaz-o, apoi revino și apasă <b>Instalează</b>.</li>
+      <li>Google Play Protect poate afișa „Aplicație nescanată". Alege <b>Instalează oricum</b> —
+        e normal pentru un build nesemnat cu cheie de release.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span> Conturi demo</h2>
+    <p style="font-size:13.5px;color:var(--text-2);margin-bottom:6px">Orice parolă funcționează.</p>
+    <table>
+      <tr>
+        <td><code>andrei@tixello.ro</code></td>
+        <td>client + 3 organizatori → apare pasul <b>„Alege contul"</b></td>
+      </tr>
+      <tr>
+        <td><code>client@tixello.ro</code></td>
+        <td>doar client → intră direct, fără pas intermediar</td>
+      </tr>
+      <tr>
+        <td><code>operator@tixello.ro</code></td>
+        <td>doar organizatori (standard, festival, leisure)</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span> Ce poți testa</h2>
+    <ul>
+      <li><b>Un login → alegerea contului → comutare client ↔ organizator</b> din banner (Acasă/Profil)
+        sau din Setări → „Comută tipul de cont".</li>
+      <li><b>Client:</b> Acasă, Explorează (categorii + Radar/revânzare), Bilete (QR + transfer),
+        Portofel cashless (sold, top-up, puncte), Profil.</li>
+      <li><b>Organizator:</b> Panou cu statistici live, bară de tură (Pauză + buton Urgență),
+        POS cu coș și comision 3%, Rapoarte cu decontare, Setări.</li>
+      <li><b>Scanare — apasă pe fereastra camerei</b> și ciclează toate cele 4 stări:
+        ACCES APROBAT → RE-INTRARE BLOCATĂ → BILET BLOCAT → BILET INVALID, fiecare cu flash colorat.
+        Pune tura pe Pauză și vezi cum se blochează scanarea.</li>
+      <li><b>Neversea</b> (rol manager) adaugă cardul <b>Cashless &amp; brățări</b> pe Panou.
+        <b>Delta Adventure Park</b> deschide navigatorul <b>leisure</b> distinct.</li>
+      <li><b>Teme:</b> Setări → Aspect → Standard / Contrast Mărit / Noapte.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <span class="i">&#9888;</span>
+    <p>
+      <b>Build intern.</b> Scanarea QR e simulată (camera reală vine în Faza 2), plățile și NFC-ul sunt
+      stub-uite, iar toate datele sunt mock. Nu distribui linkul în afara echipei.
+    </p>
+  </div>
+
+  <div class="foot">
+    Tixello · build de test generat din <code style="font-size:10.5px">tics-app/mobile</code><br>
+    Pentru un build nou: <code style="font-size:10.5px">.\build-apk.ps1</code>
+  </div>
+
+</div>
+</body>
+</html>

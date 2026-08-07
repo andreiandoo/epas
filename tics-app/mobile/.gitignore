@@ -1,0 +1,22 @@
+node_modules/
+dist/
+out/
+
+# Capacitor / Android build artefacts
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# Truststore local (contine CA-ul MITM al masinii; se regenereaza — vezi README-BUILD.md)
+android/tixello-cacerts.jks
+android/avast-root.cer
+
+.env
+.env.local
+*.log
+.DS_Store
