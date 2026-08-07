@@ -27,6 +27,14 @@ function toggleDrawerTerms() {
 
 // Sync drawer content with main ticket selection
 function syncDrawerContent() {
+    // Force a re-render of the desktop ticket cards before cloning so the
+    // drawer picks up the latest state (perks, prices, availability). Without
+    // this, opening the drawer immediately after page load — before the API
+    // response has re-triggered renderTicketTypes with enable_ticket_perks —
+    // would leave the drawer stuck with the perk-less initial render.
+    if (typeof EventPage !== 'undefined' && typeof EventPage.renderTicketTypes === 'function' && EventPage.ticketTypes?.length) {
+        try { EventPage.renderTicketTypes(); } catch (_) {}
+    }
     const mainContent = document.getElementById('ticket-types');
     const drawerContent = document.getElementById('drawerTicketTypes');
     if (mainContent && drawerContent) {

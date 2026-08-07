@@ -4112,11 +4112,29 @@ const EventPage = {
         if (!container) return;
 
         var self = this;
+        // Perks (beneficii) are on the desktop ticket-types cards; they belong
+        // on the seat-modal legend too so the buyer sees the same value
+        // proposition when picking a category on the map. Gated by
+        // event.enable_ticket_perks like the main card.
+        var perksEnabled = self.event && self.event.enable_ticket_perks;
         var html = this.ticketTypes.filter(function(tt) {
             return tt.has_seating && !tt.is_sold_out;
         }).map(function(tt) {
             var isActive = String(tt.id) === String(currentTicketTypeId);
             var seatColor = self.getTicketTypeColor(tt);
+
+            var perksHtml = '';
+            if (perksEnabled && tt.perks && tt.perks.length > 0) {
+                perksHtml = '<ul class="mt-2 space-y-1">' +
+                    tt.perks.map(function(perk) {
+                        var perkText = typeof perk === 'string' ? perk : (perk.text || perk);
+                        return '<li class="flex items-start gap-1.5 text-xs text-muted">' +
+                            '<svg class="w-3 h-3 mt-0.5 text-green-500 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' +
+                            '<span>' + self.escapeHtml(perkText) + '</span>' +
+                        '</li>';
+                    }).join('') +
+                '</ul>';
+            }
 
             return '<div class="p-3 rounded-xl border-2 cursor-pointer transition-all ' +
                 (isActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50') + '" ' +
@@ -4126,6 +4144,7 @@ const EventPage = {
                     '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
                 '</div>' +
                 '<div class="text-xs text-muted">' + (tt.description || 'Acces general') + '</div>' +
+                perksHtml +
             '</div>';
         }).join('');
 
