@@ -46,7 +46,7 @@ const dayLabel = (day?: number) => {
   return `${d.getUTCDate()} ${MONTHS_FULL[d.getUTCMonth()]}`;
 };
 
-export function TicsList({ cat, type: typeArg, day }: { cat?: string; type?: string; day?: number }) {
+export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; type?: string; catKey?: string; day?: number }) {
   const { go, back } = useNav();
   const city = useClient((s) => s.city);
   const setCity = useClient((s) => s.setCity);
@@ -65,6 +65,7 @@ export function TicsList({ cat, type: typeArg, day }: { cat?: string; type?: str
   const { items, loading, hasMore } = useRadarList({
     limit: shown,
     city: city || undefined,
+    catKey,
     type: type || undefined,
     genre: f.genre || undefined,
     day,

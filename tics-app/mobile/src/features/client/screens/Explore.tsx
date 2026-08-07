@@ -28,7 +28,8 @@ function poolsFromCategories(cats: RadarCategory[]): Pool[] {
   return cats.map((c, i) => ({
     name: c.cat,
     count: c.count,
-    c: CAT_COLORS[i % CAT_COLORS.length],
+    // culoarea oficiala a categoriei cand vine din feed; altfel paleta rotativa
+    c: c.color ?? CAT_COLORS[i % CAT_COLORS.length],
     route: `go:ticslist:${c.type}`,
     pool: c.samples as unknown as Record<string, unknown>[],
   }));
@@ -61,7 +62,13 @@ function CatCard({ c }: { c: Pool }) {
     };
   }, [c.pool.length]);
 
-  const it = c.pool[k] as { g: string; s: string };
+  /* Categoriile fara evenimente in perioada acoperita n-au exemple; cardul
+     ramane pe identitatea categoriei, ca sa nu crape si sa nu para gol. */
+  const it = (c.pool[k] as { g: string; s: string } | undefined) ?? {
+    g: '🎟',
+    s: c.name,
+    tone: `linear-gradient(150deg, ${c.c}, #1a1428)`,
+  };
 
   const onClick = () => {
     // route are forma "go:ticslist:<event_type>" (categorii reale) sau, pentru
@@ -70,7 +77,7 @@ function CatCard({ c }: { c: Pool }) {
     if (parts[0] !== 'go') return;
     /* "Alege un vibe" duce in Radar, filtrat pe categoria aleasa — acolo sunt
        evenimentele reale, cu preturi comparate pe platforme. */
-    if (parts[1] === 'ticslist') return go('ticslist', { cat: c.name, type: parts[2] });
+    if (parts[1] === 'ticslist') return go('ticslist', { cat: c.name, catKey: parts[2] });
     if (parts[1] === 'category') return go('ticslist', { cat: c.name });
     go(parts[1], parts[2] ? { id: parts[2] } : undefined);
   };

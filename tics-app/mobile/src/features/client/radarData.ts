@@ -42,7 +42,7 @@ export function useRadarList(q: RadarQuery = {}) {
 
   /* Cheia serializeaza filtrele: obiectul e recreat la fiecare randare, deci
      nu poate sta direct in lista de dependinte fara bucla infinita. */
-  const key = JSON.stringify([limit, q.city, q.type, q.genre, q.search, q.when, q.maxPrice, q.scarce, q.day, q.offset]);
+  const key = JSON.stringify([limit, q.city, q.type, q.catKey, q.genre, q.search, q.when, q.maxPrice, q.scarce, q.day, q.offset]);
 
   useEffect(() => {
     let alive = true;

@@ -28,6 +28,7 @@
    prototipului, sa nu ajungem cu ecrane goale.
    ========================================================= */
 import { TICS } from '../mock/prototype';
+import { feedCategories, feedCities, feedList, feedMonth } from './radarFeed';
 
 export const RADAR_ROOT = import.meta.env.VITE_TICS_RADAR ?? 'https://app.tics.ro';
 
@@ -544,6 +545,8 @@ export type RadarQuery = {
   limit?: number;
   city?: string;
   type?: string;
+  /** cheia de categorie a feed-ului ('teatru', 'concerte'...) */
+  catKey?: string;
   genre?: string;
   search?: string;
   when?: 'all' | 'today' | 'weekend';
@@ -593,18 +596,38 @@ export async function fetchRadarList(
   const filters = { city: opts.city, event_type: opts.type, q: opts.search };
   const { from, until } = whenRange(opts.when, opts.day);
   const needsPost = !!opts.maxPrice || !!opts.scarce;
+  const skip = opts.offset ?? 0;
 
   /* Plasa de siguranta (datasetul prototipului) se intinde DOAR cand nu s-a
      cerut niciun filtru. Daca utilizatorul a filtrat si nu iese nimic,
      raspunsul corect e "nimic gasit", nu trei evenimente inventate. */
   const unfiltered =
     !opts.city && !opts.type && !opts.genre && !opts.search && !opts.maxPrice && !opts.scarce &&
-    opts.day === undefined && !opts.offset && (!opts.when || opts.when === 'all');
+    !opts.catKey && opts.day === undefined && !opts.offset && (!opts.when || opts.when === 'all');
   const empty = () => ({
     items: unfiltered ? protoItems() : [],
     source: unfiltered ? ('prototype' as const) : ('tics' as const),
     hasMore: false,
   });
+
+  /* Feed-ul acopera urmatoarele 3 saptamani intr-o singura cerere, deci
+     raspunde instant. Cade pe API doar cand nu e disponibil. */
+  const viaFeed = await feedList({
+    limit,
+    offset: skip,
+    city: opts.city,
+    cat: opts.catKey,
+    genre: opts.genre,
+    search: opts.search,
+    when: opts.when,
+    day: opts.day,
+    maxPrice: opts.maxPrice,
+    scarce: opts.scarce,
+  });
+  if (viaFeed) {
+    if (!viaFeed.items.length) return empty();
+    return { items: viaFeed.items, source: 'tics', hasMore: skip + viaFeed.items.length < viaFeed.total };
+  }
 
   // cautarea are propriul set de rezultate, deja restrans: nu mai sarim in viitor
   const offset = opts.search ? 0 : await upcomingOffset(filters, from);
@@ -614,7 +637,6 @@ export async function fetchRadarList(
      nu mult mai multe: fiecare candidat costa o cerere de detaliu, iar
      app.tics.ro limiteaza la ~60 pe minut. Cand filtram si dupa pret/stoc,
      rata de pastrare scade, deci cerem mai multi candidati. */
-  const skip = opts.offset ?? 0;
   /* `want` TREBUIE sa creasca odata cu limita, altfel "Incarca mai multe" nu
      aduce nimic: plafonul fix taia candidatii inainte sa ajunga la ecran. */
   const want = Math.min(skip + limit * (needsPost ? 3 : 2), 72);
@@ -668,6 +690,9 @@ export const CITY_FALLBACK = [
 ];
 
 export async function fetchRadarCities(): Promise<string[]> {
+  const viaFeed = await feedCities();
+  if (viaFeed?.length) return viaFeed;
+
   const lsKey = 'tics.radar.cities.v1';
   try {
     const raw = localStorage.getItem(lsKey);
@@ -708,11 +733,24 @@ export async function fetchRadarCities(): Promise<string[]> {
    pe care ecranul Exploreaza le foloseste ca imagini de card (inainte punea
    evenimente din prototip).
    ========================================================= */
-export type RadarCategory = { type: string; cat: string; g: string; count: number; samples: RadarItem[] };
+export type RadarCategory = {
+  type: string;
+  cat: string;
+  g: string;
+  count: number;
+  samples: RadarItem[];
+  /** culoarea oficiala a categoriei, cand vine din feed */
+  color?: string;
+};
 
 const CAT_LS = 'tics.radar.cats.v1';
 
 export async function fetchRadarCategories(): Promise<RadarCategory[]> {
+  const viaFeed = await feedCategories();
+  if (viaFeed?.length) {
+    return viaFeed.map((c) => ({ type: c.key, cat: c.label, g: c.samples[0]?.g ?? '🎟', count: c.count, samples: c.samples, color: c.color }));
+  }
+
   try {
     const raw = localStorage.getItem(CAT_LS);
     if (raw) {
@@ -800,6 +838,15 @@ export async function fetchRadarMonth(
     }
   } catch {
     /* cache stricat: il ignoram si reincarcam */
+  }
+
+  /* Feed-ul acopera 3 saptamani; pentru luna curenta raspunde instant. */
+  if (!q.city && !q.type && !q.genre) {
+    const viaFeed = await feedMonth(year, month);
+    if (viaFeed) {
+      monthCache.set(key, viaFeed);
+      return viaFeed;
+    }
   }
 
   const start = Date.UTC(year, month, 1);
