@@ -8,8 +8,12 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 ## Rezumat pentru owner
 
 **Toate cele 10 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
-`claude/shorts`.** 120 de teste, 316 aserțiuni, toate verzi. 11 comenzi programate,
-33 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
+`claude/shorts`.** 122 de teste, 323 aserțiuni — verzi **atât pe SQLite, cât și pe
+PostgreSQL 16**, motorul de producție. 17 migrații aplicate curat pe Postgres.
+11 comenzi programate, 34 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
+
+**Fără conflicte cu `core`** (verificat cu `git merge-tree` după ce core a avansat cu
+4 commit-uri; niciun fișier nu e atins de ambele părți).
 
 | Fază | Ce a intrat |
 |---|---|
@@ -24,28 +28,69 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 | 9 | Colecții editoriale, stories efemere, igiena feed-ului |
 | 10 | Val 3: promovate cu pacing, drepturi/licențiere, guardrails de cost, UGC verificat, A/B cover |
 
+### ✅ Verificat pe PostgreSQL (nu mai e pe lista ta)
+
+Am pornit un PostgreSQL 16 local — era instalat în imagine, doar nu rula — și am rulat
+**toate cele 17 migrații Shorts + întreaga suită (122 de teste) pe motorul real de
+producție.** Toate verzi pe Postgres **și** pe SQLite.
+
+A meritat: au ieșit **7 bug-uri care treceau pe SQLite și ar fi picat pe Postgres**
+(detalii în `DECISIONS.md`, addendum D-068…D-074). Cele mai serioase:
+
+| Bug | Ce s-ar fi întâmplat în producție |
+|---|---|
+| `owner()->first()` pe un short editorial | **500 pe feed-ul principal** — `zero-length delimited identifier` |
+| `LIKE` pe coloană `json` | filtrul de teritoriu arunca; `json` n-are operator `LIKE` în PG |
+| `json` fără `jsonb` | `DISTINCT`/`GROUP BY` pe json → 500 în Filament (bug cu precedent în repo) |
+| `tickets.checked_in` inexistent | **nimeni n-ar fi putut posta UGC, niciodată** (tăcut, prin fail-closed) |
+| tabelele de favorite greșite | semnalul de personalizare mort permanent în ranker |
+| insert în `points_transactions` | 4 coloane greșite; reparat prin serviciul care exista deja |
+| oglindire în watchlist imposibilă | insert care nu putea reuși, înghițit de `catch` — șters |
+
+Rulează și tu, oricând:
+
+```bash
+# porneste un PG local (ca in audit)
+su postgres -c "/usr/lib/postgresql/16/bin/initdb -D /var/lib/postgresql/shortsdata -U postgres --auth=trust"
+su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/shortsdata -o '-p 55432 -k /tmp' start"
+createdb -h /tmp -p 55432 -U postgres shorts_pg
+
+DB_CONNECTION=pgsql DB_HOST=/tmp DB_PORT=55432 DB_DATABASE=shorts_pg DB_USERNAME=postgres \
+  SHORTS_TEST_PGSQL=1 php artisan test --filter=Shorts
+```
+
+> **De reținut:** o suită verde pe SQLite **nu dovedește** compatibilitate cu Postgres.
+> Rulează `SHORTS_TEST_PGSQL=1` înainte de fiecare merge care atinge Shorts.
+
+**Rămâne totuși de făcut de tine:** migrațiile sunt verificate pe schema **redusă**, nu pe
+un dump complet de producție. Istoricul de 747 de migrații nu se poate reda aici (o migrație
+preexistentă, `2025_10_31_200100_events_translatables`, face `DROP COLUMN` pe o coloană
+indexată și nici pe Postgres nu e garantat curat). Un `migrate --pretend` pe un dump real
+înainte de deploy rămâne pasul prudent — dar riscul e mult mai mic decât era.
+
 ### Ce trebuie făcut de tine înainte de producție
 
-1. **Rulează migrațiile Shorts pe un dump de dev PostgreSQL.** Istoricul de 747 de
-   migrații nu se poate reda pe SQLite (o migrație preexistentă,
-   `2025_10_31_200100_events_translatables`, face `DROP COLUMN` pe o coloană indexată),
-   iar containerul n-a avut PostgreSQL, MySQL sau Docker. Migrațiile Shorts sunt
-   verificate izolat, pe o schemă redusă (D-002). **Ăsta e singurul lucru din listă
-   care poate ascunde o surpriză.**
-2. **Bunny Stream** — pașii din `shorts.md` §C0 + cheile în `.env`. Fără ele containerul
+1. **Bunny Stream** — pașii din `shorts.md` §C0 + cheile în `.env`. Fără ele containerul
    cade pe `NullVideoProvider`: dev/CI pornesc, feed-ul servește shorts externe și
    self-hosted, dar upload-ul nativ răspunde `503`. Confirmă și schema exactă de token
    pe pull zone (`TODO(owner)` în `BunnyStreamProvider::sign()`).
-3. **Ultimul pas al atribuirii de conversii** — `CheckoutController` trebuie să treacă
+2. **Ultimul pas al atribuirii de conversii** — `CheckoutController` trebuie să treacă
    `source_short_id` / `source_feed` din payload în `Order::create()`. Coloanele sunt
    `fillable` și observerul e gata; n-am atins controllerul (1700+ linii de flux de
    plată real) fără să pot rula un checkout end-to-end (D-031).
-4. **Layer de push** — `PushSender` are azi doar `LogPushSender` (fiecare notificare e
+3. **Layer de push** — `PushSender` are azi doar `LogPushSender` (fiecare notificare e
    logată cu payload complet, deci logica de declanșare e verificabilă). D2 și D12 devin
    reale în clipa în care legi un transport FCM/APNs.
-5. **Puntea `MarketplaceCustomer ↔ Customer`** (`friends-social.md` §0) — punctele din
-   gamification stau marketplace-side până apare coloana de legătură; după aceea curg
-   singure în ledgerul real, fără schimbări la call-site.
+4. **Puntea `MarketplaceCustomer ↔ Customer`** (`friends-social.md` §0) — mai puțin urgentă
+   decât credeam: XP-ul curge deja prin `ExperienceService::awardActionXpForMarketplace`,
+   care nu are nevoie de punte (D-073). Doar `points_transactions` (side-ul `Customer`) o
+   cere. **De configurat însă `ExperienceAction` pentru `short_watch` / `short_share` /
+   `short_create`**, altfel XP-ul rămâne no-op.
+5. **Decizie pe `.claude/settings.json`.** L-am adus pe branch la cererea ta, dar merge-ul
+   în `core` îl aplică tuturor sesiunilor viitoare din repo: `defaultMode: acceptEdits` +
+   un allowlist larg de comenzi. Dacă a fost doar pentru rularea autonomă de acum, scoate-l
+   din merge (`git rm --cached .claude/settings.json`) sau mută-l în `.claude/settings.local.json`,
+   care e per-mașină.
 6. **Opțional:** chei Shotstack (altfel auto-generarea produce „poster shorts"), token
    Meta oEmbed (altfel IG/FB raportează „neconectat"), driver de transcriere pentru
    captions, partiționarea lunară a `short_events` (D-048).
@@ -64,12 +109,12 @@ npm install && npm run build            # manifestul Vite — altfel panoul Fila
 cp .env.example .env && php artisan key:generate
 
 ./scripts/shorts-dev-migrate.sh --reset # schemă de dev redusă
-php artisan test --filter=Shorts        # 120 de teste
+php artisan test --filter=Shorts        # 122 de teste (SQLite)
 ./vendor/bin/pint
 ```
 
-Deciziile luate autonom sunt în `DECISIONS.md` (67 de intrări, fiecare cu context,
-alegere, alternative și impact).
+Deciziile luate autonom sunt în `DECISIONS.md` (67 de intrări + addendumul de audit pe
+Postgres, D-068…D-074, care corectează trei dintre ele).
 
 ---
 

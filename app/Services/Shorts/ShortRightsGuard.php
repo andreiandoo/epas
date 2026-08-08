@@ -54,20 +54,22 @@ class ShortRightsGuard
 
         $code = mb_strtoupper($countryCode);
 
+        // Real JSON operators, not substring matching on the serialised value.
+        // Laravel compiles these per driver (jsonb @> on Postgres, JSON_CONTAINS
+        // on MySQL, json_each on SQLite), so the match is exact and indexable.
+        //
+        // Substring matching was the first attempt and it was wrong twice over:
+        // Postgres has no LIKE operator for json at all, and once the column
+        // became jsonb the stored text is re-normalised ({"mode": "allow"} with a
+        // space), so any hand-written pattern silently stops matching.
         $query->where(function (Builder $q) use ($code) {
             $q->whereNull('territories')
-                // JSON containment is not portable across sqlite/pgsql/mysql, so
-                // the check is a substring match on the serialised codes. Codes
-                // are two letters and quoted in the JSON, which makes "RO" match
-                // only "RO" and never the RO inside another word.
-                ->orWhere(function (Builder $allow) use ($code) {
-                    $allow->where('territories', 'like', '%"mode":"allow"%')
-                        ->where('territories', 'like', '%"'.$code.'"%');
-                })
-                ->orWhere(function (Builder $deny) use ($code) {
-                    $deny->where('territories', 'like', '%"mode":"deny"%')
-                        ->where('territories', 'not like', '%"'.$code.'"%');
-                });
+                ->orWhere(fn (Builder $allow) => $allow
+                    ->where('territories->mode', 'allow')
+                    ->whereJsonContains('territories->codes', $code))
+                ->orWhere(fn (Builder $deny) => $deny
+                    ->where('territories->mode', 'deny')
+                    ->whereJsonDoesntContain('territories->codes', $code));
         });
     }
 

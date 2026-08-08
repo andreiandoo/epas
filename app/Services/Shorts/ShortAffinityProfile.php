@@ -72,23 +72,32 @@ class ShortAffinityProfile
      */
     protected function favourites(MarketplaceCustomer $customer): array
     {
+        // One polymorphic table, keyed by favoriteable_type ('artist'|'venue'|
+        // 'event') — not a table per type. The ranker keys owners by FQCN, so the
+        // short token has to be mapped back to a class here.
+        $classes = [
+            'artist' => Artist::class,
+            'venue' => Venue::class,
+        ];
+
         $keys = [];
 
-        foreach ([
-            'marketplace_customer_favorite_artists' => Artist::class,
-            'marketplace_customer_favorite_venues' => Venue::class,
-        ] as $table => $class) {
-            try {
-                $column = $class === Artist::class ? 'artist_id' : 'venue_id';
+        try {
+            $rows = DB::table('marketplace_customer_favorites')
+                ->where('marketplace_customer_id', $customer->id)
+                ->whereIn('favoriteable_type', array_keys($classes))
+                ->get(['favoriteable_type', 'favoriteable_id']);
 
-                foreach (DB::table($table)->where('marketplace_customer_id', $customer->id)->pluck($column) as $id) {
-                    $keys[$class.':'.$id] = true;
+            foreach ($rows as $row) {
+                $class = $classes[$row->favoriteable_type] ?? null;
+
+                if ($class) {
+                    $keys[$class.':'.$row->favoriteable_id] = true;
                 }
-            } catch (\Throwable) {
-                // Table absent (scoped dev schema) — favourites just do not
-                // contribute; the ranker still has follows, geo and freshness.
-                continue;
             }
+        } catch (\Throwable) {
+            // Table absent (scoped dev schema) — favourites just do not
+            // contribute; the ranker still has follows, geo and freshness.
         }
 
         return $keys;

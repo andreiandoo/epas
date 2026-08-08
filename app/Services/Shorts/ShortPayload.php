@@ -94,7 +94,17 @@ class ShortPayload
      */
     protected function owner(Short $short): ?array
     {
-        $owner = $short->relationLoaded('owner') ? $short->owner : $short->owner()->first();
+        // An editorial short has no owner at all. Calling owner()->first() on
+        // one builds a MorphTo with an empty foreign key, which Postgres rejects
+        // outright ("zero-length delimited identifier") while SQLite quietly
+        // tolerates it — so the guard has to come before the relation is touched.
+        if (! $short->owner_type || ! $short->owner_id) {
+            return null;
+        }
+
+        // Attribute access, never owner()->first(): it resolves the morph safely
+        // and reuses the eager-loaded relation when the feed loaded it.
+        $owner = $short->owner;
 
         if (! $owner) {
             return null;

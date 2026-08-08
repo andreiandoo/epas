@@ -1067,3 +1067,114 @@ era mai bună.
 
 **Impact.** Testat exact pe acest caz. O singură variantă nu e test și nu produce
 câștigător.
+
+---
+
+# Addendum — audit pe PostgreSQL înainte de merge
+
+Am pornit un PostgreSQL 16 local (era instalat în imagine, doar nu rula) și am rulat
+migrațiile + toată suita pe motorul real de producție. **Cinci bug-uri care treceau pe
+SQLite și ar fi picat pe Postgres.** Intrările de mai jos corectează decizii anterioare.
+
+## D-068 — `owner()->first()` pe un short editorial: sintaxă invalidă în Postgres
+
+**Ce era greșit.** `ShortPayload::owner()` cădea pe `$short->owner()->first()` când
+relația nu era eager-loaded. Pe un short **editorial** (fără owner — caz suportat explicit
+de design) `MorphTo` se construiește cu cheie străină goală și generează
+`select * from shorts where "" is null`. Postgres: `zero-length delimited identifier`.
+SQLite tolerează.
+
+**Impact real.** Orice payload de feed care conținea un short editorial ar fi dat 500 —
+adică feed-ul principal, pe cazul cel mai comun.
+
+**Reparat.** Ieșire devreme când lipsește `owner_type`/`owner_id`, apoi acces prin atribut
+(`$short->owner`), care rezolvă morph-ul în siguranță și refolosește relația încărcată.
+5 teste au prins-o imediat ce suita a rulat pe Postgres.
+
+## D-069 — `LIKE` pe o coloană `json` nu există în Postgres (corectează D-062)
+
+**Ce era greșit.** Filtrul de teritoriu făcea `where('territories', 'like', '%"RO"%')`.
+Postgres: `operator does not exist: json ~~ unknown`.
+
+**Prima reparație, insuficientă.** Cast la `::text`. A funcționat, dar a rămas fragilă.
+
+**Reparația finală.** Operatori JSON reali — `where('territories->mode', ...)` +
+`whereJsonContains('territories->codes', $code)`. Laravel îi compilează per driver
+(`@>` pe Postgres, `JSON_CONTAINS` pe MySQL, `json_each` pe SQLite). Exact și indexabil.
+
+**Golul de test care a permis-o.** Aveam test pe `allows()` (verificarea PHP), dar
+**niciunul** pe constrângerea de query. Adăugat.
+
+## D-070 — `json` → `jsonb` pe coloanele Shorts (precedent deja în repo)
+
+**Context.** Postgres nu poate face `SELECT DISTINCT` / `GROUP BY` peste `json`
+(`could not identify an equality operator for type json`) — exact bug-ul pe care
+`2026_07_25_170000_tenant_event_categories_json_to_jsonb` l-a reparat deja în acest repo,
+pentru că spărgea un Select din Filament cu 500.
+
+**Verificat pe motor:** `SELECT DISTINCT id, hashtags FROM shorts` → aceeași eroare.
+
+**Alegere.** Migrație pgsql-only care convertește `shorts.hashtags/content_flags/territories`,
+`short_events.meta`, `short_promotions.targeting` la `jsonb`. Sigură pe date live
+(coloanele conțin JSON valid prin construcție; `USING col::jsonb` convertește pe loc).
+
+**Efect secundar prins imediat.** `jsonb` **renormalizează** textul serializat
+(`{"mode": "allow"}` cu spațiu), ceea ce a rupt potrivirea pe substring din D-069 — de aici
+trecerea la operatori JSON. Un bug care a reparat un bug și a expus o fragilitate.
+
+## D-071 — `tickets` nu are coloană `checked_in`
+
+**Ce era greșit.** Eligibilitatea UGC interoga
+`whereNotNull('checked_in_at')->orWhere('checked_in', true)`. Tabelul real are doar
+`checked_in_at` / `checked_in_by` / `checked_in_via`.
+
+**Impact real.** Pe producție interogarea ar fi aruncat, iar `catch`-ul fail-closed
+(D-065) ar fi transformat asta în **„nimeni nu poate posta UGC, niciodată"** — funcționalitate
+moartă, tăcut. Fail-closed a evitat o gaură de securitate, dar a ascuns defectul.
+
+**Reparat.** Doar `checked_in_at`. Stub-ul de test oglindește acum schema reală (fără
+boolean), altfel testul nu dovedea nimic.
+
+## D-072 — Favoritele stau într-un singur tabel polimorf (corectează D-033)
+
+**Ce era greșit.** `ShortAffinityProfile` interoga
+`marketplace_customer_favorite_artists` / `_venues`. Nu există. Real:
+`marketplace_customer_favorites`, cu `favoriteable_type` ('artist'|'venue'|'event') +
+`favoriteable_id`.
+
+**Impact real.** `catch` → favoritele nu contribuiau niciodată la ranker. Nu un crash,
+dar un semnal de personalizare mort permanent.
+
+**Reparat.** O interogare pe tabelul real, cu maparea tokenului la clasă.
+
+## D-073 — Punctele au deja o cale marketplace-side (corectează D-021)
+
+**Ce era greșit.** `forwardToLoyaltyLedger()` făcea un `INSERT` brut în
+`points_transactions` cu coloanele `customer_id, points, type, source`. Tabelul real cere
+`tenant_id` (NOT NULL, FK), `balance_after` (NOT NULL), `description` (json NOT NULL), și
+**nu are** `source` (are `action_type`). Patru erori într-un singur insert.
+
+**Ce am ratat inițial.** `ExperienceService::awardActionXpForMarketplace()` există deja și
+ia direct un `marketplace_customer_id` — **nu are nevoie de puntea de identitate**.
+Premisa din D-021 („punctele cer puntea") era doar parțial adevărată.
+
+**Reparat.** Rutat prin serviciul existent, care are propriile rate limits și e no-op sigur
+când nu există `ExperienceAction` configurat. Ledgerul `Customer`-side (`points_transactions`)
+rămâne dependent de punte — acolo chiar e nevoie de `tenant_id` și de un sold curent.
+
+## D-074 — Oglindirea în watchlist ștearsă, nu „try/catch"-uită
+
+**Ce era greșit.** `addToWatchlist()` insera în `marketplace_customer_watchlist` fără
+`marketplace_client_id` și `marketplace_event_id`, ambele NOT NULL. Migrația care a adăugat
+`event_id` spune explicit că **nu a putut** relaxa FK-ul existent și că „we'll handle it in
+code". Cu un short care poartă doar `event_id`, insertul nu poate reuși niciodată.
+
+**Alegere.** Am șters codul și am lăsat un `TODO(owner)` care spune de ce. Cod care aruncă
+mereu și e înghițit arată ca o funcționalitate care merge — e mai rău decât absența lui.
+
+## Lecția, pentru următoarea funcționalitate
+
+O suită verde pe SQLite **nu dovedește** compatibilitate cu Postgres. Diferă: operatorii
+`json`, `DISTINCT`/`GROUP BY` pe json, `LIKE` pe json, identificatorii de lungime zero,
+limita de 63 de caractere la numele de index, strictețea `GROUP BY`. Suita acceptă acum
+`SHORTS_TEST_PGSQL=1` exact pentru asta — vezi `PROGRESS.md`.

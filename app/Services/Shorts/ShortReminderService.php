@@ -7,8 +7,6 @@ use App\Models\Short;
 use App\Models\ShortReminder;
 use App\Models\TicketType;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
  * "Remind me when tickets drop" (D2).
@@ -110,26 +108,21 @@ class ShortReminderService
     }
 
     /**
-     * Setting a reminder is also an interest signal — mirror it into the
-     * watchlist the rest of the product already reads.
+     * Setting a reminder is also an interest signal, and mirroring it into
+     * `marketplace_customer_watchlist` would let the rest of the product see it.
+     *
+     * TODO(owner): not wired, because it cannot be. That table requires
+     * marketplace_event_id NOT NULL (the migration that added event_id says
+     * outright it could not relax the existing FK and would "handle it in code"),
+     * and a short only carries a core event_id. Making this work needs either a
+     * migration relaxing marketplace_event_id, or a marketplace_event_id on
+     * shorts — a schema decision, not something to guess at.
+     *
+     * Deliberately left as a no-op rather than an insert wrapped in a catch:
+     * code that always throws and swallows looks like a working feature.
      */
     protected function addToWatchlist(Short $short, MarketplaceCustomer $customer): void
     {
-        if (! $short->event_id) {
-            return;
-        }
-
-        try {
-            DB::table('marketplace_customer_watchlist')->updateOrInsert(
-                [
-                    'marketplace_customer_id' => $customer->id,
-                    'event_id' => $short->event_id,
-                ],
-                ['updated_at' => now(), 'created_at' => now()],
-            );
-        } catch (\Throwable $e) {
-            // The watchlist is a nice-to-have here; never fail the reminder for it.
-            Log::debug('Shorts: could not mirror reminder into watchlist', ['error' => $e->getMessage()]);
-        }
+        // Intentionally empty — see the note above.
     }
 }

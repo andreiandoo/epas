@@ -159,8 +159,10 @@ return new class extends Migration
                 $table->foreignId('event_id')->nullable();
                 $table->foreignId('order_id')->nullable();
                 $table->foreignId('current_owner_customer_id')->nullable();
-                $table->boolean('checked_in')->default(false);
+                // Mirrors the real table: the scan marker is checked_in_at, and
+                // there is NO boolean checked_in column.
                 $table->timestamp('checked_in_at')->nullable();
+                $table->string('checked_in_by')->nullable();
                 $table->string('status')->nullable();
                 $table->timestamps();
             });
@@ -190,6 +192,18 @@ return new class extends Migration
                 $table->foreignId('marketplace_client_id')->nullable();
                 $table->foreignId('event_id')->nullable();
                 $table->foreignId('marketplace_event_id')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        // One polymorphic favourites table, matching production.
+        if (! Schema::hasTable('marketplace_customer_favorites')) {
+            Schema::create('marketplace_customer_favorites', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('marketplace_client_id')->nullable();
+                $table->foreignId('marketplace_customer_id')->nullable();
+                $table->string('favoriteable_type', 100);
+                $table->unsignedBigInteger('favoriteable_id');
                 $table->timestamps();
             });
         }

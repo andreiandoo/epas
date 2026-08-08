@@ -194,6 +194,41 @@ class ShortsMonetisationTest extends ShortsTestCase
         $this->assertFalse($guard->allows($allowRo, $this->makeCustomer()));
     }
 
+    public function test_territory_filtering_works_through_the_feed_query(): void
+    {
+        // The PHP-side allows() check and the query constraint are two different
+        // code paths. Only this one touches the json column in SQL, which is
+        // where Postgres refuses LIKE on json — SQLite never noticed.
+        $everywhere = $this->makeShort(['title' => 'unrestricted']);
+        $roOnly = $this->makeShort(['title' => 'ro only', 'territories' => ['mode' => 'allow', 'codes' => ['RO']]]);
+        $notRo = $this->makeShort(['title' => 'not ro', 'territories' => ['mode' => 'deny', 'codes' => ['RO']]]);
+
+        $ro = $this->makeCustomer(['country' => 'RO']);
+        $ids = array_column(app(ShortFeedService::class)->page(customer: $ro)['items'], 'id');
+
+        $this->assertContains($everywhere->id, $ids);
+        $this->assertContains($roOnly->id, $ids);
+        $this->assertNotContains($notRo->id, $ids);
+
+        $de = $this->makeCustomer(['country' => 'DE']);
+        $deIds = array_column(app(ShortFeedService::class)->page(customer: $de)['items'], 'id');
+
+        $this->assertContains($everywhere->id, $deIds);
+        $this->assertNotContains($roOnly->id, $deIds);
+        $this->assertContains($notRo->id, $deIds);
+    }
+
+    public function test_an_anonymous_viewer_sees_only_unrestricted_shorts(): void
+    {
+        $everywhere = $this->makeShort(['title' => 'unrestricted']);
+        $this->makeShort(['title' => 'restricted', 'territories' => ['mode' => 'allow', 'codes' => ['RO']]]);
+
+        // No country to check against is not "everywhere is fine".
+        $ids = array_column(app(ShortFeedService::class)->page()['items'], 'id');
+
+        $this->assertSame([$everywhere->id], $ids);
+    }
+
     /* ---------------- D8 — cost guardrails ---------------- */
 
     public function test_projection_extrapolates_to_the_end_of_the_month(): void
@@ -262,11 +297,12 @@ class ShortsMonetisationTest extends ShortsTestCase
 
         $this->assertFalse($ugc->mayPost($customer, $event->id));
 
-        // A ticket that was never scanned is not attendance.
+        // A ticket that was never scanned is not attendance. checked_in_at is
+        // the real scan marker — there is no boolean checked_in column.
         DB::table('tickets')->insert([
             'event_id' => $event->id,
             'current_owner_customer_id' => $customer->id,
-            'checked_in' => false,
+            'checked_in_at' => null,
         ]);
         $this->assertFalse($ugc->mayPost($customer, $event->id));
 
@@ -274,14 +310,14 @@ class ShortsMonetisationTest extends ShortsTestCase
         DB::table('tickets')->insert([
             'event_id' => $event->id,
             'current_owner_customer_id' => $other->id,
-            'checked_in' => true,
+            'checked_in_at' => now(),
         ]);
         $this->assertFalse($ugc->mayPost($customer, $event->id));
 
         DB::table('tickets')->insert([
             'event_id' => $event->id,
             'current_owner_customer_id' => $customer->id,
-            'checked_in' => true,
+            'checked_in_at' => now(),
         ]);
         $this->assertTrue($ugc->mayPost($customer, $event->id));
     }

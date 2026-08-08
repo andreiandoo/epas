@@ -43,10 +43,15 @@ class ShortUgcService
     public function hasCheckedInTicket(MarketplaceCustomer $customer, int $eventId): bool
     {
         try {
+            // checked_in_at is the only scan marker on `tickets` — there is no
+            // boolean `checked_in` column, and querying one would throw, which
+            // the fail-closed catch below would silently turn into "nobody may
+            // ever post". current_owner_customer_id points at MarketplaceCustomer,
+            // so ownership and identity line up without a join.
             return DB::table('tickets')
                 ->where('event_id', $eventId)
                 ->where('current_owner_customer_id', $customer->id)
-                ->where(fn ($q) => $q->whereNotNull('checked_in_at')->orWhere('checked_in', true))
+                ->whereNotNull('checked_in_at')
                 ->exists();
         } catch (\Throwable $e) {
             // No way to verify attendance means no permission. Failing open here

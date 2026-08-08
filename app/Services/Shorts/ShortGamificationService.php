@@ -4,8 +4,9 @@ namespace App\Services\Shorts;
 
 use App\Models\MarketplaceCustomer;
 use App\Models\ShortStreak;
+use App\Services\Gamification\ExperienceService;
 use App\Services\Identity\IdentityBridge;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Points and streaks for shorts activity (D11).
@@ -122,29 +123,41 @@ class ShortGamificationService
     }
 
     /**
-     * TODO(owner): needs the MarketplaceCustomer ↔ Customer bridge
-     * (docs/plans/friends-social.md §0). Until the link column exists this is a
-     * no-op and the points live only in short_streaks.
+     * Mirror the award into the platform's own gamification ledger.
+     *
+     * Uses ExperienceService's marketplace-side entry point, which takes a
+     * MarketplaceCustomer id directly — so this needs no identity bridge, unlike
+     * the Customer-side points ledger. It no-ops safely when no ExperienceAction
+     * is configured for the source, and applies that action's own rate limits on
+     * top of our daily cap.
+     *
+     * TODO(owner): configure ExperienceAction rows for short_watch / short_share /
+     * short_create per marketplace, otherwise this stays a no-op and the points
+     * live only in short_streaks. The Customer-side loyalty points
+     * (points_transactions) still need the bridge from friends-social.md §0 —
+     * that table requires a tenant_id and a running balance we cannot derive
+     * from a marketplace customer alone.
      */
     protected function forwardToLoyaltyLedger(MarketplaceCustomer $customer, int $points, string $source): void
     {
-        if (! $this->identity->isAvailable()) {
+        if (! $customer->marketplace_client_id) {
             return;
         }
 
-        $target = $this->identity->resolve($customer);
-
-        if (! $target) {
-            return;
+        try {
+            app(ExperienceService::class)->awardActionXpForMarketplace(
+                marketplaceClientId: (int) $customer->marketplace_client_id,
+                customerId: $customer->id,
+                actionType: $source,
+                options: ['metadata' => ['points' => $points, 'source' => 'shorts']],
+            );
+        } catch (\Throwable $e) {
+            // Gamification is a bonus loop; it must never fail a watch or a share.
+            Log::debug('Shorts: could not mirror points into the XP ledger', [
+                'customer_id' => $customer->id,
+                'source' => $source,
+                'error' => $e->getMessage(),
+            ]);
         }
-
-        DB::table('points_transactions')->insert([
-            'customer_id' => $target->id,
-            'points' => $points,
-            'type' => 'earned',
-            'source' => $source,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
     }
 }
