@@ -10,7 +10,8 @@
     "build:fast": "vite build",
     "preview": "vite preview",
     "sync": "npm run build && cap sync android",
-    "apk": "npm run build && cap sync android && cd android && gradlew.bat assembleDebug"
+    "apk": "npm run build && cap sync android && cd android && gradlew.bat assembleDebug",
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
@@ -31,7 +32,9 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^2.1.9"
   }
 }

@@ -8,6 +8,7 @@ import { Button, Card, Icon, InfoRow, SectionHead, Toggle, type IconName } from 
 import { useSession, isAdminRole, type AppTheme, type SettingsFlags } from '../../store/session';
 import { useCtx } from './OrgChrome';
 import { STAFF } from '../../mock/org';
+import { useOffline } from '../../offline/useOffline';
 import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../ota';
 
 const APP_VERSION = 'Tixello · Cont organizator';
@@ -181,6 +182,8 @@ export function Settings() {
   /* Numele afisat e al membrului de personal cu rolul curent, ca in prototip —
      nu al contului de client. */
   const staffName = STAFF.find((m) => m.role === role)?.nm ?? 'Mihai Coman';
+  /* Contoarele de mai jos erau fixe in port; acum vin din cache-ul real. */
+  const offline = useOffline();
   const [autoLogout, setAutoLogout] = useState('5 min');
 
   return (
@@ -228,11 +231,16 @@ export function Settings() {
       <Card style={{ padding: '4px 16px' }}>
         <ToggleRow label="Activează Modul Offline" k="offline" />
         <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '0 0 10px' }}>
-          {set.offline
-            ? '1.486 bilete în cache local · scanezi fără internet'
+          {offline.cached
+            ? `${offline.cached.toLocaleString('ro-RO')} bilete în cache local · scanezi fără internet`
             : 'Descarcă biletele pentru a scana fără internet'}
         </div>
-        <AdminRow label="Coadă de sincronizare" badge="3 în așteptare" onClick={() => openModal('sync')} last />
+        <AdminRow
+          label="Coadă de sincronizare"
+          badge={offline.pending ? `${offline.pending} în așteptare` : 'la zi'}
+          onClick={() => openModal('sync')}
+          last
+        />
       </Card>
 
       {admin ? (
