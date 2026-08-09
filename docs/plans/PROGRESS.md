@@ -7,9 +7,9 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 
 ## Rezumat pentru owner
 
-**Toate cele 10 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
-`claude/shorts`.** 122 de teste, 323 aserțiuni — verzi **atât pe SQLite, cât și pe
-PostgreSQL 16**, motorul de producție. 17 migrații aplicate curat pe Postgres.
+**Toate cele 11 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
+`claude/shorts`.** 149 de teste, 395 aserțiuni — verzi **atât pe SQLite, cât și pe
+PostgreSQL 16**, motorul de producție. 18 migrații aplicate curat pe Postgres.
 11 comenzi programate, 34 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
 
 **Fără conflicte cu `core`** (verificat cu `git merge-tree` după ce core a avansat cu
@@ -27,11 +27,12 @@ PostgreSQL 16**, motorul de producție. 17 migrații aplicate curat pe Postgres.
 | 8 | Auto-gen din media evenimentului, captions, analytics organizator |
 | 9 | Colecții editoriale, stories efemere, igiena feed-ului |
 | 10 | Val 3: promovate cu pacing, drepturi/licențiere, guardrails de cost, UGC verificat, A/B cover |
+| 11 | **Reclame:** injectare reală în feed, advertiseri + credit prepaid, targetare, taxare CPM/CPC, panouri de aprobare |
 
 ### ✅ Verificat pe PostgreSQL (nu mai e pe lista ta)
 
 Am pornit un PostgreSQL 16 local — era instalat în imagine, doar nu rula — și am rulat
-**toate cele 17 migrații Shorts + întreaga suită (122 de teste) pe motorul real de
+**toate cele 18 migrații Shorts + întreaga suită (149 de teste) pe motorul real de
 producție.** Toate verzi pe Postgres **și** pe SQLite.
 
 A meritat: au ieșit **7 bug-uri care treceau pe SQLite și ar fi picat pe Postgres**
@@ -68,6 +69,39 @@ preexistentă, `2025_10_31_200100_events_translatables`, face `DROP COLUMN` pe o
 indexată și nici pe Postgres nu e garantat curat). Un `migrate --pretend` pe un dump real
 înainte de deploy rămâne pasul prudent — dar riscul e mult mai mic decât era.
 
+### 📣 Reclame în shorts — ce merge acum (Faza 11)
+
+Ai întrebat dacă am luat în calcul (1) promovarea evenimentelor/artiștilor și (2) reclame
+în shorts. Parțial — și verificând am găsit că **D3 era construit, dar deconectat**:
+`inject()` nu avea niciun apelant, deci *nicio reclamă nu ajungea vreodată în feed*;
+`chargeClick()` nu era apelat niciodată; `targeting` se scria dar nu se citea; iar statusul
+`pending` nu putea fi mutat pe `active`, fiindcă nu exista nicio interfață. Am marcat Faza 10
+„completă" când jumătate din D3 lipsea. Reparat în Faza 11.
+
+**Ce poți face acum:**
+
+| | Cum |
+|---|---|
+| **Promovezi un eveniment sau un artist** | Panou tenant → „Promovare Shorts" → alegi short-ul, obiectivul, CPM/CPC, bugetul, perioada, targetarea. Pleacă în `pending`. |
+| **Aprobi/respingi** | Core admin → „Ad campaigns". Are badge cu numărul celor în așteptare și tab „Pending review" ca prim ecran. |
+| **Vinzi reclamă unui brand terț** | Core admin → „Ad advertisers" (tip `external`) → „Add credit" → apoi „Ad campaigns" → „New campaign" cu obiectiv `brand`. Nu are nevoie de cont de tenant. |
+| **Cross-promovare proprie** | Advertiser de tip `house`: nu se facturează niciodată și umple doar sloturile pe care nu le-a vrut nicio campanie plătită. |
+
+**Cum se comportă în feed:** un slot la fiecare 5 shorts organice, maximum 2 pe pagină
+(`config/shorts.php` → `ads`). Sloturile se inserează **după** ranking — niciun buget nu poate
+muta poziția unui short organic. `event` și `artist` nu poartă reclame (sunt pagina cuiva
+anume). Eticheta e obligatorie și diferă: `Sponsorizat` / `Reclamă` / `Recomandat de Tixello`.
+
+**Bani:** credit prepaid per advertiser, verificat înainte de fiecare afișare, cu registru
+append-only (`short_advertiser_transactions`) ținut separat de telemetrie ca joburile de
+prune să nu poată șterge o dovadă de facturare. CPM taxează la afișare, CPC la click — și
+doar pe campania care chiar a servit acel click, nu după `short_id`.
+
+**Rămâne la tine:** alimentarea creditului prin Stripe. Cusătura e gata —
+`ShortAdvertiser::topUp($cents, $paymentIntentId)` — dar apelul cere `CheckoutController`,
+pe care nu l-am atins (D-031). Până atunci, creditul se adaugă manual din core admin, cu
+număr de factură ca referință.
+
 ### Ce trebuie făcut de tine înainte de producție
 
 1. **Bunny Stream** — pașii din `shorts.md` §C0 + cheile în `.env`. Fără ele containerul
@@ -91,7 +125,11 @@ indexată și nici pe Postgres nu e garantat curat). Un `migrate --pretend` pe u
    un allowlist larg de comenzi. Dacă a fost doar pentru rularea autonomă de acum, scoate-l
    din merge (`git rm --cached .claude/settings.json`) sau mută-l în `.claude/settings.local.json`,
    care e per-mașină.
-6. **Opțional:** chei Shotstack (altfel auto-generarea produce „poster shorts"), token
+6. **Alimentarea creditului de reclamă prin Stripe** — același blocaj ca punctul 2:
+   cusătura există (`ShortAdvertiser::topUp($cents, $paymentIntentId)`), dar apelul e în
+   fluxul de plată. Până atunci creditul se adaugă manual din core admin → „Ad advertisers"
+   → „Add credit", cu numărul de factură ca referință; registrul rămâne corect oricum.
+7. **Opțional:** chei Shotstack (altfel auto-generarea produce „poster shorts"), token
    Meta oEmbed (altfel IG/FB raportează „neconectat"), driver de transcriere pentru
    captions, partiționarea lunară a `short_events` (D-048).
 
@@ -109,7 +147,7 @@ npm install && npm run build            # manifestul Vite — altfel panoul Fila
 cp .env.example .env && php artisan key:generate
 
 ./scripts/shorts-dev-migrate.sh --reset # schemă de dev redusă
-php artisan test --filter=Shorts        # 122 de teste (SQLite)
+php artisan test --filter=Shorts        # 149 de teste (SQLite)
 ./vendor/bin/pint
 ```
 

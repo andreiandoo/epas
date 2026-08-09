@@ -10,6 +10,7 @@ use App\Models\Short;
 use App\Models\ShortEvent;
 use App\Services\Shorts\ShortFeedService;
 use App\Services\Shorts\ShortPayload;
+use App\Services\Shorts\ShortPromotionService;
 use App\Services\Shorts\ShortTelemetryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,10 @@ class ShortsController extends Controller
             'event_id' => ['nullable', 'integer'],
             'language' => ['nullable', 'string', 'max:8'],
             'city' => ['nullable', 'string', 'max:120'],
+            'country' => ['nullable', 'string', 'max:2'],
+            // Anonymous viewers are the bulk of this surface; without a stable
+            // per-device id an ad campaign cannot be frequency-capped for them.
+            'session_id' => ['nullable', 'string', 'max:64'],
         ]);
 
         $result = $this->feed->page(
@@ -51,6 +56,8 @@ class ShortsController extends Controller
                 'event_id' => $validated['event_id'] ?? null,
                 'language' => $validated['language'] ?? null,
                 'city' => $validated['city'] ?? null,
+                'country' => $validated['country'] ?? null,
+                'session_id' => $validated['session_id'] ?? null,
                 'marketplace_client_id' => $this->marketplaceClientId($request),
             ]),
         );
@@ -154,10 +161,20 @@ class ShortsController extends Controller
 
         $model->newQuery()->whereKey($model->id)->increment('cta_clicks');
 
+        // CPC billing. The promotion id is the one the feed handed the client
+        // with this item — a short reached organically carries none, and an id
+        // that does not belong to this short charges nothing.
+        $promotion = app(ShortPromotionService::class)->chargeClickFor(
+            $model,
+            $request->integer('promotion_id') ?: null,
+            $customer,
+        );
+
         return response()->json([
             'success' => true,
             'data' => [
                 'short_id' => $model->id,
+                'promotion_id' => $promotion?->id,
                 // Everything checkout needs to honour the short's offer.
                 'checkout' => [
                     'event_id' => $model->event_id,

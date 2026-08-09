@@ -27,6 +27,7 @@ class ShortFeedService
         private readonly ShortPayload $payload,
         private readonly ShortFeedRanker $ranker,
         private readonly ShortRightsGuard $rights,
+        private readonly ShortPromotionService $promotions,
     ) {}
 
     /**
@@ -35,6 +36,13 @@ class ShortFeedService
      * differs (see the "ranked pages" note on page()).
      */
     private const RANKED_FEEDS = ['for_you', 'following', 'nearby'];
+
+    /**
+     * Segments that carry paid placements. Owner pages ("event", "artist") are
+     * excluded on purpose — they belong to one organiser, and injecting a rival's
+     * ad into them is a business decision, not a default.
+     */
+    private const AD_SUPPORTED_FEEDS = ['for_you', 'featured', 'nearby'];
 
     /**
      * @param  array<string, mixed>  $filters
@@ -81,12 +89,34 @@ class ShortFeedService
 
         [$likedIds, $savedIds] = $this->viewerState($items, $customer);
 
+        $payloadItems = $this->payload->collection($items, $likedIds, $savedIds, $feed);
+
+        // Paid placements are spliced in after ranking, never scored into it, so
+        // no amount of budget can move an organic short's position. Only the
+        // scrollable segments carry ads: "event" and "artist" are somebody's own
+        // page, and selling a competitor a slot on it is not a product decision
+        // we should make silently.
+        if (in_array($feed, self::AD_SUPPORTED_FEEDS, true)) {
+            $payloadItems = $this->promotions->inject(
+                items: $payloadItems,
+                customer: $customer,
+                payload: $this->payload,
+                feed: $feed,
+                context: [
+                    'country' => $filters['country'] ?? $customer?->country,
+                    'city' => $filters['city'] ?? $customer?->city,
+                    'session_id' => $filters['session_id'] ?? null,
+                ],
+            );
+        }
+
         return [
             'feed' => $feed,
-            'items' => $this->payload->collection($items, $likedIds, $savedIds, $feed),
+            'items' => $payloadItems,
             // The cursor always advances along the recency keyset, never along
             // the ranked order — otherwise re-scoring between two pages would
-            // make it skip or repeat rows.
+            // make it skip or repeat rows. Injected ads are not part of the
+            // keyset either, so they never affect where the next page starts.
             'next_cursor' => $hasMore ? $this->cursorFor($rows->take($limit)->last()) : null,
         ];
     }

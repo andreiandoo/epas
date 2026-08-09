@@ -94,3 +94,23 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ---- dezvaluirea plasarilor platite (D3) ---- */
+/* Deliberat lizibil, nu discret: eticheta e o obligatie de transparenta, nu un
+   detaliu de design. Contrast suficient peste orice cadru video, si `display`
+   necontrolabil din alta parte — nu exista varianta „fara eticheta". */
+.app-client .short .short-ad {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .62);
+  border: 1px solid rgba(255, 255, 255, .34);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+}

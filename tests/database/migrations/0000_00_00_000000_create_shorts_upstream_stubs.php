@@ -35,6 +35,10 @@ return new class extends Migration
                 $table->string('slug')->nullable();
                 $table->string('status')->default('active');
                 $table->timestamps();
+                // The real table is soft-deleting, and MarketplaceCustomerObserver
+                // resolves the relation on save — without this the observer throws
+                // on any customer that actually has a client id.
+                $table->softDeletes();
             });
         }
 
@@ -99,6 +103,16 @@ return new class extends Migration
                 $table->string('hero_image_url')->nullable();
                 $table->json('gallery')->nullable();
                 $table->timestamps();
+            });
+        }
+
+        // Genre targeting for ad campaigns reads this pivot directly — there is
+        // no category column on `events` (D3).
+        if (! Schema::hasTable('event_event_genre')) {
+            Schema::create('event_event_genre', function (Blueprint $table) {
+                $table->foreignId('event_id');
+                $table->foreignId('event_genre_id');
+                $table->primary(['event_id', 'event_genre_id']);
             });
         }
 

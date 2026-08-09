@@ -39,6 +39,8 @@ class ShortsController extends BaseController
             'feed' => ['nullable', 'string', 'in:'.implode(',', ShortFeedService::FEEDS)],
             'cursor' => ['nullable', 'string', 'max:512'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'country' => ['nullable', 'string', 'max:2'],
+            'session_id' => ['nullable', 'string', 'max:64'],
         ]);
 
         $result = $this->feed->page(
@@ -47,6 +49,8 @@ class ShortsController extends BaseController
             limit: (int) ($validated['limit'] ?? config('shorts.feed.page_size', 10)),
             customer: $customer,
             filters: array_filter([
+                'country' => $validated['country'] ?? null,
+                'session_id' => $validated['session_id'] ?? null,
                 'marketplace_client_id' => $this->getClient($request)?->id,
             ]),
         );

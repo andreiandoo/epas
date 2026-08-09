@@ -64,6 +64,18 @@ export type ApiShort = {
   content_flags: string[];
   stats: { likes: number; views: number; shares: number };
   viewer: { liked: boolean; saved: boolean };
+  /**
+   * Prezent DOAR pe plasarile platite (D3). `label` vine de la server si
+   * difera intre un eveniment boostat si o reclama de brand — nu il inlocui
+   * cu un text hardcodat in client si nu il ascunde: dezvaluirea e obligatia
+   * legala, iar serverul e singurul care stie ce fel de plasare e.
+   */
+  promoted?: {
+    id: number;
+    label: string;
+    objective: 'event' | 'artist' | 'brand' | 'house';
+    advertiser: string | null;
+  } | null;
 };
 
 export type ShortsPage = {
@@ -323,6 +335,8 @@ export async function fetchStreak(): Promise<StreakState | null> {
 
 export type CtaClickResult = {
   short_id: number;
+  /** Campania taxata, cand tap-ul a venit dintr-un slot platit (D3). */
+  promotion_id: number | null;
   checkout: {
     event_id: number | null;
     ticket_type_id: number | null;
@@ -339,15 +353,20 @@ export type CtaClickResult = {
  * inainte sa plece din feed spre checkout, iar un flush la 5 secunde ar prinde
  * ecranul deja inchis. Public — tap-ul se intampla la fel de des inainte de
  * login ca dupa.
+ *
+ * `promotionId` se trimite doar cand short-ul a venit dintr-un slot platit: e
+ * exact `short.promoted.id` din feed. Serverul refuza sa taxeze un id care nu
+ * apartine short-ului, deci un short atins organic nu costa pe nimeni nimic.
  */
 export async function reportCtaClick(
   id: number,
   feed?: ShortFeedSegment | null,
+  promotionId?: number | null,
 ): Promise<CtaClickResult | null> {
   try {
     const body = await request<Envelope<CtaClickResult>>(`/tenant-client/shorts/${id}/cta-click`, {
       method: 'POST',
-      body: JSON.stringify({ feed }),
+      body: JSON.stringify({ feed, promotion_id: promotionId ?? null }),
     });
 
     return body.data;

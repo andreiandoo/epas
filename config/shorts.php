@@ -120,6 +120,32 @@ return [
     ],
 
     /*
+    | Promoted shorts and ads (see D3).
+    |
+    | One slot every `slot_interval` organic items, at most `max_per_page` per
+    | page. Both are deliberately conservative: ad load is the single easiest
+    | number to raise and the single hardest consequence to reverse, because a
+    | feed that feels like an ad break stops being opened.
+    */
+    'ads' => [
+        'enabled' => (bool) env('SHORTS_ADS_ENABLED', true),
+        'slot_interval' => (int) env('SHORTS_ADS_SLOT_INTERVAL', 5),
+        'max_per_page' => (int) env('SHORTS_ADS_MAX_PER_PAGE', 2),
+        // Times one viewer may see the same campaign per day.
+        'frequency_cap' => (int) env('SHORTS_ADS_FREQUENCY_CAP', 3),
+
+        // Disclosure wording. A boosted event and a third-party brand ad are
+        // different things to a viewer and to a regulator, so they do not get
+        // the same label. Never blank these out — a placement that cannot be
+        // labelled is not served.
+        'labels' => [
+            'default' => env('SHORTS_ADS_LABEL_DEFAULT', 'Sponsorizat'),
+            'brand' => env('SHORTS_ADS_LABEL_BRAND', 'Reclamă'),
+            'house' => env('SHORTS_ADS_LABEL_HOUSE', 'Recomandat de Tixello'),
+        ],
+    ],
+
+    /*
     | Player UX (see D9) — surfaced to the client through the feed payload so a
     | tuning change does not need an app release.
     */

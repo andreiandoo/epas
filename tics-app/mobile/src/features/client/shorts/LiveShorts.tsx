@@ -299,8 +299,9 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
       if (!cta) return;
 
       // Raportam imediat (nu batched) si nu asteptam raspunsul: navigarea spre
-      // checkout nu trebuie sa depinda de o cerere de analytics.
-      void reportCtaClick(short.id, feed);
+      // checkout nu trebuie sa depinda de o cerere de analytics. Pe un slot
+      // platit, aici se face si taxarea CPC (D3).
+      void reportCtaClick(short.id, feed, short.promoted?.id ?? null);
 
       if (cta.type === 'external' && cta.url) {
         window.open(cta.url, '_blank', 'noopener');
@@ -425,6 +426,17 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
             </div>
 
             <div className="info">
+              {/* Dezvaluirea plasarii platite (D3). Eticheta vine de la server —
+                  „Sponsorizat" pentru un eveniment boostat, „Reclama" pentru un
+                  brand — si nu are stare de ascundere: o plasare care nu poate fi
+                  etichetata nu e servita deloc. */}
+              {short.promoted ? (
+                <span className="short-ad" role="note">
+                  {short.promoted.label}
+                  {short.promoted.advertiser ? ` · ${short.promoted.advertiser}` : ''}
+                </span>
+              ) : null}
+
               {short.owner?.name ? <span className="gpill solid">{short.owner.name}</span> : null}
 
               {short.title ? (

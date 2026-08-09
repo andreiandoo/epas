@@ -1178,3 +1178,143 @@ O suită verde pe SQLite **nu dovedește** compatibilitate cu Postgres. Diferă:
 `json`, `DISTINCT`/`GROUP BY` pe json, `LIKE` pe json, identificatorii de lungime zero,
 limita de 63 de caractere la numele de index, strictețea `GROUP BY`. Suita acceptă acum
 `SHORTS_TEST_PGSQL=1` exact pentru asta — vezi `PROGRESS.md`.
+
+---
+
+# Faza 11 — reclame în feed (extinde D3)
+
+## D-075 — D3 era construit, dar nu era conectat
+
+**Ce am găsit.** Faza 10 a livrat schema, selecția, pacing-ul, frequency cap-ul și metodele
+de taxare pentru shorts promovate — și le-am marcat „complete". Erau cod mort:
+
+| Piesă | Stare reală |
+|---|---|
+| `ShortPromotionService::inject()` | nu avea niciun apelant — **nicio reclamă nu ajungea vreodată în feed** |
+| `chargeClick()` | nu era apelat niciodată — CPC nu factura nimic |
+| coloana `targeting` | se scria, nu se citea niciodată |
+| status `pending` | nimic nu-l putea muta pe `active` (nu exista UI) |
+| plată | inexistentă; `spent_cents` creștea fără să fie datorat cuiva |
+
+Planul cerea explicit „Resursă panou tenant «Promovează short» (+ aprobare în core admin)"
+și „prepay buget prin Stripe sau facturare via billing existent". Niciuna nu exista.
+
+**Ce am făcut.** Injectarea se face acum în `ShortFeedService::page()`, nu în controllere —
+astfel ambele feed-uri (marketplace și tenant-client) o primesc fără duplicare, iar testele
+existente pe `page()` o acoperă.
+
+## D-076 — O reclamă e un short, nu un tip nou de conținut
+
+**Alegere.** Un brand ad e un `Short` publicat obișnuit, cu o campanie atașată. Alternativa —
+un „ad creative" separat, cu propriul player, propriul renderer și propria telemetrie — ar fi
+dublat suprafața pentru zero câștig: o reclamă verticală de 15 secunde *este* un short.
+
+**Consecință acceptată.** Un brand trebuie să aibă un short încărcat în sistem. În schimb,
+reclama trece prin exact aceleași verificări ca orice alt short: drepturi, teritoriu, vârstă,
+moderare. O reclamă nu poate ocoli gardul de conformitate, fiindcă nu există o cale separată
+prin care s-o facă.
+
+## D-077 — Plătitorul devine propria entitate (`short_advertisers`)
+
+**Ce era greșit.** `short_promotions.tenant_id` era NOT NULL, deci singurul lucru
+promovabil era evenimentul unui organizator. Asta acoperă întrebarea 1 („promovez evenimente
+și artiști"), dar nu și întrebarea 2 („vreau reclame în shorts") — un brand terț nu are cont
+de tenant.
+
+**Alegere.** Trei tipuri de plătitor pe un singur mecanism: `tenant` (organizator),
+`house` (inventarul nostru, niciodată facturat), `external` (brand fără cont). `tenant_id`
+rămâne — el scopează panoul organizatorului — dar devine opțional.
+
+**Notă de migrare.** `DROP NOT NULL` merge direct pe Postgres și MySQL. Pe SQLite ar cere
+reconstrucția tabelului, care ar pierde FK-ul pe `short_id`; cum SQLite e doar motorul local,
+`ShortPromotion::booted()` scrie `0` acolo. Producția (Postgres) primește null real.
+
+## D-078 — Credit prepaid, nu facturare ulterioară
+
+**Alegere.** Soldul advertiserului e prepaid și se verifică *înainte* de fiecare afișare.
+
+**De ce.** O afișare pe care nu o putem factura e singurul mod de eșec fără cale de
+recuperare — inventarul e deja consumat. O verificare de sold e ieftină; o creanță
+neîncasabilă nu se mai poate anula.
+
+**Consecință.** Când soldul se termină, campania nu mai e servită la următoarea cerere.
+Impresia care nu poate fi taxată se loghează la `charged_cents = 0` — s-a întâmplat, deci
+se înregistrează, dar nu se raportează ca venit care n-a existat. `short_advertiser_transactions`
+e append-only și separat de `short_promotion_events`, ca joburile de prune a telemetriei să
+nu poată șterge o dovadă de facturare.
+
+**TODO(owner).** Alimentarea prin Stripe nu e legată — vezi D-031, n-am atins
+`CheckoutController`. Cusătura e `ShortAdvertiser::topUp($cents, $paymentIntentId)`: se
+apelează după un plată reușită și restul serverului de reclame nu se schimbă.
+
+## D-079 — Reclamele plătite și house ads sunt în benzi separate
+
+**Problemă.** House ads licitează 0, deci ar pierde orice comparație pe preț și inventarul
+de rezervă ar fi inaccesibil.
+
+**Alegere.** Se sortează întâi banda plătită; house ads umplu doar sloturile pe care nu
+le-a vrut nicio campanie plătită. Nu e o licitație de preț secundar: cu un slot și fără preț
+de rezervă, mecanica second-price ar adăuga complexitate fără să schimbe cine e servit.
+
+## D-080 — Cele trei porți de targetare eșuează în direcții diferite
+
+| Poartă | Direcție | De ce |
+|---|---|---|
+| Țară | **închis** | Teritoriul e o chestiune de drepturi și de taxe. A servi în țara greșită fiindcă n-am putut determina locația costă bani, nu relevanță. |
+| Vârstă | **închis** | Publicitatea cu restricție de vârstă (alcool, pariuri) e reglementată. „Nu știam ce vârstă are" nu e o apărare. |
+| Genuri | **deschis** | E un indiciu de relevanță, nu o regulă. Închis, ar face orice vizitator nelogat netargetabil — adică ar anula tăcut majoritatea inventarului vandabil. |
+
+Asimetria e intenționată și documentată în cod, ca să nu fie „reparată" din greșeală.
+
+## D-081 — Frequency cap și pentru vizitatorii anonimi
+
+**Ce era greșit.** `capKey()` returna null fără `MarketplaceCustomer`, deci `isCapped()`
+returna mereu `false`: cel mai mare public al feed-ului (nelogații) vedea aceeași reclamă
+la fiecare pagină până se termina bugetul.
+
+**Reparat.** Cheia cade pe `session_id` trimis de client (hash-uit, nu stocat brut). Fără
+niciun identificator rămâne necapat — dar atunci și dedup-ul pe pagină e singura protecție,
+ceea ce e documentat, nu tăcut.
+
+## D-082 — Sloturile se calculează pe pagina originală, nu pe cea în creștere
+
+Un slot pe la fiecare `slot_interval` articole organice, maximum `max_per_page`. Pozițiile
+se calculează pe pagina *dinaintea* oricărei inserții și se parcurg de la coadă la cap, ca
+o inserție să nu deplaseze un slot încă neumplut.
+
+Primul slot se **strânge** la sfârșitul paginii dacă pagina e mai scurtă decât intervalul.
+O pagină scurtă e frecventă (coada unui feed, un filtru îngust) și, altfel, rata de umplere
+ar fi zero exact pe cererile alea.
+
+Sloturile plătite se inserează **după** ranking, niciodată în el: niciun buget nu poate muta
+poziția unui short organic.
+
+## D-083 — Feed-urile de „pagină proprie" nu poartă reclame
+
+`event` și `artist` sunt pagina unui singur organizator. Injectarea reclamei unui rival acolo
+e o decizie de business, nu un default. `for_you`, `featured` și `nearby` poartă reclame.
+
+## D-084 — Click-ul se taxează doar pe campania care l-a servit
+
+Clientul trimite înapoi `promotion_id` primit în payload-ul feed-ului; nu se caută campania
+după `short_id`. Același short poate fi atins organic, iar taxarea unui advertiser pentru un
+click pe care nu l-a cumpărat e cel mai grav mod de eșec aici. Un id care nu aparține
+short-ului nu taxează nimic.
+
+## D-085 — Eticheta de dezvăluire nu e opțională și nu e una singură
+
+Serverul decide eticheta, nu clientul: `Sponsorizat` pentru un eveniment boostat, `Reclamă`
+pentru un brand terț, `Recomandat de Tixello` pentru house ads. Sunt lucruri diferite pentru
+un privitor și pentru ANPC, deci nu primesc același cuvânt. Nu există o stare „fără etichetă":
+o plasare care nu poate fi etichetată nu e servită.
+
+## D-086 — Aprobarea e o decizie separată de creare
+
+O campanie pleacă `pending` **din ambele părți**, inclusiv când o creează core admin. A
+contopi crearea cu aprobarea înseamnă că nimeni nu revizuiește reclamele pe care le vindem
+noi înșine — exact cele fără o a doua pereche de ochi.
+
+Editarea materialului unei campanii active (short, obiectiv, licitație, buget, targetare) o
+retrimite la revizuire. Altfel „aprobat" ar descrie doar versiunea pe care s-a întâmplat s-o
+vedem. Punerea pe pauză rămâne a organizatorului: gardul există ca să țină reclamele
+nerevizuite în afara feed-ului, nu ca să țină banii advertiserului înăuntru.
