@@ -39,9 +39,30 @@ class ShortsProductionTest extends ShortsTestCase
         $this->assertTrue($short->is_generated);
         // No video asset, so nothing has to transcode — the still is playable now.
         $this->assertTrue($short->ready);
-        $this->assertSame(Short::STATUS_DRAFT, $short->status, 'generation is a suggestion, not curation');
         $this->assertSame('https://cdn.test/poster.jpg', $short->poster_path);
         $this->assertSame('buy_tickets', $short->cta_type);
+
+        // Published, not draft. The picture is the organiser's own artwork,
+        // already shown publicly on the event page — putting it in the feed adds
+        // no moderation surface. Leaving thousands of these as drafts nobody
+        // will ever publish by hand is the same as not shipping the feature.
+        $this->assertSame(Short::STATUS_PUBLISHED, $short->status);
+        $this->assertNotNull($short->published_at);
+    }
+
+    public function test_generation_can_be_routed_through_review_instead(): void
+    {
+        config()->set('shorts.autogen.publish', false);
+
+        $event = Event::create(['slug' => 'fest-review', 'title' => 'Fest under review']);
+        $event->forceFill(['poster_url' => 'https://cdn.test/poster.jpg'])->save();
+
+        (new GenerateShortFromEventJob($event->id))->handle(new NullVideoRenderer);
+
+        $short = Short::query()->where('event_id', $event->id)->firstOrFail();
+
+        $this->assertSame(Short::STATUS_DRAFT, $short->status);
+        $this->assertNull($short->published_at);
     }
 
     public function test_generation_records_the_render_job_when_a_renderer_exists(): void

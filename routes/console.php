@@ -1133,3 +1133,16 @@ Schedule::job(new \App\Jobs\Shorts\PickPosterWinnerJob)
     ->dailyAt('04:30')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
+
+// Fills the feed from catalogue images: upcoming events, artists with a gig
+// booked, and venues — anything with a picture and no short (B3).
+//
+// A nightly sweep rather than a model observer: an event is created long before
+// its poster is uploaded, so an observer would fire on an empty record and never
+// look again. The sweep is idempotent and capped per run, so a first pass over
+// an existing catalogue catches up over several nights instead of queueing tens
+// of thousands of jobs at once.
+Schedule::command('shorts:generate')
+    ->dailyAt('02:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();

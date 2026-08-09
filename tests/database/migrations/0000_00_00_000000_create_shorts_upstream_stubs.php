@@ -125,7 +125,22 @@ return new class extends Migration
                 $table->string('letter', 4)->nullable();
                 $table->string('youtube_id')->nullable();
                 $table->string('youtube_url')->nullable();
+                // Image sources the auto-generator builds an artist short from (B3).
+                $table->string('main_image_url')->nullable();
+                $table->string('portrait_url')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->boolean('is_active')->nullable();
                 $table->timestamps();
+            });
+        }
+
+        // Artist ↔ event, used to decide whether an artist has an upcoming gig
+        // worth generating a short for (B3).
+        if (! Schema::hasTable('event_artist')) {
+            Schema::create('event_artist', function (Blueprint $table) {
+                $table->foreignId('event_id');
+                $table->foreignId('artist_id');
+                $table->primary(['event_id', 'artist_id']);
             });
         }
 
@@ -136,6 +151,9 @@ return new class extends Migration
                 $table->string('name')->nullable();
                 $table->string('slug')->nullable();
                 $table->string('city')->nullable();
+                // Image sources for a venue short (B3).
+                $table->string('image_url')->nullable();
+                $table->json('gallery')->nullable();
                 $table->timestamps();
             });
         }

@@ -1318,3 +1318,95 @@ Editarea materialului unei campanii active (short, obiectiv, licitație, buget, 
 retrimite la revizuire. Altfel „aprobat" ar descrie doar versiunea pe care s-a întâmplat s-o
 vedem. Punerea pe pauză rămâne a organizatorului: gardul există ca să țină reclamele
 nerevizuite în afara feed-ului, nu ca să țină banii advertiserului înăuntru.
+
+---
+
+# Faza 12 — generare automată din catalog (completează B3)
+
+## D-087 — Generatorul exista, dar nu-l chema nimeni (a doua oară același tipar)
+
+**Ce am găsit.** `GenerateShortFromEventJob` era scris, corect și testat din Faza 8. Nu avea
+**nicio** intrare în scheduler, niciun observer, nicio comandă. În practică nu s-a generat
+niciodată vreun short. Și acoperea doar evenimente — artiștii și locațiile deloc.
+
+Exact aceeași formă ca D-075 (reclamele): logica scrisă, declanșatorul lipsă, faza marcată
+„completă". De aici înainte: o funcționalitate programată nu e livrată până nu există un
+test care dovedește că **ceva o pornește**. `ShortsAutoGenerationTest` conține patru astfel
+de teste (`Queue::fake()` + `Artisan::call`), nu doar teste pe generator.
+
+## D-088 — Măturătoare programată, nu observer pe model
+
+**Alegere.** O comandă `shorts:generate` care rulează nocturn, nu un observer pe `Event`.
+
+**De ce.** Un eveniment se creează cu mult înainte să i se urce posterul. Un observer ar
+porni pe o înregistrare goală, n-ar găsi nicio imagine și **nu s-ar mai uita niciodată**.
+Măturătoarea reia zilnic și prinde evenimentul în ziua în care capătă artwork.
+
+Generatorul sare peste ce are deja short, deci rularea e idempotentă: o rulare parțială, una
+suprapusă sau una repetată converg la același rezultat.
+
+## D-089 — Poster short e produsul, nu un placeholder
+
+**Alegere.** Când nu e configurat niciun renderer (Shotstack), short-ul generat e un cadru
+fix marcat `ready` și **servit**, nu parcat într-o coadă.
+
+**De ce.** Majoritatea catalogului nu va avea niciodată video vertical. Dacă poster short-ul
+e tratat ca stare intermediară, feed-ul rămâne gol pentru aproape toată lumea — iar un feed
+gol omoară o suprafață de descoperire mai repede decât un feed mediocru.
+
+Clientul mobil deja randa acest caz (`playback.hls_url === null` → cardul cu poster), deci
+n-a fost nevoie de nimic nou în app.
+
+## D-090 — Generatele intră publicate, spre deosebire de UGC
+
+**Alegere.** `status = published`, nu `draft`. Inversul regulii pentru conținut de la
+utilizatori.
+
+**De ce.** Imaginile sunt artwork-ul propriu al organizatorului, deja afișat public pe pagina
+evenimentului / artistului / locației. Aceeași poză în feed nu adaugă nicio suprafață de
+moderare care să nu existe deja. Iar alternativa nu e „mai multă siguranță", ci „nimeni nu
+publică manual zece mii de rânduri" — adică funcționalitatea nu există.
+
+**Reversibil.** `SHORTS_AUTOGEN_PUBLISH=false` le trimite prin `draft`. Testat în ambele
+moduri. Am schimbat și testul din Faza 8 care aserta `draft` — schimbarea de contract e
+intenționată, nu un test reparat ca să treacă.
+
+## D-091 — Video real bate poster la egalitate (`generated_penalty`)
+
+Un cadru fix e conținut mai slab decât un clip vertical real. Fără o penalizare explicită,
+cele două pornesc la egal, iar în ziua 1 — când niciunul n-are telemetrie — explorarea le
+scoate în feed la fel de des.
+
+Penalizarea e mică (0.5, față de 3.0 pe afinitate): destul cât să piardă o egalitate, nu cât
+să îngroape singura acoperire pe care majoritatea evenimentelor o vor avea vreodată. Și se
+aplică **doar cât timp nu există asset video** — când un render aterizează, short-ul încetează
+să fie un cadru fix și încetează să fie penalizat.
+
+Verificarea se face pe coloane (`provider_asset_id`, `hls_url`, `path`), nu pe accesorul
+`playback_url`: acela semnează un URL de provider, iar rankerul rulează peste 200 de candidați
+la fiecare cerere de feed.
+
+## D-092 — Artiștii primesc CTA după ce au de vânzare
+
+Un short de artist arată spre următorul concert când există unul, și spre profil altfel. Un
+buton „Ia bilet" fără nimic de vândut e o fundătură, iar feed-ul e cel mai prost loc unde s-o
+pui.
+
+Măturătoarea generează doar pentru artiștii cu concert viitor: toată lista ar umple feed-ul
+cu acte pentru care nu se poate cumpăra nimic.
+
+## D-093 — Orizont de timp pentru evenimente
+
+Doar evenimentele din următoarele 120 de zile. Un feed plin de afișe de anul trecut e mai rău
+decât un feed scurt: face toată suprafața să pară abandonată și niciun bilet de acolo nu mai
+e de vânzare.
+
+## D-094 — Garda pe tabel, nu pe metodă
+
+Prima versiune verifica `method_exists(Artist::class, 'events')` înainte de a filtra după
+concerte viitoare. Metoda există întotdeauna — verificarea nu dovedea nimic, iar pe o schemă
+fără pivotul `event_artist` comanda arunca. Rulează nesupravegheat la 02:30. Acum se
+verifică `Schema::hasTable('event_artist')`.
+
+Prins fiindcă am rulat comanda pe schema de dev, nu doar testele. Merită repetat: un smoke
+test pe o bază reală prinde altceva decât o suită verde.

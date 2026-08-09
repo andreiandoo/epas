@@ -49,9 +49,13 @@ class ShortFeedRanker
                 'featured' => $weights['featured'] * ($short->is_featured ? 1.0 : 0.0),
                 // Velocity relative to baseline, recomputed by ComputeTrendingJob.
                 'trending' => ($weights['trending'] ?? 0) * min((float) $short->trending_score / 5, 1.0),
-                // The only negative term: something already watched should not
-                // crowd out something new.
+                // Something already watched should not crowd out something new.
                 'seen' => -$weights['seen_penalty'] * (isset($seen[$short->id]) ? 1.0 : 0.0),
+                // A poster short auto-built from catalogue images loses a tie to
+                // a real vertical clip. It only applies while there is no video
+                // asset: once a render lands, the short stops being a still and
+                // stops being penalised (B3).
+                'generated' => -($weights['generated_penalty'] ?? 0) * ($this->isPosterOnly($short) ? 1.0 : 0.0),
             ];
 
             $short->setAttribute('feed_score', array_sum($parts));
@@ -139,6 +143,24 @@ class ShortFeedRanker
         }
 
         return strcasecmp((string) $venue->city, (string) $city) === 0 ? 1.0 : 0.0;
+    }
+
+    /**
+     * A generated short that still has no video behind it — a poster played as
+     * a card.
+     *
+     * Checked on the columns rather than on the `playback_url` accessor on
+     * purpose: that accessor signs a provider URL, which is a network-adjacent
+     * call, and the ranker runs it over a 200-row candidate pool on every feed
+     * request.
+     */
+    protected function isPosterOnly(Short $short): bool
+    {
+        if (! $short->is_generated || $short->is_external) {
+            return false;
+        }
+
+        return ! $short->provider_asset_id && ! $short->hls_url && ! $short->path;
     }
 
     /**

@@ -37,6 +37,12 @@ return [
             'featured' => (float) env('SHORTS_W_FEATURED', 0.75),
             'trending' => (float) env('SHORTS_W_TRENDING', 1.25),
             'seen_penalty' => (float) env('SHORTS_W_SEEN', 4.0),
+            // A still image auto-built from a poster is weaker content than a
+            // real vertical clip. Without an explicit penalty the two start
+            // level, and on day one — when neither has telemetry — exploration
+            // surfaces them equally. Small on purpose: enough to lose a tie, not
+            // enough to bury the only coverage most events will ever have.
+            'generated_penalty' => (float) env('SHORTS_W_GENERATED', 0.5),
         ],
 
         // Epsilon-greedy exploration (D5): the share of each page reserved for
@@ -117,6 +123,37 @@ return [
         'alert_threshold_pct' => (int) env('BUNNY_ALERT_THRESHOLD_PCT', 80),
         // Above this share of the cap, the platform drops quality for everyone.
         'data_saver_threshold_pct' => (int) env('BUNNY_DATA_SAVER_THRESHOLD_PCT', 90),
+    ],
+
+    /*
+    | Automatic generation from catalogue images (see B3).
+    |
+    | Most events never get a vertical clip, and almost no artist or venue does.
+    | Without this the feed is empty for everyone who did not upload video, which
+    | is nearly everyone.
+    */
+    'autogen' => [
+        'enabled' => (bool) env('SHORTS_AUTOGEN_ENABLED', true),
+
+        // Straight into the feed rather than into a review queue. The images are
+        // the organiser's own artwork, already public on the event/artist/venue
+        // page, so the feed adds no moderation surface. Set to false to route
+        // them through `draft` instead — but then somebody has to publish them,
+        // and nobody publishes thousands of rows by hand.
+        'publish' => (bool) env('SHORTS_AUTOGEN_PUBLISH', true),
+
+        'events' => (bool) env('SHORTS_AUTOGEN_EVENTS', true),
+        'artists' => (bool) env('SHORTS_AUTOGEN_ARTISTS', true),
+        'venues' => (bool) env('SHORTS_AUTOGEN_VENUES', true),
+
+        // Ceiling per sweep, per type. The first run over an existing catalogue
+        // would otherwise queue tens of thousands of jobs at once; the sweep is
+        // idempotent, so it simply catches up over the following nights.
+        'batch_limit' => (int) env('SHORTS_AUTOGEN_BATCH', 200),
+
+        // Only events starting within this window are worth a generated short —
+        // a feed full of last year's posters is worse than a short feed.
+        'event_horizon_days' => (int) env('SHORTS_AUTOGEN_HORIZON_DAYS', 120),
     ],
 
     /*

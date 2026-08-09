@@ -7,10 +7,10 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 
 ## Rezumat pentru owner
 
-**Toate cele 11 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
-`claude/shorts`.** 149 de teste, 395 aserțiuni — verzi **atât pe SQLite, cât și pe
+**Toate cele 12 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
+`claude/shorts`.** 168 de teste, 437 aserțiuni — verzi **atât pe SQLite, cât și pe
 PostgreSQL 16**, motorul de producție. 18 migrații aplicate curat pe Postgres.
-11 comenzi programate, 34 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
+12 comenzi programate, 34 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
 
 **Fără conflicte cu `core`** (verificat cu `git merge-tree` după ce core a avansat cu
 4 commit-uri; niciun fișier nu e atins de ambele părți).
@@ -28,11 +28,12 @@ PostgreSQL 16**, motorul de producție. 18 migrații aplicate curat pe Postgres.
 | 9 | Colecții editoriale, stories efemere, igiena feed-ului |
 | 10 | Val 3: promovate cu pacing, drepturi/licențiere, guardrails de cost, UGC verificat, A/B cover |
 | 11 | **Reclame:** injectare reală în feed, advertiseri + credit prepaid, targetare, taxare CPM/CPC, panouri de aprobare |
+| 12 | **Generare automată:** shorts din posterele evenimentelor, artiștilor și locațiilor + măturătoare nocturnă |
 
 ### ✅ Verificat pe PostgreSQL (nu mai e pe lista ta)
 
 Am pornit un PostgreSQL 16 local — era instalat în imagine, doar nu rula — și am rulat
-**toate cele 18 migrații Shorts + întreaga suită (149 de teste) pe motorul real de
+**toate cele 18 migrații Shorts + întreaga suită (168 de teste) pe motorul real de
 producție.** Toate verzi pe Postgres **și** pe SQLite.
 
 A meritat: au ieșit **7 bug-uri care treceau pe SQLite și ar fi picat pe Postgres**
@@ -102,6 +103,50 @@ doar pe campania care chiar a servit acel click, nu după `short_id`.
 pe care nu l-am atins (D-031). Până atunci, creditul se adaugă manual din core admin, cu
 număr de factură ca referință.
 
+### 🖼️ Generare automată din poster — ce merge acum (Faza 12)
+
+Ai întrebat dacă se generează shorts automat pentru fiecare eveniment/artist/locație, și dacă
+se folosește posterul când nu e video. Răspunsul era **nu** — și din exact același motiv ca la
+reclame: `GenerateShortFromEventJob` era scris și testat din Faza 8, dar **nimic nu-l chema**
+(fără scheduler, fără observer, fără comandă), deci nu s-a generat niciodată vreun short. Și
+acoperea doar evenimente.
+
+**Acum:**
+
+| Sursă | Imagini folosite | CTA |
+|---|---|---|
+| **Eveniment** | `poster_url` → `hero_image_url` → `gallery` (max 5) | „Ia bilet" |
+| **Artist** | `portrait_url` → `main_image_url` → `logo_url` | „Ia bilet" dacă are concert viitor, altfel „Vezi artistul" |
+| **Locație** | `image_url` → `gallery` | „Vezi evenimentele" |
+
+Fără renderer configurat (Shotstack), rezultatul e un **poster short**: cadrul fix, marcat
+`ready` și servit ca un card în feed. Clientul mobil deja randa cazul ăsta. Cu renderer
+configurat, se comandă un clip vertical real și posterul rămâne ca fallback dacă randarea pică.
+
+**Ce le declanșează:** `shorts:generate`, programat nocturn la 02:30. Măturătoare, nu observer
+— un eveniment se creează cu mult înainte să i se urce posterul, iar un observer ar porni pe o
+înregistrare goală și nu s-ar mai uita niciodată. Idempotentă: sare peste ce are deja short.
+
+```bash
+php artisan shorts:generate --dry-run          # ce s-ar genera, fără să genereze
+php artisan shorts:generate --type=venue        # doar locații
+php artisan shorts:generate --limit=50          # peste plafonul din config
+```
+
+**Limite intenționate:** doar evenimente din următoarele 120 de zile (un feed cu afișe de anul
+trecut face suprafața să pară abandonată), doar artiști cu concert viitor (un buton „Ia bilet"
+fără nimic de vândut e o fundătură), maximum 200 pe rulare pe tip — o primă trecere peste
+catalogul existent recuperează în câteva nopți în loc să pună zeci de mii de joburi în coadă
+deodată. Tot în `config/shorts.php` → `autogen`.
+
+**Două decizii care merită știute:**
+1. **Intră publicate**, nu `draft` (invers față de UGC). Sunt pozele proprii ale
+   organizatorului, deja publice pe pagina evenimentului — feed-ul nu adaugă nicio suprafață
+   de moderare nouă. Alternativa nu e „mai sigur", ci „nimeni nu publică manual zece mii de
+   rânduri". `SHORTS_AUTOGEN_PUBLISH=false` le trimite prin revizuire.
+2. **Video real bate poster la egalitate** în ranker (`generated_penalty`, 0.5 față de 3.0 pe
+   afinitate). Penalizarea dispare când short-ul capătă asset video.
+
 ### Ce trebuie făcut de tine înainte de producție
 
 1. **Bunny Stream** — pașii din `shorts.md` §C0 + cheile în `.env`. Fără ele containerul
@@ -147,7 +192,7 @@ npm install && npm run build            # manifestul Vite — altfel panoul Fila
 cp .env.example .env && php artisan key:generate
 
 ./scripts/shorts-dev-migrate.sh --reset # schemă de dev redusă
-php artisan test --filter=Shorts        # 149 de teste (SQLite)
+php artisan test --filter=Shorts        # 168 de teste (SQLite)
 ./vendor/bin/pint
 ```
 
