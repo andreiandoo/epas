@@ -1,0 +1,140 @@
+/* =========================================================
+   API-ul de ORGANIZATOR al aplicației Tixello (/api/app/org/*).
+
+   Aplicatia nu vorbeste direct cu lumea partenerului si NU are cheia lui de
+   API: o cheie compilata in APK se poate extrage din fisier. Serverul e cel
+   care tine cheile si ruteaza spre lumea in care traieste organizatorul.
+
+   Tokenul de sesiune e al contului Tixello, nu al partenerului.
+   ========================================================= */
+import { anchorFromResponse } from '../offline/clock';
+import type { CachedTicket } from '../offline/db';
+import type { Poster } from '../offline/sync';
+
+export const APP_API = import.meta.env.VITE_APP_API ?? 'https://core.tixello.com/api/app';
+
+const TOKEN_LS = 'tixello.app.token.v1';
+
+let token: string | null = null;
+
+export function getAppToken(): string | null {
+  if (token) return token;
+  try {
+    token = localStorage.getItem(TOKEN_LS);
+  } catch {
+    token = null;
+  }
+  return token;
+}
+
+export function setAppToken(t: string | null): void {
+  token = t;
+  try {
+    if (t) localStorage.setItem(TOKEN_LS, t);
+    else localStorage.removeItem(TOKEN_LS);
+  } catch {
+    /* fara persistenta, sesiunea tine cat aplicatia */
+  }
+}
+
+type Envelope<T> = { success: boolean; data?: T; error?: string; acks?: unknown };
+
+async function call<T>(path: string, init?: RequestInit): Promise<Envelope<T> | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const res = await fetch(`${APP_API}${path}`, {
+      ...init,
+      signal: ctrl.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(init?.body ? { 'Content-Type': 'application/json' } : null),
+        ...(getAppToken() ? { Authorization: `Bearer ${getAppToken()}` } : null),
+        ...init?.headers,
+      },
+    });
+
+    /* Fiecare raspuns e o ocazie sa reancoram ceasul. La o poarta, telefonul
+       poate sta ore offline; cu cat ancora e mai proaspata, cu atat ordonarea
+       scanurilor e mai buna. */
+    anchorFromResponse(res);
+
+    if (res.status === 401) {
+      setAppToken(null);
+      return null;
+    }
+    return (await res.json()) as Envelope<T>;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/* ---------- conectarea contului de organizator ---------- */
+
+export async function connectOrganizer(
+  marketplaceClientId: number,
+  email: string,
+  password: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const r = await call<{ organizer: { id: number; name: string } }>('/org/connect', {
+    method: 'POST',
+    body: JSON.stringify({ marketplace_client_id: marketplaceClientId, email, password }),
+  });
+  if (!r) return { ok: false, error: 'Nu am putut contacta serverul.' };
+  return r.success ? { ok: true } : { ok: false, error: r.error ?? 'Conectare eșuată.' };
+}
+
+/* ---------- evenimente ---------- */
+
+export type OrgEvent = { id: string; title: string; date: string | null; time: string | null; status: string };
+
+export async function fetchOrgEvents(): Promise<OrgEvent[] | null> {
+  const r = await call<OrgEvent[]>('/org/events');
+  return r?.success ? (r.data ?? []) : null;
+}
+
+/* ---------- inventarul pentru scanare offline ---------- */
+
+export async function fetchOrgTickets(eventId: string): Promise<CachedTicket[] | null> {
+  const r = await call<CachedTicket[]>(`/org/events/${encodeURIComponent(eventId)}/tickets`);
+  return r?.success ? (r.data ?? []) : null;
+}
+
+/* ---------- trimiterea scanurilor ---------- */
+
+/**
+ * `Poster` pentru coada offline. Motorul nu stie de HTTP; primeste functia
+ * asta, ca sa poata fi testat cu una falsa.
+ */
+export const scanPoster: Poster = async (batch) => {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch(`${APP_API}/org/scans`, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(getAppToken() ? { Authorization: `Bearer ${getAppToken()}` } : null),
+      },
+      body: JSON.stringify({ scans: batch }),
+    });
+
+    if (!res.ok) return { ok: false, response: res };
+
+    const json = (await res.json()) as { success: boolean; acks?: { id: string; result?: string; error?: string }[] };
+    return {
+      ok: !!json.success,
+      acks: json.acks as never,
+      response: res,
+    };
+  } catch {
+    // fara retea: coada pastreaza tot si reincearca mai tarziu
+    return { ok: false };
+  } finally {
+    clearTimeout(t);
+  }
+};

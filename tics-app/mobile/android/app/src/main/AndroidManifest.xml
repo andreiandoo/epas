@@ -38,4 +38,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Scanarea biletelor la poarta. `required=false` ca aplicatia sa ramana
+         instalabila si pe dispozitive fara camera (tablete de casa), unde se
+         foloseste introducerea manuala a codului. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 </manifest>

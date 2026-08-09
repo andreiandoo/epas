@@ -4035,3 +4035,47 @@ Route::prefix('leisure')->middleware(['throttle:60,1'])->group(function () {
         [App\Http\Controllers\Api\Leisure\AvailabilityController::class, 'slots'])
         ->name('api.leisure.availability.slots');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Aplicația Tixello (mobil) — API global
+|--------------------------------------------------------------------------
+|
+| Aplicatia Tixello NU apartine unui tenant sau unui marketplace: vinde la tot
+| ce e in sistem. De aceea are identitate proprie (`tixello_accounts`), iar
+| accesul la lumile partenerilor vine EXCLUSIV din legaturi consimtite
+| (`tixello_account_links`).
+|
+| Spre deosebire de `marketplace-client/*`, aici NU se cere o cheie de API:
+| aplicatia e distribuita public, iar o cheie compilata in APK se poate extrage
+| din fisier. Cheile partenerilor raman pe server.
+|
+*/
+Route::prefix('app')->middleware('throttle:120,1')->group(function () {
+    Route::post('/auth/register', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'register'])
+        ->middleware('throttle:10,1')->name('api.app.auth.register');
+    Route::post('/auth/login', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'login'])
+        ->middleware('throttle:10,1')->name('api.app.auth.login');
+    Route::post('/auth/verify', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'verify'])
+        ->middleware('throttle:10,1')->name('api.app.auth.verify');
+    Route::post('/auth/resend', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'resend'])
+        ->middleware('throttle:5,1')->name('api.app.auth.resend');
+
+    Route::middleware('tixello.app.auth')->group(function () {
+        Route::get('/auth/me', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'me'])
+            ->name('api.app.auth.me');
+        Route::post('/auth/logout', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'logout'])
+            ->name('api.app.auth.logout');
+
+        // ---- organizator ----
+        Route::post('/org/connect', [\App\Http\Controllers\Api\TixelloApp\OrganizerController::class, 'connect'])
+            ->middleware('throttle:10,1')->name('api.app.org.connect');
+        Route::get('/org/events', [\App\Http\Controllers\Api\TixelloApp\OrganizerController::class, 'events'])
+            ->name('api.app.org.events');
+        Route::get('/org/events/{event}/tickets', [\App\Http\Controllers\Api\TixelloApp\OrganizerController::class, 'tickets'])
+            ->name('api.app.org.tickets');
+        // loturi de scanuri de la poarta; idempotent dupa client_scan_id
+        Route::post('/org/scans', [\App\Http\Controllers\Api\TixelloApp\OrganizerController::class, 'scans'])
+            ->middleware('throttle:240,1')->name('api.app.org.scans');
+    });
+});

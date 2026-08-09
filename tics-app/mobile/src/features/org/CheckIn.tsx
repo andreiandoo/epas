@@ -10,6 +10,7 @@ import { Button, Card, Icon } from '../../design/components';
 import { useSession } from '../../store/session';
 import { SCAN_RESULTS } from '../../mock/org';
 import { useCtx } from './OrgChrome';
+import { useCameraScanner } from '../../offline/useCameraScanner';
 
 function LiveStat({ v, l, color }: { v: string; l: string; color?: string }) {
   return (
@@ -25,6 +26,7 @@ function LiveStat({ v, l, color }: { v: string; l: string; color?: string }) {
 export function CheckIn() {
   const { scan, shiftPaused, toggleShiftPause, doScan, clearScan, openModal, set, flash, clearFlash } = useSession();
   const c = useCtx();
+  const cam = useCameraScanner(c.event);
 
   /* flash colorat pe telefon la fiecare scanare */
   useEffect(() => {
@@ -92,7 +94,7 @@ export function CheckIn() {
       <div className="screen pad stack">
         {/* fereastra camerei */}
         <div
-          onClick={doScan}
+          onClick={cam.live ? undefined : doScan}
           style={{
             height: 260,
             borderRadius: 22,
@@ -110,17 +112,34 @@ export function CheckIn() {
           <div style={corner('tr')} />
           <div style={corner('bl')} />
           <div style={corner('br')} />
-          <div style={{ width: 110, height: 110, background: '#fff', borderRadius: 8, padding: 9 }}>
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                backgroundImage: 'linear-gradient(90deg,#000 50%,transparent 0),linear-gradient(#000 50%,transparent 0)',
-                backgroundSize: '13px 13px',
-                opacity: 0.85,
-              }}
-            />
-          </div>
+          {/* fluxul camerei umple fereastra cand e pornit; altfel ramane
+              QR-ul desenat din prototip, ca ecranul sa arate la fel */}
+          <video
+            ref={cam.videoRef}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: cam.live ? 'block' : 'none',
+            }}
+            playsInline
+            muted
+          />
+          {!cam.live ? (
+            <div style={{ width: 110, height: 110, background: '#fff', borderRadius: 8, padding: 9 }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: 'linear-gradient(90deg,#000 50%,transparent 0),linear-gradient(#000 50%,transparent 0)',
+                  backgroundSize: '13px 13px',
+                  opacity: 0.85,
+                }}
+              />
+            </div>
+          ) : null}
           <div
             style={{
               position: 'absolute',
@@ -133,9 +152,41 @@ export function CheckIn() {
               fontWeight: 600,
             }}
           >
-            Apasă pentru a simula o scanare
+            {cam.hint}
           </div>
         </div>
+
+        {/* Un scanner fara alternativa manuala blocheaza poarta: cand camera
+            sau decodarea lipsesc, codul se introduce de la tastatura. */}
+        {!cam.decoding ? (
+          <div className="row" style={{ gap: 8 }}>
+            <input
+              value={cam.manual}
+              onChange={(e) => cam.setManual(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && cam.submitManual()}
+              placeholder="Cod bilet"
+              style={{
+                flex: 1,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                color: 'var(--text)',
+                font: 'inherit',
+                fontSize: 14,
+              }}
+            />
+            <Button variant="primary" onClick={cam.submitManual} style={{ width: 'auto', padding: '0 18px' }}>
+              Verifică
+            </Button>
+          </div>
+        ) : null}
+
+        {cam.error ? (
+          <div className="card pad" style={{ background: 'var(--amber-tint)', borderColor: 'var(--amber-border)' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{cam.error}</div>
+          </div>
+        ) : null}
 
         {/* card de rezultat */}
         {r ? (
