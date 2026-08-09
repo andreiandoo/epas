@@ -4,12 +4,12 @@ namespace Tests\Feature\Shorts;
 
 use App\Jobs\Shorts\AggregateShortAnalyticsJob;
 use App\Jobs\Shorts\GenerateCaptionsJob;
-use App\Jobs\Shorts\GenerateShortFromEventJob;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Short;
 use App\Models\ShortCaption;
 use App\Models\ShortEvent;
+use App\Services\Shorts\ShortAutoGenerator;
 use App\Services\Shorts\ShortPayload;
 use App\Services\Video\NullVideoProvider;
 use App\Services\Video\NullVideoRenderer;
@@ -32,7 +32,7 @@ class ShortsProductionTest extends ShortsTestCase
         $event = Event::create(['slug' => 'fest', 'title' => 'Fest 2026']);
         $event->forceFill(['poster_url' => 'https://cdn.test/poster.jpg'])->save();
 
-        (new GenerateShortFromEventJob($event->id))->handle(new NullVideoRenderer);
+        (new ShortAutoGenerator(new NullVideoRenderer))->generate($event);
 
         $short = Short::query()->where('event_id', $event->id)->firstOrFail();
 
@@ -57,7 +57,7 @@ class ShortsProductionTest extends ShortsTestCase
         $event = Event::create(['slug' => 'fest-review', 'title' => 'Fest under review']);
         $event->forceFill(['poster_url' => 'https://cdn.test/poster.jpg'])->save();
 
-        (new GenerateShortFromEventJob($event->id))->handle(new NullVideoRenderer);
+        (new ShortAutoGenerator(new NullVideoRenderer))->generate($event);
 
         $short = Short::query()->where('event_id', $event->id)->firstOrFail();
 
@@ -76,7 +76,7 @@ class ShortsProductionTest extends ShortsTestCase
 
         $renderer = new ShotstackRenderer(apiKey: 'k', environment: 'stage', webhookSecret: 's');
 
-        (new GenerateShortFromEventJob($event->id))->handle($renderer);
+        (new ShortAutoGenerator($renderer))->generate($event);
 
         $short = Short::query()->where('event_id', $event->id)->firstOrFail();
 
@@ -92,8 +92,8 @@ class ShortsProductionTest extends ShortsTestCase
         $event = Event::create(['slug' => 'fest3', 'title' => 'Fest']);
         $event->forceFill(['poster_url' => 'https://cdn.test/a.jpg'])->save();
 
-        (new GenerateShortFromEventJob($event->id))
-            ->handle(new ShotstackRenderer(apiKey: 'k', environment: 'stage'));
+        (new ShortAutoGenerator(new ShotstackRenderer(apiKey: 'k', environment: 'stage')))
+            ->generate($event);
 
         $short = Short::query()->where('event_id', $event->id)->firstOrFail();
 
@@ -112,7 +112,7 @@ class ShortsProductionTest extends ShortsTestCase
             'status' => Short::STATUS_PUBLISHED,
         ]);
 
-        (new GenerateShortFromEventJob($event->id))->handle(new NullVideoRenderer);
+        (new ShortAutoGenerator(new NullVideoRenderer))->generate($event);
 
         $this->assertSame(1, Short::query()->where('event_id', $event->id)->count());
     }
@@ -121,7 +121,7 @@ class ShortsProductionTest extends ShortsTestCase
     {
         $event = Event::create(['slug' => 'fest5', 'title' => 'Fest']);
 
-        (new GenerateShortFromEventJob($event->id))->handle(new NullVideoRenderer);
+        (new ShortAutoGenerator(new NullVideoRenderer))->generate($event);
 
         $this->assertSame(0, Short::query()->where('event_id', $event->id)->count());
     }

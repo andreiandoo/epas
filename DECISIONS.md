@@ -1410,3 +1410,91 @@ verifică `Schema::hasTable('event_artist')`.
 
 Prins fiindcă am rulat comanda pe schema de dev, nu doar testele. Merită repetat: un smoke
 test pe o bază reală prinde altceva decât o suită verde.
+
+---
+
+# Audit cap-coadă — aceeași boală, în alte patru locuri
+
+După ce două verificări la întâmplare (reclame, generare automată) au găsit exact același
+defect, am făcut un audit mecanic, nu din ochi: fiecare job, comandă, resursă Filament, rută,
+metodă publică, cheie de config și coloană de migrație — are apelant?
+
+**Curat:** 41 de rute (toate rezolvă la metode reale), 131 de coloane (una singură
+„nefolosită" era un fals pozitiv — cheia de pivot inferată de Laravel), toate cele 6 resurse
+Filament chiar sunt descoperite de panouri (verificat pornind panourile, nu presupunând că
+discovery-ul e recursiv), toate joburile au dispecer.
+
+**Murdar:** patru funcționalități scrise, corecte, testate — și nechemate de nimeni.
+
+## D-095 — D8: guardrail-ul de cost observa, dar nu păzea
+
+`PollBunnyUsageJob` înregistra consumul și loga o avertizare. `dataSaverActive()` și
+`playbackHints()` n-aveau **niciun** apelant, iar `shorts.player.data_saver_global` nu era
+citit nicăieri. Propriul docblock al metodei spunea „playback hints handed to the client in
+the feed payload" — nu erau.
+
+**Consecință.** Toată D8 („un feed video e singura funcționalitate care transformă un vârf
+de trafic direct în factură nelimitată") se reducea la o linie de log. Nimic nu scădea
+vreodată calitatea. Plafonul de bandă era decorativ.
+
+**Reparat.** `page()` și `forOwner()` întorc acum `playback` în payload; clientul combină
+decizia serverului cu preferința locală — **oricare** dintre ele pornește economia, niciuna
+n-o poate anula pe cealaltă. Platforma nu poate fi obligată să servească 1080p peste plafon,
+iar utilizatorul nu poate fi obligat să consume date.
+
+## D-096 — D11: UGC aprobat nu plătea niciodată autorul
+
+`recordApprovedUgc()` — zero apelanți. Un participant al cărui short era aprobat nu primea
+cele 50 de puncte promise.
+
+**Reparat, dar nu unde te-ai aștepta.** Nu în acțiunea Filament care publică azi, ci într-un
+`ShortObserver` pe model. Un short ajunge „published" pe patru căi (acțiune în masă, editare
+singulară, coada de moderare, comandă); o recompensă legată de una singură **nu există** pe
+celelalte trei. Exact așa s-a pierdut prima dată.
+
+Plata se face doar la **prima** publicare (`published_at` era null înainte), altfel
+arhivare + republicare ar fi o fermă de puncte.
+
+## D-097 — D9: blurhash doar pentru shorts ingerate
+
+`GenerateBlurhashJob` era dispecerizat exclusiv din `IngestShortJob`. Upload-urile native și
+shorts-urile generate — majoritatea catalogului — n-au primit niciodată LQIP.
+
+Pe dos față de intenție: un short extern vine deja cu thumbnail de la platformă, în timp ce
+un upload nativ e **exact** cazul pentru care există placeholder-ul. Mutat în observer: orice
+short cu poster primește unul, la creare sau când capătă poster mai târziu.
+
+## D-098 — D2: „Amintește-mi" uita la fiecare redeschidere
+
+`isReminded()` — zero apelanți; payload-ul nu spunea niciodată clientului că mementoul e deja
+setat. Butonul funcționa cât ținea ecranul și uita după aceea, pe fiecare dispozitiv.
+
+**Reparat pe două căi, deliberat diferite.** Feed-ul face lookup-ul **în lot** peste pagină
+(o interogare, nu una per short). Endpointul de short singular — deep link, share — n-are
+pagină cu care să grupeze, deci acolo se cheamă `isReminded()`. Legătura partajată era
+singurul loc care oferea mereu un memento deja setat.
+
+## D-099 — Cod mort și o cheie de config care mintea
+
+- `GenerateShortFromEventJob` a rămas orfan după Faza 12 (comanda dispecerizează varianta
+  generică). Șters, testele mutate pe serviciu. Un job pe care nu-l cheamă nimic arată ca o
+  funcționalitate.
+- `ranker.popularity_window_hours` — documentat ca „fereastra de velocitate", niciodată citit;
+  `popularity()` folosește totaluri pe toată durata de viață. Șters: velocitatea e deja
+  acoperită de `trending_score`. O cheie de config care promite un buton inexistent e mai rea
+  decât absența ei.
+- `ShortDeepLink::forCollection()` și `ShortAttributionService::rates()` erau utile, doar
+  nechemate: prima intră acum în payload-ul colecțiilor (un rail curatoriat era singura
+  suprafață pe care nimeni n-o putea trimite unui prieten), a doua în coloanele CTR/CVR din
+  tabelul organizatorului.
+- Clientul mobil nu trimitea `session_id` pe cererea de feed, deci cap-ul anonim de reclame
+  din Faza 11 nu se putea activa niciodată — un bug al meu, de acum două faze, prins de audit.
+
+## D-100 — Regula, ca să nu se mai repete
+
+`ShortsWiringTest` există exact pentru asta. Nu testează servicii; testează **din exterior**:
+ce întoarce chiar feed-ul, ce primește chiar coada, ce provoacă chiar o schimbare de status.
+
+Un test unitar verde pe un serviciu nu dovedește nimic despre cablare — e fix ce aveau deja
+toate cele patru funcționalități de mai sus. **O funcționalitate nu e livrată până nu există
+un test care dovedește că ceva o pornește.**

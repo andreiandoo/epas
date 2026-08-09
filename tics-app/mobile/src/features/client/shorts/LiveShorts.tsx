@@ -50,12 +50,20 @@ type Props = {
 };
 
 export function LiveShorts({ feed = 'for_you', fallback }: Props) {
-  const { items, loading, unavailable, onIndexChange, patch } = useShortsFeed(feed);
+  const { items, playbackHints, loading, unavailable, onIndexChange, patch } = useShortsFeed(feed);
   const { track } = useShortTelemetry();
   const { go } = useNav();
   const showToast = useClient((s) => s.showToast);
 
-  const { autoplayAllowed, dataSaver, prefetchCount } = usePlaybackPreferences();
+  const { autoplayAllowed, dataSaver: localDataSaver, prefetchCount: localPrefetch } = usePlaybackPreferences();
+
+  /* Economia de date porneste daca o cere ORICARE dintre parti: preferinta
+     utilizatorului sau guardrail-ul de cost al platformei (D8/D9). Niciuna n-o
+     poate anula pe cealalta — platforma nu poate fi obligata sa serveasca
+     1080p peste plafonul de banda, iar utilizatorul nu poate fi obligat sa
+     consume date. */
+  const dataSaver = localDataSaver || playbackHints?.data_saver === true;
+  const prefetchCount = dataSaver ? 0 : Math.min(localPrefetch, playbackHints?.prefetch_count ?? localPrefetch);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -468,7 +476,7 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
                 // fundatura, deci devine countdown + „Amintește-mi" (D2).
                 <DropCountdown
                   onSaleAt={short.cta.on_sale_at}
-                  reminded={reminded[short.id] === true}
+                  reminded={reminded[short.id] ?? short.viewer.reminded === true}
                   onRemind={() => void onRemind(short)}
                 />
               ) : short.cta ? (

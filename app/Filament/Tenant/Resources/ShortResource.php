@@ -7,6 +7,7 @@ use App\Filament\Tenant\Resources\ShortResource\Pages\EditShort;
 use App\Filament\Tenant\Resources\ShortResource\Pages\ListShorts;
 use App\Models\Short;
 use App\Models\TicketType;
+use App\Services\Shorts\ShortAttributionService;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Forms;
@@ -181,7 +182,22 @@ class ShortResource extends Resource
 
                 Tables\Columns\TextColumn::make('cta_clicks')->label('CTA')->numeric(),
 
+                // CTR/CVR through the attribution service rather than recomputed
+                // here: one definition of the rate, and it was previously
+                // implemented and never called by anything.
+                Tables\Columns\TextColumn::make('ctr')
+                    ->label('CTR')
+                    ->state(fn (Short $record) => number_format(
+                        app(ShortAttributionService::class)->rates($record)['ctr'] * 100, 1
+                    ).'%'),
+
                 Tables\Columns\TextColumn::make('conversions')->label('Sales')->numeric(),
+
+                Tables\Columns\TextColumn::make('cvr')
+                    ->label('CVR')
+                    ->state(fn (Short $record) => number_format(
+                        app(ShortAttributionService::class)->rates($record)['cvr'] * 100, 1
+                    ).'%'),
 
                 Tables\Columns\TextColumn::make('revenue_cents')
                     ->label('Revenue')

@@ -8,7 +8,7 @@ Plan: `docs/plans/shorts.md` · Mandat: `docs/plans/shorts-START-PROMPT.md` · D
 ## Rezumat pentru owner
 
 **Toate cele 12 faze din `shorts-START-PROMPT.md` sunt livrate și push-uite pe
-`claude/shorts`.** 168 de teste, 437 aserțiuni — verzi **atât pe SQLite, cât și pe
+`claude/shorts`.** 180 de teste, 455 aserțiuni — verzi **atât pe SQLite, cât și pe
 PostgreSQL 16**, motorul de producție. 18 migrații aplicate curat pe Postgres.
 12 comenzi programate, 34 de rute. App-ul mobil se compilează (`tsc` + `vite build`).
 
@@ -33,7 +33,7 @@ PostgreSQL 16**, motorul de producție. 18 migrații aplicate curat pe Postgres.
 ### ✅ Verificat pe PostgreSQL (nu mai e pe lista ta)
 
 Am pornit un PostgreSQL 16 local — era instalat în imagine, doar nu rula — și am rulat
-**toate cele 18 migrații Shorts + întreaga suită (168 de teste) pe motorul real de
+**toate cele 18 migrații Shorts + întreaga suită (180 de teste) pe motorul real de
 producție.** Toate verzi pe Postgres **și** pe SQLite.
 
 A meritat: au ieșit **7 bug-uri care treceau pe SQLite și ar fi picat pe Postgres**
@@ -147,6 +147,30 @@ deodată. Tot în `config/shorts.php` → `autogen`.
 2. **Video real bate poster la egalitate** în ranker (`generated_penalty`, 0.5 față de 3.0 pe
    afinitate). Penalizarea dispare când short-ul capătă asset video.
 
+### 🔍 Audit cap-coadă — patru funcționalități erau deconectate
+
+După ce două verificări la întâmplare au găsit același defect, am făcut un audit mecanic pe
+tot: fiecare job, comandă, resursă Filament, rută, metodă publică, cheie de config și coloană.
+
+**Curat:** 41 de rute, 131 de coloane, toate cele 6 resurse Filament chiar sunt descoperite de
+panouri (verificat pornind panourile, nu presupunând), toate joburile au dispecer.
+
+**Găsit și reparat:**
+
+| Ce | Impact real |
+|---|---|
+| **D8** — `playbackHints()` fără apelant | Guardrail-ul de bandă **doar loga**. Nimic nu scădea vreodată calitatea; plafonul era decorativ, iar factura tot nelimitată. |
+| **D11** — `recordApprovedUgc()` fără apelant | Un participant cu short aprobat **nu primea niciodată** cele 50 de puncte promise. |
+| **D9** — blurhash doar la ingestie | Upload-urile native și cele generate — majoritatea catalogului — n-aveau LQIP. Pe dos: externul vine deja cu thumbnail. |
+| **D2** — `isReminded()` fără apelant | „Amintește-mi" uita la fiecare redeschidere, pe fiecare dispozitiv. |
+| **D3** — clientul nu trimitea `session_id` | Cap-ul anonim de reclame nu se putea activa **niciodată** (bug al meu din Faza 11). |
+| Cod mort | `GenerateShortFromEventJob` orfan după Faza 12 (șters); `ranker.popularity_window_hours` documentat dar necitit (șters). |
+
+**Regula de acum înainte** (`ShortsWiringTest`): un test unitar verde pe un serviciu nu
+dovedește nimic despre cablare — e fix ce aveau toate cele patru de mai sus. O funcționalitate
+nu e livrată până nu există un test care dovedește că **ceva o pornește**. Testele acelea
+verifică din exterior: ce întoarce feed-ul, ce primește coada, ce provoacă o schimbare de status.
+
 ### Ce trebuie făcut de tine înainte de producție
 
 1. **Bunny Stream** — pașii din `shorts.md` §C0 + cheile în `.env`. Fără ele containerul
@@ -192,7 +216,7 @@ npm install && npm run build            # manifestul Vite — altfel panoul Fila
 cp .env.example .env && php artisan key:generate
 
 ./scripts/shorts-dev-migrate.sh --reset # schemă de dev redusă
-php artisan test --filter=Shorts        # 168 de teste (SQLite)
+php artisan test --filter=Shorts        # 180 de teste (SQLite)
 ./vendor/bin/pint
 ```
 

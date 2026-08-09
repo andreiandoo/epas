@@ -11,6 +11,7 @@ use App\Models\ShortEvent;
 use App\Services\Shorts\ShortFeedService;
 use App\Services\Shorts\ShortPayload;
 use App\Services\Shorts\ShortPromotionService;
+use App\Services\Shorts\ShortReminderService;
 use App\Services\Shorts\ShortTelemetryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,6 +85,13 @@ class ShortsController extends Controller
                 $model,
                 liked: $customer ? $model->likeRecords()->where('marketplace_customer_id', $customer->id)->exists() : false,
                 saved: $customer ? $model->saveRecords()->where('marketplace_customer_id', $customer->id)->exists() : false,
+                // The feed batches this lookup across a page; a single short
+                // opened from a deep link has no page to batch with, and without
+                // it the shared link is the one place that always offered a
+                // reminder the viewer had already set (D2).
+                reminded: $customer
+                    ? app(ShortReminderService::class)->isReminded($model, $customer)
+                    : false,
             ),
         ]);
     }

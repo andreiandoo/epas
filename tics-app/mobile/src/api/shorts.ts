@@ -63,7 +63,9 @@ export type ApiShort = {
   /** ['flashing','alcohol',...] — avertismente de continut (D7/D10). */
   content_flags: string[];
   stats: { likes: number; views: number; shares: number };
-  viewer: { liked: boolean; saved: boolean };
+  /** `reminded` vine de la server, deci butonul „Amintește-mi" isi aminteste
+   *  intre sesiuni si intre dispozitive, nu doar cat tine ecranul (D2). */
+  viewer: { liked: boolean; saved: boolean; reminded?: boolean };
   /**
    * Prezent DOAR pe plasarile platite (D3). `label` vine de la server si
    * difera intre un eveniment boostat si o reclama de brand — nu il inlocui
@@ -78,9 +80,23 @@ export type ApiShort = {
   } | null;
 };
 
+/**
+ * Hint-uri de redare decise pe server de guardrail-ul de cost (D8).
+ *
+ * Cand consumul Bunny se apropie de plafon, platforma scade calitatea pentru
+ * toata lumea — decizia ajunge pe telefon prin feed, fara release de app.
+ * Se combina cu preferinta locala: oricare dintre ele porneste economia.
+ */
+export type ShortsPlaybackHints = {
+  data_saver: boolean;
+  max_height: number;
+  prefetch_count: number;
+};
+
 export type ShortsPage = {
   feed: ShortFeedSegment;
   items: ApiShort[];
+  playback?: ShortsPlaybackHints | null;
   next_cursor: string | null;
 };
 
@@ -158,6 +174,11 @@ export async function fetchShortsFeed(opts: {
   if (opts.limit) params.set('limit', String(opts.limit));
   if (opts.tenant) params.set('tenant', String(opts.tenant));
   if (opts.city) params.set('city', opts.city);
+
+  // Fara asta, frequency cap-ul reclamelor nu se poate aplica vizitatorilor
+  // nelogati — adica exact publicului majoritar al feed-ului, care ar vedea
+  // aceeasi reclama la fiecare pagina pana se termina bugetul (D3).
+  params.set('session_id', sessionId());
 
   const query = params.toString();
   const body = await request<Envelope<ShortsPage>>(`/tenant-client/shorts${query ? `?${query}` : ''}`, {

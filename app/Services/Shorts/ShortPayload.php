@@ -22,10 +22,16 @@ class ShortPayload
      * @param  array<int, int>  $savedIds
      * @return array<int, array<string, mixed>>
      */
-    public function collection(Collection $shorts, array $likedIds = [], array $savedIds = [], ?string $feed = null): array
-    {
+    public function collection(
+        Collection $shorts,
+        array $likedIds = [],
+        array $savedIds = [],
+        ?string $feed = null,
+        array $remindedIds = [],
+    ): array {
         $liked = array_flip($likedIds);
         $saved = array_flip($savedIds);
+        $reminded = array_flip($remindedIds);
 
         return $shorts
             ->map(fn (Short $short) => $this->one(
@@ -33,6 +39,7 @@ class ShortPayload
                 isset($liked[$short->id]),
                 isset($saved[$short->id]),
                 $feed,
+                isset($reminded[$short->id]),
             ))
             ->values()
             ->all();
@@ -41,8 +48,13 @@ class ShortPayload
     /**
      * @return array<string, mixed>
      */
-    public function one(Short $short, bool $liked = false, bool $saved = false, ?string $feed = null): array
-    {
+    public function one(
+        Short $short,
+        bool $liked = false,
+        bool $saved = false,
+        ?string $feed = null,
+        bool $reminded = false,
+    ): array {
         return [
             'id' => $short->id,
             'source' => $short->source,
@@ -85,6 +97,10 @@ class ShortPayload
             'viewer' => [
                 'liked' => $liked,
                 'saved' => $saved,
+                // Without this the "remind me" button only remembers within one
+                // session: the client had no way to learn a reminder was already
+                // set, so reopening the app offered it again (D2).
+                'reminded' => $reminded,
             ],
         ];
     }

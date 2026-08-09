@@ -9,13 +9,25 @@
    ca scroll-ul sa nu se opreasca niciodata pe o rotita.
    ========================================================= */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchShortsFeed, type ApiShort, type ShortFeedSegment } from '../../../api/shorts';
+import {
+  fetchShortsFeed,
+  type ApiShort,
+  type ShortFeedSegment,
+  type ShortsPlaybackHints,
+} from '../../../api/shorts';
 
 /** Cu cate short-uri inainte de capat cerem pagina urmatoare. */
 const PREFETCH_THRESHOLD = 3;
 
 export type ShortsFeedState = {
   items: ApiShort[];
+  /**
+   * Decizia serverului privind economia de date (D8). Se combina cu preferinta
+   * locala — oricare dintre ele porneste economia, niciuna n-o poate anula pe
+   * cealalta: platforma nu poate fi obligata sa serveasca 1080p peste plafon,
+   * iar utilizatorul nu poate fi obligat sa consume date.
+   */
+  playbackHints: ShortsPlaybackHints | null;
   loading: boolean;
   /** Prima incarcare a esuat sau a venit goala — apelantul poate cadea pe fallback. */
   unavailable: boolean;
@@ -30,6 +42,7 @@ export type ShortsFeedState = {
 
 export function useShortsFeed(feed: ShortFeedSegment = 'for_you', limit = 10): ShortsFeedState {
   const [items, setItems] = useState<ApiShort[]>([]);
+  const [playbackHints, setPlaybackHints] = useState<ShortsPlaybackHints | null>(null);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +73,7 @@ export function useShortsFeed(feed: ShortFeedSegment = 'for_you', limit = 10): S
       if (!page.next_cursor) exhausted.current = true;
 
       setItems((prev) => [...prev, ...page.items]);
+      if (page.playback) setPlaybackHints(page.playback);
       setError(null);
 
       if (!firstLoadDone.current) {
@@ -109,6 +123,7 @@ export function useShortsFeed(feed: ShortFeedSegment = 'for_you', limit = 10): S
 
   return {
     items,
+    playbackHints,
     loading,
     unavailable,
     error,

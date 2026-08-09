@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\MarketplaceCustomer;
 use App\Models\Short;
 use App\Models\ShortLike;
+use App\Models\ShortReminder;
 use App\Models\ShortSave;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,7 @@ class ShortFeedService
         private readonly ShortFeedRanker $ranker,
         private readonly ShortRightsGuard $rights,
         private readonly ShortPromotionService $promotions,
+        private readonly CostGuardService $costGuard,
     ) {}
 
     /**
@@ -87,9 +89,9 @@ class ShortFeedService
             ? $this->ranker->rank($rows, $customer, $limit)->take($limit)
             : $rows->take($limit);
 
-        [$likedIds, $savedIds] = $this->viewerState($items, $customer);
+        [$likedIds, $savedIds, $remindedIds] = $this->viewerState($items, $customer);
 
-        $payloadItems = $this->payload->collection($items, $likedIds, $savedIds, $feed);
+        $payloadItems = $this->payload->collection($items, $likedIds, $savedIds, $feed, $remindedIds);
 
         // Paid placements are spliced in after ranking, never scored into it, so
         // no amount of budget can move an organic short's position. Only the
@@ -113,6 +115,11 @@ class ShortFeedService
         return [
             'feed' => $feed,
             'items' => $payloadItems,
+            // The cost guardrail's decision, carried to every device without an
+            // app release (D8). Without this the guard only ever observed:
+            // PollBunnyUsageJob recorded usage and logged a warning, and nothing
+            // ever reduced quality — the invoice was still unbounded.
+            'playback' => $this->costGuard->playbackHints(),
             // The cursor always advances along the recency keyset, never along
             // the ranked order — otherwise re-scoring between two pages would
             // make it skip or repeat rows. Injected ads are not part of the
@@ -162,11 +169,12 @@ class ShortFeedService
         $hasMore = $rows->count() > $limit;
         $items = $rows->take($limit);
 
-        [$likedIds, $savedIds] = $this->viewerState($items, $customer);
+        [$likedIds, $savedIds, $remindedIds] = $this->viewerState($items, $customer);
 
         return [
             'feed' => in_array($feed, self::FEEDS, true) ? $feed : 'event',
-            'items' => $this->payload->collection($items, $likedIds, $savedIds, $feed),
+            'items' => $this->payload->collection($items, $likedIds, $savedIds, $feed, $remindedIds),
+            'playback' => $this->costGuard->playbackHints(),
             'next_cursor' => $hasMore ? $this->cursorFor($items->last()) : null,
         ];
     }
@@ -342,7 +350,7 @@ class ShortFeedService
     protected function viewerState(Collection $shorts, ?MarketplaceCustomer $customer): array
     {
         if (! $customer || $shorts->isEmpty()) {
-            return [[], []];
+            return [[], [], []];
         }
 
         $ids = $shorts->pluck('id')->all();
@@ -359,6 +367,15 @@ class ShortFeedService
             ->pluck('short_id')
             ->all();
 
-        return [$liked, $saved];
+        // Batched with the rest rather than asked per short: ShortReminderService
+        // has an isReminded() for the single-short case, and calling it from the
+        // payload would be one query per item.
+        $reminded = ShortReminder::query()
+            ->where('marketplace_customer_id', $customer->id)
+            ->whereIn('short_id', $ids)
+            ->pluck('short_id')
+            ->all();
+
+        return [$liked, $saved, $reminded];
     }
 }

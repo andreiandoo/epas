@@ -14,7 +14,10 @@ use Illuminate\Support\Collection;
  */
 class ShortCollectionService
 {
-    public function __construct(private readonly ShortPayload $payload) {}
+    public function __construct(
+        private readonly ShortPayload $payload,
+        private readonly ShortDeepLink $deepLink,
+    ) {}
 
     /**
      * Active collections, with a small preview of each so the discovery screen
@@ -38,6 +41,10 @@ class ShortCollectionService
                 'description' => $collection->description,
                 'cover_url' => $collection->cover_url,
                 'count' => $collection->shorts->count(),
+                // Makes a rail shareable. Without it ShortDeepLink::forCollection()
+                // had no caller at all, so a curated rail was the one surface in
+                // the feature nobody could send to a friend (D1/B7).
+                'deep_link' => $this->deepLink->forCollection($collection->slug),
                 'preview' => $this->payload->collection($collection->shorts, feed: 'collection'),
             ])
             ->values()

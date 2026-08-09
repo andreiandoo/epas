@@ -54,9 +54,6 @@ return [
         // Half-life (hours) used by the freshness decay.
         'freshness_half_life_hours' => (int) env('SHORTS_FRESH_HALF_LIFE', 72),
 
-        // Popularity window (hours) for the velocity signal.
-        'popularity_window_hours' => (int) env('SHORTS_POPULARITY_WINDOW', 48),
-
         // Log the per-short score breakdown outside production.
         'explain' => (bool) env('SHORTS_RANKER_EXPLAIN', false),
     ],
