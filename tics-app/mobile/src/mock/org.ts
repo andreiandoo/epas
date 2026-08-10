@@ -16,6 +16,11 @@ export type VerticalKey =
   | 'leisure';
 
 export type TicketType = {
+  /**
+   * id-ul REAL din EPAS. Lipseste in datasetul demo — de aia POS-ul refuza
+   * vanzarea cat timp ruleaza pe el: fara id nu se poate scrie o comanda.
+   */
+  id?: number;
   /** nume */
   n: string;
   /** pret */

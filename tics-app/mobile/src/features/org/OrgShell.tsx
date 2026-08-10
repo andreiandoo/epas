@@ -12,6 +12,8 @@ import { Sales } from './Sales';
 import { Reports } from './Reports';
 import { Settings } from './Settings';
 import { OrgModals } from './OrgModals';
+import { useAutoSync } from '../../offline/useAutoSync';
+import { scanPoster } from '../../api/orgApp';
 
 function OrgTabbar() {
   const { tab, go, role } = useSession();
@@ -37,7 +39,23 @@ function OrgTabbar() {
 }
 
 export function OrgShell() {
-  const { tab, toast } = useSession();
+  const { tab, toast, showToast } = useSession();
+
+  /* Coada se goleste singura: la revenirea online, la revenirea in prim-plan
+     si pe un ritm de siguranta. Fara asta, scanurile ramaneau local si
+     reconcilierea nu se intampla niciodata. */
+  useAutoSync(scanPoster, (r) => {
+    if (r.corrections.length) {
+      showToast(`Sincronizat · ${r.sent} scanări, ${r.corrections.length} corectate de server`);
+    } else if (r.sent) {
+      showToast(`Sincronizat · ${r.sent} scanări`);
+    }
+  });
+
+  /* NU blocam shell-ul cand nu exista un cont legat. Aplicatia trebuie sa
+     ramana navigabila pe datele demo — asa a fost portata si asa se poate
+     arata. Conectarea se face dintr-un rand din Setari; pana atunci ecranele
+     merg pe prototip, iar cele care chiar cer serverul o spun singure. */
 
   const body =
     tab === 'CheckIn' ? (

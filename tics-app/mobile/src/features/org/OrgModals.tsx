@@ -7,9 +7,12 @@
    manualentry · payconfirm · banlist · ticketaction · printbadge ·
    occupancy · emailcapture · export.
    ========================================================= */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Avatar, Button, Card, CenterModal, FullModal, Icon, Input, Progress, Sheet, TypeChip, money } from '../../design/components';
 import { useSession } from '../../store/session';
+import { ConnectOrganizer } from './ConnectOrganizer';
+import { useOrgAccount } from './useOrgAccount';
+import { posSale } from '../../api/orgApp';
 import { useStaff } from './useStaff';
 import { CTX, CTX_ORDER, EMERGENCY, GATES, GUESTS, NOTIFS } from '../../mock/org';
 import { useCtx } from './OrgChrome';
@@ -434,9 +437,53 @@ function MManualEntry() {
 }
 
 /* ---------- payconfirm ---------- */
+/* ---------- conectarea contului de organizator de la un partener ---------- */
+function MConnectOrg() {
+  const { closeModal, showToast } = useSession();
+  const org = useOrgAccount();
+
+  return (
+    <FullModal title="Cont de organizator" onClose={closeModal}>
+      {org.connected ? (
+        <Card pad style={{ background: 'var(--green-tint)', borderColor: 'var(--green-border)' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Cont conectat</div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 4 }}>
+            {org.events.length
+              ? `${org.events.length} evenimente disponibile pentru operare.`
+              : 'Niciun eveniment încă — apar aici imediat ce partenerul le publică.'}
+          </div>
+        </Card>
+      ) : (
+        <ConnectOrganizer
+          busy={org.loading}
+          error={org.error}
+          onConnect={async (pid, email, pass) => {
+            const ok = await org.connect(pid, email, pass);
+            if (ok) {
+              showToast('Cont conectat');
+              closeModal();
+            }
+            return ok;
+          }}
+        />
+      )}
+    </FullModal>
+  );
+}
+
 function MPayConfirm() {
-  const { closeModal, modalArg, setSale, cart } = useSession();
+  const { closeModal, modalArg, setSale, cart, showToast } = useSession();
   const c = useCtx();
+  const [busy, setBusy] = useState(false);
+
+  /* `sale_id` se genereaza O SINGURA DATA per cos si se retrimite identic la
+     reincercare: casierul apasa din nou cand reteaua intarzie, iar serverul
+     recunoaste id-ul si nu creeaza a doua comanda. */
+  const saleId = useRef(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `sale-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`,
+  );
   const subtotal = Object.entries(cart).reduce((a, [i, q]) => a + c.tt[Number(i)].p * q, 0);
   const total = subtotal + Math.round(subtotal * 0.03);
   const label = modalArg === 'cash' ? 'Numerar' : modalArg === 'nfc' ? 'Card prin NFC' : 'Card / POS';
@@ -455,12 +502,51 @@ function MPayConfirm() {
       <Button
         variant="primary"
         style={{ marginTop: 14 }}
-        onClick={() => {
+        disabled={busy}
+        onClick={async () => {
+          if (busy) return;
+          setBusy(true);
+
+          /* Trimitem DOAR tipul si cantitatea. Pretul il calculeaza serverul —
+             un pret venit de la client poate fi modificat de oricine
+             intercepteaza cererea. */
+          const items = Object.entries(cart)
+            .filter(([, q]) => q > 0)
+            .map(([i, q]) => ({ id: c.tt[Number(i)]?.id, qty: q }));
+
+          /* Datasetul demo n-are id-uri reale de tip de bilet. Mai bine
+             refuzam explicit decat sa trimitem o comanda inventata: casierul
+             are omul in fata si trebuie sa stie ca n-a incasat. */
+          if (items.some((it) => !it.id)) {
+            setBusy(false);
+            showToast('Vânzarea cere un eveniment real — conectează contul de organizator');
+            return;
+          }
+
+          const r = await posSale({
+            eventId: Number(c.event),
+            items: items.map((it) => ({ ticket_type_id: it.id as number, qty: it.qty })),
+            paymentMethod: (modalArg === 'cash' ? 'cash' : modalArg === 'nfc' ? 'nfc' : 'card') as
+              | 'cash'
+              | 'card'
+              | 'nfc',
+            saleId: saleId.current,
+          });
+
+          setBusy(false);
+
+          if (!r.ok) {
+            // Ramanem in modal: casierul are omul in fata si trebuie sa poata
+            // reincerca sau anula, nu sa fie aruncat pe un ecran de succes fals.
+            showToast(r.error ?? 'Vânzare eșuată');
+            return;
+          }
+
           closeModal();
           setSale('success');
         }}
       >
-        Confirmă plata
+        {busy ? 'Se încasează…' : 'Confirmă plata'}
       </Button>
       <Button variant="ghost" style={{ marginTop: 8 }} onClick={closeModal}>
         Anulează
@@ -963,6 +1049,7 @@ export function OrgModals() {
     case 'breakdown': return <MBreakdown />;
     case 'scandetails': return <MScanDetails />;
     case 'manualentry': return <MManualEntry />;
+    case 'connectorg': return <MConnectOrg />;
     case 'payconfirm': return <MPayConfirm />;
     case 'ticketaction': return <MTicketAction />;
     case 'banlist': return <MBanlist />;

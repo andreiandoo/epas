@@ -9,6 +9,8 @@ import { useSession, isAdminRole, type AppTheme, type SettingsFlags } from '../.
 import { useCtx } from './OrgChrome';
 import { STAFF } from '../../mock/org';
 import { useOffline } from '../../offline/useOffline';
+import { useOrgAccount } from './useOrgAccount';
+import { fetchOrgTickets } from '../../api/orgApp';
 import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../ota';
 
 const APP_VERSION = 'Tixello · Cont organizator';
@@ -183,7 +185,17 @@ export function Settings() {
      nu al contului de client. */
   const staffName = STAFF.find((m) => m.role === role)?.nm ?? 'Mihai Coman';
   /* Contoarele de mai jos erau fixe in port; acum vin din cache-ul real. */
-  const offline = useOffline();
+  const c = useCtx();
+  const eventId = c.event ? String(c.event) : undefined;
+  const offline = useOffline(eventId);
+  const orgAccount = useOrgAccount();
+
+  /** Aduce inventarul evenimentului curent pentru scanare fara internet. */
+  const downloadInventory = async () => {
+    if (!eventId) return;
+    const n = await offline.download(async () => (await fetchOrgTickets(eventId)) ?? []);
+    showToast(n ? `${n.toLocaleString('ro-RO')} bilete descărcate` : 'Nu am putut descărca biletele');
+  };
   const [autoLogout, setAutoLogout] = useState('5 min');
 
   return (
@@ -197,6 +209,11 @@ export function Settings() {
         <InfoRow label="Nume" value={staffName} />
         <InfoRow label="Rol" value={<span className={`tag tag-${role === 'admin' ? 'admin' : role === 'manager' ? 'mgr' : 'staff'}`}>{roleLabel}</span>} />
         <InfoRow label="Poartă Asignată" value="Poarta 1" />
+        <AdminRow
+          label="Cont de organizator"
+          hint={orgAccount.connected ? 'conectat' : 'neconectat'}
+          onClick={() => openModal('connectorg')}
+        />
         <AdminRow label="Comută tipul de cont" hint="client / organizator" onClick={goChooser} last />
       </Card>
 
@@ -235,6 +252,23 @@ export function Settings() {
             ? `${offline.cached.toLocaleString('ro-RO')} bilete în cache local · scanezi fără internet`
             : 'Descarcă biletele pentru a scana fără internet'}
         </div>
+
+        {/* Butonul lipsea: inventarul nu se putea descarca din interfata, deci
+            modul offline nu putea fi folosit niciodata la o poarta reala. */}
+        <Button
+          variant="ghost"
+          icon="download"
+          onClick={downloadInventory}
+          disabled={offline.busy || !eventId}
+          style={{ marginBottom: 10 }}
+        >
+          {offline.busy
+            ? 'Se descarcă…'
+            : offline.cached
+              ? 'Reîmprospătează biletele'
+              : 'Descarcă biletele'}
+        </Button>
+
         <AdminRow
           label="Coadă de sincronizare"
           badge={offline.pending ? `${offline.pending} în așteptare` : 'la zi'}
@@ -242,6 +276,43 @@ export function Settings() {
           last
         />
       </Card>
+
+      {/* Reconcilierea produce ALERTE, nu usi inchise: al doilea om a intrat
+          deja. Fara sectiunea asta, duplicatele descoperite dupa sincronizare
+          nu ajungeau nicaieri. */}
+      {offline.duplicates.length ? (
+        <>
+          <SectionHead title="Bilete scanate de mai multe ori" />
+          <Card pad style={{ borderColor: 'var(--amber-border)', background: 'var(--amber-tint)' }}>
+            {offline.duplicates.slice(0, 6).map((d) => (
+              <div key={d.code} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{d.code}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  {[d.winner, ...d.losers]
+                    .map(
+                      (x) =>
+                        `${x.gateId ?? 'poartă necunoscută'} ${new Date(x.at).toLocaleTimeString('ro-RO', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`,
+                    )
+                    .join(' · ')}
+                </div>
+                {!d.winner.trusted ? (
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                    ceas nesincronizat pe dispozitiv — ordinea e aproximativă
+                  </div>
+                ) : null}
+              </div>
+            ))}
+            {offline.duplicates.length > 6 ? (
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                și încă {offline.duplicates.length - 6}
+              </div>
+            ) : null}
+          </Card>
+        </>
+      ) : null}
 
       {admin ? (
         <>
