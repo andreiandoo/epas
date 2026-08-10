@@ -19,6 +19,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
+use Filament\Schemas\Components\Utilities\Get;
 
 /**
  * Ad review — the gate every campaign passes through (D3).
@@ -39,6 +40,13 @@ class ShortPromotionResource extends Resource
     protected static UnitEnum|string|null $navigationGroup = 'Core';
 
     protected static ?string $navigationLabel = 'Ad campaigns';
+
+
+    /* Submeniu sub Shorts: cele patru resurse sunt un singur feature,
+
+       iar in bara laterala aratau ca patru lucruri fara legatura. */
+
+    protected static ?string $navigationParentItem = 'Shorts';
 
     protected static ?string $modelLabel = 'Campaign';
 
@@ -100,7 +108,7 @@ class ShortPromotionResource extends Resource
                     Forms\Components\TextInput::make('disclosure_label')
                         ->label('Disclosure label')
                         ->maxLength(64)
-                        ->placeholder(fn (Forms\Get $get) => match ($get('objective')) {
+                        ->placeholder(fn (Get $get) => match ($get('objective')) {
                             ShortPromotion::OBJECTIVE_BRAND => config('shorts.ads.labels.brand', 'Reclamă'),
                             ShortPromotion::OBJECTIVE_HOUSE => config('shorts.ads.labels.house'),
                             default => config('shorts.ads.labels.default', 'Sponsorizat'),

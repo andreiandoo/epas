@@ -34,6 +34,13 @@ class ShortCollectionResource extends Resource
 
     protected static ?string $navigationLabel = 'Short collections';
 
+
+    /* Submeniu sub Shorts: cele patru resurse sunt un singur feature,
+
+       iar in bara laterala aratau ca patru lucruri fara legatura. */
+
+    protected static ?string $navigationParentItem = 'Shorts';
+
     protected static ?string $modelLabel = 'Collection';
 
     protected static ?string $pluralModelLabel = 'Short collections';

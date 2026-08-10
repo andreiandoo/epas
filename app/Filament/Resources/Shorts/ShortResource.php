@@ -27,6 +27,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use UnitEnum;
+use Filament\Schemas\Components\Utilities\Get;
 
 /**
  * Central curation surface for shorts.
@@ -77,7 +78,7 @@ class ShortResource extends Resource
                                 ->url()
                                 ->maxLength(2048)
                                 ->helperText('Paste the post link — metadata, embed and thumbnail are fetched from it.')
-                                ->visible(fn (Forms\Get $get) => $get('source') !== 'upload')
+                                ->visible(fn (Get $get) => $get('source') !== 'upload')
                                 ->columnSpan(1),
 
                             Forms\Components\TextInput::make('provider_asset_id')
@@ -85,7 +86,7 @@ class ShortResource extends Resource
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->helperText('Filled in by the upload session; playback URLs are signed per request.')
-                                ->visible(fn (Forms\Get $get) => $get('source') === 'upload')
+                                ->visible(fn (Get $get) => $get('source') === 'upload')
                                 ->columnSpan(1),
 
                             Forms\Components\Toggle::make('ready')
@@ -93,7 +94,7 @@ class ShortResource extends Resource
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->helperText('Set by the provider webhook once transcoding finishes.')
-                                ->visible(fn (Forms\Get $get) => $get('source') === 'upload')
+                                ->visible(fn (Get $get) => $get('source') === 'upload')
                                 ->columnSpan(1),
                         ])
                         ->columns(2),
@@ -148,26 +149,26 @@ class ShortResource extends Resource
 
                             Forms\Components\TextInput::make('cta_label')
                                 ->maxLength(64)
-                                ->visible(fn (Forms\Get $get) => $get('cta_type') !== 'none')
+                                ->visible(fn (Get $get) => $get('cta_type') !== 'none')
                                 ->columnSpan(1),
 
                             Forms\Components\TextInput::make('cta_url')
                                 ->url()
                                 ->maxLength(2048)
-                                ->visible(fn (Forms\Get $get) => $get('cta_type') === 'external')
+                                ->visible(fn (Get $get) => $get('cta_type') === 'external')
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('promo_code')
                                 ->maxLength(64)
                                 ->helperText('Pre-applied at checkout. Must exist in the coupon system.')
-                                ->visible(fn (Forms\Get $get) => $get('cta_type') === 'buy_tickets')
+                                ->visible(fn (Get $get) => $get('cta_type') === 'buy_tickets')
                                 ->columnSpan(1),
 
                             Forms\Components\TextInput::make('cta_ticket_type_id')
                                 ->label('Ticket type ID')
                                 ->numeric()
                                 ->helperText('Pre-selects this ticket in checkout.')
-                                ->visible(fn (Forms\Get $get) => $get('cta_type') === 'buy_tickets')
+                                ->visible(fn (Get $get) => $get('cta_type') === 'buy_tickets')
                                 ->columnSpan(1),
                         ])
                         ->columns(2),

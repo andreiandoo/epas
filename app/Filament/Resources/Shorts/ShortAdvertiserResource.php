@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use UnitEnum;
+use Filament\Schemas\Components\Utilities\Get;
 
 /**
  * Who pays for ads in the feed (D3).
@@ -33,6 +34,13 @@ class ShortAdvertiserResource extends Resource
     protected static UnitEnum|string|null $navigationGroup = 'Core';
 
     protected static ?string $navigationLabel = 'Ad advertisers';
+
+
+    /* Submeniu sub Shorts: cele patru resurse sunt un singur feature,
+
+       iar in bara laterala aratau ca patru lucruri fara legatura. */
+
+    protected static ?string $navigationParentItem = 'Shorts';
 
     protected static ?string $modelLabel = 'Advertiser';
 
@@ -61,7 +69,7 @@ class ShortAdvertiserResource extends Resource
                     Forms\Components\TextInput::make('tenant_id')
                         ->label('Tenant ID')
                         ->numeric()
-                        ->visible(fn (Forms\Get $get) => $get('type') === ShortAdvertiser::TYPE_TENANT),
+                        ->visible(fn (Get $get) => $get('type') === ShortAdvertiser::TYPE_TENANT),
 
                     Forms\Components\TextInput::make('contact_email')->email()->maxLength(190),
 
