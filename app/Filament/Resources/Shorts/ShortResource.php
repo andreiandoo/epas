@@ -42,7 +42,7 @@ class ShortResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-play-circle';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static UnitEnum|string|null $navigationGroup = 'Shorts';
 
     protected static ?string $navigationLabel = 'Shorts';
 
@@ -243,8 +243,16 @@ class ShortResource extends Resource
                             Forms\Components\MorphToSelect::make('owner')
                                 ->label('Owner')
                                 ->types([
+                                    /* `slug`, nu `title`: Event declara `title` in
+                                       $translatable, deci atributul intoarce un ARRAY de
+                                       traduceri, iar MorphToSelect cere ?string — de aici
+                                       500 la deschiderea formularului.
+                                       `titleAttribute` e folosit si la CAUTARE, deci trebuie
+                                       sa fie o coloana reala; un accesor ca `name` ar afisa
+                                       corect, dar ar rupe cautarea cu SQL pe o coloana
+                                       inexistenta. `slug` e real, unic si lizibil. */
                                     Forms\Components\MorphToSelect\Type::make(Event::class)
-                                        ->titleAttribute('title'),
+                                        ->titleAttribute('slug'),
                                     Forms\Components\MorphToSelect\Type::make(Artist::class)
                                         ->titleAttribute('name'),
                                     Forms\Components\MorphToSelect\Type::make(Tenant::class)

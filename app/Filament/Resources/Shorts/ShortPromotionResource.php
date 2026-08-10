@@ -37,16 +37,9 @@ class ShortPromotionResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-megaphone';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static UnitEnum|string|null $navigationGroup = 'Shorts';
 
     protected static ?string $navigationLabel = 'Ad campaigns';
-
-
-    /* Submeniu sub Shorts: cele patru resurse sunt un singur feature,
-
-       iar in bara laterala aratau ca patru lucruri fara legatura. */
-
-    protected static ?string $navigationParentItem = 'Shorts';
 
     protected static ?string $modelLabel = 'Campaign';
 

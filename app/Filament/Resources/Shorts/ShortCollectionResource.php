@@ -30,16 +30,9 @@ class ShortCollectionResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static UnitEnum|string|null $navigationGroup = 'Shorts';
 
     protected static ?string $navigationLabel = 'Short collections';
-
-
-    /* Submeniu sub Shorts: cele patru resurse sunt un singur feature,
-
-       iar in bara laterala aratau ca patru lucruri fara legatura. */
-
-    protected static ?string $navigationParentItem = 'Shorts';
 
     protected static ?string $modelLabel = 'Collection';
 
