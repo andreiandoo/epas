@@ -176,7 +176,7 @@ class OrganizerController extends Controller
             'scans' => 'required|array|max:200',
             'scans.*.id' => 'required|string|max:64',
             'scans.*.code' => 'required|string|max:120',
-            'scans.*.event_id' => 'required|string|max:40',
+            'scans.*.event_id' => 'required|integer',
             'scans.*.device_id' => 'required|string|max:100',
             'scans.*.gate_id' => 'nullable|string|max:40',
             'scans.*.scanned_at' => 'required|date',
@@ -203,7 +203,7 @@ class OrganizerController extends Controller
                     $result = 'valid';
                     if (! $ticket) {
                         $result = 'unknown';
-                    } elseif (($ticket->meta['event_id'] ?? null) && (string) $ticket->meta['event_id'] !== $s['event_id']) {
+                    } elseif (($ticket->meta['event_id'] ?? null) && (int) $ticket->meta['event_id'] !== (int) $s['event_id']) {
                         $result = 'wrong-event';
                     } elseif ($ticket->status !== 'valid') {
                         $result = 'void';
@@ -228,7 +228,7 @@ class OrganizerController extends Controller
                     DB::table('ticket_scans')->insert([
                         'client_scan_id' => $s['id'],
                         'ticket_code' => $s['code'],
-                        'event_id' => $s['event_id'],
+                        'event_id' => (int) $s['event_id'],
                         'marketplace_organizer_id' => $org->id,
                         'device_id' => $s['device_id'],
                         'gate_id' => $s['gate_id'] ?? null,

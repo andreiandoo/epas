@@ -23,6 +23,11 @@ use Illuminate\Support\Facades\Schema;
  *
  * `client_scan_id` e generat pe telefon si face primirea IDEMPOTENTA: daca
  * raspunsul se pierde si aplicatia retrimite, nu se numara de doua ori.
+ *
+ * FARA CHEI STRAINE, deliberat. Jurnalul trebuie sa poata inregistra si un cod
+ * necunoscut (`result = 'unknown'` inseamna exact ca biletul NU exista), si sa
+ * supravietuiasca stergerii unui eveniment. O cheie straina l-ar impiedica sa
+ * faca ambele.
  */
 return new class extends Migration
 {
@@ -35,7 +40,10 @@ return new class extends Migration
             $table->string('client_scan_id', 64)->unique();
 
             $table->string('ticket_code', 120)->index();
-            $table->string('event_id', 40)->index();
+            /* bigint, ca in restul schemei. Pe PostgreSQL `varchar = bigint`
+               nu e conversie tacita, ci eroare — un raport care ar lega
+               ticket_scans de events pur si simplu ar crapa. */
+            $table->unsignedBigInteger('event_id')->index();
             $table->unsignedBigInteger('marketplace_organizer_id')->nullable()->index();
             $table->unsignedBigInteger('tenant_id')->nullable()->index();
 
