@@ -28,7 +28,7 @@ import {
 import { BottomNav, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
-import { useNotifications } from '../accountData';
+import { useFavorites, useNotifications, useReviews, useTickets, type SavedItem } from '../accountData';
 
 type Ev = Record<string, any>;
 const evOf = (id: string) => (EV as Record<string, Ev>)[id];
@@ -300,6 +300,7 @@ export function Saved() {
   const toggleSaved = useClient((s) => s.toggleSaved);
   const savedRadar = useClient((s) => s.savedRadar);
   const toggleSavedRadar = useClient((s) => s.toggleSavedRadar);
+  const favs = useFavorites();
 
   /* Salvatele vin din doua surse: datasetul local (rezolvabil dupa id) si TICS
      Radar (pastrat ca obiect, fiindca n-are corespondent local). Le aducem la
@@ -313,8 +314,11 @@ export function Saved() {
     from: number;
     poster?: string | null;
     radar: boolean;
+    /** favorit din contul real: scoaterea se face pe server, nu local */
+    fav?: SavedItem;
   };
-  const list: Row[] = saved
+
+  const localList: Row[] = saved
     .map((id): Row | null => {
       const r = savedRadar[id];
       if (r) {
@@ -344,6 +348,23 @@ export function Saved() {
     })
     .filter((x): x is Row => x !== null);
 
+  /* Cu un cont conectat, sursa de adevar e serverul: favoritele traiesc acolo
+     si trebuie sa se vada la fel pe orice dispozitiv. Salvarile locale raman
+     doar pentru sesiunea fara cont. */
+  const list: Row[] = favs.items
+    ? favs.items.map((f) => ({
+        id: String(f.itemId),
+        s: f.title,
+        city: f.sub,
+        d: '',
+        type: f.kind === 'artist' ? 'artist' : 'event',
+        from: 0,
+        poster: f.img,
+        radar: false,
+        fav: f,
+      }))
+    : localList;
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <TopBar>
@@ -368,7 +389,7 @@ export function Saved() {
           {list.map((ev) => (
             <div key={ev.id} className="card" style={sx('overflow:hidden;display:flex;gap:12px;padding:11px')}>
               <div
-                onClick={() => go(ev.radar ? 'ticsoffers' : 'event', { id: ev.id })}
+                onClick={() => go(ev.radar ? 'ticsoffers' : ev.type === 'artist' ? 'artist' : 'event', { id: ev.id })}
                 style={sx('display:flex;gap:12px;flex:1;cursor:pointer;min-width:0')}
               >
                 {ev.poster ? (
@@ -389,21 +410,26 @@ export function Saved() {
                   <div className="row muted" style={sx('gap:5px;font-size:11.5px;margin-top:3px')}>
                     <Ic svg={I.pin} /> {[ev.city, ev.d].filter(Boolean).join(' · ')}
                   </div>
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      color: ev.type === 'experience' ? 'var(--green-2)' : 'var(--indigo-2)',
-                      fontSize: '13.5px',
-                      marginTop: '6px',
-                    }}
-                  >
-                    de la {money(ev.from)} lei
-                  </div>
+                  {/* pretul apare doar cand il stim; favoritele din cont nu-l poarta */}
+                  {ev.from ? (
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: ev.type === 'experience' ? 'var(--green-2)' : 'var(--indigo-2)',
+                        fontSize: '13.5px',
+                        marginTop: '6px',
+                      }}
+                    >
+                      de la {money(ev.from)} lei
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <button
                 className="icon-btn"
-                onClick={() => (ev.radar ? toggleSavedRadar(savedRadar[ev.id]) : toggleSaved(ev.id))}
+                onClick={() =>
+                  ev.fav ? favs.remove(ev.fav) : ev.radar ? toggleSavedRadar(savedRadar[ev.id]) : toggleSaved(ev.id)
+                }
                 style={sx('align-self:flex-start;color:var(--red)')}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -491,7 +517,53 @@ export function PrefsEdit() {
    ========================================================= */
 export function Reviews() {
   const { go, back } = useNav();
-  const toReview = (ATTENDED as { ev: string; when: string; reviewed: boolean }[]).filter((a) => !a.reviewed);
+  const { list, stats } = useReviews();
+  const { groups, live: ticketsLive } = useTickets();
+
+  /* „De recenzat" nu are endpoint propriu, dar se poate deduce: evenimentele
+     cu bilet care au trecut deja si pentru care nu exista inca o recenzie.
+     Potrivirea se face pe TITLU, fiindca recenziile intorc numele
+     evenimentului, nu id-ul lui — daca API-ul incepe sa dea `event_id`,
+     inlocuieste comparatia de mai jos cu una pe id. */
+  const reviewed = new Set((list ?? []).map((r) => (r.event ?? '').trim().toLowerCase()));
+  const toReview: { ev: string; name: string; when: string; poster: Ev }[] = ticketsLive
+    ? groups
+        .filter((g) => !g.upcoming && !reviewed.has(g.title.trim().toLowerCase()))
+        .map((g) => ({ ev: g.ev, name: g.title, when: g.date, poster: { g: '★' } }))
+    : (ATTENDED as { ev: string; when: string; reviewed: boolean }[])
+        .filter((a) => !a.reviewed)
+        .map((a) => ({ ev: a.ev, name: evOf(a.ev).s, when: a.when, poster: evOf(a.ev) }));
+
+  /* Cele doua surse au campuri diferite (prototipul are `target`/`txt` si un
+     eveniment rezolvabil dupa id; API-ul da titlu de eveniment ca text si o
+     stare de moderare). Le aducem la un rand comun, ca marcajul de mai jos sa
+     ramana cel din prototip. */
+  type Row = { key: string; ev: Ev; name: string; sub: string; rating: number; txt: string; pending: boolean };
+
+  const rows: Row[] = list
+    ? list.map((r): Row => ({
+        key: String(r.id),
+        // fara imagine in API: posterul cade pe scena implicita, ca in prototip
+        ev: { g: '★' },
+        name: r.event ?? 'Eveniment',
+        sub: r.created_at ? new Date(r.created_at).toLocaleDateString('ro-RO') : '',
+        rating: r.rating,
+        // titlul recenziei, cand exista, e primul rand al textului
+        txt: [r.title, r.body].filter(Boolean).join(' — '),
+        pending: r.status !== 'published',
+      }))
+    : (MYREVIEWS as Ev[]).map((r, i): Row => {
+        const ev = evOf(r.ev);
+        return {
+          key: `proto-${i}`,
+          ev,
+          name: ev.s,
+          sub: `${r.target} · ${r.when}`,
+          rating: r.rating,
+          txt: r.txt,
+          pending: false,
+        };
+      });
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -500,7 +572,15 @@ export function Reviews() {
           <div className="icon-btn" onClick={back}>
             <Ic svg={I.back} />
           </div>
-          <div className="h2">Recenziile mele</div>
+          <div>
+            <div className="h2">Recenziile mele</div>
+            {stats ? (
+              <div className="muted" style={sx('font-size:11.5px')}>
+                {stats.total} recenzii · medie {stats.avg.toFixed(1)}
+                {stats.pending ? ` · ${stats.pending} în așteptare` : ''}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div style={sx('width:42px')} />
       </TopBar>
@@ -511,25 +591,22 @@ export function Reviews() {
             De recenzat · ai participat
           </div>
           <div style={sx('display:flex;flex-direction:column;gap:11px')}>
-            {toReview.map((a) => {
-              const ev = evOf(a.ev);
-              return (
-                <div key={a.ev} className="card" style={sx('padding:13px')}>
-                  <div className="row" style={sx('gap:12px')}>
-                    <Raw html={poster(ev, '', 'width:52px;height:52px;border-radius:14px;flex:none', undefined)} />
-                    <div style={sx('flex:1')}>
-                      <div style={sx('font-weight:600;font-size:13.5px')}>{ev.s}</div>
-                      <div className="muted" style={sx('font-size:11.5px')}>
-                        Ai participat · {a.when}
-                      </div>
+            {toReview.map((a) => (
+              <div key={a.ev} className="card" style={sx('padding:13px')}>
+                <div className="row" style={sx('gap:12px')}>
+                  <Raw html={poster(a.poster, '', 'width:52px;height:52px;border-radius:14px;flex:none', undefined)} />
+                  <div style={sx('flex:1')}>
+                    <div style={sx('font-weight:600;font-size:13.5px')}>{a.name}</div>
+                    <div className="muted" style={sx('font-size:11.5px')}>
+                      Ai participat · {a.when}
                     </div>
                   </div>
-                  <button className="cta" onClick={() => go('review', { id: a.ev })} style={sx('margin-top:11px;padding:12px')}>
-                    <Ic svg={I.star} /> Lasă o recenzie
-                  </button>
                 </div>
-              );
-            })}
+                <button className="cta" onClick={() => go('review', { id: a.ev })} style={sx('margin-top:11px;padding:12px')}>
+                  <Ic svg={I.star} /> Lasă o recenzie
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
@@ -539,31 +616,34 @@ export function Reviews() {
           Recenziile tale
         </div>
         <div style={sx('display:flex;flex-direction:column;gap:11px')}>
-          {(MYREVIEWS as Ev[]).map((r, i) => {
-            const ev = evOf(r.ev);
-            return (
-              <div key={i} className="card" style={sx('padding:14px')}>
-                <div className="between">
-                  <div className="row" style={sx('gap:11px')}>
-                    <Raw html={poster(ev, '', 'width:44px;height:44px;border-radius:12px;flex:none', undefined)} />
-                    <div>
-                      <div style={sx('font-weight:600;font-size:13.5px')}>{ev.s}</div>
-                      <div className="muted" style={sx('font-size:10.5px')}>
-                        {r.target} · {r.when}
-                      </div>
+          {rows.map((r) => (
+            <div key={r.key} className="card" style={sx('padding:14px')}>
+              <div className="between">
+                <div className="row" style={sx('gap:11px')}>
+                  <Raw html={poster(r.ev, '', 'width:44px;height:44px;border-radius:12px;flex:none', undefined)} />
+                  <div>
+                    <div style={sx('font-weight:600;font-size:13.5px')}>{r.name}</div>
+                    <div className="muted" style={sx('font-size:10.5px')}>
+                      {r.sub}
+                      {r.pending ? ' · în așteptare' : ''}
                     </div>
                   </div>
-                  <div style={sx('color:var(--amber);font-size:12px;letter-spacing:1px')}>
-                    {'★'.repeat(r.rating)}
-                    {'☆'.repeat(5 - r.rating)}
-                  </div>
                 </div>
-                <p className="muted" style={sx('font-size:12.5px;line-height:1.5;margin-top:10px')}>
-                  {r.txt}
-                </p>
+                <div style={sx('color:var(--amber);font-size:12px;letter-spacing:1px')}>
+                  {'★'.repeat(r.rating)}
+                  {'☆'.repeat(5 - r.rating)}
+                </div>
               </div>
-            );
-          })}
+              <p className="muted" style={sx('font-size:12.5px;line-height:1.5;margin-top:10px')}>
+                {r.txt}
+              </p>
+            </div>
+          ))}
+          {!rows.length ? (
+            <div className="muted" style={sx('font-size:12.5px;text-align:center;padding:18px 0')}>
+              Nu ai scris nicio recenzie încă.
+            </div>
+          ) : null}
         </div>
       </div>
       <div style={sx('height:12px')} />

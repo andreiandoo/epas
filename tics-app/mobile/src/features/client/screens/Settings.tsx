@@ -13,15 +13,39 @@ import { BottomNav, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
+import { usePaymentMethods } from '../accountData';
+import { addPaymentMethod, isLoggedIn } from '../../../api/customer';
 
-/* ---------- fld(label, val, ph, type) ---------- */
-function Fld({ label, val, ph, type }: { label: string; val?: string; ph?: string; type?: string }) {
+/* ---------- fld(label, val, ph, type) ----------
+   `onChange` e optional: campurile decorative din prototip raman exact cum erau,
+   iar cele care chiar trimit ceva la server isi ridica valoarea in parinte. */
+function Fld({
+  label,
+  val,
+  ph,
+  type,
+  onChange,
+}: {
+  label: string;
+  val?: string;
+  ph?: string;
+  type?: string;
+  onChange?: (v: string) => void;
+}) {
   const [v, setV] = useState(val ?? '');
   return (
     <div style={sx('margin-top:13px')}>
       <div className="label">{label}</div>
       <div className="field">
-        <input type={type} value={v} placeholder={ph ?? ''} onChange={(e) => setV(e.target.value)} />
+        <input
+          type={type}
+          value={v}
+          placeholder={ph ?? ''}
+          onChange={(e) => {
+            setV(e.target.value);
+            onChange?.(e.target.value);
+          }}
+        />
       </div>
     </div>
   );
@@ -293,11 +317,53 @@ export function SetSecurity() {
   );
 }
 
+/* Cardurile reale n-au gradient stocat; il alegem dupa brand, ca sa arate ca in
+   prototip (unde gradientul venea odata cu datele demo). */
+const CARD_GRAD: Record<string, string> = {
+  visa: 'linear-gradient(140deg,#1a1f71,#2d4bd6)',
+  mastercard: 'linear-gradient(140deg,#3d1c00,#eb001b 130%)',
+  amex: 'linear-gradient(140deg,#0b3d5c,#1f8fd6)',
+};
+const gradOf = (brand: string | null) =>
+  CARD_GRAD[(brand ?? '').toLowerCase()] ?? 'linear-gradient(140deg,#241d3a,#4c3f8a)';
+
 export function SetPayment() {
   const { go } = useNav();
-  const cards = useClient((s) => s.cards);
+  const localCards = useClient((s) => s.cards);
   const cardPrimary = useClient((s) => s.cardPrimary);
   const cardDel = useClient((s) => s.cardDel);
+  const api = usePaymentMethods();
+
+  /* Un singur rand pentru ambele surse. `id` exista doar la cele reale — dupa el
+     decidem daca stergerea merge la server sau doar in starea locala. */
+  type Row = { key: string; id: number | null; brand: string; last: string; exp: string; holder: string; grad: string; primary: boolean };
+
+  const cards: Row[] = api.cards
+    ? api.cards.map((c) => ({
+        key: String(c.id),
+        id: c.id,
+        brand: (c.brand ?? 'card').replace(/^./, (m) => m.toUpperCase()),
+        last: c.last4 ?? '••••',
+        exp: c.exp ?? '—',
+        holder: c.holder ?? api.billing?.name ?? '',
+        grad: gradOf(c.brand),
+        primary: c.is_default,
+      }))
+    : /* maparea e 1:1, deci indexul randului e chiar indexul din starea locala,
+         cel pe care il asteapta `cardPrimary`/`cardDel` */
+      localCards.map((c) => ({
+        key: c.last,
+        id: null,
+        brand: c.brand,
+        last: c.last,
+        exp: c.exp,
+        holder: 'Andrei Popescu',
+        grad: c.grad,
+        primary: c.primary,
+      }));
+
+  const onPrimary = (r: Row, i: number) => (r.id ? api.makeDefault(r.id) : cardPrimary(i));
+  const onDelete = (r: Row, i: number) => (r.id ? api.remove(r.id) : cardDel(i));
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -310,7 +376,7 @@ export function SetPayment() {
           {cards.length ? (
             cards.map((c, i) => (
               <div
-                key={c.last}
+                key={c.key}
                 style={{ borderRadius: 18, padding: 16, background: c.grad, color: '#fff', position: 'relative', boxShadow: 'var(--sh)' }}
               >
                 <div className="between">
@@ -323,7 +389,7 @@ export function SetPayment() {
                     ) : (
                       <button
                         className="chip"
-                        onClick={() => cardPrimary(i)}
+                        onClick={() => onPrimary(c, i)}
                         style={sx('padding:5px 10px;background:rgba(255,255,255,.18);color:#fff;border:none;font-size:11px')}
                       >
                         Setează principal
@@ -331,7 +397,7 @@ export function SetPayment() {
                     )}
                     <button
                       className="circ"
-                      onClick={() => cardDel(i)}
+                      onClick={() => onDelete(c, i)}
                       style={sx('position:static;width:30px;height:30px;background:rgba(255,255,255,.18);color:#fff;border:none')}
                       aria-label="Șterge cardul"
                     >
@@ -341,7 +407,7 @@ export function SetPayment() {
                 </div>
                 <div style={sx('font-size:19px;letter-spacing:2px;margin-top:22px;font-weight:500')}>•••• {c.last}</div>
                 <div className="between" style={sx('margin-top:10px;font-size:11px;opacity:.85')}>
-                  <span>Andrei Popescu</span>
+                  <span>{c.holder}</span>
                   <span>Exp {c.exp}</span>
                 </div>
               </div>
@@ -394,6 +460,27 @@ export function SetPayment() {
 export function SetAddCard() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
+  const [num, setNum] = useState('');
+  const [exp, setExp] = useState('');
+  const [holder, setHolder] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  /* Cand exista cont, cardul se salveaza pe server (doar brand + ultimele 4
+     cifre — restul nu pleaca nicaieri). Fara cont ramane comportamentul din
+     prototip: doar confirmarea vizuala. */
+  const save = async () => {
+    if (!isLoggedIn()) {
+      showToast('Card salvat');
+      back();
+      return;
+    }
+    setBusy(true);
+    const id = await addPaymentMethod(num, holder || undefined, exp || undefined);
+    setBusy(false);
+    showToast(id ? 'Card salvat' : 'Nu am putut salva cardul');
+    if (id) back();
+  };
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <SetHead title="Adaugă un card" />
@@ -413,20 +500,20 @@ export function SetAddCard() {
         </div>
       </div>
       <div className="pad">
-        <Fld label="Numărul cardului" ph="1234 5678 9012 3456" />
+        <Fld label="Numărul cardului" ph="1234 5678 9012 3456" onChange={setNum} />
         <div className="row" style={sx('gap:11px')}>
           <div style={sx('flex:1')}>
-            <Fld label="Expirare" ph="MM/AA" />
+            <Fld label="Expirare" ph="MM/AA" onChange={setExp} />
           </div>
           <div style={sx('flex:1')}>
             <Fld label="CVV" ph="•••" />
           </div>
         </div>
-        <Fld label="Nume pe card" val="Andrei Popescu" ph="Nume complet" />
+        <Fld label="Nume pe card" val="Andrei Popescu" ph="Nume complet" onChange={setHolder} />
       </div>
       <div className="pad" style={sx('margin-top:8px')}>
-        <button className="cta" onClick={() => { showToast('Card salvat'); back(); }}>
-          Salvează cardul
+        <button className="cta" onClick={save} disabled={busy}>
+          {busy ? 'Se salvează…' : 'Salvează cardul'}
         </button>
       </div>
       <div className="pad" style={sx('margin-top:12px')}>

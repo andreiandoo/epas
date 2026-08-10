@@ -170,15 +170,68 @@ export const fetchOrders = () =>
 
 export type ApiPaymentMethod = {
   id: number;
-  brand?: string | null;
-  last4?: string | null;
-  exp_month?: number | null;
-  exp_year?: number | null;
-  is_default?: boolean;
+  brand: string | null;
+  last4: string | null;
+  /** deja formatat de server ca „MM/YY" */
+  exp: string | null;
+  holder: string | null;
+  is_default: boolean;
 };
 
+/** Datele de facturare vin alaturi de carduri, la radacina raspunsului. */
+export type BillingInfo = { name: string | null; email: string | null; phone: string | null };
+
 export const fetchPaymentMethods = () =>
-  call<Wrapped<ApiPaymentMethod[]>>('/tenant-client/account/payment-methods').then((r) => r?.data ?? null);
+  call<Wrapped<ApiPaymentMethod[]> & { billing?: BillingInfo }>('/tenant-client/account/payment-methods').then((r) =>
+    r?.success ? { cards: r.data ?? [], billing: r.billing ?? null } : null,
+  );
+
+export const setDefaultPaymentMethod = (id: number) =>
+  call<{ success: boolean }>(`/tenant-client/account/payment-methods/${id}/default`, { method: 'POST' }).then(
+    (r) => r?.success === true,
+  );
+
+export const removePaymentMethod = (id: number) =>
+  call<{ success: boolean }>(`/tenant-client/account/payment-methods/${id}`, { method: 'DELETE' }).then(
+    (r) => r?.success === true,
+  );
+
+/**
+ * ATENTIE: serverul NU tokenizeaza cardul la un procesator — pastreaza doar
+ * brandul, ultimele 4 cifre si expirarea, cu un `token` fictiv. Lista e utila
+ * ca preferinta a clientului, dar cu ea NU se poate plati. Plata reala vine
+ * odata cu integrarea Stripe.
+ */
+export const addPaymentMethod = (number: string, holder?: string, exp?: string) =>
+  call<Wrapped<{ id: number }>>('/tenant-client/account/payment-methods', {
+    method: 'POST',
+    body: JSON.stringify({ number, holder, exp }),
+  }).then((r) => (r?.success ? (r.data?.id ?? null) : null));
+
+/* ---------- favorite ---------- */
+
+/** Serverul accepta DOAR aceste doua tipuri (vezi validarea din toggleFavorite). */
+export type FavoriteType = 'event' | 'artist';
+
+/** Peste id-uri se intinde `meta`, care e liber ca forma — de aici Record-ul. */
+export type ApiFavorite = { id: number; item_type: FavoriteType; item_id: number } & Record<string, unknown>;
+
+/** Raspunsul are exact aceste doua chei; nu exista grup pentru sali. */
+export type Favorites = { events: ApiFavorite[]; artists: ApiFavorite[] };
+
+export const fetchFavorites = () =>
+  call<Wrapped<Favorites>>('/tenant-client/account/favorites').then((r) => (r?.success ? (r.data ?? null) : null));
+
+/**
+ * Intoarce noua stare, sau null daca cererea a esuat.
+ * ATENTIE: aici `favorited` sta la RADACINA raspunsului, nu sub `data` ca la
+ * restul endpointurilor din acest controller.
+ */
+export const toggleFavorite = (itemType: FavoriteType, itemId: number, meta?: Record<string, unknown>) =>
+  call<{ success: boolean; favorited: boolean }>('/tenant-client/account/favorites/toggle', {
+    method: 'POST',
+    body: JSON.stringify({ item_type: itemType, item_id: itemId, ...(meta ? { meta } : null) }),
+  }).then((r) => (r?.success ? r.favorited : null));
 
 export type ApiNotification = {
   id?: number | string;
@@ -194,15 +247,23 @@ export const fetchNotifications = () =>
   call<Wrapped<ApiNotification[]>>('/tenant-client/account/notifications').then((r) => r?.data ?? null);
 
 export type ApiReview = {
-  id?: number;
-  event?: string | null;
-  rating?: number;
-  comment?: string | null;
-  created_at?: string | null;
+  id: number;
+  event: string | null;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  /** 'published' | 'pending' | ... */
+  status: string;
+  created_at: string | null;
 };
 
+export type ReviewStats = { total: number; published: number; pending: number; avg: number };
+
+/** Raspunsul are si `stats`, in afara lui `data` — le intoarcem impreuna. */
 export const fetchReviews = () =>
-  call<Wrapped<ApiReview[]>>('/tenant-client/account/reviews').then((r) => r?.data ?? null);
+  call<Wrapped<ApiReview[]> & { stats?: ReviewStats }>('/tenant-client/account/reviews').then((r) =>
+    r?.success ? { items: r.data ?? [], stats: r.stats ?? null } : null,
+  );
 
 export type ApiGiftCard = { id?: number; code?: string; balance?: number; currency?: string };
 

@@ -143,7 +143,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(API_ROOT + path, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      /* `Content-Type` DOAR cand chiar trimitem ceva: pe un GET ar transforma
+         cererea intr-una „non-simpla" si ar adauga un preflight OPTIONS inutil
+         inaintea fiecarei pagini de feed. */
+      ...(init?.body ? { 'Content-Type': 'application/json' } : null),
       Accept: 'application/json',
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : null),
       ...init?.headers,

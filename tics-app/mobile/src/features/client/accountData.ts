@@ -8,18 +8,26 @@
 import { useEffect, useState } from 'react';
 import { MYTIX } from '../../mock/prototype';
 import {
+  fetchFavorites,
   fetchNotifications,
   fetchPaymentMethods,
+  removePaymentMethod,
+  setDefaultPaymentMethod,
   fetchReviews,
   fetchStats,
   fetchTickets,
   getCustomer,
   isLoggedIn,
+  toggleFavorite,
   type AccountStats,
   type ApiNotification,
   type ApiPaymentMethod,
   type ApiReview,
   type ApiTicket,
+  type BillingInfo,
+  type FavoriteType,
+  type Favorites,
+  type ReviewStats,
 } from '../../api/customer';
 
 /* ---------- forma pe care o consuma ecranul de Bilete (cea din prototip) --- */
@@ -156,15 +164,42 @@ export const initialsOf = (name: string) =>
 
 export function usePaymentMethods() {
   const [cards, setCards] = useState<ApiPaymentMethod[] | null>(null);
+  const [billing, setBilling] = useState<BillingInfo | null>(null);
+  const [loading, setLoading] = useState(isLoggedIn());
+
+  const load = () =>
+    fetchPaymentMethods().then((r) => {
+      if (!r) return;
+      setCards(r.cards);
+      setBilling(r.billing);
+    });
+
   useEffect(() => {
     if (!isLoggedIn()) return;
     let alive = true;
-    fetchPaymentMethods().then((c) => alive && c && setCards(c));
+    fetchPaymentMethods()
+      .then((r) => {
+        if (!alive || !r) return;
+        setCards(r.cards);
+        setBilling(r.billing);
+      })
+      .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
   }, []);
-  return cards;
+
+  /* Dupa „principal" reincarcam de pe server: schimbarea atinge TOATE randurile
+     (celelalte devin nepricipale), deci o corectie locala ar putea rata unul. */
+  const makeDefault = async (id: number) => {
+    if (await setDefaultPaymentMethod(id)) await load();
+  };
+
+  const remove = async (id: number) => {
+    if (await removePaymentMethod(id)) setCards((cur) => (cur ?? []).filter((c) => c.id !== id));
+  };
+
+  return { cards, billing, loading, live: cards !== null, makeDefault, remove, reload: load };
 }
 
 export function useNotifications() {
@@ -180,15 +215,96 @@ export function useNotifications() {
   return list;
 }
 
+/**
+ * Recenziile vin impreuna cu un sumar (`stats`) calculat pe server — total,
+ * publicate, in asteptare, medie. Il pastram asa cum e: recalculat in aplicatie
+ * ar da alte cifre, pentru ca lista poate fi paginata iar media serverului tine
+ * cont doar de cele publicate.
+ */
 export function useReviews() {
   const [list, setList] = useState<ApiReview[] | null>(null);
+  const [stats, setStats] = useState<ReviewStats | null>(null);
+  const [loading, setLoading] = useState(isLoggedIn());
+
   useEffect(() => {
     if (!isLoggedIn()) return;
     let alive = true;
-    fetchReviews().then((r) => alive && r && setList(r));
+    fetchReviews()
+      .then((r) => {
+        if (!alive || !r) return;
+        setList(r.items);
+        setStats(r.stats);
+      })
+      .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
   }, []);
-  return list;
+
+  return { list, stats, loading, live: list !== null };
+}
+
+/**
+ * Favoritele sosesc grupate pe tip, iar peste id-uri e intins `meta`.
+ * Serverul cunoaste DOAR evenimente si artisti — nu exista favorite pe sali,
+ * desi prototipul avea un tab pentru ele. Tabul acela ramane gol pana cand
+ * exista si in API, ca sa nu inventam o functie care n-are unde sa salveze.
+ */
+export type SavedItem = {
+  id: number;
+  kind: FavoriteType;
+  itemId: number;
+  title: string;
+  sub: string;
+  img: string | null;
+};
+
+const asText = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+const GROUPS: ReadonlyArray<[keyof Favorites, FavoriteType]> = [
+  ['events', 'event'],
+  ['artists', 'artist'],
+];
+
+function flattenFavorites(f: Favorites): SavedItem[] {
+  const out: SavedItem[] = [];
+  for (const [group, kind] of GROUPS) {
+    for (const it of f[group] ?? []) {
+      out.push({
+        id: it.id,
+        kind,
+        itemId: it.item_id,
+        // `meta` e liber ca forma, deci incercam cheile uzuale, in ordine
+        title: asText(it.title) || asText(it.name) || `#${it.item_id}`,
+        sub: asText(it.venue) || asText(it.date) || asText(it.city) || asText(it.subtitle),
+        img: asText(it.image) || asText(it.poster) || asText(it.cover) || null,
+      });
+    }
+  }
+  return out;
+}
+
+export function useFavorites() {
+  const [items, setItems] = useState<SavedItem[] | null>(null);
+  const [loading, setLoading] = useState(isLoggedIn());
+
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+    let alive = true;
+    fetchFavorites()
+      .then((f) => alive && f && setItems(flattenFavorites(f)))
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** Scoate din favorite si actualizeaza lista pe loc, fara sa reincarce tot. */
+  const remove = async (it: SavedItem) => {
+    const favorited = await toggleFavorite(it.kind, it.itemId);
+    // null = cererea a esuat; lasam randul pe ecran, ca sa nu mintim utilizatorul
+    if (favorited === false) setItems((cur) => (cur ?? []).filter((x) => x.id !== it.id));
+  };
+
+  return { items, loading, live: items !== null, remove };
 }

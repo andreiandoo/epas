@@ -26,13 +26,40 @@ if (env('CORS_ALLOW_LOCALHOST', false) || env('APP_ENV') === 'local') {
     ]);
 }
 
+/*
+ * APLICATIA MOBILA (Capacitor) — obligatoriu si in productie.
+ *
+ * Continutul aplicatiei e servit de un WebView local, deci cererile catre API
+ * poarta unul dintre originile de mai jos: `https://localhost` pe Android
+ * (schema implicita in Capacitor 6) si `capacitor://localhost` pe iOS.
+ *
+ * DE CE NU ERA DE AJUNS TenantClientCors: acela e middleware DE RUTA, iar
+ * preflight-ul (OPTIONS) e tratat mai devreme, de HandleCors, care raspundea
+ * 204 FARA `Access-Control-Allow-Origin` — pentru ca originea nu era in lista
+ * de aici. WebView-ul bloca atunci cererea reala, iar ecranele cadeau pe
+ * datele demo fara niciun mesaj de eroare.
+ *
+ * Preflight apare la orice cerere cu `Authorization` sau cu un corp JSON,
+ * adica la aproape tot ce face aplicatia dupa login.
+ *
+ * Riscul e mic: o pagina de browser obisnuita nu poate avea originea
+ * `capacitor://localhost`, iar `https://localhost` inseamna un server pe
+ * portul 443 al masinii utilizatorului.
+ */
+$appOrigins = [
+    'https://localhost',
+    'http://localhost',
+    'capacitor://localhost',
+    'ionic://localhost',
+];
+
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     // SECURITY: Use specific origins instead of wildcard
-    'allowed_origins' => $originsArray,
+    'allowed_origins' => array_merge($originsArray, $appOrigins),
 
     // Allow patterns for tenant subdomains
     'allowed_origins_patterns' => [
@@ -59,6 +86,11 @@ return [
 
     'max_age' => 86400,
 
-    // SECURITY: Only enable credentials if specific origins are set
+    /*
+     * SECURITY: Only enable credentials if specific origins are set.
+     * Deliberat NU tine cont de $appOrigins: aplicatia se autentifica prin
+     * antetul Authorization, nu prin cookie-uri, deci n-are nevoie de asta —
+     * iar activarea automata ar largi suprafata fara motiv.
+     */
     'supports_credentials' => !empty($originsArray),
 ];
