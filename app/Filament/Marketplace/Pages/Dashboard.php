@@ -1670,13 +1670,18 @@ class Dashboard extends Page
                     $gP = round((float) $sPos['total_revenue'], 2);
                     $cP = round((float) $sPos['total_commission'], 2);
                     // Cash/card physical: mirror endpoint (POS orders, filter meta payment_method)
-                    /* Toate sursele POS, nu doar 'pos': BillingBreakdown si
-                       SalesBreakdown foloseau deja lista completa, iar aici
-                       ramasese o singura valoare — de unde comisioane diferite
-                       pe aceeasi zi, in pagini diferite. Vezi App\Support\OrderSource. */
+                    /* ACEEASI lista ca $sPos de mai sus, care vine din
+                       SalesBreakdownService. Altfel blocul se contrazice singur:
+                       `gross`/`comision` ar numara alte comenzi decat `cash`/`card`,
+                       si suma cash+card ar putea depasi gross-ul.
+                       Aici ramasese doar 'pos', deci vanzarile din aplicatia
+                       mobila ('pos_app') nu intrau in defalcarea cash/card.
+                       `venue_owner_pos` e lasat deoparte INTENTIONAT de serviciu,
+                       ca sa nu schimbe retroactiv calculul de payout — vezi
+                       comentariul de la SalesBreakdownService::POS_SOURCES. */
                     $posOrders = Order::where('event_id', $event->id)
                         ->whereIn('status', ['paid', 'completed'])
-                        ->whereIn('source', \App\Support\OrderSource::POS)
+                        ->whereIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
                         ->whereBetween('paid_at', [$sFrom->copy()->utc(), $sTo->copy()->utc()]);
                     $cash = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'cash'")->sum('total'), 2);
                     $card = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'card'")->sum('total'), 2);
