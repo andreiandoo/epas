@@ -11,12 +11,13 @@
       indisponibil. Ecranul nu trebuie sa fie niciodata gol: un ecran gol nu ne
       spune nimic despre design.
    ========================================================= */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ART, EV, I, VEN, bgv, galFor, money, poster } from '../../../mock/prototype';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { LiveShorts } from '../shorts/LiveShorts';
+import { useHorizontalSwipe } from '../shorts/useHorizontalSwipe';
 
 type Ev = Record<string, any>;
 
@@ -98,21 +99,39 @@ export function Shorts() {
 
 /** Feed-ul din prototip — fallback cand EPAS n-are inca short-uri publicate. */
 function PrototypeShorts() {
-  const { go } = useNav();
+  const { go, back } = useNav();
   const prefsSel = useClient((s) => s.prefsSel);
   const toggleSaved = useClient((s) => s.toggleSaved);
   const showToast = useClient((s) => s.showToast);
   /* recalculat la fiecare intrare, ca in prototip */
   const feed = useMemo(() => buildFeed(prefsSel), [prefsSel]);
   const [liked, setLiked] = useState<Record<number, boolean>>({});
+  const scroller = useRef<HTMLDivElement | null>(null);
 
   const like = (i: number) => {
     setLiked((l) => ({ ...l, [i]: !l[i] }));
     showToast(liked[i] ? 'Scos de la favorite' : '💜');
   };
 
+  /* Care slide e in fata. Aici e destul un calcul din scroll — scroll-snap-ul
+     aliniaza exact la inaltimea containerului — spre deosebire de feed-ul live,
+     unde intra si preincarcarea video si e nevoie de IntersectionObserver. */
+  const openDetail = () => {
+    const el = scroller.current;
+    if (!el) return;
+
+    const it = feed[Math.round(el.scrollTop / el.clientHeight)];
+    if (!it) return;
+
+    if (it.t === 'artist') go('artist', { id: it.a.id });
+    else if (it.t === 'venue') go('venue', { id: it.v.id });
+    else go('event', { id: it.ev.id });
+  };
+
+  const swipe = useHorizontalSwipe(back, openDetail);
+
   return (
-    <div className="shorts">
+    <div className="shorts" ref={scroller} {...swipe}>
       {feed.map((it, idx) => {
         if (it.t === 'artist') {
           const a = it.a;

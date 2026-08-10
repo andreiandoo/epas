@@ -11,6 +11,142 @@
    Scopate sub `.app-client`, ca tot ce tine de shell-ul de client.
    ========================================================= */
 
+/* =========================================================
+   STRATUL FIX DE COMENZI (.shchrome)
+
+   In prototip, bara de sus, textul si rail-ul lateral stau in interiorul
+   fiecarui slide, deci se misca odata cu el la derulare. Aici sunt scoase
+   intr-un strat propriu, peste scroller: butoanele raman perfect nemiscate si
+   se schimba doar continutul lor cand trece la alt short.
+
+   Geometria e copiata din client.css (.short .shtop/.info/.rail), ca sa arate
+   identic — se schimba doar parintele. Singura diferenta intentionata: zona de
+   jos urca cu 22px si tine cont si de bara de gesturi (--safe-bottom), care
+   inainte era ignorata.
+
+   `pointer-events` e stins pe strat si repornit pe comenzi, altfel un strat
+   intins peste tot ecran ar inghiti derularea verticala.
+   ========================================================= */
+.app-client .shwrap { position: absolute; inset: 0; }
+
+.app-client .shchrome {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  color: #fff;
+}
+.app-client .shchrome > * { pointer-events: auto; }
+
+/* Scrimul: unul singur, fix. Cand statea in slide, la trecerea dintre doua
+   short-uri se vedeau doua degradeuri lipite. */
+.app-client .shchrome .grad {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .45), transparent 20%, transparent 50%, rgba(0, 0, 0, .88));
+}
+
+.app-client .shchrome .shtop {
+  position: absolute;
+  top: calc(var(--safe-top, 0px) + 17px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 6;
+}
+.app-client .shchrome .shtop button.icon-btn { font-size: 16px; line-height: 1; }
+
+.app-client .shchrome .mtag {
+  position: absolute;
+  top: calc(var(--safe-top, 0px) + 77px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(4, 3, 9, .42);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, .18);
+  padding: 5px 11px;
+  border-radius: 999px;
+}
+
+.app-client .shchrome .info {
+  position: absolute;
+  left: 18px;
+  right: 74px;
+  bottom: calc(var(--safe-bottom, 0px) + 56px);
+  z-index: 5;
+}
+
+.app-client .shchrome .rail {
+  position: absolute;
+  right: 16px;
+  bottom: calc(var(--safe-bottom, 0px) + 54px);
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 6;
+  align-items: center;
+}
+.app-client .shchrome .rail .act {
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .55);
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  color: #fff;
+  min-height: 44px;
+}
+.app-client .shchrome .rail .act span { white-space: nowrap }
+.app-client .shchrome .rail .act .b {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, .2);
+  display: grid;
+  place-items: center;
+  transition: .18s;
+}
+.app-client .shchrome .rail .act .b svg { width: 19px; height: 19px }
+.app-client .shchrome .rail .act:active .b { transform: scale(.86) }
+.app-client .shchrome .rail .act.liked .b {
+  color: #f0616d;
+  background: rgba(240, 79, 79, .22);
+  border-color: rgba(240, 79, 79, .4);
+}
+.app-client .shchrome .rail .act.liked .b svg { animation: hpop .35s cubic-bezier(.2, 1.4, .3, 1) }
+
+.app-client .shchrome .shcta { min-height: 44px }
+
+/* Short fara CTA: butonul dispare, dar isi PASTREAZA locul.
+   Cu `display:none` (ce face implicit atributul `hidden`) blocul de text ar
+   coborai cu inaltimea butonului la fiecare short fara actiune — exact
+   saltul pe care stratul fix il elimina. `visibility` il scoate si din
+   arborele de accesibilitate si din ordinea de focus.
+   Regula e necesara si pentru ca `.shcta{display:inline-flex}` ar bate oricum
+   regula implicita a atributului `hidden`. */
+.app-client .shchrome .shcta[hidden] { display: inline-flex; visibility: hidden }
+.app-client .shchrome button:focus-visible { outline: 2px solid #fff; outline-offset: 3px }
+
 /* ---- video ---- */
 .app-client .short .shvideo {
   width: 100%;

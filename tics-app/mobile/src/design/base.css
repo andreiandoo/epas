@@ -25,6 +25,13 @@ body,
 #root {
   height: 100%;
 }
+/* Pe <html>, nu doar pe <body>: `overscroll-behavior` NU se propaga de la body
+   la zona de derulare a paginii, iar fara el un swipe orizontal e citit ca
+   „inapoi in istoric" si scoate aplicatia din pagina — se vede in Chrome, si
+   ar strica gestul de navigare din feed-ul de shorts. */
+html {
+  overscroll-behavior: none;
+}
 body {
   font-family: var(--font);
   background: var(--bg);

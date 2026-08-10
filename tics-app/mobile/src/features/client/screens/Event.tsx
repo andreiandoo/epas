@@ -9,7 +9,7 @@
    ========================================================= */
 import { Ic, sx } from '../../../design/sx';
 import { ADDONS, ART, ATTENDED, EV, EVREVIEWS, I, VEN, bgv, money } from '../../../mock/prototype';
-import { DBar } from '../kit';
+import { DBar, MissingContent } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useLightbox } from '../lightbox';
@@ -25,7 +25,13 @@ export function Event({ id }: { id?: string }) {
   const toggleSaved = useClient((s) => s.toggleSaved);
 
   const ev = (EV as Record<string, Ev>)[id || evId];
-  if (ev && ev.id !== evId) setEv(ev.id);
+
+  /* Feed-ul de shorts trimite id-uri REALE de eveniment, care nu exista in
+     datasetul prototipului. Fara verificarea asta, linia urmatoare citea `.ven`
+     din undefined si ecranul ramanea alb. */
+  if (!ev) return <MissingContent what="Evenimentul" />;
+
+  if (ev.id !== evId) setEv(ev.id);
 
   const v = (VEN as Record<string, Ev>)[ev.ven];
   const attended = (ATTENDED as { ev: string }[]).some((a) => a.ev === ev.id);

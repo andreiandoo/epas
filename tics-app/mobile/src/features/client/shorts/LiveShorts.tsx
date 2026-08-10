@@ -31,6 +31,7 @@ import { ShortVideo } from './ShortVideo';
 import { useShortsFeed } from './useShortsFeed';
 import { useShortTelemetry } from './useShortTelemetry';
 import { usePlaybackPreferences } from './usePlaybackPreferences';
+import { useHorizontalSwipe } from './useHorizontalSwipe';
 import { Blurhash } from './Blurhash';
 import { DropCountdown } from './DropCountdown';
 
@@ -52,7 +53,7 @@ type Props = {
 export function LiveShorts({ feed = 'for_you', fallback }: Props) {
   const { items, playbackHints, loading, unavailable, onIndexChange, patch } = useShortsFeed(feed);
   const { track } = useShortTelemetry();
-  const { go } = useNav();
+  const { go, back } = useNav();
   const showToast = useClient((s) => s.showToast);
 
   const { autoplayAllowed, dataSaver: localDataSaver, prefetchCount: localPrefetch } = usePlaybackPreferences();
@@ -339,6 +340,23 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
   const activeShort = items[activeIndex];
 
+  /**
+   * Deschide subiectul short-ului activ, fara sa raporteze un click de CTA.
+   *
+   * Un swipe NU e o apasare pe buton: daca l-am trece prin `onCta`, o plasare
+   * platita ar fi taxata pentru un gest care nu i-a fost destinat.
+   */
+  const openDetail = useCallback(() => {
+    const short = items[activeIndex];
+    if (!short) return;
+
+    if (short.event?.id) go('event', { id: short.event.id, sourceShortId: short.id, sourceFeed: feed });
+    else if (short.owner?.type === 'artist' && short.owner.id) go('artist', { id: short.owner.id });
+    else if (short.owner?.type === 'venue' && short.owner.id) go('venue', { id: short.owner.id });
+  }, [items, activeIndex, go, feed]);
+
+  const swipe = useHorizontalSwipe(back, openDetail);
+
   // Cu economie de date sau pe retea mobila, prefetchCount e 0: montam doar
   // short-ul activ si nu platim banda pentru vecini (D9).
   const radius = Math.min(PRELOAD_RADIUS, prefetchCount > 0 ? PRELOAD_RADIUS : 0);
@@ -361,166 +379,189 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
   }
 
   return (
-    <div className="shorts" ref={containerRef} role="feed" aria-label="Shorts">
-      {items.map((short, index) => {
-        const isActive = index === activeIndex;
-        const mounted = index >= visibleRange.from && index <= visibleRange.to;
-        const hls = short.playback.hls_url;
+    /* Doua straturi suprapuse: derularea, si peste ea comenzile.
+       Gestul orizontal se asculta pe invelis, ca sa prinda si atingerile care
+       incep pe zone fara comenzi. */
+    <div className="shwrap" {...swipe}>
+      <div className="shorts" ref={containerRef} role="feed" aria-label="Shorts">
+        {items.map((short, index) => {
+          const isActive = index === activeIndex;
+          const mounted = index >= visibleRange.from && index <= visibleRange.to;
+          const hls = short.playback.hls_url;
 
-        return (
-          <article
-            className="short"
-            key={short.id}
-            data-index={index}
-            ref={(node) => {
-              slideRefs.current[index] = node;
-            }}
-            aria-label={short.title ?? 'Short'}
-            aria-current={isActive ? 'true' : undefined}
-          >
-            {/* LQIP sub video: pe retea slaba se vede o culoare plauzibila,
-                nu un dreptunghi negru, pana urca posterul (D9). */}
-            <Blurhash hash={short.playback.blurhash} />
+          return (
+            <article
+              className="short"
+              key={short.id}
+              data-index={index}
+              ref={(node) => {
+                slideRefs.current[index] = node;
+              }}
+              aria-label={short.title ?? 'Short'}
+              aria-current={isActive ? 'true' : undefined}
+            >
+              {/* LQIP sub video: pe retea slaba se vede o culoare plauzibila,
+                  nu un dreptunghi negru, pana urca posterul (D9). */}
+              <Blurhash hash={short.playback.blurhash} />
 
-            {mounted && hls ? (
-              <ShortVideo
-                src={hls}
-                poster={short.playback.poster_url}
-                active={isActive}
-                muted={muted}
-                preloadOnly={!isActive}
-                autoplayAllowed={autoplayAllowed}
-                dataSaver={dataSaver}
-                onProgress={(ms, ratio) => handleProgress(short, ms, ratio)}
-                onComplete={() => handleComplete(short)}
-                onTap={() => setMuted((m) => !m)}
-              />
-            ) : (
-              // Short extern (embed) sau asset inca neincarcat: posterul e
-              // suficient ca feed-ul sa nu aiba goluri negre.
-              <div
-                className="media"
-                style={
-                  short.playback.poster_url
-                    ? { background: `#0b0912 center/cover no-repeat url(${short.playback.poster_url})` }
-                    : sx('background:transparent')
-                }
-              />
-            )}
+              {mounted && hls ? (
+                <ShortVideo
+                  src={hls}
+                  poster={short.playback.poster_url}
+                  active={isActive}
+                  muted={muted}
+                  preloadOnly={!isActive}
+                  autoplayAllowed={autoplayAllowed}
+                  dataSaver={dataSaver}
+                  onProgress={(ms, ratio) => handleProgress(short, ms, ratio)}
+                  onComplete={() => handleComplete(short)}
+                  onTap={() => setMuted((m) => !m)}
+                />
+              ) : (
+                // Short extern (embed) sau asset inca neincarcat: posterul e
+                // suficient ca feed-ul sa nu aiba goluri negre.
+                <div
+                  className="media"
+                  style={
+                    short.playback.poster_url
+                      ? { background: `#0b0912 center/cover no-repeat url(${short.playback.poster_url})` }
+                      : sx('background:transparent')
+                  }
+                />
+              )}
+            </article>
+          );
+        })}
+      </div>
 
-            {/* Avertisment de continut inainte de a porni ceva ce poate
-                declansa fotosensibilitate (D10). */}
-            {short.content_flags.includes('flashing') ? (
-              <span className="mtag" role="note">
-                ⚠ Lumini intermitente
+      {/* ---------- comenzile, montate O SINGURA DATA ----------
+          Cheia e ca nimic de aici sa nu se remonteze la schimbarea short-ului:
+          nodurile raman aceleasi si li se schimba doar textul. Asa butonul de
+          inapoi, cele laterale si cel de bilete stau perfect nemiscate in timp
+          ce continutul din spate deruleaza. */}
+      {activeShort ? (
+        <div className="shchrome" aria-hidden={false}>
+          <div className="grad" />
+
+          <div className="shtop">
+            <button type="button" className="icon-btn glass" aria-label="Înapoi" onClick={back}>
+              <Ic svg={I.back} />
+            </button>
+            <div className="row" style={sx('gap:6px;color:#fff;font-weight:600;font-size:14px')}>
+              <Ic svg={I.wave} /> Pe val
+            </div>
+            <button
+              type="button"
+              className="icon-btn glass"
+              aria-label={muted ? 'Pornește sunetul' : 'Oprește sunetul'}
+              aria-pressed={!muted}
+              onClick={() => setMuted((m) => !m)}
+            >
+              {muted ? '🔇' : '🔊'}
+            </button>
+          </div>
+
+          {/* Avertisment de continut inainte de a porni ceva ce poate
+              declansa fotosensibilitate (D10). */}
+          {activeShort.content_flags.includes('flashing') ? (
+            <span className="mtag" role="note">
+              ⚠ Lumini intermitente
+            </span>
+          ) : null}
+
+          <div className="info">
+            {/* Dezvaluirea plasarii platite (D3). Eticheta vine de la server —
+                „Sponsorizat" pentru un eveniment boostat, „Reclama" pentru un
+                brand — si nu are stare de ascundere: o plasare care nu poate fi
+                etichetata nu e servita deloc. */}
+            {activeShort.promoted ? (
+              <span className="short-ad" role="note">
+                {activeShort.promoted.label}
+                {activeShort.promoted.advertiser ? ` · ${activeShort.promoted.advertiser}` : ''}
               </span>
             ) : null}
 
-            <div className="grad" />
+            {activeShort.owner?.name ? <span className="gpill solid">{activeShort.owner.name}</span> : null}
 
-            <div className="shtop">
-              <div className="row" style={sx('gap:6px;color:#fff;font-weight:600;font-size:14px')}>
-                <Ic svg={I.wave} /> Pe val
+            {/* Randate neconditionat, chiar goale: un `? :` ar scoate si ar
+                repune nodul la fiecare short, iar blocul de sub el ar sari. */}
+            <div
+              style={sx(
+                'font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)',
+              )}
+            >
+              {activeShort.title ?? ''}
+            </div>
+
+            <div style={sx('font-size:13px;opacity:.9;margin-top:7px;line-height:1.35')}>
+              {activeShort.caption ?? ''}
+            </div>
+
+            <div style={sx('font-size:12.5px;opacity:.8;margin-top:6px')}>
+              {activeShort.hashtags.map((tag) => `#${tag}`).join(' ')}
+            </div>
+
+            <div style={sx('font-size:11.5px;opacity:.7;margin-top:6px')}>
+              {activeShort.music_credit ? `♪ ${activeShort.music_credit}` : ''}
+            </div>
+
+            {activeShort.cta?.pending && activeShort.cta.on_sale_at ? (
+              // Biletele nu sunt inca la vanzare: un buton „Ia bilet" ar fi o
+              // fundatura, deci devine countdown + „Amintește-mi" (D2).
+              <DropCountdown
+                onSaleAt={activeShort.cta.on_sale_at}
+                reminded={reminded[activeShort.id] ?? activeShort.viewer.reminded === true}
+                onRemind={() => void onRemind(activeShort)}
+              />
+            ) : (
+              <button
+                className="shcta"
+                style={sx('margin-top:14px')}
+                // Fara CTA n-avem unde duce. Butonul se ascunde, dar isi
+                // pastreaza locul (vezi shorts.css) ca textul de deasupra sa nu
+                // coboare la trecerea pe un short fara actiune.
+                hidden={!activeShort.cta}
+                onClick={() => onCta(activeShort)}
+              >
+                <Ic svg={I.ticket} /> {activeShort.cta?.label ?? 'Vezi detalii'}
+              </button>
+            )}
+          </div>
+
+          <div className="rail">
+            <button
+              type="button"
+              className={activeShort.viewer.liked ? 'act liked' : 'act'}
+              aria-label="Îmi place"
+              aria-pressed={activeShort.viewer.liked}
+              onClick={() => void onLike(activeShort)}
+            >
+              <div className="b">
+                <Ic svg={activeShort.viewer.liked ? I.heart : I.heartO} />
               </div>
-              <button
-                type="button"
-                className="icon-btn glass"
-                aria-label={muted ? 'Pornește sunetul' : 'Oprește sunetul'}
-                aria-pressed={!muted}
-                onClick={() => setMuted((m) => !m)}
-              >
-                {muted ? '🔇' : '🔊'}
-              </button>
-            </div>
+              <span>{kfmt(activeShort.stats.likes)}</span>
+            </button>
 
-            <div className="info">
-              {/* Dezvaluirea plasarii platite (D3). Eticheta vine de la server —
-                  „Sponsorizat" pentru un eveniment boostat, „Reclama" pentru un
-                  brand — si nu are stare de ascundere: o plasare care nu poate fi
-                  etichetata nu e servita deloc. */}
-              {short.promoted ? (
-                <span className="short-ad" role="note">
-                  {short.promoted.label}
-                  {short.promoted.advertiser ? ` · ${short.promoted.advertiser}` : ''}
-                </span>
-              ) : null}
+            <button
+              type="button"
+              className={activeShort.viewer.saved ? 'act liked' : 'act'}
+              aria-label="Salvează"
+              aria-pressed={activeShort.viewer.saved}
+              onClick={() => void onSave(activeShort)}
+            >
+              <div className="b">
+                <Ic svg={I.save} />
+              </div>
+            </button>
 
-              {short.owner?.name ? <span className="gpill solid">{short.owner.name}</span> : null}
-
-              {short.title ? (
-                <div
-                  style={sx(
-                    'font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)',
-                  )}
-                >
-                  {short.title}
-                </div>
-              ) : null}
-
-              {short.caption ? (
-                <div style={sx('font-size:13px;opacity:.9;margin-top:7px;line-height:1.35')}>{short.caption}</div>
-              ) : null}
-
-              {short.hashtags.length > 0 ? (
-                <div style={sx('font-size:12.5px;opacity:.8;margin-top:6px')}>
-                  {short.hashtags.map((tag) => `#${tag}`).join(' ')}
-                </div>
-              ) : null}
-
-              {short.music_credit ? (
-                <div style={sx('font-size:11.5px;opacity:.7;margin-top:6px')}>♪ {short.music_credit}</div>
-              ) : null}
-
-              {short.cta?.pending && short.cta.on_sale_at ? (
-                // Biletele nu sunt inca la vanzare: un buton „Ia bilet" ar fi o
-                // fundatura, deci devine countdown + „Amintește-mi" (D2).
-                <DropCountdown
-                  onSaleAt={short.cta.on_sale_at}
-                  reminded={reminded[short.id] ?? short.viewer.reminded === true}
-                  onRemind={() => void onRemind(short)}
-                />
-              ) : short.cta ? (
-                <button className="shcta" style={sx('margin-top:14px')} onClick={() => onCta(short)}>
-                  <Ic svg={I.ticket} /> {short.cta.label ?? 'Vezi detalii'}
-                </button>
-              ) : null}
-            </div>
-
-            <div className="rail">
-              <button
-                type="button"
-                className={short.viewer.liked ? 'act liked' : 'act'}
-                aria-label="Îmi place"
-                aria-pressed={short.viewer.liked}
-                onClick={() => void onLike(short)}
-              >
-                <div className="b">
-                  <Ic svg={short.viewer.liked ? I.heart : I.heartO} />
-                </div>
-                <span>{kfmt(short.stats.likes)}</span>
-              </button>
-
-              <button
-                type="button"
-                className={short.viewer.saved ? 'act liked' : 'act'}
-                aria-label="Salvează"
-                aria-pressed={short.viewer.saved}
-                onClick={() => void onSave(short)}
-              >
-                <div className="b">
-                  <Ic svg={I.save} />
-                </div>
-              </button>
-
-              <button type="button" className="act" aria-label="Trimite" onClick={() => void onShare(short)}>
-                <div className="b">
-                  <Ic svg={I.share} />
-                </div>
-              </button>
-            </div>
-          </article>
-        );
-      })}
+            <button type="button" className="act" aria-label="Trimite" onClick={() => void onShare(activeShort)}>
+              <div className="b">
+                <Ic svg={I.share} />
+              </div>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Regiune live: cititoarele de ecran anunta schimbarea short-ului (D10). */}
       <div className="sr-only" aria-live="polite">

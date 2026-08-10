@@ -10,7 +10,7 @@ import { Ic, cn, sx } from '../../../design/sx';
 import { ART, ARTX, EV, I, SOCIC, SOCLIST, SORTLBL, VEN, bgv } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvRow } from '../cards';
-import { BottomNav, BackTitle, DBar, SafeTop, SecH, TopBar } from '../kit';
+import { BottomNav, BackTitle, DBar, MissingContent, SafeTop, SecH, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -266,7 +266,11 @@ export function Search() {
    ========================================================= */
 export function Artist({ id }: { id?: string }) {
   const showToast = useClient((s) => s.showToast);
-  const a = ((ART as Record<string, Ev>)[id || ''] || (ART as Record<string, Ev>).coldplay) as Ev;
+  /* Fara id ramane exemplul din prototip (asa intra din ecranele demo), dar un
+     id NECUNOSCUT vine de la un short real si n-are ce arata aici — mai bine
+     spunem asta decat sa afisam alt artist. */
+  const a = (ART as Record<string, Ev>)[id || 'coldplay'] as Ev | undefined;
+  if (!a) return <MissingContent what="Artistul" />;
   const x = ((ARTX as Record<string, Ev>)[a.id] || (ARTX as Record<string, Ev>).coldplay) as Ev;
   const evs = allEvents().filter((e) => e.artists.includes(a.id));
   const upEv = evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
@@ -450,7 +454,8 @@ export function Artist({ id }: { id?: string }) {
    ========================================================= */
 export function Venue({ id }: { id?: string }) {
   const { go } = useNav();
-  const v = ((VEN as Record<string, Ev>)[id || ''] || (VEN as Record<string, Ev>).arena) as Ev;
+  const v = (VEN as Record<string, Ev>)[id || 'arena'] as Ev | undefined;
+  if (!v) return <MissingContent what="Locația" />;
   const evs = allEvents().filter((e) => e.ven === v.id);
   const list = evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
 

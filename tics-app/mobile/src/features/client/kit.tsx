@@ -138,3 +138,44 @@ export function SetHead({ title, sub }: { title: string; sub?: string }) {
     </TopBar>
   );
 }
+
+/* =========================================================
+   Continut care nu exista in aplicatie.
+
+   NU e din prototip — prototipul lucreaza pe un dataset inchis, in care orice
+   id cerut exista. Feed-ul de shorts insa vine de pe server si trimite catre
+   evenimente, artisti si locatii REALE, ale caror ecrane sunt inca pe datele
+   demo. Fara asta, `Event` arunca pe un id necunoscut si ramane un ecran alb.
+
+   Deliberat spune adevarul („nu e inca disponibil"), nu inventeaza un
+   inlocuitor: un ecran de eveniment care arata alt eveniment e mai rau decat
+   unul care recunoaste ca lipseste.
+   ========================================================= */
+export function MissingContent({ what = 'Conținutul' }: { what?: string }) {
+  const { back } = useNav();
+
+  return (
+    <div className="grid" style={sx('min-height:100%')}>
+      <TopBar>
+        <div className="row" style={sx('gap:12px')}>
+          <div className="icon-btn" onClick={back}>
+            <Ic svg={I.back} />
+          </div>
+          <div className="h2">Indisponibil</div>
+        </div>
+        <div style={sx('width:42px')} />
+      </TopBar>
+
+      <div className="pad" style={sx('margin-top:70px;text-align:center')}>
+        <div style={sx('font-size:44px;opacity:.5')}>🚧</div>
+        <div style={sx('font-weight:600;font-size:15px;margin-top:10px')}>{what} nu e încă disponibil în aplicație</div>
+        <div className="muted" style={sx('font-size:12.5px;margin-top:6px;line-height:1.5')}>
+          Lucrăm la ecranul complet. Între timp îl găsești pe site.
+        </div>
+        <button className="cta" style={sx('width:auto;padding:12px 22px;margin:20px auto 0')} onClick={back}>
+          Înapoi
+        </button>
+      </div>
+    </div>
+  );
+}
