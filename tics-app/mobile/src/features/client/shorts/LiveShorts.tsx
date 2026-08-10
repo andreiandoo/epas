@@ -481,7 +481,11 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
               </span>
             ) : null}
 
-            {activeShort.owner?.name ? <span className="gpill solid">{activeShort.owner.name}</span> : null}
+            {/* Pastila spune CE e, nu CUM se cheama: numele sta in titlul de
+                dedesubt, iar pana acum pastila il repeta pe acelasi. */}
+            <span className="gpill solid" hidden={!activeShort.owner?.label}>
+              {activeShort.owner?.label ?? ''}
+            </span>
 
             {/* Randate neconditionat, chiar goale: un `? :` ar scoate si ar
                 repune nodul la fiecare short, iar blocul de sub el ar sari. */}
@@ -491,6 +495,17 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
               )}
             >
               {activeShort.title ?? ''}
+            </div>
+
+            {/* Adresa, nota, capacitatea — ce stie catalogul despre proprietar.
+                Un short de locatie arata pana acum doar numele. */}
+            <div className="cmeta" style={sx('margin-top:8px')}>
+              {(activeShort.owner?.details ?? []).map((d) => (
+                <span className="i" key={d.text}>
+                  <Ic svg={I[d.icon as keyof typeof I] ?? I.pin} />
+                  <span>{d.text}</span>
+                </span>
+              ))}
             </div>
 
             <div style={sx('font-size:13px;opacity:.9;margin-top:7px;line-height:1.35')}>

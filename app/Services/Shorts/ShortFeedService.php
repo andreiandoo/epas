@@ -86,7 +86,9 @@ class ShortFeedService
         $hasMore = $rows->count() > $limit;
 
         $items = $ranked
-            ? $this->ranker->rank($rows, $customer, $limit)->take($limit)
+            /* Sesiunea anonima ajunge pana la ranker: fara ea, penalizarea
+               „deja vazut" nu functiona pentru vizitatorii fara cont. */
+            ? $this->ranker->rank($rows, $customer, $limit, $filters['session_id'] ?? null)->take($limit)
             : $rows->take($limit);
 
         [$likedIds, $savedIds, $remindedIds] = $this->viewerState($items, $customer);

@@ -48,7 +48,16 @@ export type ApiShort = {
   hashtags: string[];
   language: string | null;
   music_credit: string | null;
-  owner: { type: string | null; id: number; slug: string | null; name: string | null } | null;
+  owner: {
+    type: string | null;
+    id: number;
+    slug: string | null;
+    name: string | null;
+    /** Eticheta de TIP („Locație", „Artist"), pentru pastila colorata. */
+    label?: string | null;
+    /** Randurile de sub titlu: adresa, nota, capacitate. `icon` e cheia din I. */
+    details?: Array<{ icon: string; text: string }>;
+  } | null;
   event: { id: number; slug: string | null; title: string | null; date: string | null } | null;
   cta: {
     type: 'buy_tickets' | 'open_event' | 'open_artist' | 'external';

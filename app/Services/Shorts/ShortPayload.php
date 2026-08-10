@@ -2,8 +2,10 @@
 
 namespace App\Services\Shorts;
 
-use App\Support\PlainText;
+use App\Models\Artist;
 use App\Models\Short;
+use App\Models\Venue;
+use App\Support\PlainText;
 use Illuminate\Support\Collection;
 
 /**
@@ -132,7 +134,86 @@ class ShortPayload
             'id' => $owner->getKey(),
             'slug' => $owner->slug ?? null,
             'name' => PlainText::of($owner->name ?? null) ?? PlainText::of($owner->title ?? null),
+            /* Eticheta de tip. Feed-ul afisa in pastila colorata NUMELE
+               proprietarului, adica exact ce scria si in titlul de dedesubt —
+               deci pastila nu spunea nimic. In prototip acolo sta categoria
+               („Concerte", „Locatie"), iar numele sta doar in titlu. */
+            'label' => $this->ownerLabel($short->owner_type),
+            /* Randurile de detaliu. Un short de sala arata pana acum doar numele:
+               nici oras, nici adresa, nici nota — desi toate exista in catalog. */
+            'details' => $this->ownerDetails($owner),
         ];
+    }
+
+    /** Cum se numeste tipul, in limba interfetei. */
+    protected function ownerLabel(?string $ownerType): ?string
+    {
+        return match ($this->morphAlias($ownerType)) {
+            'venue' => 'Locație',
+            'artist' => 'Artist',
+            'event' => 'Eveniment',
+            default => null,
+        };
+    }
+
+    /**
+     * Detaliile scurte de sub titlu, in ordinea in care se citesc.
+     *
+     * Numai date deja publice pe pagina proprietarului — feed-ul nu expune
+     * nimic in plus fata de site.
+     *
+     * @return array<int, array{icon: string, text: string}>
+     */
+    protected function ownerDetails(object $owner): array
+    {
+        $rows = [];
+
+        if ($owner instanceof Venue) {
+            $address = is_string($owner->address ?? null) ? trim($owner->address) : '';
+            $city = is_string($owner->city ?? null) ? trim($owner->city) : '';
+
+            $place = array_filter([$address !== '' ? $address : null, $city !== '' ? $city : null]);
+
+            if ($place !== []) {
+                $rows[] = ['icon' => 'pin', 'text' => implode(', ', $place)];
+            }
+
+            /* Nota Google, cand a fost sincronizata. Accesorul intoarce null
+               fara `google_place_id`, deci salile nelegate nu arata o nota
+               inventata. */
+            $rating = $owner->google_reviews_payload['rating'] ?? null;
+
+            if (is_numeric($rating) && (float) $rating > 0) {
+                $count = $owner->google_reviews_payload['review_count'] ?? null;
+                $rows[] = [
+                    'icon' => 'star',
+                    'text' => is_numeric($count) && (int) $count > 0
+                        ? sprintf('%.1f · %d recenzii', (float) $rating, (int) $count)
+                        : sprintf('%.1f', (float) $rating),
+                ];
+            }
+
+            if (is_numeric($owner->capacity ?? null) && (int) $owner->capacity > 0) {
+                $rows[] = ['icon' => 'user', 'text' => number_format((int) $owner->capacity, 0, ',', '.').' locuri'];
+            }
+
+            return $rows;
+        }
+
+        if ($owner instanceof Artist) {
+            $where = array_filter([
+                is_string($owner->city ?? null) && trim($owner->city) !== '' ? trim($owner->city) : null,
+                is_string($owner->country ?? null) && trim($owner->country) !== '' ? trim($owner->country) : null,
+            ]);
+
+            if ($where !== []) {
+                $rows[] = ['icon' => 'pin', 'text' => implode(', ', $where)];
+            }
+
+            return $rows;
+        }
+
+        return $rows;
     }
 
     /**

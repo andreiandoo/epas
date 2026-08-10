@@ -6,6 +6,7 @@ use App\Models\Artist;
 use App\Models\Event;
 use App\Models\Short;
 use App\Models\Venue;
+use App\Support\VerticalPoster;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -28,11 +29,17 @@ use Illuminate\Support\Facades\Log;
  */
 class ShortSourceImageObserver
 {
-    /** Campul de imagine principal, per tip de proprietar. */
+    /**
+     * Campurile urmarite, per tip de proprietar — DOAR cele verticale.
+     *
+     * Aceeasi regula ca la generare (App\Support\VerticalPoster): feed-ul e
+     * 9:16, deci o imagine orizontala n-are ce cauta acolo. `meta` apare la sala
+     * pentru ca portretul ei traieste in `meta.portrait`, nu intr-o coloana.
+     */
     private const IMAGE_FIELDS = [
-        Event::class => ['poster_url', 'hero_image_url'],
-        Artist::class => ['portrait_url', 'main_image_url', 'logo_url'],
-        Venue::class => ['image_url'],
+        Event::class => ['poster_url'],
+        Artist::class => ['portrait_url'],
+        Venue::class => ['meta'],
     ];
 
     public function updated(Model $owner): void
@@ -47,18 +54,13 @@ class ShortSourceImageObserver
             return;
         }
 
-        $image = null;
-        foreach ($fields as $field) {
-            $value = $owner->{$field};
-            if (is_string($value) && trim($value) !== '') {
-                $image = trim($value);
-                break;
-            }
-        }
+        $image = VerticalPoster::for($owner);
 
         if ($image === null) {
-            // imaginile au fost sterse: lasam posterul existent, ca feed-ul sa
-            // nu ramana cu un card gol
+            /* Portretul a fost sters, sau inlocuit cu un fisier orizontal.
+               Lasam posterul existent: un card gol in feed e mai rau decat unul
+               cu imaginea anterioara, iar stergerea short-ului la o salvare
+               gresita ar fi o pierdere tacuta de continut. */
             return;
         }
 

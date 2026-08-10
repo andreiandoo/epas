@@ -37,7 +37,17 @@ const short = (id, title, likes) => ({
   hashtags: [],
   language: null,
   music_credit: null,
-  owner: { type: 'venue', id: 10 + id, slug: `v${id}`, name: `Loc ${id}` },
+  owner: {
+    type: 'venue',
+    id: 10 + id,
+    slug: `v${id}`,
+    name: `Loc ${id}`,
+    label: 'Locație',
+    details: [
+      { icon: 'pin', text: `Str. Exemplu ${id}, Oras` },
+      { icon: 'star', text: `4.${id} · 120 recenzii` },
+    ],
+  },
   event: { id: 100 + id, slug: `e${id}`, title, date: null },
   cta: {
     type: 'buy_tickets',
@@ -202,6 +212,14 @@ const short = (id, title, likes) => ({
 
     return { infoGap: h - info.bottom, railGap: h - rail.bottom };
   });
+  const meta = await page.evaluate(() => ({
+    pill: document.querySelector('.shchrome .gpill')?.textContent.trim(),
+    title: document.querySelector('.shchrome .info > div')?.textContent.trim(),
+    details: [...document.querySelectorAll('.shchrome .cmeta .i')].map((e) => e.textContent.trim()),
+  }));
+  check('pastila arata TIPUL, nu numele', meta.pill === 'Locație', `pastila="${meta.pill}" titlu="${meta.title}"`);
+  check('detaliile locatiei apar sub titlu', meta.details.length === 2, meta.details.join(' | '));
+
   check('blocul de text a urcat cu >=20px (era 34)', geom.infoGap >= 54, `${Math.round(geom.infoGap)}px de jos`);
   check('rail-ul a urcat cu >=20px (era 32)', geom.railGap >= 52, `${Math.round(geom.railGap)}px de jos`);
 

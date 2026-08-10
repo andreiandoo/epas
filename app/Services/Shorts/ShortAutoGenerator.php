@@ -8,6 +8,7 @@ use App\Models\Short;
 use App\Models\Venue;
 use App\Services\Video\VideoRenderer;
 use App\Support\PlainText;
+use App\Support\VerticalPoster;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -141,11 +142,7 @@ class ShortAutoGenerator
     protected function planForEvent(Event $event): array
     {
         return [
-            'images' => $this->pickImages([
-                $event->poster_url,
-                $event->hero_image_url,
-                ...$this->arrayOf($event->gallery),
-            ]),
+            'images' => $this->pickImages($event),
             'title' => PlainText::of($event->title),
             'subtitle' => $event->event_date?->format('d M Y'),
             'event_id' => $event->getKey(),
@@ -167,11 +164,7 @@ class ShortAutoGenerator
         $nextEvent = $this->nextEventFor($artist);
 
         return [
-            'images' => $this->pickImages([
-                $artist->portrait_url,
-                $artist->main_image_url,
-                $artist->logo_url,
-            ]),
+            'images' => $this->pickImages($artist),
             'title' => PlainText::of($artist->name),
             'subtitle' => $nextEvent?->event_date?->format('d M Y'),
             'event_id' => $nextEvent?->getKey(),
@@ -187,10 +180,7 @@ class ShortAutoGenerator
     protected function planForVenue(Venue $venue): array
     {
         return [
-            'images' => $this->pickImages([
-                $venue->image_url,
-                ...$this->arrayOf($venue->gallery),
-            ]),
+            'images' => $this->pickImages($venue),
             'title' => PlainText::of($venue->name),
             'subtitle' => $venue->city,
             'event_id' => null,
@@ -234,47 +224,20 @@ class ShortAutoGenerator
     }
 
     /**
-     * Whatever the record actually has, best first, deduplicated and capped.
+     * Imaginile din care se construieste short-ul: EXCLUSIV cea verticala.
      *
-     * @param  array<int, mixed>  $candidates
-     * @return array<int, string>
-     */
-    protected function pickImages(array $candidates): array
-    {
-        $urls = array_filter(
-            array_map(fn ($value) => is_string($value) ? trim($value) : null, $candidates),
-            fn (?string $value) => $value !== null && $value !== '',
-        );
-
-        return array_values(array_slice(array_unique($urls), 0, 5));
-    }
-
-    /**
-     * `gallery` is a json column on both Event and Venue, but deployments differ
-     * on whether it holds bare URLs or objects with a url/path key.
+     * Aici era, pana acum, o lista de rezerve — posterul, apoi imaginea „hero",
+     * apoi galeria. Consecinta: un artist fara portret capata un short din
+     * fotografia lui orizontala, care intr-un feed 9:16 apare taiata prin
+     * mijloc. Rezervele au fost scoase deliberat: fara imagine verticala nu se
+     * genereaza nimic (vezi App\Support\VerticalPoster).
      *
-     * @return array<int, string>
+     * @return array<int, string> zero sau un element
      */
-    protected function arrayOf(mixed $gallery): array
+    protected function pickImages(Model $owner): array
     {
-        if (is_string($gallery)) {
-            $gallery = json_decode($gallery, true);
-        }
+        $vertical = VerticalPoster::for($owner);
 
-        if (! is_array($gallery)) {
-            return [];
-        }
-
-        return array_values(array_filter(array_map(function ($item) {
-            if (is_string($item)) {
-                return $item;
-            }
-
-            if (is_array($item)) {
-                return $item['url'] ?? $item['path'] ?? $item['src'] ?? null;
-            }
-
-            return null;
-        }, $gallery)));
+        return $vertical === null ? [] : [$vertical];
     }
 }

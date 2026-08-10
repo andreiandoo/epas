@@ -29,7 +29,12 @@ class ShortFeedRanker
      * @param  Collection<int, Short>  $candidates
      * @return Collection<int, Short> ordered best-first, diversified
      */
-    public function rank(Collection $candidates, ?MarketplaceCustomer $customer, ?int $pageLimit = null): Collection
+    public function rank(
+        Collection $candidates,
+        ?MarketplaceCustomer $customer,
+        ?int $pageLimit = null,
+        ?string $sessionId = null,
+    ): Collection
     {
         if ($candidates->isEmpty()) {
             return $candidates;
@@ -37,7 +42,7 @@ class ShortFeedRanker
 
         $weights = config('shorts.ranker.weights');
         $profile = $this->profile->for($customer);
-        $seen = $this->seenShortIds($customer, $candidates->pluck('id')->all());
+        $seen = $this->seenShortIds($customer, $candidates->pluck('id')->all(), $sessionId);
 
         $scored = $candidates->map(function (Short $short) use ($weights, $profile, $seen) {
             $parts = [
@@ -190,31 +195,54 @@ class ShortFeedRanker
      * @param  array<int, int>  $candidateIds
      * @return array<int, bool>
      */
-    protected function seenShortIds(?MarketplaceCustomer $customer, array $candidateIds): array
-    {
-        if (! $customer || $candidateIds === []) {
+    protected function seenShortIds(
+        ?MarketplaceCustomer $customer,
+        array $candidateIds,
+        ?string $sessionId = null,
+    ): array {
+        if ($candidateIds === [] || (! $customer && ! $sessionId)) {
             return [];
         }
 
         $seen = [];
 
-        try {
-            $seen = DB::table('short_impressions')
-                ->where('marketplace_customer_id', $customer->id)
-                ->whereIn('short_id', $candidateIds)
-                ->pluck('short_id')
-                ->flip()
-                ->map(fn () => true)
-                ->all();
-        } catch (\Throwable $e) {
-            Log::debug('ShortFeedRanker: seen store unavailable', ['error' => $e->getMessage()]);
+        if ($customer) {
+            try {
+                $seen = DB::table('short_impressions')
+                    ->where('marketplace_customer_id', $customer->id)
+                    ->whereIn('short_id', $candidateIds)
+                    ->pluck('short_id')
+                    ->flip()
+                    ->map(fn () => true)
+                    ->all();
+            } catch (\Throwable $e) {
+                Log::debug('ShortFeedRanker: seen store unavailable', ['error' => $e->getMessage()]);
+            }
         }
 
         try {
+            /* Telemetria bruta: dupa cont cand exista, dupa sesiunea anonima
+               altfel.
+
+               Fara ramura pe sesiune, penalizarea „deja vazut" nu se aplica
+               DELOC vizitatorilor fara cont — adica exact publicului majoritar
+               al feed-ului, si singurul pe care il are deocamdata aplicatia.
+               Efectul se vedea imediat pe telefon: iesi din ecran, intri la loc
+               si primesti aceleasi short-uri, pentru ca nimic nu retinuse ca
+               le-ai vazut. `short_impressions` nu ajuta aici: are doar coloana
+               de client.
+
+               Intra si `impression`, nu doar `view`: pe un feed de postere fara
+               video, un short poate fi vazut si depasit fara sa atinga pragul
+               de vizionare — dar tot a fost vazut. */
             $recent = ShortEvent::query()
-                ->where('marketplace_customer_id', $customer->id)
+                ->when(
+                    $customer !== null,
+                    fn ($q) => $q->where('marketplace_customer_id', $customer->id),
+                    fn ($q) => $q->whereNull('marketplace_customer_id')->where('session_id', $sessionId),
+                )
                 ->whereIn('short_id', $candidateIds)
-                ->whereIn('type', [ShortEvent::TYPE_VIEW, ShortEvent::TYPE_COMPLETE])
+                ->whereIn('type', [ShortEvent::TYPE_VIEW, ShortEvent::TYPE_COMPLETE, ShortEvent::TYPE_IMPRESSION])
                 ->distinct()
                 ->pluck('short_id')
                 ->flip()
@@ -277,9 +305,22 @@ class ShortFeedRanker
         ))->values();
     }
 
+    /** Cate short-uri la rand poate avea acelasi TIP de proprietar. */
+    private const MAX_SAME_KIND_RUN = 2;
+
     /**
-     * Never two consecutive shorts from the same owner. Without this a single
-     * prolific organiser takes over the whole page.
+     * Nici doua short-uri consecutive de la acelasi proprietar, si nici siruri
+     * lungi de acelasi TIP de proprietar.
+     *
+     * Regula pe proprietar exista de la inceput. Cea pe tip a lipsit, si se
+     * vedea: generarea automata a produs sute de short-uri de sali, toate cu
+     * aceeasi prospetime si aceeasi popularitate (zero), deci scorurile ies
+     * practic egale si sortarea le lasa lipite. Rezultatul, pe telefon: derulezi
+     * si vezi numai sali, una dupa alta, desi in baza exista si evenimente si
+     * artisti.
+     *
+     * Nu se rescriu scorurile — un short nu devine „mai bun" pentru ca e de alt
+     * tip. Se amana doar cel care ar prelungi sirul, exact ca la proprietar.
      *
      * @param  Collection<int, Short>  $ordered
      * @return Collection<int, Short>
@@ -289,31 +330,51 @@ class ShortFeedRanker
         $result = collect();
         $deferred = collect();
         $lastOwner = null;
+        $lastKind = null;
+        $kindRun = 0;
 
-        foreach ($ordered as $short) {
-            $owner = $short->owner_type.':'.$short->owner_id;
+        $ownerKey = fn (Short $s) => $s->owner_type.':'.$s->owner_id;
+
+        // Ar strica randul: acelasi proprietar, sau un sir de acelasi tip prea lung.
+        $clashes = function (Short $s) use (&$lastOwner, &$lastKind, &$kindRun, $ownerKey): bool {
+            $owner = $ownerKey($s);
 
             if ($owner !== ':' && $owner === $lastOwner) {
+                return true;
+            }
+
+            return $s->owner_type !== null
+                && $s->owner_type === $lastKind
+                && $kindRun >= self::MAX_SAME_KIND_RUN;
+        };
+
+        $accept = function (Short $s) use (&$result, &$lastOwner, &$lastKind, &$kindRun, $ownerKey): void {
+            $result->push($s);
+            $kindRun = ($s->owner_type !== null && $s->owner_type === $lastKind) ? $kindRun + 1 : 1;
+            $lastKind = $s->owner_type;
+            $lastOwner = $ownerKey($s);
+        };
+
+        foreach ($ordered as $short) {
+            if ($clashes($short)) {
                 $deferred->push($short);
 
                 continue;
             }
 
-            $result->push($short);
-            $lastOwner = $owner;
+            $accept($short);
 
-            // Re-admit a deferred short as soon as it no longer clashes.
-            $promotable = $deferred->first(fn (Short $d) => $d->owner_type.':'.$d->owner_id !== $lastOwner);
+            // Reprimim un amanat imediat ce nu mai strica randul.
+            $promotable = $deferred->first(fn (Short $d) => ! $clashes($d));
 
             if ($promotable) {
                 $deferred = $deferred->reject(fn (Short $d) => $d->is($promotable))->values();
-                $result->push($promotable);
-                $lastOwner = $promotable->owner_type.':'.$promotable->owner_id;
+                $accept($promotable);
             }
         }
 
-        // Anything still deferred goes at the end rather than being dropped —
-        // a diversity rule must not silently shrink the page.
+        /* Ce a ramas amanat merge la coada, nu se pierde: o regula de
+           diversitate n-are voie sa micsoreze pagina in tacere. */
         return $result->concat($deferred)->values();
     }
 
