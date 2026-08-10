@@ -1066,7 +1066,12 @@ Schedule::call(function () {
         ->whereNotNull('youtube_id')
         ->whereHas('events', fn ($q) => $q->whereDate('event_date', '>=', now()->toDateString()))
         ->pluck('id')
-        ->each(fn (int $id) => \App\Jobs\Shorts\PullChannelShortsJob::dispatch($id));
+        // 50, nu 10 (implicitul): se citesc ultimele incarcari de ORICE fel din
+        // canal, iar filtrul de 60s vine dupa. Un artist care a pus recent zece
+        // clipuri lungi n-ar fi dat niciun short, desi are pagina /shorts plina.
+        // Nu costa nimic in plus: playlistItems e o unitate de cota indiferent
+        // de maxResults, iar videos.list accepta 50 de id-uri intr-un apel.
+        ->each(fn (int $id) => \App\Jobs\Shorts\PullChannelShortsJob::dispatch($id, 50));
 })
     ->name('shorts:pull-artist-youtube')
     ->weeklyOn(2, '03:15') // Tuesday 03:15
