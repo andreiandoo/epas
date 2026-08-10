@@ -2,6 +2,7 @@
 
 namespace App\Services\Shorts;
 
+use App\Support\PlainText;
 use App\Models\Short;
 use Illuminate\Support\Collection;
 
@@ -130,7 +131,7 @@ class ShortPayload
             'type' => $this->morphAlias($short->owner_type),
             'id' => $owner->getKey(),
             'slug' => $owner->slug ?? null,
-            'name' => $owner->name ?? $owner->title ?? null,
+            'name' => PlainText::of($owner->name ?? null) ?? PlainText::of($owner->title ?? null),
         ];
     }
 
@@ -148,7 +149,7 @@ class ShortPayload
         return [
             'id' => $event->id,
             'slug' => $event->slug ?? null,
-            'title' => $event->title ?? $event->name ?? null,
+            'title' => PlainText::of($event->title ?? null) ?? PlainText::of($event->name ?? null),
             'date' => $event->event_date?->toDateString() ?? null,
         ];
     }

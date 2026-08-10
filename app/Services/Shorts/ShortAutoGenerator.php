@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Short;
 use App\Models\Venue;
 use App\Services\Video\VideoRenderer;
+use App\Support\PlainText;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -145,7 +146,7 @@ class ShortAutoGenerator
                 $event->hero_image_url,
                 ...$this->arrayOf($event->gallery),
             ]),
-            'title' => $event->title,
+            'title' => PlainText::of($event->title),
             'subtitle' => $event->event_date?->format('d M Y'),
             'event_id' => $event->getKey(),
             'tenant_id' => $event->tenant_id,
@@ -171,7 +172,7 @@ class ShortAutoGenerator
                 $artist->main_image_url,
                 $artist->logo_url,
             ]),
-            'title' => $artist->name,
+            'title' => PlainText::of($artist->name),
             'subtitle' => $nextEvent?->event_date?->format('d M Y'),
             'event_id' => $nextEvent?->getKey(),
             'tenant_id' => $nextEvent?->tenant_id,
@@ -190,7 +191,7 @@ class ShortAutoGenerator
                 $venue->image_url,
                 ...$this->arrayOf($venue->gallery),
             ]),
-            'title' => $venue->name,
+            'title' => PlainText::of($venue->name),
             'subtitle' => $venue->city,
             'event_id' => null,
             'tenant_id' => $venue->tenant_id,

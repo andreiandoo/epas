@@ -2,6 +2,7 @@
 
 namespace App\Services\Shorts;
 
+use App\Support\PlainText;
 use App\Models\Event;
 use App\Models\MarketplaceCustomer;
 use App\Models\Short;
@@ -69,7 +70,7 @@ class ShortUgcService
      */
     public function createUpload(MarketplaceCustomer $customer, Event $event, ?string $caption = null): array
     {
-        $session = $this->provider->createDirectUpload(['title' => $event->title]);
+        $session = $this->provider->createDirectUpload(['title' => PlainText::of($event->title) ?? 'Short']);
 
         $short = Short::create([
             'source' => Short::SOURCE_UPLOAD,
