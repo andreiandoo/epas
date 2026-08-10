@@ -94,6 +94,12 @@ class PullChannelShortsJob implements ShouldQueue
                 'title' => $video['title'] ?? null,
                 'duration' => $duration,
                 'status' => Short::STATUS_DRAFT,
+                /* Butonul principal. Fara el, `cta_type` ramanea implicit
+                   'none', payload-ul intorcea `cta: null` si short-ul aparea in
+                   feed FARA nicio actiune — un clip de artist din care nu se
+                   putea ajunge la artist. */
+                'cta_type' => 'open_artist',
+                'cta_label' => 'Vezi profil',
                 /* Marcheaza randul ca adus de automat, nu incarcat de om. E si
                    singurul semn dupa care plafonul de mai jos stie ce are voie
                    sa stearga. Nu atrage penalizarea de „poster fara video" din

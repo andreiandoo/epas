@@ -168,7 +168,7 @@ const short = (id, title, likes) => ({
   });
 
   const before = await page.evaluate(() => ({
-    title: document.querySelector('.shchrome .info div').textContent,
+    title: document.querySelector('.shchrome .shtitle span').textContent,
     likes: document.querySelector('.shchrome .rail button > span')?.textContent ?? '',
     cta: document.querySelector('.shchrome .shcta').textContent.trim(),
     infoBottom: document.querySelector('.shchrome .info').getBoundingClientRect().bottom,
@@ -214,7 +214,7 @@ const short = (id, title, likes) => ({
   });
   const meta = await page.evaluate(() => ({
     pill: document.querySelector('.shchrome .gpill')?.textContent.trim(),
-    title: document.querySelector('.shchrome .info > div')?.textContent.trim(),
+    title: document.querySelector('.shchrome .shtitle span')?.textContent.trim(),
     details: [...document.querySelectorAll('.shchrome .cmeta .i')].map((e) => e.textContent.trim()),
   }));
   check('pastila arata TIPUL, nu numele', meta.pill === 'Locație', `pastila="${meta.pill}" titlu="${meta.title}"`);
@@ -222,6 +222,28 @@ const short = (id, title, likes) => ({
 
   check('blocul de text a urcat cu >=20px (era 34)', geom.infoGap >= 54, `${Math.round(geom.infoGap)}px de jos`);
   check('rail-ul a urcat cu >=20px (era 32)', geom.railGap >= 52, `${Math.round(geom.railGap)}px de jos`);
+
+  /* ---------- 3b. titlul lung se micsoreaza, descrierea se plieaza ---------- */
+  const titleInfo = await page.evaluate(() => {
+    const el = document.querySelector('.shchrome .shtitle');
+    const wrap = document.querySelector('.shchrome .shdescwrap');
+
+    return {
+      size: parseFloat(getComputedStyle(el).fontSize),
+      openHeight: wrap ? wrap.getBoundingClientRect().height : -1,
+    };
+  });
+  check('descrierea porneste pliata', titleInfo.openHeight < 6, `${Math.round(titleInfo.openHeight)}px`);
+
+  await page.evaluate(() => document.querySelector('.shchrome .shtitle').click());
+  await wait(600);
+  const descOpened = await page.evaluate(() => document.querySelector('.shchrome .shdescwrap').getBoundingClientRect().height);
+  check('atingerea titlului desface descrierea', descOpened > 10, `${Math.round(descOpened)}px`);
+
+  await page.evaluate(() => document.querySelector('.shchrome .shtitle').click());
+  await wait(600);
+  const closed = await page.evaluate(() => document.querySelector('.shchrome .shdescwrap').getBoundingClientRect().height);
+  check('a doua atingere o plieaza la loc', closed < 6, `${Math.round(closed)}px`);
 
   /* ---------- 4. gesturile orizontale ---------- */
   const swipe = async (fromX, toX) => {

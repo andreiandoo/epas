@@ -82,14 +82,16 @@
   position: absolute;
   left: 18px;
   right: 74px;
-  bottom: calc(var(--safe-bottom, 0px) + 56px);
+  /* +2px fata de linia comuna: blocul de text are un descendent mai jos decat
+     rail-ul, iar la aceeasi valoare parea cu un fir mai jos decat el. */
+  bottom: calc(var(--ep-bottom-line) + 2px);
   z-index: 5;
 }
 
 .app-client .shchrome .rail {
   position: absolute;
   right: 16px;
-  bottom: calc(var(--safe-bottom, 0px) + 54px);
+  bottom: var(--ep-bottom-line);
   width: 42px;
   display: flex;
   flex-direction: column;
@@ -283,4 +285,100 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .app-client .sk { animation: none }
+}
+
+/* ---- player extern (YouTube) ----
+   Clipul e 9:16, dar iframe-ul livreaza un cadru 16:9 cu benzi negre. Il facem
+   mai lat decat ecranul si il centram, ca imaginea sa umple cadrul la fel ca un
+   video propriu — altfel un short vertical ar aparea ca o dunga in mijloc. */
+.app-client .short .shembed {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  /* 16:9 peste latimea ecranului => inaltimea necesara ca sa acopere 9:16 */
+  height: 178vw;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+  border: 0;
+}
+
+/* ---- titlul: buton, ca sa desfaca descrierea ---- */
+.app-client .shchrome .shtitle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+/* Maxim trei randuri chiar si dupa micsorarea automata: exista titluri care
+   depasesc orice prag rezonabil. */
+.app-client .shchrome .shtitle > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.app-client .shchrome .shcaret {
+  flex: none;
+  margin-top: .45em;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  opacity: .75;
+  transition: transform .28s cubic-bezier(.3, .9, .3, 1);
+}
+.app-client .shchrome .shcaret.up { transform: rotate(-135deg); }
+
+/* ---- data evenimentului ---- */
+.app-client .shchrome .shdate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .26);
+  backdrop-filter: blur(8px);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.app-client .shchrome .shdate svg { width: 13px; height: 13px }
+/* Ca la .shcta: `hidden` trebuie sa bata `display:inline-flex`. */
+.app-client .shchrome .shdate[hidden] { display: none }
+
+/* ---- descrierea pliabila ----
+   `grid-template-rows: 0fr -> 1fr` e singurul mod de a anima o inaltime
+   necunoscuta fara sa o masori in JS; tot ce urmeaza se deplaseaza lin odata
+   cu ea. */
+.app-client .shchrome .shdescwrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows .32s cubic-bezier(.3, .9, .3, 1), opacity .24s ease;
+}
+.app-client .shchrome .shdescwrap.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.app-client .shchrome .shdescinner { overflow: hidden; min-height: 0 }
+/* Desfacuta, poate fi lunga: o limitam la sase randuri si o lasam sa deruleze. */
+.app-client .shchrome .shdescwrap.open .shdesc {
+  -webkit-line-clamp: unset;
+  max-height: 34vh;
+  overflow-y: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-client .shchrome .shdescwrap { transition: none }
 }

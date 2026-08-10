@@ -4128,6 +4128,11 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/catalog/artists/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'artist'])
         ->name('api.tenant-client.catalog.artist');
 
+    /* Cautare dupa nume, pentru sursele externe (Radar) care n-au id-ul nostru.
+       Declarata INAINTEA rutei cu {key}, altfel „lookup" ar fi citit ca slug. */
+    Route::get('/catalog/venues-lookup', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'venueLookup'])
+        ->name('api.tenant-client.catalog.venue-lookup');
+
     Route::get('/catalog/venues/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'venue'])
         ->name('api.tenant-client.catalog.venue');
 

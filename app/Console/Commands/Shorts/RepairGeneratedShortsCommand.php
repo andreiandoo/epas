@@ -106,6 +106,20 @@ class RepairGeneratedShortsCommand extends Command
         if ($force && $count > 0) {
             $query->update(['is_generated' => true]);
         }
+
+        /* Cele aduse inainte ca preluarea sa seteze butonul au ramas cu
+           `cta_type = 'none'`, deci apareau in feed fara nicio actiune. */
+        $noCta = Short::query()
+            ->where('source', ShortIngestService::PLATFORM_YOUTUBE)
+            ->where('owner_type', Artist::class)
+            ->where(fn ($q) => $q->where('cta_type', 'none')->orWhereNull('cta_type'));
+
+        $noCtaCount = (clone $noCta)->count();
+        $this->line(sprintf('Short-uri YouTube fara buton de actiune: %d', $noCtaCount));
+
+        if ($force && $noCtaCount > 0) {
+            $noCta->update(['cta_type' => 'open_artist', 'cta_label' => 'Vezi profil']);
+        }
     }
 
     private function applyPerOwnerCap(bool $force): void

@@ -67,6 +67,9 @@ type DetailResponse = { data: ApiRadarEvent };
 /* ---------- forma pe care o consuma ecranele (cea din prototip) ---------- */
 export type RadarOffer = [platform: string, price: number, stock: string];
 
+/** O categorie de bilet a unei platforme — asa cum e listata pe app.tics.ro. */
+export type RadarTicket = { name: string; price: number; stock: string };
+
 export type RadarItem = {
   id: string;
   s: string;
@@ -89,6 +92,8 @@ export type RadarItem = {
   poster?: string | null;
   /** true daca vine din TICS Radar, false daca e din datasetul prototipului */
   live?: boolean;
+  /** toate categoriile de bilet, per platforma; cheia e numele platformei */
+  tickets: Record<string, RadarTicket[]>;
   /** linkurile de cumparare, in aceeasi ordine ca `offers` */
   urls?: Record<string, string>;
 };
@@ -204,28 +209,44 @@ function parts(iso: string | null) {
 }
 
 /** Cel mai mic pret pe platforma, cu eticheta de stoc a biletului respectiv. */
-function toOffers(e: ApiRadarEvent): { offers: RadarOffer[]; urls: Record<string, string> } {
+function toOffers(e: ApiRadarEvent): {
+  offers: RadarOffer[];
+  urls: Record<string, string>;
+  tickets: Record<string, RadarTicket[]>;
+} {
   const offers: RadarOffer[] = [];
   const urls: Record<string, string> = {};
+  const tickets: Record<string, RadarTicket[]> = {};
 
   for (const p of e.platforms ?? []) {
-    const tickets = (p.tickets ?? [])
-      .map((t) => ({ price: Number(t.total_price ?? t.price), av: (t.availability ?? '').toLowerCase() }))
+    const rows = (p.tickets ?? [])
+      .map((t) => ({
+        name: (t.name ?? '').trim() || 'Bilet',
+        price: Number(t.total_price ?? t.price),
+        av: (t.availability ?? '').toLowerCase(),
+      }))
       .filter((t) => Number.isFinite(t.price) && t.price > 0);
-    if (!tickets.length) continue;
+    if (!rows.length) continue;
 
-    const cheapest = tickets.reduce((a, b) => (b.price < a.price ? b : a));
+    const cheapest = rows.reduce((a, b) => (b.price < a.price ? b : a));
     offers.push([p.platform_name, Math.round(cheapest.price), STOCK_RO[cheapest.av] ?? 'Verifică']);
     if (p.url) urls[p.platform_name] = p.url;
+
+    /* Toate categoriile, nu doar cea mai ieftina: pe app.tics.ro se pot
+       desfasura, iar pretul de start singur nu spune ce cumperi. Sortate
+       crescator, ca randul de sus sa fie chiar cel din capul listei. */
+    tickets[p.platform_name] = rows
+      .map((t) => ({ name: t.name, price: Math.round(t.price), stock: STOCK_RO[t.av] ?? 'Verifică' }))
+      .sort((a, b) => a.price - b.price);
   }
 
-  return { offers: offers.sort((a, b) => a[1] - b[1]), urls };
+  return { offers: offers.sort((a, b) => a[1] - b[1]), urls, tickets };
 }
 
 export function normalizeRadar(e: ApiRadarEvent): RadarItem {
   const info = typeInfo(e.event_type);
   const p = parts(e.starts_at);
-  const { offers, urls } = toOffers(e);
+  const { offers, urls, tickets } = toOffers(e);
 
   const item: RadarItem = {
     id: String(e.id),
@@ -242,9 +263,12 @@ export function normalizeRadar(e: ApiRadarEvent): RadarItem {
     stock: offers[0]?.[2] ?? 'Verifică',
     rat: '—',
     desc: '',
-    artists: [],
+    /* API-ul da un singur nume, si acela adesea gol — nu o lista de artisti.
+       Il aratam cand exista, in loc sa lasam sectiunea goala. */
+    artists: e.artist_name ? [e.artist_name] : [],
     gallery: [],
     offers,
+    tickets,
     sc: info.sc,
     poster: e.poster_url ?? null,
     live: true,

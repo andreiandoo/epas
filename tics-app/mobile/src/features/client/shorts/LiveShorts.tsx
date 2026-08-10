@@ -28,6 +28,7 @@ import {
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { ShortVideo } from './ShortVideo';
+import { ShortEmbed, youtubeId } from './ShortEmbed';
 import { useShortsFeed } from './useShortsFeed';
 import { useShortTelemetry } from './useShortTelemetry';
 import { usePlaybackPreferences } from './usePlaybackPreferences';
@@ -41,6 +42,10 @@ const PRELOAD_RADIUS = 1;
 /** Pragurile unui "view" — trebuie sa fie cel putin la fel de stricte ca serverul. */
 const VIEW_MIN_MS = 2000;
 const VIEW_MIN_RATIO = 0.25;
+
+/** Id-ul de YouTube al unui short extern, sau null cand nu e unul. */
+const embedIdOf = (short: ApiShort) =>
+  short.source === 'youtube' ? youtubeId(short.source_url, short.embed_html) : null;
 
 const kfmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n));
 
@@ -69,6 +74,29 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [muted, setMuted] = useState(true);
   const [reminded, setReminded] = useState<Record<number, boolean>>({});
+  /* Descrierea sta pliata si se desface la atingerea titlului. Cheia e id-ul
+     short-ului, nu un simplu boolean: altfel starea „deschis" ar migra pe
+     short-ul urmator la derulare. */
+  const [descOpenFor, setDescOpenFor] = useState<number | null>(null);
+
+  /* Volumul de sistem comanda sunetul feed-ului.
+     Evenimentul vine din MainActivity (WebView-ul nu vede tastele hardware si
+     nu poate citi volumul). Fara asta, dai telefonul pe silentios din butoane
+     si short-ul continua sa cante — ceea ce e exact momentul in care nu vrei.
+     Necesita APK nou; pe un APK vechi evenimentul nu apare si totul ramane ca
+     inainte. */
+  useEffect(() => {
+    const onVolume = (e: Event) => {
+      const volume = (e as CustomEvent<{ volume: number }>).detail?.volume;
+      if (typeof volume !== 'number') return;
+
+      setMuted(volume === 0);
+    };
+
+    window.addEventListener('tixello:system-volume', onVolume);
+
+    return () => window.removeEventListener('tixello:system-volume', onVolume);
+  }, []);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const slideRefs = useRef<Array<HTMLElement | null>>([]);
@@ -375,6 +403,26 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
   const swipe = useHorizontalSwipe(back, openDetail);
 
+  /* Data, separata de restul detaliilor — se afiseaza altfel. */
+  const details = activeShort?.owner?.details ?? [];
+  const dateRow = details.find((d) => d.icon === 'cal') ?? null;
+  const otherRows = details.filter((d) => d !== dateRow);
+
+  const descText = activeShort?.caption ?? activeShort?.description ?? '';
+  const hasDesc = descText.trim() !== '';
+  const descOpen = hasDesc && descOpenFor === activeShort?.id;
+
+  /**
+   * Marimea titlului, dupa lungime.
+   *
+   * Titlurile preluate de pe YouTube sau numele lungi de eveniment ajungeau la
+   * trei randuri de 26px, adica jumatate din inaltimea ecranului. Praguri fixe,
+   * nu o formula: se pot citi dintr-o privire si dau acelasi rezultat pe orice
+   * telefon, spre deosebire de o masuratoare care depinde de latimea reala.
+   */
+  const titleLen = (activeShort?.title ?? '').length;
+  const titleSize = titleLen > 78 ? 17 : titleLen > 56 ? 19 : titleLen > 38 ? 22 : 26;
+
   // Cu economie de date sau pe retea mobila, prefetchCount e 0: montam doar
   // short-ul activ si nu platim banda pentru vecini (D9).
   const radius = Math.min(PRELOAD_RADIUS, prefetchCount > 0 ? PRELOAD_RADIUS : 0);
@@ -435,6 +483,27 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
                   onComplete={() => handleComplete(short)}
                   onTap={() => setMuted((m) => !m)}
                 />
+              ) : embedIdOf(short) ? (
+                /* Short extern: playerul platformei, montat doar cat e activ.
+                   Posterul ramane dedesubt si se vede cat incarca. */
+                <>
+                  <div
+                    className="media"
+                    style={
+                      short.playback.poster_url
+                        ? { background: `#0b0912 center/cover no-repeat url(${short.playback.poster_url})` }
+                        : sx('background:transparent')
+                    }
+                  />
+                  <ShortEmbed
+                    videoId={embedIdOf(short) as string}
+                    active={isActive}
+                    muted={muted || !autoplayAllowed}
+                    duration={short.duration}
+                    onProgress={(ms, ratio) => handleProgress(short, ms, ratio)}
+                    onComplete={() => handleComplete(short)}
+                  />
+                </>
               ) : (
                 // Short extern (embed) sau asset inca neincarcat: posterul e
                 // suficient ca feed-ul sa nu aiba goluri negre.
@@ -505,20 +574,40 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
               {activeShort.owner?.label ?? ''}
             </span>
 
-            {/* Randate neconditionat, chiar goale: un `? :` ar scoate si ar
-                repune nodul la fiecare short, iar blocul de sub el ar sari. */}
-            <div
-              style={sx(
-                'font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:11px;line-height:1.05;text-shadow:0 2px 18px rgba(0,0,0,.6)',
-              )}
-            >
-              {activeShort.title ?? ''}
-            </div>
+            {/* Data, scoasa in evidenta: pentru un eveniment conteaza aproape
+                cat titlul, iar pierduta printre celelalte detalii se citea
+                ultima. Ramane doar un rand de text pentru artisti si locatii,
+                unde nu exista. */}
+            <span className="shdate" hidden={!dateRow}>
+              <Ic svg={I.cal} /> {dateRow?.text ?? ''}
+            </span>
 
-            {/* Adresa, nota, capacitatea — ce stie catalogul despre proprietar.
-                Un short de locatie arata pana acum doar numele. */}
+            {/* Randate neconditionat, chiar goale: un `? :` ar scoate si ar
+                repune nodul la fiecare short, iar blocul de sub el ar sari.
+                Marimea scade cu lungimea: un titlu preluat de pe YouTube poate
+                avea 90 de caractere, iar la 26px ar ocupa jumatate de ecran. */}
+            <button
+              type="button"
+              className="shtitle"
+              // atingerea titlului desface / plieaza descrierea
+              onClick={() => setDescOpenFor((cur) => (cur === activeShort.id ? null : activeShort.id))}
+              aria-expanded={descOpen}
+              style={{
+                fontSize: `${titleSize}px`,
+                fontWeight: 700,
+                letterSpacing: '-.03em',
+                marginTop: '9px',
+                lineHeight: 1.08,
+                textShadow: '0 2px 18px rgba(0,0,0,.6)',
+              }}
+            >
+              <span>{activeShort.title ?? ''}</span>
+              {hasDesc ? <i className={descOpen ? 'shcaret up' : 'shcaret'} aria-hidden="true" /> : null}
+            </button>
+
+            {/* Restul detaliilor: adresa, nota, capacitatea, organizatorul. */}
             <div className="cmeta" style={sx('margin-top:8px')}>
-              {(activeShort.owner?.details ?? []).map((d) => (
+              {otherRows.map((d) => (
                 <span className="i" key={d.text}>
                   <Ic svg={I[d.icon as keyof typeof I] ?? I.pin} />
                   <span>{d.text}</span>
@@ -526,12 +615,16 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
               ))}
             </div>
 
-            {/* Textul scris de om (caption) daca exista, altfel descrierea din
-                catalog. Serverul trimite doar una dintre ele, deci nu se pot
-                suprapune. Maxim trei randuri: peste imagine, un paragraf intreg
-                ar acoperi tot cadrul. */}
-            <div className="shdesc" style={sx('font-size:13px;opacity:.9;margin-top:7px;line-height:1.35')}>
-              {activeShort.caption ?? activeShort.description ?? ''}
+            {/* Descrierea: pliata implicit, ca sa nu acopere cadrul.
+                Animatia foloseste `grid-template-rows: 0fr -> 1fr`, singurul mod
+                de a tranzita o inaltime NECUNOSCUTA fara sa o masuram in JS —
+                iar tot ce e sub ea se deplaseaza odata cu ea, lin. */}
+            <div className={descOpen ? 'shdescwrap open' : 'shdescwrap'}>
+              <div className="shdescinner">
+                <div className="shdesc" style={sx('font-size:13px;opacity:.9;margin-top:8px;line-height:1.4')}>
+                  {descText}
+                </div>
+              </div>
             </div>
 
             <div style={sx('font-size:12.5px;opacity:.8;margin-top:6px')}>

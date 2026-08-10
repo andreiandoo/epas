@@ -121,6 +121,48 @@ class CatalogController extends Controller
         ]]);
     }
 
+    /**
+     * Cauta o locatie dupa NUME, pentru sursele externe.
+     *
+     * Radarul TICS agrega evenimente de pe alte platforme si tine sala doar ca
+     * text — n-are id-ul nostru. Fara punctul asta, numele salii de pe un
+     * eveniment din Radar nu putea duce nicaieri.
+     *
+     * Potrivirea e conservatoare: intai exact, apoi „incepe cu". NU se face
+     * potrivire aproximativa — mai bine niciun rezultat decat sala gresita, care
+     * ar trimite omul cu 300 de km in alta parte. Cand orasul e cunoscut, se
+     * foloseste ca departajare intre sali cu acelasi nume.
+     */
+    public function venueLookup(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->query('name', ''));
+        $city = trim((string) $request->query('city', ''));
+
+        if (mb_strlen($name) < 3) {
+            return $this->missing('Nume prea scurt.');
+        }
+
+        $base = fn () => Venue::query()
+            ->when($city !== '', fn ($q) => $q->where('city', $city));
+
+        $venue = $base()->whereRaw('LOWER(CAST(name AS TEXT)) = ?', [mb_strtolower($name)])->first()
+            ?? $base()->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', [mb_strtolower($name).'%'])->first();
+
+        /* Cu orasul dat si fara rezultat, mai incercam o data fara el: sursele
+           externe scriu orasul altfel („Bucuresti" vs „București"). */
+        if (! $venue && $city !== '') {
+            $venue = Venue::query()
+                ->whereRaw('LOWER(CAST(name AS TEXT)) = ?', [mb_strtolower($name)])
+                ->first();
+        }
+
+        if (! $venue) {
+            return $this->missing('Locația nu a fost găsită.');
+        }
+
+        return response()->json(['success' => true, 'data' => ['id' => $venue->id, 'slug' => $venue->slug]]);
+    }
+
     /* ================= ajutoare ================= */
 
     /**

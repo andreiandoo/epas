@@ -100,6 +100,49 @@ public class MainActivity extends BridgeActivity {
         wv.post(() -> wv.evaluateJavascript(js, null));
     }
 
+    /**
+     * Tastele de volum comanda si sunetul feed-ului.
+     *
+     * WebView-ul nu vede tastele hardware si nu poate citi volumul sistemului,
+     * deci fara punctul asta nativ butonul de mute din aplicatie si volumul
+     * telefonului raman doua lucruri fara legatura: dai telefonul pe silentios
+     * si short-ul continua sa cante.
+     *
+     * NU consumam evenimentul — `super` ruleaza mai departe, deci volumul chiar
+     * se schimba. Citim valoarea DUPA schimbare (de aici `post`), fiindca in
+     * momentul apasarii sistemul inca n-a aplicat-o.
+     *
+     * Aplicatia asculta `tixello:system-volume` si isi pune sunetul dupa el.
+     */
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        boolean handled = super.onKeyDown(keyCode, event);
+
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP
+            || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN
+            || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_MUTE) {
+            notifyVolume();
+        }
+
+        return handled;
+    }
+
+    private void notifyVolume() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+
+        final WebView wv = getBridge().getWebView();
+        final android.media.AudioManager am =
+            (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+        if (am == null) return;
+
+        wv.postDelayed(() -> {
+            int vol = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+            final String js =
+                "window.dispatchEvent(new CustomEvent('tixello:system-volume',{detail:{volume:" + vol + "}}))";
+            wv.evaluateJavascript(js, null);
+        }, 60);
+    }
+
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);

@@ -135,3 +135,14 @@ export const fetchCatalogArtist = (id: string | number, signal?: AbortSignal) =>
 
 export const fetchCatalogVenue = (id: string | number, signal?: AbortSignal) =>
   get<CatalogVenue>(`/tenant-client/catalog/venues/${key(id)}`, signal);
+
+/**
+ * Cauta o locatie dupa nume — pentru evenimentele din Radar, care tin sala doar
+ * ca text. Intoarce null cand nu exista una sigura; nu ghicim.
+ */
+export const lookupCatalogVenue = (name: string, city?: string) => {
+  const params = new URLSearchParams({ name });
+  if (city) params.set('city', city);
+
+  return get<{ id: number; slug: string | null }>(`/tenant-client/catalog/venues-lookup?${params.toString()}`);
+};

@@ -1,0 +1,112 @@
+/* =========================================================
+   Linia de jos, comuna intregii aplicatii.
+
+   Bara de navigare statea la 10px de marginea de jos, iar comenzile din feed-ul
+   de shorts la 54px — doua repere diferite pentru acelasi lucru, vizibile cand
+   treci dintr-un ecran in altul.
+
+   Un singur token, folosit de ambele: cine il schimba le muta impreuna, si nu
+   mai pot ajunge sa se abata una de alta.
+   ========================================================= */
+:root {
+  --ep-bottom-line: calc(var(--safe-bottom, 0px) + 54px);
+}
+
+.app-client .bnav {
+  bottom: var(--ep-bottom-line);
+}
+
+/* ---- panou care se desface (categoriile unui furnizor de bilete) ----
+   `grid-template-rows: 0fr -> 1fr` animeaza o inaltime necunoscuta fara sa o
+   masuram in JS, si impinge lin continutul de dedesubt. */
+.app-client .exp {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .3s cubic-bezier(.3, .9, .3, 1);
+}
+.app-client .exp.open { grid-template-rows: 1fr }
+.app-client .exp .expinner { overflow: hidden; min-height: 0 }
+@media (prefers-reduced-motion: reduce) {
+  .app-client .exp { transition: none }
+}
+
+/* =========================================================
+   Zona „Pe val" de pe Exploreaza.
+
+   Doua straturi: un fundal in culorile marcii si un teanc de postere reale din
+   feed, inclinate ca un pachet de carti. Textul sta pe stanga, pe o zona
+   intunecata suficient cat sa ramana lizibil peste orice poster.
+   ========================================================= */
+.app-client .wave {
+  position: relative;
+  height: 168px;
+  border-radius: 24px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--sh);
+  color: #fff;
+  isolation: isolate;
+}
+.app-client .wave:active { transform: scale(.985); transition: transform .12s }
+
+.app-client .wave-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 120% at 12% 0%, rgba(255, 255, 255, .22), transparent 58%),
+    linear-gradient(115deg, #0e7490 0%, #7c3aed 52%, #ec4899 100%);
+}
+
+/* Posterele. Se aseaza in dreapta si intra sub gradientul de lizibilitate. */
+.app-client .wave-stack {
+  position: absolute;
+  right: -6px;
+  top: 0;
+  bottom: 0;
+  width: 62%;
+}
+.app-client .wave-card {
+  position: absolute;
+  top: 50%;
+  width: 84px;
+  height: 126px;
+  border-radius: 14px;
+  background-position: center;
+  background-size: cover;
+  background-color: #14101f;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .65);
+  border: 1.5px solid rgba(255, 255, 255, .35);
+}
+.app-client .wave-card.p0 { right: 104px; transform: translateY(-50%) rotate(-8deg); z-index: 1 }
+.app-client .wave-card.p1 { right: 52px;  transform: translateY(-50%) rotate(-2deg); z-index: 2 }
+.app-client .wave-card.p2 { right: 4px;   transform: translateY(-50%) rotate(6deg);  z-index: 3 }
+
+/* Peste postere, dinspre stanga, ca textul sa ramana lizibil orice ar fi in
+   imagini — nu ne putem baza pe cat de intunecat e un poster oarecare. */
+.app-client .wave-text {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(90deg, rgba(8, 6, 16, .72) 0%, rgba(8, 6, 16, .42) 46%, transparent 78%);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .45);
+}
+.app-client .wave-text > div:first-child svg { width: 14px; height: 14px }
+
+.app-client .wave-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: #fff;
+  color: #141020;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.app-client .wave-cta svg { width: 14px; height: 14px }

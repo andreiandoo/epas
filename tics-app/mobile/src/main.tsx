@@ -11,6 +11,9 @@ import './design/client.css';
 // Scris de mana (client.css e generat din prototip, care n-are video real).
 import './design/shorts.css';
 
+// Repere de asezare comune ecranelor (linia de jos).
+import './design/layout.css';
+
 // Ultima: corecteaza `hidden`, pe care clasele generate din prototip il bateau.
 import './design/hidden.css';
 import { App } from './app/App';

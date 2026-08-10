@@ -12,6 +12,7 @@ import type { UiEvent } from '../../../api/tenantClient';
 import { EvMini } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
+import { useShortsPreview } from '../shorts/useShortsPreview';
 import { useClient } from '../../../store/client';
 import { useRadarCategories } from '../radarData';
 import type { RadarCategory } from '../../../api/ticsRadar';
@@ -116,6 +117,7 @@ function CatCard({ c }: { c: Pool }) {
 }
 
 export function Explore() {
+  const preview = useShortsPreview();
   const { go } = useNav();
   const cats = useRadarCategories();
   /* Pana raspunde app.tics.ro ramanem pe categoriile prototipului, ca sectiunea
@@ -170,34 +172,37 @@ export function Explore() {
         ))}
       </div>
 
-      <div className="pad" style={sx('margin-top:16px')}>
-        <div className="mcard" onClick={() => go('shorts')} style={sx('overflow:hidden;cursor:pointer')}>
-          <div style={sx('height:120px;position:relative;background:linear-gradient(120deg,#0e7490,#7c3aed,#ec4899)')}>
-            <div
-              style={sx('position:absolute;inset:0;background:radial-gradient(80% 100% at 20% 0%,rgba(255,255,255,.25),transparent 60%)')}
-            />
-            <div
-              style={sx('position:absolute;left:16px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;color:#fff')}
-            >
-              <div
-                className="row"
-                style={sx('gap:7px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase')}
-              >
-                <Ic svg={I.wave} /> Nou
-              </div>
-              <div
-                style={sx('font-size:19px;font-weight:700;letter-spacing:-.02em;margin-top:5px;text-shadow:0 2px 12px rgba(0,0,0,.4)')}
-              >
-                Pe val
-              </div>
-              <div style={sx('font-size:12px;opacity:.9;margin-top:2px')}>Scrolează evenimente ca la Shorts</div>
+      {/* ---------- „Pe val" ----------
+          Era un gradient fix cu un text peste: arata ca un banner publicitar,
+          nu ca o intrare in continut. Acum poarta chiar posterele din feed,
+          deci se vede DIN CE intri, si se innoieste singur pe masura ce apar
+          short-uri noi. Fara postere (feed gol sau offline) ramane varianta
+          simpla, care nu depinde de retea. */}
+      <div className="pad" style={sx('margin-top:18px')}>
+        <div className="wave" onClick={() => go('shorts')} role="button" tabIndex={0}>
+          <div className="wave-bg" />
+
+          <div className="wave-stack" aria-hidden="true">
+            {(preview?.posters ?? []).map((src, i) => (
+              <span key={src} className={`wave-card p${i}`} style={{ backgroundImage: `url('${src}')` }} />
+            ))}
+          </div>
+
+          <div className="wave-text">
+            <div className="row" style={sx('gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9')}>
+              <Ic svg={I.wave} /> Pe val
             </div>
-            <div
-              style={sx('position:absolute;right:16px;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;color:#7c3aed')}
-            >
-              <Ic svg={I.play} />
+            <div style={sx('font-size:22px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.1')}>
+              Descoperă prin video
             </div>
-            <div style={sx('position:absolute;right:74px;top:16px;font-size:34px;opacity:.5')}>🌊</div>
+            <div style={sx('font-size:12.5px;opacity:.88;margin-top:4px')}>
+              {preview
+                ? `${preview.count}+ momente de la artiști, locații și evenimente`
+                : 'Scrolează evenimente ca la Shorts'}
+            </div>
+            <span className="wave-cta">
+              <Ic svg={I.play} /> Începe
+            </span>
           </div>
         </div>
       </div>

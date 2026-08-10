@@ -114,6 +114,9 @@ export function fromFeed(e: FeedEvent): RadarItem {
     artists: [],
     gallery: e.img ? [`url('${e.img}') center/cover, #14101f`] : [],
     offers,
+    /* Lista din pagina /events nu poarta categoriile de bilet — doar pretul de
+       start. Ele vin la hidratare, din detaliul evenimentului. */
+    tickets: {},
     sc: l.sc,
     poster: e.img,
     live: true,

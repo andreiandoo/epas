@@ -7,7 +7,7 @@
    Datele sunt REALE: vin din TICS Radar (app.tics.ro) prin api/ticsRadar.
    Structura si stilurile raman cele din prototip; se schimba doar sursa.
    ========================================================= */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Ic, cn, sx } from '../../../design/sx';
 import { ART, CAL_DAY, CAL_DOTS, I, bgv } from '../../../mock/prototype';
 import { RadarCard } from '../cards';
@@ -18,6 +18,7 @@ import { useLightbox } from '../lightbox';
 import { fmtK, useRadarCities, useRadarDay, useRadarEvent, useRadarList, useRadarMonth, useRadarStats } from '../radarData';
 import { CAT_TO_TYPE, GENRE_OPTIONS, TYPE_OPTIONS, type RadarItem } from '../../../api/ticsRadar';
 import { PickerChip, PickerSheet, type Option } from '../picker';
+import { lookupCatalogVenue } from '../../../api/catalog';
 
 type Ev = Record<string, any>;
 
@@ -277,6 +278,29 @@ export function TicsOffers({ id }: { id?: string }) {
   const toggleSavedRadar = useClient((s) => s.toggleSavedRadar);
   const saved = useClient((s) => !!s.savedRadar[id ?? '']);
   const t = useRadarEvent(id) as RadarItem & Ev;
+  /* Ce furnizor e desfacut. Unul singur: doua liste deschise pe acelasi ecran
+     fac comparatia mai grea, nu mai usoara. */
+  const [openPlatform, setOpenPlatform] = useState<string | null>(null);
+
+  /* Id-ul salii din catalogul nostru, cand numele din Radar se potriveste sigur. */
+  const [venueId, setVenueId] = useState<number | null>(null);
+  useEffect(() => {
+    setVenueId(null);
+    if (!t.venName || t.venName.length < 3) return;
+
+    let alive = true;
+    void lookupCatalogVenue(t.venName, t.city || undefined).then((v) => {
+      if (alive && v) setVenueId(v.id);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [t.venName, t.city]);
+
+  const openVenue = () => {
+    if (venueId) go('venue', { id: String(venueId) });
+  };
   const sorted = [...(t.offers as [string, number, string][])].sort((a, b) => a[1] - b[1]);
   const ch = sorted[0]?.[1] ?? 0;
   /* Cand avem mai multe platforme, "mediana pietei" e chiar cea mai scumpa
@@ -371,13 +395,23 @@ ${url}`);
               <div style={sx('font-size:11px;color:var(--muted)')}>{t.time ? `Ora ${t.time}` : 'Oră neanunțată'}</div>
             </div>
           </div>
-          <div className="row" style={sx('gap:9px')}>
+          {/* Radarul tine sala doar ca text — n-are id-ul nostru. O cautam dupa
+              nume si, daca o gasim sigur, numele devine link catre fisa ei. */}
+          <div className="row" style={sx('gap:9px')} onClick={openVenue}>
             <div className="icon-btn" style={sx('width:38px;height:38px')}>
               <Ic svg={I.pin} />
             </div>
             <div>
               <div style={sx('font-size:12.5px;font-weight:500')}>{t.venName}</div>
-              <div style={sx('font-size:11px;color:var(--muted)')}>{t.city}</div>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: venueId ? 'var(--indigo-2)' : 'var(--muted)',
+                  fontWeight: venueId ? 600 : undefined,
+                }}
+              >
+                {venueId ? 'Vezi locația ›' : t.city}
+              </div>
             </div>
           </div>
         </div>
@@ -516,13 +550,17 @@ ${url}`);
         <div className="card" style={sx('overflow:hidden')}>
           {sorted.map((o, i) => {
             const amber = /ultim|puține|6/i.test(o[2]);
+            const rows = t.tickets?.[o[0]] ?? [];
+            const open = openPlatform === o[0];
+
             return (
+              <div key={o[0]} style={{ borderTop: i > 0 ? '1px solid var(--line)' : undefined }}>
               <div
-                key={o[0]}
                 className="selrow"
+                onClick={() => rows.length > 1 && setOpenPlatform(open ? null : o[0])}
                 style={{
-                  borderTop: i > 0 ? '1px solid var(--line)' : undefined,
                   background: i === 0 ? 'var(--green-soft)' : undefined,
+                  cursor: rows.length > 1 ? 'pointer' : undefined,
                 }}
               >
                 <div
@@ -555,6 +593,14 @@ ${url}`);
                   <div className="metaline" style={sx('margin-top:4px')}>
                     <span className="stockdot" style={{ background: amber ? 'var(--amber)' : 'var(--green-2)' }} />
                     <span>{o[2]}</span>
+                    {rows.length > 1 ? (
+                      <>
+                        <span className="dot" />
+                        <span style={sx('color:var(--indigo-2);font-weight:600')}>
+                          {rows.length} tipuri {open ? '▴' : '▾'}
+                        </span>
+                      </>
+                    ) : null}
                   </div>
                 </div>
                 <div style={sx('text-align:right;flex:none')}>
@@ -572,7 +618,11 @@ ${url}`);
                   </div>
                   <button
                     className="gpill"
-                    onClick={() => goToOffer(o[0])}
+                    onClick={(e) => {
+                      // randul de deasupra desface lista; butonul duce pe site
+                      e.stopPropagation();
+                      goToOffer(o[0]);
+                    }}
                     style={
                       i === 0
                         ? { marginTop: 7, background: 'linear-gradient(135deg,var(--green),#16a34a)', borderColor: 'transparent' }
@@ -582,6 +632,35 @@ ${url}`);
                     Mergi <Ic svg={I.ext} />
                   </button>
                 </div>
+              </div>
+
+              {/* Categoriile de bilet ale furnizorului. Aceeasi animatie de
+                  inaltime ca la descrierea din feed, ca lista sa nu apara brusc. */}
+              <div className={open ? 'exp open' : 'exp'}>
+                <div className="expinner">
+                  <div style={sx('padding:2px 14px 12px')}>
+                    {rows.map((r) => (
+                      <div
+                        key={r.name + r.price}
+                        className="between"
+                        style={sx('padding:8px 0;border-top:1px solid var(--line)')}
+                      >
+                        <div style={sx('min-width:0;flex:1')}>
+                          <div style={sx('font-size:12.5px;font-weight:500')}>{r.name}</div>
+                          <div className="metaline" style={sx('margin-top:2px')}>
+                            <span className="stockdot" style={sx('background:var(--green-2)')} />
+                            <span>{r.stock}</span>
+                          </div>
+                        </div>
+                        <div style={sx('font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;flex:none')}>
+                          {r.price}
+                          <small style={sx('font-size:10px;color:var(--muted);font-weight:600')}> lei</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
               </div>
             );
           })}
@@ -659,10 +738,20 @@ export function Calendar() {
   const now = new Date();
   const [ym, setYm] = useState<[number, number]>([now.getFullYear(), now.getMonth()]);
   const [year, month] = ym;
+
+  /* Miezul zilei de azi, in UTC — grila e construita tot in UTC (`Date.UTC`
+     mai jos), deci comparatia trebuie facuta in acelasi sistem, altfel ziua
+     curenta apare inactiva in fusurile de la est de Greenwich. */
+  const TODAY_UTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const shiftMonth = (d: number) => {
     const t = new Date(Date.UTC(year, month + d, 1));
+
+    // Nu se coboara sub luna curenta: n-ar avea decat zile inactive.
+    if (Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1) < Date.UTC(now.getFullYear(), now.getMonth(), 1)) return;
+
     setYm([t.getUTCFullYear(), t.getUTCMonth()]);
   };
+  const canGoBack = Date.UTC(year, month, 1) > Date.UTC(now.getFullYear(), now.getMonth(), 1);
 
   const calF = useClient((s) => s.calF);
   const setCalF = useClient((s) => s.setCalF);
@@ -781,7 +870,11 @@ export function Calendar() {
       <div className="pad" style={sx('margin-top:14px')}>
         <div className="between" style={sx('margin-bottom:10px')}>
           <div className="row" style={sx('gap:10px')}>
-            <span className="muted" style={sx('cursor:pointer')} onClick={() => shiftMonth(-1)}>
+            <span
+              className="muted"
+              style={{ cursor: canGoBack ? 'pointer' : 'default', opacity: canGoBack ? 1 : 0.3 }}
+              onClick={() => shiftMonth(-1)}
+            >
               ‹
             </span>
             <div style={sx('font-weight:600;font-size:15px')}>
@@ -809,17 +902,22 @@ export function Calendar() {
             const cnt = counts[d];
             const on = d === calDay;
             const dd = dots[d] || (cnt ? ['#8b5cf6', '#22c55e', '#3b82f6'] : []);
+            /* Zilele trecute nu se pot alege: la un eveniment de ieri nu mai ai
+               ce face, iar Radarul oricum nu are ce lista acolo. */
+            const past = Date.UTC(year, month, d) < TODAY_UTC;
             return (
               <div
                 key={d}
-                onClick={() => useClient.setState({ calDay: d })}
+                aria-disabled={past || undefined}
+                onClick={() => !past && useClient.setState({ calDay: d })}
                 style={{
                   aspectRatio: '1',
                   borderRadius: 11,
                   border: `1px solid ${on ? 'var(--indigo)' : 'var(--line)'}`,
                   background: on ? 'var(--indigo-soft)' : 'var(--surface-solid)',
                   padding: '4px 5px',
-                  cursor: 'pointer',
+                  cursor: past ? 'default' : 'pointer',
+                  opacity: past ? 0.38 : 1,
                   display: 'flex',
                   flexDirection: 'column',
                 }}
