@@ -1038,3 +1038,111 @@ Schedule::command('customers:audit-email-mx', [
     ->withoutOverlapping()
     ->runInBackground();
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// Shorts (docs/plans/shorts.md)
+// ─────────────────────────────────────────────────────────────────────────
+
+// Rolls short_events up into the denormalised counters on `shorts`. Every five
+// minutes: the feed reads those counters, and stats that lag by an hour make a
+// short look dead right when it is taking off. The job recomputes from scratch
+// per short, so an overlapping or repeated run cannot double-count.
+Schedule::job(new \App\Jobs\Shorts\AggregateShortStatsJob)
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Fires the "tickets are live" reminders. Every minute, because a drop is a
+// moment — a reminder an hour late arrives after the good tickets are gone.
+Schedule::job(new \App\Jobs\Shorts\FireDropRemindersJob)
+    ->everyMinute()
+    ->withoutOverlapping();
+
+// Seeds the feed from the YouTube channels of artists who have an upcoming
+// event. Weekly, and only for artists actually playing soon: the Data API has a
+// daily quota, and pulling for the whole roster would burn it on shorts nobody
+// is going to curate. Everything lands as draft.
+Schedule::call(function () {
+    \App\Models\Artist::query()
+        ->whereNotNull('youtube_id')
+        ->whereHas('events', fn ($q) => $q->whereDate('event_date', '>=', now()->toDateString()))
+        ->pluck('id')
+        ->each(fn (int $id) => \App\Jobs\Shorts\PullChannelShortsJob::dispatch($id));
+})
+    ->name('shorts:pull-artist-youtube')
+    ->weeklyOn(2, '03:15') // Tuesday 03:15
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Trending score — velocity relative to baseline, not raw totals. Every 15
+// minutes: fast enough that a short taking off surfaces the same session, cheap
+// enough that it is two grouped counts over a bounded window.
+Schedule::job(new \App\Jobs\Shorts\ComputeTrendingJob)
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
+// Distils "who saw what" so the ranker's seen penalty survives the telemetry
+// prune — otherwise a short reappears in someone's feed 90 days later purely
+// because the evidence was deleted.
+Schedule::job(new \App\Jobs\Shorts\SyncShortImpressionsJob)
+    ->everyThirtyMinutes()
+    ->withoutOverlapping();
+
+// Yesterday's drop-off curve. Daily and idempotent — it replaces that day's rows.
+Schedule::job(new \App\Jobs\Shorts\AggregateShortRetentionJob)
+    ->dailyAt('03:40')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Prunes raw telemetry past its retention window. short_events is the fastest
+// growing table in the feature and everything worth keeping is already rolled up.
+Schedule::job(new \App\Jobs\Shorts\PruneShortEventsJob)
+    ->dailyAt('04:10')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Behavioural nudges. Twice a day rather than hourly: this is re-engagement, not
+// an alert, and the job enforces its own quiet hours and per-event cooldown.
+Schedule::job(new \App\Jobs\Shorts\EvaluateBehaviouralTriggersJob)
+    ->cron('0 11,18 * * *')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Daily per-short rollup for the organiser analytics page. Stored rather than
+// queried live, because the raw telemetry it is built from gets pruned.
+Schedule::job(new \App\Jobs\Shorts\AggregateShortAnalyticsJob)
+    ->dailyAt('03:50')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Archives expired shorts (stories included) and external embeds whose source
+// was deleted. Hourly: a broken frame in the middle of an infinite feed is
+// invisible to us and obvious to the viewer, and nobody reports it.
+Schedule::job(new \App\Jobs\Shorts\CheckShortHealthJob)
+    ->hourly()
+    ->withoutOverlapping();
+
+// Bunny bandwidth guardrails. Every six hours: usage does not spike within an
+// hour, and without this the first signal a feed went viral is the invoice.
+Schedule::job(new \App\Jobs\Shorts\PollBunnyUsageJob)
+    ->everySixHours()
+    ->withoutOverlapping();
+
+// Ends cover A/B tests that have enough sample. Daily — calling a winner early
+// permanently discards the variant that might have been better.
+Schedule::job(new \App\Jobs\Shorts\PickPosterWinnerJob)
+    ->dailyAt('04:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Fills the feed from catalogue images: upcoming events, artists with a gig
+// booked, and venues — anything with a picture and no short (B3).
+//
+// A nightly sweep rather than a model observer: an event is created long before
+// its poster is uploaded, so an observer would fire on an empty record and never
+// look again. The sweep is idempotent and capped per run, so a first pass over
+// an existing catalogue catches up over several nights instead of queueing tens
+// of thousands of jobs at once.
+Schedule::command('shorts:generate')
+    ->dailyAt('02:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();

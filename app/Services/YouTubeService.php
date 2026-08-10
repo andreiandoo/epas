@@ -12,9 +12,12 @@ class YouTubeService
 
     public function __construct()
     {
-        // Try to get from Settings first, then fallback to env
+        // Try to get from Settings first, then fallback to env.
+        // Cast to string: config() returns null when YOUTUBE_API_KEY is unset,
+        // and the typed property then throws on construction — which now matters
+        // because ShortIngestService resolves this through the container.
         $settings = \App\Models\Setting::current();
-        $this->apiKey = $settings->youtube_api_key ?: config('services.youtube.api_key', '');
+        $this->apiKey = (string) ($settings->youtube_api_key ?: config('services.youtube.api_key', ''));
     }
 
     /**

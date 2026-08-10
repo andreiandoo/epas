@@ -1,0 +1,116 @@
+/* =========================================================
+   Feed LIVE de shorts — CSS scris de mana.
+
+   NU merge in client.css: acela e GENERAT din client-app.html
+   (node scripts/extract-client-css.cjs) si orice adaugare acolo dispare la
+   prima regenerare. Prototipul n-are video real, deci regulile astea n-au de
+   unde sa vina din el.
+
+   Se incarca DUPA client.css si reutilizeaza clasele de acolo
+   (.short/.info/.rail/.shcta) — aici sunt doar completarile.
+   Scopate sub `.app-client`, ca tot ce tine de shell-ul de client.
+   ========================================================= */
+
+/* ---- video ---- */
+.app-client .short .shvideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+/* Butoanele de pe rail sunt <button> pentru cititoarele de ecran si focus;
+   resetam stilul nativ ca sa arate exact ca <div>-urile din prototip. */
+.app-client .short .rail button.act {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: #fff;
+}
+
+.app-client .short .shtop button.icon-btn {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Buton de play: cand politica de autoplay refuza, sau cand utilizatorul a
+   dezactivat redarea automata (D10). */
+.app-client .short .shplay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, .3);
+  color: #fff;
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+.app-client .short .shplay:active { transform: translate(-50%, -50%) scale(.92); }
+
+/* ---- LQIP: culoare plauzibila sub video pana urca posterul (D9) ---- */
+.app-client .short .shblur {
+  z-index: 0;
+  filter: blur(18px);
+  transform: scale(1.1);
+}
+
+/* ---- countdown de drop (D2) ---- */
+.app-client .short .shdrop { margin-top: 14px; }
+.app-client .short .shdrop-time {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: .92;
+  margin-bottom: 9px;
+  letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+.app-client .short .shcta[disabled] { opacity: .62; cursor: default; }
+
+/* ---- accesibilitate (D10): tinte >=44px, focus vizibil ---- */
+.app-client .short .rail button.act,
+.app-client .short .shcta { min-height: 44px; }
+.app-client .short button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* Text doar pentru cititoarele de ecran (regiunea live care anunta short-ul). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- dezvaluirea plasarilor platite (D3) ---- */
+/* Deliberat lizibil, nu discret: eticheta e o obligatie de transparenta, nu un
+   detaliu de design. Contrast suficient peste orice cadru video, si `display`
+   necontrolabil din alta parte — nu exista varianta „fara eticheta". */
+.app-client .short .short-ad {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .62);
+  border: 1px solid rgba(255, 255, 255, .34);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+}

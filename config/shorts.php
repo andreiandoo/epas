@@ -1,0 +1,192 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Shorts — vertical short-form video feed (mobile app only)
+    |--------------------------------------------------------------------------
+    |
+    | See docs/plans/shorts.md. Ranking weights live here (rather than in code)
+    | so the feed stays tunable per environment and remains explainable.
+    |
+    */
+
+    'feed' => [
+        // Page size for the cursor-paginated feed.
+        'page_size' => (int) env('SHORTS_FEED_PAGE_SIZE', 10),
+        'max_page_size' => (int) env('SHORTS_FEED_MAX_PAGE_SIZE', 30),
+
+        // Candidate pool the ranker scores before trimming to a page.
+        'candidate_pool' => (int) env('SHORTS_FEED_CANDIDATE_POOL', 200),
+
+        // Never place two consecutive shorts from the same owner.
+        'diversity_enabled' => (bool) env('SHORTS_FEED_DIVERSITY', true),
+    ],
+
+    /*
+    | Weights for the "For You" scored query. Kept flat and readable — the score
+    | is logged in dev so a placement can always be explained.
+    */
+    'ranker' => [
+        'weights' => [
+            'affinity' => (float) env('SHORTS_W_AFFINITY', 3.0),
+            'popularity' => (float) env('SHORTS_W_POPULARITY', 1.5),
+            'watch' => (float) env('SHORTS_W_WATCH', 2.0),
+            'geo' => (float) env('SHORTS_W_GEO', 1.0),
+            'freshness' => (float) env('SHORTS_W_FRESH', 1.0),
+            'featured' => (float) env('SHORTS_W_FEATURED', 0.75),
+            'trending' => (float) env('SHORTS_W_TRENDING', 1.25),
+            'seen_penalty' => (float) env('SHORTS_W_SEEN', 4.0),
+            // A still image auto-built from a poster is weaker content than a
+            // real vertical clip. Without an explicit penalty the two start
+            // level, and on day one — when neither has telemetry — exploration
+            // surfaces them equally. Small on purpose: enough to lose a tie, not
+            // enough to bury the only coverage most events will ever have.
+            'generated_penalty' => (float) env('SHORTS_W_GENERATED', 0.5),
+        ],
+
+        // Epsilon-greedy exploration (D5): the share of each page reserved for
+        // shorts with too few impressions to have earned a score yet. Without
+        // it the ranker is rich-get-richer and new shorts can never surface.
+        'exploration_rate' => (float) env('SHORTS_EXPLORATION_RATE', 0.15),
+        'exploration_impression_threshold' => (int) env('SHORTS_EXPLORATION_THRESHOLD', 50),
+
+        // Half-life (hours) used by the freshness decay.
+        'freshness_half_life_hours' => (int) env('SHORTS_FRESH_HALF_LIFE', 72),
+
+        // Log the per-short score breakdown outside production.
+        'explain' => (bool) env('SHORTS_RANKER_EXPLAIN', false),
+    ],
+
+    /*
+    | Telemetry ingestion guardrails (see D6).
+    */
+    'telemetry' => [
+        // Max events accepted in one batched POST.
+        'max_batch' => (int) env('SHORTS_TELEMETRY_MAX_BATCH', 100),
+
+        // A view only counts past these thresholds (anti-fraud, see D6).
+        'view_min_ms' => (int) env('SHORTS_VIEW_MIN_MS', 2000),
+        'view_min_ratio' => (float) env('SHORTS_VIEW_MIN_RATIO', 0.25),
+
+        // Keep 1/N impressions; every other event type is kept in full.
+        'impression_sampling' => (int) env('SHORTS_IMPRESSION_SAMPLING', 1),
+
+        // Raw short_events retention before pruning into the rollups.
+        'retention_days' => (int) env('SHORTS_EVENTS_RETENTION_DAYS', 90),
+    ],
+
+    /*
+    | Deep links used by share + landing (see D1).
+    */
+    'deep_link' => [
+        'scheme' => env('SHORTS_DEEPLINK_SCHEME', 'tixello'),
+        'share_base_url' => env('SHORTS_SHARE_BASE_URL', env('APP_URL', 'http://localhost')),
+        // Store fallbacks on the share landing page when the app is not installed.
+        'ios_store_url' => env('SHORTS_IOS_STORE_URL'),
+        'android_store_url' => env('SHORTS_ANDROID_STORE_URL'),
+    ],
+
+    /*
+    | Points and streaks for shorts activity (see D11).
+    |
+    | The daily cap is the anti-abuse lever: without it, a script can farm the
+    | watch reward indefinitely.
+    */
+    'gamification' => [
+        'enabled' => (bool) env('SHORTS_GAMIFICATION', true),
+        'watch_points' => (int) env('SHORTS_POINTS_WATCH', 5),
+        'share_points' => (int) env('SHORTS_POINTS_SHARE', 10),
+        'ugc_points' => (int) env('SHORTS_POINTS_UGC', 50),
+        'streak_bonus_cap' => (int) env('SHORTS_STREAK_BONUS_CAP', 10),
+        'daily_cap' => (int) env('SHORTS_POINTS_DAILY_CAP', 100),
+    ],
+
+    /*
+    | Moderation (see §14, B9).
+    */
+    'moderation' => [
+        // Reports that auto-hide a published short pending human review. Hiding
+        // something good for a few hours costs far less than leaving something
+        // harmful up.
+        'auto_hide_reports' => (int) env('SHORTS_AUTO_HIDE_REPORTS', 3),
+    ],
+
+    /*
+    | Bunny cost guardrails (see D8).
+    */
+    'cost' => [
+        'monthly_bandwidth_cap_gb' => (int) env('BUNNY_MONTHLY_BANDWIDTH_CAP_GB', 0),
+        'alert_threshold_pct' => (int) env('BUNNY_ALERT_THRESHOLD_PCT', 80),
+        // Above this share of the cap, the platform drops quality for everyone.
+        'data_saver_threshold_pct' => (int) env('BUNNY_DATA_SAVER_THRESHOLD_PCT', 90),
+    ],
+
+    /*
+    | Automatic generation from catalogue images (see B3).
+    |
+    | Most events never get a vertical clip, and almost no artist or venue does.
+    | Without this the feed is empty for everyone who did not upload video, which
+    | is nearly everyone.
+    */
+    'autogen' => [
+        'enabled' => (bool) env('SHORTS_AUTOGEN_ENABLED', true),
+
+        // Straight into the feed rather than into a review queue. The images are
+        // the organiser's own artwork, already public on the event/artist/venue
+        // page, so the feed adds no moderation surface. Set to false to route
+        // them through `draft` instead — but then somebody has to publish them,
+        // and nobody publishes thousands of rows by hand.
+        'publish' => (bool) env('SHORTS_AUTOGEN_PUBLISH', true),
+
+        'events' => (bool) env('SHORTS_AUTOGEN_EVENTS', true),
+        'artists' => (bool) env('SHORTS_AUTOGEN_ARTISTS', true),
+        'venues' => (bool) env('SHORTS_AUTOGEN_VENUES', true),
+
+        // Ceiling per sweep, per type. The first run over an existing catalogue
+        // would otherwise queue tens of thousands of jobs at once; the sweep is
+        // idempotent, so it simply catches up over the following nights.
+        'batch_limit' => (int) env('SHORTS_AUTOGEN_BATCH', 200),
+
+        // Only events starting within this window are worth a generated short —
+        // a feed full of last year's posters is worse than a short feed.
+        'event_horizon_days' => (int) env('SHORTS_AUTOGEN_HORIZON_DAYS', 120),
+    ],
+
+    /*
+    | Promoted shorts and ads (see D3).
+    |
+    | One slot every `slot_interval` organic items, at most `max_per_page` per
+    | page. Both are deliberately conservative: ad load is the single easiest
+    | number to raise and the single hardest consequence to reverse, because a
+    | feed that feels like an ad break stops being opened.
+    */
+    'ads' => [
+        'enabled' => (bool) env('SHORTS_ADS_ENABLED', true),
+        'slot_interval' => (int) env('SHORTS_ADS_SLOT_INTERVAL', 5),
+        'max_per_page' => (int) env('SHORTS_ADS_MAX_PER_PAGE', 2),
+        // Times one viewer may see the same campaign per day.
+        'frequency_cap' => (int) env('SHORTS_ADS_FREQUENCY_CAP', 3),
+
+        // Disclosure wording. A boosted event and a third-party brand ad are
+        // different things to a viewer and to a regulator, so they do not get
+        // the same label. Never blank these out — a placement that cannot be
+        // labelled is not served.
+        'labels' => [
+            'default' => env('SHORTS_ADS_LABEL_DEFAULT', 'Sponsorizat'),
+            'brand' => env('SHORTS_ADS_LABEL_BRAND', 'Reclamă'),
+            'house' => env('SHORTS_ADS_LABEL_HOUSE', 'Recomandat de Tixello'),
+        ],
+    ],
+
+    /*
+    | Player UX (see D9) — surfaced to the client through the feed payload so a
+    | tuning change does not need an app release.
+    */
+    'player' => [
+        // How many shorts ahead the client should prefetch posters for.
+        'prefetch_count' => (int) env('SHORTS_PREFETCH_COUNT', 2),
+        // Platform-wide quality drop, used by the Bunny cost guardrails (D8).
+        'data_saver_global' => (bool) env('SHORTS_DATA_SAVER_GLOBAL', false),
+    ],
+];

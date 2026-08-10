@@ -165,4 +165,66 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Managed video pipeline (Shorts)
+    |--------------------------------------------------------------------------
+    |
+    | Native shorts are uploaded straight to a managed provider which transcodes
+    | to HLS and serves playback from its own CDN — no ffmpeg and no video egress
+    | on this server. Bunny Stream is the chosen provider (docs/plans/shorts.md §C).
+    |
+    | Without credentials the container falls back to a no-op provider, so dev and
+    | CI keep booting; external (embed) shorts are unaffected either way.
+    |
+    */
+    'video' => [
+        'driver' => env('VIDEO_DRIVER', 'bunny'),
+        // TTL (seconds) for the signed playback/poster URLs handed to the app.
+        'signed_url_ttl' => (int) env('VIDEO_SIGNED_URL_TTL', 3600),
+    ],
+
+    /*
+    | Meta oEmbed Read — Instagram Reels + Facebook video ingestion.
+    |
+    | TODO(owner): needs a Meta app with the oEmbed Read product approved; the
+    | value here is that app's access token. Until it is set, IG/FB links are
+    | reported as unsupported rather than half-ingested. Meta's policy on this
+    | product has changed repeatedly — confirm availability before app review.
+    */
+    'meta' => [
+        'oembed_token' => env('META_OEMBED_TOKEN'),
+    ],
+
+    /*
+    | Managed video rendering — turns an event's images into a vertical clip (B3).
+    |
+    | Without credentials the container binds a null renderer and auto-generation
+    | falls back to the "poster short" path: a still-image short the feed plays as
+    | a card. That fills the feed today; a real renderer changes nothing else.
+    */
+    'render' => [
+        'driver' => env('RENDER_DRIVER', 'shotstack'),
+        'api_key' => env('SHOTSTACK_API_KEY'),
+        'environment' => env('SHOTSTACK_ENV', 'stage'),
+        'webhook_secret' => env('RENDER_WEBHOOK_SECRET'),
+    ],
+
+    /*
+    | Automatic captions (B6). Without a driver, GenerateCaptionsJob asks the
+    | video provider for captions it may already have and otherwise does nothing.
+    */
+    'captions' => [
+        'driver' => env('CAPTIONS_DRIVER'),
+        'api_key' => env('CAPTIONS_API_KEY'),
+    ],
+
+    'bunny' => [
+        'stream_library_id'     => env('BUNNY_STREAM_LIBRARY_ID'),
+        'stream_api_key'        => env('BUNNY_STREAM_API_KEY'),
+        'stream_pull_zone'      => env('BUNNY_STREAM_PULL_ZONE'),      // vz-xxxxxxxx-xxx.b-cdn.net
+        'stream_token_key'      => env('BUNNY_STREAM_TOKEN_KEY'),      // pull zone token auth key
+        'stream_webhook_secret' => env('BUNNY_STREAM_WEBHOOK_SECRET'),
+    ],
+
 ];

@@ -149,6 +149,15 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
         \App\Models\Order::observe(\App\Observers\ServerSidePurchaseOrderObserver::class);
         \App\Models\Order::observe(\App\Observers\ActivityBookingOrderObserver::class);
+        // Credits the short an order came from, and takes it back on refund
+        // (docs/plans/shorts.md B1). Hooked here rather than on an event because
+        // orders reach "paid" through several paths and only the model sees all.
+        \App\Models\Order::observe(\App\Observers\ShortAttributionOrderObserver::class);
+        // Pays an attendee when their UGC short is approved, and makes sure every
+        // short with a poster gets an LQIP. On the model rather than on the panel
+        // action, because a short reaches "published" through four different
+        // paths and a reward wired to one of them does not exist on the others.
+        \App\Models\Short::observe(\App\Observers\ShortObserver::class);
         // PERF P2/8 — invalidate event_stats:v1:{event_id} cache on ticket
         // status / check-in changes so dashboards see fresh numbers within
         // 60s window (without waiting for the TTL to expire on its own).

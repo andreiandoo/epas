@@ -43,3 +43,6 @@ resources/marketplaces/ambilet/includes/cache/*.json
 resources/marketplaces/ambilet/old_database/
 resources/marketplaces/ambilet/designs/
 nul
+
+# Local dev databases (scoped shorts schema — see scripts/shorts-dev-migrate.sh)
+/database/*.sqlite

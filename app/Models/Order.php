@@ -41,6 +41,10 @@ class Order extends Model
         'marketplace_customer_id',
         'marketplace_event_id',
         'event_id',
+        // Shorts attribution — last-touch, set when checkout starts from a short
+        // (docs/plans/shorts.md B1 / D4).
+        'source_short_id',
+        'source_feed',
         'order_number',
         'subtotal',
         'discount_amount',
@@ -94,6 +98,9 @@ class Order extends Model
         'processing_fee_passed' => 'boolean',
         'processing_fee_percent_rate' => 'decimal:2',
         'processing_fee_fixed_cents' => 'integer',
+        // Set by ShortAttributionService once the conversion has been credited;
+        // its presence is what makes crediting idempotent across webhook retries.
+        'short_attributed_at' => 'datetime',
     ];
 
     public function tenant(): BelongsTo

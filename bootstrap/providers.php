@@ -9,4 +9,5 @@ return [
     App\Providers\Filament\OperatorPanelProvider::class,
     App\Providers\SeatingServiceProvider::class,
     App\Providers\MicroservicesServiceProvider::class,
+    App\Providers\VideoServiceProvider::class,
 ];

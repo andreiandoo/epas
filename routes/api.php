@@ -4101,3 +4101,127 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
             ->middleware('throttle:120,1')->name('api.app.org.sale');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Shorts — vertical short-form video feed (mobile app only)
+|--------------------------------------------------------------------------
+|
+| See docs/plans/shorts.md. Reads are public so the app can browse before
+| login; a bearer token, when present, enriches the payload with the viewer's
+| like/save state. Interactions live under the authenticated customer prefix.
+|
+*/
+
+Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+    Route::get('/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'index'])
+        ->name('api.tenant-client.shorts.index');
+
+    // Batched, fire-and-forget telemetry. Higher throttle: the client flushes
+    // a queue of events per scroll session, guests included.
+    Route::post('/shorts/events', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'events'])
+        ->middleware('throttle:300,1')
+        ->name('api.tenant-client.shorts.events');
+
+    Route::get('/shorts/{short}', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'show'])
+        ->whereNumber('short')
+        ->name('api.tenant-client.shorts.show');
+
+    // CTA click — sent immediately, not batched: it is the last thing the client
+    // does before leaving for checkout, and it hands back the offer to honour.
+    Route::post('/shorts/{short}/cta-click', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'ctaClick'])
+        ->whereNumber('short')
+        ->name('api.tenant-client.shorts.cta-click');
+
+    Route::get('/events/{slug}/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'forEvent'])
+        ->name('api.tenant-client.shorts.by-event');
+
+    Route::get('/artists/{slug}/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'forArtist'])
+        ->name('api.tenant-client.shorts.by-artist');
+});
+
+Route::prefix('marketplace-client/customer/shorts')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::get('/feed', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'feed'])
+            ->name('api.marketplace-client.customer.shorts.feed');
+        Route::get('/saved', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'saved'])
+            ->name('api.marketplace-client.customer.shorts.saved');
+        Route::post('/{short}/like', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'toggleLike'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.like');
+        Route::post('/{short}/save', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortsController::class, 'toggleSave'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.save');
+    });
+
+// Direct-upload session for native shorts (organiser/admin). The file goes
+// straight to the video provider; only the session hand-off happens here.
+Route::post('tenant/shorts/upload-url', [\App\Http\Controllers\Api\Shorts\ShortUploadController::class, 'store'])
+    ->middleware(['throttle:30,1', 'auth:sanctum'])
+    ->name('api.tenant.shorts.upload-url');
+
+// Provider callback ("asset ready"). Unauthenticated by nature — the shared
+// secret is verified inside the controller and the payload is only ever a
+// trigger for an authoritative re-read.
+Route::post('webhooks/video/{provider}', \App\Http\Controllers\Api\Shorts\VideoWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('api.webhooks.video');
+
+// Shorts — interactiuni de val 1: share (D1), remind/drop (D2), streak (D11).
+Route::prefix('marketplace-client/customer/shorts')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::post('/{short}/share', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'share'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.share');
+        Route::post('/{short}/remind', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'remind'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.remind');
+        Route::delete('/{short}/remind', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'forget'])
+            ->whereNumber('short')
+            ->name('api.marketplace-client.customer.shorts.remind.delete');
+        Route::get('/streak', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'streak'])
+            ->name('api.marketplace-client.customer.shorts.streak');
+        Route::post('/watched', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortInteractionsController::class, 'watched'])
+            ->name('api.marketplace-client.customer.shorts.watched');
+    });
+
+// Shorts — graful de urmărire din spatele segmentului „Following" (B2).
+Route::prefix('marketplace-client/customer/follows')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\FollowsController::class, 'index'])
+            ->name('api.marketplace-client.customer.follows.index');
+        Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\FollowsController::class, 'toggle'])
+            ->name('api.marketplace-client.customer.follows.toggle');
+    });
+
+// Shorts — colecții editoriale (B7) + tava de stories (B8). Citiri publice, ca
+// restul feed-ului: navigarea se întâmplă înainte de login.
+Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+    Route::get('/short-collections', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'index'])
+        ->name('api.tenant-client.short-collections.index');
+    Route::get('/short-collections/{slug}', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'show'])
+        ->name('api.tenant-client.short-collections.show');
+    Route::get('/stories', [\App\Http\Controllers\Api\TenantClient\ShortCollectionsController::class, 'stories'])
+        ->name('api.tenant-client.stories');
+});
+
+// Shorts — UGC de la participanți verificați (B9) + raportare (§14).
+Route::prefix('marketplace-client/customer/shorts')
+    ->middleware(['throttle:60,1', 'marketplace.auth', 'auth:sanctum'])
+    ->group(function () {
+        Route::get('/can-post', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortUgcController::class, 'eligibility'])
+            ->name('api.marketplace-client.customer.shorts.can-post');
+        Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortUgcController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('api.marketplace-client.customer.shorts.store');
+    });
+
+// Raportarea rămâne deschisă și pentru guest: cine nu e logat vede același feed,
+// iar a cere cont ca să raportezi conținut dăunător protejează doar conținutul.
+Route::post('tenant-client/shorts/{short}/report', [\App\Http\Controllers\Api\MarketplaceClient\Customer\ShortUgcController::class, 'report'])
+    ->whereNumber('short')
+    ->middleware(['throttle:20,1', 'tenant.client.cors'])
+    ->name('api.tenant-client.shorts.report');
