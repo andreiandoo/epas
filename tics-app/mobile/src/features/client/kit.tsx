@@ -142,14 +142,13 @@ export function SetHead({ title, sub }: { title: string; sub?: string }) {
 /* =========================================================
    Continut care nu exista in aplicatie.
 
-   NU e din prototip — prototipul lucreaza pe un dataset inchis, in care orice
-   id cerut exista. Feed-ul de shorts insa vine de pe server si trimite catre
-   evenimente, artisti si locatii REALE, ale caror ecrane sunt inca pe datele
-   demo. Fara asta, `Event` arunca pe un id necunoscut si ramane un ecran alb.
+   NU e din prototip. Ecranele de eveniment, artist si locatie citesc acum din
+   catalogul real, deci ajung aici DOAR cand serverul spune ca nu exista sau
+   cand cererea esueaza — nu pentru ca ecranul n-ar fi gata.
 
-   Deliberat spune adevarul („nu e inca disponibil"), nu inventeaza un
-   inlocuitor: un ecran de eveniment care arata alt eveniment e mai rau decat
-   unul care recunoaste ca lipseste.
+   Deliberat spune adevarul, in loc sa inventeze un inlocuitor: un ecran de
+   eveniment care arata alt eveniment e mai rau decat unul care recunoaste ca
+   n-are ce arata.
    ========================================================= */
 export function MissingContent({ what = 'Conținutul' }: { what?: string }) {
   const { back } = useNav();
@@ -167,14 +166,46 @@ export function MissingContent({ what = 'Conținutul' }: { what?: string }) {
       </TopBar>
 
       <div className="pad" style={sx('margin-top:70px;text-align:center')}>
-        <div style={sx('font-size:44px;opacity:.5')}>🚧</div>
-        <div style={sx('font-weight:600;font-size:15px;margin-top:10px')}>{what} nu e încă disponibil în aplicație</div>
+        <div style={sx('font-size:44px;opacity:.5')}>🔍</div>
+        <div style={sx('font-weight:600;font-size:15px;margin-top:10px')}>{what} nu a putut fi găsit</div>
         <div className="muted" style={sx('font-size:12.5px;margin-top:6px;line-height:1.5')}>
-          Lucrăm la ecranul complet. Între timp îl găsești pe site.
+          Poate a fost șters sau nu mai este public. Verifică-ți conexiunea și încearcă din nou.
         </div>
         <button className="cta" style={sx('width:auto;padding:12px 22px;margin:20px auto 0')} onClick={back}>
           Înapoi
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ecranul cat timp se aduce o fisa din catalog.
+ *
+ * Un ecran gol pentru o secunda arata ca o eroare; bara de sus ramane pe loc,
+ * deci butonul de inapoi e disponibil imediat chiar daca datele intarzie.
+ */
+export function CatalogLoading({ title }: { title?: string }) {
+  const { back } = useNav();
+
+  return (
+    <div className="grid" style={sx('min-height:100%')}>
+      <TopBar>
+        <div className="row" style={sx('gap:12px')}>
+          <div className="icon-btn" onClick={back}>
+            <Ic svg={I.back} />
+          </div>
+          <div className="h2">{title ?? 'Se încarcă'}</div>
+        </div>
+        <div style={sx('width:42px')} />
+      </TopBar>
+
+      <div className="pad" style={sx('margin-top:16px;display:flex;flex-direction:column;gap:12px')}>
+        <div className="sk" style={sx('height:200px;border-radius:22px')} />
+        <div className="sk" style={sx('height:20px;width:70%;border-radius:8px')} />
+        <div className="sk" style={sx('height:14px;width:45%;border-radius:8px')} />
+        <div className="sk" style={sx('height:14px;width:90%;border-radius:8px')} />
+        <div className="sk" style={sx('height:14px;width:80%;border-radius:8px')} />
       </div>
     </div>
   );

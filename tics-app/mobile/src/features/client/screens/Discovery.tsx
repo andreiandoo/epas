@@ -10,7 +10,8 @@ import { Ic, cn, sx } from '../../../design/sx';
 import { ART, ARTX, EV, I, SOCIC, SOCLIST, SORTLBL, VEN, bgv } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvRow } from '../cards';
-import { BottomNav, BackTitle, DBar, MissingContent, SafeTop, SecH, TopBar } from '../kit';
+import { BottomNav, BackTitle, CatalogLoading, DBar, MissingContent, SafeTop, SecH, TopBar } from '../kit';
+import { useCatalogArtist, useCatalogVenue } from '../catalogData';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -269,11 +270,31 @@ export function Artist({ id }: { id?: string }) {
   /* Fara id ramane exemplul din prototip (asa intra din ecranele demo), dar un
      id NECUNOSCUT vine de la un short real si n-are ce arata aici — mai bine
      spunem asta decat sa afisam alt artist. */
-  const a = (ART as Record<string, Ev>)[id || 'coldplay'] as Ev | undefined;
-  if (!a) return <MissingContent what="Artistul" />;
-  const x = ((ARTX as Record<string, Ev>)[a.id] || (ARTX as Record<string, Ev>).coldplay) as Ev;
-  const evs = allEvents().filter((e) => e.artists.includes(a.id));
-  const upEv = evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
+  const demo = (ART as Record<string, Ev>)[id || 'coldplay'] as Ev | undefined;
+
+  /* Fara id ramane exemplul din prototip (asa intra din ecranele demo). Un id
+     necunoscut vine de la un short sau de la un eveniment real, deci se cere
+     din catalog. */
+  const live = useCatalogArtist(demo ? undefined : id);
+
+  if (!demo && live.loading) return <CatalogLoading title="Artist" />;
+  if (!demo && !live.data) return <MissingContent what="Artistul" />;
+
+  const a = demo ?? (live.data as { rec: Ev }).rec;
+  const isLive = !demo;
+
+  /* ARTX tine melodii, clipuri si statistici sociale detaliate — un dataset
+     fix al prototipului. Pentru un artist real n-avem asa ceva in API, iar
+     imprumutate de la Coldplay ar fi pur si simplu false. Sectiunile care
+     depind de el se ascund. */
+  const x = (isLive ? undefined : (ARTX as Record<string, Ev>)[a.id]) as Ev | undefined;
+  const upEv: Ev[] = isLive
+    ? (live.data?.events ?? [])
+    : (() => {
+        const evs = allEvents().filter((e) => e.artists.includes(a.id));
+
+        return evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
+      })();
   const socList = SOCLIST as [string, string][];
   const socIc = SOCIC as Record<string, string>;
 
@@ -287,7 +308,7 @@ export function Artist({ id }: { id?: string }) {
           </div>
         }
       />
-      <div className="poster" style={{ background: bgv(a), height: 228 }}>
+      <div className="poster" style={{ background: a._bg ?? bgv(a), height: 228 }}>
         <div style={sx('position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.4),transparent 42%,var(--bg))')} />
         <div style={sx('position:absolute;left:0;right:0;bottom:-42px;text-align:center')}>
           <div
@@ -296,7 +317,7 @@ export function Artist({ id }: { id?: string }) {
               height: 104,
               borderRadius: 34,
               margin: '0 auto',
-              background: a.tone,
+              background: a._bg ?? a.tone,
               border: '4px solid var(--bg)',
               display: 'grid',
               placeItems: 'center',
@@ -304,7 +325,7 @@ export function Artist({ id }: { id?: string }) {
               boxShadow: 'var(--sh-p)',
             }}
           >
-            {a.g}
+            {a._bg ? '' : a.g}
           </div>
         </div>
       </div>
@@ -312,7 +333,7 @@ export function Artist({ id }: { id?: string }) {
       <div style={sx('text-align:center;margin-top:52px')}>
         <div style={sx('font-weight:600;font-size:22px;letter-spacing:-.02em')}>{a.name}</div>
         <div className="muted" style={sx('font-size:12.5px;margin-top:3px')}>
-          {x.sub} · {a.fol} urmăritori
+          {[x?.sub ?? a.role, a.fol ? `${a.fol} urmăritori` : null].filter(Boolean).join(' · ')}
         </div>
         <div className="row" style={sx('justify-content:center;gap:9px;margin-top:15px')}>
           <button className="cta" onClick={() => showToast('Urmărești ' + a.name)} style={sx('width:auto;padding:11px 28px')}>
@@ -322,21 +343,29 @@ export function Artist({ id }: { id?: string }) {
             <Ic svg={I.bell} />
           </button>
         </div>
+        {/* Doar retelele cu link real. Un rand de pictograme din care jumatate
+            nu duc nicaieri e mai rau decat trei care duc. */}
         <div className="row" style={sx('justify-content:center;gap:10px;margin-top:15px')}>
-          {socList.map((s) => (
-            <button key={s[1]} className="socbtn" onClick={() => showToast(s[1])}>
-              <Ic svg={socIc[s[0]]} />
-            </button>
-          ))}
+          {socList
+            .filter((s) => !isLive || a._links?.[s[0]])
+            .map((s) => (
+              <button
+                key={s[1]}
+                className="socbtn"
+                onClick={() => (a._links?.[s[0]] ? window.open(a._links[s[0]], '_blank', 'noopener') : showToast(s[1]))}
+              >
+                <Ic svg={socIc[s[0]]} />
+              </button>
+            ))}
         </div>
       </div>
 
-      <div className="scroll-x" style={sx('margin-top:18px')}>
+      <div className="scroll-x" style={sx('margin-top:18px')} hidden={!x}>
         {socList.map((s) => (
           <div key={s[1]} className="statpill">
             <Ic svg={socIc[s[0]]} />
             <div>
-              <div style={sx('font-weight:700;font-size:14px;font-variant-numeric:tabular-nums')}>{x.soc[s[0]]}</div>
+              <div style={sx('font-weight:700;font-size:14px;font-variant-numeric:tabular-nums')}>{x?.soc[s[0]]}</div>
               <div
                 className="muted"
                 style={sx('font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em')}
@@ -353,11 +382,14 @@ export function Artist({ id }: { id?: string }) {
           Despre
         </div>
         <p className="muted" style={sx('font-size:13.5px;line-height:1.62;margin-top:8px')}>
-          {x.bio}
+          {a.bio || x?.bio || 'Artistul nu are încă o descriere.'}
         </p>
       </div>
 
-      <div className="pad" style={sx('margin-top:22px')}>
+      {/* Melodiile si clipurile vin din ARTX, un dataset fix al prototipului.
+          Pentru un artist real n-avem asa ceva in API, iar imprumutate de la
+          alt artist ar fi pur si simplu false — deci sectiunile dispar. */}
+      <div className="pad" style={sx('margin-top:22px')} hidden={!x}>
         <div className="between">
           <div className="h2" style={sx('font-size:15px')}>
             Top 10 melodii
@@ -367,14 +399,14 @@ export function Artist({ id }: { id?: string }) {
           </span>
         </div>
         <div className="card" style={sx('margin-top:11px;padding:2px 14px')}>
-          {(x.songs as [string, string][]).map((s, i) => (
+          {((x?.songs ?? []) as [string, string][]).map((s, i) => (
             <div
               key={s[0]}
               className="between"
               onClick={() => showToast('▶ ' + s[0])}
               style={{
                 padding: '11px 0',
-                borderBottom: i < x.songs.length - 1 ? '1px solid var(--line)' : undefined,
+                borderBottom: i < (x?.songs.length ?? 0) - 1 ? '1px solid var(--line)' : undefined,
                 cursor: 'pointer',
               }}
             >
@@ -409,10 +441,16 @@ export function Artist({ id }: { id?: string }) {
         </div>
       </div>
 
-      <div className="sec">
-        <SecH icon={I.play} icbg="var(--indigo-soft)" iccol="var(--indigo-2)" title="Videoclipuri" sub={`${x.videos.length} clipuri`} />
+      <div className="sec" hidden={!x}>
+        <SecH
+          icon={I.play}
+          icbg="var(--indigo-soft)"
+          iccol="var(--indigo-2)"
+          title="Videoclipuri"
+          sub={`${x?.videos.length ?? 0} clipuri`}
+        />
         <div className="rail">
-          {(x.videos as [string, string, string][]).map((v) => (
+          {((x?.videos ?? []) as [string, string, string][]).map((v) => (
             <div key={v[0]} className="mcard" onClick={() => showToast('▶ ' + v[0])} style={sx('min-width:236px')}>
               <div className="cover" style={{ background: v[1], height: 146 }}>
                 <span className="em">{v[2]}</span>
@@ -454,15 +492,27 @@ export function Artist({ id }: { id?: string }) {
    ========================================================= */
 export function Venue({ id }: { id?: string }) {
   const { go } = useNav();
-  const v = (VEN as Record<string, Ev>)[id || 'arena'] as Ev | undefined;
-  if (!v) return <MissingContent what="Locația" />;
-  const evs = allEvents().filter((e) => e.ven === v.id);
-  const list = evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
+  const demo = (VEN as Record<string, Ev>)[id || 'arena'] as Ev | undefined;
+  const live = useCatalogVenue(demo ? undefined : id);
+
+  if (!demo && live.loading) return <CatalogLoading title="Locație" />;
+  if (!demo && !live.data) return <MissingContent what="Locația" />;
+
+  const v = demo ?? (live.data as { rec: Ev }).rec;
+  const isLive = !demo;
+
+  const list: Ev[] = isLive
+    ? (live.data?.events ?? [])
+    : (() => {
+        const evs = allEvents().filter((e) => e.ven === v.id);
+
+        return evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
+      })();
 
   return (
     <div style={sx('min-height:100%;background:var(--bg)')}>
       <DBar title={v.name} />
-      <div className="poster" style={{ background: bgv(v), height: 210, borderRadius: '0 0 28px 28px' }}>
+      <div className="poster" style={{ background: v._bg ?? bgv(v), height: 210, borderRadius: '0 0 28px 28px' }}>
         <div style={sx('position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 45%,rgba(11,9,18,.6))')} />
         <div style={sx('position:absolute;left:20px;bottom:18px;color:#fff')}>
           <div style={sx('font-size:22px;font-weight:600')}>{v.name}</div>
@@ -474,11 +524,14 @@ export function Venue({ id }: { id?: string }) {
 
       <div className="pad" style={sx('margin-top:16px')}>
         <div className="row" style={sx('gap:10px')}>
-          {[
+          {([
             ['Capacitate', v.cap],
             ['Oraș', v.city],
-            ['Rating', '4.8 ⭐'],
-          ].map((s) => (
+            /* „4.8" era o valoare fixa in prototip. Pe o locatie reala punem
+               nota Google, si doar cand exista — o nota inventata pe pagina
+               unei sali adevarate ar fi o afirmatie falsa despre ea. */
+            v._rating ? ['Rating', `${Number(v._rating).toFixed(1)} ⭐`] : null,
+          ].filter(Boolean) as [string, string][]).map((s) => (
             <div key={s[0]} className="card" style={sx('flex:1;text-align:center;padding:12px')}>
               <div style={sx('font-weight:600;font-size:15px')}>{s[1]}</div>
               <div className="muted" style={sx('font-size:10px;font-weight:500;text-transform:uppercase;margin-top:2px')}>
@@ -506,6 +559,20 @@ export function Venue({ id }: { id?: string }) {
           </button>
         </div>
 
+        {v._desc ? (
+          <>
+            <div className="h2" style={sx('font-size:15px;margin-top:24px')}>
+              Despre
+            </div>
+            <p
+              className="muted"
+              style={sx('font-size:13.5px;line-height:1.62;margin-top:8px;white-space:pre-line')}
+            >
+              {v._desc}
+            </p>
+          </>
+        ) : null}
+
         <div className="h2" style={sx('font-size:15px;margin-top:24px;margin-bottom:12px')}>
           Evenimente aici
         </div>
@@ -513,6 +580,11 @@ export function Venue({ id }: { id?: string }) {
           {list.map((ev) => (
             <EvRow key={ev.id} ev={ev as UiEvent} />
           ))}
+          {!list.length ? (
+            <div className="muted" style={sx('font-size:12.5px;padding:6px 0')}>
+              Nu sunt evenimente anunțate aici deocamdată.
+            </div>
+          ) : null}
         </div>
       </div>
       <div style={sx('height:8px')} />

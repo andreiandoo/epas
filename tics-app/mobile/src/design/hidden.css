@@ -1,0 +1,21 @@
+/* =========================================================
+   `hidden` chiar sa ascunda.
+
+   client.css e GENERAT din prototip si da `display` explicit multor clase
+   utilitare (.between, .row, .scroll-x, .listitem, .gpill, .shcta...). Regula
+   implicita a atributului `hidden` din foaia browserului are cea mai mica
+   specificitate posibila, deci orice astfel de clasa o bate: un element cu
+   `hidden` ramanea perfect vizibil.
+
+   S-a vazut concret: sectiunea de recenzii demo de pe fisa unui eveniment REAL
+   ramanea pe ecran desi era marcata ascunsa.
+
+   Se incarca ULTIMA, ca sa castige la specificitate egala. Fara `!important`:
+   locurile care ascund deliberat un element PASTRANDU-I locul in pagina
+   (`display:inline-flex; visibility:hidden` din shorts.css) au trei clase, deci
+   raman mai specifice si continua sa functioneze.
+   ========================================================= */
+.app-client [hidden],
+.app-org [hidden] {
+  display: none;
+}

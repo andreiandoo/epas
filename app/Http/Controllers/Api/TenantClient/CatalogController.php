@@ -1,0 +1,352 @@
+<?php
+
+namespace App\Http\Controllers\Api\TenantClient;
+
+use App\Http\Controllers\Controller;
+use App\Models\Artist;
+use App\Models\Event;
+use App\Models\Venue;
+use App\Support\PlainText;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * Fişele publice de eveniment, artist şi locaţie, pentru aplicaţia mobilă.
+ *
+ * DE CE UN CONTROLER NOU, când există deja `/tenant-client/events/{slug}`
+ * Acela rezolvă întâi un TENANT (din `?tenant=` sau din domeniu) şi filtrează
+ * după el. Aplicaţia Tixello nu aparţine niciunui tenant: feed-ul de shorts
+ * trimite la evenimente, artişti şi locaţii din tot sistemul — ale tenanţilor
+ * şi ale marketplace-urilor deopotrivă. Cerinţa e aceeaşi cu a feed-ului
+ * (citire publică, fără cont), aşa că stă sub acelaşi prefix şi împrumută
+ * aceleaşi CORS + throttle.
+ *
+ * Se caută după ID sau după slug: feed-ul are id-uri, linkurile au slug-uri.
+ *
+ * Se răspunde DOAR pentru conţinut deja public. Un eveniment nepublicat nu
+ * există pentru aplicaţie, oricât de corect ar fi id-ul cerut.
+ */
+class CatalogController extends Controller
+{
+    /** Câte evenimente viitoare se listează pe fişa unui artist sau a unei locaţii. */
+    private const RELATED_EVENTS = 12;
+
+    public function event(Request $request, string $key): JsonResponse
+    {
+        $event = $this->findBy(Event::query()->with([
+            'venue',
+            'marketplaceOrganizer',
+            'ticketTypes',
+            'artists',
+            'eventTypes',
+        ]), $key);
+
+        if (! $event || ! $this->eventIsVisible($event)) {
+            return $this->missing('Evenimentul nu a fost găsit.');
+        }
+
+        return response()->json(['success' => true, 'data' => $this->eventPayload($event, full: true)]);
+    }
+
+    public function artist(Request $request, string $key): JsonResponse
+    {
+        $artist = $this->findBy(Artist::query(), $key);
+
+        if (! $artist) {
+            return $this->missing('Artistul nu a fost găsit.');
+        }
+
+        $events = $this->upcomingEvents($artist->events()->getQuery());
+
+        return response()->json(['success' => true, 'data' => [
+            'id' => $artist->id,
+            'slug' => $artist->slug,
+            'name' => PlainText::of($artist->name),
+            'role' => $artist->role ?? null,
+            'bio' => $this->plainHtml(PlainText::of($artist->bio_html)),
+            'city' => $this->text($artist->city),
+            'country' => $this->text($artist->country),
+            'image' => $this->url($artist->portrait_url) ?? $this->url($artist->main_image_url),
+            'cover' => $this->url($artist->main_image_url) ?? $this->url($artist->portrait_url),
+            /* Doar reţelele care chiar au un link — un rând de pictograme din
+               care jumătate nu duc nicăieri e mai rău decât trei care duc. */
+            'links' => array_filter([
+                'website' => $this->text($artist->website),
+                'facebook' => $this->text($artist->facebook_url),
+                'instagram' => $this->text($artist->instagram_url),
+                'tiktok' => $this->text($artist->tiktok_url),
+                'youtube' => $this->text($artist->youtube_url),
+                'spotify' => $this->text($artist->spotify_url),
+            ]),
+            'followers' => array_filter([
+                'facebook' => $this->count($artist->facebook_followers ?? $artist->followers_facebook),
+                'instagram' => $this->count($artist->instagram_followers ?? $artist->followers_instagram),
+                'tiktok' => $this->count($artist->tiktok_followers ?? $artist->followers_tiktok),
+                'youtube' => $this->count($artist->youtube_followers ?? $artist->followers_youtube),
+                'spotify' => $this->count($artist->spotify_followers),
+            ], fn ($v) => $v !== null),
+            'events' => $events,
+        ]]);
+    }
+
+    public function venue(Request $request, string $key): JsonResponse
+    {
+        $venue = $this->findBy(Venue::query(), $key);
+
+        if (! $venue) {
+            return $this->missing('Locația nu a fost găsită.');
+        }
+
+        $reviews = $venue->google_reviews_payload;
+
+        return response()->json(['success' => true, 'data' => [
+            'id' => $venue->id,
+            'slug' => $venue->slug,
+            'name' => PlainText::of($venue->name),
+            'city' => $this->text($venue->city),
+            'address' => $this->text($venue->address),
+            'country' => $this->text($venue->country),
+            'capacity' => $this->count($venue->capacity ?? $venue->capacity_total),
+            'description' => $this->plainHtml(PlainText::of($venue->description)),
+            'image' => $this->url($venue->image_url),
+            'portrait' => $this->url($venue->meta['portrait'] ?? null),
+            'gallery' => $this->gallery($venue->gallery),
+            'lat' => is_numeric($venue->latitude ?? null) ? (float) $venue->latitude : null,
+            'lng' => is_numeric($venue->longitude ?? null) ? (float) $venue->longitude : null,
+            'rating' => isset($reviews['rating']) && is_numeric($reviews['rating']) ? (float) $reviews['rating'] : null,
+            'review_count' => isset($reviews['review_count']) ? (int) $reviews['review_count'] : null,
+            'reviews' => $reviews['reviews'] ?? [],
+            'events' => $this->upcomingEvents($venue->events()->getQuery()),
+        ]]);
+    }
+
+    /* ================= ajutoare ================= */
+
+    /**
+     * Un ID numeric sau un slug. Feed-ul trimite id-uri, linkurile trimit
+     * slug-uri, iar ecranul e acelaşi — deci acceptăm ambele forme în loc să
+     * cerem clientului să ştie care e care.
+     */
+    private function findBy($query, string $key)
+    {
+        return ctype_digit($key)
+            ? $query->whereKey((int) $key)->first()
+            : $query->where('slug', $key)->first();
+    }
+
+    private function missing(string $message): JsonResponse
+    {
+        return response()->json(['success' => false, 'message' => $message], 404);
+    }
+
+    /**
+     * Un eveniment nepublicat nu există pentru aplicaţie.
+     *
+     * Coloana lipseşte pe unele instalări, aşa că absenţa ei se citeşte ca
+     * „vizibil" — altfel un deployment fără ea ar întoarce 404 la tot.
+     */
+    private function eventIsVisible(Event $event): bool
+    {
+        return ! isset($event->is_published) || (bool) $event->is_published;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function upcomingEvents($query): array
+    {
+        try {
+            return $query
+                ->with(['venue'])
+                ->when(
+                    true,
+                    fn ($q) => $q->whereDate('event_date', '>=', now()->toDateString()),
+                )
+                ->orderBy('event_date')
+                ->limit(self::RELATED_EVENTS)
+                ->get()
+                ->filter(fn (Event $e) => $this->eventIsVisible($e))
+                ->map(fn (Event $e) => $this->eventPayload($e, full: false))
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            /* Relaţia sau coloana de dată lipsesc pe acest deployment: fişa e
+               tot utilă fără lista de evenimente. */
+            return [];
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function eventPayload(Event $event, bool $full): array
+    {
+        $date = $event->event_date;
+        $venue = $event->relationLoaded('venue') ? $event->venue : null;
+
+        $base = [
+            'id' => $event->id,
+            'slug' => $event->slug,
+            'title' => PlainText::of($event->title),
+            'subtitle' => PlainText::of($event->subtitle),
+            'date' => $date?->toDateString(),
+            'day' => $date?->format('d'),
+            'month' => $date ? $this->monthShort((int) $date->format('n')) : null,
+            'date_label' => $date ? $date->format('d').' '.$this->monthShort((int) $date->format('n')) : null,
+            'time' => $event->start_time ? substr((string) $event->start_time, 0, 5) : null,
+            'city' => $this->text($venue?->city) ?? $this->text($event->city ?? null),
+            'venue' => $venue ? [
+                'id' => $venue->id,
+                'slug' => $venue->slug,
+                'name' => PlainText::of($venue->name),
+                'city' => $this->text($venue->city),
+                'address' => $this->text($venue->address),
+            ] : null,
+            'poster' => $this->url($event->poster_url) ?? $this->url($event->hero_image_url),
+            'price_from' => $this->priceFrom($event),
+            'is_cancelled' => (bool) ($event->cancelled_at ?? false),
+            'is_postponed' => (bool) ($event->postponed_at ?? false),
+        ];
+
+        if (! $full) {
+            return $base;
+        }
+
+        return $base + [
+            'hero' => $this->url($event->hero_image_url) ?? $this->url($event->poster_url),
+            'gallery' => $this->gallery($event->gallery ?? null),
+            'category' => $event->relationLoaded('eventTypes')
+                ? PlainText::of($event->eventTypes->first()?->name)
+                : null,
+            'organizer' => $event->relationLoaded('marketplaceOrganizer') && $event->marketplaceOrganizer
+                ? PlainText::of($event->marketplaceOrganizer->name)
+                : null,
+            'short_description' => $this->plainHtml(PlainText::of($event->short_description)),
+            'description' => $this->plainHtml(PlainText::of($event->description)),
+            'terms' => $this->plainHtml(PlainText::of($event->ticket_terms)),
+            'ticket_types' => $this->ticketTypes($event),
+            'artists' => $event->relationLoaded('artists')
+                ? $event->artists->map(fn (Artist $a) => [
+                    'id' => $a->id,
+                    'slug' => $a->slug,
+                    'name' => PlainText::of($a->name),
+                    'role' => $a->role ?? null,
+                    'image' => $this->url($a->portrait_url) ?? $this->url($a->main_image_url),
+                ])->values()->all()
+                : [],
+        ];
+    }
+
+    /**
+     * Categoriile de bilet, fără nimic despre stoc în cifre exacte.
+     *
+     * `available` e un DA/NU, nu un număr: stocul rămas e informaţie
+     * comercială a organizatorului, iar un endpoint public care o publică o dă
+     * şi concurenţei. Aplicaţia are nevoie doar să ştie ce poate cumpăra.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function ticketTypes(Event $event): array
+    {
+        if (! $event->relationLoaded('ticketTypes')) {
+            return [];
+        }
+
+        return $event->ticketTypes
+            ->filter(fn ($t) => ($t->status ?? null) === 'active')
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => PlainText::of($t->name),
+                'description' => $this->plainHtml(PlainText::of($t->description ?? null)),
+                'price' => is_numeric($t->price) ? (float) $t->price : null,
+                'available' => ! isset($t->quota_total) || (int) $t->quota_total !== 0,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function priceFrom(Event $event): ?float
+    {
+        try {
+            $types = $event->relationLoaded('ticketTypes')
+                ? $event->ticketTypes
+                : $event->ticketTypes()->where('status', 'active')->get(['price', 'status']);
+
+            $prices = $types
+                ->filter(fn ($t) => ($t->status ?? null) === 'active' && is_numeric($t->price) && (float) $t->price > 0)
+                ->map(fn ($t) => (float) $t->price);
+
+            return $prices->isEmpty() ? null : $prices->min();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** @return array<int, string> */
+    private function gallery(mixed $gallery): array
+    {
+        if (is_string($gallery)) {
+            $gallery = json_decode($gallery, true);
+        }
+
+        if (! is_array($gallery)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function ($item) {
+            $raw = is_string($item) ? $item : ($item['url'] ?? $item['path'] ?? $item['src'] ?? null);
+
+            return is_string($raw) ? $this->url($raw) : null;
+        }, $gallery)));
+    }
+
+    /** Cale de pe discul public sau URL absolut — clientul primeşte mereu URL. */
+    private function url(mixed $path): ?string
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        $path = trim($path);
+
+        return str_starts_with($path, 'http://') || str_starts_with($path, 'https://')
+            ? $path
+            : Storage::disk('public')->url(ltrim($path, '/'));
+    }
+
+    private function text(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    private function count(mixed $value): ?int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    /** Descrierile din catalog sunt HTML; ecranele afişează text. */
+    private function plainHtml(?string $html): ?string
+    {
+        if (! is_string($html) || trim($html) === '') {
+            return null;
+        }
+
+        $text = trim(preg_replace(
+            '/\n{3,}/u',
+            "\n\n",
+            html_entity_decode(
+                strip_tags(preg_replace('#<(br|/p|/div|/li)[^>]*>#i', "\n", $html)),
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8',
+            ),
+        ));
+
+        return $text === '' ? null : $text;
+    }
+
+    private function monthShort(int $month): string
+    {
+        return ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'][$month - 1] ?? '';
+    }
+}

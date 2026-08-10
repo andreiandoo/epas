@@ -11,7 +11,8 @@
 import { useEffect, useRef } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ADDONS, EV, EXPDAYS, I, VEN, lei, occInfo, poster } from '../../../mock/prototype';
-import { TopBar, BackTitle, SafeTop } from '../kit';
+import { TopBar, BackTitle, CatalogLoading, MissingContent, SafeTop } from '../kit';
+import { useCatalogEvent } from '../catalogData';
 import { useNav } from '../nav';
 import { useClient, ttCountsFor } from '../../../store/client';
 
@@ -179,8 +180,20 @@ export function TicketTypes() {
   const setTtCount = useClient((s) => s.setTtCount);
   const toggleAddon = useClient((s) => s.toggleAddon);
 
-  const ev = evOf(evId);
+  const demo = evOf(evId);
+
+  /* Evenimentele reale nu-s in datasetul prototipului; fisa lor (cu categoriile
+     de bilet) e deja in cache-ul din catalogData dupa ecranul precedent, deci
+     apelul de aici e de regula instant. */
+  const live = useCatalogEvent(demo ? undefined : evId);
+
+  const ev = demo ?? live.data?.ev;
   const eday = (EXPDAYS as Ev[])[expDay] || (EXPDAYS as Ev[])[4];
+
+  if (!ev) {
+    return live.loading ? <CatalogLoading title="Bilete" /> : <MissingContent what="Evenimentul" />;
+  }
+
   const counts = ttCounts[evId] ?? ttCountsFor(evId, ev.tt.length);
   const evAddons = (ADDONS as Record<string, Ev[]>)[ev.id];
 

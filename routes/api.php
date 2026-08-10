@@ -4117,6 +4117,20 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/shorts', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'index'])
         ->name('api.tenant-client.shorts.index');
 
+    /* Fisele publice de catalog pentru aplicatia mobila.
+       Sub acelasi prefix ca feed-ul, si din acelasi motiv: aplicatia Tixello nu
+       apartine niciunui tenant, iar `/tenant-client/events/{slug}` de mai sus
+       rezolva intai un tenant si filtreaza dupa el. Aici se cauta global, dupa
+       id sau slug, si se raspunde doar pentru continut public. */
+    Route::get('/catalog/events/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'event'])
+        ->name('api.tenant-client.catalog.event');
+
+    Route::get('/catalog/artists/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'artist'])
+        ->name('api.tenant-client.catalog.artist');
+
+    Route::get('/catalog/venues/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'venue'])
+        ->name('api.tenant-client.catalog.venue');
+
     // Batched, fire-and-forget telemetry. Higher throttle: the client flushes
     // a queue of events per scroll session, guests included.
     Route::post('/shorts/events', [\App\Http\Controllers\Api\TenantClient\ShortsController::class, 'events'])

@@ -10,6 +10,9 @@ import './design/client.css';
 
 // Scris de mana (client.css e generat din prototip, care n-are video real).
 import './design/shorts.css';
+
+// Ultima: corecteaza `hidden`, pe care clasele generate din prototip il bateau.
+import './design/hidden.css';
 import { App } from './app/App';
 import { initNative } from './native';
 import { initOta } from './ota';

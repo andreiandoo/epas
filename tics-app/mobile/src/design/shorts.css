@@ -268,3 +268,19 @@
   letter-spacing: .02em;
   text-shadow: 0 1px 6px rgba(0, 0, 0, .5);
 }
+
+/* ---- schelet de incarcare pentru fisele din catalog ----
+   Ecranele de eveniment/artist/locatie asteapta un raspuns de retea; un ecran
+   gol in acel timp arata ca o eroare. */
+.app-client .sk {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skshimmer 1.4s ease infinite;
+}
+@keyframes skshimmer {
+  0% { background-position: 100% 50% }
+  100% { background-position: 0 50% }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-client .sk { animation: none }
+}

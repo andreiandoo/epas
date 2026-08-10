@@ -7,9 +7,11 @@
      [experiente] produse & servicii · galerie cu lightbox · recenzii ·
      locatie · card Stay22 · dock cu pretul si CTA-ul
    ========================================================= */
+import { useEffect } from 'react';
 import { Ic, sx } from '../../../design/sx';
 import { ADDONS, ART, ATTENDED, EV, EVREVIEWS, I, VEN, bgv, money } from '../../../mock/prototype';
-import { DBar, MissingContent } from '../kit';
+import { CatalogLoading, DBar, MissingContent } from '../kit';
+import { useCatalogEvent } from '../catalogData';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useLightbox } from '../lightbox';
@@ -24,16 +26,28 @@ export function Event({ id }: { id?: string }) {
   const saved = useClient((s) => s.saved);
   const toggleSaved = useClient((s) => s.toggleSaved);
 
-  const ev = (EV as Record<string, Ev>)[id || evId];
+  const key = id || evId;
+  const demo = (EV as Record<string, Ev>)[key];
 
-  /* Feed-ul de shorts trimite id-uri REALE de eveniment, care nu exista in
-     datasetul prototipului. Fara verificarea asta, linia urmatoare citea `.ven`
-     din undefined si ecranul ramanea alb. */
-  if (!ev) return <MissingContent what="Evenimentul" />;
+  /* Datasetul prototipului acopera doar cateva id-uri inventate. Restul —
+     tot ce vine din feed-ul de shorts sau din Radar — se cere de la catalogul
+     real. Se interogheaza doar cand nu exista corespondent demo, ca fluxurile
+     de prezentare sa ramana instant si offline. */
+  const live = useCatalogEvent(demo ? undefined : key);
 
-  if (ev.id !== evId) setEv(ev.id);
+  useEffect(() => {
+    if (demo && demo.id !== evId) setEv(demo.id);
+    else if (live.data && key !== evId) setEv(key);
+  }, [demo, live.data, key, evId, setEv]);
 
-  const v = (VEN as Record<string, Ev>)[ev.ven];
+  if (!demo && live.loading) return <CatalogLoading title="Eveniment" />;
+  if (!demo && !live.data) return <MissingContent what="Evenimentul" />;
+
+  const ev = demo ?? (live.data as { ev: Ev }).ev;
+  const isLive = !demo;
+
+  const v = (isLive ? live.data?.venue : null) ?? (VEN as Record<string, Ev>)[ev.ven] ?? null;
+  const liveArtists = isLive ? (live.data?.artists ?? []) : null;
   const attended = (ATTENDED as { ev: string }[]).some((a) => a.ev === ev.id);
   const addons = (ADDONS as Record<string, Ev[]>)[ev.id];
   const isExp = ev.type === 'experience';
@@ -65,7 +79,7 @@ export function Event({ id }: { id?: string }) {
         }
       />
 
-      <div className="poster" style={{ background: bgv(ev), height: 388, borderRadius: '0 0 30px 30px' }}>
+      <div className="poster" style={{ background: ev._bg ?? bgv(ev), height: 388, borderRadius: '0 0 30px 30px' }}>
         <div
           style={sx('position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 26%,rgba(11,9,18,.97))')}
         />
@@ -83,7 +97,8 @@ export function Event({ id }: { id?: string }) {
             className="badge"
             style={sx('background:rgba(255,255,255,.16);backdrop-filter:blur(8px);color:#fff')}
           >
-            {isExp ? 'Experiență' : ev.cat} · ⭐ {ev.rat}
+            {isExp ? 'Experiență' : ev.cat}
+            {ev.rat ? ` · ⭐ ${ev.rat}` : ''}
           </span>
           <div
             style={sx('font-size:23px;font-weight:600;letter-spacing:-.03em;margin-top:10px;line-height:1.12;text-wrap:balance')}
@@ -104,15 +119,17 @@ export function Event({ id }: { id?: string }) {
               <div style={sx('font-size:11px;color:var(--muted)')}>Ora {ev.time}</div>
             </div>
           </div>
-          <div className="row" style={sx('gap:9px')} onClick={() => go('venue', { id: v.id })}>
-            <div className="icon-btn" style={sx('width:38px;height:38px')}>
-              <Ic svg={I.pin} />
+          {v ? (
+            <div className="row" style={sx('gap:9px')} onClick={() => go('venue', { id: v.id })}>
+              <div className="icon-btn" style={sx('width:38px;height:38px')}>
+                <Ic svg={I.pin} />
+              </div>
+              <div>
+                <div style={sx('font-size:12.5px;font-weight:500')}>{v.name}</div>
+                <div style={sx('font-size:11px;color:var(--indigo-2)')}>Vezi locația ›</div>
+              </div>
             </div>
-            <div>
-              <div style={sx('font-size:12.5px;font-weight:500')}>{v.name}</div>
-              <div style={sx('font-size:11px;color:var(--indigo-2)')}>Vezi locația ›</div>
-            </div>
-          </div>
+          ) : null}
         </div>
 
         {ev.friends?.length ? (
@@ -150,8 +167,8 @@ export function Event({ id }: { id?: string }) {
               Artiști
             </div>
             <div className="scroll-x" style={sx('margin-top:11px;padding:0')}>
-              {(ev.artists as string[]).map((aid) => {
-                const a = (ART as Record<string, Ev>)[aid];
+              {(liveArtists ?? (ev.artists as string[]).map((aid) => (ART as Record<string, Ev>)[aid])).map((a: Ev) => {
+                const aid = a.id;
                 return (
                   <div
                     key={aid}
@@ -164,13 +181,13 @@ export function Event({ id }: { id?: string }) {
                         height: 72,
                         borderRadius: 24,
                         margin: '0 auto',
-                        background: a.tone,
+                        background: a._bg ?? a.tone,
                         display: 'grid',
                         placeItems: 'center',
                         fontSize: '28px',
                       }}
                     >
-                      {a.g}
+                      {a._bg ? '' : a.g}
                     </div>
                     <div style={sx('font-weight:500;font-size:12.5px;margin-top:7px')}>{a.name}</div>
                     <div style={sx('font-size:10.5px;color:var(--muted)')}>{a.role}</div>
@@ -184,10 +201,16 @@ export function Event({ id }: { id?: string }) {
         <div className="h2" style={sx('margin-top:22px;font-size:15px')}>
           Despre
         </div>
-        <p style={sx('color:var(--ink-2);font-size:13.5px;line-height:1.62;margin-top:8px')}>
-          {isExp
-            ? 'O experiență de neuitat, cu ghizi dedicați și tot ce ai nevoie inclus. Alegi data care ți se potrivește și adaugi serviciile dorite.'
-            : 'Un spectacol care îmbină energie, atmosferă și un show de neuitat. Fie că ești fan de mult timp sau descoperi acum, aceasta e experiența ta.'}
+        {/* Descrierea reala cand exista. Textul generic de mai jos e din
+            prototip si ramane doar pentru evenimentele demo — pus sub un
+            eveniment real, ar fi o descriere inventata. */}
+        <p style={sx('color:var(--ink-2);font-size:13.5px;line-height:1.62;margin-top:8px;white-space:pre-line')}>
+          {isLive
+            ? (live.data?.description ??
+              'Organizatorul nu a adăugat încă o descriere pentru acest eveniment.')
+            : isExp
+              ? 'O experiență de neuitat, cu ghizi dedicați și tot ce ai nevoie inclus. Alegi data care ți se potrivește și adaugi serviciile dorite.'
+              : 'Un spectacol care îmbină energie, atmosferă și un show de neuitat. Fie că ești fan de mult timp sau descoperi acum, aceasta e experiența ta.'}
         </p>
 
         {isExp && addons ? (
@@ -234,7 +257,7 @@ export function Event({ id }: { id?: string }) {
           </>
         ) : null}
 
-        <div className="between" style={sx('margin-top:24px')}>
+        <div className="between" style={sx('margin-top:24px')} hidden={!ev.gallery.length}>
           <div className="h2" style={sx('font-size:15px')}>
             Galerie
           </div>
@@ -290,7 +313,10 @@ export function Event({ id }: { id?: string }) {
           ) : null}
         </div>
 
-        <div className="between" style={sx('margin-top:24px')}>
+        {/* Recenziile din prototip sunt un dataset fix. Pe un eveniment real ar
+            fi pareri inventate despre el, deci sectiunea dispare pana cand
+            exista un endpoint de recenzii pe eveniment. */}
+        <div className="between" style={sx('margin-top:24px')} hidden={isLive}>
           <div className="h2" style={sx('font-size:15px')}>
             Recenzii
           </div>
@@ -298,7 +324,7 @@ export function Event({ id }: { id?: string }) {
             <Ic svg={I.star} /> {ev.rat} · {(EVREVIEWS as unknown[]).length} recenzii
           </span>
         </div>
-        <div className="scroll-x" style={sx('margin-top:11px;padding:0')}>
+        <div className="scroll-x" style={sx('margin-top:11px;padding:0')} hidden={isLive}>
           {(EVREVIEWS as [string, string, number, string, string][]).map((r) => (
             <div key={r[0] + r[4]} className="card" style={sx('min-width:252px;padding:13px')}>
               <div className="row" style={sx('gap:9px')}>
@@ -338,21 +364,22 @@ export function Event({ id }: { id?: string }) {
           </div>
         )}
 
-        <div className="h2" style={sx('margin-top:24px;font-size:15px')}>
+        <div className="h2" style={sx('margin-top:24px;font-size:15px')} hidden={!v}>
           Locație
         </div>
         <div
           className="listitem"
-          onClick={() => go('venue', { id: v.id })}
+          hidden={!v}
+          onClick={() => v && go('venue', { id: v.id })}
           style={sx('margin-top:11px;cursor:pointer;padding:12px')}
         >
-          <div className="iconbadge" style={{ background: v.tone }}>
+          <div className="iconbadge" style={{ background: v?.tone }}>
             <Ic svg={I.pin} />
           </div>
           <div style={sx('flex:1;min-width:0')}>
-            <div style={sx('font-weight:600;font-size:13.5px')}>{v.name}</div>
+            <div style={sx('font-weight:600;font-size:13.5px')}>{v?.name}</div>
             <div className="metaline" style={sx('margin-top:3px')}>
-              {v.addr} · {v.city}
+              {v?.addr} · {v?.city}
             </div>
           </div>
           <span className="muted">
@@ -361,7 +388,8 @@ export function Event({ id }: { id?: string }) {
         </div>
         <div
           className="listitem"
-          onClick={() => go('stay22', { id: v.id })}
+          hidden={!v}
+          onClick={() => v && go('stay22', { id: v.id })}
           style={sx('background:linear-gradient(135deg,#0f766e,#12b3a6);border:0;margin-top:11px;color:#fff;cursor:pointer;padding:12px')}
         >
           <div className="iconbadge" style={sx('background:rgba(255,255,255,.18)')}>
@@ -369,7 +397,7 @@ export function Event({ id }: { id?: string }) {
           </div>
           <div style={sx('flex:1')}>
             <div style={sx('font-weight:600;font-size:13.5px')}>Cazare & cum ajung</div>
-            <div style={sx('font-size:11.5px;opacity:.85')}>Hartă cu hoteluri lângă {v.name}</div>
+            <div style={sx('font-size:11.5px;opacity:.85')}>Hartă cu hoteluri lângă {v?.name}</div>
           </div>
           <Ic svg={I.arrow} />
         </div>
@@ -384,7 +412,13 @@ export function Event({ id }: { id?: string }) {
               Preț de la
             </div>
             <div style={sx('font-weight:700;font-size:20px;margin-top:1px')}>
-              {money(ev.from)} <span style={sx('font-size:13px;color:var(--muted);font-weight:600')}>lei</span>
+              {ev.from ? (
+                <>
+                  {money(ev.from)} <span style={sx('font-size:13px;color:var(--muted);font-weight:600')}>lei</span>
+                </>
+              ) : (
+                <span style={sx('font-size:15px;color:var(--muted);font-weight:600')}>—</span>
+              )}
             </div>
           </div>
           <button className="cta" onClick={() => go(isExp ? 'expdate' : 'tickettypes')} style={sx('flex:1')}>
