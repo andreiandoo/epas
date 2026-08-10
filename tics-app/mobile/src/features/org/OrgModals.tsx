@@ -10,7 +10,8 @@
 import { useState } from 'react';
 import { Avatar, Button, Card, CenterModal, FullModal, Icon, Input, Progress, Sheet, TypeChip, money } from '../../design/components';
 import { useSession } from '../../store/session';
-import { CTX, CTX_ORDER, EMERGENCY, GATES, GUESTS, NOTIFS, STAFF } from '../../mock/org';
+import { useStaff } from './useStaff';
+import { CTX, CTX_ORDER, EMERGENCY, GATES, GUESTS, NOTIFS } from '../../mock/org';
 import { useCtx } from './OrgChrome';
 
 /* ---------- events (selector eveniment) ---------- */
@@ -101,25 +102,130 @@ function MSwitch() {
 }
 
 /* ---------- staff (echipa) ---------- */
+/** Culoarea avatarului, stabila per membru — nu vine de la server. */
+const AV_COLORS = ['red', 'blue', 'amber', 'purple', 'green'] as const;
+const avatarColor = (id: number) => AV_COLORS[id % AV_COLORS.length];
+
 function MStaff() {
   const { closeModal, showToast } = useSession();
+  const staff = useStaff();
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'staff' as 'admin' | 'manager' | 'staff' });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (busy) return;
+    if (!form.email.trim() || form.password.length < 8) {
+      showToast('Email și parolă de minim 8 caractere');
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await staff.add({
+        name: form.name.trim() || undefined,
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+      });
+      if (r.ok) {
+        showToast('Membru adăugat');
+        setForm({ name: '', email: '', password: '', role: 'staff' });
+        setAdding(false);
+      } else {
+        showToast(r.error ?? 'Adăugare eșuată');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = (
+    label: string,
+    value: string,
+    onChange: (v: string) => void,
+    type = 'text',
+  ) => (
+    <div style={{ marginBottom: 10 }}>
+      <div className="label" style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 5 }}>
+        {label}
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          padding: '11px 13px',
+          color: 'var(--text)',
+          font: 'inherit',
+          fontSize: 14,
+        }}
+      />
+    </div>
+  );
+
   return (
     <FullModal title="Echipă & personal" onClose={closeModal}>
-      {STAFF.map((s) => (
+      {staff.rows.map((s) => (
         <Card key={s.id} pad style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Avatar initials={s.ini} color={s.av} size={42} radius={13} />
+          <Avatar initials={s.initials} color={avatarColor(s.id)} size={42} radius={13} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)' }}>{s.nm}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)' }}>{s.name}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-              {s.gate ?? 'fără poartă'} · {s.scans ? `${s.scans} scanări` : `${s.sales} vânzări`}
+              {s.gate ?? 'fără poartă'} · {s.email}
             </div>
           </div>
-          <span className={`tag tag-${s.role === 'admin' ? 'admin' : s.role === 'manager' ? 'mgr' : 'staff'}`}>{s.roleL}</span>
+          <span className={`tag tag-${s.role === 'admin' ? 'admin' : s.role === 'manager' ? 'mgr' : 'staff'}`}>
+            {s.roleLabel}
+          </span>
         </Card>
       ))}
-      <Button variant="primary" icon="plus" style={{ marginTop: 6 }} onClick={() => showToast('Adăugare membru — Faza 2')}>
-        Adaugă membru
-      </Button>
+
+      {adding ? (
+        <Card pad style={{ marginBottom: 10 }}>
+          {field('Nume (opțional)', form.name, (v) => setForm({ ...form, name: v }))}
+          {field('Email', form.email, (v) => setForm({ ...form, email: v }))}
+          {field('Parolă', form.password, (v) => setForm({ ...form, password: v }), 'password')}
+          <div className="label" style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6 }}>
+            Rol
+          </div>
+          <div style={{ display: 'flex', gap: 7, marginBottom: 12 }}>
+            {(['staff', 'manager', 'admin'] as const).map((r) => (
+              <span
+                key={r}
+                className={`typechip ${form.role === r ? 'on' : ''}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setForm({ ...form, role: r })}
+              >
+                {r === 'admin' ? 'Administrator' : r === 'manager' ? 'Manager' : 'Staff'}
+              </span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="primary" onClick={submit} style={{ flex: 1 }}>
+              {busy ? 'Se adaugă…' : 'Salvează'}
+            </Button>
+            <Button variant="ghost" onClick={() => setAdding(false)} style={{ flex: 1 }}>
+              Renunță
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <Button variant="primary" icon="plus" style={{ marginTop: 6 }} onClick={() => setAdding(true)}>
+          Adaugă membru
+        </Button>
+      )}
+
+      {/* Cand nu exista un organizator conectat, lista e cea din prototip —
+          spunem asta, in loc s-o dam drept echipa reala. */}
+      {!staff.live ? (
+        <div className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 12, lineHeight: 1.5 }}>
+          Echipă demonstrativă. Conectează contul de organizator ca să vezi echipa reală.
+        </div>
+      ) : null}
     </FullModal>
   );
 }

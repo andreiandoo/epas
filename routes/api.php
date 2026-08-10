@@ -4093,5 +4093,11 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
             ->name('api.app.org.staff.activate');
         Route::post('/org/staff/reset-password', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'resetPassword'])
             ->middleware('throttle:20,1')->name('api.app.org.staff.reset-password');
+
+        /* Vanzare la usa. Scrie comanda in lumea partenerului cu
+           `source = 'pos_app'`, ca sa intre corect in rapoartele si
+           decontarile lui. Idempotent dupa `sale_id`. */
+        Route::post('/org/sale', [\App\Http\Controllers\Api\TixelloApp\PosController::class, 'sale'])
+            ->middleware('throttle:120,1')->name('api.app.org.sale');
     });
 });

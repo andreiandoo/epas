@@ -27,6 +27,14 @@ final class OrderSource
     /** Sursa scrisa de vanzarea la usa din aplicatia Tixello. */
     public const TIXELLO_APP_POS = 'pos_app';
 
+    /**
+     * Echivalentul de pe partea de TENANT (`OperatorController::sale`).
+     * NU e inclus deliberat in `POS`: lista aia deserveste rapoartele de
+     * marketplace, unde sursa asta nu apare, iar adaugarea ei ar schimba
+     * cifre fara motiv. E aici doar ca sa fie documentata langa surori.
+     */
+    public const TENANT_POS = 'pos_tenant';
+
     public static function isPos(?string $source): bool
     {
         return $source !== null && in_array($source, self::POS, true);

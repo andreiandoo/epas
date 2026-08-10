@@ -191,3 +191,50 @@ export async function removeStaff(memberId: number): Promise<boolean> {
   const r = await call('/org/staff/remove', { method: 'POST', body: JSON.stringify({ member_id: memberId }) });
   return !!r?.success;
 }
+
+/* =========================================================
+   Vânzarea la ușă
+
+   Aplicatia trimite DOAR ce tip de bilet si cate bucati — pretul il calculeaza
+   serverul. Un pret venit de la client poate fi modificat de oricine
+   intercepteaza cererea.
+
+   `sale_id` e generat pe dispozitiv si retrimis identic la fiecare incercare:
+   casierul apasa din nou cand reteaua intarzie, iar fara el omul ar plati o
+   data si ar primi doua comenzi.
+   ========================================================= */
+export type PosSaleResult = {
+  order_id: number;
+  order_number: string;
+  total: number;
+  currency: string;
+  tickets: { code: string; price: number }[];
+};
+
+const newSaleId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `sale-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+
+export async function posSale(payload: {
+  eventId: number;
+  items: { ticket_type_id: number; qty: number }[];
+  paymentMethod: 'cash' | 'card' | 'nfc';
+  customer?: { email?: string; name?: string; phone?: string };
+  /** se trimite acelasi la reincercare; generat automat daca lipseste */
+  saleId?: string;
+}): Promise<{ ok: boolean; sale?: PosSaleResult; error?: string }> {
+  const r = await call<PosSaleResult>('/org/sale', {
+    method: 'POST',
+    body: JSON.stringify({
+      sale_id: payload.saleId ?? newSaleId(),
+      event_id: payload.eventId,
+      items: payload.items,
+      payment_method: payload.paymentMethod,
+      customer: payload.customer ?? {},
+    }),
+  });
+
+  if (!r) return { ok: false, error: 'Nu am putut contacta serverul.' };
+  return r.success ? { ok: true, sale: r.data } : { ok: false, error: r.error ?? 'Vânzare eșuată.' };
+}
