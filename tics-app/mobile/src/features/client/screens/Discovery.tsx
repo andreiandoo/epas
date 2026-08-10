@@ -541,14 +541,36 @@ export function Venue({ id }: { id?: string }) {
           ))}
         </div>
 
-        <div
-          style={sx('height:130px;border-radius:18px;margin-top:16px;background:linear-gradient(120deg,#141126,#0d0b16);position:relative;overflow:hidden')}
-        >
-          <div style={sx('position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7')} />
+        {/* Harta reala, cand stim coordonatele.
+
+            OpenStreetMap, nu Google: embed-ul OSM e gratuit, fara cheie si
+            fara cota — Google Maps JavaScript API se factureaza per incarcare
+            de harta, iar asta ar fi un cost care creste cu fiecare deschidere
+            de pagina de locatie. Butoanele de navigare de mai jos deschid
+            aplicatia de harti de pe telefon, ceea ce nu costa nimic indiferent
+            de furnizor.
+
+            Fara coordonate ramane caseta decorativa din prototip: mai bine un
+            substitut evident decat o harta centrata pe un loc gresit. */}
+        {typeof v._lat === 'number' && typeof v._lng === 'number' ? (
+          <div style={sx('height:150px;border-radius:18px;margin-top:16px;overflow:hidden;background:#0d0b16')}>
+            <iframe
+              title={`Harta · ${v.name}`}
+              loading="lazy"
+              style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${v._lng - 0.006}%2C${v._lat - 0.003}%2C${v._lng + 0.006}%2C${v._lat + 0.003}&layer=mapnik&marker=${v._lat}%2C${v._lng}`}
+            />
+          </div>
+        ) : (
           <div
-            style={sx('position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid var(--bg);box-shadow:var(--sh-p)')}
-          />
-        </div>
+            style={sx('height:130px;border-radius:18px;margin-top:16px;background:linear-gradient(120deg,#141126,#0d0b16);position:relative;overflow:hidden')}
+          >
+            <div style={sx('position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7')} />
+            <div
+              style={sx('position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid var(--bg);box-shadow:var(--sh-p)')}
+            />
+          </div>
+        )}
 
         <div className="row" style={sx('gap:10px;margin-top:12px')}>
           <button className="cta ghost" style={sx('padding:13px')} onClick={() => go('stay22', { id: v.id })}>

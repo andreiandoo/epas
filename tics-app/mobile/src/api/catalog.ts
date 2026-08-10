@@ -130,6 +130,21 @@ const key = (v: string | number) => encodeURIComponent(String(v));
 export const fetchCatalogEvent = (id: string | number, signal?: AbortSignal) =>
   get<CatalogEvent>(`/tenant-client/catalog/events/${key(id)}`, signal);
 
+/**
+ * Evenimentele NOASTRE (tenanti + marketplace-uri), pentru ecranele de
+ * descoperire. Radarul TICS ramane o sursa secundara: acolo doar comparam
+ * preturi, aici chiar vindem bilet.
+ */
+export const fetchCatalogEvents = (opts: { city?: string; limit?: number } = {}, signal?: AbortSignal) => {
+  const params = new URLSearchParams();
+  if (opts.city) params.set('city', opts.city);
+  if (opts.limit) params.set('limit', String(opts.limit));
+
+  const qs = params.toString();
+
+  return get<CatalogEventBrief[]>(`/tenant-client/catalog/events${qs ? `?${qs}` : ''}`, signal);
+};
+
 export const fetchCatalogArtist = (id: string | number, signal?: AbortSignal) =>
   get<CatalogArtist>(`/tenant-client/catalog/artists/${key(id)}`, signal);
 

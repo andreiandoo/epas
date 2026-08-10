@@ -15,9 +15,11 @@
    minciuna, nu un substitut.
    ========================================================= */
 import { useEffect, useState } from 'react';
+import type { UiEvent } from '../../api/tenantClient';
 import {
   fetchCatalogArtist,
   fetchCatalogEvent,
+  fetchCatalogEvents,
   fetchCatalogVenue,
   type CatalogArtist,
   type CatalogEvent,
@@ -184,8 +186,11 @@ export function compact(n: number): string {
 
 export const exact = (n: number): string => n.toLocaleString('ro-RO');
 
-/** Evenimentele listate pe fisa artistului sau a locatiei, in forma prototipului. */
-export function toEventBrief(e: CatalogEventBrief): Rec {
+/**
+ * Evenimentele listate pe fisele de artist / locatie si pe ecranele de
+ * descoperire, in forma pe care o consuma cardurile din prototip.
+ */
+export function toEventBrief(e: CatalogEventBrief): UiEvent {
   return {
     id: String(e.id),
     s: e.title ?? '',
@@ -209,7 +214,7 @@ export function toEventBrief(e: CatalogEventBrief): Rec {
     poster: e.poster,
     _bg: bgFor(e.poster, e.id),
     _live: true,
-  };
+  } as unknown as UiEvent;
 }
 
 /* ---------- hook-uri ---------- */
@@ -300,6 +305,41 @@ function useCatalog<A, T>(
   }, [id, ns]);
 
   return state;
+}
+
+/**
+ * Evenimentele proprii, in forma pe care o consuma cardurile.
+ *
+ * Se reincarca la schimbarea orasului. Esecul NU e o eroare de ecran: ecranul
+ * cade pe Radar, care oricum e a doua sursa — deci lista goala e un rezultat
+ * valid, nu o exceptie.
+ */
+export function useCatalogEvents(opts: { city?: string; limit?: number } = {}) {
+  const { city, limit } = opts;
+  const [items, setItems] = useState<UiEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let alive = true;
+    setLoading(true);
+
+    void fetchCatalogEvents({ city, limit }, ctrl.signal).then((list) => {
+      if (!alive) return;
+      /* `Array.isArray`, nu doar `?? []`: un raspuns malformat (proxy care
+         intoarce alt JSON, endpoint schimbat) ar fi ajuns direct in `.map` si
+         ar fi doborat ecranul de pornire. */
+      setItems(Array.isArray(list) ? list.map(toEventBrief) : []);
+      setLoading(false);
+    });
+
+    return () => {
+      alive = false;
+      ctrl.abort();
+    };
+  }, [city, limit]);
+
+  return { items, loading };
 }
 
 const adaptArtist = (a: CatalogArtist) => ({ rec: toArtistRecord(a), events: a.events.map(toEventBrief) });

@@ -26,8 +26,15 @@ import { useCatalogVenue } from '../catalogData';
 
 type Ev = Record<string, any>;
 
-/** Codul de afiliat Stay22. Fara el, partea de cazare nu se randeaza. */
-const STAY22_AID = import.meta.env.VITE_STAY22_AID as string | undefined;
+/**
+ * Codul de afiliat Stay22.
+ *
+ * Scris in cod, nu intr-un `.env`: NU e un secret — apare oricum in adresa
+ * iframe-ului, deci il vede oricine deschide pagina. Tinut aici, orice build
+ * merge, inclusiv pe o masina fara fisierul de mediu. `VITE_STAY22_AID` il
+ * poate suprascrie, pentru teste cu alt cont.
+ */
+const STAY22_AID = (import.meta.env.VITE_STAY22_AID as string | undefined) ?? '68f75671f26bfb6f2a73d0b9';
 
 /**
  * Linkul catre harti.

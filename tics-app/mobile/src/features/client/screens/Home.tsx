@@ -14,6 +14,7 @@ import { EvMini, ExpCard, FeaturedCard, RadarCard } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { radarToUi, useRadarCities, useRadarList } from '../radarData';
+import { useCatalogEvents } from '../catalogData';
 import { PickerSheet, type Option } from '../picker';
 import { useClient } from '../../../store/client';
 import { useState } from 'react';
@@ -27,24 +28,37 @@ export function Home() {
   const setCity = useClient((s) => s.setCity);
   const cities = useRadarCities();
   const [picker, setPicker] = useState(false);
-  /* Un singur apel pentru tot ecranul, nu unul pe sectiune: Radarul e aceeasi
-     sursa pentru toate, iar patru cereri ar insemna patru asteptari si patru
-     ocazii de esec pe ecranul de pornire. Primele trei raman pentru banda
-     „Radar"; restul umplu sectiunile de mai jos. */
+  /* DOUA surse, in ordinea asta:
+       1. evenimentele NOASTRE — ale tenantilor si marketplace-urilor Tixello.
+          Au bilet in aplicatie, deci merg intotdeauna primele;
+       2. Radarul TICS — acolo doar comparam preturi de pe alte platforme.
+     Cate un singur apel de fiecare, nu unul pe sectiune: patru cereri ar
+     insemna patru asteptari si patru ocazii de esec pe ecranul de pornire. */
+  const mine = useCatalogEvents({ city: city || undefined, limit: 12 });
   const { items: radar, loading: radarLoading } = useRadarList({ limit: 14, city: city || undefined });
 
-  /* Fara evenimente reale (offline, sau oras fara nimic anuntat) ramanem pe
-     datasetul prototipului: un ecran de pornire gol nu spune nimic despre ce
-     face aplicatia. */
-  const live = radar.length > 0;
+  /* Deduplicare: acelasi eveniment poate aparea si la noi, si in Radar (care
+     ne agrega si pe noi). Cheia e titlul + ziua, singurele comune celor doua
+     surse — id-urile sunt din lumi diferite. Al nostru castiga, fiindca de
+     acolo se poate cumpara. */
+  const mineKeys = new Set(mine.items.map((e) => `${String(e.s).toLowerCase()}|${e.d}`));
+  const pool = [
+    ...mine.items,
+    ...radar.filter((r) => !mineKeys.has(`${r.s.toLowerCase()}|${[r.day, r.mon].filter(Boolean).join(' ')}`)).map(radarToUi),
+  ];
 
-  const f = live ? radarToUi(radar[0]) : ev('coldplay');
-  const forYou = live ? radar.slice(0, 6).map(radarToUi) : ['coldplay', 'celestial', 'swan'].map(ev);
+  /* Fara niciun eveniment real (offline, sau oras fara nimic anuntat) ramanem
+     pe datasetul prototipului: un ecran de pornire gol nu spune nimic despre
+     ce face aplicatia. */
+  const live = pool.length > 0;
+
+  const f = live ? pool[0] : ev('coldplay');
+  const forYou = live ? pool.slice(0, 6) : ['coldplay', 'celestial', 'swan'].map(ev);
   const events = live
-    ? radar.filter((r) => r.cat !== 'Experiențe').slice(0, 8).map(radarToUi)
+    ? pool.filter((e) => e.type !== 'experience').slice(0, 8)
     : ['coldplay', 'swan', 'celestial'].map(ev);
   const exps = live
-    ? radar.filter((r) => r.cat === 'Experiențe').slice(0, 6).map(radarToUi)
+    ? pool.filter((e) => e.type === 'experience').slice(0, 6)
     : ['salina', 'atv', 'wine'].map(ev);
 
   return (

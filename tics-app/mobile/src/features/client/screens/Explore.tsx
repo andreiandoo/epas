@@ -13,6 +13,8 @@ import { EvMini } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { useShortsPreview } from '../shorts/useShortsPreview';
+import { useCatalogEvents } from '../catalogData';
+import { radarToUi, useRadarList } from '../radarData';
 import { useClient } from '../../../store/client';
 import { useRadarCategories } from '../radarData';
 import type { RadarCategory } from '../../../api/ticsRadar';
@@ -124,7 +126,15 @@ export function Explore() {
      sa nu apara goala; apoi le inlocuim cu cele reale (17 tipuri masurate). */
   const pools = cats.length ? poolsFromCategories(cats) : (CATPOOLS as unknown as Pool[]);
   const prefsSel = useClient((s) => s.prefsSel);
-  const rec = ['coldplay', 'salina', 'swan'].map(ev);
+  const city = useClient((s) => s.city);
+  /* Aceeasi ordine ca pe Acasa: evenimentele NOASTRE primele — de acolo se
+     poate cumpara bilet — apoi Radarul, ca sa completeze randul cand avem
+     putine. Fara nimic real, ramane datasetul prototipului. */
+  const mine = useCatalogEvents({ city: city || undefined, limit: 6 });
+  const { items: radar } = useRadarList({ limit: 6, city: city || undefined });
+
+  const pool = [...mine.items, ...radar.map(radarToUi)];
+  const rec = pool.length ? pool.slice(0, 6) : ['coldplay', 'salina', 'swan'].map(ev);
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>

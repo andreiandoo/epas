@@ -4122,6 +4122,11 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
        apartine niciunui tenant, iar `/tenant-client/events/{slug}` de mai sus
        rezolva intai un tenant si filtreaza dupa el. Aici se cauta global, dupa
        id sau slug, si se raspunde doar pentru continut public. */
+    /* Lista de evenimente proprii (tenanti + marketplace-uri). Declarata
+       INAINTEA rutei cu {key}, ca „events" sa nu fie citit ca slug. */
+    Route::get('/catalog/events', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'events'])
+        ->name('api.tenant-client.catalog.events');
+
     Route::get('/catalog/events/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'event'])
         ->name('api.tenant-client.catalog.event');
 

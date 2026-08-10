@@ -49,6 +49,54 @@ class CatalogController extends Controller
         return response()->json(['success' => true, 'data' => $this->eventPayload($event, full: true)]);
     }
 
+    /**
+     * Lista de evenimente PROPRII — ale tenantilor si ale marketplace-urilor
+     * Tixello — pentru ecranele de descoperire din aplicatie.
+     *
+     * DE CE ARE PRIORITATE fata de Radar: Radarul TICS agrega preturi de pe alte
+     * platforme si nu poate vinde nimic. Un eveniment de aici e vandut chiar de
+     * noi, cu bilet in aplicatie. Ordinea o decide clientul, dar sursa asta
+     * trebuie sa existe ca sa poata fi pusa prima.
+     *
+     * Se listeaza doar ce e publicat si inca nu a trecut. `scopeUpcoming` tine
+     * cont de toate cele trei moduri de durata (o zi, interval, mai multe
+     * intervale) — o simpla comparatie pe `event_date` ar fi ascuns
+     * festivalurile aflate in desfasurare.
+     */
+    public function events(Request $request): JsonResponse
+    {
+        $limit = max(1, min((int) $request->query('limit', 20), 50));
+        $city = trim((string) $request->query('city', ''));
+
+        $events = Event::query()
+            ->where('is_published', true)
+            ->upcoming()
+            ->with(['venue', 'ticketTypes'])
+            /* Intai cele scoase in fata de organizator, apoi dupa cat de
+               aproape sunt: un eveniment de saptamana viitoare e mai util
+               decat unul de peste opt luni. */
+            ->orderByDesc('is_homepage_featured')
+            ->orderByRaw('COALESCE(event_date, range_start_date) ASC NULLS LAST')
+            ->limit($city !== '' ? $limit * 4 : $limit)
+            ->get()
+            /* Orasul se filtreaza DUPA interogare, pe sala: evenimentele nu
+               poarta un oras propriu, iar un join doar pentru filtrare ar fi
+               complicat interogarea pentru un caz care oricum se rezolva pe
+               cateva zeci de randuri. */
+            ->when(
+                $city !== '',
+                fn ($rows) => $rows->filter(
+                    fn (Event $e) => mb_strtolower((string) ($e->venue->city ?? '')) === mb_strtolower($city),
+                ),
+            )
+            ->take($limit)
+            ->map(fn (Event $e) => $this->eventPayload($e, full: false))
+            ->values()
+            ->all();
+
+        return response()->json(['success' => true, 'data' => $events]);
+    }
+
     public function artist(Request $request, string $key): JsonResponse
     {
         $artist = $this->findBy(Artist::query(), $key);

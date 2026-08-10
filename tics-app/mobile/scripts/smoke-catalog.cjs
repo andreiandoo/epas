@@ -151,6 +151,8 @@ const VENUE = {
       return json(req, { feed: 'for_you', items: [shortFor(feedMode)], playback: null, next_cursor: null });
     }
 
+    // lista (fara id) inaintea fisei, altfel „events?" ar cadea pe fisa
+    if (/\/catalog\/events(\?|$)/.test(url)) return json(req, [EVENT]);
     if (url.includes('/catalog/events/')) return json(req, EVENT);
     if (url.includes('/catalog/artists/')) return json(req, ARTIST);
     if (url.includes('/catalog/venues/')) return json(req, VENUE);
