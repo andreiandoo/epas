@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Schema;
 class GenerateShortsCommand extends Command
 {
     protected $signature = 'shorts:generate
-        {--type=* : Limit to events, artists or venues (default: all enabled)}
+        {--type=* : event|artist|venue (si pluralele lor). Implicit: toate cele activate}
         {--limit= : Override the per-type batch ceiling}
         {--id=* : Generate for specific ids (requires exactly one --type)}
         {--dry-run : Report what would be queued without queueing it}';
@@ -43,10 +43,23 @@ class GenerateShortsCommand extends Command
             return self::SUCCESS;
         }
 
+        $requested = array_filter((array) $this->option('type'));
         $types = $this->resolveTypes();
 
         if ($types === []) {
-            $this->warn('No types enabled or selected.');
+            /* Doua cauze diferite, care cereau mesaje diferite: un `--type`
+               gresit tacea la fel ca „totul dezactivat din config", iar
+               comanda iesea cu SUCCESS — deci nimic nu semnala greseala. */
+            if ($requested !== []) {
+                $this->error(sprintf(
+                    'Tip necunoscut: %s. Valori acceptate: event, artist, venue (si pluralele lor).',
+                    implode(', ', $requested),
+                ));
+
+                return self::FAILURE;
+            }
+
+            $this->warn('Toate tipurile sunt dezactivate din config (shorts.autogen.*).');
 
             return self::SUCCESS;
         }
@@ -82,7 +95,15 @@ class GenerateShortsCommand extends Command
         $requested = array_filter((array) $this->option('type'));
 
         if ($requested !== []) {
-            return array_values(array_intersect($requested, ['event', 'artist', 'venue']));
+            /* Textul de ajutor anunta pluralul („events, artists or venues"),
+               dar codul accepta doar singularul — o comanda scrisa exact dupa
+               `--help` nu facea nimic, tacut. Acceptam ambele. */
+            $normalised = array_map(
+                fn (string $t) => rtrim(mb_strtolower(trim($t)), 's'),
+                $requested,
+            );
+
+            return array_values(array_intersect($normalised, ['event', 'artist', 'venue']));
         }
 
         return array_values(array_filter([
