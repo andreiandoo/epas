@@ -45,9 +45,18 @@ const EVENT = {
   short_description: null,
   description: 'Descrierea reala a evenimentului, adusa din catalog.',
   terms: null,
+  pricing: { source: 'marketplace', mode: 'included', rate: 7 },
   ticket_types: [
-    { id: 1, name: 'Acces general', description: 'In picioare', price: 123, available: true },
-    { id: 2, name: 'Categoria I', description: 'Loc pe scaun', price: 199, available: true },
+    {
+      id: 1,
+      name: 'Acces general',
+      description: 'In picioare',
+      price: 123,
+      full_price: 150,
+      perks: ['Acces zona generala', 'Garderoba inclusa'],
+      available: true,
+    },
+    { id: 2, name: 'Categoria I', description: 'Loc pe scaun', price: 199, full_price: null, perks: [], available: true },
   ],
   artists: [{ id: 6446, slug: 'sukar-nation', name: 'Sukar Nation', role: 'Live', image: null }],
 };
@@ -252,6 +261,22 @@ const VENUE = {
   check('sala reala apare', txt.includes('Sala Reală'));
   check('pretul minim apare in dock', txt.includes('123'));
   check('recenziile demo NU apar pe eveniment real', !(await sectionVisible('Recenzii')));
+
+  /* Lista de bilete: descriere, beneficii, reducere si comisionul corect. */
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button.cta')].find((x) => /Alege bilete/.test(x.textContent));
+    b?.click();
+  });
+  await wait(1400);
+  const tickets = await page.evaluate(() => ({
+    cards: document.querySelectorAll('.ttcard').length,
+    perks: [...document.querySelectorAll('.ttperks li')].map((e) => e.textContent.trim()),
+    body: document.body.textContent.replace(/\s+/g, ' '),
+  }));
+  check('cardurile de bilet folosesc marcajul nou', tickets.cards === 2, `${tickets.cards} carduri`);
+  check('beneficiile apar ca lista', tickets.perks.length === 2, tickets.perks.join(' | '));
+  check('reducerea se vede ca procent', /-18%/.test(tickets.body), '150 -> 123 lei');
+  check('preturile nu mai sunt 0', /123/.test(tickets.body) && /199/.test(tickets.body));
   check('galeria goala nu are antet', !(await sectionVisible('Galerie')));
 
   /* ---------- artist ---------- */

@@ -103,10 +103,18 @@ export function toEventRecord(e: CatalogEvent): EventRecord {
         n: t.name ?? 'Bilet',
         desc: t.description ?? '',
         p: t.price ?? 0,
+        // `old` e cheia pe care ecranul o foloseste deja pentru pretul taiat
+        old: t.full_price ?? undefined,
+        perks: t.perks ?? [],
         pts: Math.round(t.price ?? 0),
         seat: false,
         sold: !t.available,
+        id: t.id,
       })),
+      /* Comisionul calatoreste cu evenimentul: cosul trebuie sa stie daca mai
+         adauga ceva peste pret sau nu, iar raspunsul difera de la un eveniment
+         la altul (marketplace vs tenant). */
+      _pricing: e.pricing,
       _bg: bgFor(e.poster ?? e.hero, e.id),
       _live: true,
     },

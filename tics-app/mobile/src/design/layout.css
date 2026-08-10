@@ -170,3 +170,65 @@
   font-weight: 700;
 }
 .app-client .wave-cta svg { width: 14px; height: 14px }
+
+/* =========================================================
+   Cardul unui tip de bilet.
+
+   Prototipul avea un card simplu, cu nume, descriere si pret. Un tip de bilet
+   are insa si beneficii si poate avea o reducere; toate trebuie sa incapa fara
+   ca lista sa devina un zid de text. De aici: pretul urcat langa nume (ca sa se
+   compare categoriile dintr-o privire) si beneficiile ca lista bifata, nu ca
+   fraza.
+   ========================================================= */
+.app-client .ttcard {
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 14px;
+  transition: border-color .18s, background .18s;
+}
+/* Cel ales iese in evidenta: pe o lista lunga, contorul singur se pierde. */
+.app-client .ttcard.picked {
+  border-color: var(--indigo);
+  background: linear-gradient(135deg, var(--indigo-soft), var(--surface-solid));
+}
+
+.app-client .ttperks {
+  list-style: none;
+  margin: 11px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.app-client .ttperks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.app-client .ttperks svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  margin-top: 2px;
+  color: var(--green-2);
+}
+
+/* ---- spatiul de sub continut, cat sa incapa bara de jos ----
+   Bara nu mai e lipita de fluxul paginii (e fixa, montata in carcasa), deci
+   nu-si mai rezerva singura locul. Cei 38px din prototip erau calculati pentru
+   varianta veche; acum ultimul rand de continut ramanea sub ea. */
+.app-client .navspace {
+  height: calc(var(--ep-bottom-line) + 70px);
+}
+
+/* ---- antetul care devine fix la derulare ----
+   Butonul de inapoi statea lipit de muchia de jos. Marimea aparea doar dupa ce
+   antetul capata fundal (`.scrolled`), fiindca pana atunci nu se vedea unde se
+   termina. */
+.app-client .dbar.scrolled .between {
+  padding-bottom: 10px;
+}

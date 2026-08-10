@@ -54,6 +54,16 @@ type ProtoSt = {
 const seed = PROTO_ST as unknown as ProtoSt;
 
 /** ST.catF din prototip — filtrele ecranului de categorie. */
+/** Orasul ales, pastrat intre porniri. */
+const CITY_LS = 'tixello.city';
+const readCity = (): string => {
+  try {
+    return localStorage.getItem(CITY_LS) ?? '';
+  } catch {
+    return '';
+  }
+};
+
 export type CatFilters = { sort: 'rec' | 'price' | 'rating'; maxPrice: number; city: string; seated: boolean };
 const CAT_DEFAULTS: CatFilters = { sort: 'rec', maxPrice: 500, city: '', seated: false };
 
@@ -150,7 +160,7 @@ export const useClient = create<ClientState>((set, get) => ({
   catF: { ...CAT_DEFAULTS },
   catFor: null,
   savedRadar: loadSavedRadar(),
-  city: '',
+  city: readCity(),
   radarF: { ...RADAR_DEFAULTS },
   calF: { ...CAL_DEFAULTS },
   stayF: { type: 'Toate', sort: 'dist', maxPrice: 500 },
@@ -184,7 +194,16 @@ export const useClient = create<ClientState>((set, get) => ({
       };
     }),
 
-  setCity: (city) => set({ city }),
+  setCity: (city) => {
+    /* Orasul se retine intre porniri: e o alegere pe care utilizatorul o face
+       o data si o asteapta acolo data viitoare, nu un filtru de sesiune. */
+    try {
+      localStorage.setItem(CITY_LS, city);
+    } catch {
+      /* fara persistenta, ramane doar pe sesiunea curenta */
+    }
+    set({ city });
+  },
   setRadarF: (patch) => set((s) => ({ radarF: { ...s.radarF, ...patch } })),
   resetRadarF: () => set({ radarF: { ...RADAR_DEFAULTS } }),
   setCalF: (patch) => set((s) => ({ calF: { ...s.calF, ...patch } })),

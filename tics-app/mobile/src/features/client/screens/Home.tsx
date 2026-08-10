@@ -254,6 +254,8 @@ export function Home() {
           value={city}
           onPick={setCity}
           onClose={() => setPicker(false)}
+          searchable
+          searchPlaceholder="Caută orașul"
         />
       ) : null}
 

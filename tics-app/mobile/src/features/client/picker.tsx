@@ -6,7 +6,7 @@
    foloseste aceleasi clase ca restul aplicatiei (.card, .selrow, .chip), ca
    sa nu introduca un limbaj vizual nou.
    ========================================================= */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { cn, sx } from '../../design/sx';
 
 export type Option = [value: string, label: string];
@@ -17,13 +17,34 @@ export function PickerSheet({
   value,
   onPick,
   onClose,
+  searchable,
+  searchPlaceholder,
 }: {
   title: string;
   options: Option[];
   value: string;
   onPick: (v: string) => void;
   onClose: () => void;
+  /** Lista de orase are peste 100 de intrari; derulata, e nefolosibila. */
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }) {
+  const [q, setQ] = useState('');
+
+  /* Cautare fara diacritice si fara majuscule: nimeni nu scrie „Timișoara" cu
+     s-cedila pe tastatura telefonului, iar o cautare care nu gaseste orasul
+     scris firesc e mai rea decat lipsa ei. */
+  const fold = (t: string) =>
+    t
+      .toLocaleLowerCase('ro-RO')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      // ș/ț cu virgula dedesubt nu se descompun; le traducem explicit
+      .replace(/[șş]/g, 's')
+      .replace(/[țţ]/g, 't');
+
+  const needle = fold(q.trim());
+  const shown = needle ? options.filter(([, label]) => fold(label).includes(needle)) : options;
   /* pe telefon, "inapoi" trebuie sa inchida foaia, nu sa iasa din ecran */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -62,8 +83,21 @@ export function PickerSheet({
           </button>
         </div>
 
+        {searchable ? (
+          <div className="pad" style={sx('flex:none;padding-bottom:6px')}>
+            <div className="field">
+              <input
+                value={q}
+                autoFocus
+                placeholder={searchPlaceholder ?? 'Caută…'}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+          </div>
+        ) : null}
+
         <div style={sx('overflow-y:auto;padding:4px 20px 0')}>
-          {options.map(([v, label]) => (
+          {shown.map(([v, label]) => (
             <div
               key={v || '__all'}
               className="selrow"
@@ -77,6 +111,11 @@ export function PickerSheet({
               {v === value ? <span style={sx('color:var(--indigo-2);font-weight:700')}>✓</span> : null}
             </div>
           ))}
+          {!shown.length ? (
+            <div className="muted" style={sx('font-size:12.5px;text-align:center;padding:20px 0')}>
+              Niciun rezultat pentru „{q}".
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

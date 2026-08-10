@@ -44,8 +44,25 @@ export type CatalogTicketType = {
   name: string | null;
   description: string | null;
   price: number | null;
+  /** Pretul intreg, cand exista o reducere activa; altfel null. */
+  full_price: number | null;
+  /** Ce include biletul („acces zona VIP", „include o bautura"...). */
+  perks: string[];
   /** DA/NU, nu numar: stocul ramas e informatie comerciala a organizatorului. */
   available: boolean;
+};
+
+/**
+ * Cine ia comisionul si cum.
+ *
+ * `included` — deja in pretul afisat, cumparatorul nu vede nicio linie in plus.
+ * `added_on_top` — se adauga la total, ca linie separata.
+ */
+export type CatalogPricing = {
+  source: 'marketplace' | 'tenant';
+  mode: 'included' | 'added_on_top';
+  /** procent */
+  rate: number;
 };
 
 export type CatalogArtistRef = {
@@ -64,6 +81,7 @@ export type CatalogEvent = CatalogEventBrief & {
   short_description: string | null;
   description: string | null;
   terms: string | null;
+  pricing: CatalogPricing;
   ticket_types: CatalogTicketType[];
   artists: CatalogArtistRef[];
 };

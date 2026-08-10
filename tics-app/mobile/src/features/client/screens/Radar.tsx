@@ -201,7 +201,15 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
       ) : null}
 
       {sheet === 'city' ? (
-        <PickerSheet title="Alege orașul" options={cityOptions} value={city} onPick={setCity} onClose={() => setSheet(null)} />
+        <PickerSheet
+          title="Alege orașul"
+          options={cityOptions}
+          value={city}
+          onPick={setCity}
+          onClose={() => setSheet(null)}
+          searchable
+          searchPlaceholder="Caută orașul"
+        />
       ) : null}
       {sheet === 'type' ? (
         <PickerSheet
@@ -846,6 +854,8 @@ export function Calendar() {
           value={calF.city}
           onPick={(city) => setCalF({ city })}
           onClose={() => setSheet(null)}
+          searchable
+          searchPlaceholder="Caută orașul"
         />
       ) : null}
       {sheet === 'type' ? (

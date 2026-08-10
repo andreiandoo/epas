@@ -315,6 +315,7 @@ class CatalogController extends Controller
             'short_description' => $this->plainHtml(PlainText::of($event->short_description)),
             'description' => $this->plainHtml(PlainText::of($event->description)),
             'terms' => $this->plainHtml(PlainText::of($event->ticket_terms)),
+            'pricing' => $this->pricing($event),
             'ticket_types' => $this->ticketTypes($event),
             'artists' => $event->relationLoaded('artists')
                 ? $event->artists->map(fn (Artist $a) => [
@@ -345,6 +346,10 @@ class CatalogController extends Controller
 
         return $event->ticketTypes
             ->filter(fn ($t) => ($t->status ?? null) === 'active')
+            /* Biletele marcate „doar POS" nu se vand online, deci n-au ce cauta
+               intr-o lista din care utilizatorul poate alege: le-ar vedea, le-ar
+               adauga in cos si ar afla abia la plata ca nu se poate. */
+            ->reject(fn ($t) => (bool) ($t->meta['pos_only'] ?? false))
             ->map(function ($t) {
                 /* `display_price`, NU `price`.
                    Pe TicketType, `price` e accesor pentru pretul de REDUCERE si
@@ -363,11 +368,74 @@ class CatalogController extends Controller
                     'price' => $price > 0 ? $price : null,
                     // pretul taiat, doar cand chiar exista o reducere activa
                     'full_price' => $full > $price && $price > 0 ? $full : null,
+                    /* Ce include biletul. Repeaterul din admin e „simplu", deci
+                       tine siruri; acceptam si forma cu obiecte, pentru randuri
+                       scrise inainte. */
+                    'perks' => $this->perks($t->perks ?? null),
                     'available' => ! isset($t->quota_total) || (int) $t->quota_total !== 0,
                 ];
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * Cine ia comisionul si cum, pentru evenimentul asta.
+     *
+     * REGULA, si motivul ei:
+     *
+     *  - EVENIMENT DE MARKETPLACE (ambilet.ro, bilete.online...): se aplica
+     *    EXCLUSIV comisionul marketplace-ului, in modul lui (inclus in pret sau
+     *    adaugat peste). Tixello NU mai adauga nimic — isi incaseaza partea de
+     *    la marketplace, iar un al doilea comision ar taxa cumparatorul de doua
+     *    ori pentru acelasi bilet.
+     *
+     *  - EVENIMENT DE TENANT: comisionul Tixello, adaugat peste pret. Aici
+     *    Tixello e platforma care vinde, deci comisionul lui e singurul.
+     *
+     * Cifrele vin din `getEffectiveCommission*()` — aceleasi pe care le
+     * foloseste si decontarea, ca aplicatia sa nu ajunga sa afiseze un total
+     * diferit de cel din contabilitate.
+     *
+     * @return array{source: string, mode: string, rate: float}
+     */
+    private function pricing(Event $event): array
+    {
+        $isMarketplace = (bool) $event->marketplace_organizer_id;
+
+        $rate = (float) $event->getEffectiveCommissionRate();
+        $mode = $event->getEffectiveCommissionMode();
+
+        /* Pentru evenimentele de tenant, plafonul implicit al modelului e 5%
+           — o valoare istorica, nepotrivita pentru vanzarea din aplicatie.
+           Cand tenantul n-are nimic configurat, cade pe cota aplicatiei. */
+        if (! $isMarketplace && $event->commission_rate === null && ($event->tenant->commission_rate ?? null) === null) {
+            $rate = (float) config('tixello.app_commission_rate', 2.0);
+        }
+
+        return [
+            'source' => $isMarketplace ? 'marketplace' : 'tenant',
+            'mode' => $mode === 'added_on_top' ? 'added_on_top' : 'included',
+            'rate' => round($rate, 2),
+        ];
+    }
+
+    /** @return array<int, string> */
+    private function perks(mixed $perks): array
+    {
+        if (is_string($perks)) {
+            $perks = json_decode($perks, true);
+        }
+
+        if (! is_array($perks)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function ($p) {
+            $text = is_string($p) ? $p : ($p['text'] ?? null);
+
+            return is_string($text) && trim($text) !== '' ? trim($text) : null;
+        }, $perks)));
     }
 
     private function priceFrom(Event $event): ?float
@@ -378,7 +446,9 @@ class CatalogController extends Controller
                 : $event->ticketTypes()->where('status', 'active')->get();
 
             $prices = $types
-                ->filter(fn ($t) => ($t->status ?? null) === 'active' && (float) $t->display_price > 0)
+                ->filter(fn ($t) => ($t->status ?? null) === 'active'
+                    && ! ($t->meta['pos_only'] ?? false)
+                    && (float) $t->display_price > 0)
                 ->map(fn ($t) => (float) $t->display_price);
 
             return $prices->isEmpty() ? null : $prices->min();

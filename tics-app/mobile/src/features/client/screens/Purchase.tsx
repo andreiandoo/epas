@@ -38,7 +38,19 @@ export function cartCompute(evId: string) {
   /* Fara eveniment (fisa neincarcata inca) intoarcem un cos gol, nu aruncam:
      functia e apelata si din ecrane care se randeaza inainte ca datele sa
      ajunga, iar o exceptie aici oprea toata aplicatia. */
-  if (!ev) return { items: [] as CartItem[], subtotal: 0, fee: 0, total: 0, pts: 0, count: 0 };
+  if (!ev) {
+    return {
+      items: [] as CartItem[],
+      subtotal: 0,
+      fee: 0,
+      protect: 0,
+      disc: 0,
+      total: 0,
+      pts: 0,
+      pricing: { source: 'tenant', mode: 'added_on_top', rate: 2 },
+      feeIncluded: false,
+    };
+  }
 
   const seatT = ev.tt.find((t: Ev) => t.seat)?.p || 120;
 
@@ -59,12 +71,28 @@ export function cartCompute(evId: string) {
     });
 
   const subtotal = items.reduce((s, it) => s + it.p * it.q, 0);
-  const fee = Math.round(subtotal * 0.02 * 100) / 100;
+
+  /* COMISIONUL nu mai e 2% fix.
+     Fiecare eveniment isi poarta regula (`_pricing`, de la server):
+       - eveniment de MARKETPLACE -> comisionul marketplace-ului, in modul lui.
+         Tixello nu mai adauga nimic: isi ia partea de la marketplace, iar un al
+         doilea comision ar taxa cumparatorul de doua ori pentru acelasi bilet;
+       - eveniment de TENANT -> comisionul Tixello, adaugat peste pret.
+     `included` inseamna ca e deja in pretul afisat, deci pentru cumparator
+     linia e zero — nu o ascundem, o aratam ca „inclus".
+     Pe evenimentele demo, unde nu exista `_pricing`, ramane 2% ca in prototip. */
+  const pricing = (ev._pricing ?? { source: 'tenant', mode: 'added_on_top', rate: 2 }) as {
+    source: string;
+    mode: string;
+    rate: number;
+  };
+  const feeIncluded = pricing.mode === 'included';
+  const fee = feeIncluded ? 0 : Math.round(subtotal * (pricing.rate / 100) * 100) / 100;
   const protect = st.cart.protect ? Math.round(subtotal * 0.08 * 100) / 100 : 0;
   const disc = st.cart.discount || 0;
   const total = Math.max(0, subtotal + fee + protect - disc);
   const pts = items.reduce((s, it) => s + it.pts * it.q, 0);
-  return { items, subtotal, fee, protect, disc, total, pts };
+  return { items, subtotal, fee, protect, disc, total, pts, pricing, feeIncluded };
 }
 
 const addonsTotal = (evId: string) => {
@@ -268,39 +296,77 @@ export function TicketTypes() {
 
       <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:11px')}>
         {ev.tt.map((t: Ev, i: number) => (
-          <div key={t.n} className="card" style={sx('padding:14px')}>
-            <div style={sx('flex:1')}>
-              <div className="row" style={sx('gap:8px')}>
-                <div style={sx('font-weight:600;font-size:14.5px')}>{t.n}</div>
-                {t.old ? (
-                  <span className="badge" style={sx('background:rgba(240,97,109,.16);color:#f0616d')}>
-                    -{Math.round((1 - t.p / t.old) * 100)}%
-                  </span>
-                ) : null}
-                {t.seat && ev.seatmap ? (
-                  <span className="badge" style={sx('background:var(--indigo-soft);color:var(--indigo-2)')}>
-                    Loc pe hartă
-                  </span>
+          /* RANDUL DE BILET, refacut.
+             Purta doar nume + descriere + pret. Un tip de bilet are insa si
+             beneficii („include o bautura", „acces zona VIP") si poate avea o
+             reducere — informatii care decid alegerea si care lipseau cu totul.
+             Asezarea urmeaza ordinea in care se citeste: ce cumperi, cat costa,
+             ce include, cate iei. Pretul urca sus, langa nume, ca sa poata fi
+             comparat intre categorii dintr-o privire, fara sa citesti tot. */
+          <div key={t.n} className={cn('ttcard', (counts[i] || 0) > 0 && 'picked')}>
+            <div className="row" style={sx('gap:12px;align-items:flex-start')}>
+              <div style={sx('flex:1;min-width:0')}>
+                <div className="row" style={sx('gap:7px;flex-wrap:wrap')}>
+                  <div style={sx('font-weight:600;font-size:14.5px')}>{t.n}</div>
+                  {t.old && t.old > t.p ? (
+                    <span className="badge" style={sx('background:rgba(240,97,109,.16);color:#f0616d')}>
+                      -{Math.round((1 - t.p / t.old) * 100)}%
+                    </span>
+                  ) : null}
+                  {t.seat && ev.seatmap ? (
+                    <span className="badge" style={sx('background:var(--indigo-soft);color:var(--indigo-2)')}>
+                      Loc pe hartă
+                    </span>
+                  ) : null}
+                  {t.sold ? (
+                    <span className="badge" style={sx('background:var(--surface-3);color:var(--muted)')}>
+                      Epuizat
+                    </span>
+                  ) : null}
+                </div>
+                {t.desc ? (
+                  <div className="muted" style={sx('font-size:12px;margin-top:5px;line-height:1.45')}>
+                    {t.desc}
+                  </div>
                 ) : null}
               </div>
-              <div className="muted" style={sx('font-size:12px;margin-top:5px;line-height:1.45')}>
-                {t.desc}
-              </div>
-              <div className="row" style={sx('gap:8px;margin-top:8px')}>
-                <span style={sx('font-weight:600;color:var(--indigo-2);font-size:15px')}>{t.p} lei</span>
-                {t.old ? (
-                  <span className="muted" style={sx('text-decoration:line-through;font-size:12.5px')}>
+
+              <div style={sx('text-align:right;flex:none')}>
+                <div style={sx('font-weight:700;color:var(--indigo-2);font-size:17px;line-height:1;font-variant-numeric:tabular-nums')}>
+                  {t.p}
+                  <small style={sx('font-size:10.5px;color:var(--muted);font-weight:600')}> lei</small>
+                </div>
+                {t.old && t.old > t.p ? (
+                  <div className="muted" style={sx('text-decoration:line-through;font-size:11.5px;margin-top:3px')}>
                     {t.old} lei
-                  </span>
+                  </div>
                 ) : null}
-                <span className="pts">
+                <div className="pts" style={sx('margin-top:6px;justify-content:flex-end')}>
                   <Ic svg={I.star} /> +{t.pts}
-                </span>
+                </div>
               </div>
             </div>
+
+            {/* Beneficiile: fiecare pe randul lui, cu bifa. Insirate cu virgula
+                s-ar fi citit ca o descriere, nu ca o lista de lucruri incluse. */}
+            {t.perks?.length ? (
+              <ul className="ttperks">
+                {(t.perks as string[]).map((perk) => (
+                  <li key={perk}>
+                    <Ic svg={I.check} />
+                    <span>{perk}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
             <div className="between" style={sx('margin-top:12px;border-top:1px solid var(--line);padding-top:11px')}>
               <span className="muted" style={sx('font-size:11.5px')}>
-                {t.seat && ev.seatmap ? 'Alege locul la pasul următor' : 'Disponibil'}
+                {t.sold
+                  ? 'Nu mai sunt bilete'
+                  : t.seat && ev.seatmap
+                    ? 'Alege locul la pasul următor'
+                    : 'Disponibil'}
               </span>
               <div className="row" style={sx('gap:10px')}>
                 <div
@@ -743,11 +809,16 @@ export function Cart() {
             </span>
             <span style={sx('font-weight:500')}>{c.subtotal} lei</span>
           </div>
+          {/* Cine ia comisionul si cat — scris exact, nu „2%" fix: pe un
+              eveniment de marketplace comisionul e al lor, iar Tixello nu mai
+              adauga nimic peste. */}
           <div className="between" style={sx('padding:5px 0')}>
             <span className="muted" style={sx('font-size:13px')}>
-              Taxă Tixello (2%)
+              {c.pricing.source === 'marketplace' ? 'Taxă de serviciu' : 'Taxă Tixello'} ({c.pricing.rate}%)
             </span>
-            <span style={sx('font-weight:500')}>{lei(c.fee)} lei</span>
+            <span style={sx('font-weight:500')}>
+              {c.feeIncluded ? 'inclusă în preț' : `${lei(c.fee)} lei`}
+            </span>
           </div>
           {c.protect ? (
             <div className="between" style={sx('padding:5px 0')}>
