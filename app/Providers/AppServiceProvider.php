@@ -158,6 +158,14 @@ class AppServiceProvider extends ServiceProvider
         // action, because a short reaches "published" through four different
         // paths and a reward wired to one of them does not exist on the others.
         \App\Models\Short::observe(\App\Observers\ShortObserver::class);
+
+        /* Posterul unui short generat urmeaza imaginea sursei.
+           Maturatoarea nocturna nu poate face asta: ea sare peste proprietarii
+           care au deja un short, deci o imagine schimbata nu s-ar propaga
+           niciodata. Vezi ShortSourceImageObserver. */
+        \App\Models\Event::observe(\App\Observers\ShortSourceImageObserver::class);
+        \App\Models\Artist::observe(\App\Observers\ShortSourceImageObserver::class);
+        \App\Models\Venue::observe(\App\Observers\ShortSourceImageObserver::class);
         // PERF P2/8 — invalidate event_stats:v1:{event_id} cache on ticket
         // status / check-in changes so dashboards see fresh numbers within
         // 60s window (without waiting for the TTL to expire on its own).
