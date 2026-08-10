@@ -158,6 +158,10 @@ export function toVenueRecord(v: CatalogVenue): Rec {
     cap: v.capacity ? exact(v.capacity) : '—',
     tone: toneFor(v.id),
     _bg: bgFor(v.portrait ?? v.image, v.id),
+    /* Coordonatele merg mai departe catre „Cum ajung": o pereche lat/lng nu
+       poate fi inteleasa gresit, spre deosebire de un nume de sala. */
+    _lat: v.lat,
+    _lng: v.lng,
     _rating: v.rating,
     _reviewCount: v.review_count,
     _desc: v.description,
@@ -228,6 +232,17 @@ export type Loaded<T> = { data: T | null; loading: boolean; missing: boolean };
  * mai rau, ar putea prinde alt raspuns decat ecranul din spate.
  */
 const cache = new Map<string, unknown>();
+
+/**
+ * Fisa unui eveniment deja adusa, citita SINCRON.
+ *
+ * Cosul si celelalte ecrane de cumparare nu sunt locul unde se asteapta o
+ * cerere de retea: utilizatorul tocmai a apasat „Continua". Ele citeau doar
+ * datasetul prototipului, deci pe un eveniment real primeau `undefined` si
+ * ecranul ramanea negru — aplicatia parea blocata.
+ */
+export const cachedEvent = (id: string | undefined): EventRecord | null =>
+  (id ? (cache.get(`event:${id}`) as EventRecord | undefined) : undefined) ?? null;
 
 function useCatalog<A, T>(
   id: string | undefined,

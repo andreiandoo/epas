@@ -297,13 +297,27 @@ class CatalogController extends Controller
 
         return $event->ticketTypes
             ->filter(fn ($t) => ($t->status ?? null) === 'active')
-            ->map(fn ($t) => [
-                'id' => $t->id,
-                'name' => PlainText::of($t->name),
-                'description' => $this->plainHtml(PlainText::of($t->description ?? null)),
-                'price' => is_numeric($t->price) ? (float) $t->price : null,
-                'available' => ! isset($t->quota_total) || (int) $t->quota_total !== 0,
-            ])
+            ->map(function ($t) {
+                /* `display_price`, NU `price`.
+                   Pe TicketType, `price` e accesor pentru pretul de REDUCERE si
+                   intoarce null cand nu exista una — pretul intreg sta in
+                   `price_cents`. Cu `price` ajungeau in aplicatie doar valori
+                   nule, adica toate biletele afisate cu 0 lei.
+                   `display_price` alege singur: reducerea daca e in fereastra
+                   ei, altfel pretul intreg. */
+                $price = (float) $t->display_price;
+                $full = (float) $t->price_max;
+
+                return [
+                    'id' => $t->id,
+                    'name' => PlainText::of($t->name),
+                    'description' => $this->plainHtml(PlainText::of($t->description ?? null)),
+                    'price' => $price > 0 ? $price : null,
+                    // pretul taiat, doar cand chiar exista o reducere activa
+                    'full_price' => $full > $price && $price > 0 ? $full : null,
+                    'available' => ! isset($t->quota_total) || (int) $t->quota_total !== 0,
+                ];
+            })
             ->values()
             ->all();
     }
@@ -313,11 +327,11 @@ class CatalogController extends Controller
         try {
             $types = $event->relationLoaded('ticketTypes')
                 ? $event->ticketTypes
-                : $event->ticketTypes()->where('status', 'active')->get(['price', 'status']);
+                : $event->ticketTypes()->where('status', 'active')->get();
 
             $prices = $types
-                ->filter(fn ($t) => ($t->status ?? null) === 'active' && is_numeric($t->price) && (float) $t->price > 0)
-                ->map(fn ($t) => (float) $t->price);
+                ->filter(fn ($t) => ($t->status ?? null) === 'active' && (float) $t->display_price > 0)
+                ->map(fn ($t) => (float) $t->display_price);
 
             return $prices->isEmpty() ? null : $prices->min();
         } catch (\Throwable) {

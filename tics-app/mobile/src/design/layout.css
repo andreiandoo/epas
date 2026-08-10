@@ -9,11 +9,71 @@
    mai pot ajunge sa se abata una de alta.
    ========================================================= */
 :root {
-  --ep-bottom-line: calc(var(--safe-bottom, 0px) + 54px);
+  --ep-bottom-line: calc(var(--safe-bottom, 0px) + 45px);
 }
 
+/* Fixa, nu lipita de ecran: e montata o singura data, in carcasa, si trebuie
+   sa ramana pe loc si cat timp ecranele se schimba sub ea. */
 .app-client .bnav {
+  position: fixed;
+  left: 26px;
+  right: 26px;
   bottom: var(--ep-bottom-line);
+  margin: 0;
+}
+
+/* Ascunsa pe ecranele care n-o cer (eveniment, cos, shorts). Pleaca in jos si
+   se stinge, in loc sa dispara brusc — dispariția brusca a unui element fix
+   citeste ca o eroare de randare. */
+.app-client .bnav.hiddenbar {
+  transform: translateY(140%);
+  opacity: 0;
+  pointer-events: none;
+}
+.app-client .bnav {
+  transition: transform .26s cubic-bezier(.3, .9, .3, 1), opacity .2s ease;
+}
+
+/* Tabul activ: pastila mov, ca butonul din mijloc. Ceruta dupa testul pe
+   telefon — o simpla schimbare de culoare a iconitei se pierdea pe fundalul
+   inchis al barei. */
+.app-client .bnav .nav {
+  position: relative;
+}
+.app-client .bnav .nav svg {
+  position: relative;
+  z-index: 1;
+  transition: transform .2s cubic-bezier(.3, 1.4, .4, 1);
+}
+.app-client .bnav .nav.on svg {
+  transform: scale(1.18);
+  color: #fff;
+  filter: none;
+}
+.app-client .bnav .nav.on::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, var(--indigo), var(--indigo-3));
+  box-shadow: var(--sh-p);
+  animation: navpop .22s cubic-bezier(.3, 1.4, .4, 1);
+}
+@keyframes navpop {
+  from { transform: scale(.7); opacity: 0 }
+  to { transform: scale(1); opacity: 1 }
+}
+/* Butonul din mijloc are deja pastila; cand e activ, doar creste. */
+.app-client .bnav .fab.on { transform: scale(1.06) }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-client .bnav,
+  .app-client .bnav .nav svg { transition: none }
+  .app-client .bnav .nav.on::before { animation: none }
 }
 
 /* ---- panou care se desface (categoriile unui furnizor de bilete) ----

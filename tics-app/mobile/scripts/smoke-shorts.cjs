@@ -210,7 +210,12 @@ const short = (id, title, likes) => ({
     const info = document.querySelector('.shchrome .info').getBoundingClientRect();
     const rail = document.querySelector('.shchrome .rail').getBoundingClientRect();
 
-    return { infoGap: h - info.bottom, railGap: h - rail.bottom };
+    /* Bara de jos e ascunsa in Shorts, deci o masuram prin stilul ei calculat,
+       nu prin pozitia din pagina (translatata in afara ecranului). */
+    const nav = document.querySelector('.bnav');
+    const navGap = nav ? parseFloat(getComputedStyle(nav).bottom) : -1;
+
+    return { infoGap: h - info.bottom, railGap: h - rail.bottom, navGap };
   });
   const meta = await page.evaluate(() => ({
     pill: document.querySelector('.shchrome .gpill')?.textContent.trim(),
@@ -220,8 +225,15 @@ const short = (id, title, likes) => ({
   check('pastila arata TIPUL, nu numele', meta.pill === 'Locație', `pastila="${meta.pill}" titlu="${meta.title}"`);
   check('detaliile locatiei apar sub titlu', meta.details.length === 2, meta.details.join(' | '));
 
-  check('blocul de text a urcat cu >=20px (era 34)', geom.infoGap >= 54, `${Math.round(geom.infoGap)}px de jos`);
-  check('rail-ul a urcat cu >=20px (era 32)', geom.railGap >= 52, `${Math.round(geom.railGap)}px de jos`);
+  /* Linia comuna e `--ep-bottom-line` (45px + safe-bottom); prototipul avea
+     34px pentru text si 32 pentru rail. Verificam ca ambele stau pe ea. */
+  check('blocul de text sta pe linia comuna', geom.infoGap >= 45, `${Math.round(geom.infoGap)}px de jos`);
+  check('rail-ul sta pe linia comuna', geom.railGap >= 43, `${Math.round(geom.railGap)}px de jos`);
+  check(
+    'bara de jos e aliniata cu comenzile din shorts',
+    Math.abs(geom.navGap - geom.railGap) <= 1,
+    `nav ${Math.round(geom.navGap)}px vs rail ${Math.round(geom.railGap)}px`,
+  );
 
   /* ---------- 3b. titlul lung se micsoreaza, descrierea se plieaza ---------- */
   const titleInfo = await page.evaluate(() => {

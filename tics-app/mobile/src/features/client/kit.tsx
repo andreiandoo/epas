@@ -3,7 +3,8 @@
    Fiecare componenta de aici corespunde unei functii din prototip;
    clasele si sirurile de stil sunt copiate VERBATIM (prin sx()).
    ========================================================= */
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { claimToken, releaseBottomNav, requestBottomNav, useBottomNavState } from './bottomNav';
 import { Ic, cn, sx } from '../../design/sx';
 import { I } from '../../mock/prototype';
 import { useNav } from './nav';
@@ -73,26 +74,50 @@ export function BackTitle({ title, sub, right }: { title: ReactNode; sub?: React
 }
 
 /* ---------- nav(active) — bottom nav: 4 iteme + FAB central ---------- */
+/**
+ * Ecranul CERE bara de jos; carcasa o deseneaza (vezi bottomNav.ts).
+ *
+ * Randeaza doar spatiul de sub continut, ca ultimul rand sa nu ramana ascuns
+ * dupa bara. Semnatura e neschimbata, deci niciun ecran n-a trebuit atins.
+ */
 export function BottomNav({ active }: { active: string }) {
+  const token = useRef(0);
+  if (token.current === 0) token.current = claimToken();
+
+  useEffect(() => {
+    requestBottomNav(token.current, active);
+  }, [active]);
+
+  useEffect(() => {
+    const mine = token.current;
+
+    return () => releaseBottomNav(mine);
+  }, []);
+
+  return <div className="navspace" />;
+}
+
+/** Bara propriu-zisa. Se monteaza o singura data, in carcasa. */
+export function AppBottomNav() {
   const { tab } = useNav();
+  const { visible, active } = useBottomNavState();
+
   const item = (id: string, icon: string) => (
     <div className={cn('nav', active === id && 'on')} onClick={() => tab(id)}>
       <Ic svg={icon} />
     </div>
   );
+
   return (
-    <>
-      <div className="navspace" />
-      <div className="bnav">
-        {item('home', I.nhome)}
-        {item('explore', I.nexplore)}
-        <div className="fab" onClick={() => tab('wallet')}>
-          <Ic svg={I.nscan} />
-        </div>
-        {item('tickets', I.nticket)}
-        {item('profile', I.nprofile)}
+    <div className={cn('bnav', !visible && 'hiddenbar')} aria-hidden={!visible}>
+      {item('home', I.nhome)}
+      {item('explore', I.nexplore)}
+      <div className={cn('fab', active === 'wallet' && 'on')} onClick={() => tab('wallet')}>
+        <Ic svg={I.nscan} />
       </div>
-    </>
+      {item('tickets', I.nticket)}
+      {item('profile', I.nprofile)}
+    </div>
   );
 }
 

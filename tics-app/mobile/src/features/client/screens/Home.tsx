@@ -13,7 +13,7 @@ import { eventBackground } from '../../../api/tenantClient';
 import { EvMini, ExpCard, FeaturedCard, RadarCard } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
-import { useRadarCities, useRadarList } from '../radarData';
+import { radarToUi, useRadarCities, useRadarList } from '../radarData';
 import { PickerSheet, type Option } from '../picker';
 import { useClient } from '../../../store/client';
 import { useState } from 'react';
@@ -27,12 +27,25 @@ export function Home() {
   const setCity = useClient((s) => s.setCity);
   const cities = useRadarCities();
   const [picker, setPicker] = useState(false);
-  const { items: radar, loading: radarLoading } = useRadarList({ limit: 3, city: city || undefined });
+  /* Un singur apel pentru tot ecranul, nu unul pe sectiune: Radarul e aceeasi
+     sursa pentru toate, iar patru cereri ar insemna patru asteptari si patru
+     ocazii de esec pe ecranul de pornire. Primele trei raman pentru banda
+     „Radar"; restul umplu sectiunile de mai jos. */
+  const { items: radar, loading: radarLoading } = useRadarList({ limit: 14, city: city || undefined });
 
-  const f = ev('coldplay');
-  const forYou = ['coldplay', 'celestial', 'swan'].map(ev);
-  const events = ['coldplay', 'swan', 'celestial'].map(ev);
-  const exps = ['salina', 'atv', 'wine'].map(ev);
+  /* Fara evenimente reale (offline, sau oras fara nimic anuntat) ramanem pe
+     datasetul prototipului: un ecran de pornire gol nu spune nimic despre ce
+     face aplicatia. */
+  const live = radar.length > 0;
+
+  const f = live ? radarToUi(radar[0]) : ev('coldplay');
+  const forYou = live ? radar.slice(0, 6).map(radarToUi) : ['coldplay', 'celestial', 'swan'].map(ev);
+  const events = live
+    ? radar.filter((r) => r.cat !== 'Experiențe').slice(0, 8).map(radarToUi)
+    : ['coldplay', 'swan', 'celestial'].map(ev);
+  const exps = live
+    ? radar.filter((r) => r.cat === 'Experiențe').slice(0, 6).map(radarToUi)
+    : ['salina', 'atv', 'wine'].map(ev);
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>

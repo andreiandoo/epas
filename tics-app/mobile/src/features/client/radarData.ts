@@ -6,6 +6,7 @@
    Daca sursa cade, ramane pe prototip — niciun ecran gol.
    ========================================================= */
 import { useEffect, useState } from 'react';
+import type { UiEvent } from '../../api/tenantClient';
 import {
   CITY_FALLBACK,
   fetchRadarCategories,
@@ -171,3 +172,45 @@ export function useRadarDay(items: RadarItem[]) {
 
 /** 3450 -> "3.4k"; sub 1000 ramane cifra exacta. */
 export const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace('.0', '')}k` : String(n));
+
+
+/**
+ * Un eveniment din Radar, in forma pe care o consuma cardurile de pe Acasa.
+ *
+ * Cardurile sunt porturi din prototip si citesc cheile scurte de acolo
+ * (`s`, `d`, `from`, `ven`...). Radarul are alte nume si un pret care sta in
+ * lista de oferte, nu intr-un camp — de aici traducerea.
+ *
+ * `ven` primeste NUMELE salii, nu un id: cardurile cauta intai in VEN-ul
+ * prototipului si cad pe valoarea bruta, deci un id ar fi ajuns pe ecran.
+ */
+export function radarToUi(r: RadarItem): UiEvent {
+  return {
+    id: r.id,
+    s: r.s,
+    t: r.s,
+    type: r.cat === 'Experiențe' ? 'experience' : 'event',
+    cat: r.cat,
+    city: r.city,
+    ven: r.venName,
+    d: [r.day, r.mon].filter(Boolean).join(' '),
+    day: r.day,
+    mon: r.mon,
+    time: r.time,
+    // pretul de start e cea mai ieftina oferta gasita de Radar
+    from: r.offers[0]?.[1] ?? 0,
+    tone: r.tone,
+    g: r.g,
+    rat: r.rat,
+    sc: r.sc,
+    poster: r.poster,
+    live: true,
+    // Radarul agrega preturi, nu galerii; sectiunile care le cer se ascund
+    gallery: [],
+    artists: [],
+    /* Marcheaza provenienta: cardurile trebuie sa duca la ecranul de oferte
+       (`ticsoffers`), nu la fisa unui eveniment din catalogul nostru — sunt
+       lumi diferite, cu id-uri diferite. */
+    radar: true,
+  } as unknown as UiEvent;
+}

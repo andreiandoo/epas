@@ -335,11 +335,14 @@ class ShortPayload
         try {
             $types = $event->relationLoaded('ticketTypes')
                 ? $event->ticketTypes
-                : $event->ticketTypes()->where('status', 'active')->get(['price', 'status']);
+                : $event->ticketTypes()->where('status', 'active')->get();
 
+            /* `display_price`, nu `price`: acela e accesorul pretului de
+               reducere si e null cand nu exista una — butonul ar fi ramas
+               mereu pe eticheta de rezerva. */
             $prices = $types
-                ->filter(fn ($t) => $t->status === 'active' && is_numeric($t->price) && (float) $t->price > 0)
-                ->map(fn ($t) => (float) $t->price);
+                ->filter(fn ($t) => $t->status === 'active' && (float) $t->display_price > 0)
+                ->map(fn ($t) => (float) $t->display_price);
 
             return $prices->isEmpty() ? null : $prices->min();
         } catch (\Throwable) {

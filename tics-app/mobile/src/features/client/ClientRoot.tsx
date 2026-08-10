@@ -40,6 +40,7 @@ import { Festival } from './screens/Festival';
 import { Stay22 } from './screens/Stay22';
 import { Shorts } from './screens/Shorts';
 import { LightboxProvider } from './lightbox';
+import { AppBottomNav } from './kit';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
@@ -207,6 +208,9 @@ export function ClientRoot() {
       <LightboxProvider>
         <NavProvider initial="home">
           <Stack />
+          {/* Bara de jos sta AICI, in afara stivei: altfel ar pleca odata cu
+              ecranul care o randeaza si ar clipi la fiecare navigare. */}
+          <AppBottomNav />
         </NavProvider>
       </LightboxProvider>
       <div id="toast" className={toast ? 'show' : ''}>

@@ -17,10 +17,21 @@ import { useClient } from '../../store/client';
 import { useNav } from './nav';
 
 /* ---------- evMini(ev, st) ---------- */
+/**
+ * Unde duce un card de eveniment.
+ *
+ * Radarul TICS si catalogul nostru sunt lumi diferite, cu id-uri diferite: un
+ * id de Radar cerut de la catalog intoarce 404, iar utilizatorul vede „nu a
+ * putut fi gasit" pentru un eveniment care exista. `radar` e pus de
+ * `radarToUi` si spune din care lume vine cardul.
+ */
+export const eventTarget = (ev: UiEvent): [string, Record<string, unknown>] =>
+  (ev as unknown as { radar?: boolean }).radar ? ['ticsoffers', { id: ev.id }] : ['event', { id: ev.id }];
+
 export function EvMini({ ev, st }: { ev: UiEvent; st?: string }) {
   const { go } = useNav();
   return (
-    <div className="mcard" onClick={() => go('event', { id: ev.id })} style={sx(st || 'min-width:212px')}>
+    <div className="mcard" onClick={() => go(...eventTarget(ev))} style={sx(st || 'min-width:212px')}>
       <div className="cover" style={{ background: eventBackground(ev), height: 268 }}>
         <span className="em">{ev.g}</span>
         <div className="scrim" />
@@ -61,7 +72,7 @@ export function ExpCard({ ev }: { ev: UiEvent }) {
   return (
     <div
       className="mcard"
-      onClick={() => go('event', { id: ev.id })}
+      onClick={() => go(...eventTarget(ev))}
       style={sx('min-width:236px;border:1px solid var(--green-line)')}
     >
       <div className="cover" style={{ background: eventBackground(ev), height: 232 }}>
@@ -182,7 +193,7 @@ export function EvRow({ ev }: { ev: UiEvent }) {
   return (
     <div
       className="mcard"
-      onClick={() => go('event', { id: ev.id })}
+      onClick={() => go(...eventTarget(ev))}
       style={sx('display:flex;align-items:stretch;border-radius:20px')}
     >
       <div className="cover" style={{ background: eventBackground(ev), width: 116, flex: 'none' }}>
@@ -238,7 +249,7 @@ export function FeaturedCard({ ev }: { ev: UiEvent }) {
 
   return (
     <div className="pad">
-      <div className="mcard fade-up" onClick={() => go('event', { id: ev.id })}>
+      <div className="mcard fade-up" onClick={() => go(...eventTarget(ev))}>
         <div className="cover" style={{ background: eventBackground(ev), height: 224 }}>
           <span className="em">{ev.g}</span>
           <div className="scrim" />

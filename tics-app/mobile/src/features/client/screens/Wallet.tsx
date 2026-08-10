@@ -7,20 +7,28 @@ import { I, TX, lei } from '../../../mock/prototype';
 import { BottomNav, SafeTop, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
-import { useAccountStats } from '../accountData';
+import { useAccountStats, useWallet } from '../accountData';
 import { Qr } from '../qr';
 
 /* ---------- S.wallet ---------- */
 export function Wallet() {
   const { go, back, tab, stack } = useNav();
   const stats = useAccountStats();
-  const balance = useClient((s) => s.balance);
-  /* Punctele vin din gamification (API-ul de cont), cand exista un cont real
-     conectat; soldul cashless ramane deocamdata local — nu exista inca un
-     portofel pe partea de server. */
+  const wallet = useWallet();
+  const localBalance = useClient((s) => s.balance);
+  /* Punctele vin din gamification; soldul e suma cardurilor cadou active —
+     singurul sold care exista chiar in sistem. Fara cont, ambele raman pe
+     valorile demo, ca ecranul sa fie navigabil. */
   const points = useClient((s) => s.points);
   const livePoints = stats?.points ?? points;
+  const balance = wallet.balance ?? localBalance;
   const sback = () => (stack.length > 1 ? back() : tab('home'));
+
+  /* Comenzile reale, in forma tuplului din prototip:
+     [titlu, cand, suma, credit?]. Fara cont ramane datasetul demo. */
+  const txRows: [string, string, string, number][] = wallet.tx
+    ? wallet.tx.map((t) => [t.title, t.when, t.amount, t.credit ? 1 : 0])
+    : (TX as [string, string, string, number][]);
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
@@ -112,7 +120,7 @@ export function Wallet() {
 
       <div className="pad" style={sx('margin-top:8px')}>
         <div className="card" style={sx('padding:4px 14px')}>
-          {(TX as [string, string, string, number][]).map((t) => (
+          {txRows.map((t) => (
             <div className="txrow" key={t[0] + t[1]}>
               <div
                 style={{

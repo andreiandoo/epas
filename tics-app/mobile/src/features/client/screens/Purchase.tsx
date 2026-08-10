@@ -12,12 +12,21 @@ import { useEffect, useRef } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ADDONS, EV, EXPDAYS, I, VEN, lei, occInfo, poster } from '../../../mock/prototype';
 import { TopBar, BackTitle, CatalogLoading, MissingContent, SafeTop } from '../kit';
-import { useCatalogEvent } from '../catalogData';
 import { useNav } from '../nav';
 import { useClient, ttCountsFor } from '../../../store/client';
+import { cachedEvent, useCatalogEvent } from '../catalogData';
 
 type Ev = Record<string, any>;
-const evOf = (id: string) => (EV as Record<string, Ev>)[id];
+/**
+ * Evenimentul, din prototip sau din catalogul real.
+ *
+ * Poate lipsi: fisa reala se aduce asincron, iar cine intra direct pe un ecran
+ * de cumparare (revenire din background, deep link) o poate gasi neincarcata.
+ * De aceea intoarce `Ev | undefined` si fiecare ecran verifica — inainte,
+ * absenta ei se termina intr-un ecran negru.
+ */
+const evOf = (id: string): Ev | undefined =>
+  (EV as Record<string, Ev>)[id] ?? cachedEvent(id)?.ev;
 
 /* ---------- cartCompute() ---------- */
 export type CartItem = { n: string; p: number; q: number; pts: number; addon?: boolean };
@@ -25,6 +34,12 @@ export type CartItem = { n: string; p: number; q: number; pts: number; addon?: b
 export function cartCompute(evId: string) {
   const ev = evOf(evId);
   const st = useClient.getState();
+
+  /* Fara eveniment (fisa neincarcata inca) intoarcem un cos gol, nu aruncam:
+     functia e apelata si din ecrane care se randeaza inainte ca datele sa
+     ajunga, iar o exceptie aici oprea toata aplicatia. */
+  if (!ev) return { items: [] as CartItem[], subtotal: 0, fee: 0, total: 0, pts: 0, count: 0 };
+
   const seatT = ev.tt.find((t: Ev) => t.seat)?.p || 120;
 
   let items: CartItem[] = [];
@@ -70,6 +85,8 @@ export function ExpDate() {
   const ev = evOf(evId);
   const days = EXPDAYS as Ev[];
   const sel = days[expDay] || days[4];
+
+  if (!ev) return <MissingContent what="Evenimentul" />;
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -401,6 +418,9 @@ export function SeatMap() {
   const seats = useClient((s) => s.seats);
   const toggleSeat = useClient((s) => s.toggleSeat);
   const ev = evOf(evId);
+
+  if (!ev) return <MissingContent what="Evenimentul" />;
+
   const seatPrice = ev.tt.find((t: Ev) => t.seat)?.p || 120;
 
   return (
@@ -498,8 +518,10 @@ export function Cart() {
   useClient((s) => s.addons);
 
   const ev = evOf(evId);
-  const venue = (VEN as Record<string, Ev>)[ev.ven];
+  const venue = ev ? ((VEN as Record<string, Ev>)[ev.ven] ?? cachedEvent(evId)?.venue) : null;
   const c = cartCompute(evId);
+
+  if (!ev) return <MissingContent what="Evenimentul" />;
 
   let idx = 0;
 
@@ -519,11 +541,16 @@ export function Cart() {
 
       <div className="pad" style={sx('margin-top:14px')}>
         <div className="card" style={sx('padding:12px;display:flex;gap:12px;align-items:center')}>
-          <Raw html={poster(ev, '', 'width:56px;height:56px;border-radius:15px;flex:none', undefined)} />
+          {/* Posterul real cand exista; altfel scena procedurala din prototip. */}
+          {ev._bg ? (
+            <div style={{ width: 56, height: 56, borderRadius: 15, flex: 'none', background: ev._bg }} />
+          ) : (
+            <Raw html={poster(ev, '', 'width:56px;height:56px;border-radius:15px;flex:none', undefined)} />
+          )}
           <div style={sx('flex:1')}>
             <div style={sx('font-weight:600;font-size:13.5px')}>{ev.s}</div>
             <div className="muted" style={sx('font-size:11.5px')}>
-              {ev.d} · {ev.time} · {venue.name}
+              {[ev.d, ev.time, venue?.name].filter(Boolean).join(' · ')}
             </div>
           </div>
         </div>

@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react';
 import { MYTIX } from '../../mock/prototype';
 import {
   fetchFavorites,
+  fetchGiftCards,
+  fetchOrders,
   fetchNotifications,
   fetchPaymentMethods,
   removePaymentMethod,
@@ -307,4 +309,54 @@ export function useFavorites() {
   };
 
   return { items, loading, live: items !== null, remove };
+}
+
+
+/* ---------- portofel ---------- */
+
+export type WalletTx = { title: string; when: string; amount: string; credit: boolean };
+
+/**
+ * Ce arata Portofelul cand exista un cont real.
+ *
+ * `balance` e suma cardurilor cadou active — singurul sold care exista chiar in
+ * sistem. NU exista un portofel cashless pe server, deci nici nu inventam unul:
+ * fara carduri cadou, soldul e zero si asta e adevarat.
+ *
+ * Tranzactiile sunt comenzile clientului. Toate sunt debite: o comanda inseamna
+ * bani cheltuiti. Reincarcarile ar aparea aici cand va exista un portofel real.
+ */
+export function useWallet() {
+  const [tx, setTx] = useState<WalletTx[] | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+    let alive = true;
+
+    void fetchOrders().then((orders) => {
+      if (!alive || !orders) return;
+
+      setTx(
+        orders.map((o) => ({
+          title: o.reference ? `Comanda ${o.reference}` : `Comanda #${o.id}`,
+          when: o.created_at ? new Date(o.created_at).toLocaleDateString('ro-RO') : '',
+          amount: `-${(o.total ?? 0).toFixed(2).replace('.', ',')}`,
+          credit: false,
+        })),
+      );
+    });
+
+    void fetchGiftCards().then((cards) => {
+      if (!alive || !cards) return;
+
+      setBalance(cards.reduce((sum, c) => sum + (Number(c.balance) || 0), 0));
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return { tx, balance, live: tx !== null || balance !== null };
 }
