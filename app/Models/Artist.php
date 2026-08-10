@@ -27,6 +27,20 @@ class Artist extends Model
             if (!empty($artist->name)) {
                 $artist->letter = mb_strtoupper(mb_substr($artist->name, 0, 1));
             }
+
+            /* `youtube_id` se deducea DOAR la import, niciodata la salvarea din
+               formular. Cine lipea linkul canalului in „YouTube URL" — adica
+               modul normal de lucru, in ambele panouri — ramanea cu id-ul gol,
+               iar tot ce depinde de el tacea: statisticile de canal si aducerea
+               automata a short-urilor (PullChannelShortsJob filtreaza pe
+               `whereNotNull('youtube_id')`).
+
+               Se completeaza doar cand lipseste: o valoare pusa de om nu se
+               rescrie. Formele /@handle si /c/nume nu se pot rezolva fara un
+               apel la API, deci raman pe seama campului manual. */
+            if (empty($artist->youtube_id) && !empty($artist->youtube_url)) {
+                $artist->youtube_id = \App\Services\YouTubeService::extractChannelId($artist->youtube_url);
+            }
         });
     }
 
