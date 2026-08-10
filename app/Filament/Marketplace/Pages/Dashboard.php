@@ -1670,9 +1670,13 @@ class Dashboard extends Page
                     $gP = round((float) $sPos['total_revenue'], 2);
                     $cP = round((float) $sPos['total_commission'], 2);
                     // Cash/card physical: mirror endpoint (POS orders, filter meta payment_method)
+                    /* Toate sursele POS, nu doar 'pos': BillingBreakdown si
+                       SalesBreakdown foloseau deja lista completa, iar aici
+                       ramasese o singura valoare — de unde comisioane diferite
+                       pe aceeasi zi, in pagini diferite. Vezi App\Support\OrderSource. */
                     $posOrders = Order::where('event_id', $event->id)
                         ->whereIn('status', ['paid', 'completed'])
-                        ->where('source', 'pos')
+                        ->whereIn('source', \App\Support\OrderSource::POS)
                         ->whereBetween('paid_at', [$sFrom->copy()->utc(), $sTo->copy()->utc()]);
                     $cash = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'cash'")->sum('total'), 2);
                     $card = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'card'")->sum('total'), 2);

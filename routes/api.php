@@ -4077,5 +4077,21 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
         // loturi de scanuri de la poarta; idempotent dupa client_scan_id
         Route::post('/org/scans', [\App\Http\Controllers\Api\TixelloApp\OrganizerController::class, 'scans'])
             ->middleware('throttle:240,1')->name('api.app.org.scans');
+
+        /* Personalul de la poarta — ACELASI tabel si aceleasi reguli ca in
+           aplicatia partenerului: StaffController deleaga catre TeamController,
+           ca regulile sa nu se poata desincroniza. */
+        Route::get('/org/staff', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'index'])
+            ->name('api.app.org.staff');
+        Route::post('/org/staff', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'invite'])
+            ->middleware('throttle:20,1')->name('api.app.org.staff.invite');
+        Route::post('/org/staff/update', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'update'])
+            ->name('api.app.org.staff.update');
+        Route::post('/org/staff/remove', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'remove'])
+            ->name('api.app.org.staff.remove');
+        Route::post('/org/staff/activate', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'activate'])
+            ->name('api.app.org.staff.activate');
+        Route::post('/org/staff/reset-password', [\App\Http\Controllers\Api\TixelloApp\StaffController::class, 'resetPassword'])
+            ->middleware('throttle:20,1')->name('api.app.org.staff.reset-password');
     });
 });

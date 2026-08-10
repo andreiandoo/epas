@@ -138,3 +138,56 @@ export const scanPoster: Poster = async (batch) => {
     clearTimeout(t);
   }
 };
+
+/* =========================================================
+   Personalul de la poartă
+
+   Serverul deleaga catre acelasi controller ca aplicatia partenerului, deci
+   sunt ACELEASI randuri si aceleasi reguli — nu o lista paralela.
+   Dezactivarea e simetrica: cine dispare aici dispare si acolo.
+   ========================================================= */
+export type StaffMemberApi = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'manager' | 'staff';
+  status: 'pending' | 'active' | 'inactive';
+  gate_id?: number | null;
+  permissions?: string[] | null;
+};
+
+export async function fetchStaff(): Promise<StaffMemberApi[] | null> {
+  const r = await call<StaffMemberApi[] | { members?: StaffMemberApi[] }>('/org/staff');
+  if (!r?.success) return null;
+  const d = r.data as StaffMemberApi[] | { members?: StaffMemberApi[] } | undefined;
+  return Array.isArray(d) ? d : (d?.members ?? []);
+}
+
+export async function inviteStaff(payload: {
+  name?: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'manager' | 'staff';
+  gate_id?: number | null;
+  event_ids?: number[];
+  send_welcome_email?: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  const r = await call('/org/staff', { method: 'POST', body: JSON.stringify(payload) });
+  if (!r) return { ok: false, error: 'Nu am putut contacta serverul.' };
+  return r.success ? { ok: true } : { ok: false, error: r.error ?? 'Adăugare eșuată.' };
+}
+
+export async function updateStaff(payload: {
+  member_id: number;
+  role?: 'admin' | 'manager' | 'staff';
+  gate_id?: number | null;
+  event_ids?: number[];
+}): Promise<boolean> {
+  const r = await call('/org/staff/update', { method: 'POST', body: JSON.stringify(payload) });
+  return !!r?.success;
+}
+
+export async function removeStaff(memberId: number): Promise<boolean> {
+  const r = await call('/org/staff/remove', { method: 'POST', body: JSON.stringify({ member_id: memberId }) });
+  return !!r?.success;
+}

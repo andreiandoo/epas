@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\TixelloApp;
 
+use App\Http\Controllers\Api\TixelloApp\Concerns\ResolvesLinkedOrganizer;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
@@ -31,34 +32,7 @@ use Illuminate\Support\Facades\Hash;
  */
 class OrganizerController extends Controller
 {
-    /** Organizatorul legat de contul curent, sau null. */
-    private function organizerFor(Request $request): ?MarketplaceOrganizer
-    {
-        /** @var TixelloAccount $account */
-        $account = $request->attributes->get('tixello_account');
-
-        $link = $account->activeLinks()->ofKind('marketplace_organizer')->first();
-        if (! $link) {
-            return null;
-        }
-
-        $org = MarketplaceOrganizer::find($link->linked_id);
-
-        // partenerul e autoritatea: daca l-a dezactivat, legatura nu mai tine
-        if (! $org || ($org->status ?? 'active') !== 'active') {
-            return null;
-        }
-
-        return $org;
-    }
-
-    private function noOrganizer(): JsonResponse
-    {
-        return response()->json([
-            'success' => false,
-            'error' => 'Niciun cont de organizator conectat.',
-        ], 403);
-    }
+    use ResolvesLinkedOrganizer;
 
     /**
      * Conecteaza un cont de organizator de la un partener.

@@ -15,7 +15,7 @@
       marcheaza 'failed' si ramane vizibil, in loc sa reincerce la infinit si
       sa tina in loc tot ce e in spate.
    ========================================================= */
-import { anchorFromResponse } from './clock';
+import { anchorFromResponse, compareStamps } from './clock';
 import { pendingScans, updateScans, type LocalScan, type ScanResult } from './db';
 
 /** Cate scanuri trimitem intr-o cerere. */
@@ -71,8 +71,12 @@ export async function flushOnce(post: Poster): Promise<SyncReport> {
     const all = await pendingScans();
     if (!all.length) return empty;
 
-    // ordine cronologica: serverul vede scanurile in ordinea in care s-au produs
-    const batch = [...all].sort((a, b) => a.at - b.at).slice(0, BATCH);
+    /* Ordine cronologica, cu ACELASI comparator ca reconcilierea. Sortarea
+       doar dupa `at` nu ajunge: doua scanuri pot cadea in aceeasi milisecunda,
+       iar `getAll()` din IndexedDB nu garanteaza ordinea de inserare — deci
+       serverul le-ar putea primi inversate. `compareStamps` desparte
+       egalitatile dupa dispozitiv si contorul monoton. */
+    const batch = [...all].sort(compareStamps).slice(0, BATCH);
     const res = await post(batch.map(payloadOf));
 
     if (res.response) anchorFromResponse(res.response);
