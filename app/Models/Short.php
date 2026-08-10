@@ -40,7 +40,7 @@ class Short extends Model
 
     public const STATUSES = ['draft', 'pending_review', 'published', 'archived', 'rejected'];
 
-    public const CTA_TYPES = ['none', 'buy_tickets', 'open_event', 'open_artist', 'external'];
+    public const CTA_TYPES = ['none', 'buy_tickets', 'open_event', 'open_artist', 'open_venue', 'external'];
 
     protected $fillable = [
         'owner_type',

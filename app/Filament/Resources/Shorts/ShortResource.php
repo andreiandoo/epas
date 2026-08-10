@@ -141,6 +141,7 @@ class ShortResource extends Resource
                                     'buy_tickets' => 'Buy tickets',
                                     'open_event' => 'Open event',
                                     'open_artist' => 'Open artist',
+                                    'open_venue' => 'Open venue',
                                     'external' => 'External link',
                                 ])
                                 ->default('none')

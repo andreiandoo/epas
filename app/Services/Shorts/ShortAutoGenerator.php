@@ -148,7 +148,10 @@ class ShortAutoGenerator
             'event_id' => $event->getKey(),
             'tenant_id' => $event->tenant_id,
             'cta_type' => 'buy_tickets',
-            'cta_label' => 'Ia bilet',
+            /* Doar o rezerva: eticheta reala se compune la fiecare cerere, din
+               cel mai mic pret ACTIV (vezi ShortPayload::ctaLabel). Inghetata
+               aici, ar ramane in urma vanzarilor. */
+            'cta_label' => 'Vezi biletele',
         ];
     }
 
@@ -169,8 +172,12 @@ class ShortAutoGenerator
             'subtitle' => $nextEvent?->event_date?->format('d M Y'),
             'event_id' => $nextEvent?->getKey(),
             'tenant_id' => $nextEvent?->tenant_id,
-            'cta_type' => $nextEvent ? 'buy_tickets' : 'open_artist',
-            'cta_label' => $nextEvent ? 'Ia bilet' : 'Vezi artistul',
+            /* Mereu spre profil, chiar cand artistul are un concert apropiat:
+               short-ul e despre ARTIST, iar „Ia bilet" trimitea la un eveniment
+               despre care cadrul nu spusese nimic. Biletele se iau din pagina
+               lui, unde apar toate datele. */
+            'cta_type' => 'open_artist',
+            'cta_label' => 'Vezi profil',
         ];
     }
 
@@ -185,8 +192,8 @@ class ShortAutoGenerator
             'subtitle' => $venue->city,
             'event_id' => null,
             'tenant_id' => $venue->tenant_id,
-            'cta_type' => 'open_event',
-            'cta_label' => 'Vezi evenimentele',
+            'cta_type' => 'open_venue',
+            'cta_label' => 'Vezi detalii',
         ];
     }
 

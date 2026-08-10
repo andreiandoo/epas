@@ -318,6 +318,22 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
         return;
       }
 
+      /* Decide TIPUL de CTA, nu prezenta unui eveniment.
+         Inainte, orice short care avea `event` mergea la eveniment — deci un
+         short de artist cu un concert apropiat ducea la biletele acelui
+         concert, desi cadrul era despre artist si butonul spune „Vezi profil". */
+      if (cta.type === 'open_artist' && short.owner?.id) {
+        go('artist', { id: short.owner.id });
+
+        return;
+      }
+
+      if (cta.type === 'open_venue' && short.owner?.id) {
+        go('venue', { id: short.owner.id });
+
+        return;
+      }
+
       if (short.event?.id) {
         // sourceShortId + sourceFeed calatoresc pana la crearea comenzii; acolo
         // devin orders.source_short_id / source_feed si inchid bucla de
@@ -333,7 +349,9 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
         return;
       }
 
+      // Rezerva, pentru randuri vechi fara tip potrivit.
       if (short.owner?.type === 'artist' && short.owner.id) go('artist', { id: short.owner.id });
+      else if (short.owner?.type === 'venue' && short.owner.id) go('venue', { id: short.owner.id });
     },
     [feed, go],
   );
@@ -508,8 +526,12 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
               ))}
             </div>
 
-            <div style={sx('font-size:13px;opacity:.9;margin-top:7px;line-height:1.35')}>
-              {activeShort.caption ?? ''}
+            {/* Textul scris de om (caption) daca exista, altfel descrierea din
+                catalog. Serverul trimite doar una dintre ele, deci nu se pot
+                suprapune. Maxim trei randuri: peste imagine, un paragraf intreg
+                ar acoperi tot cadrul. */}
+            <div className="shdesc" style={sx('font-size:13px;opacity:.9;margin-top:7px;line-height:1.35')}>
+              {activeShort.caption ?? activeShort.description ?? ''}
             </div>
 
             <div style={sx('font-size:12.5px;opacity:.8;margin-top:6px')}>

@@ -37,7 +37,7 @@ class ShortsController extends Controller
     {
         $validated = $request->validate([
             'feed' => ['nullable', 'string', 'in:'.implode(',', ShortFeedService::FEEDS)],
-            'cursor' => ['nullable', 'string', 'max:512'],
+            'cursor' => ['nullable', 'string', 'max:1024'], // poarta si id-urile deja servite (ShortFeedCursor)
             'limit' => ['nullable', 'integer', 'min:1', 'max:30'],
             'event_id' => ['nullable', 'integer'],
             'language' => ['nullable', 'string', 'max:8'],

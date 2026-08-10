@@ -45,6 +45,8 @@ export type ApiShort = {
   aspect: string;
   title: string | null;
   caption: string | null;
+  /** Descrierea din catalog, deja scurtata pe server. */
+  description?: string | null;
   hashtags: string[];
   language: string | null;
   music_credit: string | null;
@@ -60,7 +62,7 @@ export type ApiShort = {
   } | null;
   event: { id: number; slug: string | null; title: string | null; date: string | null } | null;
   cta: {
-    type: 'buy_tickets' | 'open_event' | 'open_artist' | 'external';
+    type: 'buy_tickets' | 'open_event' | 'open_artist' | 'open_venue' | 'external';
     label: string | null;
     url: string | null;
     ticket_type_id: number | null;

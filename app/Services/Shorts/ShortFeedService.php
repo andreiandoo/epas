@@ -9,6 +9,7 @@ use App\Models\ShortLike;
 use App\Models\ShortReminder;
 use App\Models\ShortSave;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -66,6 +67,14 @@ class ShortFeedService
         $decoded = ShortFeedCursor::decode($cursor);
         if ($decoded) {
             $this->applyCursor($query, $decoded);
+
+            /* Short-urile deja trimise nu se mai propun. Vezi ShortFeedCursor:
+               ordinea rankata si cheia cursorului sunt lucruri diferite, iar
+               fara excluderea asta un short urcat din adancul bazinului revine
+               dupa cateva pagini. */
+            if ($decoded->servedIds !== []) {
+                $query->whereNotIn('shorts.id', $decoded->servedIds);
+            }
         }
 
         // Ranked segments score a bounded candidate pool and reorder it; the
@@ -90,6 +99,12 @@ class ShortFeedService
                „deja vazut" nu functiona pentru vizitatorii fara cont. */
             ? $this->ranker->rank($rows, $customer, $limit, $filters['session_id'] ?? null)->take($limit)
             : $rows->take($limit);
+
+        // Sala, organizatorul si categoriile de bilet ale short-urilor CHIAR
+        // afisate. Deliberat aici si nu in `with()` de pe interogare: aceea
+        // aduce pana la 200 de randuri candidate, din care pagina foloseste
+        // zece — restul ar fi relatii incarcate degeaba la fiecare cerere.
+        $this->hydrateOwners($items);
 
         [$likedIds, $savedIds, $remindedIds] = $this->viewerState($items, $customer);
 
@@ -126,7 +141,12 @@ class ShortFeedService
             // the ranked order — otherwise re-scoring between two pages would
             // make it skip or repeat rows. Injected ads are not part of the
             // keyset either, so they never affect where the next page starts.
-            'next_cursor' => $hasMore ? $this->cursorFor($rows->take($limit)->last()) : null,
+            'next_cursor' => $hasMore
+                ? $this->cursorFor(
+                    $rows->take($limit)->last(),
+                    array_merge($decoded->servedIds ?? [], $items->pluck('id')->all()),
+                )
+                : null,
         ];
     }
 
@@ -332,7 +352,10 @@ class ShortFeedService
         });
     }
 
-    protected function cursorFor(?Short $short): ?string
+    /**
+     * @param  array<int, int>  $servedIds  ce s-a trimis deja, ca sa nu revina
+     */
+    protected function cursorFor(?Short $short, array $servedIds = []): ?string
     {
         if (! $short) {
             return null;
@@ -342,7 +365,44 @@ class ShortFeedService
             publishedAt: $short->published_at?->toDateTimeString(),
             id: $short->id,
             featured: (bool) $short->is_featured,
+            servedIds: array_values(array_unique(array_map('intval', $servedIds))),
         ))->encode();
+    }
+
+    /**
+     * Incarca relatiile de care are nevoie payload-ul pentru detaliile de sub
+     * titlu si pentru pretul minim.
+     *
+     * `owner` e o relatie morfica, deci relatiile ei nu se pot cere din `with()`
+     * obisnuit — de aici `loadMorph`. Fara ea, un short de eveniment nu stia
+     * sala si nici organizatorul, iar detaliile aparent „lipsa" erau de fapt
+     * relatii neincarcate.
+     *
+     * @param  \Illuminate\Support\Collection<int, Short>  $items
+     */
+    protected function hydrateOwners(Collection $items): void
+    {
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        // Rankerul intoarce o colectie simpla; loadMorph e pe cea Eloquent.
+        $models = EloquentCollection::make($items->all());
+
+        try {
+            $models->loadMissing(['event.ticketTypes']);
+            $models->loadMorph('owner', [
+                Event::class => ['venue', 'marketplaceOrganizer', 'ticketTypes'],
+                \App\Models\Venue::class => [],
+                \App\Models\Artist::class => [],
+            ]);
+        } catch (\Throwable $e) {
+            /* Un deployment fara una dintre relatii nu are voie sa doboare
+               feed-ul: detaliile lipsesc, restul merge. */
+            \Illuminate\Support\Facades\Log::debug('ShortFeedService: hydrateOwners failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Services\Shorts;
 
 use App\Models\Artist;
+use App\Models\Event;
 use App\Models\Short;
 use App\Models\Venue;
 use App\Support\PlainText;
@@ -75,6 +76,10 @@ class ShortPayload
             'aspect' => $short->aspect,
             'title' => $short->title,
             'caption' => $short->caption,
+            /* Descrierea proprietarului, scurtata. Feed-ul arata pana acum doar
+               titlul si cateva date seci — textul exista deja in catalog si e
+               deja public pe pagina evenimentului/artistului/locatiei. */
+            'description' => $this->description($short),
             'hashtags' => $short->hashtags ?? [],
             'language' => $short->language,
             'music_credit' => $short->music_credit,
@@ -200,6 +205,33 @@ class ShortPayload
             return $rows;
         }
 
+        if ($owner instanceof Event) {
+            if ($owner->event_date) {
+                $rows[] = ['icon' => 'cal', 'text' => $owner->event_date->format('d M Y')];
+            }
+
+            /* Sala si orasul, intr-un singur rand: pe latimea ramasa langa rail
+               doua randuri separate ar rupe urat un nume lung de sala. */
+            $venue = $owner->relationLoaded('venue') ? $owner->venue : null;
+            $place = array_filter([
+                $venue ? PlainText::of($venue->name) : null,
+                $venue && is_string($venue->city ?? null) && trim($venue->city) !== '' ? trim($venue->city) : null,
+            ]);
+
+            if ($place !== []) {
+                $rows[] = ['icon' => 'pin', 'text' => implode(' · ', $place)];
+            }
+
+            $organizer = $owner->relationLoaded('marketplaceOrganizer') ? $owner->marketplaceOrganizer : null;
+            $organizerName = $organizer ? PlainText::of($organizer->name ?? null) : null;
+
+            if ($organizerName) {
+                $rows[] = ['icon' => 'user', 'text' => $organizerName];
+            }
+
+            return $rows;
+        }
+
         if ($owner instanceof Artist) {
             $where = array_filter([
                 is_string($owner->city ?? null) && trim($owner->city) !== '' ? trim($owner->city) : null,
@@ -246,7 +278,7 @@ class ShortPayload
 
         $cta = [
             'type' => $short->cta_type,
-            'label' => $short->cta_label,
+            'label' => $this->ctaLabel($short),
             'url' => $short->cta_url,
             'ticket_type_id' => $short->cta_ticket_type_id,
             'promo_code' => $short->promo_code,
@@ -263,6 +295,116 @@ class ShortPayload
         }
 
         return $cta;
+    }
+
+    /**
+     * Eticheta butonului principal.
+     *
+     * Cea din baza e scrisa la GENERARE si ramane inghetata acolo. Pentru un
+     * eveniment asta nu merge: pretul minim se schimba pe masura ce se vand
+     * categoriile ieftine, iar un buton care promite „de la 50 lei" cand cel mai
+     * ieftin bilet ramas costa 90 e o minciuna, nu o scapare de afisare. Deci
+     * pentru bilete se recalculeaza la fiecare cerere; pentru restul ramane ce
+     * scrie in rand.
+     */
+    protected function ctaLabel(Short $short): ?string
+    {
+        if ($short->cta_type !== 'buy_tickets') {
+            return $short->cta_label;
+        }
+
+        $price = $this->minTicketPrice($short);
+
+        if ($price === null) {
+            // Fara pret cunoscut nu inventam o cifra.
+            return $short->cta_label ?: 'Vezi biletele';
+        }
+
+        return 'Bilete de la '.$this->money($price).' lei';
+    }
+
+    /** Cel mai mic pret ACTIV al evenimentului, sau null cand nu se poate afla. */
+    protected function minTicketPrice(Short $short): ?float
+    {
+        $event = $short->relationLoaded('event') ? $short->event : null;
+
+        if (! $event) {
+            return null;
+        }
+
+        try {
+            $types = $event->relationLoaded('ticketTypes')
+                ? $event->ticketTypes
+                : $event->ticketTypes()->where('status', 'active')->get(['price', 'status']);
+
+            $prices = $types
+                ->filter(fn ($t) => $t->status === 'active' && is_numeric($t->price) && (float) $t->price > 0)
+                ->map(fn ($t) => (float) $t->price);
+
+            return $prices->isEmpty() ? null : $prices->min();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Fara zecimale cand sunt zero — „90 lei", nu „90,00 lei". */
+    protected function money(float $value): string
+    {
+        return fmod($value, 1.0) === 0.0
+            ? number_format($value, 0, ',', '.')
+            : number_format($value, 2, ',', '.');
+    }
+
+    /**
+     * Descrierea proprietarului, taiata la o lungime care incape peste imagine.
+     *
+     * Se taie la ultimul cuvant intreg, nu la caracter: „Concert extraordi…" e
+     * mai rau decat un rand mai scurt.
+     */
+    protected function description(Short $short): ?string
+    {
+        if (is_string($short->caption) && trim($short->caption) !== '') {
+            // Un text scris de om bate descrierea din catalog.
+            return null;
+        }
+
+        $owner = ($short->owner_type && $short->owner_id) ? $short->owner : null;
+
+        $raw = match (true) {
+            $owner instanceof Event => PlainText::of($owner->short_description) ?: PlainText::of($owner->description),
+            $owner instanceof Venue => PlainText::of($owner->description),
+            $owner instanceof Artist => PlainText::of($owner->bio_html),
+            default => null,
+        };
+
+        return $this->excerpt($raw);
+    }
+
+    protected function excerpt(?string $html, int $max = 180): ?string
+    {
+        if (! is_string($html) || trim($html) === '') {
+            return null;
+        }
+
+        // Descrierile din catalog sunt HTML; feed-ul afiseaza text simplu.
+        $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+
+        if ($text === '') {
+            return null;
+        }
+
+        if (mb_strlen($text) <= $max) {
+            return $text;
+        }
+
+        $cut = mb_substr($text, 0, $max);
+        $lastSpace = mb_strrpos($cut, ' ');
+
+        if ($lastSpace !== false && $lastSpace > $max * 0.6) {
+            $cut = mb_substr($cut, 0, $lastSpace);
+        }
+
+        return rtrim($cut, " ,.;:–-").'…';
     }
 
     /**

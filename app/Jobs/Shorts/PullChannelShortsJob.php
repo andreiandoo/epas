@@ -30,6 +30,9 @@ class PullChannelShortsJob implements ShouldQueue
     /** YouTube counts anything up to 60s as a Short. */
     private const MAX_SHORT_SECONDS = 60;
 
+    /** Cate short-uri aduse automat se tin, per artist. Fereastra glisanta. */
+    public const MAX_PER_OWNER = 6;
+
     public int $tries = 3;
 
     /** @var array<int, int> */
@@ -91,6 +94,18 @@ class PullChannelShortsJob implements ShouldQueue
                 'title' => $video['title'] ?? null,
                 'duration' => $duration,
                 'status' => Short::STATUS_DRAFT,
+                /* Marcheaza randul ca adus de automat, nu incarcat de om. E si
+                   singurul semn dupa care plafonul de mai jos stie ce are voie
+                   sa stearga. Nu atrage penalizarea de „poster fara video" din
+                   ranker: aceea sare peste short-urile externe (isPosterOnly). */
+                'is_generated' => true,
+                /* Posterul se pune ACUM, din raspunsul API-ului, nu se asteapta
+                   IngestShortJob. Ingestul completeaza embed-ul si un thumbnail
+                   mai bun, dar el poate esua sau sta la coada — si atunci
+                   short-ul ramanea fara imagine, ceea ce se si vedea in lista:
+                   unele cu cover, altele fara. Ingestul il suprascrie cand
+                   reuseste. */
+                'poster_path' => $video['thumbnail'] ?: "https://i.ytimg.com/vi/{$videoId}/hqdefault.jpg",
             ])->save();
 
             // The link is already known; the job fills embed + thumbnail.
@@ -98,11 +113,54 @@ class PullChannelShortsJob implements ShouldQueue
             $created++;
         }
 
+        $trimmed = $this->trimToCap($artist);
+
         Log::info('PullChannelShortsJob: pulled artist shorts', [
             'artist_id' => $artist->id,
             'scanned' => count($videos),
             'created' => $created,
+            'trimmed' => $trimmed,
         ]);
+    }
+
+    /**
+     * Pastreaza cele mai recente MAX_PER_OWNER short-uri aduse de aici; restul
+     * se sterg.
+     *
+     * Un canal activ ar acumula altfel zeci de short-uri pentru acelasi artist,
+     * care ar sufoca feed-ul si ar transforma curatarea intr-o corvoada
+     * manuala. Plafonul face preluarea sa se comporte ca o fereastra glisanta:
+     * apare unul nou, pleaca cel mai vechi.
+     *
+     * Se sterg DOAR randurile aduse automat de aici — `source = youtube` si
+     * `is_generated` — deci un short incarcat sau editat de om nu intra
+     * niciodata in socoteala si nu poate fi sters de o rulare programata.
+     */
+    protected function trimToCap(Artist $artist): int
+    {
+        $keepIds = Short::query()
+            ->where('owner_type', Artist::class)
+            ->where('owner_id', $artist->id)
+            ->where('source', ShortIngestService::PLATFORM_YOUTUBE)
+            ->where('is_generated', true)
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->limit(self::MAX_PER_OWNER)
+            ->pluck('id');
+
+        $stale = Short::query()
+            ->where('owner_type', Artist::class)
+            ->where('owner_id', $artist->id)
+            ->where('source', ShortIngestService::PLATFORM_YOUTUBE)
+            ->where('is_generated', true)
+            ->whereNotIn('id', $keepIds)
+            ->get();
+
+        foreach ($stale as $short) {
+            $short->delete();
+        }
+
+        return $stale->count();
     }
 
     /**

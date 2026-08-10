@@ -154,6 +154,15 @@
 /* Randul de detalii (adresa, nota) trebuie sa incapa pe latimea ramasa langa
    rail; fara asta, o adresa lunga impinge nota afara din ecran. */
 .app-client .shchrome .cmeta { flex-wrap: wrap; row-gap: 4px }
+
+/* Descrierea din catalog poate fi lunga chiar si taiata pe server; peste
+   imagine, trei randuri sunt limita dincolo de care cadrul nu se mai vede. */
+.app-client .shchrome .shdesc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .app-client .shchrome button:focus-visible { outline: 2px solid #fff; outline-offset: 3px }
 
 /* ---- video ---- */
