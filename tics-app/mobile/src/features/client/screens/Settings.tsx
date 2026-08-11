@@ -6,7 +6,7 @@
      S.setDelete  (1081) · legalPage(1087) -> S.setTerms / S.setPrivacy
      S.setRate    (1091)
    ========================================================= */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Ic, cn, sx } from '../../../design/sx';
 import { I } from '../../../mock/prototype';
 import { BottomNav, SetHead, TopBar } from '../kit';
@@ -14,7 +14,8 @@ import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
 import { usePaymentMethods } from '../accountData';
-import { addPaymentMethod, isLoggedIn } from '../../../api/customer';
+import { addPaymentMethod, isLoggedIn, removeAvatar, uploadAvatar } from '../../../api/customer';
+import { customerName, initialsOf, useCustomer } from '../accountData';
 import { APP_VERSION } from '../../../version';
 
 /* ---------- fld(label, val, ph, type) ----------
@@ -217,15 +218,88 @@ export function Settings() {
 export function SetPersonal() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
+  const customer = useCustomer();
+  const [avatar, setAvatar] = useState<string | null>(customer?.avatar ?? null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const initials = initialsOf(customerName(customer) ?? 'Andrei Popescu');
+
+  const pickAvatar = async (file: File) => {
+    if (!isLoggedIn()) {
+      showToast('Intră în cont ca să schimbi poza');
+
+      return;
+    }
+
+    setUploading(true);
+    const url = await uploadAvatar(file);
+    setUploading(false);
+
+    if (!url) {
+      showToast('Nu am putut încărca poza');
+
+      return;
+    }
+
+    /* `?v=` forteaza reincarcarea: calea poate ramane aceeasi, iar fara ea
+       browserul ar arata in continuare imaginea veche din cache. */
+    setAvatar(`${url}?v=${Date.now()}`);
+    showToast('Poză actualizată');
+  };
+
+  const dropAvatar = async () => {
+    if (await removeAvatar()) {
+      setAvatar(null);
+      showToast('Poză ștearsă');
+    }
+  };
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <SetHead title="Date personale" />
       <div className="pad" style={sx('margin-top:14px')}>
         <div style={sx('display:flex;flex-direction:column;align-items:center;gap:10px')}>
-          <div style={sx('width:78px;height:78px;border-radius:26px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-size:26px;font-weight:600')}>
-            AP
+          <div
+            style={{
+              width: 78,
+              height: 78,
+              borderRadius: 26,
+              background: avatar
+                ? `url('${avatar}') center/cover, #14101f`
+                : 'linear-gradient(135deg,var(--indigo),var(--indigo-4))',
+              display: 'grid',
+              placeItems: 'center',
+              color: '#fff',
+              fontSize: 26,
+              fontWeight: 600,
+            }}
+          >
+            {avatar ? '' : initials}
           </div>
-          <button className="chip">Schimbă poza</button>
+          {/* Input ascuns: butonul din prototip ramane cum arata, dar acum
+              deschide selectorul de fisiere al telefonului. */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void pickAvatar(f);
+              e.target.value = '';
+            }}
+          />
+          <div className="row" style={sx('gap:8px')}>
+            <button className="chip" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? 'Se încarcă…' : 'Schimbă poza'}
+            </button>
+            {avatar ? (
+              <button className="chip" onClick={() => void dropAvatar()}>
+                Șterge
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
       <div className="pad">

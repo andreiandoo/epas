@@ -8,13 +8,15 @@
    plus cartCompute() (linia 893), care calculeaza subtotal / taxa 2% /
    protectie 8% / reducere / puncte.
    ========================================================= */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ADDONS, EV, EXPDAYS, I, VEN, lei, occInfo, poster } from '../../../mock/prototype';
 import { TopBar, BackTitle, CatalogLoading, MissingContent, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { useClient, ttCountsFor } from '../../../store/client';
 import { cachedEvent, useCatalogEvent } from '../catalogData';
+import { createOrder, startPayment } from '../../../api/checkout';
+import { customerName, useCustomer } from '../accountData';
 
 type Ev = Record<string, any>;
 /**
@@ -586,6 +588,87 @@ export function Cart() {
   const ev = evOf(evId);
   const venue = ev ? ((VEN as Record<string, Ev>)[ev.ven] ?? cachedEvent(evId)?.venue) : null;
   const c = cartCompute(evId);
+  const customer = useCustomer();
+  const [paying, setPaying] = useState(false);
+
+  /**
+   * Plata.
+   *
+   * Doi pasi, ca pe site: se creeaza comanda (care rezerva stocul si porneste
+   * ceasul de expirare), apoi se cere adresa procesatorului. Nu se sar peste
+   * niciunul — un „succes" afisat fara comanda ar fi lasat clientul convins ca
+   * are bilet.
+   *
+   * Adresa se deschide in browserul SISTEMULUI: 3-D Secure si aplicatiile
+   * bancare refuza sa ruleze intr-un WebView incorporat. Confirmarea vine pe
+   * webhook, deci comanda se finalizeaza chiar daca utilizatorul nu se mai
+   * intoarce in aplicatie.
+   */
+  const pay = async () => {
+    if (!ev) return;
+
+    const eventId = Number(ev.id);
+
+    if (!Number.isFinite(eventId)) {
+      showToast('Acest eveniment nu se poate cumpăra din aplicație');
+
+      return;
+    }
+
+    const tickets = (ev.tt as Ev[])
+      .map((t: Ev, i: number) => ({ ticket_type_id: Number(t.id), quantity: (useClient.getState().ttCounts[evId] ?? [])[i] || 0 }))
+      .filter((t) => Number.isFinite(t.ticket_type_id) && t.quantity > 0);
+
+    if (!tickets.length) {
+      showToast('Alege cel puțin un bilet');
+
+      return;
+    }
+
+    const name = (customerName(customer) ?? '').trim();
+    const [first, ...rest] = name.split(/\s+/);
+
+    setPaying(true);
+
+    const order = await createOrder({
+      event_id: eventId,
+      tickets,
+      customer: {
+        email: customer?.email ?? '',
+        first_name: first || 'Client',
+        last_name: rest.join(' ') || 'Tixello',
+        phone: customer?.phone ?? undefined,
+      },
+    });
+
+    if (!order.ok) {
+      setPaying(false);
+      showToast(order.error.message);
+
+      return;
+    }
+
+    const orderId = order.data.order_id ?? order.data.id;
+
+    if (!orderId) {
+      setPaying(false);
+      showToast('Comanda nu a putut fi creată');
+
+      return;
+    }
+
+    const payment = await startPayment(orderId);
+    setPaying(false);
+
+    if (!payment.ok || !payment.data.payment_url) {
+      showToast(payment.ok ? 'Plata nu este disponibilă pentru acest eveniment' : payment.error.message);
+
+      return;
+    }
+
+    window.open(payment.data.payment_url, '_blank', 'noopener');
+    go('success', { orderId });
+  };
 
   if (!ev) return <MissingContent what="Evenimentul" />;
 
@@ -842,8 +925,14 @@ export function Cart() {
       </div>
 
       <div className="dock">
-        <button className="cta" onClick={() => go('success')}>
-          Plătește · <span>{lei(c.total)}</span> lei
+        <button className="cta" onClick={() => void pay()} disabled={paying}>
+          {paying ? (
+            'Se pregătește plata…'
+          ) : (
+            <>
+              Plătește · <span>{lei(c.total)}</span> lei
+            </>
+          )}
         </button>
       </div>
     </div>

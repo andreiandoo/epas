@@ -148,6 +148,10 @@ class AuthController extends Controller
                     'id' => $customer->id,
                     'name' => $customer->full_name,
                     'email' => $customer->email,
+                    // poza de profil, ca ecranele sa o aiba de la prima randare
+                    'avatar' => $customer->avatar_path
+                        ? \Illuminate\Support\Facades\Storage::disk('public')->url($customer->avatar_path)
+                        : null,
                     'email_verified' => false,
                     'role' => 'customer',
                 ],
@@ -211,6 +215,10 @@ class AuthController extends Controller
                     'id' => $customer->id,
                     'name' => $customer->full_name,
                     'email' => $customer->email,
+                    // poza de profil, ca ecranele sa o aiba de la prima randare
+                    'avatar' => $customer->avatar_path
+                        ? \Illuminate\Support\Facades\Storage::disk('public')->url($customer->avatar_path)
+                        : null,
                     'role' => 'customer',
                 ],
             ],

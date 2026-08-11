@@ -33,6 +33,8 @@ export type Customer = {
   last_name?: string | null;
   email: string;
   phone?: string | null;
+  /** URL absolut catre poza de profil, sau null. */
+  avatar?: string | null;
 };
 
 let token: string | null = null;
@@ -85,7 +87,9 @@ async function call<T>(path: string, init?: RequestInit & { auth?: boolean }): P
       headers: {
         Accept: 'application/json',
         'X-Tenant-Domain': TENANT_HOST,
-        ...(init?.body ? { 'Content-Type': 'application/json' } : null),
+        /* FormData isi pune singur antetul, cu tot cu separator; scris de noi,
+           ar rupe corpul cererii. */
+        ...(init?.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : null),
         ...(init?.auth !== false && getToken() ? { Authorization: `Bearer ${getToken()}` } : null),
         ...init?.headers,
       },
@@ -269,6 +273,30 @@ export type ApiGiftCard = { id?: number; code?: string; balance?: number; curren
 
 export const fetchGiftCards = () =>
   call<Wrapped<ApiGiftCard[]>>('/tenant-client/account/gift-cards').then((r) => r?.data ?? null);
+
+/**
+ * Poza de profil.
+ *
+ * Se trimite ca `multipart/form-data`, deci NU se pune `Content-Type` de mana:
+ * antetul trebuie sa contina si separatorul (`boundary`), pe care doar browserul
+ * il stie. Scris manual, serverul ar primi un corp pe care nu-l poate desface.
+ */
+export async function uploadAvatar(file: File): Promise<string | null> {
+  const body = new FormData();
+  body.append('avatar', file);
+
+  const r = await call<Wrapped<{ avatar: string | null }>>('/tenant-client/account/avatar', {
+    method: 'POST',
+    body,
+  });
+
+  return r?.success ? (r.data?.avatar ?? null) : null;
+}
+
+export const removeAvatar = () =>
+  call<Wrapped<{ avatar: null }>>('/tenant-client/account/avatar', { method: 'DELETE' }).then(
+    (r) => r?.success === true,
+  );
 
 export const updateProfile = (payload: Record<string, unknown>) =>
   call<Wrapped<Customer>>('/tenant-client/account/profile', {

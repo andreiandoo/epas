@@ -28,6 +28,7 @@ class Customer extends Authenticatable
         'last_name',
         'full_name',
         'phone',
+        'avatar_path',
         'city',
         'country',
         'date_of_birth',

@@ -18,6 +18,7 @@ use App\Services\Gamification\GamificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -225,8 +226,75 @@ class CustomerAccountController extends Controller
         $customer->update(array_filter($validated, fn ($v) => $v !== null));
 
         return response()->json(['success' => true, 'data' => [
-            'name' => $customer->full_name, 'email' => $customer->email, 'phone' => $customer->phone,
+            'name' => $customer->full_name,
+            'email' => $customer->email,
+            'phone' => $customer->phone,
+            'avatar' => $this->avatarUrl($customer),
         ]]);
+    }
+
+    /**
+     * Poza de profil.
+     *
+     * Se primeste FISIERUL, nu un URL: aplicatia are imaginea din camera sau din
+     * galerie, iar un flux prin URL ar cere intai un serviciu de gazduire.
+     *
+     * Cea veche se sterge la inlocuire — altfel fiecare schimbare de poza ar
+     * lasa un fisier orfan pe disc, la nesfarsit.
+     */
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        $request->validate([
+            /* Limita si tipurile sunt impuse aici, nu doar in aplicatie: un
+               client isi poate trimite orice, iar un fisier de 40 MB ar umple
+               discul. `image` respinge si fisierele care doar se prefac ca sunt
+               imagini (verifica antetul, nu extensia). */
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:4096',
+        ]);
+
+        $old = $customer->avatar_path;
+
+        $path = $request->file('avatar')->store('customers/avatars', 'public');
+
+        $customer->update(['avatar_path' => $path]);
+
+        if ($old && $old !== $path) {
+            try {
+                Storage::disk('public')->delete($old);
+            } catch (\Throwable) {
+                /* fisierul vechi nu se poate sterge (permisiuni, deja lipsa):
+                   nu e un motiv sa esueze incarcarea celei noi */
+            }
+        }
+
+        return response()->json(['success' => true, 'data' => ['avatar' => $this->avatarUrl($customer)]]);
+    }
+
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) { return $ctx; }
+        [$tenant, $customer] = $ctx;
+
+        if ($customer->avatar_path) {
+            try {
+                Storage::disk('public')->delete($customer->avatar_path);
+            } catch (\Throwable) {
+                /* vezi mai sus */
+            }
+            $customer->update(['avatar_path' => null]);
+        }
+
+        return response()->json(['success' => true, 'data' => ['avatar' => null]]);
+    }
+
+    private function avatarUrl($customer): ?string
+    {
+        return $customer->avatar_path ? Storage::disk('public')->url($customer->avatar_path) : null;
     }
 
     /** Schimbare parolă. */

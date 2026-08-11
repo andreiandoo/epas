@@ -113,6 +113,8 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/account/orders/{id}', [TenantAccountController::class, 'orderDetail'])->name('api.tenant-client-public.account.order');
     Route::get('/account/tickets', [TenantAccountController::class, 'tickets'])->name('api.tenant-client-public.account.tickets');
     Route::post('/account/profile', [TenantAccountController::class, 'updateProfile'])->name('api.tenant-client-public.account.profile');
+    Route::post('/account/avatar', [TenantAccountController::class, 'updateAvatar'])->name('api.tenant-client-public.account.avatar');
+    Route::delete('/account/avatar', [TenantAccountController::class, 'deleteAvatar'])->name('api.tenant-client-public.account.avatar.delete');
     Route::post('/account/password', [TenantAccountController::class, 'changePassword'])->name('api.tenant-client-public.account.password');
     Route::post('/account/delete', [TenantAccountController::class, 'deleteAccount'])->name('api.tenant-client-public.account.delete');
     Route::get('/account/favorites', [TenantAccountController::class, 'favorites'])->name('api.tenant-client-public.account.favorites');
@@ -4066,6 +4068,16 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
             ->name('api.app.auth.me');
         Route::post('/auth/logout', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'logout'])
             ->name('api.app.auth.logout');
+
+        /* ---- cumparare de bilete ----
+           Delegheaza catre fluxul de marketplace, care e cel folosit in
+           productie; vezi CheckoutController pentru de ce nu se rescrie. */
+        Route::post('/checkout/order', [\App\Http\Controllers\Api\TixelloApp\CheckoutController::class, 'createOrder'])
+            ->middleware('throttle:20,1')->name('api.app.checkout.order');
+        Route::post('/checkout/order/{order}/pay', [\App\Http\Controllers\Api\TixelloApp\CheckoutController::class, 'pay'])
+            ->middleware('throttle:20,1')->name('api.app.checkout.pay');
+        Route::get('/checkout/order/{order}', [\App\Http\Controllers\Api\TixelloApp\CheckoutController::class, 'status'])
+            ->name('api.app.checkout.status');
 
         // ---- organizator ----
         Route::post('/org/connect', [\App\Http\Controllers\Api\TixelloApp\OrganizerController::class, 'connect'])

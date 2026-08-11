@@ -104,6 +104,20 @@ class CustomerResource extends Resource
                         SC\Tabs\Tab::make('Date personale')
                             ->icon('heroicon-o-user')
                             ->schema([
+                                /* Poza de profil, incarcata de client din aplicatie.
+                                   Apare si aici ca sa poata fi vazuta si, la nevoie,
+                                   stearsa de suport — o poza nepotrivita trebuie sa
+                                   poata fi scoasa fara acces la disc. */
+                                Forms\Components\FileUpload::make('avatar_path')
+                                    ->label('Poză de profil')
+                                    ->image()
+                                    ->avatar()
+                                    ->disk('public')
+                                    ->directory('customers/avatars')
+                                    ->visibility('public')
+                                    ->maxSize(4096)
+                                    ->helperText('Încărcată de client din aplicație. O poți șterge de aici.')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 SC\Grid::make(2)->schema([
                                     Forms\Components\TextInput::make('first_name')->label('First name')->maxLength(120),
                                     Forms\Components\TextInput::make('last_name')->label('Last name')->maxLength(120),
