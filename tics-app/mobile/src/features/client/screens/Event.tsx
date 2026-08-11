@@ -8,10 +8,11 @@
      locatie · card Stay22 · dock cu pretul si CTA-ul
    ========================================================= */
 import { useEffect } from 'react';
-import { Ic, sx } from '../../../design/sx';
+import { Ic, cn, sx } from '../../../design/sx';
 import { ADDONS, ART, ATTENDED, EV, EVREVIEWS, I, VEN, bgv, money } from '../../../mock/prototype';
 import { CatalogLoading, DBar, MissingContent } from '../kit';
 import { useCatalogEvent } from '../catalogData';
+import { useEventFriends } from '../friendsData';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useLightbox } from '../lightbox';
@@ -39,6 +40,14 @@ export function Event({ id }: { id?: string }) {
     if (demo && demo.id !== evId) setEv(demo.id);
     else if (live.data && key !== evId) setEv(key);
   }, [demo, live.data, key, evId, setEv]);
+
+  /* Partea sociala: cine dintre prieteni merge + propria vizibilitate.
+     Se cheama INAINTE de orice `return` conditionat — un hook chemat dupa o
+     iesire timpurie se executa doar pe unele randari, iar React opreste tot
+     componenta. Se vedea imediat: ecranul evenimentului ramanea alb.
+     `demo ? null : key` in loc de `ev.id`: `ev` inca nu exista aici, iar
+     evenimentele din prototip n-au corespondent pe server. */
+  const social = useEventFriends(demo ? null : Number(key));
 
   if (!demo && live.loading) return <CatalogLoading title="Eveniment" />;
   if (!demo && !live.data) return <MissingContent what="Evenimentul" />;
@@ -132,32 +141,78 @@ export function Event({ id }: { id?: string }) {
           ) : null}
         </div>
 
-        {ev.friends?.length ? (
+        {/* PRIETENII care merg — date reale, nu iniţialele inventate din
+            prototip. Apar doar cei care au ales să se ştie: serverul filtrează
+            după regula lor generală şi după excepţia pe acest eveniment, iar
+            aplicaţia nu are cum să vadă pe altcineva.
+
+            Sub ele, propriul comutator: e locul firesc să decizi „aici vreau
+            să se ştie", pentru că exact aici te gândeşti la evenimentul ăsta. */}
+        {social.data && social.data.count > 0 ? (
           <div className="listitem" style={sx('margin-top:18px')}>
             <div className="row" style={sx('margin-right:2px')}>
-              {(ev.friends as string[]).map((fr, i) => (
+              {social.data.friends.slice(0, 4).map((fr, i) => (
                 <div
-                  key={fr}
+                  key={fr.id}
+                  title={fr.name}
                   style={{
                     width: 30,
                     height: 30,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg,var(--indigo-2),var(--indigo-4))',
+                    background: fr.avatar
+                      ? `url('${fr.avatar}') center/cover, #14101f`
+                      : 'linear-gradient(135deg,var(--indigo-2),var(--indigo-4))',
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '10px',
                     fontWeight: 600,
+                    color: '#fff',
                     border: '2px solid var(--surface-solid)',
                     marginLeft: i ? -10 : 0,
                   }}
                 >
-                  {fr}
+                  {fr.avatar
+                    ? ''
+                    : fr.name
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((w) => w[0]?.toUpperCase() ?? '')
+                        .join('')}
                 </div>
               ))}
             </div>
             <div style={sx('flex:1;font-size:12.5px;font-weight:600;color:var(--ink-2)')}>
-              <b>{ev.friends.length} prieteni</b> au deja bilete
+              {social.data.count === 1 ? (
+                <>
+                  <b>{social.data.friends[0]?.name}</b> are bilet
+                </>
+              ) : (
+                <>
+                  <b>{social.data.count} prieteni</b> au deja bilete
+                </>
+              )}
             </div>
+          </div>
+        ) : null}
+
+        {social.data ? (
+          <div
+            className="listitem"
+            onClick={() => void social.toggle()}
+            style={sx('margin-top:10px;cursor:pointer')}
+          >
+            <div
+              style={sx('width:38px;height:38px;border-radius:12px;background:var(--indigo-soft);color:var(--indigo-2);display:grid;place-items:center;font-size:17px')}
+            >
+              👥
+            </div>
+            <div style={sx('flex:1;min-width:0')}>
+              <div style={sx('font-weight:500;font-size:13.5px')}>Arată prietenilor că merg</div>
+              <div className="muted" style={sx('font-size:11px;margin-top:1px')}>
+                Doar la acest eveniment
+              </div>
+            </div>
+            <div className={cn('toggle', social.data.visible && 'on')} />
           </div>
         ) : null}
 

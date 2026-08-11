@@ -28,8 +28,10 @@ import {
   redeemInviteCode,
   removeFriend,
   respondToRequest,
+  reportAccount,
   type FriendCard,
   type FriendsState,
+  type ReportReason,
 } from '../../../api/friends';
 
 /** Iniţialele, când nu există poză. */
@@ -377,9 +379,20 @@ export function Friends() {
    decizie explicită. Când vor exista lucruri de arătat (evenimente comune,
    artişti urmăriţi), aici e locul lor.
    ========================================================= */
+const REPORT_REASONS: [ReportReason, string][] = [
+  ['spam', 'Trimite spam sau reclame'],
+  ['harassment', 'Mă hărțuiește'],
+  ['fake_profile', 'Profil fals / impostor'],
+  ['inappropriate', 'Conținut nepotrivit'],
+  ['other', 'Altceva'],
+];
+
 export function FriendProfile({ id }: { id?: string }) {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
+  const [reporting, setReporting] = useState(false);
+  const [reason, setReason] = useState<ReportReason | ''>('');
+  const [note, setNote] = useState('');
 
   const [person, setPerson] = useState<FriendCard | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -450,8 +463,83 @@ export function FriendProfile({ id }: { id?: string }) {
             >
               Blochează
             </button>
+            <button
+              className="cta ghost"
+              onClick={() => setReporting(true)}
+              style={sx('padding:12px;color:var(--red);border-color:rgba(240,97,109,.3)')}
+            >
+              Raportează
+            </button>
           </div>
         </>
+      ) : null}
+
+      {/* RAPORTAREA. Blocarea rezolva problema unui singur om — nu-l mai vezi.
+          Raportarea e pentru cand problema priveste pe toata lumea si trebuie sa
+          ajunga la cineva care poate lua o masura. Motivele sunt o lista scurta
+          si inchisa: un camp liber ar fi produs „nu-mi place" si n-ar fi putut
+          fi triat de nimeni. */}
+      {reporting && person ? (
+        <div
+          onClick={() => setReporting(false)}
+          style={sx('position:fixed;inset:0;z-index:60;background:rgba(4,3,9,.6);backdrop-filter:blur(3px);display:flex;align-items:flex-end')}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              background: 'var(--bg)',
+              borderRadius: '24px 24px 0 0',
+              border: '1px solid var(--line)',
+              borderBottom: 0,
+              paddingBottom: 'calc(16px + var(--safe-bottom, 0px))',
+            }}
+          >
+            <div style={sx('width:40px;height:4px;border-radius:9px;background:var(--line-2);margin:10px auto 6px')} />
+            <div className="pad">
+              <div className="h2" style={sx('font-size:15px')}>
+                Raportează {person.name}
+              </div>
+              <div className="muted" style={sx('font-size:11.5px;margin-top:4px;line-height:1.45')}>
+                Contul va fi și blocat, ca să nu te mai poată contacta până verificăm.
+              </div>
+
+              <div style={sx('display:flex;flex-direction:column;gap:8px;margin-top:14px')}>
+                {REPORT_REASONS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={reason === value ? 'chip ind on' : 'chip'}
+                    onClick={() => setReason(value)}
+                    style={sx('justify-content:flex-start;padding:12px 14px')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {reason === 'other' ? (
+                <div className="field" style={sx('margin-top:12px')}>
+                  <input
+                    value={note}
+                    placeholder="Spune-ne pe scurt ce s-a întâmplat"
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </div>
+              ) : null}
+
+              <button
+                className="cta"
+                disabled={!reason || (reason === 'other' && note.trim().length < 3)}
+                style={sx('margin-top:14px')}
+                onClick={() =>
+                  void act(() => reportAccount(person.id, reason as ReportReason, note || undefined), 'Raport trimis')
+                }
+              >
+                Trimite raportul
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <div style={sx('height:10px')} />

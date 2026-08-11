@@ -92,6 +92,9 @@ class Settings extends Page
                 'invoice_due_days' => $settings['invoice_due_days'] ?? 30,
                 'decont_prefix' => $settings['decont_prefix'] ?? 'DEC',
                 'decont_next_number' => $settings['decont_next_number'] ?? 1,
+                'contract_prefix' => $settings['contract_prefix'] ?? ($marketplace->slug ?? 'CTR'),
+                // Counter for contracts is a dedicated column, not settings JSON.
+                'contract_next_number' => (int) ($marketplace->next_contract_number ?? 1),
 
                 // Legal Pages
                 'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
@@ -781,6 +784,26 @@ class Settings extends Page
                                             ->numeric()
                                             ->default(1)
                                             ->minValue(1),
+
+                                        Forms\Components\TextInput::make('contract_prefix')
+                                            ->label('Prefix serie contracte')
+                                            ->default('CTR')
+                                            ->maxLength(10)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: AMB → AMB605, AMB606... (folosit la generarea automată de contract la onboarding organizator)'),
+
+                                        // Counter for contracts lives on the
+                                        // marketplace_clients.next_contract_number column
+                                        // (has proper concurrency handling at
+                                        // MarketplaceClient::getNextContractNumber). We
+                                        // expose it here for parity with the other three
+                                        // counters even though it's a column, not a
+                                        // settings JSON key.
+                                        Forms\Components\TextInput::make('contract_next_number')
+                                            ->label('Număr curent contracte')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1)
+                                            ->helperText('Următorul număr atribuit când se generează un contract nou. Formatul final e prefix+număr (ex. AMB605).'),
                                     ])->columns(2),
                             ]),
 
@@ -1273,6 +1296,13 @@ class Settings extends Page
         $settings['invoice_due_days'] = (int) ($data['invoice_due_days'] ?? 30);
         $settings['decont_prefix'] = $data['decont_prefix'] ?? 'DEC';
         $settings['decont_next_number'] = (int) ($data['decont_next_number'] ?? 1);
+        // Contract prefix persists in settings JSON; counter persists on
+        // marketplace_clients.next_contract_number column (set below with
+        // the rest of the $update array).
+        $settings['contract_prefix'] = $data['contract_prefix'] ?? ($marketplace->slug ?? 'CTR');
+        if (isset($data['contract_next_number'])) {
+            $update['next_contract_number'] = max(1, (int) $data['contract_next_number']);
+        }
 
         $settings['legal'] = [
             'terms_title' => $data['terms_title'] ?? 'Terms & Conditions',

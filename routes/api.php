@@ -4091,6 +4091,15 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
         Route::delete('/friends/{account}', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'remove'])
             ->name('api.app.friends.remove');
 
+        /* Cine dintre prieteni merge la un eveniment. Sub prefixul de
+           evenimente, nu de prieteni: ecranul care intreaba e cel al
+           evenimentului. */
+        Route::get('/events/{event}/friends', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'attending'])
+            ->name('api.app.events.friends');
+
+        Route::post('/reports', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'report'])
+            ->middleware('throttle:10,1')->name('api.app.reports');
+
         /* ---- cumparare de bilete ----
            Delegheaza catre fluxul de marketplace, care e cel folosit in
            productie; vezi CheckoutController pentru de ce nu se rescrie. */

@@ -3,6 +3,7 @@
 namespace App\Services\Friends;
 
 use App\Models\TixelloAccount;
+use App\Models\TixelloEventVisibility;
 use App\Models\TixelloFriendInvite;
 use App\Models\TixelloFriendship;
 use Illuminate\Support\Collection;
@@ -191,6 +192,60 @@ class FriendshipService
         return $made;
     }
 
+    /**
+     * Beneficiarii unei comenzi devin invitatii de prietenie.
+     *
+     * Se cheama DUPA ce comanda a fost creata, si niciodata inaintea ei: o
+     * eroare in partea sociala n-are voie sa impiedice o vanzare. Din acelasi
+     * motiv, apelantul o inveleste in try/catch.
+     *
+     * Cumparatorul se recunoaste dupa EMAIL. Daca n-are cont Tixello (cumparare
+     * de pe site, fara aplicatie), nu se intampla nimic — n-avem cui atribui
+     * invitatia, iar a o lega de altcineva ar fi o greseala mai mare decat a nu
+     * face nimic.
+     *
+     * Rezultatul e tot o CERERE, nu o prietenie. Un beneficiar poate fi un coleg
+     * caruia i-ai luat bilet o data.
+     *
+     * @param  array<int, array<string, mixed>>  $beneficiaries
+     * @return int cate invitatii s-au creat
+     */
+    public function inviteFromBeneficiaries(?string $buyerEmail, array $beneficiaries): int
+    {
+        $buyerEmail = mb_strtolower(trim((string) $buyerEmail));
+
+        if ($buyerEmail === '' || $beneficiaries === []) {
+            return 0;
+        }
+
+        $buyer = TixelloAccount::whereRaw('LOWER(email) = ?', [$buyerEmail])->first();
+
+        if (! $buyer) {
+            return 0;
+        }
+
+        $made = 0;
+
+        foreach ($beneficiaries as $b) {
+            $email = is_array($b) ? ($b['email'] ?? null) : null;
+
+            /* Beneficiarii fara email nu pot fi invitati — si e in regula:
+               multi sunt copii sau rude pentru care cumperi biletul, fara
+               adresa proprie. */
+            if (! is_string($email) || trim($email) === '') {
+                continue;
+            }
+
+            $result = $this->inviteByEmail($buyer, $email, is_array($b) ? ($b['name'] ?? null) : null, 'beneficiary');
+
+            if ($result['ok']) {
+                $made++;
+            }
+        }
+
+        return $made;
+    }
+
     /** @return array{ok: bool, message: string} */
     public function respond(TixelloAccount $me, int $friendshipId, bool $accept): array
     {
@@ -288,6 +343,85 @@ class FriendshipService
             ->where('account_b_id', $b)
             ->where('status', 'accepted')
             ->exists();
+    }
+
+    /**
+     * Prietenii care merg la un eveniment — DOAR cei care au ales să se vadă.
+     *
+     * Trei filtre, in ordinea asta, si niciunul nu e optional:
+     *   1. sa fie prieten acceptat;
+     *   2. sa aiba bilet platit la evenimentul asta;
+     *   3. sa fi permis sa se stie: regula lui generala, plus exceptia pe
+     *      evenimentul acesta, daca a pus una.
+     *
+     * Legatura dintre cont si bilet se face pe EMAIL. Nu e ideal — un om poate
+     * cumpara cu alta adresa — dar e singura care traverseaza toate lumile:
+     * comenzile stau in `orders` cu emailul cumparatorului, indiferent daca
+     * evenimentul e de tenant sau de marketplace. Alternativa, prin
+     * `tixello_account_links`, ar fi acoperit doar conturile deja legate.
+     *
+     * @return array<int, int> id-uri de conturi
+     */
+    public function attendingFriendIds(TixelloAccount $me, int $eventId): array
+    {
+        $friendIds = $this->friendIds($me)->all();
+
+        if ($friendIds === []) {
+            return [];
+        }
+
+        $accounts = TixelloAccount::whereIn('id', $friendIds)->get(['id', 'email', 'friends_visibility']);
+
+        /* Exceptiile per eveniment, pentru toti prietenii deodata: altfel ar fi
+           o interogare pe fiecare. */
+        $overrides = TixelloEventVisibility::whereIn('tixello_account_id', $friendIds)
+            ->where('event_id', $eventId)
+            ->pluck('visible', 'tixello_account_id');
+
+        $visible = $accounts->filter(function ($a) use ($overrides) {
+            /* Exceptia bate regula, in ambele sensuri: poti ascunde un eveniment
+               desi in general esti vizibil, si invers. */
+            if ($overrides->has($a->id)) {
+                return (bool) $overrides->get($a->id);
+            }
+
+            return $a->friends_visibility === 'friends';
+        });
+
+        if ($visible->isEmpty()) {
+            return [];
+        }
+
+        $emails = $visible->pluck('email')->map(fn ($e) => mb_strtolower((string) $e))->all();
+
+        try {
+            $buyers = \App\Models\Order::query()
+                ->where('event_id', $eventId)
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->pluck('customer_email')
+                ->map(fn ($e) => mb_strtolower((string) $e))
+                ->unique()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $going = array_intersect($emails, $buyers);
+
+        return $visible
+            ->filter(fn ($a) => in_array(mb_strtolower((string) $a->email), $going, true))
+            ->pluck('id')
+            ->all();
+    }
+
+    /** Vizibilitatea mea la un eveniment: exceptia, daca exista, altfel regula. */
+    public function visibilityFor(TixelloAccount $me, int $eventId): bool
+    {
+        $override = TixelloEventVisibility::where('tixello_account_id', $me->id)
+            ->where('event_id', $eventId)
+            ->value('visible');
+
+        return $override !== null ? (bool) $override : $me->friends_visibility === 'friends';
     }
 
     /** Perechea canonică: id mic întâi, mereu. */

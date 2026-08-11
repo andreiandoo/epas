@@ -204,6 +204,23 @@ class OrderController extends Controller
                 $orderEmailService = app(OrderEmailService::class);
                 $orderEmailService->sendOrderConfirmation($order, $tenant);
 
+                /* Beneficiarii cu email devin invitatii de prietenie in
+                   aplicatia Tixello — o CERERE, nu o prietenie gata facuta.
+                   Invelit in try/catch si pus la sfarsit: partea sociala n-are
+                   voie sa impiedice o vanzare. Daca nu exista cont Tixello pe
+                   emailul cumparatorului, serviciul nu face nimic. */
+                try {
+                    app(\App\Services\Friends\FriendshipService::class)->inviteFromBeneficiaries(
+                        $validated['customer_email'] ?? null,
+                        $validated['beneficiaries'] ?? [],
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Invitatiile din beneficiari au esuat', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 return response()->json([
                     'success' => true,
                     'data' => [

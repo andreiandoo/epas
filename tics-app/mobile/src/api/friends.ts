@@ -78,6 +78,22 @@ export const blockFriend = (accountId: number) => call<null>(`/friends/${account
 
 export const fetchFriendProfile = (accountId: number) => call<FriendCard>(`/friends/${accountId}/profile`);
 
+export type EventFriends = {
+  friends: FriendCard[];
+  count: number;
+  /** Dacă EU sunt vizibil la evenimentul ăsta — regula mea plus excepția lui. */
+  visible: boolean;
+};
+
+/** Cine dintre prieteni merge la un eveniment, şi cum sunt eu văzut acolo. */
+export const fetchEventFriends = (eventId: number) => call<EventFriends>(`/events/${eventId}/friends`);
+
+export type ReportReason = 'spam' | 'harassment' | 'fake_profile' | 'inappropriate' | 'other';
+
+/** Raportarea blochează automat contul — vezi FriendsController::report(). */
+export const reportAccount = (accountId: number, reason: ReportReason, note?: string) =>
+  call<null>('/reports', { method: 'POST', body: JSON.stringify({ subject_id: accountId, reason, note }) });
+
 /** `scope: 'global'` schimbă regula; `'event'` scrie o excepție pentru un eveniment. */
 export const setFriendsVisibility = (visible: boolean, eventId?: number) =>
   call<{ visibility?: string }>('/friends/visibility', {

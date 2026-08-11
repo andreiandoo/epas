@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TixelloAccount;
 use App\Models\TixelloEventVisibility;
 use App\Models\TixelloFriendInvite;
+use App\Models\TixelloReport;
 use App\Services\Friends\FriendshipService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -111,7 +112,10 @@ class FriendsController extends Controller
             $this->me($request),
             $request->input('email'),
             $request->input('name'),
-            'invite_code',
+            /* `email`, nu `invite_code`: sunt cai diferite de a ajunge prieteni
+               si merita masurate separat. Codul se da din mana in mana; adresa
+               se scrie deliberat. */
+            'email',
         );
 
         return response()->json(['success' => $result['ok'], 'message' => $result['message']], $result['ok'] ? 200 : 422);
@@ -212,6 +216,67 @@ class FriendsController extends Controller
         );
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * GET /api/app/events/{event}/friends
+     *
+     * Cine dintre prietenii mei merge, şi cum sunt eu văzut la evenimentul ăsta.
+     * Cele două sunt cerute mereu împreună de ecranul evenimentului, deci vin în
+     * acelaşi răspuns.
+     */
+    public function attending(Request $request, int $event): JsonResponse
+    {
+        $me = $this->me($request);
+
+        $ids = $this->friends->attendingFriendIds($me, $event);
+
+        $accounts = TixelloAccount::whereIn('id', $ids)->get();
+
+        return response()->json(['success' => true, 'data' => [
+            'friends' => $accounts->map(fn ($a) => $this->publicCard($a))->filter()->values(),
+            'count' => count($ids),
+            /* Starea MEA la acest eveniment, ca butonul din ecran să pornească
+               de la adevăr, nu de la o presupunere. */
+            'visible' => $this->friends->visibilityFor($me, $event),
+        ]]);
+    }
+
+    /**
+     * POST /api/app/reports  {subject_id, reason, note?}
+     *
+     * Raportarea unui cont. Blocarea rezolvă problema unui singur om — nu-l mai
+     * vezi. Raportarea e pentru cazul în care problema priveşte pe toată lumea
+     * şi trebuie să ajungă la cineva care poate lua o măsură.
+     *
+     * Se BLOCHEAZĂ automat odată cu raportarea: cine raportează pe cineva nu mai
+     * vrea, aproape sigur, să-l vadă până se rezolvă — iar a-l lăsa vizibil în
+     * tot acest timp ar fi un răspuns prost la o plângere.
+     */
+    public function report(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'subject_id' => 'required|integer',
+            'reason' => 'required|in:'.implode(',', TixelloReport::REASONS),
+            // `other` fără explicaţie nu poate fi triat de nimeni
+            'note' => 'required_if:reason,other|nullable|string|max:1000',
+        ]);
+
+        $me = $this->me($request);
+        $subjectId = (int) $validated['subject_id'];
+
+        if ($subjectId === $me->id) {
+            return response()->json(['success' => false, 'message' => 'Nu te poți raporta pe tine.'], 422);
+        }
+
+        TixelloReport::updateOrCreate(
+            ['reporter_id' => $me->id, 'subject_type' => 'account', 'subject_id' => $subjectId],
+            ['reason' => $validated['reason'], 'note' => $validated['note'] ?? null, 'status' => 'open'],
+        );
+
+        $this->friends->block($me, $subjectId);
+
+        return response()->json(['success' => true, 'message' => 'Raport trimis. Contul a fost și blocat.']);
     }
 
     /**
