@@ -11,7 +11,9 @@ import { ART, ARTX, EV, I, SOCIC, SOCLIST, SORTLBL, VEN, bgv } from '../../../mo
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvRow } from '../cards';
 import { BottomNav, BackTitle, CatalogLoading, DBar, MissingContent, SafeTop, SecH, TopBar } from '../kit';
-import { useCatalogArtist, useCatalogVenue } from '../catalogData';
+import { useCatalogArtist, useCatalogEvents, useCatalogSearch, useCatalogVenue } from '../catalogData';
+import { radarToUi, useRadarList } from '../radarData';
+import { CAT_TO_TYPE } from '../../../api/ticsRadar';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -37,7 +39,25 @@ export function Category({ id }: { id?: string }) {
   }, [cat, setCat]);
   useEffect(() => setPriceLive(f.maxPrice), [f.maxPrice]);
 
-  const base = useMemo(() => allEvents().filter((e) => cat === 'Toate' || e.cat === cat), [cat]);
+  /* Aceleasi doua surse ca pe Acasa, in aceeasi ordine: ale noastre intai,
+     Radarul dupa. Ecranul filtra pana acum datasetul prototipului, deci orice
+     categoria ai fi ales duceai la aceleasi trei evenimente inventate. */
+  const mine = useCatalogEvents({ limit: 40 });
+  const { items: radarItems } = useRadarList({ limit: 24, catKey: CAT_TO_TYPE[cat] });
+
+  const base = useMemo(() => {
+    const ours = mine.items.filter((e) => cat === 'Toate' || e.cat === cat);
+    const seen = new Set(ours.map((e) => String(e.s).toLowerCase()));
+    const fromRadar = radarItems
+      .filter((r) => !seen.has(r.s.toLowerCase()))
+      .map(radarToUi)
+      .filter((e) => cat === 'Toate' || e.cat === cat);
+
+    const pool = [...ours, ...fromRadar];
+
+    // Fara nimic real ramane datasetul prototipului, ca ecranul sa fie navigabil.
+    return pool.length ? pool : allEvents().filter((e) => cat === 'Toate' || e.cat === cat);
+  }, [cat, mine.items, radarItems]);
   const cities = useMemo(() => [...new Set(base.map((e) => e.city))], [base]);
 
   let list = base
@@ -162,7 +182,7 @@ const RECENT = ['Coldplay', 'Salina Turda', 'Nordvale', 'Teatru'];
 const TRENDING = ['Nordvale Festival 2026', 'Coldplay', 'Salina Turda', 'ATV Adventure', 'Smiley Live'];
 
 export function Search() {
-  const { back } = useNav();
+  const { back, go } = useNav();
   const [q, setQ] = useState('');
   const input = useRef<HTMLInputElement>(null);
 
@@ -171,13 +191,28 @@ export function Search() {
     return () => clearTimeout(t);
   }, []);
 
-  const v = q.toLowerCase();
-  const hits = v
-    ? allEvents().filter(
-        (e) => e.t.toLowerCase().includes(v) || e.cat.toLowerCase().includes(v) || e.city.toLowerCase().includes(v),
-      )
-    : [];
-  const results = v ? (hits.length ? hits : allEvents().slice(0, 3)) : [];
+  const v = q.trim();
+
+  /* Trei surse, in ordinea in care conteaza:
+       1. catalogul propriu (evenimente, artisti, locatii) — de aici se cumpara;
+       2. Radarul TICS — comparatie de preturi pe alte platforme;
+       3. datasetul prototipului, DOAR cand primele doua n-au nimic si nici nu
+          mai asteptam un raspuns; altfel ecranul ar parea gol o clipa.
+     Cautarea din prototip filtra doar datasetul demo, deci orice termen real
+     intorcea fie nimic, fie primele trei evenimente inventate — mai rau decat
+     un raspuns gol, pentru ca parea un rezultat. */
+  const mine = useCatalogSearch(v);
+  const { items: radarHits, loading: radarLoading } = useRadarList({ limit: 10, search: v.length > 1 ? v : undefined });
+
+  const catalogEvents = mine.data?.events ?? [];
+  const catalogKeys = new Set(catalogEvents.map((e) => String(e.s).toLowerCase()));
+  const radarEvents = v.length > 1 ? radarHits.filter((r) => !catalogKeys.has(r.s.toLowerCase())).map(radarToUi) : [];
+
+  const results: UiEvent[] = [...catalogEvents, ...radarEvents];
+  const artists = mine.data?.artists ?? [];
+  const venues = mine.data?.venues ?? [];
+  const searching = mine.loading || radarLoading;
+  const empty = v.length > 1 && !searching && !results.length && !artists.length && !venues.length;
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -251,11 +286,81 @@ export function Search() {
             <button className="chip">Experiențe</button>
             <button className="chip">Artiști</button>
           </div>
+          {artists.length ? (
+            <>
+              <div className="h2" style={sx('font-size:14px;margin-bottom:10px')}>
+                Artiști
+              </div>
+              <div className="scroll-x" style={sx('padding:0 0 14px;margin:0')}>
+                {artists.map((a) => (
+                  <div
+                    key={a.id}
+                    onClick={() => go('artist', { id: a.id })}
+                    style={sx('min-width:88px;text-align:center;cursor:pointer')}
+                  >
+                    <div style={{ width: 68, height: 68, borderRadius: 22, margin: '0 auto', background: a.bg }} />
+                    <div style={sx('font-weight:500;font-size:12.5px;margin-top:7px')}>{a.name}</div>
+                    <div style={sx('font-size:10.5px;color:var(--muted)')}>{a.role}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {venues.length ? (
+            <>
+              <div className="h2" style={sx('font-size:14px;margin-bottom:10px')}>
+                Locații
+              </div>
+              <div style={sx('display:flex;flex-direction:column;gap:9px;margin-bottom:16px')}>
+                {venues.map((ven) => (
+                  <div
+                    key={ven.id}
+                    className="listitem"
+                    onClick={() => go('venue', { id: ven.id })}
+                    style={sx('cursor:pointer;padding:10px')}
+                  >
+                    <div style={{ width: 40, height: 40, borderRadius: 13, flex: 'none', background: ven.bg }} />
+                    <div style={sx('flex:1;min-width:0')}>
+                      <div style={sx('font-weight:600;font-size:13.5px')}>{ven.name}</div>
+                      <div className="muted" style={sx('font-size:11.5px')}>
+                        {ven.city}
+                      </div>
+                    </div>
+                    <span className="muted">
+                      <Ic svg={I.arrow} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {results.length ? (
+            <div className="h2" style={sx('font-size:14px;margin-bottom:10px')}>
+              Evenimente
+            </div>
+          ) : null}
           <div style={sx('display:flex;flex-direction:column;gap:11px')}>
             {results.map((ev) => (
-              <EvRow key={ev.id} ev={ev as UiEvent} />
+              <EvRow key={`${ev.id}-${ev.s}`} ev={ev as UiEvent} />
             ))}
           </div>
+
+          {searching && !results.length ? (
+            <div style={sx('display:flex;flex-direction:column;gap:10px')}>
+              <div className="sk" style={sx('height:86px;border-radius:20px')} />
+              <div className="sk" style={sx('height:86px;border-radius:20px')} />
+            </div>
+          ) : null}
+
+          {empty ? (
+            <div className="muted" style={sx('font-size:12.5px;text-align:center;padding:26px 0;line-height:1.5')}>
+              Nimic pentru „{v}".
+              <br />
+              Încearcă numele artistului, al locației sau al orașului.
+            </div>
+          ) : null}
         </div>
       )}
     </div>

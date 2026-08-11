@@ -21,6 +21,7 @@ import {
   fetchCatalogEvent,
   fetchCatalogEvents,
   fetchCatalogVenue,
+  searchCatalog,
   type CatalogArtist,
   type CatalogEvent,
   type CatalogEventBrief,
@@ -203,8 +204,10 @@ export function toEventBrief(e: CatalogEventBrief): UiEvent {
     id: String(e.id),
     s: e.title ?? '',
     t: e.title ?? '',
-    type: 'event',
-    cat: 'Eveniment',
+    /* Categoria decide unde apare evenimentul; „Experiențe" e singura care
+       schimba si tipul, fiindca ecranele o trateaza altfel (data, extra-optiuni). */
+    type: e.category === 'Experiențe' ? 'experience' : 'event',
+    cat: e.category ?? 'Eveniment',
     city: e.city ?? e.venue?.city ?? '',
     d: e.date_label ?? '',
     mon: e.month ?? '',
@@ -348,6 +351,74 @@ export function useCatalogEvents(opts: { city?: string; limit?: number } = {}) {
   }, [city, limit]);
 
   return { items, loading };
+}
+
+export type SearchResults = {
+  events: UiEvent[];
+  artists: { id: string; name: string; role: string; bg: string }[];
+  venues: { id: string; name: string; city: string; bg: string }[];
+};
+
+/**
+ * Cautare in catalogul propriu, cu intarziere.
+ *
+ * 280 ms dupa ultima tasta: la fiecare caracter ar insemna o cerere per litera,
+ * iar raspunsurile ar putea sosi in alta ordine decat au plecat si ecranul ar
+ * afisa rezultatele unei cautari abandonate. Cererea anterioara se si anuleaza.
+ */
+export function useCatalogSearch(q: string): { data: SearchResults | null; loading: boolean } {
+  const [data, setData] = useState<SearchResults | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const term = q.trim();
+
+    if (term.length < 2) {
+      setData(null);
+      setLoading(false);
+
+      return;
+    }
+
+    const ctrl = new AbortController();
+    let alive = true;
+    setLoading(true);
+
+    const timer = setTimeout(() => {
+      void searchCatalog(term, ctrl.signal).then((r) => {
+        if (!alive) return;
+
+        setData(
+          r
+            ? {
+                events: r.events.map(toEventBrief),
+                artists: r.artists.map((a) => ({
+                  id: String(a.id),
+                  name: a.name ?? '',
+                  role: a.role ?? '',
+                  bg: bgFor(a.image, a.id),
+                })),
+                venues: r.venues.map((v) => ({
+                  id: String(v.id),
+                  name: v.name ?? '',
+                  city: v.city ?? '',
+                  bg: bgFor(v.image, v.id),
+                })),
+              }
+            : null,
+        );
+        setLoading(false);
+      });
+    }, 280);
+
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [q]);
+
+  return { data, loading };
 }
 
 const adaptArtist = (a: CatalogArtist) => ({ rec: toArtistRecord(a), events: a.events.map(toEventBrief) });

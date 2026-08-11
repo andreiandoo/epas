@@ -71,7 +71,7 @@ class CatalogController extends Controller
         $events = Event::query()
             ->where('is_published', true)
             ->upcoming()
-            ->with(['venue', 'ticketTypes'])
+            ->with(['venue', 'ticketTypes', 'eventTypes'])
             /* Intai cele scoase in fata de organizator, apoi dupa cat de
                aproape sunt: un eveniment de saptamana viitoare e mai util
                decat unul de peste opt luni. */
@@ -95,6 +95,78 @@ class CatalogController extends Controller
             ->all();
 
         return response()->json(['success' => true, 'data' => $events]);
+    }
+
+    /**
+     * Cautare in catalogul propriu: evenimente, artisti, locatii.
+     *
+     * Se cauta pe TEXT SIMPLU, cu `LIKE`, si asta e o alegere, nu o lene:
+     * `events.title` si `venues.name` sunt coloane traductibile (JSON pe unele
+     * instalari, TEXT pe productie — vezi driftul cunoscut de la `venues.name`),
+     * iar un index de cautare full-text peste ele ar trebui intretinut separat
+     * pentru fiecare limba. La dimensiunea catalogului, `LIKE` pe cateva zeci de
+     * mii de randuri e sub 50 ms si nu poate iesi din sincron.
+     *
+     * `CAST(... AS TEXT)` e obligatoriu: fara el, Postgres refuza `jsonb LIKE
+     * text` si intreaga cautare crapa pe instalarile unde coloana chiar e JSON.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json(['success' => true, 'data' => ['events' => [], 'artists' => [], 'venues' => []]]);
+        }
+
+        $like = '%'.mb_strtolower($q).'%';
+        $limit = max(1, min((int) $request->query('limit', 10), 25));
+
+        $events = Event::query()
+            ->where('is_published', true)
+            ->upcoming()
+            ->whereRaw('LOWER(CAST(title AS TEXT)) LIKE ?', [$like])
+            ->with(['venue', 'ticketTypes', 'eventTypes'])
+            ->orderByRaw('COALESCE(event_date, range_start_date) ASC NULLS LAST')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Event $e) => $this->eventPayload($e, full: false))
+            ->values()
+            ->all();
+
+        $artists = Artist::query()
+            ->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', [$like])
+            ->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Artist $a) => [
+                'id' => $a->id,
+                'slug' => $a->slug,
+                'name' => PlainText::of($a->name),
+                'role' => $a->role ?? null,
+                'image' => $this->url($a->portrait_url) ?? $this->url($a->main_image_url),
+            ])
+            ->values()
+            ->all();
+
+        $venues = Venue::query()
+            ->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', [$like])
+            ->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Venue $v) => [
+                'id' => $v->id,
+                'slug' => $v->slug,
+                'name' => PlainText::of($v->name),
+                'city' => $this->text($v->city),
+                'image' => $this->url($v->meta['portrait'] ?? null) ?? $this->url($v->image_url),
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => ['events' => $events, 'artists' => $artists, 'venues' => $venues],
+        ]);
     }
 
     public function artist(Request $request, string $key): JsonResponse
@@ -248,7 +320,7 @@ class CatalogController extends Controller
     {
         try {
             return $query
-                ->with(['venue'])
+                ->with(['venue', 'eventTypes'])
                 ->when(
                     true,
                     fn ($q) => $q->whereDate('event_date', '>=', now()->toDateString()),
@@ -294,6 +366,12 @@ class CatalogController extends Controller
                 'address' => $this->text($venue->address),
             ] : null,
             'poster' => $this->url($event->poster_url) ?? $this->url($event->hero_image_url),
+            /* Si in forma scurta: ecranele de categorie si de descoperire
+               filtreaza dupa ea, iar fara ea toate evenimentele noastre cadeau
+               intr-o singura galeata numita „Eveniment". */
+            'category' => $event->relationLoaded('eventTypes')
+                ? PlainText::of($event->eventTypes->first()?->name)
+                : null,
             'price_from' => $this->priceFrom($event),
             'is_cancelled' => (bool) ($event->cancelled_at ?? false),
             'is_postponed' => (bool) ($event->postponed_at ?? false),
@@ -306,9 +384,6 @@ class CatalogController extends Controller
         return $base + [
             'hero' => $this->url($event->hero_image_url) ?? $this->url($event->poster_url),
             'gallery' => $this->gallery($event->gallery ?? null),
-            'category' => $event->relationLoaded('eventTypes')
-                ? PlainText::of($event->eventTypes->first()?->name)
-                : null,
             'organizer' => $event->relationLoaded('marketplaceOrganizer') && $event->marketplaceOrganizer
                 ? PlainText::of($event->marketplaceOrganizer->name)
                 : null,

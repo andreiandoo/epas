@@ -54,6 +54,31 @@ type ProtoSt = {
 const seed = PROTO_ST as unknown as ProtoSt;
 
 /** ST.catF din prototip — filtrele ecranului de categorie. */
+/** Preferintele de continut, pastrate intre porniri.
+    Sunt o alegere pe care utilizatorul o face o data si care hraneste
+    recomandarile; resetate la fiecare pornire, ecranul de preferinte devine un
+    formular fara efect. */
+const PREFS_LS = 'tixello.prefs';
+const readPrefs = (seedPrefs: string[]): string[] => {
+  try {
+    const raw = localStorage.getItem(PREFS_LS);
+    if (!raw) return [...seedPrefs];
+
+    const parsed = JSON.parse(raw);
+
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [...seedPrefs];
+  } catch {
+    return [...seedPrefs];
+  }
+};
+const writePrefs = (v: string[]) => {
+  try {
+    localStorage.setItem(PREFS_LS, JSON.stringify(v));
+  } catch {
+    /* fara persistenta, raman pe sesiunea curenta */
+  }
+};
+
 /** Orasul ales, pastrat intre porniri. */
 const CITY_LS = 'tixello.city';
 const readCity = (): string => {
@@ -136,7 +161,7 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useClient = create<ClientState>((set, get) => ({
   prefs: [...seed.prefs],
-  prefsSel: [...seed.prefsSel],
+  prefsSel: readPrefs(seed.prefsSel),
   ev: seed.ev,
   seats: [...seed.seats],
   obStep: seed.obStep,
@@ -226,7 +251,12 @@ export const useClient = create<ClientState>((set, get) => ({
     }),
 
   togglePref: (p) =>
-    set((s) => ({ prefsSel: s.prefsSel.includes(p) ? s.prefsSel.filter((x) => x !== p) : [...s.prefsSel, p] })),
+    set((s) => {
+      const next = s.prefsSel.includes(p) ? s.prefsSel.filter((x) => x !== p) : [...s.prefsSel, p];
+      writePrefs(next);
+
+      return { prefsSel: next };
+    }),
   setObStep: (obStep) => set({ obStep }),
   cardPrimary: (i) => set((s) => ({ cards: s.cards.map((c, k) => ({ ...c, primary: k === i })) })),
   cardDel: (i) => set((s) => ({ cards: s.cards.filter((_, k) => k !== i) })),

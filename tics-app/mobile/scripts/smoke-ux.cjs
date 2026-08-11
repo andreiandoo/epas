@@ -176,6 +176,41 @@ const check = (name, ok, extra = '') => {
   check('back din Portofel duce in Profil', onProfile);
   check('scroll-ul e pastrat la back', Math.abs(restored - scrolled) < 40, `${scrolled} -> ${restored}`);
 
+  /* ---------- preferintele se retin intre porniri ---------- */
+  /* Profil -> Setări cont -> Preferințele mele. `.bnav .nav` are patru intrari
+     (butonul din mijloc e `.fab`, nu `.nav`), deci profilul e ultima. */
+  await page.evaluate(() => {
+    const navs = document.querySelectorAll('.bnav .nav');
+    navs[navs.length - 1]?.click();
+  });
+  await wait(1000);
+  const prefBefore = await page.evaluate(() => localStorage.getItem('tixello.prefs'));
+  await clickText('Setări cont');
+  await wait(900);
+  await page.evaluate(() => {
+    const el = [...document.querySelectorAll('.listitem')].find((e) => /Preferințele mele/.test(e.textContent ?? ''));
+    el?.click();
+  });
+  await wait(1200);
+  const toggled = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button.pref')].find((x) => !x.classList.contains('on'));
+    const label = b?.textContent?.trim();
+    b?.click();
+
+    return label ?? '';
+  });
+  await wait(500);
+  const prefAfter = await page.evaluate(() => localStorage.getItem('tixello.prefs'));
+  check(
+    'preferintele se scriu in localStorage',
+    prefAfter !== null && prefAfter !== prefBefore,
+    `a bifat „${toggled}"`,
+  );
+
+  /* ---------- orasul ales se retine ---------- */
+  const savedCity = await page.evaluate(() => localStorage.getItem('tixello.city'));
+  check('orasul ales e pastrat intre porniri', savedCity !== null, `„${savedCity}"`);
+
   console.log(errors.length ? '\nERORI:\n' + errors.join('\n') : '\nNicio eroare de pagina.');
   console.log(failures ? `\n${failures} verificari picate.` : '\nToate verificarile au trecut.');
   await browser.close();

@@ -34,6 +34,7 @@ export type CatalogEventBrief = {
   city: string | null;
   venue: CatalogVenueRef | null;
   poster: string | null;
+  category: string | null;
   price_from: number | null;
   is_cancelled: boolean;
   is_postponed: boolean;
@@ -76,7 +77,6 @@ export type CatalogArtistRef = {
 export type CatalogEvent = CatalogEventBrief & {
   hero: string | null;
   gallery: string[];
-  category: string | null;
   organizer: string | null;
   short_description: string | null;
   description: string | null;
@@ -162,6 +162,16 @@ export const fetchCatalogEvents = (opts: { city?: string; limit?: number } = {},
 
   return get<CatalogEventBrief[]>(`/tenant-client/catalog/events${qs ? `?${qs}` : ''}`, signal);
 };
+
+export type CatalogSearch = {
+  events: CatalogEventBrief[];
+  artists: { id: number; slug: string | null; name: string | null; role: string | null; image: string | null }[];
+  venues: { id: number; slug: string | null; name: string | null; city: string | null; image: string | null }[];
+};
+
+/** Cautare in catalogul propriu. Radarul se cauta separat, in client. */
+export const searchCatalog = (q: string, signal?: AbortSignal) =>
+  get<CatalogSearch>(`/tenant-client/catalog/search?q=${encodeURIComponent(q)}`, signal);
 
 export const fetchCatalogArtist = (id: string | number, signal?: AbortSignal) =>
   get<CatalogArtist>(`/tenant-client/catalog/artists/${key(id)}`, signal);

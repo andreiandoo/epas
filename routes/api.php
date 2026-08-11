@@ -4127,6 +4127,9 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/catalog/events', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'events'])
         ->name('api.tenant-client.catalog.events');
 
+    Route::get('/catalog/search', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'search'])
+        ->name('api.tenant-client.catalog.search');
+
     Route::get('/catalog/events/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'event'])
         ->name('api.tenant-client.catalog.event');
 

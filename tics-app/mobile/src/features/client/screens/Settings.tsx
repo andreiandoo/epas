@@ -15,6 +15,7 @@ import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
 import { usePaymentMethods } from '../accountData';
 import { addPaymentMethod, isLoggedIn } from '../../../api/customer';
+import { APP_VERSION } from '../../../version';
 
 /* ---------- fld(label, val, ph, type) ----------
    `onChange` e optional: campurile decorative din prototip raman exact cum erau,
@@ -107,7 +108,7 @@ const SECTIONS: [string, Row[]][] = [
       ['📄', 'Termeni & condiții', '›', 'setTerms'],
       ['🛡️', 'Politica de confidențialitate', '›', 'setPrivacy'],
       ['⭐', 'Evaluează aplicația', '›', 'setRate'],
-      ['ℹ️', 'Versiune', 'v1.0.0'],
+      ['ℹ️', 'Versiune', APP_VERSION],
     ],
   ],
 ];
@@ -232,7 +233,11 @@ export function SetPersonal() {
         <Fld label="Email" val="andrei@tixello.ro" ph="email@exemplu.ro" type="email" />
         <Fld label="Telefon" val="0722 145 388" ph="07xx xxx xxx" type="tel" />
         <Fld label="Oraș" val="Cluj-Napoca" ph="Orașul tău" />
-        <Fld label="Data nașterii" val="12.05.1994" ph="ZZ.LL.AAAA" />
+        {/* `type=date` — selectorul nativ al telefonului. Cu un camp de text
+            utilizatorul trebuia sa scrie singur punctele, si orice alta forma
+            („12/05/1994", „12 mai 1994") ar fi fost respinsa la salvare fara
+            sa-i spuna nimeni de ce. */}
+        <Fld label="Data nașterii" val="1994-05-12" type="date" />
       </div>
       <div className="pad" style={sx('margin-top:6px')}>
         <button className="cta" onClick={() => { showToast('Salvat'); back(); }}>
@@ -465,6 +470,15 @@ export function SetAddCard() {
   const [holder, setHolder] = useState('');
   const [busy, setBusy] = useState(false);
 
+  /* Cifrele scrise, grupate cate patru, cu restul locurilor ca puncte —
+     lungimea cardului ramane constanta, deci mock-up-ul nu se lungeste si nu se
+     scurteaza in timp ce scrii. */
+  const cardDigits = (() => {
+    const digits = num.replace(/\D/g, '').slice(0, 16).padEnd(16, '•');
+
+    return (digits.match(/.{1,4}/g) ?? []).join(' ');
+  })();
+
   /* Cand exista cont, cardul se salveaza pe server (doar brand + ultimele 4
      cifre — restul nu pleaca nicaieri). Fara cont ramane comportamentul din
      prototip: doar confirmarea vizuala. */
@@ -492,10 +506,17 @@ export function SetAddCard() {
             <span style={sx('font-weight:600;font-size:14px')}>Card nou</span>
             <Ic svg={I.wallet} />
           </div>
-          <div style={sx('font-size:19px;letter-spacing:2px;margin-top:22px;font-weight:500')}>•••• •••• •••• ••••</div>
+          {/* Mock-up-ul urmareste ce se scrie: cifrele apar pe card pe masura
+              ce sunt introduse, ca sa se vada imediat o greseala de tastare
+              inainte de a apasa „Salvează". */}
+          <div style={sx('font-size:19px;letter-spacing:2px;margin-top:22px;font-weight:500;font-variant-numeric:tabular-nums')}>
+            {cardDigits}
+          </div>
           <div className="between" style={sx('margin-top:10px;font-size:11px;opacity:.85')}>
-            <span>NUME PRENUME</span>
-            <span>MM/AA</span>
+            <span style={sx('white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%')}>
+              {holder.trim() ? holder.toUpperCase() : 'NUME PRENUME'}
+            </span>
+            <span>{exp.trim() || 'MM/AA'}</span>
           </div>
         </div>
       </div>
@@ -529,21 +550,47 @@ export function SetAddCard() {
 export function SetBilling() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
+  /* Butoanele erau decorative: primul avea clasa „activ" scrisa fix, deci
+     „Companie" nu se putea alege niciodata. Alegerea schimba si campurile —
+     o firma are denumire si CUI, nu nume si CNP. */
+  const [kind, setKind] = useState<'person' | 'company'>('person');
+  const isCompany = kind === 'company';
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <SetHead title="Date de facturare" />
       <div className="pad" style={sx('margin-top:14px')}>
         <div className="row" style={sx('gap:9px')}>
-          {['Persoană fizică', 'Companie'].map((t, i) => (
-            <button key={t} className={cn('chip', i === 0 && 'ind on')} style={sx('flex:1;justify-content:center')}>
-              {t}
+          {([
+            ['person', 'Persoană fizică'],
+            ['company', 'Companie'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              className={cn('chip', kind === value && 'ind on')}
+              onClick={() => setKind(value)}
+              style={sx('flex:1;justify-content:center')}
+            >
+              {label}
             </button>
           ))}
         </div>
       </div>
       <div className="pad">
-        <Fld label="Nume complet" val="Andrei Popescu" ph="Nume complet" />
-        <Fld label="CNP / CIF" ph="Cod fiscal" />
+        {isCompany ? (
+          <>
+            <Fld label="Denumire firmă" ph="ex: Tixello SRL" />
+            <Fld label="CUI / CIF" ph="RO12345678" />
+            <Fld label="Nr. Reg. Comerțului" ph="J12/345/2020" />
+            <Fld label="Bancă" ph="Denumirea băncii" />
+            <Fld label="IBAN" ph="RO49 AAAA 1B31 0075 9384 0000" />
+          </>
+        ) : (
+          <>
+            <Fld label="Nume complet" val="Andrei Popescu" ph="Nume complet" />
+            <Fld label="CNP" ph="Cod numeric personal" />
+          </>
+        )}
         <Fld label="Adresă" val="Str. Memorandumului 28" ph="Stradă, număr" />
         <div className="row" style={sx('gap:11px')}>
           <div style={sx('flex:1')}>

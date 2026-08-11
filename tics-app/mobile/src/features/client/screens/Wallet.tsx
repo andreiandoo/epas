@@ -2,12 +2,13 @@
    PORTOFEL — port 1:1 al lui S.wallet() (client-app.html, linia 974),
    plus S.topup() si S.payqr() + INIT.payqr, care fac parte din acelasi flux.
    ========================================================= */
-import { Ic, sx } from '../../../design/sx';
+import { useState } from 'react';
+import { Ic, cn, sx } from '../../../design/sx';
 import { I, TX, lei } from '../../../mock/prototype';
 import { BottomNav, SafeTop, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
-import { useAccountStats, useWallet } from '../accountData';
+import { useAccountStats, usePaymentMethods, useWallet } from '../accountData';
 import { Qr } from '../qr';
 
 /* ---------- S.wallet ---------- */
@@ -162,9 +163,21 @@ export function Wallet() {
 const AMOUNTS = ['50', '100', '200', '300', '500', 'Alta'];
 
 export function Topup() {
-  const { back } = useNav();
+  const { back, go } = useNav();
   const balance = useClient((s) => s.balance);
   const showToast = useClient((s) => s.showToast);
+  const cards = usePaymentMethods();
+
+  /* Sumele erau butoane fara stare: al treilea avea clasa „activ" scrisa fix,
+     deci nu se putea alege alta si nici o suma proprie. */
+  const [amount, setAmount] = useState<number>(200);
+  const [custom, setCustom] = useState('');
+  const [customOpen, setCustomOpen] = useState(false);
+
+  const chosen = customOpen ? Number(custom.replace(',', '.')) || 0 : amount;
+  const valid = chosen >= 10 && chosen <= 5000;
+
+  const primary = cards.cards?.find((c) => c.is_default) ?? cards.cards?.[0] ?? null;
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -186,27 +199,73 @@ export function Topup() {
           Alege suma
         </div>
         <div style={sx('display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px')}>
-          {AMOUNTS.map((v, i) => (
-            <button
-              key={v}
-              className={`chip ${i === 2 ? 'ind on' : ''}`}
-              style={sx('padding:16px 0;justify-content:center;font-size:15px;border-radius:16px')}
-            >
-              {v === 'Alta' ? v : v + ' lei'}
-            </button>
-          ))}
+          {AMOUNTS.map((v) => {
+            const isOther = v === 'Alta';
+            const on = isOther ? customOpen : !customOpen && amount === Number(v);
+
+            return (
+              <button
+                key={v}
+                className={cn('chip', on && 'ind on')}
+                onClick={() => {
+                  if (isOther) {
+                    setCustomOpen(true);
+
+                    return;
+                  }
+
+                  setCustomOpen(false);
+                  setAmount(Number(v));
+                }}
+                style={sx('padding:16px 0;justify-content:center;font-size:15px;border-radius:16px')}
+              >
+                {isOther ? v : `${v} lei`}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="card" style={sx('margin-top:18px;padding:13px;display:flex;align-items:center;gap:12px')}>
+        {customOpen ? (
+          <div style={sx('margin-top:12px')}>
+            <div className="label">Suma dorită (10 – 5.000 lei)</div>
+            <div className="field">
+              <input
+                autoFocus
+                inputMode="decimal"
+                value={custom}
+                placeholder="ex: 250"
+                onChange={(e) => setCustom(e.target.value)}
+              />
+              <span className="muted" style={sx('font-size:12px')}>
+                lei
+              </span>
+            </div>
+            {custom && !valid ? (
+              <div style={sx('font-size:11.5px;color:var(--red);margin-top:6px')}>
+                Introdu o sumă între 10 și 5.000 lei.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* „Schimbă" nu facea nimic. Duce acum la lista de carduri, care e
+            singurul loc unde se poate alege sau adauga unul. */}
+        <div
+          className="card"
+          onClick={() => go('setPayment')}
+          style={sx('margin-top:18px;padding:13px;display:flex;align-items:center;gap:12px;cursor:pointer')}
+        >
           <div
-            style={sx('width:44px;height:30px;border-radius:7px;background:#1a1f71;color:#fff;display:grid;place-items:center;font-weight:600;font-size:11px;font-style:italic')}
+            style={sx('width:44px;height:30px;border-radius:7px;background:#1a1f71;color:#fff;display:grid;place-items:center;font-weight:600;font-size:10px;font-style:italic;text-transform:uppercase')}
           >
-            VISA
+            {(primary?.brand ?? 'card').slice(0, 4)}
           </div>
           <div style={sx('flex:1')}>
-            <div style={sx('font-weight:500;font-size:13px')}>•••• 8756</div>
+            <div style={sx('font-weight:500;font-size:13px')}>
+              {primary ? `•••• ${primary.last4}` : 'Niciun card salvat'}
+            </div>
             <div className="muted" style={sx('font-size:11px')}>
-              Card primar
+              {primary ? (primary.is_default ? 'Card principal' : 'Card salvat') : 'Adaugă unul ca să poți încărca'}
             </div>
           </div>
           <span className="muted">Schimbă ›</span>
@@ -214,14 +273,17 @@ export function Topup() {
       </div>
 
       <div className="dock">
+        {/* Plata inca nu exista: nu e integrat niciun procesator, deci nu se
+            pot lua bani. Butonul spune asta in loc sa arate un mesaj de succes
+            pentru o incarcare care nu s-a intamplat — utilizatorul ar fi crezut
+            ca are sold si ar fi descoperit contrariul la casa. */}
         <button
           className="cta"
-          onClick={() => {
-            back();
-            showToast('Portofel încărcat cu 200 lei');
-          }}
+          disabled={!valid}
+          onClick={() => showToast('Încărcarea portofelului nu este încă disponibilă')}
+          style={valid ? undefined : sx('opacity:.55')}
         >
-          Încarcă 200 lei
+          {valid ? `Încarcă ${chosen} lei` : 'Alege o sumă'}
         </button>
       </div>
     </div>
