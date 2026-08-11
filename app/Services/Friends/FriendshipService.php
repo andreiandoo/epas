@@ -247,14 +247,24 @@ class FriendshipService
             ->delete() > 0;
     }
 
-    /** Id-urile prietenilor acceptati. */
+    /**
+     * Id-urile prietenilor acceptati.
+     *
+     * `toBase()` NU e cosmetic. `Eloquent\Collection::map()` intoarce o colectie
+     * de baza doar daca rezultatul contine ceva ce nu e model — la o colectie
+     * GOALA n-are ce contine, deci ramane Eloquent. Iar `merge()` pe o colectie
+     * Eloquent cheama `getKey()` pe fiecare element, ceea ce pe niste intregi
+     * inseamna „Call to a member function getKey() on int".
+     * Adica: mergea cat timp aveai prieteni si crapa fix cand n-aveai niciunul.
+     */
     public function friendIds(TixelloAccount $me): Collection
     {
         return TixelloFriendship::where('status', 'accepted')
             ->where(fn ($q) => $q->where('account_a_id', $me->id)->orWhere('account_b_id', $me->id))
             ->get()
             ->map(fn (TixelloFriendship $f) => $f->account_a_id === $me->id ? $f->account_b_id : $f->account_a_id)
-            ->values();
+            ->values()
+            ->toBase();
     }
 
     /** @return array{pending_in: Collection, pending_out: Collection} */

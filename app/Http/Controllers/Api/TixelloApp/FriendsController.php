@@ -51,9 +51,13 @@ class FriendsController extends Controller
         $friendIds = $this->friends->friendIds($me);
         $pending = $this->friends->pending($me);
 
+        /* `toBase()` peste tot: vezi FriendshipService::friendIds() — o colectie
+           Eloquent GOALA ramane Eloquent chiar dupa `map()`, iar `merge()` pe ea
+           cheama `getKey()` pe elemente. Cu id-uri intregi, asta crapa exact in
+           cazul in care listele sunt goale, adica la primul utilizator. */
         $ids = $friendIds
-            ->merge($pending['pending_in']->map(fn ($f) => $f->otherId($me->id)))
-            ->merge($pending['pending_out']->map(fn ($f) => $f->otherId($me->id)))
+            ->merge($pending['pending_in']->map(fn ($f) => $f->otherId($me->id))->toBase())
+            ->merge($pending['pending_out']->map(fn ($f) => $f->otherId($me->id))->toBase())
             ->unique();
 
         $accounts = TixelloAccount::whereIn('id', $ids)->get()->keyBy('id');
