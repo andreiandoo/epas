@@ -21,6 +21,18 @@ class EditOrganizerInvoice extends EditRecord
 
     protected static string $resource = OrganizerInvoiceResource::class;
 
+    /**
+     * The form is display-only now (a single HTML placeholder with all
+     * the invoice data laid out). Save/Cancel at the bottom would do
+     * nothing and confuse operators — the real actions (Trimite proformă,
+     * Trimite factură fiscală, Marchează Achitată, Trimite eFactura, etc.)
+     * live in getHeaderActions() below.
+     */
+    protected function getFormActions(): array
+    {
+        return [];
+    }
+
     protected function getHeaderActions(): array
     {
         return [

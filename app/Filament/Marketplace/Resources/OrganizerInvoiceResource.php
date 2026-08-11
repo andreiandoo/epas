@@ -43,136 +43,14 @@ class OrganizerInvoiceResource extends Resource
 
     public static function form(Schema $form): Schema
     {
+        // Single read-only display section. All editing paths that used to
+        // live on this form (mark paid, send to Oblio, resend email, etc.)
+        // are now header actions on EditOrganizerInvoice — the form itself
+        // exists only to render what's on the invoice, not to mutate it.
         return $form
             ->columns(1)
             ->schema([
                 Section::make('Detalii factură')
-                    ->schema([
-                        Forms\Components\TextInput::make('number')
-                            ->label('Număr factură')
-                            ->disabled(),
-
-                        // Series + number returned by Oblio when the fiscal
-                        // invoice was issued. Pulled straight from
-                        // meta.accounting.invoice_number (e.g. "AMB605").
-                        // Empty until "Trimite factură fiscală" has been run.
-                        Forms\Components\Placeholder::make('oblio_invoice_number')
-                            ->label('Serie/număr Oblio (fiscală)')
-                            ->content(function ($record): string {
-                                if (!$record) return '—';
-                                $ref = $record->meta['accounting']['invoice_number']
-                                    ?? $record->meta['accounting']['external_ref']
-                                    ?? null;
-                                return $ref ? (string) $ref : '—';
-                            }),
-
-                        // Same for a proforma issued via Oblio. Rendered so
-                        // the operator can cross-check what Oblio returned
-                        // without opening the "Date/emitent/client/articole"
-                        // preview blob below.
-                        Forms\Components\Placeholder::make('oblio_proforma_number')
-                            ->label('Serie/număr Oblio (proformă)')
-                            ->content(function ($record): string {
-                                if (!$record) return '—';
-                                $ref = $record->meta['accounting_proforma']['invoice_number']
-                                    ?? $record->meta['accounting_proforma']['external_ref']
-                                    ?? null;
-                                return $ref ? (string) $ref : '—';
-                            }),
-
-                        Forms\Components\Select::make('marketplace_organizer_id')
-                            ->label('Organizator')
-                            ->relationship('organizer', 'name')
-                            ->disabled()
-                            ->preload(),
-
-                        Forms\Components\Select::make('type')
-                            ->label('Tip')
-                            ->options([
-                                'proforma' => 'Proforma',
-                                'fiscal' => 'Fiscală',
-                            ])
-                            ->required(),
-
-                        Forms\Components\Select::make('status')
-                            ->label('Status')
-                            ->options([
-                                'outstanding' => 'Neachitată',
-                                'paid' => 'Achitată',
-                            ])
-                            ->required(),
-
-                        Forms\Components\Textarea::make('description')
-                            ->label('Descriere')
-                            ->rows(2)
-                            ->columnSpanFull(),
-                    ])->columns(2),
-
-                Section::make('Date')
-                    ->schema([
-                        Forms\Components\DatePicker::make('issue_date')
-                            ->label('Data emiterii')
-                            ->required(),
-
-                        Forms\Components\DatePicker::make('due_date')
-                            ->label('Data scadentă')
-                            ->required(),
-
-                        Forms\Components\DatePicker::make('period_start')
-                            ->label('Perioadă de la'),
-
-                        Forms\Components\DatePicker::make('period_end')
-                            ->label('Perioadă până la'),
-                    ])->columns(4),
-
-                Section::make('Valori')
-                    ->schema([
-                        Forms\Components\TextInput::make('subtotal')
-                            ->label('Subtotal')
-                            ->numeric()
-                            ->required()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
-                                $vatRate = (float) ($get('vat_rate') ?? 0);
-                                $subtotal = (float) ($state ?? 0);
-                                $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
-                                $set('vat_amount', $vatAmount);
-                                $set('amount', $subtotal + $vatAmount);
-                            }),
-
-                        Forms\Components\TextInput::make('vat_rate')
-                            ->label('TVA (%)')
-                            ->numeric()
-                            ->required()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
-                                $subtotal = (float) ($get('subtotal') ?? 0);
-                                $vatRate = (float) ($state ?? 0);
-                                $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
-                                $set('vat_amount', $vatAmount);
-                                $set('amount', $subtotal + $vatAmount);
-                            }),
-
-                        Forms\Components\TextInput::make('vat_amount')
-                            ->label('Valoare TVA')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(),
-
-                        Forms\Components\TextInput::make('amount')
-                            ->label('Total')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(),
-
-                        Forms\Components\TextInput::make('currency')
-                            ->label('Monedă')
-                            ->default('RON')
-                            ->maxLength(3),
-                    ])->columns(5),
-
-                // Organizer & items data section (single column)
-                Section::make('Date emitent / client / articole')
                     ->schema([
                         Forms\Components\Placeholder::make('invoice_details_view')
                             ->label('')
@@ -195,7 +73,63 @@ class OrganizerInvoiceResource extends Resource
 
                                 $row = fn ($label, $value) => "<tr><td style='padding:6px 12px 6px 0;opacity:0.7;white-space:nowrap;'>{$label}</td><td style='padding:6px 0;'>{$value}</td></tr>";
 
+                                $money = fn ($val) => number_format((float) $val, 2, ',', '.') . ' ' . $currency;
+                                $fmtDate = fn ($val) => $val instanceof \Carbon\Carbon ? $val->format('d.m.Y') : (is_string($val) && $val !== '' ? \Carbon\Carbon::parse($val)->format('d.m.Y') : '—');
+
                                 $html = '<div style="font-size:14px;line-height:1.6;">';
+
+                                // ── HEADER: număr + status + tip + Oblio refs ──
+                                $typeLabel = ($record->type === 'proforma') ? 'Proformă' : (($record->type === 'fiscal') ? 'Fiscală' : ucfirst((string) $record->type));
+                                $statusMap = [
+                                    'paid' => ['label' => 'Achitată', 'bg' => '#16a34a', 'fg' => '#ffffff'],
+                                    'outstanding' => ['label' => 'Neachitată', 'bg' => '#f59e0b', 'fg' => '#0f172a'],
+                                ];
+                                $statusInfo = $statusMap[$record->status] ?? ['label' => ucfirst((string) $record->status), 'bg' => '#64748b', 'fg' => '#ffffff'];
+
+                                $oblioFiscal = $meta['accounting']['invoice_number'] ?? $meta['accounting']['external_ref'] ?? null;
+                                $oblioProforma = $meta['accounting_proforma']['invoice_number'] ?? $meta['accounting_proforma']['external_ref'] ?? null;
+
+                                $html .= '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid rgba(128,128,128,0.2);">';
+                                $html .= '<div style="font-size:24px;font-weight:700;">' . e($record->number ?? '—') . '</div>';
+                                $html .= '<span style="display:inline-block;padding:4px 10px;border-radius:6px;background:rgba(59,130,246,0.15);color:#2563eb;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">' . e($typeLabel) . '</span>';
+                                $html .= '<span style="display:inline-block;padding:4px 10px;border-radius:6px;background:' . $statusInfo['bg'] . ';color:' . $statusInfo['fg'] . ';font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">' . e($statusInfo['label']) . '</span>';
+                                if ($oblioFiscal) {
+                                    $html .= '<span style="margin-left:auto;font-size:12px;opacity:0.7;">Oblio fiscală: <strong style="font-family:monospace;font-size:13px;">' . e($oblioFiscal) . '</strong></span>';
+                                } elseif ($oblioProforma) {
+                                    $html .= '<span style="margin-left:auto;font-size:12px;opacity:0.7;">Oblio proformă: <strong style="font-family:monospace;font-size:13px;">' . e($oblioProforma) . '</strong></span>';
+                                }
+                                $html .= '</div>';
+
+                                // ── HEADER 2: date + amounts pe două coloane ──
+                                $html .= '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">';
+
+                                // Left col: dates
+                                $html .= '<div><h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Date</h4>';
+                                $html .= '<table style="width:100%;">';
+                                $html .= $row('Emiterii', $fmtDate($record->issue_date));
+                                $html .= $row('Scadenței', $fmtDate($record->due_date));
+                                if ($record->period_start || $record->period_end) {
+                                    $html .= $row('Perioadă', $fmtDate($record->period_start) . ' — ' . $fmtDate($record->period_end));
+                                }
+                                $html .= '</table></div>';
+
+                                // Right col: amounts
+                                $html .= '<div><h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Sume</h4>';
+                                $html .= '<table style="width:100%;">';
+                                $html .= $row('Subtotal', $money($record->subtotal));
+                                $html .= $row('TVA (' . ((int) $vatRate) . '%)', $money($record->vat_amount));
+                                $html .= $row('<strong>Total</strong>', '<strong style="font-size:16px;">' . $money($record->amount) . '</strong>');
+                                $html .= '</table></div>';
+
+                                $html .= '</div>';
+
+                                // ── DESCRIERE (dacă există) ──
+                                if (!empty($record->description)) {
+                                    $html .= '<div style="margin-bottom:24px;padding:12px 16px;background:rgba(148,163,184,0.08);border-radius:8px;font-size:13px;">'
+                                        . '<div style="opacity:0.5;text-transform:uppercase;font-size:11px;font-weight:600;letter-spacing:0.05em;margin-bottom:4px;">Descriere</div>'
+                                        . e($record->description)
+                                        . '</div>';
+                                }
 
                                 // ── EMITENT ──
                                 $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Emitent (din factură)</h4>';

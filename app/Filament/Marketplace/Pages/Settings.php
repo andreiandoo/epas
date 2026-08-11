@@ -356,15 +356,6 @@ class Settings extends Page
                                             ->helperText('Toate orele afișate (comenzi, bilete, rapoarte) vor fi convertite în acest fus orar. Datele rămân stocate în UTC.')
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default: Europe/Bucharest. Schimbarea afectează doar afișarea — nu modifică datele istorice.'),
 
-                                        Forms\Components\TextInput::make('invoice_preparer')
-                                            ->label('Persoana care completează documentele')
-                                            ->maxLength(255)
-                                            ->helperText('Numele persoanei care semnează/completează facturile. Trimis la Oblio ca `issuerName` — apare în partea de jos a facturii generate.'),
-
-                                        Forms\Components\TextInput::make('invoice_preparer_cnp')
-                                            ->label('CNP persoană care completează')
-                                            ->maxLength(13)
-                                            ->helperText('CNP-ul persoanei de mai sus. Trimis la Oblio ca `issuerCnp` — apare în partea de jos a facturii generate.'),
                                     ])->columns(3),
 
                                 SC\Section::make('Client general (facturi comision peste preț)')
@@ -810,6 +801,21 @@ class Settings extends Page
                                             ->default(1)
                                             ->minValue(1)
                                             ->helperText('Următorul număr atribuit când se generează un contract nou. Formatul final e prefix+număr (ex. AMB605).'),
+                                    ])->columns(2),
+
+                                SC\Section::make('Emitere facturi (Oblio)')
+                                    ->description('Numele + CNP-ul persoanei care apare pe facturile generate prin Oblio. Trimise ca `issuerName` / `issuerCnp` la generare; când sunt goale, Oblio folosește default-ul din contul lor.')
+                                    ->icon('heroicon-o-user-circle')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('invoice_preparer')
+                                            ->label('Persoana care completează documentele')
+                                            ->maxLength(255)
+                                            ->helperText('Numele persoanei care semnează/completează facturile. Trimis la Oblio ca `issuerName` — apare în partea de jos a facturii generate.'),
+
+                                        Forms\Components\TextInput::make('invoice_preparer_cnp')
+                                            ->label('CNP persoană care completează')
+                                            ->maxLength(13)
+                                            ->helperText('CNP-ul persoanei de mai sus. Trimis la Oblio ca `issuerCnp` — apare în partea de jos a facturii generate.'),
                                     ])->columns(2),
                             ]),
 
