@@ -24,10 +24,17 @@ class FriendsController extends Controller
 {
     public function __construct(private readonly FriendshipService $friends) {}
 
-    /** Contul curent, pus de middleware-ul `tixello.app.auth`. */
+    /**
+     * Contul curent.
+     *
+     * `attributes`, NU `$request->user()`: middleware-ul `tixello.app.auth` nu
+     * trece prin gardianul Laravel — verifica tokenul propriu si aseaza contul
+     * in atributele cererii. `user()` ar fi intors mereu null, iar toate rutele
+     * de aici ar fi crapat la prima folosire.
+     */
     private function me(Request $request): TixelloAccount
     {
-        return $request->user();
+        return $request->attributes->get('tixello_account');
     }
 
     /**
