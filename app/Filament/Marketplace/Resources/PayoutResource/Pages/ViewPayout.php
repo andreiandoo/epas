@@ -1163,19 +1163,18 @@ class ViewPayout extends ViewRecord
             : (is_string($organizer->contract_date) && $organizer->contract_date !== ''
                 ? \Carbon\Carbon::parse($organizer->contract_date)->format('d.m.Y')
                 : '');
+        // Short accountant phrasing: "cf. ctr. nr X/DATE, eveniment "Y"/DATE".
+        // No leading "taxa ticketing", no "pentru"/"din"/"la {venue}, {city}"
+        // padding — Oblio row descriptions have a display cap and the
+        // long form gets truncated in printed invoices.
         $contractFragment = ($contractNumber !== '' || $contractDate !== '')
-            ? 'conform contract nr ' . $contractNumber . '/' . $contractDate . ','
+            ? 'cf. ctr. nr ' . $contractNumber . '/' . $contractDate
             : '';
 
-        // Event context — quoted name plus date / venue / city, matching
-        // the accountant-friendly phrasing the user defined.
         $eventCtx = $this->resolveEventContext($payout->event);
         $eventFragment = $eventCtx['name'] !== ''
-            ? ' pentru eveniment "' . $eventCtx['name'] . '"'
-                . ($eventCtx['date'] !== '' ? ' din ' . $eventCtx['date'] : '')
-                . ($eventCtx['venue'] !== '' && $eventCtx['city'] !== ''
-                    ? ' la ' . $eventCtx['venue'] . ', ' . $eventCtx['city']
-                    : ($eventCtx['venue'] !== '' ? ' la ' . $eventCtx['venue'] : ''))
+            ? ', eveniment "' . $eventCtx['name'] . '"'
+                . ($eventCtx['date'] !== '' ? '/' . $eventCtx['date'] : '')
             : '';
 
         $items = [];
@@ -1194,8 +1193,8 @@ class ViewPayout extends ViewRecord
 
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
-                'description' => trim('Prestari servicii invitatii/bilete online acces POS, taxa ticketing '
-                    . $contractFragment . $eventFragment),
+                'description' => trim('Prestari servicii invitatii/bilete online acces POS'
+                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1219,8 +1218,8 @@ class ViewPayout extends ViewRecord
             $items[] = [
                 'name' => 'Comision bilet rambursat integral',
                 'description' => trim('Comision pentru bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
-                    . '" rambursat integral (comision returnat clientului), taxa ticketing '
-                    . $contractFragment . $eventFragment),
+                    . '" rambursat integral (comision returnat clientului)'
+                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1244,8 +1243,8 @@ class ViewPayout extends ViewRecord
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
                 'description' => trim('Comision inclus în preț bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
-                    . '" vândut online, taxa ticketing '
-                    . $contractFragment . $eventFragment),
+                    . '" vândut online'
+                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1271,8 +1270,8 @@ class ViewPayout extends ViewRecord
                 'name' => 'Storno comision reținut din rambursare parțială',
                 'description' => trim('Storno: comision reținut de Ambilet la rambursarea parțială a biletului "'
                     . ($row['ticket_type_name'] ?? 'Bilet')
-                    . '" (fără rambursarea comisionului) — deja în vistieria Ambilet, se scade din total, taxa ticketing '
-                    . $contractFragment . $eventFragment),
+                    . '" (fără rambursarea comisionului) — deja în vistieria Ambilet, se scade din total'
+                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => -$commPerTicket,
                 'amount' => -$lineTotal,

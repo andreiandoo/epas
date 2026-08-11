@@ -143,10 +143,13 @@ class OrganizerContractService
             ]);
 
             // Auto-fill contract series/date on the organizer if not already set.
+            // Format = PREFIX + NUMBER, no separator (e.g. AMB605). The trailing
+            // "/date" fragment used in invoice descriptions is added at render
+            // time, not stored here.
             $contractNumber = $variables['marketplace_contract_number'] ?? null;
             if ($contractNumber && !$organizer->contract_number_series) {
                 $prefix = $marketplace->settings['contract_prefix'] ?? $marketplace->slug ?? 'CTR';
-                $contractSeries = strtoupper($prefix) . '/' . $contractNumber;
+                $contractSeries = strtoupper($prefix) . $contractNumber;
                 $organizer->updateQuietly([
                     'contract_number_series' => $contractSeries,
                     'contract_date' => now()->toDateString(),

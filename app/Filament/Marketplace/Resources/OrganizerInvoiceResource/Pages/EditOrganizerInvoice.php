@@ -483,9 +483,19 @@ class EditOrganizerInvoice extends EditRecord
             $vatNumber = $client['cui'] ?? '';
         }
 
+        // Invoice preparer (name + CNP) from marketplace settings. When
+        // set, Oblio renders them at the bottom of the generated invoice
+        // as "Întocmit de: {name}, CNP {cnp}". Both empty → Oblio falls
+        // back to whatever's configured on their account.
+        $marketplaceSettings = $marketplace->settings ?? [];
+        $issuerName = trim((string) ($marketplaceSettings['invoice_preparer'] ?? ''));
+        $issuerCnp = trim((string) ($marketplaceSettings['invoice_preparer_cnp'] ?? ''));
+
         // Build accounting invoice data
         $invoiceData = [
             'seller_vat' => $issuer['cui'] ?? '',
+            'issuer_name' => $issuerName,
+            'issuer_cnp' => $issuerCnp,
             'issue_date' => $invoice->issue_date?->format('Y-m-d') ?? date('Y-m-d'),
             'due_date' => $invoice->due_date?->format('Y-m-d'),
             'currency' => $invoice->currency ?? 'RON',

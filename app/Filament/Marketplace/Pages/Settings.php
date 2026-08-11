@@ -65,6 +65,7 @@ class Settings extends Page
                 'currency' => $marketplace->currency ?? 'EUR',
                 'timezone' => $marketplace->timezone ?? \App\Support\MarketplaceTz::DEFAULT_TIMEZONE,
                 'invoice_preparer' => $settings['invoice_preparer'] ?? '',
+                'invoice_preparer_cnp' => $settings['invoice_preparer_cnp'] ?? '',
                 'general_invoice_client_name' => $settings['general_invoice_client_name'] ?? 'Client general',
                 'general_invoice_client_cui' => $settings['general_invoice_client_cui'] ?? '',
                 'general_invoice_client_address' => $settings['general_invoice_client_address'] ?? '',
@@ -358,7 +359,12 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('invoice_preparer')
                                             ->label('Persoana care completează documentele')
                                             ->maxLength(255)
-                                            ->helperText('Numele persoanei care semnează/completează facturile și documentele fiscale.'),
+                                            ->helperText('Numele persoanei care semnează/completează facturile. Trimis la Oblio ca `issuerName` — apare în partea de jos a facturii generate.'),
+
+                                        Forms\Components\TextInput::make('invoice_preparer_cnp')
+                                            ->label('CNP persoană care completează')
+                                            ->maxLength(13)
+                                            ->helperText('CNP-ul persoanei de mai sus. Trimis la Oblio ca `issuerCnp` — apare în partea de jos a facturii generate.'),
                                     ])->columns(3),
 
                                 SC\Section::make('Client general (facturi comision peste preț)')
@@ -1279,6 +1285,7 @@ class Settings extends Page
         ];
         $settings['site_template'] = $data['site_template'];
         $settings['invoice_preparer'] = $data['invoice_preparer'] ?? '';
+        $settings['invoice_preparer_cnp'] = $data['invoice_preparer_cnp'] ?? '';
         $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';
         $settings['general_invoice_client_cui'] = $data['general_invoice_client_cui'] ?? '';
         $settings['general_invoice_client_address'] = $data['general_invoice_client_address'] ?? '';

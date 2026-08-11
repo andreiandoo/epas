@@ -266,6 +266,20 @@ class OblioAdapter implements AccountingAdapterInterface
                 'products' => [],
             ];
 
+            // Optional issuer override — Oblio prints these at the bottom
+            // of the generated invoice ("Întocmit de: {name}, CNP {cnp}").
+            // Sourced from marketplace settings.invoice_preparer /
+            // invoice_preparer_cnp. Sent only when filled; omitting them
+            // falls back to whatever's set on the Oblio account itself.
+            $issuerName = trim((string) ($invoice['issuer_name'] ?? ''));
+            $issuerCnp = trim((string) ($invoice['issuer_cnp'] ?? ''));
+            if ($issuerName !== '') {
+                $payload['issuerName'] = $issuerName;
+            }
+            if ($issuerCnp !== '') {
+                $payload['issuerCnp'] = $issuerCnp;
+            }
+
             // Diagnostic: log the exact client block that goes to Oblio so we
             // can confirm general_client invoices ship cif='vanzare online'
             // with save=0 + autocomplete=0. Remove after verification.
@@ -273,6 +287,8 @@ class OblioAdapter implements AccountingAdapterInterface
                 'docType' => $docType,
                 'series' => $resolvedSeries,
                 'client' => $payload['client'],
+                'issuerName' => $issuerName ?: '(empty)',
+                'issuerCnp' => $issuerCnp !== '' ? '(set)' : '(empty)',
             ]);
 
             // Add line items

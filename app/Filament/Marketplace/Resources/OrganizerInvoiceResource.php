@@ -52,6 +52,34 @@ class OrganizerInvoiceResource extends Resource
                             ->label('Număr factură')
                             ->disabled(),
 
+                        // Series + number returned by Oblio when the fiscal
+                        // invoice was issued. Pulled straight from
+                        // meta.accounting.invoice_number (e.g. "AMB605").
+                        // Empty until "Trimite factură fiscală" has been run.
+                        Forms\Components\Placeholder::make('oblio_invoice_number')
+                            ->label('Serie/număr Oblio (fiscală)')
+                            ->content(function ($record): string {
+                                if (!$record) return '—';
+                                $ref = $record->meta['accounting']['invoice_number']
+                                    ?? $record->meta['accounting']['external_ref']
+                                    ?? null;
+                                return $ref ? (string) $ref : '—';
+                            }),
+
+                        // Same for a proforma issued via Oblio. Rendered so
+                        // the operator can cross-check what Oblio returned
+                        // without opening the "Date/emitent/client/articole"
+                        // preview blob below.
+                        Forms\Components\Placeholder::make('oblio_proforma_number')
+                            ->label('Serie/număr Oblio (proformă)')
+                            ->content(function ($record): string {
+                                if (!$record) return '—';
+                                $ref = $record->meta['accounting_proforma']['invoice_number']
+                                    ?? $record->meta['accounting_proforma']['external_ref']
+                                    ?? null;
+                                return $ref ? (string) $ref : '—';
+                            }),
+
                         Forms\Components\Select::make('marketplace_organizer_id')
                             ->label('Organizator')
                             ->relationship('organizer', 'name')
@@ -409,6 +437,22 @@ class OrganizerInvoiceResource extends Resource
                         'nevalidata' => 'Nevalidată',
                         default => $state,
                     }),
+
+                // Oblio-returned series + number for the most recent doc
+                // issued (fiscal wins over proforma when both exist). Pulled
+                // from meta.accounting.invoice_number so operators can spot-
+                // check without opening the invoice.
+                Tables\Columns\TextColumn::make('oblio_number')
+                    ->label('Nr. Oblio')
+                    ->state(function ($record): ?string {
+                        $meta = $record->meta ?? [];
+                        return $meta['accounting']['invoice_number']
+                            ?? $meta['accounting_proforma']['invoice_number']
+                            ?? null;
+                    })
+                    ->placeholder('—')
+                    ->copyable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('issue_date')
                     ->label('Data emiterii')

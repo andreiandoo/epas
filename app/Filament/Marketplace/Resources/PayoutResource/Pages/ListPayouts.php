@@ -824,8 +824,20 @@ class ListPayouts extends ListRecords
                                 $settings = $client?->settings ?? [];
                                 return $settings['decont_prefix'] ?? 'DEC';
                             })
-                            ->placeholder('Auto (folosește contorul din Settings)')
-                            ->helperText('Tastează doar partea numerică / sufixul — prefixul de mai sus se adaugă automat. Lasă gol pentru auto-generare cu următorul număr din contor.'),
+                            // Pre-fill with the projected next number from the
+                            // marketplace's contor. If the operator leaves it
+                            // as-is, the action() below clears it before create
+                            // so MarketplacePayout::assignDecontSeries runs
+                            // under a row lock (atomic increment). If they type
+                            // a different number, that override is respected
+                            // verbatim.
+                            ->default(function () {
+                                $admin = Auth::guard('marketplace_admin')->user();
+                                $client = $admin?->marketplaceClient;
+                                $settings = $client?->settings ?? [];
+                                return (int) ($settings['decont_next_number'] ?? 1);
+                            })
+                            ->helperText('Precompletat cu următorul număr din Setări → Serii documente. Modifică doar dacă vrei un număr diferit — altfel se incrementează automat contorul.'),
 
                         Forms\Components\DateTimePicker::make('created_at_override')
                             ->label('Data creării')
@@ -949,18 +961,25 @@ class ListPayouts extends ListRecords
 
                 // Optional operator-provided overrides — leave series empty to
                 // let MarketplacePayout::assignDecontSeries auto-generate from
-                // settings. The input shows the marketplace's configured prefix
-                // as a visual prefix; the operator types only the suffix, which
-                // we prepend with the prefix here so the stored value is the
-                // full series (e.g. "DECAMB47").
+                // settings. The input is pre-filled with the projected next
+                // number so the operator sees what will be used; if they leave
+                // it as-is (or clear it), we fall through to the boot hook's
+                // atomic lock-and-increment. Only a manually-changed value
+                // becomes an override that skips the counter.
                 $customSuffix = trim((string) ($data['decont_series'] ?? ''));
-                if ($customSuffix !== '') {
-                    $client = $marketplaceAdmin->marketplaceClient;
-                    $settings = $client?->settings ?? [];
-                    $prefix = $settings['decont_prefix'] ?? 'DEC';
-                    $customSeries = $prefix . $customSuffix;
-                } else {
+                $client = $marketplaceAdmin->marketplaceClient;
+                $settings = $client?->settings ?? [];
+                $prefix = $settings['decont_prefix'] ?? 'DEC';
+                $projectedNext = (string) ((int) ($settings['decont_next_number'] ?? 1));
+
+                if ($customSuffix === '' || $customSuffix === $projectedNext) {
+                    // Empty OR matches the pre-fill → let boot's
+                    // assignDecontSeries do the atomic increment. Two admins
+                    // clicking Create simultaneously will get sequential
+                    // numbers instead of colliding on the pre-filled value.
                     $customSeries = '';
+                } else {
+                    $customSeries = $prefix . $customSuffix;
                 }
                 $createdAtOverride = !empty($data['created_at_override'])
                     ? \Carbon\Carbon::parse($data['created_at_override'])
