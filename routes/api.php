@@ -4069,6 +4069,28 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
         Route::post('/auth/logout', [\App\Http\Controllers\Api\TixelloApp\AuthController::class, 'logout'])
             ->name('api.app.auth.logout');
 
+        /* ---- prieteni ----
+           Descoperire DOAR prin cod / link de invitatie: o cautare dupa nume sau
+           email ar transforma aplicatia intr-un director de clienti. */
+        Route::get('/friends', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'index'])
+            ->name('api.app.friends');
+        Route::post('/friends/redeem', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'redeem'])
+            ->middleware('throttle:20,1')->name('api.app.friends.redeem');
+        Route::post('/friends/invite', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'invite'])
+            ->middleware('throttle:20,1')->name('api.app.friends.invite');
+        Route::post('/friends/visibility', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'visibility'])
+            ->name('api.app.friends.visibility');
+        Route::post('/friends/{friendship}/respond', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'respond'])
+            ->name('api.app.friends.respond');
+        Route::get('/friends/{account}/profile', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'profile'])
+            ->name('api.app.friends.profile');
+        Route::post('/friends/{account}/block', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'block'])
+            ->name('api.app.friends.block');
+        Route::delete('/friends/{account}/block', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'unblock'])
+            ->name('api.app.friends.unblock');
+        Route::delete('/friends/{account}', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'remove'])
+            ->name('api.app.friends.remove');
+
         /* ---- cumparare de bilete ----
            Delegheaza catre fluxul de marketplace, care e cel folosit in
            productie; vezi CheckoutController pentru de ce nu se rescrie. */

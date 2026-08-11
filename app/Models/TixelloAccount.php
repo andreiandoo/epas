@@ -25,6 +25,7 @@ class TixelloAccount extends Model
         'email', 'password', 'name', 'phone',
         'email_verified_at', 'verification_code', 'verification_expires_at', 'verification_attempts',
         'is_organizer', 'avatar', 'locale', 'status', 'last_login_at',
+        'invite_code', 'friends_visibility',
     ];
 
     protected $hidden = ['password', 'verification_code'];

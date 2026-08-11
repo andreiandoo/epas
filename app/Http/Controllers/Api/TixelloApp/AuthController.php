@@ -104,6 +104,22 @@ class AuthController extends Controller
         }
 
         $account->forceFill(['last_login_at' => now()])->save();
+
+        /* Invitatiile care asteptau adresa asta devin CERERI de prietenie —
+           nu prietenii. Omul tocmai s-a inregistrat, n-a acceptat inca nimic;
+           le vede in ecranul de prieteni si decide el.
+           Se face aici, nu la `register`: pana la verificarea emailului nu stim
+           ca adresa chiar ii apartine, iar o cerere legata de o adresa
+           nedovedita ar fi exact scaparea pe care verificarea o inchide. */
+        try {
+            app(\App\Services\Friends\FriendshipService::class)->convertPendingInvites($account);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Conversia invitatiilor de prietenie a esuat', [
+                'account_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $token = $account->issueToken($data['device_id'] ?? null);
 
         return response()->json(['success' => true, 'data' => $this->accountPayload($account, $token)]);
