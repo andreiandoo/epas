@@ -145,7 +145,17 @@ class FriendsController extends Controller
 
     public function unblock(Request $request, int $account): JsonResponse
     {
-        $this->friends->unblock($this->me($request), $account);
+        /* Raspunsul spune ce s-a intamplat CU ADEVARAT.
+           Inainte intorcea mereu `success: true`, chiar cand nu deblocase nimic
+           — de exemplu cand cel blocat incearca sa se deblocheze singur.
+           Serverul se comporta corect (blocarea ramanea), dar clientul ar fi
+           afisat „deblocat" si omul ar fi crezut ca s-a intamplat ceva. */
+        if (! $this->friends->unblock($this->me($request), $account)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nu ai ce debloca.',
+            ], 422);
+        }
 
         return response()->json(['success' => true]);
     }
