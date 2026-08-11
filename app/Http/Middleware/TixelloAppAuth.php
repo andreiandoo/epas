@@ -19,6 +19,14 @@ class TixelloAppAuth
 {
     public function handle(Request $request, Closure $next): Response
     {
+        /* Raspunsul e MEREU JSON.
+           Fara asta, o eroare de validare pe o cerere care n-a trimis
+           `Accept: application/json` nu iese ca 422, ci ca REDIRECT catre
+           pagina de start — comportamentul de formular web. Pe un client de
+           API asta inseamna un raspuns HTML in loc de mesajul de eroare, deci
+           un bug care pare al retelei. */
+        $request->headers->set('Accept', 'application/json');
+
         $token = $request->bearerToken();
 
         if (! $token) {
