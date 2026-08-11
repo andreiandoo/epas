@@ -22,6 +22,7 @@ class ShortObserver
     public function created(Short $short): void
     {
         $this->queueBlurhash($short);
+        $this->flushOwnerTypeCountsCache();
     }
 
     public function updated(Short $short): void
@@ -35,6 +36,22 @@ class ShortObserver
         if ($short->wasChanged('poster_path')) {
             $this->queueBlurhash($short);
         }
+
+        // Bust the admin ListShorts owner-type tab counts when the row
+        // moves between buckets. Same 30s cache the page reads from.
+        if ($short->wasChanged('owner_type')) {
+            $this->flushOwnerTypeCountsCache();
+        }
+    }
+
+    public function deleted(Short $short): void
+    {
+        $this->flushOwnerTypeCountsCache();
+    }
+
+    protected function flushOwnerTypeCountsCache(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('shorts:owner_type_counts');
     }
 
     /**
