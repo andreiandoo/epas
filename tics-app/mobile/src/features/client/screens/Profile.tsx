@@ -160,6 +160,22 @@ export function Profile() {
         </div>
       </div>
 
+      {/* Prietenii: intrare proprie, separata de afiliere. „Invita prieteni" de
+          mai jos e despre cod si comision; asta e despre oameni. */}
+      <div className="pad" style={sx('margin-bottom:10px')}>
+        <div className="listitem" onClick={() => go('friends')} style={sx('cursor:pointer')}>
+          <div
+            style={sx('width:38px;height:38px;border-radius:12px;background:var(--indigo-soft);color:var(--indigo-2);display:grid;place-items:center;font-size:17px')}
+          >
+            👥
+          </div>
+          <div style={sx('flex:1;font-weight:500;font-size:14px')}>Prietenii mei</div>
+          <span className="muted">
+            <Ic svg={I.arrow} />
+          </span>
+        </div>
+      </div>
+
       <div className="pad">
         <div
           className="card"

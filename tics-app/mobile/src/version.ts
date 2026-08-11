@@ -9,4 +9,4 @@
 
    Se actualizeaza odata cu `publish-bundle.ps1 -Version x.y.z`.
    ========================================================= */
-export const APP_VERSION = 'v3.5.0';
+export const APP_VERSION = 'v3.6.0';

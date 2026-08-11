@@ -6,7 +6,7 @@
      S.setDelete  (1081) · legalPage(1087) -> S.setTerms / S.setPrivacy
      S.setRate    (1091)
    ========================================================= */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Ic, cn, sx } from '../../../design/sx';
 import { I } from '../../../mock/prototype';
 import { BottomNav, SetHead, TopBar } from '../kit';
@@ -17,6 +17,7 @@ import { usePaymentMethods } from '../accountData';
 import { addPaymentMethod, isLoggedIn, removeAvatar, uploadAvatar } from '../../../api/customer';
 import { customerName, initialsOf, useCustomer } from '../accountData';
 import { APP_VERSION } from '../../../version';
+import { fetchFriends, setFriendsVisibility } from '../../../api/friends';
 
 /* ---------- fld(label, val, ph, type) ----------
    `onChange` e optional: campurile decorative din prototip raman exact cum erau,
@@ -71,6 +72,67 @@ function TglRow({ emoji, label, on, last }: { emoji: string; label: string; on?:
   );
 }
 
+/**
+ * Comutatorul de vizibilitate a participarii.
+ *
+ * Spre deosebire de celelalte din lista, asta scrie pe server. Starea se ia de
+ * acolo la deschidere, nu se presupune: e o setare de confidentialitate, iar un
+ * comutator care arata „pornit" cand serverul zice „oprit" e mai rau decat
+ * niciunul.
+ *
+ * Optimist la atingere, cu revenire la esec — altfel butonul ar parea blocat
+ * cat dureaza cererea.
+ */
+function FriendsVisibilityRow({ emoji, label, last }: { emoji: string; label: string; last?: boolean }) {
+  const showToast = useClient((s) => s.showToast);
+  const [on, setOn] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchFriends().then((r) => {
+      if (!alive || !r.ok) return;
+      setOn(r.data.visibility === 'friends');
+      setReady(true);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const toggle = async () => {
+    const next = !on;
+    setOn(next);
+
+    const r = await setFriendsVisibility(next);
+
+    if (!r.ok) {
+      setOn(!next);
+      showToast(r.message);
+    }
+  };
+
+  return (
+    <div
+      className="between"
+      onClick={() => ready && void toggle()}
+      style={{ padding: '13px 0', borderBottom: last ? undefined : '1px solid var(--line)', cursor: 'pointer' }}
+    >
+      <div className="row" style={sx('gap:11px')}>
+        <span style={sx('font-size:16px')}>{emoji}</span>
+        <div>
+          <div style={sx('font-weight:500;font-size:13.5px')}>{label}</div>
+          <div className="muted" style={sx('font-size:11px;margin-top:1px')}>
+            Poți face excepții la fiecare eveniment
+          </div>
+        </div>
+      </div>
+      <div className={cn('toggle', on && 'on')} style={ready ? undefined : sx('opacity:.4')} />
+    </div>
+  );
+}
+
 /* =========================================================
    S.settings
    ========================================================= */
@@ -98,6 +160,9 @@ const SECTIONS: [string, Row[]][] = [
   [
     'Confidențialitate',
     [
+      /* Cheia `friendsVis` e tratata special mai jos: e singurul comutator din
+         lista care chiar scrie ceva pe server. Restul sunt inca locale. */
+      ['👥', 'Prietenii văd la ce merg', 'friendsVis'],
       ['📍', 'Locație', 'tgl'],
       ['📊', 'Date pentru personalizare', 'tgl'],
       ['🗑️', 'Șterge contul', '›', 'setDelete'],
@@ -176,7 +241,9 @@ export function Settings() {
           </div>
           <div className="card" style={sx('padding:4px 14px')}>
             {rows.map((r, i) =>
-              r[2] === 'tgl' ? (
+              r[2] === 'friendsVis' ? (
+                <FriendsVisibilityRow key={r[1]} emoji={r[0]} label={r[1]} last={i === rows.length - 1} />
+              ) : r[2] === 'tgl' ? (
                 <TglRow key={r[1]} emoji={r[0]} label={r[1]} on last={i === rows.length - 1} />
               ) : (
                 <div

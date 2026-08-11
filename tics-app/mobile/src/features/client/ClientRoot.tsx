@@ -41,6 +41,7 @@ import { Stay22 } from './screens/Stay22';
 import { Shorts } from './screens/Shorts';
 import { LightboxProvider } from './lightbox';
 import { AppBottomNav } from './kit';
+import { FriendProfile, Friends } from './screens/Friends';
 
 type ScreenFn = (data: Record<string, unknown>) => JSX.Element;
 
@@ -63,6 +64,8 @@ const SCREENS: Record<string, ScreenFn> = {
   success: () => <Success />,
   category: (d) => <Category id={d.id as string} />,
   search: () => <Search />,
+  friends: () => <Friends />,
+  friend: (d) => <FriendProfile id={d.id as string} />,
   artist: (d) => <Artist id={d.id as string} />,
   venue: (d) => <Venue id={d.id as string} />,
   points: () => <Points />,

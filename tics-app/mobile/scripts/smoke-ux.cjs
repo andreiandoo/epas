@@ -211,6 +211,32 @@ const check = (name, ok, extra = '') => {
   const savedCity = await page.evaluate(() => localStorage.getItem('tixello.city'));
   check('orasul ales e pastrat intre porniri', savedCity !== null, `„${savedCity}"`);
 
+  /* ---------- ecranul de prieteni ---------- */
+  await page.evaluate(() => {
+    const navs = document.querySelectorAll('.bnav .nav');
+    navs[navs.length - 1]?.click();
+  });
+  await wait(900);
+  const opened = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('.listitem')].find((e) => /Prietenii mei/.test(e.textContent ?? ''));
+    el?.click();
+
+    return !!el;
+  });
+  await wait(1200);
+  const friendsScreen = await page.evaluate(() => ({
+    title: document.querySelector('.h2')?.textContent ?? '',
+    body: document.body.textContent.replace(/\s+/g, ' ').slice(0, 300),
+  }));
+  check('ecranul de prieteni se deschide din Profil', opened && /Prietenii mei/.test(friendsScreen.title), friendsScreen.title);
+  /* Fara cont Tixello, ecranul TREBUIE sa spuna asta, nu sa ramana gol: aici
+     nu exista date demo, iar un ecran alb ar parea o eroare. */
+  check(
+    'fara cont, ecranul explica de ce e gol',
+    /Intră în contul Tixello/.test(friendsScreen.body),
+    friendsScreen.body.slice(0, 90),
+  );
+
   console.log(errors.length ? '\nERORI:\n' + errors.join('\n') : '\nNicio eroare de pagina.');
   console.log(failures ? `\n${failures} verificari picate.` : '\nToate verificarile au trecut.');
   await browser.close();
