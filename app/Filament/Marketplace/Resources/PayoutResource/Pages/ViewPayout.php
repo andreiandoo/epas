@@ -1163,14 +1163,24 @@ class ViewPayout extends ViewRecord
             : (is_string($organizer->contract_date) && $organizer->contract_date !== ''
                 ? \Carbon\Carbon::parse($organizer->contract_date)->format('d.m.Y')
                 : '');
-        // Accountant-friendly short phrasing:
+        // Accountant-friendly short phrasing per line:
         //   Servicii ticketing [POS ]invitatii/bilete [rambursate ]"TICKETTYPE"
-        //     [, cf. ctr. nr X/DATE][, "EVENT" / DATE]
-        // Contract stays because the accountant needs a legal reference to
-        // the underlying commercial contract; ticket type stays because it
-        // ties the invoice line to a specific SKU sold.
+        //     [, cf. ctr. nr X/DATE][, cf. decont S/DATE][, "EVENT" / DATE]
+        // - Contract = legal reference to the underlying commercial contract
+        // - Decont = which payout / statement this line rolled up from
+        // - Ticket type = ties the invoice line to a specific SKU sold
+        // Each fragment self-hides when its source data is empty so there
+        // are no orphan commas.
         $contractFragment = ($contractNumber !== '' || $contractDate !== '')
             ? ', cf. ctr. nr ' . $contractNumber . '/' . $contractDate
+            : '';
+
+        $decontSeries = trim((string) ($payout->decont_series ?? ''));
+        $decontDate = $payout->created_at instanceof \Carbon\Carbon
+            ? $payout->created_at->format('d.m.Y')
+            : '';
+        $decontFragment = ($decontSeries !== '' || $decontDate !== '')
+            ? ', cf. decont ' . $decontSeries . ($decontDate !== '' ? '/' . $decontDate : '')
             : '';
 
         $eventCtx = $this->resolveEventContext($payout->event);
@@ -1198,7 +1208,7 @@ class ViewPayout extends ViewRecord
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
                 'description' => trim('Servicii ticketing POS invitatii/bilete "' . $ticketTypeName . '"'
-                    . $contractFragment . $eventFragment),
+                    . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1224,7 +1234,7 @@ class ViewPayout extends ViewRecord
             $items[] = [
                 'name' => 'Comision bilet rambursat integral',
                 'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $ticketTypeName . '"'
-                    . $contractFragment . $eventFragment),
+                    . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1250,7 +1260,7 @@ class ViewPayout extends ViewRecord
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
                 'description' => trim('Servicii ticketing invitatii/bilete "' . $ticketTypeName . '"'
-                    . $contractFragment . $eventFragment),
+                    . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1277,7 +1287,7 @@ class ViewPayout extends ViewRecord
             $items[] = [
                 'name' => 'Storno comision reținut din rambursare parțială',
                 'description' => trim('Storno servicii ticketing "' . $ticketTypeName . '"'
-                    . $contractFragment . $eventFragment),
+                    . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => -$commPerTicket,
                 'amount' => -$lineTotal,
@@ -1539,9 +1549,12 @@ class ViewPayout extends ViewRecord
             if ($ev['date'] !== '') {
                 $itemEventFragment = trim($itemEventFragment . ' ' . $ev['date']);
             }
-            $itemDescription = trim($itemEventFragment
-                . ' // cf. decont ' . $series
-                . ($createdAt !== '' ? '/' . $createdAt : ''));
+            // General-client (public sale) invoices go to "Client Divers -
+            // Persoana Fizică" — anonymous end-buyers. They don't need the
+            // decont reference (that's internal to the marketplace <->
+            // organizer relationship, not to the buyer). Keep just the
+            // event context.
+            $itemDescription = trim($itemEventFragment);
         } else {
             $itemName = 'Comision servicii ticketing';
             $itemDescription = 'Comision servicii ticketing - ' . $reference;

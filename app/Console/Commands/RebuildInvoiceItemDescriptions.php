@@ -92,17 +92,23 @@ class RebuildInvoiceItemDescriptions extends Command
     }
 
     /**
-     * General-client: just swap the description tail on each existing item.
-     * We keep the item list + amounts intact.
+     * General-client: strip the decont-reference tail entirely from each
+     * existing description. Handles both the historical formats:
+     *   " //Conform decont nr. X din data Y" (pre-Aug 12)
+     *   " // cf. decont X/Y" (Aug 12 → Aug 12-later)
+     * Items themselves + amounts are preserved.
      */
     protected function rebuildGeneralClient(array $items): array
     {
-        $pattern = '#\s*//\s*Conform decont nr\.\s+(\S+)\s+din data\s+(\S+)#u';
-        $replacement = ' // cf. decont $1/$2';
+        $legacyPattern = '#\s*//\s*Conform decont nr\.\s+\S+\s+din data\s+\S+\s*$#u';
+        $shortPattern = '#\s*//\s*cf\.\s*decont\s+\S+\s*$#u';
 
-        return collect($items)->map(function ($item) use ($pattern, $replacement) {
+        return collect($items)->map(function ($item) use ($legacyPattern, $shortPattern) {
             if (!empty($item['description'])) {
-                $item['description'] = preg_replace($pattern, $replacement, $item['description']);
+                $desc = $item['description'];
+                $desc = preg_replace($legacyPattern, '', $desc);
+                $desc = preg_replace($shortPattern, '', $desc);
+                $item['description'] = trim($desc);
             }
             return $item;
         })->all();
@@ -149,6 +155,16 @@ class RebuildInvoiceItemDescriptions extends Command
             ? ', cf. ctr. nr ' . $contractNumber . '/' . $contractDate
             : '';
 
+        if ($contractFragment === '') {
+            $this->warn("  (!) Organizer #{$organizer->id} has no contract_number_series/contract_date — contract fragment will be missing from descriptions.");
+        }
+
+        $decontSeries = trim((string) ($payout->decont_series ?? ''));
+        $decontDate = $payout->created_at instanceof Carbon ? $payout->created_at->format('d.m.Y') : '';
+        $decontFragment = ($decontSeries !== '' || $decontDate !== '')
+            ? ', cf. decont ' . $decontSeries . ($decontDate !== '' ? '/' . $decontDate : '')
+            : '';
+
         $evName = '';
         $evDate = '';
         $title = $event->title;
@@ -173,7 +189,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
-                'description' => trim('Servicii ticketing POS invitatii/bilete "' . $tt . '"' . $contractFragment . $eventFragment),
+                'description' => trim('Servicii ticketing POS invitatii/bilete "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $comm,
                 'amount' => round($qty * $comm, 2),
@@ -188,7 +204,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Comision bilet rambursat integral',
-                'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $tt . '"' . $contractFragment . $eventFragment),
+                'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $comm,
                 'amount' => $lt,
@@ -203,7 +219,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
-                'description' => trim('Servicii ticketing invitatii/bilete "' . $tt . '"' . $contractFragment . $eventFragment),
+                'description' => trim('Servicii ticketing invitatii/bilete "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $comm,
                 'amount' => $lt,
@@ -218,7 +234,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Storno comision reținut din rambursare parțială',
-                'description' => trim('Storno servicii ticketing "' . $tt . '"' . $contractFragment . $eventFragment),
+                'description' => trim('Storno servicii ticketing "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => -$comm,
                 'amount' => -$lt,
