@@ -114,7 +114,7 @@ class EditOrganizerInvoice extends EditRecord
 
         // ── Grup "Trimite" (toate acțiunile outbound) ──
         $email = Actions\Action::make('email')
-            ->label('Trimite Email')
+            ->label('Trimite factura pe email')
             ->icon('heroicon-o-envelope')
             ->requiresConfirmation()
             ->modalHeading('Trimite factura pe email')
@@ -135,6 +135,12 @@ class EditOrganizerInvoice extends EditRecord
             ->modalHeading('Trimite factură proformă')
             ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca PROFORMĂ în software-ul de contabilitate.")
             ->visible(function () {
+                $meta = $this->record->meta ?? [];
+                // Deja emisă ca proformă, sau deja finalizată ca fiscală → nu
+                // retrimite aceeași proformă.
+                if (!empty($meta['accounting_proforma']['external_ref']) || !empty($meta['accounting']['external_ref'])) {
+                    return false;
+                }
                 if (!static::marketplaceHasMicroservice('accounting-connectors')) {
                     return false;
                 }
@@ -166,6 +172,12 @@ class EditOrganizerInvoice extends EditRecord
             ->modalHeading('Trimite factură fiscală')
             ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
             ->visible(function () {
+                $meta = $this->record->meta ?? [];
+                // Factura fiscală deja emisă → nu retrimite. (O proformă
+                // existentă e OK — trimiterea fiscalei o convertește.)
+                if (!empty($meta['accounting']['external_ref'])) {
+                    return false;
+                }
                 if (!static::marketplaceHasMicroservice('accounting-connectors')) {
                     return false;
                 }
@@ -197,7 +209,7 @@ class EditOrganizerInvoice extends EditRecord
             });
 
         $emailAccountingPdf = Actions\Action::make('emailAccountingPdf')
-            ->label('Trimite PDF pe Email')
+            ->label('Trimite PDF contabilitate pe email')
             ->icon('heroicon-o-envelope')
             ->color('info')
             ->requiresConfirmation()
@@ -270,7 +282,7 @@ class EditOrganizerInvoice extends EditRecord
                 $sendEfactura,
                 $emailAccountingPdf,
             ])
-                ->label('Trimite')
+                ->label('Trimite ▾')
                 ->icon('heroicon-o-paper-airplane')
                 ->button(),
             Actions\ActionGroup::make([
@@ -278,7 +290,7 @@ class EditOrganizerInvoice extends EditRecord
                 $viewAccountingPdf,
                 $refreshAccountingPdf,
             ])
-                ->label('Documente')
+                ->label('Documente ▾')
                 ->icon('heroicon-o-document-text')
                 ->color('gray')
                 ->button(),
