@@ -883,7 +883,7 @@ class OrderResource extends Resource
                     // labelled action + a mandatory acknowledgement checkbox so a
                     // misclick can't wipe real sales.
                     \Filament\Actions\BulkAction::make('bulk_hard_delete')
-                        ->label('Șterge definitiv (curățare teste)')
+                        ->label('Șterge definitiv')
                         ->icon('heroicon-o-fire')
                         ->color('danger')
                         ->requiresConfirmation()
