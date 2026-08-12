@@ -35,239 +35,260 @@ class EditOrganizerInvoice extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        // Primary standalone action — completing the invoice payment status.
+        $markPaid = Actions\Action::make('markPaid')
+            ->label('Marchează Achitată')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->requiresConfirmation()
+            ->visible(fn () => $this->record->status !== 'paid')
+            ->action(function () {
+                $this->record->markAsPaid('manual');
+                Notification::make()->success()->title('Factură marcată ca achitată.')->send();
+                $this->fillForm();
+            });
+
+        // eFactura status indicator (dynamic label/color) — kept standalone as
+        // it reads as a status badge, not an action.
+        $efacturaStatus = Actions\Action::make('efacturaStatus')
+            ->label(function () {
+                $queue = $this->record->anafQueue;
+                if (!$queue) return 'Status eFactura';
+                $statusLabels = [
+                    'queued' => 'eFactura: În coadă',
+                    'submitted' => 'eFactura: Trimisă',
+                    'accepted' => 'eFactura: Acceptată',
+                    'rejected' => 'eFactura: Respinsă',
+                    'error' => 'eFactura: Eroare',
+                ];
+                return $statusLabels[$queue->status] ?? 'eFactura: ' . $queue->status;
+            })
+            ->icon('heroicon-o-document-check')
+            ->color(function () {
+                $queue = $this->record->anafQueue;
+                if (!$queue) return 'gray';
+                return match ($queue->status) {
+                    'accepted' => 'success',
+                    'rejected', 'error' => 'danger',
+                    'submitted' => 'warning',
+                    'queued' => 'info',
+                    default => 'gray',
+                };
+            })
+            ->modalHeading('Status eFactura')
+            ->modalContent(function () {
+                $queue = $this->record->anafQueue;
+                if (!$queue) return new HtmlString('<p>Factura nu a fost trimisă în eFactura.</p>');
+
+                $statusLabels = [
+                    'queued' => 'În coadă',
+                    'submitted' => 'Trimisă către ANAF',
+                    'accepted' => 'Acceptată de ANAF',
+                    'rejected' => 'Respinsă de ANAF',
+                    'error' => 'Eroare',
+                ];
+
+                $html = '<div style="font-family:sans-serif;">';
+                $html .= '<p><strong>Status:</strong> ' . e($statusLabels[$queue->status] ?? $queue->status) . '</p>';
+                $html .= '<p><strong>Încercări:</strong> ' . $queue->attempts . '</p>';
+
+                if ($queue->submitted_at) {
+                    $html .= '<p><strong>Trimisă la:</strong> ' . $queue->submitted_at->format('d.m.Y H:i') . '</p>';
+                }
+                if ($queue->accepted_at) {
+                    $html .= '<p><strong>Acceptată la:</strong> ' . $queue->accepted_at->format('d.m.Y H:i') . '</p>';
+                }
+                if ($queue->error_message) {
+                    $html .= '<p><strong>Eroare:</strong> ' . e($queue->error_message) . '</p>';
+                }
+                if ($remoteId = $queue->getRemoteId()) {
+                    $html .= '<p><strong>ID ANAF:</strong> ' . e($remoteId) . '</p>';
+                }
+
+                $html .= '</div>';
+                return new HtmlString($html);
+            })
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel('Închide')
+            ->visible(fn () => $this->record->anafQueue !== null);
+
+        // ── Grup "Trimite" (toate acțiunile outbound) ──
+        $email = Actions\Action::make('email')
+            ->label('Trimite Email')
+            ->icon('heroicon-o-envelope')
+            ->requiresConfirmation()
+            ->modalHeading('Trimite factura pe email')
+            ->modalDescription(function () {
+                $organizer = $this->record->organizer;
+                $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
+                return "Factura #{$this->record->number} va fi trimisă la: {$email}";
+            })
+            ->action(function () {
+                $this->sendInvoiceEmail($this->record);
+            });
+
+        $sendProforma = Actions\Action::make('sendProforma')
+            ->label('Trimite Proformă')
+            ->icon('heroicon-o-document-duplicate')
+            ->color('info')
+            ->requiresConfirmation()
+            ->modalHeading('Trimite factură proformă')
+            ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca PROFORMĂ în software-ul de contabilitate.")
+            ->visible(function () {
+                if (!static::marketplaceHasMicroservice('accounting-connectors')) {
+                    return false;
+                }
+                $marketplace = static::getMarketplaceClient();
+                if (!$marketplace) return false;
+                if (!app(AccountingService::class)->hasMarketplaceConnector($marketplace->id)) return false;
+                // Check if proforma series is configured
+                $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+                    ->where('marketplace_client_id', $marketplace->id)
+                    ->where('status', 'connected')
+                    ->first();
+                if (!$connector) return false;
+                try {
+                    $auth = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($connector->auth), true);
+                    return !empty($auth['proforma_series_name']);
+                } catch (\Exception $e) {
+                    return false;
+                }
+            })
+            ->action(function () {
+                $this->sendToAccounting($this->record, 'proforma');
+            });
+
+        $sendAccounting = Actions\Action::make('sendAccounting')
+            ->label('Trimite Factură Fiscală')
+            ->icon('heroicon-o-calculator')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->modalHeading('Trimite factură fiscală')
+            ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
+            ->visible(function () {
+                if (!static::marketplaceHasMicroservice('accounting-connectors')) {
+                    return false;
+                }
+                $marketplace = static::getMarketplaceClient();
+                if (!$marketplace) return false;
+                return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
+            })
+            ->action(function () {
+                $this->sendToAccounting($this->record, 'invoice');
+            });
+
+        $sendEfactura = Actions\Action::make('sendEfactura')
+            ->label('Trimite în eFactura')
+            ->icon('heroicon-o-paper-airplane')
+            ->color('info')
+            ->requiresConfirmation()
+            ->modalHeading('Trimite factura în eFactura')
+            ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă către ANAF prin sistemul eFactura.")
+            ->visible(function () {
+                // Show only if marketplace has eFactura active AND invoice not already sent
+                if (!static::marketplaceHasMicroservice('efactura-ro')) {
+                    return false;
+                }
+                $queue = $this->record->anafQueue;
+                return !$queue || in_array($queue->status, [AnafQueue::STATUS_ERROR, AnafQueue::STATUS_REJECTED]);
+            })
+            ->action(function () {
+                $this->submitToEfactura($this->record);
+            });
+
+        $emailAccountingPdf = Actions\Action::make('emailAccountingPdf')
+            ->label('Trimite PDF pe Email')
+            ->icon('heroicon-o-envelope')
+            ->color('info')
+            ->requiresConfirmation()
+            ->modalHeading('Trimite PDF-ul din contabilitate pe email')
+            ->modalDescription(function () {
+                $organizer = $this->record->organizer;
+                $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
+                $meta = $this->record->meta ?? [];
+                $provider = $meta['accounting']['provider'] ?? $meta['accounting_proforma']['provider'] ?? 'contabilitate';
+                return "PDF-ul facturii #{$this->record->number} din {$provider} va fi trimis la: {$email}";
+            })
+            ->visible(function () {
+                $meta = $this->record->meta ?? [];
+                return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+            })
+            ->action(function () {
+                $this->sendAccountingPdfEmail($this->record);
+            });
+
+        // ── Grup "Documente" (PDF-uri de vizualizat / regenerat) ──
+        $viewProformaPdf = Actions\Action::make('viewProformaPdf')
+            ->label('PDF Proformă')
+            ->icon('heroicon-o-document-duplicate')
+            ->color('gray')
+            ->url(function () {
+                $meta = $this->record->meta ?? [];
+                return $meta['accounting_proforma']['pdf_url'] ?? null;
+            })
+            ->openUrlInNewTab()
+            ->visible(fn () => !empty(($this->record->meta ?? [])['accounting_proforma']['pdf_url']));
+
+        $viewAccountingPdf = Actions\Action::make('viewAccountingPdf')
+            ->label('PDF Factură Fiscală')
+            ->icon('heroicon-o-document-text')
+            ->color('gray')
+            ->url(function () {
+                $meta = $this->record->meta ?? [];
+                return $meta['accounting']['pdf_url'] ?? null;
+            })
+            ->openUrlInNewTab()
+            ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url']));
+
+        $refreshAccountingPdf = Actions\Action::make('refreshAccountingPdf')
+            ->label('Actualizează PDF')
+            ->icon('heroicon-o-arrow-path')
+            ->color('gray')
+            ->visible(function () {
+                $meta = $this->record->meta ?? [];
+                return !empty($meta['accounting']['external_ref']) || !empty($meta['accounting_proforma']['external_ref']);
+            })
+            ->action(function () {
+                $this->fetchAccountingPdf($this->record);
+            });
+
+        // ── Overflow (rar + distructiv) ──
+        $delete = Actions\DeleteAction::make()
+            ->label('Șterge factura')
+            ->requiresConfirmation()
+            ->modalHeading('Șterge factura')
+            ->modalDescription(fn () => "Factura #{$this->record->number} va fi ștearsă. Această acțiune nu poate fi anulată.")
+            ->successRedirectUrl(fn () => OrganizerInvoiceResource::getUrl('index'));
+
         return [
-            Actions\Action::make('preview')
-                ->label('Previzualizare')
-                ->icon('heroicon-o-eye')
-                ->modalHeading(fn () => "Factură #{$this->record->number}")
-                ->modalContent(fn () => new HtmlString(
-                    OrganizerInvoiceResource::renderInvoiceHtml($this->record)
-                ))
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Închide'),
-
-            // "Descarcă PDF" button removed 2026-08-07 — redundant with the
-            // dedicated PDF Proformă / PDF Factură Fiscală buttons that show
-            // for each accounting document actually generated.
-
-            Actions\DeleteAction::make()
-                ->label('Șterge factura')
-                ->requiresConfirmation()
-                ->modalHeading('Șterge factura')
-                ->modalDescription(fn () => "Factura #{$this->record->number} va fi ștearsă. Această acțiune nu poate fi anulată.")
-                ->successRedirectUrl(fn () => OrganizerInvoiceResource::getUrl('index')),
-
-            Actions\Action::make('email')
-                ->label('Trimite Email')
-                ->icon('heroicon-o-envelope')
-                ->requiresConfirmation()
-                ->modalHeading('Trimite factura pe email')
-                ->modalDescription(function () {
-                    $organizer = $this->record->organizer;
-                    $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
-                    return "Factura #{$this->record->number} va fi trimisă la: {$email}";
-                })
-                ->action(function () {
-                    $this->sendInvoiceEmail($this->record);
-                }),
-
-            Actions\Action::make('sendEfactura')
-                ->label('Trimite în eFactura')
+            $markPaid,
+            $efacturaStatus,
+            Actions\ActionGroup::make([
+                $email,
+                $sendProforma,
+                $sendAccounting,
+                $sendEfactura,
+                $emailAccountingPdf,
+            ])
+                ->label('Trimite')
                 ->icon('heroicon-o-paper-airplane')
-                ->color('info')
-                ->requiresConfirmation()
-                ->modalHeading('Trimite factura în eFactura')
-                ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă către ANAF prin sistemul eFactura.")
-                ->visible(function () {
-                    // Show only if marketplace has eFactura active AND invoice not already sent
-                    if (!static::marketplaceHasMicroservice('efactura-ro')) {
-                        return false;
-                    }
-                    $queue = $this->record->anafQueue;
-                    return !$queue || in_array($queue->status, [AnafQueue::STATUS_ERROR, AnafQueue::STATUS_REJECTED]);
-                })
-                ->action(function () {
-                    $this->submitToEfactura($this->record);
-                }),
-
-            Actions\Action::make('efacturaStatus')
-                ->label(function () {
-                    $queue = $this->record->anafQueue;
-                    if (!$queue) return 'Status eFactura';
-                    $statusLabels = [
-                        'queued' => 'eFactura: În coadă',
-                        'submitted' => 'eFactura: Trimisă',
-                        'accepted' => 'eFactura: Acceptată',
-                        'rejected' => 'eFactura: Respinsă',
-                        'error' => 'eFactura: Eroare',
-                    ];
-                    return $statusLabels[$queue->status] ?? 'eFactura: ' . $queue->status;
-                })
-                ->icon('heroicon-o-document-check')
-                ->color(function () {
-                    $queue = $this->record->anafQueue;
-                    if (!$queue) return 'gray';
-                    return match ($queue->status) {
-                        'accepted' => 'success',
-                        'rejected', 'error' => 'danger',
-                        'submitted' => 'warning',
-                        'queued' => 'info',
-                        default => 'gray',
-                    };
-                })
-                ->modalHeading('Status eFactura')
-                ->modalContent(function () {
-                    $queue = $this->record->anafQueue;
-                    if (!$queue) return new HtmlString('<p>Factura nu a fost trimisă în eFactura.</p>');
-
-                    $statusLabels = [
-                        'queued' => 'În coadă',
-                        'submitted' => 'Trimisă către ANAF',
-                        'accepted' => 'Acceptată de ANAF',
-                        'rejected' => 'Respinsă de ANAF',
-                        'error' => 'Eroare',
-                    ];
-
-                    $html = '<div style="font-family:sans-serif;">';
-                    $html .= '<p><strong>Status:</strong> ' . e($statusLabels[$queue->status] ?? $queue->status) . '</p>';
-                    $html .= '<p><strong>Încercări:</strong> ' . $queue->attempts . '</p>';
-
-                    if ($queue->submitted_at) {
-                        $html .= '<p><strong>Trimisă la:</strong> ' . $queue->submitted_at->format('d.m.Y H:i') . '</p>';
-                    }
-                    if ($queue->accepted_at) {
-                        $html .= '<p><strong>Acceptată la:</strong> ' . $queue->accepted_at->format('d.m.Y H:i') . '</p>';
-                    }
-                    if ($queue->error_message) {
-                        $html .= '<p><strong>Eroare:</strong> ' . e($queue->error_message) . '</p>';
-                    }
-                    if ($remoteId = $queue->getRemoteId()) {
-                        $html .= '<p><strong>ID ANAF:</strong> ' . e($remoteId) . '</p>';
-                    }
-
-                    $html .= '</div>';
-                    return new HtmlString($html);
-                })
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Închide')
-                ->visible(fn () => $this->record->anafQueue !== null),
-
-            Actions\Action::make('sendProforma')
-                ->label('Trimite Proformă')
-                ->icon('heroicon-o-document-duplicate')
-                ->color('info')
-                ->requiresConfirmation()
-                ->modalHeading('Trimite factură proformă')
-                ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca PROFORMĂ în software-ul de contabilitate.")
-                ->visible(function () {
-                    if (!static::marketplaceHasMicroservice('accounting-connectors')) {
-                        return false;
-                    }
-                    $marketplace = static::getMarketplaceClient();
-                    if (!$marketplace) return false;
-                    if (!app(AccountingService::class)->hasMarketplaceConnector($marketplace->id)) return false;
-                    // Check if proforma series is configured
-                    $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
-                        ->where('marketplace_client_id', $marketplace->id)
-                        ->where('status', 'connected')
-                        ->first();
-                    if (!$connector) return false;
-                    try {
-                        $auth = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($connector->auth), true);
-                        return !empty($auth['proforma_series_name']);
-                    } catch (\Exception $e) {
-                        return false;
-                    }
-                })
-                ->action(function () {
-                    $this->sendToAccounting($this->record, 'proforma');
-                }),
-
-            Actions\Action::make('sendAccounting')
-                ->label('Trimite Factură Fiscală')
-                ->icon('heroicon-o-calculator')
-                ->color('warning')
-                ->requiresConfirmation()
-                ->modalHeading('Trimite factură fiscală')
-                ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
-                ->visible(function () {
-                    if (!static::marketplaceHasMicroservice('accounting-connectors')) {
-                        return false;
-                    }
-                    $marketplace = static::getMarketplaceClient();
-                    if (!$marketplace) return false;
-                    return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
-                })
-                ->action(function () {
-                    $this->sendToAccounting($this->record, 'invoice');
-                }),
-
-            Actions\Action::make('viewProformaPdf')
-                ->label('PDF Proformă')
-                ->icon('heroicon-o-document-duplicate')
-                ->color('gray')
-                ->url(function () {
-                    $meta = $this->record->meta ?? [];
-                    return $meta['accounting_proforma']['pdf_url'] ?? null;
-                })
-                ->openUrlInNewTab()
-                ->visible(fn () => !empty(($this->record->meta ?? [])['accounting_proforma']['pdf_url'])),
-
-            Actions\Action::make('viewAccountingPdf')
-                ->label('PDF Factură Fiscală')
+                ->button(),
+            Actions\ActionGroup::make([
+                $viewProformaPdf,
+                $viewAccountingPdf,
+                $refreshAccountingPdf,
+            ])
+                ->label('Documente')
                 ->icon('heroicon-o-document-text')
                 ->color('gray')
-                ->url(function () {
-                    $meta = $this->record->meta ?? [];
-                    return $meta['accounting']['pdf_url'] ?? null;
-                })
-                ->openUrlInNewTab()
-                ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url'])),
-
-            Actions\Action::make('refreshAccountingPdf')
-                ->label('Actualizează PDF')
-                ->icon('heroicon-o-arrow-path')
+                ->button(),
+            Actions\ActionGroup::make([
+                $delete,
+            ])
+                ->label('Mai multe')
+                ->icon('heroicon-o-ellipsis-vertical')
                 ->color('gray')
-                ->visible(function () {
-                    $meta = $this->record->meta ?? [];
-                    return !empty($meta['accounting']['external_ref']) || !empty($meta['accounting_proforma']['external_ref']);
-                })
-                ->action(function () {
-                    $this->fetchAccountingPdf($this->record);
-                }),
-
-            Actions\Action::make('emailAccountingPdf')
-                ->label('Trimite PDF pe Email')
-                ->icon('heroicon-o-envelope')
-                ->color('info')
-                ->requiresConfirmation()
-                ->modalHeading('Trimite PDF-ul din contabilitate pe email')
-                ->modalDescription(function () {
-                    $organizer = $this->record->organizer;
-                    $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
-                    $meta = $this->record->meta ?? [];
-                    $provider = $meta['accounting']['provider'] ?? $meta['accounting_proforma']['provider'] ?? 'contabilitate';
-                    return "PDF-ul facturii #{$this->record->number} din {$provider} va fi trimis la: {$email}";
-                })
-                ->visible(function () {
-                    $meta = $this->record->meta ?? [];
-                    return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
-                })
-                ->action(function () {
-                    $this->sendAccountingPdfEmail($this->record);
-                }),
-
-            Actions\Action::make('markPaid')
-                ->label('Marchează Achitată')
-                ->icon('heroicon-o-check-circle')
-                ->color('success')
-                ->requiresConfirmation()
-                ->visible(fn () => $this->record->status !== 'paid')
-                ->action(function () {
-                    $this->record->markAsPaid('manual');
-                    Notification::make()->success()->title('Factură marcată ca achitată.')->send();
-                    $this->fillForm();
-                }),
+                ->button(),
         ];
     }
 
