@@ -1163,18 +1163,20 @@ class ViewPayout extends ViewRecord
             : (is_string($organizer->contract_date) && $organizer->contract_date !== ''
                 ? \Carbon\Carbon::parse($organizer->contract_date)->format('d.m.Y')
                 : '');
-        // Short accountant phrasing: "cf. ctr. nr X/DATE, eveniment "Y"/DATE".
-        // No leading "taxa ticketing", no "pentru"/"din"/"la {venue}, {city}"
-        // padding — Oblio row descriptions have a display cap and the
-        // long form gets truncated in printed invoices.
+        // Accountant-friendly short phrasing:
+        //   Servicii ticketing [POS ]invitatii/bilete [rambursate ]"TICKETTYPE"
+        //     [, cf. ctr. nr X/DATE][, "EVENT" / DATE]
+        // Contract stays because the accountant needs a legal reference to
+        // the underlying commercial contract; ticket type stays because it
+        // ties the invoice line to a specific SKU sold.
         $contractFragment = ($contractNumber !== '' || $contractDate !== '')
-            ? 'cf. ctr. nr ' . $contractNumber . '/' . $contractDate
+            ? ', cf. ctr. nr ' . $contractNumber . '/' . $contractDate
             : '';
 
         $eventCtx = $this->resolveEventContext($payout->event);
         $eventFragment = $eventCtx['name'] !== ''
-            ? ', eveniment "' . $eventCtx['name'] . '"'
-                . ($eventCtx['date'] !== '' ? '/' . $eventCtx['date'] : '')
+            ? ', "' . $eventCtx['name'] . '"'
+                . ($eventCtx['date'] !== '' ? ' / ' . $eventCtx['date'] : '')
             : '';
 
         $items = [];
@@ -1191,10 +1193,12 @@ class ViewPayout extends ViewRecord
             $lineTotal = round($qty * $commPerTicket, 2);
             $subtotal += $lineTotal;
 
+            $ticketTypeName = (string) ($item['ticket_type_name'] ?? 'Bilet');
+
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
-                'description' => trim('Prestari servicii invitatii/bilete online acces POS'
-                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
+                'description' => trim('Servicii ticketing POS invitatii/bilete "' . $ticketTypeName . '"'
+                    . $contractFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1215,11 +1219,12 @@ class ViewPayout extends ViewRecord
 
             $subtotal += $lineTotal;
 
+            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
+
             $items[] = [
                 'name' => 'Comision bilet rambursat integral',
-                'description' => trim('Comision pentru bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
-                    . '" rambursat integral (comision returnat clientului)'
-                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
+                'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $ticketTypeName . '"'
+                    . $contractFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1240,11 +1245,12 @@ class ViewPayout extends ViewRecord
 
             $subtotal += $lineTotal;
 
+            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
+
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
-                'description' => trim('Comision inclus în preț bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
-                    . '" vândut online'
-                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
+                'description' => trim('Servicii ticketing invitatii/bilete "' . $ticketTypeName . '"'
+                    . $contractFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1266,12 +1272,12 @@ class ViewPayout extends ViewRecord
 
             $subtotal -= $lineTotal;
 
+            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
+
             $items[] = [
                 'name' => 'Storno comision reținut din rambursare parțială',
-                'description' => trim('Storno: comision reținut de Ambilet la rambursarea parțială a biletului "'
-                    . ($row['ticket_type_name'] ?? 'Bilet')
-                    . '" (fără rambursarea comisionului) — deja în vistieria Ambilet, se scade din total'
-                    . ($contractFragment !== '' ? ', ' . $contractFragment : '') . $eventFragment),
+                'description' => trim('Storno servicii ticketing "' . $ticketTypeName . '"'
+                    . $contractFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => -$commPerTicket,
                 'amount' => -$lineTotal,
@@ -1534,8 +1540,8 @@ class ViewPayout extends ViewRecord
                 $itemEventFragment = trim($itemEventFragment . ' ' . $ev['date']);
             }
             $itemDescription = trim($itemEventFragment
-                . ' //Conform decont nr. ' . $series
-                . ($createdAt !== '' ? ' din data ' . $createdAt : ''));
+                . ' // cf. decont ' . $series
+                . ($createdAt !== '' ? '/' . $createdAt : ''));
         } else {
             $itemName = 'Comision servicii ticketing';
             $itemDescription = 'Comision servicii ticketing - ' . $reference;
