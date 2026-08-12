@@ -875,6 +875,43 @@ class OrderResource extends Resource
                             \Filament\Notifications\Notification::make()->title($msg)->success()->send();
                         })
                         ->deselectRecordsAfterCompletion(),
+                    // Destructive counterpart of "Șterge" for TEST cleanup: unlike
+                    // the safe action above it does NOT skip paid/completed orders —
+                    // it hard-deletes everything selected (the Order::deleting hook
+                    // still releases seats, restores stock and drops tickets, and the
+                    // rows leave the live reports). Kept as a separate, clearly
+                    // labelled action + a mandatory acknowledgement checkbox so a
+                    // misclick can't wipe real sales.
+                    \Filament\Actions\BulkAction::make('bulk_hard_delete')
+                        ->label('Șterge definitiv (curățare teste)')
+                        ->icon('heroicon-o-fire')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Șterge DEFINITIV comenzile selectate')
+                        ->modalDescription(new HtmlString('<b>Ștergere HARD, ireversibilă.</b> Dispar comenzile și biletele, se eliberează locurile, se reface stocul și se scad din rapoarte — <b>INCLUSIV vânzări reale plătite/finalizate</b>. Nu returnează banii încasați și nu modifică deconturile deja emise. Folosește DOAR pentru curățarea testelor.'))
+                        ->modalSubmitActionLabel('Da, șterge definitiv')
+                        ->modalIcon('heroicon-o-fire')
+                        ->form([
+                            \Filament\Forms\Components\Checkbox::make('confirm_hard_delete')
+                                ->label('Am înțeles: șterg definitiv (inclusiv vânzări reale), acțiunea nu poate fi anulată.')
+                                ->accepted()
+                                ->required()
+                                ->validationMessages(['accepted' => 'Bifează asumarea pentru a putea șterge.']),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $n = 0;
+                            \Illuminate\Support\Facades\DB::transaction(function () use ($records, &$n) {
+                                foreach ($records as $r) {
+                                    $r->delete();
+                                    $n++;
+                                }
+                            });
+                            \Filament\Notifications\Notification::make()
+                                ->title($n . ' comenzi șterse definitiv.')
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
