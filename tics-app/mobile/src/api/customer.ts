@@ -59,11 +59,18 @@ export const getCustomer = (): Customer | null => {
   return customer;
 };
 
-function setSession(t: string | null, c: Customer | null) {
+/**
+ * `remember` decide daca sesiunea supravietuieste repornirii.
+ *
+ * Bifa „Ține-mă minte" chiar face ceva acum: nebifata, tokenul ramane doar in
+ * memorie si dispare cand se inchide aplicatia. Pe un telefon imprumutat, asta
+ * e diferenta dintre a te deconecta si a lasa contul deschis.
+ */
+function setSession(t: string | null, c: Customer | null, remember = true) {
   token = t;
   customer = c;
   try {
-    if (t) localStorage.setItem(TOKEN_LS, JSON.stringify({ token: t, customer: c }));
+    if (t && remember) localStorage.setItem(TOKEN_LS, JSON.stringify({ token: t, customer: c }));
     else localStorage.removeItem(TOKEN_LS);
   } catch {
     /* fara persistenta, doar se pierde la repornire */
@@ -112,14 +119,15 @@ async function call<T>(path: string, init?: RequestInit & { auth?: boolean }): P
 type LoginResponse = { success: boolean; data?: { token: string; customer: Customer } };
 
 /** Intoarce clientul la succes, null daca datele-s gresite sau API-ul tace. */
-export async function customerLogin(email: string, password: string): Promise<Customer | null> {
+export async function customerLogin(email: string, password: string, remember = true): Promise<Customer | null> {
   const r = await call<LoginResponse>('/tenant-client/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
     auth: false,
   });
   if (!r?.success || !r.data?.token) return null;
-  setSession(r.data.token, r.data.customer ?? null);
+  setSession(r.data.token, r.data.customer ?? null, remember);
+
   return r.data.customer ?? null;
 }
 

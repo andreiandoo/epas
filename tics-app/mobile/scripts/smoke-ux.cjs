@@ -237,6 +237,50 @@ const check = (name, ok, extra = '') => {
     friendsScreen.body.slice(0, 90),
   );
 
+  /* ---------- categoria nu mai cade pe evenimente demo ---------- */
+  await page.evaluate(() => document.querySelectorAll('.bnav .nav')[0]?.click());
+  await wait(900);
+  const wentToCategory = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button.chip')].find((x) => /Teatru/.test(x.textContent ?? ''));
+    b?.click();
+
+    return !!b;
+  });
+  await wait(2500);
+  const category = await page.evaluate(() => ({
+    body: document.body.textContent.replace(/\s+/g, ' '),
+    cards: document.querySelectorAll('.mcard').length,
+  }));
+  /* „Coldplay" e din datasetul prototipului. Daca apare pe un ecran de
+     categorie, inseamna ca fallback-ul demo s-a intors. */
+  check(
+    'categoria NU arata evenimente demo',
+    wentToCategory && !/Coldplay/.test(category.body),
+    `${category.cards} carduri`,
+  );
+
+  /* ---------- bifa „Ține-mă minte" exista si comuta ---------- */
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'networkidle2' });
+  await wait(3400);
+  await clickText('Sari peste');
+  await wait(700);
+  const cbxBefore = await page.evaluate(() => {
+    const el = document.querySelector('.cbx');
+    if (!el) return null;
+    el.parentElement?.click();
+
+    return el.classList.contains('on');
+  });
+  /* React randeaza dupa click; citirea imediata prinde starea veche. */
+  await wait(400);
+  const cbxAfter = await page.evaluate(() => document.querySelector('.cbx')?.classList.contains('on') ?? null);
+  check(
+    'bifa „Ține-mă minte" exista si comuta',
+    cbxBefore !== null && cbxBefore !== cbxAfter,
+    `${cbxBefore} -> ${cbxAfter}`,
+  );
+
   console.log(errors.length ? '\nERORI:\n' + errors.join('\n') : '\nNicio eroare de pagina.');
   console.log(failures ? `\n${failures} verificari picate.` : '\nToate verificarile au trecut.');
   await browser.close();

@@ -193,6 +193,7 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
   const [email, setEmail] = useState('andrei@tixello.ro');
   const [pass, setPass] = useState('password');
   const [busy, setBusy] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   /**
@@ -208,9 +209,21 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
     setBusy(true);
     setErr(null);
     try {
-      const real = await customerLogin(email.trim(), pass);
-      if (!real) setErr('Cont demonstrativ — datele n-au fost recunoscute.');
-      login(identityFor(email));
+      const real = await customerLogin(email.trim(), pass, remember);
+
+      if (!real) {
+        setErr('Cont demonstrativ — datele n-au fost recunoscute.');
+        login(identityFor(email));
+
+        return;
+      }
+
+      /* Un client REAL intra direct in aplicatie, nu in ecranul de alegere.
+         Inainte se chema `login(identityFor(email))` indiferent de rezultat,
+         iar `identityFor` deduce tipul contului din PREFIXUL adresei — o regula
+         a datelor demo. Efectul: te autentificai cu succes si tot in contul
+         demonstrativ ajungeai, fara sa afli ca autentificarea reusise. */
+      login('clientonly');
     } finally {
       setBusy(false);
     }
@@ -265,7 +278,16 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
           </div>
         </div>
         <div className="between" style={sx('margin:12px 2px 0;font-size:12.5px;font-weight:500')}>
-          <span className="muted">Ține-mă minte</span>
+          {/* Avea doar eticheta, fara nimic de bifat — arata ca o setare, dar
+              nu se putea atinge si nu facea nimic. */}
+          <span
+            className="row muted"
+            onClick={() => setRemember((v) => !v)}
+            style={sx('gap:8px;cursor:pointer;user-select:none')}
+          >
+            <span className={remember ? 'cbx on' : 'cbx'} aria-hidden="true" />
+            Ține-mă minte
+          </span>
           <span style={sx('color:var(--indigo-2);cursor:pointer')} onClick={onForgot}>
             Ai uitat parola?
           </span>

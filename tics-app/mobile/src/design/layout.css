@@ -232,3 +232,34 @@
 .app-client .dbar.scrolled .between {
   padding-bottom: 10px;
 }
+
+/* ---- casuta de bifat ----
+   Prototipul n-are niciuna; „Ține-mă minte" era doar un text. Desenata din CSS,
+   nu un `<input type=checkbox>` nativ, ca sa arate la fel pe Android si iOS —
+   controlul nativ e diferit pe fiecare si ar fi singurul element din aplicatie
+   care nu respecta limbajul vizual. */
+.app-client .cbx {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line-2);
+  background: var(--surface-2);
+  flex: none;
+  position: relative;
+  transition: background .16s, border-color .16s;
+}
+.app-client .cbx.on {
+  background: linear-gradient(135deg, var(--indigo), var(--indigo-3));
+  border-color: transparent;
+}
+.app-client .cbx.on::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(42deg);
+}

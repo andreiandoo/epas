@@ -67,10 +67,21 @@ class CatalogController extends Controller
     {
         $limit = max(1, min((int) $request->query('limit', 20), 50));
         $city = trim((string) $request->query('city', ''));
+        $category = trim((string) $request->query('category', ''));
 
         $events = Event::query()
             ->where('is_published', true)
             ->upcoming()
+            /* Categoria se filtreaza AICI, nu in aplicatie.
+               Taxonomia scrie „Concert", „Concerte", „Concert live" — o
+               comparatie de siruri egale in client rata aproape tot si ecranul
+               de categorie ramanea gol. `LIKE` pe numele tipului de eveniment
+               prinde variantele, iar `CAST` e obligatoriu: numele e traductibil
+               si poate fi jsonb pe unele instalari. */
+            ->when($category !== '', fn ($q) => $q->whereHas(
+                'eventTypes',
+                fn ($t) => $t->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', ['%'.mb_strtolower($category).'%']),
+            ))
             ->with(['venue', 'ticketTypes', 'eventTypes'])
             /* Intai cele scoase in fata de organizator, apoi dupa cat de
                aproape sunt: un eveniment de saptamana viitoare e mai util

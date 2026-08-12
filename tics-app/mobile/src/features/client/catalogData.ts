@@ -325,8 +325,8 @@ function useCatalog<A, T>(
  * cade pe Radar, care oricum e a doua sursa — deci lista goala e un rezultat
  * valid, nu o exceptie.
  */
-export function useCatalogEvents(opts: { city?: string; limit?: number } = {}) {
-  const { city, limit } = opts;
+export function useCatalogEvents(opts: { city?: string; limit?: number; category?: string } = {}) {
+  const { city, limit, category } = opts;
   const [items, setItems] = useState<UiEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -335,7 +335,7 @@ export function useCatalogEvents(opts: { city?: string; limit?: number } = {}) {
     let alive = true;
     setLoading(true);
 
-    void fetchCatalogEvents({ city, limit }, ctrl.signal).then((list) => {
+    void fetchCatalogEvents({ city, limit, category }, ctrl.signal).then((list) => {
       if (!alive) return;
       /* `Array.isArray`, nu doar `?? []`: un raspuns malformat (proxy care
          intoarce alt JSON, endpoint schimbat) ar fi ajuns direct in `.map` si
@@ -348,7 +348,7 @@ export function useCatalogEvents(opts: { city?: string; limit?: number } = {}) {
       alive = false;
       ctrl.abort();
     };
-  }, [city, limit]);
+  }, [city, limit, category]);
 
   return { items, loading };
 }

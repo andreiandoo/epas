@@ -39,25 +39,29 @@ export function Category({ id }: { id?: string }) {
   }, [cat, setCat]);
   useEffect(() => setPriceLive(f.maxPrice), [f.maxPrice]);
 
-  /* Aceleasi doua surse ca pe Acasa, in aceeasi ordine: ale noastre intai,
-     Radarul dupa. Ecranul filtra pana acum datasetul prototipului, deci orice
-     categoria ai fi ales duceai la aceleasi trei evenimente inventate. */
-  const mine = useCatalogEvents({ limit: 40 });
-  const { items: radarItems } = useRadarList({ limit: 24, catKey: CAT_TO_TYPE[cat] });
+  /* Aceleasi doua surse ca pe Acasa: ale noastre intai, Radarul dupa.
+     Categoria se cere SERVERULUI, nu se filtreaza in client — taxonomia scrie
+     „Concert", „Concerte", „Concert live", iar o comparatie de siruri egale
+     rata aproape tot si ecranul ramanea gol. */
+  const mine = useCatalogEvents({ limit: 40, category: cat === 'Toate' ? undefined : cat });
+  const { items: radarItems, loading: radarLoading } = useRadarList({
+    limit: 24,
+    catKey: cat === 'Toate' ? undefined : CAT_TO_TYPE[cat],
+  });
+
+  const loadingCat = mine.loading || radarLoading;
 
   const base = useMemo(() => {
-    const ours = mine.items.filter((e) => cat === 'Toate' || e.cat === cat);
+    const ours = mine.items;
     const seen = new Set(ours.map((e) => String(e.s).toLowerCase()));
-    const fromRadar = radarItems
-      .filter((r) => !seen.has(r.s.toLowerCase()))
-      .map(radarToUi)
-      .filter((e) => cat === 'Toate' || e.cat === cat);
+    const fromRadar = radarItems.filter((r) => !seen.has(r.s.toLowerCase())).map(radarToUi);
 
-    const pool = [...ours, ...fromRadar];
-
-    // Fara nimic real ramane datasetul prototipului, ca ecranul sa fie navigabil.
-    return pool.length ? pool : allEvents().filter((e) => cat === 'Toate' || e.cat === cat);
-  }, [cat, mine.items, radarItems]);
+    /* NU se mai cade pe datasetul prototipului. O categorie fara evenimente
+       reale arata acum goala, nu plina cu spectacole inventate: un ecran de
+       „Concerte" care listeaza Coldplay la Cluj pe date fixe e mai rau decat
+       unul gol — pare ca aplicatia are stoc si trimite omul intr-o fundatura. */
+    return [...ours, ...fromRadar];
+  }, [mine.items, radarItems]);
   const cities = useMemo(() => [...new Set(base.map((e) => e.city))], [base]);
 
   let list = base
@@ -143,6 +147,25 @@ export function Category({ id }: { id?: string }) {
                 Vezi {list.length} rezultate
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {loadingCat && !list.length ? (
+        <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:11px')}>
+          <div className="sk" style={sx('height:96px;border-radius:20px')} />
+          <div className="sk" style={sx('height:96px;border-radius:20px')} />
+        </div>
+      ) : null}
+
+      {!loadingCat && !list.length ? (
+        <div className="pad" style={sx('margin-top:50px;text-align:center')}>
+          <div style={sx('font-size:40px;opacity:.5')}>🔍</div>
+          <div style={sx('font-weight:600;font-size:15px;margin-top:10px')}>Nimic în „{cat}" deocamdată</div>
+          <div className="muted" style={sx('font-size:12.5px;margin-top:6px;line-height:1.5')}>
+            {base.length
+              ? 'Filtrele active nu lasă niciun rezultat. Încearcă să le lărgești.'
+              : 'Încă nu sunt evenimente anunțate în această categorie.'}
           </div>
         </div>
       ) : null}

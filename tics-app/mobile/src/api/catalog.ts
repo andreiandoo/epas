@@ -153,10 +153,14 @@ export const fetchCatalogEvent = (id: string | number, signal?: AbortSignal) =>
  * descoperire. Radarul TICS ramane o sursa secundara: acolo doar comparam
  * preturi, aici chiar vindem bilet.
  */
-export const fetchCatalogEvents = (opts: { city?: string; limit?: number } = {}, signal?: AbortSignal) => {
+export const fetchCatalogEvents = (
+  opts: { city?: string; limit?: number; category?: string } = {},
+  signal?: AbortSignal,
+) => {
   const params = new URLSearchParams();
   if (opts.city) params.set('city', opts.city);
   if (opts.limit) params.set('limit', String(opts.limit));
+  if (opts.category) params.set('category', opts.category);
 
   const qs = params.toString();
 
