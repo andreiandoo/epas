@@ -436,7 +436,7 @@ require_once __DIR__ . '/includes/header.php';
                         <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
                         </svg>
-                        <a href="tel:+40729121232" class="text-primary">+40 729 121 232</a>
+                        <a href="tel:+40726131516" class="text-primary">+40 726 131 516</a>
                     </li>
                     <li class="flex items-center justify-center gap-2 text-sm text-gray-500 sm:justify-start">
                         <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
