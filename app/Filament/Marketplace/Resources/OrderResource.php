@@ -858,29 +858,10 @@ class OrderResource extends Resource
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
-                    \Filament\Actions\BulkAction::make('bulk_delete')
-                        ->label('Șterge')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->modalHeading('Șterge comenzile selectate')
-                        ->modalDescription('Comenzile finalizate, plătite sau rambursate nu pot fi șterse.')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            $protected = ['completed', 'paid', 'refunded', 'partially_refunded'];
-                            $deletable = $records->filter(fn ($r) => !in_array($r->status, $protected));
-                            $skipped = $records->count() - $deletable->count();
-                            $deletable->each(fn ($r) => $r->delete());
-                            $msg = $deletable->count() . ' comenzi șterse.';
-                            if ($skipped > 0) $msg .= " {$skipped} comenzi protejate au fost ignorate.";
-                            \Filament\Notifications\Notification::make()->title($msg)->success()->send();
-                        })
-                        ->deselectRecordsAfterCompletion(),
-                    // Destructive counterpart of "Șterge" for TEST cleanup: unlike
-                    // the safe action above it does NOT skip paid/completed orders —
-                    // it hard-deletes everything selected (the Order::deleting hook
-                    // still releases seats, restores stock and drops tickets, and the
-                    // rows leave the live reports). Kept as a separate, clearly
-                    // labelled action + a mandatory acknowledgement checkbox so a
+                    // Hard-deletes every selected order regardless of status (the
+                    // Order::deleting hook still releases seats, restores stock and
+                    // drops tickets, and the rows leave the live reports). Gated by a
+                    // mandatory acknowledgement checkbox + strong confirmation so a
                     // misclick can't wipe real sales.
                     \Filament\Actions\BulkAction::make('bulk_hard_delete')
                         ->label('Șterge definitiv')
