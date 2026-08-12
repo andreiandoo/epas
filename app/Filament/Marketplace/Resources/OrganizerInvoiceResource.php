@@ -131,6 +131,50 @@ class OrganizerInvoiceResource extends Resource
                                         . '</div>';
                                 }
 
+                                // ── EVENIMENT & DECONT(URI) ──
+                                // Linkuri către evenimentul facturii și către
+                                // decontul/deconturile aceluiași eveniment.
+                                $invPayout = $record->payout;
+                                $invEvent = $invPayout?->event;
+                                if ($invEvent || $invPayout) {
+                                    $html .= '<div style="margin-bottom:24px;padding:12px 16px;background:rgba(148,163,184,0.08);border-radius:8px;font-size:13px;">'
+                                        . '<div style="opacity:0.5;text-transform:uppercase;font-size:11px;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">Eveniment & Decont</div>';
+
+                                    if ($invEvent) {
+                                        $rawTitle = $invEvent->title;
+                                        if (is_array($rawTitle)) {
+                                            $evTitle = $rawTitle['ro'] ?? $rawTitle['en'] ?? (reset($rawTitle) ?: 'Eveniment');
+                                        } else {
+                                            $evTitle = $rawTitle ?: 'Eveniment';
+                                        }
+                                        $evUrl = \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $invEvent->id]);
+                                        $html .= '<div style="margin-bottom:6px;"><span style="opacity:0.6;">Eveniment:</span> '
+                                            . '<a href="' . e($evUrl) . '" style="color:#6366f1;font-weight:600;text-decoration:none;">' . e($evTitle) . '</a></div>';
+                                    }
+
+                                    // Toate deconturile evenimentului; îl marchez pe cel al acestei facturi.
+                                    $deconturi = $invEvent
+                                        ? \App\Models\MarketplacePayout::where('event_id', $invEvent->id)
+                                            ->orderBy('id')
+                                            ->get(['id', 'reference', 'decont_series', 'issuing_company', 'period_start', 'period_end'])
+                                        : ($invPayout ? collect([$invPayout]) : collect());
+
+                                    if ($deconturi->isNotEmpty()) {
+                                        $links = [];
+                                        foreach ($deconturi as $d) {
+                                            $dUrl = \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $d->id]);
+                                            $dLabel = $d->decont_series ?: ($d->reference ?: ('#' . $d->id));
+                                            $isThis = $invPayout && (int) $d->id === (int) $invPayout->id;
+                                            $links[] = '<a href="' . e($dUrl) . '" style="color:#6366f1;font-weight:600;text-decoration:none;">' . e($dLabel) . '</a>'
+                                                . ($isThis ? ' <span style="opacity:0.5;">(această factură)</span>' : '');
+                                        }
+                                        $html .= '<div><span style="opacity:0.6;">' . (count($links) > 1 ? 'Deconturi:' : 'Decont:') . '</span> '
+                                            . implode(' &middot; ', $links) . '</div>';
+                                    }
+
+                                    $html .= '</div>';
+                                }
+
                                 // ── EMITENT ──
                                 $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Emitent (din factură)</h4>';
                                 $html .= '<table style="width:100%;">';
