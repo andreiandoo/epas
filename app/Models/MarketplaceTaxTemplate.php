@@ -1168,6 +1168,42 @@ class MarketplaceTaxTemplate extends Model
             $variables['total_sales_value'] = number_format($totalSalesValue, 2);
             $variables['total_sales_currency'] = $currency;
 
+            // ⚠️ SCOPED FIX for declaratie_impozite ONLY.
+            //
+            // ticket_types.quota_sold is a denormalized counter that drifts
+            // in production for a bunch of reasons (POS test orders, cancels
+            // that didn't decrement, legacy imports, race conditions).
+            // Fiscal declarations MUST use the real ticket count so the
+            // organizer isn't declaring phantom revenue.
+            //
+            // We recompute $totalSalesValue from the `tickets` table
+            // (status IN valid/used/checked_in) × current price, subtract
+            // the same discount sum, and override the total_sales_value
+            // variable. All downstream declaratie_impozite variables
+            // (music_stamp_value, taxable_income, tax_due) inherit the
+            // corrected number automatically.
+            //
+            // Other templates (cerere_avizare, PV distrugere, decont-uri)
+            // keep the quota_sold-based calculation to avoid changing
+            // their output as a side-effect.
+            if ($template && $template->type === 'declaratie_impozite' && $event) {
+                $realSalesValue = 0.0;
+                foreach ($event->ticketTypes as $tt) {
+                    $realSold = \App\Models\Ticket::where('event_id', $event->id)
+                        ->where('ticket_type_id', $tt->id)
+                        ->whereIn('status', ['valid', 'used', 'checked_in'])
+                        ->count();
+                    $ttPrice = (float) ($tt->display_price ?? $tt->price ?? 0);
+                    $realSalesValue += $realSold * $ttPrice;
+                }
+                // Same discount adjustment as the global path above.
+                if (isset($eventDiscountSum) && $eventDiscountSum > 0) {
+                    $realSalesValue = max(0.0, $realSalesValue - $eventDiscountSum);
+                }
+                $totalSalesValue = $realSalesValue;
+                $variables['total_sales_value'] = number_format($totalSalesValue, 2);
+            }
+
             // === Calcule pentru decont impozit pe spectacole ===
             // Sumează taxele generale aplicabile (din template->general_tax_ids)
             // Filtrate după event_types: doar taxele care includ unul dintre tipurile evenimentului
@@ -1283,8 +1319,15 @@ class MarketplaceTaxTemplate extends Model
                 }
 
                 try {
+                    // Page-2 "Situația biletelor" table. For declaratie_impozite
+                    // POS sales are impozitabile fiscal and MUST be included
+                    // otherwise the declared income undercounts POS revenue.
+                    // Other templates (cerere_avizare pre-sale registration,
+                    // etc.) keep POS excluded because their scope is
+                    // pre-issued online series only.
+                    $splitExcludePos = !($template && $template->type === 'declaratie_impozite');
                     $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-                        ->buildPayoutSplitTable($event, null, null, excludePos: true);
+                        ->buildPayoutSplitTable($event, null, null, excludePos: $splitExcludePos);
                 } catch (\Throwable $e) {
                     $splitRows = [];
                 }
