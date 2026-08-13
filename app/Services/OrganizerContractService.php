@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendMarketplaceOrganizerEmailJob;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\MarketplaceTaxRegistry;
@@ -175,6 +176,15 @@ class OrganizerContractService
                 Log::warning('OrganizerContractService: Failed to create document notification', ['error' => $e->getMessage()]);
             }
 
+            // Email the organizer with a CTA to sign. Silent on failure —
+            // the contract still exists, and admins can resend from the
+            // OrganizerResource action.
+            try {
+                $this->notifyContractReadyForSignature($organizer);
+            } catch (\Throwable $e) {
+                Log::warning('OrganizerContractService: Failed to notify organizer', ['error' => $e->getMessage()]);
+            }
+
             return $document;
         } catch (\Throwable $e) {
             Log::error('OrganizerContractService: Failed to generate organizer contract', [
@@ -183,6 +193,90 @@ class OrganizerContractService
             ]);
             return null;
         }
+    }
+
+    /**
+     * Dispatch the "contract ready — please sign" email to the organizer.
+     * Called both at the end of generate() and from the admin "Resend
+     * signing reminder" action on OrganizerResource. Silent no-op for
+     * organizers exempt from the signature requirement (created before
+     * MarketplaceOrganizer::CONTRACT_SIGNATURE_REQUIRED_FROM). Returns
+     * true if an email was actually queued, false if skipped.
+     */
+    public function notifyContractReadyForSignature(MarketplaceOrganizer $organizer): bool
+    {
+        $marketplace = $organizer->marketplaceClient;
+        if (!$marketplace) {
+            return false;
+        }
+        if (!$organizer->email) {
+            return false;
+        }
+        if (method_exists($organizer, 'isContractSignatureRequired') && !$organizer->isContractSignatureRequired()) {
+            // Grandfathered organizer — do not spam them with a sign
+            // reminder for a signature they don't owe us.
+            return false;
+        }
+
+        SendMarketplaceOrganizerEmailJob::dispatch(
+            $marketplace->id,
+            $organizer->id,
+            'Semnează contractul cu {{marketplace_name}}',
+            $this->getContractReadyEmailBody()
+        );
+
+        return true;
+    }
+
+    /**
+     * Static HTML body for the contract-ready email. Placeholders like
+     * {{marketplace_name}} + {{sign_contract_url}} are resolved by
+     * SendMarketplaceOrganizerEmailJob::getTemplateVariables() at send
+     * time — see that file for the full var list.
+     */
+    protected function getContractReadyEmailBody(): string
+    {
+        return <<<'HTML'
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Semnează contractul</title>
+</head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:24px;color:#111;">
+    <table role="presentation" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <tr>
+            <td style="padding:32px 32px 16px;">
+                <h1 style="margin:0 0 8px;font-size:22px;color:#111;">Contractul tău este gata de semnat</h1>
+                <p style="margin:0;color:#555;font-size:14px;">Bună, {{organizer_name}}!</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:8px 32px 24px;color:#333;font-size:15px;line-height:1.6;">
+                <p>Am generat automat contractul de colaborare între <strong>{{company_name}}</strong> și <strong>{{marketplace_name}}</strong>. Pentru a-l activa, trebuie să-l semnezi electronic.</p>
+                <p style="margin:0;">Semnarea durează sub un minut și se face direct din contul tău de organizator, cu semnătură pe touchscreen sau mouse — nu ai nevoie de niciun software suplimentar.</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:0 32px 32px;text-align:center;">
+                <a href="{{sign_contract_url}}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:15px;">Semnează contractul acum</a>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:16px 32px 32px;color:#666;font-size:13px;line-height:1.5;border-top:1px solid #eee;">
+                <p style="margin:0 0 8px;"><strong>De ce e important?</strong> Publicarea evenimentelor și retragerile de fonduri sunt blocate până semnezi.</p>
+                <p style="margin:0;">Dacă linkul de mai sus nu funcționează, deschide manual: <a href="{{sign_contract_url}}" style="color:#2563eb;">{{sign_contract_url}}</a></p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:16px 32px;background:#f9fafb;color:#888;font-size:12px;text-align:center;">
+                Ai întrebări? Scrie la <a href="mailto:{{support_email}}" style="color:#2563eb;">{{support_email}}</a>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+HTML;
     }
 
     /**

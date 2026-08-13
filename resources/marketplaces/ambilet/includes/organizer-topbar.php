@@ -215,6 +215,29 @@ $skipJsComponents = true;
     </div>
 </div>
 
+<!-- Unsigned Contract Banner — fires ONLY when organizer is active
+     and required to sign but hasn't yet. Fetches state async from
+     /organizer/contract (see loadContract in settings.php for the
+     same source). Rendered after the pending banner so, if both
+     conditions ever fire, the operator sees "activate first" on top
+     followed by "sign contract" below. -->
+<div id="unsigned-contract-banner" class="hidden border-b" style="background:rgba(37,99,235,0.08);border-color:rgba(37,99,235,0.25);">
+    <div class="flex items-center justify-between gap-4 px-4 py-3 lg:px-8">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full" style="background:rgba(37,99,235,0.18);">
+                <svg class="w-5 h-5" fill="none" stroke="#2563eb" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-secondary">Contractul tau nu e semnat</p>
+                <p class="text-xs text-muted">Semneaza contractul electronic pentru a putea publica evenimente si a retrage bani.</p>
+            </div>
+        </div>
+        <a href="/organizator/semneaza-contract" class="px-4 py-2 text-sm text-white rounded-lg whitespace-nowrap" style="background:#2563eb;">
+            Semneaza acum
+        </a>
+    </div>
+</div>
+
 <script>
 // Populate topbar with logged-in organizer data
 (function() {
@@ -244,6 +267,30 @@ $skipJsComponents = true;
                 pendingBanner.classList.remove('hidden');
             }
         }
+    } catch (e) {}
+})();
+
+// Unsigned contract banner — async fetch because localStorage
+// (ambilet_organizer_data) doesn't carry signing state. Only fires
+// when the org is active AND required to sign AND hasn't signed yet.
+// Skipped entirely on non-organizer contexts (AmbiletAPI undefined).
+(function() {
+    if (typeof AmbiletAPI === 'undefined') return;
+    try {
+        // Skip if the pending-account banner already surfaced — the
+        // organizer needs to activate first anyway, no point stacking
+        // two nags before their account is even usable.
+        const pendingVisible = document.getElementById('pending-account-banner')
+            && !document.getElementById('pending-account-banner').classList.contains('hidden');
+        if (pendingVisible) return;
+
+        AmbiletAPI.get('/organizer/contract').then(function(res) {
+            const d = (res && res.data) || {};
+            if (d.signature_required && !d.is_signed) {
+                const el = document.getElementById('unsigned-contract-banner');
+                if (el) el.classList.remove('hidden');
+            }
+        }).catch(function() { /* silent — banner stays hidden */ });
     } catch (e) {}
 })();
 

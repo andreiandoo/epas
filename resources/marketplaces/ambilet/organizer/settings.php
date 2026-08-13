@@ -125,13 +125,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <div id="contract-section" class="hidden settings-section">
                 <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center justify-between mb-6 gap-3 flex-wrap">
                         <h2 class="text-lg font-bold text-secondary">Contract Marketplace</h2>
-                        <button id="download-contract-btn" onclick="downloadContract()" class="hidden btn btn-primary bg-primary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            Descarca Contract
-                        </button>
-                        <span id="no-contract-msg" class="hidden text-sm text-muted">Contract negenearat</span>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button id="download-contract-btn" onclick="downloadContract()" class="hidden btn btn-primary bg-primary">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                Descarca Contract
+                            </button>
+                            <a id="sign-contract-btn" href="/organizator/semneaza-contract" class="hidden btn text-white" style="background:#16a34a;">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                Semneaza Acum
+                            </a>
+                            <span id="contract-signed-badge" class="hidden items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-full" style="background:#16a34a;">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                Semnat electronic
+                            </span>
+                            <span id="no-contract-msg" class="hidden text-sm text-muted">Contract negenearat</span>
+                        </div>
                     </div>
                     <div class="p-4 mb-6 border border-blue-200 bg-blue-50 rounded-xl">
                         <div class="flex items-start gap-3">
@@ -795,12 +805,37 @@ async function loadContract() {
             // Show/hide download contract button based on contract existence
             const downloadBtn = document.getElementById('download-contract-btn');
             const noContractMsg = document.getElementById('no-contract-msg');
+            const signBtn = document.getElementById('sign-contract-btn');
+            const signedBadge = document.getElementById('contract-signed-badge');
             if (data.has_contract) {
                 downloadBtn.classList.remove('hidden');
                 noContractMsg.classList.add('hidden');
+
+                // Signing state controls whether we surface the "Semneaza
+                // acum" CTA vs the green "Semnat electronic" badge. The
+                // badge uses inline-flex when visible (added via JS to
+                // avoid a hidden+inline-flex CSS conflict on the span).
+                if (data.signature_required && !data.is_signed) {
+                    signBtn?.classList.remove('hidden');
+                    signedBadge?.classList.add('hidden');
+                    signedBadge?.classList.remove('inline-flex');
+                } else if (data.is_signed) {
+                    signBtn?.classList.add('hidden');
+                    signedBadge?.classList.remove('hidden');
+                    signedBadge?.classList.add('inline-flex');
+                } else {
+                    // Grandfathered organizer: contract exists but signing
+                    // is not required. Hide both signing indicators.
+                    signBtn?.classList.add('hidden');
+                    signedBadge?.classList.add('hidden');
+                    signedBadge?.classList.remove('inline-flex');
+                }
             } else {
                 downloadBtn.classList.add('hidden');
                 noContractMsg.classList.remove('hidden');
+                signBtn?.classList.add('hidden');
+                signedBadge?.classList.add('hidden');
+                signedBadge?.classList.remove('inline-flex');
             }
             // Show existing documents status
             if (data.documents) {

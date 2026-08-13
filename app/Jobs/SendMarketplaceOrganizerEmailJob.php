@@ -94,6 +94,21 @@ class SendMarketplaceOrganizerEmailJob implements ShouldQueue
      */
     protected function getTemplateVariables(MarketplaceClient $marketplace, MarketplaceOrganizer $organizer): array
     {
+        // contract_url routes to the sign page for organizers who still
+        // need to e-sign; otherwise it lands on the Contract tab in
+        // settings (download-only view). Computed at send time (not
+        // queue time) so a job enqueued before signing but processed
+        // after correctly points to the settings tab.
+        $needsToSign = method_exists($organizer, 'isContractSignatureRequired')
+            && method_exists($organizer, 'hasSignedContract')
+            && $organizer->isContractSignatureRequired()
+            && !$organizer->hasSignedContract();
+
+        $base = (string) ($marketplace->domain ?? '');
+        if ($base !== '' && !preg_match('#^https?://#i', $base)) {
+            $base = 'https://' . $base;
+        }
+
         return [
             'organizer_name' => $organizer->name ?? '',
             'organizer_email' => $organizer->email ?? '',
@@ -101,10 +116,11 @@ class SendMarketplaceOrganizerEmailJob implements ShouldQueue
             'contact_name' => $organizer->contact_name ?? '',
             'marketplace_name' => $marketplace->name ?? '',
             'marketplace_domain' => $marketplace->domain ?? '',
-            'settings_url' => ($marketplace->domain ?? '') . '/organizator/setari',
-            'contract_url' => ($marketplace->domain ?? '') . '/organizator/setari#contract',
-            'dashboard_url' => ($marketplace->domain ?? '') . '/organizator/dashboard',
-            'login_url' => ($marketplace->domain ?? '') . '/organizator/login',
+            'settings_url' => $base . '/organizator/setari',
+            'contract_url' => $base . ($needsToSign ? '/organizator/semneaza-contract' : '/organizator/setari#contract'),
+            'sign_contract_url' => $base . '/organizator/semneaza-contract',
+            'dashboard_url' => $base . '/organizator/dashboard',
+            'login_url' => $base . '/organizator/login',
             'support_email' => $marketplace->contact_email ?? '',
             'current_date' => now()->format('d.m.Y'),
             'current_year' => now()->format('Y'),

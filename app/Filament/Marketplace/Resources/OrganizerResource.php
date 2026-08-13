@@ -8,6 +8,7 @@ use App\Filament\Marketplace\Resources\OrganizerResource\Pages;
 use App\Filament\Marketplace\Resources\EventResource;
 use App\Models\Activity;
 use App\Models\MarketplaceOrganizer;
+use App\Services\OrganizerContractService;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -1333,6 +1334,30 @@ class OrganizerResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->toggleable(),
 
+                // Contract signing status (3 buckets). Computed on read —
+                // no DB column. "Exceptat" = organizer created before the
+                // cutoff (CONTRACT_SIGNATURE_REQUIRED_FROM) so they were
+                // grandfathered out of the e-signature requirement.
+                Tables\Columns\TextColumn::make('contract_signed_state')
+                    ->label('Contract')
+                    ->badge()
+                    ->state(fn (MarketplaceOrganizer $r): string =>
+                        !$r->isContractSignatureRequired() ? 'exceptat'
+                        : ($r->hasSignedContract() ? 'semnat' : 'nesemnat'))
+                    ->color(fn (string $state): string => match ($state) {
+                        'semnat' => 'success',
+                        'nesemnat' => 'danger',
+                        'exceptat' => 'gray',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'semnat' => 'Semnat',
+                        'nesemnat' => 'Nesemnat',
+                        'exceptat' => 'Exceptat',
+                        default => $state,
+                    })
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('total_events')
                     ->label('Events')
                     ->numeric()
@@ -1371,6 +1396,30 @@ class OrganizerResource extends Resource
                         true: fn (Builder $query) => $query->whereNotNull('verified_at'),
                         false: fn (Builder $query) => $query->whereNull('verified_at'),
                     ),
+
+                // Filter mirrors the same 3 buckets as the Contract column.
+                // "Exceptat" uses the model's grandfather cutoff constant
+                // so the SQL and the column stay in sync automatically.
+                Tables\Filters\SelectFilter::make('contract_signed_state')
+                    ->label('Contract')
+                    ->options([
+                        'semnat' => 'Semnat',
+                        'nesemnat' => 'Nesemnat',
+                        'exceptat' => 'Exceptat',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+                        if (!$value) return $query;
+                        $cutoff = MarketplaceOrganizer::CONTRACT_SIGNATURE_REQUIRED_FROM;
+                        return match ($value) {
+                            'semnat' => $query->whereNotNull('contract_signed_at'),
+                            'nesemnat' => $query->whereNull('contract_signed_at')
+                                ->where('created_at', '>=', $cutoff),
+                            'exceptat' => $query->whereNull('contract_signed_at')
+                                ->where('created_at', '<', $cutoff),
+                            default => $query,
+                        };
+                    }),
             ])
             ->recordActions([
                 Action::make('approve')
@@ -1391,6 +1440,35 @@ class OrganizerResource extends Resource
                     ->visible(fn (MarketplaceOrganizer $record): bool => $record->verified_at === null && $record->status === 'active')
                     ->action(function (MarketplaceOrganizer $record): void {
                         $record->update(['verified_at' => now()]);
+                    }),
+
+                // Manual "resend contract signing email". Uses the same
+                // dispatcher OrganizerContractService fires at generation
+                // time so wording stays consistent. Only surfaces on
+                // organizers that actually owe a signature (required +
+                // not yet signed) — grandfathered accounts + already
+                // signed ones don't see the action.
+                Action::make('resend_signing_reminder')
+                    ->label('Trimite reminder semnare')
+                    ->icon('heroicon-o-envelope')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Trimite reminder pentru semnarea contractului')
+                    ->modalDescription(fn (MarketplaceOrganizer $record) =>
+                        'Se va trimite un email către ' . ($record->email ?: '(fără email)')
+                        . ' cu un CTA "Semnează acum" ce duce la /organizator/semneaza-contract.')
+                    ->modalSubmitActionLabel('Trimite email')
+                    ->visible(fn (MarketplaceOrganizer $record): bool =>
+                        $record->isContractSignatureRequired() && !$record->hasSignedContract() && filled($record->email))
+                    ->action(function (MarketplaceOrganizer $record): void {
+                        $sent = app(OrganizerContractService::class)->notifyContractReadyForSignature($record);
+                        \Filament\Notifications\Notification::make()
+                            ->title($sent ? 'Email trimis' : 'Email neexpediat')
+                            ->body($sent
+                                ? 'Reminder-ul de semnare a fost pus în coadă și va ajunge la organizator în câteva secunde.'
+                                : 'Nu a putut fi expediat (verifică email organizator + configurație SMTP marketplace).')
+                            ->color($sent ? 'success' : 'warning')
+                            ->send();
                     }),
 
                 Action::make('suspend')
