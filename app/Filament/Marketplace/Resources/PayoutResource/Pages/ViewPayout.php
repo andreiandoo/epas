@@ -1199,6 +1199,54 @@ class ViewPayout extends ViewRecord
         $items = [];
         $subtotal = 0.0;
 
+        // Leisure per-society invoice: count only the PAID (price > 0) tickets in
+        // the quantity column. Package-component tickets (price 0) generate no
+        // commission, so counting them inflated the qty and produced a confusing
+        // "unit price" (e.g. 241.45 / 1103 = 0.22 instead of the real 2.30 floor
+        // on the 105 paid tickets). The line AMOUNT is unchanged — only the
+        // displayed quantity + unit price reflect the taxable tickets. Non-leisure
+        // (issuing_company null) keeps the raw counts, so nothing changes there.
+        $billablePos = collect();
+        $billableOnline = collect();
+        if ($payout->issuing_company) {
+            $bFrom = $payout->period_start?->copy()->startOfDay();
+            $bTo = $payout->period_end?->copy()->endOfDay();
+            $bTtIds = collect($posRows)->pluck('ticket_type_id')
+                ->merge(collect($onlineIncludedRows)->pluck('ticket_type_id'))
+                ->filter()->unique()->values()->all();
+            $billableCount = function (bool $pos) use ($bTtIds, $bFrom, $bTo) {
+                if (empty($bTtIds)) {
+                    return collect();
+                }
+                $dateCol = $pos ? 'created_at' : 'paid_at';
+
+                return \App\Models\Ticket::query()
+                    ->whereIn('ticket_type_id', $bTtIds)
+                    ->whereIn('status', ['valid', 'used'])
+                    ->where('price', '>', 0)
+                    ->whereHas('order', function ($o) use ($pos, $bFrom, $bTo, $dateCol) {
+                        $o->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
+                            ->whereNotIn('source', ['external_import', 'pos_test']);
+                        if ($pos) {
+                            $o->whereIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
+                        } else {
+                            $o->whereNotIn('source', array_merge(\App\Services\Marketplace\SalesBreakdownService::POS_SOURCES, ['test_order']));
+                        }
+                        if ($bFrom) {
+                            $o->where($dateCol, '>=', $bFrom);
+                        }
+                        if ($bTo) {
+                            $o->where($dateCol, '<=', $bTo);
+                        }
+                    })
+                    ->selectRaw('ticket_type_id, count(*) as c')
+                    ->groupBy('ticket_type_id')
+                    ->pluck('c', 'ticket_type_id');
+            };
+            $billablePos = $billableCount(true);
+            $billableOnline = $billableCount(false);
+        }
+
         // (1) POS commission lines — one per ticket type sold via POS.
         foreach ($posRows as $item) {
             $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
@@ -1212,12 +1260,22 @@ class ViewPayout extends ViewRecord
 
             $ticketTypeName = (string) ($item['ticket_type_name'] ?? 'Bilet');
 
+            $displayQty = $qty;
+            $displayUnit = $commPerTicket;
+            if ($payout->issuing_company) {
+                $billQty = (int) ($billablePos[(int) ($item['ticket_type_id'] ?? 0)] ?? 0);
+                if ($billQty > 0) {
+                    $displayQty = $billQty;
+                    $displayUnit = round($lineTotal / $billQty, 2);
+                }
+            }
+
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
                 'description' => trim('Servicii ticketing POS invitatii/bilete "' . $ticketTypeName . '"'
                     . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $qty,
-                'unit_price' => $commPerTicket,
+                'quantity' => $displayQty,
+                'unit_price' => $displayUnit,
                 'amount' => $lineTotal,
             ];
         }
@@ -1264,12 +1322,22 @@ class ViewPayout extends ViewRecord
 
             $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
 
+            $displayQty = $qty;
+            $displayUnit = $commPerTicket;
+            if ($payout->issuing_company) {
+                $billQty = (int) ($billableOnline[(int) ($row['ticket_type_id'] ?? 0)] ?? 0);
+                if ($billQty > 0) {
+                    $displayQty = $billQty;
+                    $displayUnit = round($lineTotal / $billQty, 2);
+                }
+            }
+
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
                 'description' => trim('Servicii ticketing invitatii/bilete "' . $ticketTypeName . '"'
                     . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $qty,
-                'unit_price' => $commPerTicket,
+                'quantity' => $displayQty,
+                'unit_price' => $displayUnit,
                 'amount' => $lineTotal,
             ];
         }
