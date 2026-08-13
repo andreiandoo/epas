@@ -261,6 +261,7 @@ class MarketplaceTaxTemplate extends Model
             '{{payout_commission_percent}}' => 'Commission Percentage (ex: 6%)',
             '{{payout_vat_rate}}' => 'Cota TVA (ex: 19% sau 0%)',
             '{{payout_vat_amount}}' => 'Valoare TVA calculată',
+            '{{payout_amount_without_vat}}' => 'Total fără TVA (bază impozabilă)',
             '{{payout_total_with_vat}}' => 'Total de plată cu TVA',
             '{{payout_fees_amount}}' => 'Fees Amount (taxe)',
             '{{payout_adjustments_amount}}' => 'Adjustments Amount (ajustări)',
@@ -1789,7 +1790,8 @@ class MarketplaceTaxTemplate extends Model
             // primary (Asociația) prints 0% while a VAT-payer secondary (Csomadcom)
             // prints its rate. issuing_company-null (ordinary/non-leisure) payouts
             // keep the exact legacy behaviour: the organizer's vat_payer flag.
-            if ($organizer && ($payout->issuing_company ?? null)) {
+            $isSocietyDecont = $organizer && ($payout->issuing_company ?? null);
+            if ($isSocietyDecont) {
                 $issuerVat = $organizer->getIssuerData($payout->issuing_company);
                 $vatPayer = (bool) ($issuerVat['vat_payer'] ?? false);
                 $vatRate = $vatPayer ? (float) ($issuerVat['vat_rate'] ?? 19) : 0;
@@ -1797,10 +1799,26 @@ class MarketplaceTaxTemplate extends Model
                 $vatPayer = $organizer?->vat_payer ?? false;
                 $vatRate = $vatPayer ? 19 : 0;
             }
-            $vatAmount = $vatPayer ? round($payoutCommission * $vatRate / 100, 2) : 0;
-            $variables['payout_vat_rate'] = $vatRate > 0 ? $vatRate . '%' : '0%';
-            $variables['payout_vat_amount'] = number_format($vatAmount, 2);
-            $variables['payout_total_with_vat'] = number_format(($payout->fees_amount ?? 0) + $vatAmount, 2);
+            $variables['payout_vat_rate'] = $vatRate > 0 ? ($vatRate . '%') : '0%';
+
+            if ($isSocietyDecont) {
+                // Leisure society decont: the settled GROSS is the society's own
+                // VAT-inclusive revenue, so the decont splits it as
+                //   fără TVA + TVA = de plată (gross),  TVA = rate% × gross.
+                // (For a non-VAT-payer society the rate is 0 → fără TVA = gross,
+                // TVA = 0, de plată = gross.)
+                $vatAmount = $vatPayer ? round($payoutGross * $vatRate / 100, 2) : 0;
+                $variables['payout_vat_amount'] = number_format($vatAmount, 2);
+                $variables['payout_amount_without_vat'] = number_format($payoutGross - $vatAmount, 2);
+                $variables['payout_total_with_vat'] = number_format($payoutGross, 2);
+            } else {
+                // Ordinary/non-leisure decont — unchanged: VAT on the marketplace
+                // commission; the "fără TVA" cell keeps the fees value it had.
+                $vatAmount = $vatPayer ? round($payoutCommission * $vatRate / 100, 2) : 0;
+                $variables['payout_vat_amount'] = number_format($vatAmount, 2);
+                $variables['payout_amount_without_vat'] = number_format($payout->fees_amount ?? 0, 2);
+                $variables['payout_total_with_vat'] = number_format(($payout->fees_amount ?? 0) + $vatAmount, 2);
+            }
             $variables['payout_adjustments_note'] = $payout->adjustments_note ?? '';
             $variables['payout_period_start'] = $payout->period_start
                 ? $payout->period_start->format('d.m.Y')
