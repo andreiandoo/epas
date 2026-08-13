@@ -1,5 +1,5 @@
 # =========================================================
-#  Tixello - build APK debug (Windows / PowerShell 5.1)
+#  Tics - build APK debug (Windows / PowerShell 5.1)
 #  ATENTIE: fisier ASCII-only. PowerShell 5.1 citeste .ps1 fara BOM ca ANSI,
 #  deci diacriticele si em-dash-urile strica parsarea. Nu adauga caractere
 #  non-ASCII aici (documentatia cu diacritice sta in README-BUILD.md).
@@ -111,7 +111,7 @@ if (-not (Test-Path $apk)) { throw "APK negasit la $apk" }
 
 $outDir = Join-Path $root 'out'
 New-Item -ItemType Directory -Force $outDir | Out-Null
-$copy = Join-Path $outDir 'tixello-debug.apk'
+$copy = Join-Path $outDir 'tics-debug.apk'
 Copy-Item $apk $copy -Force
 
 $size = [math]::Round((Get-Item $apk).Length / 1MB, 2)
