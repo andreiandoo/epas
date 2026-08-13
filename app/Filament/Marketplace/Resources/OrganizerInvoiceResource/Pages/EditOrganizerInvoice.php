@@ -523,19 +523,28 @@ class EditOrganizerInvoice extends EditRecord
         // save). For organizer-recipient invoices, use the real client data.
         if ($isGeneralClient) {
             $customerEmail = '';
-            $customerName = 'Client Divers - Persoană Fizică';
+            $customerName = 'Client Divers Persoană Fizică';
             $vatNumber = '0000000000000';
             $customerRegNumber = '00';
             $customerCode = '001';
             $street = '';
             $city = 'sector 4';
             $county = 'Bucuresti';
+            // SAVE the client in Oblio so it dedupes by this (consistent) CUI on
+            // every future general_client invoice — without save=1 Oblio creates
+            // a brand-new client each time. autocomplete=0 so it does NOT ANAF-
+            // lookup the placeholder CUI (which would fail / overwrite the data).
+            $customerSave = 1;
+            $customerAutocomplete = 0;
         } else {
             $customerEmail = $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '';
             $customerName = $client['name'] ?? '';
             $vatNumber = $client['cui'] ?? '';
             $customerRegNumber = $client['reg_com'] ?? '';
             $customerCode = '';
+            // Let the adapter decide save/autocomplete from whether the CUI is real.
+            $customerSave = null;
+            $customerAutocomplete = null;
         }
 
         // Invoice preparer (name + CNP) from marketplace settings. When
@@ -563,6 +572,8 @@ class EditOrganizerInvoice extends EditRecord
                 'reg_number' => $customerRegNumber,
                 'code' => $customerCode,
                 'email' => $customerEmail,
+                'save' => $customerSave,
+                'autocomplete' => $customerAutocomplete,
                 'address' => [
                     'street' => $street,
                     'city' => $city,

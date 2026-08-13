@@ -260,8 +260,8 @@ class OblioAdapter implements AccountingAdapterInterface
                         'county' => $customer['address']['county'] ?? '',
                         'country' => $customer['address']['country'] ?? 'Romania',
                         'email' => $customer['email'] ?? '',
-                        'save' => $isRealCif ? 1 : 0,
-                        'autocomplete' => $isRealCif ? 1 : 0,
+                        'save' => isset($customer['save']) ? (int) $customer['save'] : ($isRealCif ? 1 : 0),
+                        'autocomplete' => isset($customer['autocomplete']) ? (int) $customer['autocomplete'] : ($isRealCif ? 1 : 0),
                     ];
                 })(),
                 'products' => [],
