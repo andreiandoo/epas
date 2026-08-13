@@ -1819,11 +1819,21 @@ class MarketplaceTaxTemplate extends Model
             $vatBase = in_array($vatMode, ['added_on_top', 'on_top'], true)
                 ? (float) $payoutAmount
                 : (float) $payoutGross;
-            $vatAmount = $vatPayer ? round($vatBase * $vatRate / 100, 2) : 0;
+            // TVA is INCLUDED in the settled price, so it is EXTRACTED, not added:
+            //   Total fără TVA = PREȚ / (1 + cotă)   (e.g. 1860 / 1.21 = 1537.19)
+            //   Valoare TVA    = PREȚ − Total fără TVA (e.g. 1860 − 1537.19 = 322.81)
+            //   Total de plată = PREȚ
+            if ($vatPayer && $vatRate > 0) {
+                $baseWithoutVat = round($vatBase / (1 + $vatRate / 100), 2);
+                $vatAmount = round($vatBase - $baseWithoutVat, 2);
+            } else {
+                $baseWithoutVat = $vatBase;
+                $vatAmount = 0.0;
+            }
 
             $variables['payout_vat_rate'] = $vatRate > 0 ? ($vatRate . '%') : '0%';
             $variables['payout_vat_amount'] = number_format($vatAmount, 2);
-            $variables['payout_amount_without_vat'] = number_format($vatBase - $vatAmount, 2);
+            $variables['payout_amount_without_vat'] = number_format($baseWithoutVat, 2);
             $variables['payout_total_with_vat'] = number_format($vatBase, 2);
             $variables['payout_adjustments_note'] = $payout->adjustments_note ?? '';
             $variables['payout_period_start'] = $payout->period_start
