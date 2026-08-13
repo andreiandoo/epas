@@ -118,6 +118,8 @@ class MarketplaceOrganizer extends Authenticatable
         'primary_vat_rate',
         'secondary_vat_payer',
         'secondary_vat_rate',
+        'secondary_contract_number_series',
+        'secondary_contract_date',
         'contract_number_series',
         'contract_date',
         'invoice_due_days',
@@ -210,6 +212,7 @@ class MarketplaceOrganizer extends Authenticatable
         'secondary_vat_payer' => 'boolean',
         'primary_vat_rate' => 'decimal:2',
         'secondary_vat_rate' => 'decimal:2',
+        'secondary_contract_date' => 'date',
     ];
 
     /**
@@ -236,6 +239,8 @@ class MarketplaceOrganizer extends Authenticatable
                 'last_invoice_number' => (int) ($this->secondary_last_invoice_number ?? 0),
                 'vat_payer' => (bool) $this->secondary_vat_payer,
                 'vat_rate' => $this->secondary_vat_rate !== null ? (float) $this->secondary_vat_rate : null,
+                'contract_number_series' => $this->secondary_contract_number_series,
+                'contract_date' => $this->secondary_contract_date,
                 // Email de contact al organizatorului — folosit pe factura POS in
                 // linia "Emis de {name} - {email}" sub seria facturii.
                 'contact_email' => $this->email,
@@ -262,6 +267,8 @@ class MarketplaceOrganizer extends Authenticatable
             'vat_rate' => $this->primary_vat_rate !== null
                 ? (float) $this->primary_vat_rate
                 : (isset($this->tax_settings['vat_rate']) ? (float) $this->tax_settings['vat_rate'] : null),
+            'contract_number_series' => $this->contract_number_series,
+            'contract_date' => $this->contract_date,
             // Email de contact al organizatorului — folosit pe factura POS in
             // linia "Emis de {name} - {email}" sub seria facturii.
             'contact_email' => $this->email,

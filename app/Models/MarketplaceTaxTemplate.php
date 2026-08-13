@@ -1666,13 +1666,20 @@ class MarketplaceTaxTemplate extends Model
             $variables['customer_email'] = $order->customer_email ?? ($order->customer->email ?? '');
         }
 
-        // Contract variables (from organizer)
+        // Contract variables (from organizer). A society-tagged decont/invoice
+        // (leisure secondary issuer) prints THAT society's own contract number +
+        // date; primary / untagged documents keep the organizer's main contract.
         if ($organizer) {
-            $variables['contract_number_series'] = $organizer->contract_number_series ?? '';
-            $variables['contract_date'] = $organizer->contract_date
-                ? (is_string($organizer->contract_date)
-                    ? $organizer->contract_date
-                    : $organizer->contract_date->format('d.m.Y'))
+            $contractSeries = $organizer->contract_number_series ?? '';
+            $contractDate = $organizer->contract_date;
+            if ($payout && ($payout->issuing_company ?? null) === 'secondary' && $organizer->has_secondary_issuer) {
+                $issuerData = $organizer->getIssuerData('secondary');
+                $contractSeries = $issuerData['contract_number_series'] ?: $contractSeries;
+                $contractDate = $issuerData['contract_date'] ?: $contractDate;
+            }
+            $variables['contract_number_series'] = $contractSeries;
+            $variables['contract_date'] = $contractDate
+                ? (is_string($contractDate) ? $contractDate : $contractDate->format('d.m.Y'))
                 : '';
         }
 
@@ -1775,9 +1782,21 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_commission_mode'] = $payout->commission_mode ?? 'included';
 
             // VAT calculations — use POS-excluded commission so the VAT on the decont
-            // only reflects the online-commission portion
-            $vatPayer = $organizer?->vat_payer ?? false;
-            $vatRate = $vatPayer ? 19 : 0;
+            // only reflects the online-commission portion.
+            //
+            // Per-issuing-company VAT: a society-tagged decont (leisure) uses THAT
+            // society's VAT status (getIssuerData), so e.g. a non-VAT-payer
+            // primary (Asociația) prints 0% while a VAT-payer secondary (Csomadcom)
+            // prints its rate. issuing_company-null (ordinary/non-leisure) payouts
+            // keep the exact legacy behaviour: the organizer's vat_payer flag.
+            if ($organizer && ($payout->issuing_company ?? null)) {
+                $issuerVat = $organizer->getIssuerData($payout->issuing_company);
+                $vatPayer = (bool) ($issuerVat['vat_payer'] ?? false);
+                $vatRate = $vatPayer ? (float) ($issuerVat['vat_rate'] ?? 19) : 0;
+            } else {
+                $vatPayer = $organizer?->vat_payer ?? false;
+                $vatRate = $vatPayer ? 19 : 0;
+            }
             $vatAmount = $vatPayer ? round($payoutCommission * $vatRate / 100, 2) : 0;
             $variables['payout_vat_rate'] = $vatRate > 0 ? $vatRate . '%' : '0%';
             $variables['payout_vat_amount'] = number_format($vatAmount, 2);

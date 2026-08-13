@@ -667,6 +667,27 @@ class OrganizerResource extends Resource
                                     ->numeric()
                                     ->minValue(0)
                                     ->default(0),
+                                Forms\Components\Toggle::make('secondary_vat_payer')
+                                    ->label('Plătitoare de TVA — societate secundară')
+                                    ->helperText('Bifează dacă a doua societate emitentă este plătitoare de TVA (decontul/factura ei va include TVA).')
+                                    ->live()
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('secondary_vat_rate')
+                                    ->label('Cotă TVA secundară (%)')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->default(19)
+                                    ->suffix('%')
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('secondary_vat_payer')),
+                                Forms\Components\TextInput::make('secondary_contract_number_series')
+                                    ->label('Nr./serie contract — societate secundară')
+                                    ->maxLength(64)
+                                    ->placeholder('ex: CSA-123'),
+                                Forms\Components\DatePicker::make('secondary_contract_date')
+                                    ->label('Dată contract — societate secundară')
+                                    ->native(false)
+                                    ->displayFormat('d.m.Y'),
                             ])
                                 ->columns(2)
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('has_secondary_issuer'))
