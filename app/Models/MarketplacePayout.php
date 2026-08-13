@@ -1164,6 +1164,32 @@ class MarketplacePayout extends Model
      * action visible()/modal callbacks hit it on the same render.
      */
     /**
+     * Filter commission / POS rows (each carrying a ticket_type_id) down to
+     * THIS payout's issuing company. No-op for ordinary payouts
+     * (issuing_company null) — so only leisure per-society deconturi are
+     * scoped, which is what makes the organizer invoice one-per-society-per-
+     * period. NULL / 'mix' / 'primary' ticket types resolve to primary.
+     *
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    public function filterRowsToIssuer(array $rows): array
+    {
+        if (!$this->issuing_company) {
+            return $rows;
+        }
+        $issuer = $this->issuing_company;
+        $map = \App\Models\TicketType::where('event_id', $this->event_id)
+            ->pluck('issuing_company', 'id');
+
+        return array_values(array_filter($rows, function ($r) use ($map, $issuer) {
+            $ttId = (int) ($r['ticket_type_id'] ?? 0);
+            $bucket = (($map[$ttId] ?? null) === 'secondary') ? 'secondary' : 'primary';
+            return $bucket === $issuer;
+        }));
+    }
+
+    /**
      * Total POS commission for THIS PAYOUT'S SLICE (period_start /
      * period_end on paid_at). Every payout that carries POS sales in its
      * window gets its own invoice — changed 2026-08-06 from event-wide
@@ -1184,6 +1210,7 @@ class MarketplacePayout extends Model
 
         $rows = app(\App\Services\Marketplace\SalesBreakdownService::class)
             ->buildPosForPayout($this->event, $this->period_start, $this->period_end);
+        $rows = $this->filterRowsToIssuer($rows);
 
         $total = 0.0;
         foreach ($rows as $row) {
@@ -1270,7 +1297,7 @@ class MarketplacePayout extends Model
             $byType[$ttId]['commission_amount'] += $commPer;
         }
 
-        return array_values($byType);
+        return $this->filterRowsToIssuer(array_values($byType));
     }
 
     /**
@@ -1347,7 +1374,7 @@ class MarketplacePayout extends Model
             ];
         }
 
-        return $result;
+        return $this->filterRowsToIssuer($result);
     }
 
     public function getOnlineIncludedCommissionTotalForPayout(): float
@@ -1422,7 +1449,7 @@ class MarketplacePayout extends Model
             $byType[$ttId]['commission_amount'] += $commPer;
         }
 
-        return array_values($byType);
+        return $this->filterRowsToIssuer(array_values($byType));
     }
 
     public function getKeptCommissionTotalForPayout(): float

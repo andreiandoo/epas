@@ -1142,8 +1142,15 @@ class ViewPayout extends ViewRecord
         //       billing the organizer for money Ambilet already has.
         // Gated upstream by the button's visible() so we only reach here
         // after the event has finished and no prior organizer invoice exists.
-        $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->buildPosForPayout($payout->event, null, null);
+        // POS billed for THIS payout's period (not event-wide) so leisure
+        // per-period invoices don't re-bill all POS every period; and filtered
+        // to the payout's issuing company so each society gets its own invoice.
+        // Non-leisure (issuing_company null) → period = whole finished event and
+        // filterRowsToIssuer is a no-op, so the billed POS is unchanged.
+        $posRows = $payout->filterRowsToIssuer(
+            app(\App\Services\Marketplace\SalesBreakdownService::class)
+                ->buildPosForPayout($payout->event, $payout->period_start, $payout->period_end)
+        );
         $refundedRows = $payout->getRefundedCommissionRowsForPayout();
         $onlineIncludedRows = $payout->getOnlineIncludedCommissionRowsForPayout();
         $keptRows = $payout->getKeptCommissionRowsForPayout();
