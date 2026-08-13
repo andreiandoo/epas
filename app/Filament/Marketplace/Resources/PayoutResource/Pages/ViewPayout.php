@@ -800,7 +800,7 @@ class ViewPayout extends ViewRecord
                         return;
                     }
 
-                    $vatRate = $marketplace->vat_payer ? 19 : 0;
+                    $vatRate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0;
                     $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
 
                     // Description + line item composition mirrors what the
@@ -1319,7 +1319,7 @@ class ViewPayout extends ViewRecord
         $nextNumber = $lastInvoice ? ((int) preg_replace('/\D/', '', $lastInvoice->number) + 1) : 1;
         $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
-        $vatRate = $marketplace->vat_payer ? 19 : 0;
+        $vatRate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0;
         $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
         $total = $subtotal + $vatAmount;
 
