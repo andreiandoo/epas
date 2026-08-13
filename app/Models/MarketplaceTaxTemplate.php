@@ -1800,10 +1800,20 @@ class MarketplaceTaxTemplate extends Model
             // (getIssuerData) — for ordinary payouts (issuing_company null) that
             // resolves to the organizer's PRIMARY VAT status/rate, never a
             // hardcoded rate. A non-VAT-payer → rate 0 → fără TVA = baza, TVA = 0.
-            $vatIssuer = $payout->issuing_company ?: 'primary';
-            $issuerVat = $organizer ? $organizer->getIssuerData($vatIssuer) : [];
-            $vatPayer = (bool) ($issuerVat['vat_payer'] ?? ($organizer?->vat_payer ?? false));
-            $vatRate = $vatPayer ? (float) ($issuerVat['vat_rate'] ?? 21) : 0;
+            if ($payout->issuing_company) {
+                // Leisure per-society: the organizer has these set explicitly.
+                $issuerVat = $organizer ? $organizer->getIssuerData($payout->issuing_company) : [];
+                $vatPayer = (bool) ($issuerVat['vat_payer'] ?? false);
+                $vatRate = $vatPayer ? (float) ($issuerVat['vat_rate'] ?? 21) : 0;
+            } else {
+                // Ordinary organizer: the (legacy) vat_payer flag — NOT
+                // getIssuerData('primary'), whose primary_vat_payer defaults to
+                // false and would ignore a real VAT payer. There is no per-
+                // organizer VAT-rate field, so use the marketplace's configured
+                // rate (RO default 21).
+                $vatPayer = (bool) ($organizer?->vat_payer ?? false);
+                $vatRate = $vatPayer ? (float) data_get($marketplace?->settings, 'tax.vat_rate', 21) : 0;
+            }
 
             $vatMode = $payout->commission_mode ?: 'included';
             $vatBase = in_array($vatMode, ['added_on_top', 'on_top'], true)
