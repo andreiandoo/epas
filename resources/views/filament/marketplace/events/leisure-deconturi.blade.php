@@ -217,19 +217,22 @@
                     @empty
                         <span class="text-xs text-gray-400">Nu există vânzări de decontat în această perioadă.</span>
                     @endforelse
-                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" wire:click="toggleDecontFlag('{{ $p['from'] }}','generated')" @checked($p['generated_at']) class="w-4 h-4 text-indigo-600 rounded border-gray-300">
-                        <span class="text-gray-800 dark:text-gray-200">S-a generat decont?</span>
-                        @if ($p['generated_at'])<span class="text-xs text-gray-400">({{ $p['generated_at'] }})</span>@endif
-                    </label>
-                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" wire:click="toggleDecontFlag('{{ $p['from'] }}','settled')" @checked($p['settled_at']) class="w-4 h-4 text-emerald-600 rounded border-gray-300">
-                        <span class="text-gray-800 dark:text-gray-200">S-a lichidat decont?</span>
-                        @if ($p['settled_at'])<span class="text-xs text-gray-400">({{ $p['settled_at'] }})</span>@endif
-                    </label>
                 </div>
 
-                @if (empty($p['days']))
+                @php
+                    // Every society that has sales this period must have a decont
+                    // generated → then the per-day breakdown is hidden (period done).
+                    $societiesWithData = [];
+                    if (!empty($primaryHasData)) { $societiesWithData[] = 'primary'; }
+                    if (!empty($hasSecondary) && !empty($secondaryHasData)) { $societiesWithData[] = 'secondary'; }
+                    $allSocietiesDecontat = !empty($societiesWithData);
+                    foreach ($societiesWithData as $sk) {
+                        if (empty($p['deconturi'][$sk] ?? null)) { $allSocietiesDecontat = false; break; }
+                    }
+                @endphp
+                @if ($allSocietiesDecontat)
+                    <p class="text-sm text-center text-gray-400">Perioadă decontată integral — deconturile sunt generate pe fiecare societate (vezi linkurile de mai sus).</p>
+                @elseif (empty($p['days']))
                     <p class="text-sm text-gray-400">Nu există vânzări în această perioadă.</p>
                 @else
                     <div class="overflow-x-auto">
