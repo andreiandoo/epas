@@ -69,7 +69,12 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
      adica exact continutul pentru care ai deschis Radarul. */
   const cats = useRadarCategories(city || undefined);
   const [allCats, setAllCats] = useState(false);
-  const pools = poolsFromCategories(cats);
+  /* Categoriile fara niciun eveniment nu se mai arata.
+
+     Se afisau toate 22, „ca pe site", cu contorul pe 0 — iar dupa ce contorul
+     a inceput sa tina cont de orasul ales, jumatate din grila devenea un sir
+     de carduri care nu duc nicaieri. Un card e o promisiune ca ai ce gasi. */
+  const pools = poolsFromCategories(cats).filter((c) => c.count > 0);
 
   const [sheet, setSheet] = useState<'city' | 'type' | 'genre' | null>(null);
   const [shown, setShown] = useState(PAGE);
@@ -126,17 +131,32 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
           <SafeTop />
           <div className="hrow">
             <div>
-              <div className="eyebrow">Prețuri din toată piața</div>
-              <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
-                Radar
-              </h1>
+              <div className="eyebrow">Orice eveniment din România</div>
+              <div className="row" style={sx('gap:9px;margin-top:2px')}>
+                <h1 className="h1" style={sx('font-size:23px')}>
+                  Radar
+                </h1>
+                {/* Orasul, langa titlu si atingibil.
+
+                    Statea doar ca text mic sub antet, alaturi de „prețuri
+                    live" — se citea a subtitlu, nu a filtru, iar schimbarea lui
+                    cerea sa stii ca se face din alt ecran. Acum se vede CE e
+                    ales si se schimba de aici. */}
+                <button
+                  className="chip ind on"
+                  onClick={() => setSheet('city')}
+                  style={sx('padding:5px 11px;font-size:12px;font-weight:600')}
+                >
+                  <Ic svg={I.pin} /> {city || 'Toată România'} ⌄
+                </button>
+              </div>
             </div>
             <div className="icon-btn" onClick={() => go('calendar')}>
               <Ic svg={I.cal} />
             </div>
           </div>
-          <div className="muted" style={sx('font-size:11.5px;margin-top:2px')}>
-            {subtitle}
+          <div className="muted" style={sx('font-size:11.5px;margin-top:4px')}>
+            {[dayLabel(day), 'prețuri comparate live'].filter(Boolean).join(' · ')}
           </div>
         </div>
       ) : (

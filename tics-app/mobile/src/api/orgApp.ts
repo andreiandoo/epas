@@ -253,24 +253,62 @@ export async function posSale(payload: {
  * nu se intampla nimic si nu apare nicio eroare — n-ar avea ce sa faca omul cu
  * ea in acel moment.
  */
-export async function appLogin(email: string, password: string): Promise<boolean> {
+/**
+ * Ce s-a intamplat la o incercare de legare a contului tics.
+ *
+ * `login` are TREI raspunsuri posibile, nu doua, si asta conteaza: contul poate
+ * exista dar sa fie neverificat, caz in care serverul trimite un cod pe email
+ * si NU da token. Tratat ca esec — cum era pana acum — omul primea „date
+ * gresite" pentru un cont care e al lui si care tocmai i-a trimis un cod.
+ */
+export type AppAuthResult =
+  | { ok: true }
+  | { ok: false; needsCode: true; email: string }
+  | { ok: false; needsCode: false; message: string };
+
+type AuthBody = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  data?: { token?: string; verification_required?: boolean; email?: string };
+};
+
+async function appAuth(path: string, body: Record<string, unknown>): Promise<AppAuthResult> {
   try {
-    const res = await fetch(`${APP_API}/auth/login`, {
+    const res = await fetch(`${APP_API}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(body),
     });
 
-    if (!res.ok) return false;
+    const parsed = (await res.json().catch(() => null)) as AuthBody | null;
 
-    const body = (await res.json()) as { success?: boolean; data?: { token?: string } };
+    if (parsed?.data?.token) {
+      setAppToken(parsed.data.token);
 
-    if (!body?.success || !body.data?.token) return false;
+      return { ok: true };
+    }
 
-    setAppToken(body.data.token);
+    if (parsed?.success && parsed.data?.verification_required) {
+      return { ok: false, needsCode: true, email: parsed.data.email ?? String(body.email ?? '') };
+    }
 
-    return true;
+    return {
+      ok: false,
+      needsCode: false,
+      message: parsed?.error ?? parsed?.message ?? 'Nu a mers. Încearcă din nou.',
+    };
   } catch {
-    return false;
+    return { ok: false, needsCode: false, message: 'Fără conexiune. Verifică internetul.' };
   }
 }
+
+export const appLogin = (email: string, password: string) => appAuth('/auth/login', { email, password });
+
+/** Creeaza contul tics. Raspunde mereu cu „ai primit un cod pe email". */
+export const appRegister = (email: string, password: string, name?: string) =>
+  appAuth('/auth/register', { email, password, name });
+
+/** Confirma codul primit pe email si intra in cont. */
+export const appVerify = (email: string, code: string) => appAuth('/auth/verify', { email, code });
+

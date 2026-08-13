@@ -60,6 +60,10 @@
 }
 .app-client .shchrome .shtop button.icon-btn { font-size: 16px; line-height: 1; }
 
+/* Marca ecranului, in stanga. Iconita creste odata cu textul — la 16px langa
+   un titlu de 20px arata a bifa, nu a semn. */
+.app-client .shchrome .shtop .shbrand svg { width: 24px; height: 24px }
+
 .app-client .shchrome .mtag {
   position: absolute;
   top: calc(var(--safe-top, 0px) + 77px);

@@ -453,3 +453,37 @@ export async function toggleFollow(
     return null;
   }
 }
+
+/**
+ * Clipurile unui artist — pentru sectiunea „Videoclipuri" de pe fisa lui.
+ *
+ * Sunt aceleasi short-uri care apar in „Pe val", aduse din canalul lui de
+ * YouTube. Sectiunea era legata de datasetul prototipului si disparea pentru
+ * orice artist real, desi continutul exista deja pe server.
+ *
+ * Esecul e tacut si intoarce o lista goala: sectiunea nu se afiseaza, restul
+ * fisei ramane intreaga.
+ */
+export async function fetchArtistShorts(
+  slug: string,
+  limit = 8,
+): Promise<{ id: number; title: string; poster: string | null }[]> {
+  try {
+    const res = await fetch(
+      `${API_ROOT}/tenant-client/artists/${encodeURIComponent(slug)}/shorts?limit=${limit}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!res.ok) return [];
+
+    const body = (await res.json()) as { success?: boolean; data?: { items?: ApiShort[] } };
+
+    return (body?.data?.items ?? []).map((s) => ({
+      id: s.id,
+      title: s.title ?? s.owner?.name ?? 'Clip',
+      poster: s.playback?.poster_url ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}

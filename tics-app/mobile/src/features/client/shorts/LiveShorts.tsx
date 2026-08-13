@@ -548,10 +548,12 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
           <div className="grad" />
 
           <div className="shtop">
-            <button type="button" className="icon-btn glass" aria-label="Înapoi" onClick={back}>
-              <Ic svg={I.back} />
-            </button>
-            <div className="row" style={sx('gap:6px;color:#fff;font-weight:600;font-size:14px')}>
+            {/* Sageata de back a plecat: „Pe val" e tab in bara de jos, deci
+                intrarea obisnuita nu lasa nimic in stiva si butonul nu avea
+                unde sa duca. Iesirea ramane prin bara sau prin gestul de swipe
+                spre dreapta, care functioneaza. Titlul trece in stanga, unde
+                era ea, si creste — e antetul ecranului, nu o eticheta. */}
+            <div className="row shbrand" style={sx('gap:9px;color:#fff;font-weight:700;font-size:20px;letter-spacing:-.02em')}>
               <Ic svg={I.wave} /> Pe val
             </div>
             <button

@@ -156,6 +156,12 @@ export function toArtistRecord(a: CatalogArtist): Rec {
     city: a.city ?? '',
     _bg: bgFor(a.image ?? a.cover, a.id),
     _links: a.links,
+    /* Urmaritorii PE FIECARE RETEA, nu doar maximul.
+
+       Erau deja in raspuns si se foloseau doar ca sa scoatem un singur numar
+       sub nume; banda de pastile de dedesubt ramanea legata de datasetul
+       prototipului si deci ascunsa pentru orice artist real. */
+    _soc: a.followers,
     _live: true,
   };
 }

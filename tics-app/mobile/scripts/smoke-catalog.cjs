@@ -135,7 +135,7 @@ const VENUE = {
   await page.setGeolocation({ latitude: 44.4268, longitude: 26.1025 });
 
   const errors = [];
-  page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+  page.on('pageerror', (e) => console.log('PAGEERROR:', e.message)); page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
 
   const json = (req, data) =>
     req.respond({
@@ -220,6 +220,18 @@ const VENUE = {
     // lista (fara id) inaintea fisei, altfel „events?" ar cadea pe fisa
     if (/\/catalog\/events(\?|$)/.test(url)) return json(req, [EVENT]);
     if (url.includes('/catalog/events/')) return json(req, EVENT);
+    /* Clipurile artistului („Videoclipuri"), inaintea fisei: ruta e
+       /artists/{slug}/shorts, nu /catalog/artists/... */
+    if (/\/artists\/[^/]+\/shorts/.test(url)) {
+      return json(req, {
+        items: [
+          { id: 501, title: 'Clip real 1', playback: { poster_url: null }, owner: { name: 'Sukar Nation' } },
+          { id: 502, title: 'Clip real 2', playback: { poster_url: null }, owner: { name: 'Sukar Nation' } },
+        ],
+        next_cursor: null,
+      });
+    }
+
     if (url.includes('/catalog/artists/')) return json(req, ARTIST);
     if (url.includes('/catalog/venues/')) return json(req, VENUE);
 
@@ -396,6 +408,10 @@ const VENUE = {
   check('biografia reala apare', txt.includes('Biografia reala a artistului'));
   check('melodiile demo NU apar', !(await sectionVisible('Top 10 melodii')));
   check('evenimentul artistului apare', txt.includes('Concert Real 2026'));
+  /* Clipurile artistului sunt REALE (short-urile lui). Sectiunea era legata de
+     datasetul prototipului si disparea pentru orice artist adevarat. */
+  check('videoclipurile reale apar', txt.includes('Clip real 1') && txt.includes('Clip real 2'));
+  check('urmaritorii pe retea apar ca pastile', /120k/.test(txt) || /Instagram/.test(txt), txt.slice(0, 70));
 
   /* ---------- locatie ---------- */
   await openScreen('venue');

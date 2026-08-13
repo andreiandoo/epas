@@ -233,8 +233,12 @@ export function TicketTypes() {
      de bilet) e deja in cache-ul din catalogData dupa ecranul precedent, deci
      apelul de aici e de regula instant. */
   const live = useCatalogEvent(demo ? undefined : evId);
+  /* Deasupra iesirii timpurii de mai jos: un hook dupa `return` ruleaza doar
+     la unele randari si strica ordinea hook-urilor. */
+  const [showTerms, setShowTerms] = useState(false);
 
   const ev = demo ?? live.data?.ev;
+  const terms = live.data?.terms ?? null;
   const eday = (EXPDAYS as Ev[])[expDay] || (EXPDAYS as Ev[])[4];
 
   if (!ev) {
@@ -261,10 +265,37 @@ export function TicketTypes() {
             </div>
           </div>
         </div>
-        <div className="icon-btn">
-          <Ic svg={I.info} />
-        </div>
+        {/* Iconita de info exista in prototip, dar nu era legata de nimic:
+            un buton care nu face nimic e mai rau decat lipsa lui. Acum
+            deschide TERMENII biletului (`ticket_terms` din admin) — singura
+            informatie suplimentara pe care o avem aici si chiar conteaza
+            inainte sa cumperi. Fara termeni scrisi, butonul nu se afiseaza. */}
+        {terms ? (
+          <div className="icon-btn" onClick={() => setShowTerms((v) => !v)} aria-label="Termenii biletului">
+            <Ic svg={I.info} />
+          </div>
+        ) : (
+          <div style={sx('width:42px')} />
+        )}
       </TopBar>
+
+      {terms && showTerms ? (
+        <div className="pad" style={sx('margin-top:10px')}>
+          <div className="card" style={sx('padding:15px')}>
+            <div className="between" style={sx('margin-bottom:8px')}>
+              <div className="h2" style={sx('font-size:14px')}>
+                Termenii biletului
+              </div>
+              <button className="chip" onClick={() => setShowTerms(false)} style={sx('padding:5px 11px;font-size:11px')}>
+                Închide
+              </button>
+            </div>
+            <p className="muted" style={sx('font-size:12.5px;line-height:1.6;white-space:pre-line')}>
+              {terms}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="pad" style={sx('margin-top:8px')}>
         <div className="pts">

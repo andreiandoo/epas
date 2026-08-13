@@ -100,7 +100,7 @@ export function Event({ id }: { id?: string }) {
         className="poster"
         style={{
           background: ev._bg ?? bgv(ev),
-          height: ev.poster ? 'min(80vh, 720px)' : 388,
+          height: ev.poster ? 'min(65vh, 620px)' : 388,
           borderRadius: '0 0 30px 30px',
         }}
       >

@@ -123,7 +123,12 @@ class ShortsController extends Controller
      */
     public function forArtist(Request $request, string $slug): JsonResponse
     {
-        $artist = Artist::query()->where('slug', $slug)->first();
+        /* Dupa SLUG sau dupa ID: fisa artistului se deschide si dintr-un card
+           care poarta id-ul numeric, nu doar dintr-un link cu slug. Cautarea
+           doar pe slug intorcea 404 exact pentru drumul cel mai des folosit. */
+        $artist = Artist::query()
+            ->when(ctype_digit($slug), fn ($q) => $q->where('id', (int) $slug), fn ($q) => $q->where('slug', $slug))
+            ->first();
 
         if (! $artist) {
             return response()->json(['success' => false, 'message' => 'Artist not found'], 404);

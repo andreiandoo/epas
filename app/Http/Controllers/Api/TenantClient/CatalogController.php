@@ -390,6 +390,24 @@ class CatalogController extends Controller
         return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
+    /**
+     * Numele spune ca biletul nu se vinde online (POS sau invitatie)?
+     *
+     * Se compara pe CUVINTE INTREGI, dupa pliere fara diacritice.
+     */
+    private function isOfflineOnlyName(?string $name): bool
+    {
+        $words = preg_split('/[^a-z0-9]+/u', $this->fold((string) $name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($words as $word) {
+            if ($word === 'pos' || str_starts_with($word, 'invitat') || str_starts_with($word, 'invitation')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Litere mici, fara diacritice — forma in care sunt indexate localitatile. */
     private function fold(string $value): string
     {
@@ -773,6 +791,19 @@ class CatalogController extends Controller
                intr-o lista din care utilizatorul poate alege: le-ar vedea, le-ar
                adauga in cos si ar afla abia la plata ca nu se poate. */
             ->reject(fn ($t) => (bool) ($t->meta['pos_only'] ?? false))
+            /* ... si cele care se vad din NUME ca nu sunt de vanzare online.
+
+               `meta.pos_only` exista doar pe sabloanele `leisure_venue`; pe
+               evenimentele obisnuite, organizatorii marcheaza acelasi lucru
+               scriind in nume: „POS Acces", „Invitație presă", „Invitatii
+               protocol". Fara filtrul asta, cumparatorul le vedea in lista,
+               le punea in cos si afla abia la plata ca nu se poate.
+
+               E o euristica pe cuvinte intregi, nu pe subsir: „Poster VIP" sau
+               „Posada" nu trebuie sa dispara. Solutia durabila e un comutator
+               propriu in admin, ca la leisure; pana atunci, numele e singurul
+               semnal pe care il avem. */
+            ->reject(fn ($t) => $this->isOfflineOnlyName(PlainText::of($t->name)))
             ->map(function ($t) {
                 /* `display_price`, NU `price`.
                    Pe TicketType, `price` e accesor pentru pretul de REDUCERE si

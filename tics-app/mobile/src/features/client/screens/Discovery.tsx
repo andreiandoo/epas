@@ -11,12 +11,13 @@ import { ART, ARTX, EV, I, SOCIC, SOCLIST, SORTLBL, VEN, bgv } from '../../../mo
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvRow } from '../cards';
 import { BottomNav, BackTitle, CatalogLoading, DBar, MissingContent, SafeTop, SecH, TopBar } from '../kit';
-import { useCatalogArtist, useCatalogEvents, useCatalogSearch, useCatalogVenue } from '../catalogData';
+import { compact, useCatalogArtist, useCatalogEvents, useCatalogSearch, useCatalogVenue } from '../catalogData';
 import { radarToUi, useRadarList } from '../radarData';
 import { CAT_TO_FEED } from '../../../api/ticsRadar';
 import { CityTag } from '../cityTag';
 import { useNav } from '../nav';
 import { OsmMap } from '../osmMap';
+import { fetchArtistShorts } from '../../../api/shorts';
 import type { CatalogVenueReview } from '../../../api/catalog';
 import { useClient } from '../../../store/client';
 
@@ -407,6 +408,29 @@ export function Search() {
    ========================================================= */
 export function Artist({ id }: { id?: string }) {
   const showToast = useClient((s) => s.showToast);
+  const { go } = useNav();
+  /* Clipurile reale ale artistului — short-urile lui din „Pe val". Starea sta
+     DEASUPRA iesirilor timpurii de mai jos: un hook chemat dupa un `return`
+     ruleaza doar la unele randari si strica ordinea hook-urilor. */
+  const [clips, setClips] = useState<{ id: number; title: string; poster: string | null }[]>([]);
+  /* `String(...)`, nu `.trim()` direct: `id` vine din tabela de ecrane, unde
+     e tipat `as string` dar poate fi si numar (cardurile trimit id-ul numeric
+     al artistului). Fara conversie, `.trim` nu exista si cade tot ecranul. */
+  const slug = String(id ?? '').trim();
+
+  useEffect(() => {
+    setClips([]);
+    if (!slug) return;
+
+    let alive = true;
+    void fetchArtistShorts(slug).then((list) => {
+      if (alive) setClips(list);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
   /* Fara id ramane exemplul din prototip (asa intra din ecranele demo), dar un
      id NECUNOSCUT vine de la un short real si n-are ce arata aici — mai bine
      spunem asta decat sa afisam alt artist. */
@@ -428,6 +452,8 @@ export function Artist({ id }: { id?: string }) {
      imprumutate de la Coldplay ar fi pur si simplu false. Sectiunile care
      depind de el se ascund. */
   const x = (isLive ? undefined : (ARTX as Record<string, Ev>)[a.id]) as Ev | undefined;
+
+
   const upEv: Ev[] = isLive
     ? (live.data?.events ?? [])
     : (() => {
@@ -436,6 +462,15 @@ export function Artist({ id }: { id?: string }) {
         return evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
       })();
   const socList = SOCLIST as [string, string][];
+
+  /* Cifrele de urmaritori pe care CHIAR le avem. Reteaua fara numar nu capata
+     pastila: un „—" ocupa cat o cifra si nu spune nimic. */
+  const socStats: { key: string; label: string; value: string }[] = isLive
+    ? socList
+        .map((sl) => ({ key: sl[0], label: sl[1], raw: (a._soc as Record<string, number | undefined> | undefined)?.[sl[0]] }))
+        .filter((st) => typeof st.raw === 'number')
+        .map((st) => ({ key: st.key, label: st.label, value: compact(st.raw as number) }))
+    : socList.map((sl) => ({ key: sl[0], label: sl[1], value: String((x?.soc as Record<string, string>)?.[sl[0]] ?? '—') }));
   const socIc = SOCIC as Record<string, string>;
 
   return (
@@ -500,17 +535,21 @@ export function Artist({ id }: { id?: string }) {
         </div>
       </div>
 
-      <div className="scroll-x" style={sx('margin-top:18px')} hidden={!x}>
-        {socList.map((s) => (
-          <div key={s[1]} className="statpill">
-            <Ic svg={socIc[s[0]]} />
+      {/* Pastilele cu urmaritori: pentru artistii reali vin din `_soc`
+          (numerele din catalog), nu din datasetul prototipului. Se arata doar
+          retelele pentru care chiar avem cifra — o pastila „—" nu spune nimic
+          si ocupa cat una plina. */}
+      <div className="scroll-x" style={sx('margin-top:18px')} hidden={!socStats.length}>
+        {socStats.map((st) => (
+          <div key={st.label} className="statpill">
+            <Ic svg={socIc[st.key]} />
             <div>
-              <div style={sx('font-weight:700;font-size:14px;font-variant-numeric:tabular-nums')}>{x?.soc[s[0]]}</div>
+              <div style={sx('font-weight:700;font-size:14px;font-variant-numeric:tabular-nums')}>{st.value}</div>
               <div
                 className="muted"
                 style={sx('font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em')}
               >
-                {s[1]}
+                {st.label}
               </div>
             </div>
           </div>
@@ -581,15 +620,49 @@ export function Artist({ id }: { id?: string }) {
         </div>
       </div>
 
-      <div className="sec" hidden={!x}>
+      {/* CLIPURILE REALE ale artistului.
+
+          Sectiunea era legata de datasetul prototipului si disparea pentru
+          orice artist adevarat — desi avem clipurile lui: sunt exact
+          short-urile din „Pe val", aduse din canalul lui de YouTube.
+          Le luam din `/artists/{slug}/shorts`. Atingerea deschide „Pe val" —
+          feedul nu stie inca sa porneasca de la un short anume, deci nu ne
+          prefacem ca duce fix la clipul atins.
+          Pentru artistii demo raman cele din prototip. */}
+      <div className="sec" hidden={!x && !clips.length}>
         <SecH
           icon={I.play}
           icbg="var(--indigo-soft)"
           iccol="var(--indigo-2)"
           title="Videoclipuri"
-          sub={`${x?.videos.length ?? 0} clipuri`}
+          sub={`${(x?.videos.length ?? 0) + clips.length} clipuri`}
         />
         <div className="rail">
+          {clips.map((c) => (
+            <div key={c.id} className="mcard" onClick={() => go('shorts')} style={sx('min-width:236px')}>
+              <div
+                className="cover"
+                style={{
+                  background: c.poster ? `url('${c.poster}') center/cover` : 'linear-gradient(135deg,#2a1065,#0f0d18)',
+                  height: 146,
+                }}
+              >
+                <div className="scrim" />
+                <div style={sx('position:absolute;inset:0;display:grid;place-items:center;z-index:3')}>
+                  <div
+                    style={sx('width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;color:#141020')}
+                  >
+                    <Ic svg={I.play} />
+                  </div>
+                </div>
+                <div className="btm">
+                  <div className="ctitle" style={sx('font-size:14px')}>
+                    {c.title}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
           {((x?.videos ?? []) as [string, string, string][]).map((v) => (
             <div key={v[0]} className="mcard" onClick={() => showToast('▶ ' + v[0])} style={sx('min-width:236px')}>
               <div className="cover" style={{ background: v[1], height: 146 }}>
