@@ -1790,35 +1790,31 @@ class MarketplaceTaxTemplate extends Model
             // primary (Asociația) prints 0% while a VAT-payer secondary (Csomadcom)
             // prints its rate. issuing_company-null (ordinary/non-leisure) payouts
             // keep the exact legacy behaviour: the organizer's vat_payer flag.
-            $isSocietyDecont = $organizer && ($payout->issuing_company ?? null);
-            if ($isSocietyDecont) {
-                $issuerVat = $organizer->getIssuerData($payout->issuing_company);
-                $vatPayer = (bool) ($issuerVat['vat_payer'] ?? false);
-                $vatRate = $vatPayer ? (float) ($issuerVat['vat_rate'] ?? 19) : 0;
-            } else {
-                $vatPayer = $organizer?->vat_payer ?? false;
-                $vatRate = $vatPayer ? 19 : 0;
-            }
-            $variables['payout_vat_rate'] = $vatRate > 0 ? ($vatRate . '%') : '0%';
+            // Unified VAT (leisure + non-leisure, any commission mode): TVA is
+            // computed on the amount the organizer actually settles — the value
+            // shown in the "Preț" column / VALOARE TOTALA de achitat (E):
+            //   - added_on_top: the base price (commission is billed on top) → payout amount
+            //   - inclus:       the (VAT-inclusive) gross ticket revenue     → payout gross
+            // Split as: fără TVA + TVA = de plată,  TVA = rate% × baza.
+            // Payer + rate come from the issuing company's config
+            // (getIssuerData) — for ordinary payouts (issuing_company null) that
+            // resolves to the organizer's PRIMARY VAT status/rate, never a
+            // hardcoded rate. A non-VAT-payer → rate 0 → fără TVA = baza, TVA = 0.
+            $vatIssuer = $payout->issuing_company ?: 'primary';
+            $issuerVat = $organizer ? $organizer->getIssuerData($vatIssuer) : [];
+            $vatPayer = (bool) ($issuerVat['vat_payer'] ?? ($organizer?->vat_payer ?? false));
+            $vatRate = $vatPayer ? (float) ($issuerVat['vat_rate'] ?? 21) : 0;
 
-            if ($isSocietyDecont) {
-                // Leisure society decont: the settled GROSS is the society's own
-                // VAT-inclusive revenue, so the decont splits it as
-                //   fără TVA + TVA = de plată (gross),  TVA = rate% × gross.
-                // (For a non-VAT-payer society the rate is 0 → fără TVA = gross,
-                // TVA = 0, de plată = gross.)
-                $vatAmount = $vatPayer ? round($payoutGross * $vatRate / 100, 2) : 0;
-                $variables['payout_vat_amount'] = number_format($vatAmount, 2);
-                $variables['payout_amount_without_vat'] = number_format($payoutGross - $vatAmount, 2);
-                $variables['payout_total_with_vat'] = number_format($payoutGross, 2);
-            } else {
-                // Ordinary/non-leisure decont — unchanged: VAT on the marketplace
-                // commission; the "fără TVA" cell keeps the fees value it had.
-                $vatAmount = $vatPayer ? round($payoutCommission * $vatRate / 100, 2) : 0;
-                $variables['payout_vat_amount'] = number_format($vatAmount, 2);
-                $variables['payout_amount_without_vat'] = number_format($payout->fees_amount ?? 0, 2);
-                $variables['payout_total_with_vat'] = number_format(($payout->fees_amount ?? 0) + $vatAmount, 2);
-            }
+            $vatMode = $payout->commission_mode ?: 'included';
+            $vatBase = in_array($vatMode, ['added_on_top', 'on_top'], true)
+                ? (float) $payoutAmount
+                : (float) $payoutGross;
+            $vatAmount = $vatPayer ? round($vatBase * $vatRate / 100, 2) : 0;
+
+            $variables['payout_vat_rate'] = $vatRate > 0 ? ($vatRate . '%') : '0%';
+            $variables['payout_vat_amount'] = number_format($vatAmount, 2);
+            $variables['payout_amount_without_vat'] = number_format($vatBase - $vatAmount, 2);
+            $variables['payout_total_with_vat'] = number_format($vatBase, 2);
             $variables['payout_adjustments_note'] = $payout->adjustments_note ?? '';
             $variables['payout_period_start'] = $payout->period_start
                 ? $payout->period_start->format('d.m.Y')
