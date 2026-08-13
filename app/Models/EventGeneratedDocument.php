@@ -118,24 +118,53 @@ class EventGeneratedDocument extends Model
                 ->first();
         }
 
-        // Build variables for the template
-        $variables = self::buildTemplateVariables($event, $marketplace, $organizer, $taxRegistry);
+        // Build variables using the SAME full builder that powers the
+        // (working) organizer_contract path. The narrow builder below
+        // (self::buildTemplateVariables) is kept for reference but no
+        // longer called — it only produced ~30 scalars while templates
+        // expect 100+ variables (ticket_types_rows, unsold_tickets_rows,
+        // tax_situation_table_rows, guarantor_*, marketplace_bank_*,
+        // properly-unwrapped translatable fields, all 4 event date modes,
+        // etc.). Every unknown {{var}} was falling through into the PDF
+        // as literal text — that's why the tables were empty.
+        $variables = MarketplaceTaxTemplate::getVariablesForContext(
+            $taxRegistry,
+            $marketplace,
+            $organizer,
+            $event,
+            null,
+            incrementContractNumber: false,
+            template: $template,
+        );
 
         // Process the template
         $htmlContent = $template->processTemplate($variables);
 
         // Process page 2 if exists. Skip empty stubs (e.g. lone <p></p>) so
         // they don't produce a phantom blank PDF page after the page-break.
-        $htmlContentPage2 = null;
         if (MarketplaceTaxTemplate::hasMeaningfulContent($template->html_content_page_2)) {
             $htmlContentPage2 = $template->html_content_page_2;
             foreach ($variables as $key => $value) {
+                // Array-value guard — some variables (e.g. translatable
+                // fields not yet unwrapped) can be arrays. The page-1
+                // processTemplate has this guard; the page-2 loop was
+                // missing it and crashed with a preg_replace TypeError
+                // whenever any $value was an array (declaratie_impozite
+                // reproduced this reliably via venue_name).
+                if (is_array($value)) {
+                    continue;
+                }
                 $htmlContentPage2 = preg_replace(
                     '/\{\{\s*' . preg_quote($key, '/') . '\s*\}\}/',
-                    $value ?? '',
+                    (string) ($value ?? ''),
                     $htmlContentPage2
                 );
             }
+
+            // Concatenate page 2 into the final HTML with an explicit
+            // page break. Before this the second-page HTML was built and
+            // then silently discarded — Pdf::loadHTML only received page 1.
+            $htmlContent .= '<div style="page-break-before: always;"></div>' . $htmlContentPage2;
         }
 
         // Generate PDF using DomPDF
@@ -190,7 +219,14 @@ class EventGeneratedDocument extends Model
     }
 
     /**
-     * Build template variables from Event model
+     * @deprecated Do not call. Superseded by
+     * MarketplaceTaxTemplate::getVariablesForContext() which produces
+     * the full 100+ variable set that templates actually reference
+     * (ticket_types_rows, unsold_tickets_rows, tax_situation_*, etc.).
+     * This narrow builder only produced ~30 scalars and silently
+     * assigned translatable fields as arrays. Retained temporarily as
+     * reference for the fields it USED to cover; remove once no
+     * consumers remain (grep confirms 0 external callers as of 2026-08-13).
      */
     protected static function buildTemplateVariables(
         Event $event,
