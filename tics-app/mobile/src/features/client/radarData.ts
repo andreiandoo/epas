@@ -66,15 +66,15 @@ export function useRadarList(q: RadarQuery = {}) {
 }
 
 /** Categoriile reale, cu exemple din care ecranul isi ia imaginile de card. */
-export function useRadarCategories() {
+export function useRadarCategories(city?: string) {
   const [cats, setCats] = useState<RadarCategory[]>([]);
   useEffect(() => {
     let alive = true;
-    fetchRadarCategories().then((c) => alive && setCats(c));
+    fetchRadarCategories(city).then((c) => alive && setCats(c));
     return () => {
       alive = false;
     };
-  }, []);
+  }, [city]);
   return cats;
 }
 

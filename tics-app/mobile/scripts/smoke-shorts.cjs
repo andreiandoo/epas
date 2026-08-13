@@ -23,6 +23,21 @@ const check = (name, ok, extra = '') => {
   if (!ok) failures++;
 };
 
+/* Al treilea short e un EVENIMENT, nu o locatie: pastila lui trebuie sa arate
+   data, nu cuvantul „Eveniment". Fara un asemenea exemplu in fixture, regula
+   n-ar fi acoperita de niciun test. */
+const eventOwner = (id) => ({
+  type: 'event',
+  id: 10 + id,
+  slug: `e${id}`,
+  name: `Eveniment ${id}`,
+  label: 'Eveniment',
+  details: [
+    { icon: 'cal', text: '12 septembrie · 20:00' },
+    { icon: 'pin', text: 'Sala Mare, Oras' },
+  ],
+});
+
 const short = (id, title, likes) => ({
   id,
   source: 'upload',
@@ -37,7 +52,7 @@ const short = (id, title, likes) => ({
   hashtags: [],
   language: null,
   music_credit: null,
-  owner: {
+  owner: id === 3 ? eventOwner(id) : {
     type: 'venue',
     id: 10 + id,
     slug: `v${id}`,
@@ -86,7 +101,7 @@ const short = (id, title, likes) => ({
           success: true,
           data: {
             feed: 'for_you',
-            items: [short(1, 'Primul short', 1200), short(2, 'Al doilea short', 34)],
+            items: [short(1, 'Primul short', 1200), short(2, 'Al doilea short', 34), short(3, 'Un eveniment', 7)],
             playback: null,
             next_cursor: null,
           },
@@ -224,6 +239,29 @@ const short = (id, title, likes) => ({
   }));
   check('pastila arata TIPUL, nu numele', meta.pill === 'Locație', `pastila="${meta.pill}" titlu="${meta.title}"`);
   check('detaliile locatiei apar sub titlu', meta.details.length === 2, meta.details.join(' | '));
+
+  /* Inca un short mai jos e un EVENIMENT: acolo pastila poarta DATA, iar
+     randul separat de data dispare — aceeasi informatie de doua ori, una sub
+     alta, arata a greseala. */
+  await page.evaluate(() => {
+    const s = document.querySelector('.shorts');
+    s.scrollTo({ top: s.clientHeight * 2, behavior: 'auto' });
+  });
+  await wait(1200);
+  const evMeta = await page.evaluate(() => {
+    const dateRow = document.querySelector('.shchrome .shdate');
+
+    return {
+      pill: document.querySelector('.shchrome .gpill')?.textContent.trim(),
+      dateVisible: dateRow ? getComputedStyle(dateRow).display !== 'none' : false,
+    };
+  });
+  check(
+    'la eveniment, pastila arata DATA, nu tipul',
+    evMeta.pill === '12 septembrie · 20:00',
+    `pastila="${evMeta.pill}"`,
+  );
+  check('data nu se mai repeta pe un rand separat', !evMeta.dateVisible);
 
   /* Linia comuna e `--ep-bottom-line` (45px + safe-bottom); prototipul avea
      34px pentru text si 32 pentru rail. Verificam ca ambele stau pe ea. */

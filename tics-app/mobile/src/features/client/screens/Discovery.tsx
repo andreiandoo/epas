@@ -16,6 +16,7 @@ import { radarToUi, useRadarList } from '../radarData';
 import { CAT_TO_FEED } from '../../../api/ticsRadar';
 import { CityTag } from '../cityTag';
 import { useNav } from '../nav';
+import { OsmMap } from '../osmMap';
 import { useClient } from '../../../store/client';
 
 type Ev = Record<string, any>;
@@ -691,22 +692,33 @@ export function Venue({ id }: { id?: string }) {
             Fara coordonate ramane caseta decorativa din prototip: mai bine un
             substitut evident decat o harta centrata pe un loc gresit. */}
         {typeof v._lat === 'number' && typeof v._lng === 'number' ? (
-          <div style={sx('height:150px;border-radius:18px;margin-top:16px;overflow:hidden;background:#0d0b16')}>
-            <iframe
-              title={`Harta · ${v.name}`}
-              loading="lazy"
-              style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${v._lng - 0.006}%2C${v._lat - 0.003}%2C${v._lng + 0.006}%2C${v._lat + 0.003}&layer=mapnik&marker=${v._lat}%2C${v._lng}`}
-            />
-          </div>
+          <>
+            {/* Harta reala (Leaflet + OSM), aceeasi componenta ca pe Acasa.
+                Inainte era un `<iframe>` catre openstreetmap.org: functiona,
+                dar arata altfel decat restul aplicatiei si nu putea purta
+                acelasi pin. Aici e fixa — pe fisa unei locatii n-ai ce cauta
+                sa te plimbi, singurul punct care conteaza e in centru. */}
+            <div style={sx('margin-top:16px')}>
+              <OsmMap
+                center={{ lat: v._lat as number, lng: v._lng as number }}
+                zoom={v._approx ? 12 : 15}
+                height={170}
+                pin={{ lat: v._lat as number, lng: v._lng as number, label: String(v.name ?? '') }}
+                interactive={false}
+              />
+            </div>
+            {v._approx ? (
+              <div className="muted" style={sx('font-size:11px;margin-top:7px')}>
+                Poziție aproximativă — centrul orașului. Sala nu are coordonate exacte în catalog.
+              </div>
+            ) : null}
+          </>
         ) : (
           <div
-            style={sx('height:130px;border-radius:18px;margin-top:16px;background:linear-gradient(120deg,#141126,#0d0b16);position:relative;overflow:hidden')}
+            style={sx('height:130px;border-radius:18px;margin-top:16px;background:linear-gradient(120deg,#141126,#0d0b16);position:relative;overflow:hidden;display:grid;place-items:center')}
           >
             <div style={sx('position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.7')} />
-            <div
-              style={sx('position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid var(--bg);box-shadow:var(--sh-p)')}
-            />
+            <div className="muted" style={sx('font-size:11.5px;position:relative')}>Locația nu are coordonate</div>
           </div>
         )}
 

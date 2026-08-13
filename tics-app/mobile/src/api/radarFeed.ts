@@ -220,15 +220,24 @@ export async function feedList(q: FeedQuery = {}): Promise<{ items: RadarItem[];
   return { items: hits.slice(off, off + lim).map(fromFeed), total: hits.length };
 }
 
-/** Categoriile OFICIALE (22), cu cate evenimente are fiecare in feed. */
-export async function feedCategories(): Promise<
-  { key: string; label: string; color: string; count: number; samples: RadarItem[] }[] | null
-> {
+/**
+ * Categoriile OFICIALE (22), cu cate evenimente are fiecare in feed.
+ *
+ * Numara EXACT ce va aparea in lista daca dai click pe card: acelasi oras si
+ * aceeasi conditie de pret ca `feedList`. Inainte numara tot feed-ul, deci un
+ * card putea scrie „105" si sa te duca intr-o lista goala — cifra de pe card
+ * era o promisiune pe care lista n-o putea tine.
+ */
+export async function feedCategories(
+  q: { city?: string } = {},
+): Promise<{ key: string; label: string; color: string; count: number; samples: RadarItem[] }[] | null> {
   const feed = await getFeed();
   if (!feed?.cats?.length) return null;
 
   const byCat = new Map<string, FeedEvent[]>();
   for (const e of feed.events) {
+    if (e.price === null) continue;
+    if (q.city && e.city !== q.city) continue;
     (byCat.get(e.cat) ?? byCat.set(e.cat, []).get(e.cat)!).push(e);
   }
 

@@ -67,7 +67,7 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
   /* Categoriile reale, pentru „Alege un vibe". Se arata patru, restul la
      cerere: toate 12 deodata impingeau lista de evenimente cu ~1100px in jos,
      adica exact continutul pentru care ai deschis Radarul. */
-  const cats = useRadarCategories();
+  const cats = useRadarCategories(city || undefined);
   const [allCats, setAllCats] = useState(false);
   const pools = poolsFromCategories(cats);
 
@@ -102,6 +102,18 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
   ];
 
   const subtitle = [dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ') + ' · prețuri live';
+
+  /* Ce restrange lista chiar acum, in cuvinte. Orasul e primul: e filtrul cel
+     mai des uitat, fiindca se alege din alt ecran. */
+  const active = [
+    city ? `orașul ${city}` : null,
+    cat ? `categoria ${cat}` : null,
+    f.genre ? `genul ${labelOf(GENRE_OPTIONS, f.genre, f.genre)}` : null,
+    f.when === 'today' ? 'azi' : f.when === 'weekend' ? 'weekend' : null,
+    f.maxPrice ? `sub ${f.maxPrice} lei` : null,
+    f.scarce ? 'aproape sold-out' : null,
+    dayLabel(day),
+  ].filter(Boolean) as string[];
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -328,12 +340,30 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
             </div>
             {!loading ? (
               <>
+                {/* Se SPUNE ce filtreaza acum. „Nimic pentru filtrele astea"
+                    fara sa arate care sunt ele lasa omul sa caute prin ecran
+                    ce anume l-a golit — de multe ori orasul, care nu e nici
+                    macar in bara de filtre, ci in antetul de pe Acasă. */}
                 <div className="muted" style={sx('font-size:12px;margin-top:6px;line-height:1.5')}>
-                  Încearcă fără filtre sau alege alt oraș din antetul de pe Acasă.
+                  {active.length ? `Filtrezi după: ${active.join(', ')}.` : 'Nu e nimic publicat aici deocamdată.'}
                 </div>
-                <button className="cta ghost" style={sx('margin-top:14px;padding:11px')} onClick={resetRadarF}>
-                  Șterge filtrele
-                </button>
+                {active.length ? (
+                  <button
+                    className="cta ghost"
+                    style={sx('margin-top:14px;padding:11px')}
+                    onClick={() => {
+                      /* Sterge TOT ce poate goli lista, orasul inclusiv.
+                         Butonul chema doar `resetRadarF`, care nu atinge
+                         orasul — deci cand vinovat era orasul, apasarea nu
+                         schimba nimic si parea stricat. */
+                      resetRadarF();
+                      setCity('');
+                      if (cat) back();
+                    }}
+                  >
+                    {cat ? 'Șterge filtrele și ieși din categorie' : 'Șterge filtrele'}
+                  </button>
+                ) : null}
               </>
             ) : null}
           </div>

@@ -1,28 +1,27 @@
 /* =========================================================
-   LANGA TINE — evenimentele din raza de 100 km, pe harta
+   LANGA TINE — evenimentele din jur, pe harta OpenStreetMap
 
    Sectiunea exista si in prototip, in „Explorează", dar era desenata: doua
    puncte fixe pe un gradient si acelasi festival, la orice ora si in orice
-   oras. Acum vine din `/catalog/events/nearby`, cu distanta calculata pe
-   server.
+   oras.
 
-   DE CE O HARTA DESENATA DE NOI, si nu una cu strazi
-   O harta cu dale (Leaflet + OpenStreetMap, Mapbox, MapTiler) inseamna ori o
-   politica de utilizare pe care un app comercial n-o respecta, ori o cheie de
-   API si o factura pe afisari. Aici nu ai nevoie sa vezi strazi: intrebarea e
-   „ce se intampla aproape si CAT de aproape". Pozitiile sunt reale, proiectate
-   din lat/lng, iar cercurile spun distanta mai clar decat ar face-o un fundal
-   de harta. Daca se ia o cheie de dale, fundalul se schimba fara sa se atinga
-   restul.
+   Harta e acum una reala (Leaflet + OSM, vezi osmMap.tsx) si se poate plimba:
+   la fiecare oprire cere evenimentele din dreptunghiul vizibil, deci apar pini
+   noi pe masura ce te muti. Lista de sub harta ramane cea „langa tine", pe
+   raza de 100 km, ordonata dupa distanta — harta raspunde la „unde", lista la
+   „cat de aproape".
    ========================================================= */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ic, sx } from '../../design/sx';
 import { I } from '../../mock/prototype';
-import { fetchNearbyEvents, type NearbyEvent, type NearbyResult } from '../../api/catalog';
+import {
+  fetchEventsInBounds,
+  fetchNearbyEvents,
+  type MapEvent,
+  type NearbyResult,
+} from '../../api/catalog';
+import { OsmMap, type Bounds } from './osmMap';
 import { useNav } from './nav';
-
-/** Cate km inseamna un grad, ca sa proiectam lat/lng in kilometri plani. */
-const KM_PER_DEG = 111.045;
 
 type Located = { lat: number; lng: number } | { city: string } | null;
 
@@ -67,101 +66,20 @@ function useWhereAmI(city: string): Located {
   return city ? { city } : null;
 }
 
-/** Proiectie plana in jurul centrului: la 100 km, curbura e sub un pixel. */
-function project(center: { lat: number; lng: number }, p: { lat: number; lng: number }) {
-  const x = (p.lng - center.lng) * KM_PER_DEG * Math.cos((center.lat * Math.PI) / 180);
-  const y = (center.lat - p.lat) * KM_PER_DEG;
-
-  return { x, y };
-}
-
-function Map({ data, onPick }: { data: NearbyResult; onPick: (e: NearbyEvent) => void }) {
-  /* Scara se ia dupa cel mai departat eveniment AFISAT, nu dupa raza ceruta:
-     daca tot ce ai la 100 km e la 12 km, o harta scalata la 100 km ar
-     ingramadi totul intr-un punct in mijloc. Minim 8 km, ca doua evenimente
-     din acelasi oras sa nu se suprapuna complet. */
-  const far = Math.max(8, ...data.events.map((e) => e.distance_km));
-  const rings = [far / 3, (far * 2) / 3, far];
-
-  return (
-    <div
-      style={sx('position:relative;height:210px;border-radius:20px;overflow:hidden;background:radial-gradient(120% 120% at 50% 50%,#171331,#0c0a16);border:1px solid var(--line-2)')}
-    >
-      <div style={sx('position:absolute;inset:0;background-image:var(--grid);background-size:26px 26px;opacity:.45')} />
-
-      {/* cercurile de distanta */}
-      {rings.map((km, i) => {
-        const size = ((i + 1) / rings.length) * 92;
-
-        return (
-          <div
-            key={km}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              width: `${size}%`,
-              height: `${size * (210 / 210)}%`,
-              transform: 'translate(-50%,-50%)',
-              borderRadius: '50%',
-              border: '1px dashed rgba(139,124,246,.28)',
-              pointerEvents: 'none',
-            }}
-          />
-        );
-      })}
-      <div
-        className="muted"
-        style={sx('position:absolute;left:50%;top:calc(50% - 96px);transform:translateX(-50%);font-size:9.5px;font-weight:600;letter-spacing:.06em')}
-      >
-        {Math.round(far)} KM
-      </div>
-
-      {/* evenimentele */}
-      {data.events.map((e) => {
-        const p = project(data.center, e);
-        /* 46% din latime/inaltime pentru cercul exterior: restul e marginea in
-           care incape pastila cu numele, ca sa nu iasa din card. */
-        const left = 50 + (p.x / far) * 42;
-        const top = 50 + (p.y / far) * 42;
-
-        return (
-          <button
-            key={e.id}
-            onClick={() => onPick(e)}
-            aria-label={`${e.title ?? 'Eveniment'} · ${e.distance_km} km`}
-            style={{
-              position: 'absolute',
-              left: `${Math.max(4, Math.min(96, left))}%`,
-              top: `${Math.max(6, Math.min(94, top))}%`,
-              transform: 'translate(-50%,-50%)',
-              width: 30,
-              height: 30,
-              borderRadius: '50%',
-              border: '2px solid rgba(255,255,255,.9)',
-              background: e.poster ? `url('${e.poster}') center/cover` : 'var(--indigo)',
-              boxShadow: 'var(--sh-p)',
-              padding: 0,
-              cursor: 'pointer',
-            }}
-          />
-        );
-      })}
-
-      {/* tu */}
-      <div
-        style={sx('position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:var(--cyan);border:3px solid #0c0a16;box-shadow:0 0 0 6px rgba(45,214,238,.18)')}
-      />
-    </div>
-  );
-}
-
 export function NearYou({ city }: { city: string }) {
   const { go } = useNav();
   const at = useWhereAmI(city);
   const [data, setData] = useState<NearbyResult | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'empty' | 'nowhere'>('loading');
   const [open, setOpen] = useState(false);
+
+  /* Pinurile de pe harta sunt ALTCEVA decat lista: lista e „langa tine",
+     pinurile sunt „ce se vede acum pe ecran". Cand plimbi harta spre alt
+     oras, pinurile se schimba, dar lista de dedesubt ramane a ta. */
+  const [pins, setPins] = useState<MapEvent[]>([]);
+  const [tooWide, setTooWide] = useState(false);
+  const boundsAbort = useRef<AbortController | null>(null);
+  const boundsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!at) {
@@ -198,6 +116,34 @@ export function NearYou({ city }: { city: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [at && 'lat' in at ? `${at.lat},${at.lng}` : (at?.city ?? '')]);
 
+  /* Plimbatul hartii cere evenimente noi — dar nu la fiecare cadru de
+     miscare: Leaflet trage `moveend` si dupa o glisare de doi pixeli, iar o
+     cerere pe fiecare ar insemna zeci pe secunda. 350 ms de liniste inseamna
+     „s-a oprit din mutat". */
+  const onBounds = useCallback((b: Bounds) => {
+    if (boundsTimer.current) clearTimeout(boundsTimer.current);
+
+    boundsTimer.current = setTimeout(() => {
+      boundsAbort.current?.abort();
+      boundsAbort.current = new AbortController();
+      const ac = boundsAbort.current;
+
+      void fetchEventsInBounds(b, ac.signal).then((r) => {
+        if (ac.signal.aborted || !r) return;
+        setTooWide(!!r.too_wide);
+        setPins(Array.isArray(r.events) ? r.events : []);
+      });
+    }, 350);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (boundsTimer.current) clearTimeout(boundsTimer.current);
+      boundsAbort.current?.abort();
+    },
+    [],
+  );
+
   /* Fara loc si fara rezultate, sectiunea nu se afiseaza deloc: un card gol pe
      ecranul de pornire e zgomot, nu informatie. */
   if (state === 'nowhere' || state === 'empty') return null;
@@ -229,7 +175,20 @@ export function NearYou({ city }: { city: string }) {
         <div className="sk" style={sx('height:210px;border-radius:20px')} />
       ) : (
         <>
-          <Map data={data} onPick={(e) => go('event', { id: String(e.id) })} />
+          <OsmMap
+            center={data.center}
+            zoom={9}
+            height={240}
+            events={pins}
+            showMe
+            onBoundsChange={onBounds}
+            onPick={(e) => go('event', { id: String(e.id) })}
+          />
+          {tooWide ? (
+            <div className="muted" style={sx('font-size:11px;margin-top:7px;text-align:center')}>
+              Apropie harta ca să vezi evenimentele.
+            </div>
+          ) : null}
 
           {/* Sub harta: acelasi set, citibil. Pastila spune distanta, ca sa
               poti alege fara sa ghicesti care punct de pe harta e care. */}

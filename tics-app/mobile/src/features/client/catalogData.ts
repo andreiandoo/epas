@@ -173,6 +173,7 @@ export function toVenueRecord(v: CatalogVenue): Rec {
        poate fi inteleasa gresit, spre deosebire de un nume de sala. */
     _lat: v.lat,
     _lng: v.lng,
+    _approx: v.location_approx ?? false,
     _rating: v.rating,
     _reviewCount: v.review_count,
     _desc: v.description,

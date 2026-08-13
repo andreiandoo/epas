@@ -88,8 +88,12 @@ const VENUE = {
   image: null,
   portrait: null,
   gallery: [],
-  lat: null,
-  lng: null,
+  /* Coordonate REALE in fixture: pana acum erau null, deci testul trecea si
+     cu bugul care citea `latitude`/`longitude` in loc de `lat`/`lng` — harta
+     locatiei era goala pentru orice sala. */
+  lat: 46.7712,
+  lng: 23.6236,
+  location_approx: false,
   rating: 4.6,
   review_count: 88,
   reviews: [],
@@ -166,6 +170,18 @@ const VENUE = {
       return json(req, { feed: 'for_you', items: [shortFor(feedMode)], playback: null, next_cursor: null });
     }
 
+    // dreptunghiul hartii — pinurile care apar cand plimbi harta
+    if (url.includes('/catalog/events/in-bounds')) {
+      return json(req, {
+        too_wide: false,
+        events: [
+          { ...EVENT, id: 901, title: 'Aproape de tot', lat: 44.44, lng: 26.11 },
+          { ...EVENT, id: 902, title: 'Mai departe', lat: 44.9, lng: 25.4 },
+          { ...EVENT, id: 903, title: 'Al treilea', lat: 44.6, lng: 26.4 },
+        ],
+      });
+    }
+
     // „nearby" inaintea fisei: altfel ruta ar fi citita ca slug de eveniment
     if (url.includes('/catalog/events/nearby')) {
       return json(req, {
@@ -183,6 +199,20 @@ const VENUE = {
     if (url.includes('/catalog/events/')) return json(req, EVENT);
     if (url.includes('/catalog/artists/')) return json(req, ARTIST);
     if (url.includes('/catalog/venues/')) return json(req, VENUE);
+
+    /* Dalele de harta: 1x1 PNG transparent. Un JSON servit ca imagine ar
+       umple consola de erori si ar face testul sa para ca a picat ceva. */
+    if (/tile\.openstreetmap\.org/.test(url)) {
+      return req.respond({
+        status: 200,
+        contentType: 'image/png',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          'base64',
+        ),
+      });
+    }
 
     if (/^https?:\/\/(?!localhost)/.test(url)) {
       return req.respond({
@@ -278,21 +308,33 @@ const VENUE = {
      complet inutila. */
   await goHome();
   await wait(1600);
+  /* Leaflet se incarca la cerere (import dinamic), deci se asteapta harta,
+     nu se presupune ca e deja acolo. */
+  await page
+    .waitForFunction(() => !!document.querySelector('.leaflet-container'), { timeout: 12000 })
+    .catch(() => {});
+  await wait(1800);
+
   const near = await page.evaluate(() => {
     const heading = [...document.querySelectorAll('div')].find((e) => e.textContent.trim() === 'Lângă tine');
     const card = heading?.closest('.pad');
-    const pins = card ? [...card.querySelectorAll('button[aria-label]')].filter((b) => /km/.test(b.getAttribute('aria-label'))) : [];
 
     return {
       visible: !!card,
       body: card?.textContent.replace(/\s+/g, ' ') ?? '',
-      spots: pins.map((b) => `${b.style.left}|${b.style.top}`),
+      map: !!card?.querySelector('.leaflet-container'),
+      tiles: card?.querySelectorAll('.leaflet-tile').length ?? 0,
+      pins: card?.querySelectorAll('.leaflet-marker-icon').length ?? 0,
+      attrib: card?.querySelector('.leaflet-control-attribution')?.textContent ?? '',
     };
   });
   check('sectiunea „Lângă tine" apare pe Acasa', near.visible, near.body.slice(0, 80));
-  check('harta poarta un punct per eveniment', near.spots.length === 2, near.spots.join(' , '));
-  check('punctele nu se suprapun', new Set(near.spots).size === near.spots.length, near.spots.join(' , '));
-  check('distantele reale apar', /1\.9 km/.test(near.body) && /78\.4 km/.test(near.body), near.body.slice(0, 120));
+  check('harta OpenStreetMap se randeaza', near.map);
+  check('dalele se cer de la furnizor', near.tiles > 0, `${near.tiles} dale`);
+  /* Atributia OSM nu e decor: e conditia sub care avem voie sa folosim dalele. */
+  check('atributia OSM e prezenta', /OpenStreetMap/.test(near.attrib), near.attrib.slice(0, 60));
+  check('pinurile din dreptunghi apar pe harta', near.pins >= 3, `${near.pins} pini`);
+  check('distantele reale apar in lista', /1\.9 km/.test(near.body) && /78\.4 km/.test(near.body), near.body.slice(0, 120));
 
   /* ---------- eveniment ---------- */
   await openScreen('event');
@@ -334,6 +376,20 @@ const VENUE = {
   check('locatia reala se deschide', txt.includes('Sala Reală'), txt.slice(0, 90));
   check('descrierea locatiei apare', txt.includes('Descrierea reala a locatiei'));
   check('capacitatea reala apare', txt.includes('1.200'), txt.slice(txt.indexOf('Capacitate') - 12, txt.indexOf('Capacitate') + 10));
+  /* Harta locatiei: acelasi Leaflet ca pe Acasa, cu un singur pin. */
+  await page
+    .waitForFunction(() => !!document.querySelector('.leaflet-container'), { timeout: 12000 })
+    .catch(() => {});
+  await wait(1200);
+  const venueMap = await page.evaluate(() => ({
+    map: !!document.querySelector('.leaflet-container'),
+    pins: document.querySelectorAll('.leaflet-marker-icon').length,
+    approx: /Poziție aproximativă/.test(document.body.textContent),
+  }));
+  check('harta locatiei se randeaza', venueMap.map);
+  check('locatia are exact un pin', venueMap.pins === 1, `${venueMap.pins} pini`);
+  check('coordonate exacte => fara avertisment de aproximare', !venueMap.approx);
+
   check('nota reala apare, nu 4.8 fix', txt.includes('4.6') && !txt.includes('4.8'));
 
   if (errors.length) {

@@ -9,6 +9,7 @@
    ca scroll-ul sa nu se opreasca niciodata pe o rotita.
    ========================================================= */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { freshCount, rotateBySeen } from './seen';
 import {
   fetchShortsFeed,
   type ApiShort,
@@ -18,6 +19,17 @@ import {
 
 /** Cu cate short-uri inainte de capat cerem pagina urmatoare. */
 const PREFETCH_THRESHOLD = 3;
+
+/**
+ * Cate pagini sarim cautand ceva nevazut, la prima incarcare.
+ *
+ * Feed-ul serverului incepe de fiecare data cu aceleasi short-uri. Daca le-ai
+ * vazut pe toate din prima pagina, deschiderea ecranului te-ar pune exact in
+ * fata lor. Cerem paginile urmatoare pana gasim continut nou — dar nu la
+ * nesfarsit: patru pagini inseamna ~40 de short-uri, iar dincolo de asta
+ * chiar le-ai vazut pe toate si e cinstit sa le reia, cele mai vechi intai.
+ */
+const FRESH_LOOKAHEAD = 4;
 
 export type ShortsFeedState = {
   items: ApiShort[];
@@ -51,6 +63,8 @@ export function useShortsFeed(feed: ShortFeedSegment = 'for_you', limit = 10): S
   const exhausted = useRef(false);
   const inFlight = useRef(false);
   const firstLoadDone = useRef(false);
+  /** Cate pagini am sarit deja cautand ceva nevazut. */
+  const lookahead = useRef(0);
   const abort = useRef<AbortController | null>(null);
 
   const load = useCallback(async () => {
@@ -72,7 +86,19 @@ export function useShortsFeed(feed: ShortFeedSegment = 'for_you', limit = 10): S
       cursor.current = page.next_cursor;
       if (!page.next_cursor) exhausted.current = true;
 
-      setItems((prev) => [...prev, ...page.items]);
+      /* Rotatia se face PE PAGINA, nu pe lista intreaga: paginile deja
+         afisate nu se ating, altfel ecranul ar sari sub degetul omului. */
+      setItems((prev) => [...prev, ...rotateBySeen(page.items)]);
+
+      /* Prima pagina integral vazuta => mai cerem una. Fara asta, „Pe val"
+         iti arata la fiecare deschidere exact ce ai vazut ultima oara. */
+      if (!firstLoadDone.current && page.items.length && freshCount(page.items) === 0) {
+        lookahead.current += 1;
+        if (lookahead.current <= FRESH_LOOKAHEAD && page.next_cursor) {
+          inFlight.current = false;
+          void load();
+        }
+      }
       if (page.playback) setPlaybackHints(page.playback);
       setError(null);
 
@@ -98,6 +124,7 @@ export function useShortsFeed(feed: ShortFeedSegment = 'for_you', limit = 10): S
     cursor.current = null;
     exhausted.current = false;
     firstLoadDone.current = false;
+    lookahead.current = 0;
     setItems([]);
     setUnavailable(false);
     void load();

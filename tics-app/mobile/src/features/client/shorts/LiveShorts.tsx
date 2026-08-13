@@ -30,6 +30,7 @@ import { useClient } from '../../../store/client';
 import { ShortVideo } from './ShortVideo';
 import { ShortEmbed, youtubeId } from './ShortEmbed';
 import { useShortsFeed } from './useShortsFeed';
+import { markSeen } from './seen';
 import { useShortTelemetry } from './useShortTelemetry';
 import { usePlaybackPreferences } from './usePlaybackPreferences';
 import { useHorizontalSwipe } from './useHorizontalSwipe';
@@ -151,6 +152,12 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
     flags.impression = true;
     track({ short_id: short.id, type: 'impression', feed });
+
+    /* Tinut minte LOCAL, ca la urmatoarea deschidere sa treaca la coada.
+       Se marcheaza la impresie, nu la vizionarea completa: daca l-ai avut pe
+       ecran si ai derulat mai departe, l-ai vazut destul cat sa nu vrei sa-l
+       primesti primul maine. Vezi shorts/seen.ts. */
+    markSeen(short.id);
   }, [activeIndex, items, track, feed]);
 
   /* ---------- raportul de iesire pentru short-ul parasit ---------- */
@@ -408,6 +415,16 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
   const dateRow = details.find((d) => d.icon === 'cal') ?? null;
   const otherRows = details.filter((d) => d !== dateRow);
 
+  /* La un EVENIMENT, pastila poarta data, nu cuvantul „Eveniment": tipul se
+     vede oricum din tot ce urmeaza (titlu, sala, buton de bilete), pe cand
+     data e informatia dupa care decizi daca te intereseaza. La artisti si
+     locatii nu exista data, deci pastila ramane ce era.
+     Randul separat de data dispare cand pastila il duce — aceeasi informatie
+     de doua ori, una sub alta, arata a greseala. */
+  const isEvent = activeShort?.owner?.type === 'event';
+  const pillDate = isEvent ? dateRow : null;
+  const pillText = pillDate?.text ?? activeShort?.owner?.label ?? '';
+
   const descText = activeShort?.caption ?? activeShort?.description ?? '';
   const hasDesc = descText.trim() !== '';
   const descOpen = hasDesc && descOpenFor === activeShort?.id;
@@ -570,15 +587,15 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
 
             {/* Pastila spune CE e, nu CUM se cheama: numele sta in titlul de
                 dedesubt, iar pana acum pastila il repeta pe acelasi. */}
-            <span className="gpill solid" hidden={!activeShort.owner?.label}>
-              {activeShort.owner?.label ?? ''}
+            <span className="gpill solid" hidden={!pillText}>
+              {pillText}
             </span>
 
             {/* Data, scoasa in evidenta: pentru un eveniment conteaza aproape
                 cat titlul, iar pierduta printre celelalte detalii se citea
                 ultima. Ramane doar un rand de text pentru artisti si locatii,
                 unde nu exista. */}
-            <span className="shdate" hidden={!dateRow}>
+            <span className="shdate" hidden={!dateRow || !!pillDate}>
               <Ic svg={I.cal} /> {dateRow?.text ?? ''}
             </span>
 

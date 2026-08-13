@@ -101,8 +101,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     <div className="ob grid">
       <SafeTop />
       <div className="between pad" style={sx('padding-top:4px')}>
-        <div className="row" style={sx('gap:6px;font-weight:600;font-size:16px;color:var(--ink)')}>
-          <Raw html={ticsMark('var(--indigo-2)', 26)} /> tics
+        {/* Marca, nu o bulina langa un cuvant: in onboarding e singurul loc in
+            care se vede cine esti, iar la 26px se pierdea langa „Sari peste".
+            „tics" se scrie mereu cu litera mica. */}
+        <div className="row" style={sx('gap:9px;font-weight:600;font-size:24px;letter-spacing:-.03em;color:var(--ink)')}>
+          <Raw html={ticsMark('var(--indigo-2)', 44)} /> tics
         </div>
         <button className="chip" onClick={onDone} style={sx('border:0;background:transparent;color:var(--muted)')}>
           Sari peste

@@ -232,6 +232,87 @@ class CatalogController extends Controller
     }
 
     /**
+     * Evenimentele dintr-un dreptunghi de harta — pentru harta care se
+     * populeaza pe masura ce o plimbi.
+     *
+     * Separat de `nearby` fiindca intrebarea e alta: acolo „ce e aproape de
+     * MINE", aici „ce e in ce vad ACUM". Nu exista centru, deci nu exista
+     * distanta si nici ordonare dupa ea; ordinea e dupa data, iar limita e
+     * mai mare — o harta cu 12 pini pe un judet intreg arata pustie.
+     *
+     * Dreptunghiul e plafonat: fara plafon, un utilizator care da zoom out
+     * pana la continent ar cere toata baza de date la fiecare glisare.
+     */
+    public function inBounds(Request $request): JsonResponse
+    {
+        foreach (['north', 'south', 'east', 'west'] as $edge) {
+            if (! is_numeric($request->query($edge))) {
+                return response()->json(['success' => false, 'message' => 'Dreptunghi incomplet.'], 422);
+            }
+        }
+
+        $north = (float) $request->query('north');
+        $south = (float) $request->query('south');
+        $east = (float) $request->query('east');
+        $west = (float) $request->query('west');
+
+        if ($north <= $south || $east <= $west) {
+            return response()->json(['success' => false, 'message' => 'Dreptunghi invalid.'], 422);
+        }
+
+        /* Peste ~12 grade (≈1300 km) nu mai are sens sa desenam pini: la zoom-ul
+           acela nu se disting oricum. Se raspunde cu lista goala si un semnal,
+           ca aplicatia sa poata spune „mai apropie", nu sa para stricata. */
+        if (($north - $south) > 12 || ($east - $west) > 12) {
+            return response()->json([
+                'success' => true,
+                'data' => ['events' => [], 'too_wide' => true],
+            ]);
+        }
+
+        $limit = max(1, min((int) $request->query('limit', 60), 120));
+
+        $candidates = Event::query()
+            ->where('is_published', true)
+            ->upcoming()
+            ->whereHas('venue', function ($v) use ($north, $south, $east, $west) {
+                $v->where(function ($q) use ($north, $south, $east, $west) {
+                    $q->whereBetween('lat', [$south, $north])
+                        ->whereBetween('lng', [$west, $east]);
+                })
+                    ->orWhereNull('lat')
+                    ->orWhereNull('lng');
+            })
+            ->with(['venue', 'ticketTypes', 'eventTypes'])
+            ->orderByRaw('COALESCE(event_date, range_start_date) ASC NULLS LAST')
+            ->limit(400)
+            ->get();
+
+        $coords = $this->resolveVenueCoordinates($candidates);
+
+        $events = $candidates
+            ->map(function (Event $e) use ($coords) {
+                $point = $coords[$e->venue?->id] ?? null;
+
+                return $point ? ['event' => $e, 'lat' => $point[0], 'lng' => $point[1]] : null;
+            })
+            ->filter()
+            /* Al doilea filtru e obligatoriu: salile fara coordonate au trecut
+               de interogare tocmai ca sa li se afle orasul, iar orasul aflat
+               poate fi in afara dreptunghiului. */
+            ->filter(fn (array $r) => $r['lat'] <= $north && $r['lat'] >= $south && $r['lng'] <= $east && $r['lng'] >= $west)
+            ->take($limit)
+            ->map(fn (array $r) => $this->eventPayload($r['event'], full: false) + [
+                'lat' => round($r['lat'], 5),
+                'lng' => round($r['lng'], 5),
+            ])
+            ->values()
+            ->all();
+
+        return response()->json(['success' => true, 'data' => ['events' => $events, 'too_wide' => false]]);
+    }
+
+    /**
      * Coordonata fiecarei sali din setul dat: a ei, sau a orasului ei.
      *
      * Localitatile se citesc INTR-O SINGURA interogare, pe numele pliat (fara
@@ -440,6 +521,37 @@ class CatalogController extends Controller
 
         $reviews = $venue->google_reviews_payload;
 
+        /* Coloanele se cheama `lat`/`lng`, nu `latitude`/`longitude`.
+           Raspunsul citea numele lungi — care nu exista pe model — deci
+           trimitea mereu null, iar aplicatia arata caseta decorativa in loc de
+           harta pentru ORICE locatie, inclusiv pentru cele cu coordonate
+           completate corect in admin.
+
+           Cand sala chiar n-are coordonate, se cade pe centrul orasului si se
+           SPUNE asta prin `location_approx`: un pin in centrul Clujului e util
+           („e in Cluj"), un pin in centrul Clujului prezentat ca adresa salii
+           e o minciuna mica dar suparatoare. */
+        $lat = is_numeric($venue->lat) ? (float) $venue->lat : null;
+        $lng = is_numeric($venue->lng) ? (float) $venue->lng : null;
+        $approx = false;
+
+        if ($lat === null || $lng === null) {
+            $city = $this->fold((string) ($venue->city ?? ''));
+
+            $hit = $city === '' ? null : GeoLocality::query()
+                ->where('name_ascii', $city)
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->orderBy('sort_order')
+                ->first(['latitude', 'longitude']);
+
+            if ($hit) {
+                $lat = (float) $hit->latitude;
+                $lng = (float) $hit->longitude;
+                $approx = true;
+            }
+        }
+
         return response()->json(['success' => true, 'data' => [
             'id' => $venue->id,
             'slug' => $venue->slug,
@@ -452,8 +564,9 @@ class CatalogController extends Controller
             'image' => $this->url($venue->image_url),
             'portrait' => $this->url($venue->meta['portrait'] ?? null),
             'gallery' => $this->gallery($venue->gallery),
-            'lat' => is_numeric($venue->latitude ?? null) ? (float) $venue->latitude : null,
-            'lng' => is_numeric($venue->longitude ?? null) ? (float) $venue->longitude : null,
+            'lat' => $lat,
+            'lng' => $lng,
+            'location_approx' => $approx,
             'rating' => isset($reviews['rating']) && is_numeric($reviews['rating']) ? (float) $reviews['rating'] : null,
             'review_count' => isset($reviews['review_count']) ? (int) $reviews['review_count'] : null,
             'reviews' => $reviews['reviews'] ?? [],

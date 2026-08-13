@@ -117,6 +117,8 @@ export type CatalogVenue = {
   gallery: string[];
   lat: number | null;
   lng: number | null;
+  /** Pinul e centrul orasului, nu adresa salii — se spune in interfata. */
+  location_approx?: boolean;
   rating: number | null;
   review_count: number | null;
   reviews: CatalogVenueReview[];
@@ -167,7 +169,11 @@ export const fetchCatalogEvents = (
   return get<CatalogEventBrief[]>(`/tenant-client/catalog/events${qs ? `?${qs}` : ''}`, signal);
 };
 
-export type NearbyEvent = CatalogEventBrief & { lat: number; lng: number; distance_km: number };
+/** Un eveniment care are un loc pe harta. */
+export type MapEvent = CatalogEventBrief & { lat: number; lng: number };
+
+/** Acelasi, dar cerut relativ la un punct — deci si cu distanta. */
+export type NearbyEvent = MapEvent & { distance_km: number };
 
 export type NearbyResult = {
   center: { lat: number; lng: number };
@@ -196,6 +202,23 @@ export const fetchNearbyEvents = (
   params.set('limit', String(opts.limit ?? 20));
 
   return get<NearbyResult>(`/tenant-client/catalog/events/nearby?${params.toString()}`, signal);
+};
+
+export type BoundsResult = { events: MapEvent[]; too_wide: boolean };
+
+/** Evenimentele din dreptunghiul vizibil pe harta. */
+export const fetchEventsInBounds = (
+  b: { north: number; south: number; east: number; west: number },
+  signal?: AbortSignal,
+) => {
+  const params = new URLSearchParams({
+    north: b.north.toFixed(5),
+    south: b.south.toFixed(5),
+    east: b.east.toFixed(5),
+    west: b.west.toFixed(5),
+  });
+
+  return get<BoundsResult>(`/tenant-client/catalog/events/in-bounds?${params.toString()}`, signal);
 };
 
 export type CatalogSearch = {

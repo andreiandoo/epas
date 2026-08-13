@@ -299,3 +299,32 @@
   font-weight: 700;
   margin-left: 1px;
 }
+
+/* =========================================================
+   HARTA OpenStreetMap (Leaflet)
+
+   Dalele OSM sunt luminoase, iar aplicatia e intunecata: fara nicio corectie,
+   harta sare din pagina ca o fereastra alba. Filtrul se pune DOAR pe stratul
+   de dale — pinurile si atributia raman la culorile lor, altfel marcajele
+   albe ar deveni gri si linkul de atributie ilizibil.
+
+   Nu e o „harta dark" reala (aia cere alt set de dale, cu cheie); e aceeasi
+   harta, tinuta putin mai jos ca luminozitate. Strazile si etichetele raman
+   citibile — verificat pe zoom 9-16.
+   ========================================================= */
+.leaflet-container {
+  background: #12101c;
+  font: inherit;
+}
+.leaflet-tile-pane {
+  filter: brightness(0.82) saturate(0.9) contrast(1.06);
+}
+.leaflet-control-attribution {
+  background: rgba(12, 10, 22, 0.72) !important;
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 9.5px !important;
+  padding: 1px 5px !important;
+}
+.leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.82) !important;
+}

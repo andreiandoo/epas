@@ -792,8 +792,8 @@ export type RadarCategory = {
 
 const CAT_LS = 'tics.radar.cats.v1';
 
-export async function fetchRadarCategories(): Promise<RadarCategory[]> {
-  const viaFeed = await feedCategories();
+export async function fetchRadarCategories(city?: string): Promise<RadarCategory[]> {
+  const viaFeed = await feedCategories({ city });
   if (viaFeed?.length) {
     return viaFeed.map((c) => ({ type: c.key, cat: c.label, g: c.samples[0]?.g ?? '🎟', count: c.count, samples: c.samples, color: c.color }));
   }

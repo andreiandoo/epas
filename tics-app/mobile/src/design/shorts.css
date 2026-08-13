@@ -298,7 +298,12 @@
   width: 100%;
   /* 16:9 peste latimea ecranului => inaltimea necesara ca sa acopere 9:16 */
   height: 178vw;
-  transform: translate(-50%, -50%);
+  /* `scale(1.16)`: singura cale de a scoate din cadru sigla YouTube si bara
+     „Watch on YouTube". `modestbranding=1` nu mai are efect din 2023 — YouTube
+     il ignora — iar un capac desenat peste ea ar acoperi si imaginea. Taiem
+     ~8% din fiecare margine; la un short vertical, acolo nu e continut, e
+     margine. Parintele `.short` are deja overflow:hidden. */
+  transform: translate(-50%, -50%) scale(1.16);
   z-index: 1;
   pointer-events: none;
   border: 0;

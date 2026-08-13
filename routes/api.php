@@ -4178,6 +4178,9 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/catalog/events/nearby', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'nearby'])
         ->name('api.tenant-client.catalog.nearby');
 
+    Route::get('/catalog/events/in-bounds', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'inBounds'])
+        ->name('api.tenant-client.catalog.in-bounds');
+
     Route::get('/catalog/events/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'event'])
         ->name('api.tenant-client.catalog.event');
 
