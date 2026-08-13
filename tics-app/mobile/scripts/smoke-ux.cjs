@@ -235,7 +235,7 @@ const check = (name, ok, extra = '') => {
      nu exista date demo, iar un ecran alb ar parea o eroare. */
   check(
     'fara cont, ecranul explica de ce e gol',
-    /Intră în contul Tixello/.test(friendsScreen.body),
+    /Intră în contul Tics/.test(friendsScreen.body),
     friendsScreen.body.slice(0, 90),
   );
 

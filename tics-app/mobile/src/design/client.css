@@ -29,7 +29,7 @@
 }
 
 .app-client{
-    /* Tixello brand — DARK: purple primary, green + cyan accents, grid (from tixello.com) */
+    /* Tics brand — DARK: purple primary, green + cyan accents, grid (from tixello.com) */
     --bg:#0A0711; --bg-2:#0E0A18; --surface:#15112230; --surface-solid:#151122; --surface-2:#1B1630; --surface-3:#231E39;
     --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.13); --line-3:rgba(255,255,255,.2);
     --ink:#F5F5FA; --ink-2:#C4C6D4; --muted:#8E92A6; --faint:#5F6379;

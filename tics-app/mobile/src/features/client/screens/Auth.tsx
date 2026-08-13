@@ -191,7 +191,7 @@ const LockIcon = () => (
    ========================================================= */
 export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegister: () => void }) {
   const login = useSession((s) => s.login);
-  const [email, setEmail] = useState('andrei@tixello.ro');
+  const [email, setEmail] = useState('andrei@tics.ro');
   const [pass, setPass] = useState('password');
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(true);
@@ -319,7 +319,7 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
 export function Register({ onBack }: { onBack: () => void }) {
   const login = useSession((s) => s.login);
   const [email, setEmail] = useState('');
-  const submit = () => login(identityFor(email || 'andrei@tixello.ro'));
+  const submit = () => login(identityFor(email || 'andrei@tics.ro'));
 
   return (
     <div style={sx('min-height:100%;background:var(--bg);padding-bottom:26px')}>
@@ -421,7 +421,7 @@ export function Register({ onBack }: { onBack: () => void }) {
    ========================================================= */
 export function Forgot({ onBack }: { onBack: () => void }) {
   const showToast = useClient((s) => s.showToast);
-  const [email, setEmail] = useState('andrei@tixello.ro');
+  const [email, setEmail] = useState('andrei@tics.ro');
   const ref = useRef<HTMLInputElement>(null);
 
   return (

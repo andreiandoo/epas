@@ -1,11 +1,11 @@
 /* =========================================================
-   API-ul de ORGANIZATOR al aplicației Tixello (/api/app/org/*).
+   API-ul de ORGANIZATOR al aplicației Tics (/api/app/org/*).
 
    Aplicatia nu vorbeste direct cu lumea partenerului si NU are cheia lui de
    API: o cheie compilata in APK se poate extrage din fisier. Serverul e cel
    care tine cheile si ruteaza spre lumea in care traieste organizatorul.
 
-   Tokenul de sesiune e al contului Tixello, nu al partenerului.
+   Tokenul de sesiune e al contului Tics, nu al partenerului.
    ========================================================= */
 import { anchorFromResponse } from '../offline/clock';
 import type { CachedTicket } from '../offline/db';

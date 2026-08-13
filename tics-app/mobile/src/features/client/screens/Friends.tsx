@@ -110,11 +110,11 @@ export function Friends() {
   const share = async () => {
     if (!state) return;
 
-    const text = `Hai pe Tixello! Codul meu de invitație: ${state.invite_code}`;
+    const text = `Hai pe Tics! Codul meu de invitație: ${state.invite_code}`;
 
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Tixello', text, url: state.invite_url });
+        await navigator.share({ title: 'Tics', text, url: state.invite_url });
 
         return;
       }
@@ -262,7 +262,7 @@ export function Friends() {
             </div>
 
             <div className="muted" style={sx('font-size:11.5px;margin-top:14px')}>
-              Sau invită pe email pe cineva care nu are încă Tixello:
+              Sau invită pe email pe cineva care nu are încă Tics:
             </div>
             <div className="field" style={sx('margin-top:8px')}>
               <input
@@ -444,7 +444,7 @@ export function FriendProfile({ id }: { id?: string }) {
             </div>
             <div style={sx('font-weight:600;font-size:20px;margin-top:12px')}>{person.name}</div>
             <div className="muted" style={sx('font-size:12px;margin-top:3px')}>
-              Prieten pe Tixello
+              Prieten pe Tics
             </div>
           </div>
 

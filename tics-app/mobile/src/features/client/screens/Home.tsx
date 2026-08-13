@@ -29,7 +29,7 @@ export function Home() {
   const cities = useRadarCities();
   const [picker, setPicker] = useState(false);
   /* DOUA surse, in ordinea asta:
-       1. evenimentele NOASTRE — ale tenantilor si marketplace-urilor Tixello.
+       1. evenimentele NOASTRE — ale tenantilor si marketplace-urilor Tics.
           Au bilet in aplicatie, deci merg intotdeauna primele;
        2. Radarul TICS — acolo doar comparam preturi de pe alte platforme.
      Cate un singur apel de fiecare, nu unul pe sectiune: patru cereri ar

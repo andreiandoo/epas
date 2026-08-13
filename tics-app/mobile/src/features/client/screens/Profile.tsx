@@ -116,7 +116,7 @@ export function Profile() {
   const customer = useCustomer();
   const stats = useAccountStats();
   const name = customerName(customer) ?? 'Andrei Popescu';
-  const email = customer?.email ?? 'andrei@tixello.ro';
+  const email = customer?.email ?? 'andrei@tics.ro';
 
   const run = (action: string) => {
     if (action === 'logout') return logout();

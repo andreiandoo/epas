@@ -442,7 +442,7 @@ function VenueSettings() {
         Deconectare
       </Button>
       <div className="center muted" style={{ fontSize: 12, paddingBottom: 8 }}>
-        Tixello · Cont organizator v0.1.0
+        Tics · Cont organizator v0.1.0
       </div>
     </div>
   );

@@ -256,10 +256,10 @@ export type StaffMember = {
 };
 
 export const STAFF: StaffMember[] = [
-  { id: 1, nm: 'Mihai Coman', ini: 'MC', av: 'red', email: 'mihai@tixello.ro', role: 'admin', roleL: 'Administrator', gate: 'Poarta 1', status: 'active', scans: 412, sales: 0 },
-  { id: 2, nm: 'Alexandra Dinu', ini: 'AD', av: 'blue', email: 'alexandra@tixello.ro', role: 'manager', roleL: 'Manager', gate: 'Poarta 1', status: 'active', scans: 0, sales: 36 },
-  { id: 3, nm: 'Ioan Barbu', ini: 'IB', av: 'amber', email: 'ioan@tixello.ro', role: 'staff', roleL: 'Staff', gate: 'Poarta 2', status: 'active', scans: 247, sales: 0 },
-  { id: 4, nm: 'Raluca Bălan', ini: 'RB', av: 'purple', email: 'raluca@tixello.ro', role: 'staff', roleL: 'Staff', gate: null, status: 'pending', scans: 0, sales: 0 },
+  { id: 1, nm: 'Mihai Coman', ini: 'MC', av: 'red', email: 'mihai@tics.ro', role: 'admin', roleL: 'Administrator', gate: 'Poarta 1', status: 'active', scans: 412, sales: 0 },
+  { id: 2, nm: 'Alexandra Dinu', ini: 'AD', av: 'blue', email: 'alexandra@tics.ro', role: 'manager', roleL: 'Manager', gate: 'Poarta 1', status: 'active', scans: 0, sales: 36 },
+  { id: 3, nm: 'Ioan Barbu', ini: 'IB', av: 'amber', email: 'ioan@tics.ro', role: 'staff', roleL: 'Staff', gate: 'Poarta 2', status: 'active', scans: 247, sales: 0 },
+  { id: 4, nm: 'Raluca Bălan', ini: 'RB', av: 'purple', email: 'raluca@tics.ro', role: 'staff', roleL: 'Staff', gate: null, status: 'pending', scans: 0, sales: 0 },
 ];
 
 export type Gate = {

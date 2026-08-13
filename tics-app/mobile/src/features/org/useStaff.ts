@@ -3,7 +3,7 @@
 
    Serverul deleaga catre acelasi controller ca aplicatia partenerului, deci
    randurile de aici sunt ACELEASI cu cele de acolo. Cine e adaugat din
-   Tixello apare imediat si in aplicatia partenerului, si invers.
+   Tics apare imediat si in aplicatia partenerului, si invers.
    ========================================================= */
 import { useCallback, useEffect, useState } from 'react';
 import { fetchStaff, inviteStaff, removeStaff, type StaffMemberApi } from '../../api/orgApp';

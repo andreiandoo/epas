@@ -69,7 +69,7 @@ export function Points() {
           <div style={sx('position:absolute;right:-24px;top:-24px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08)')} />
           <div className="between">
             <div>
-              <div style={sx('font-size:11px;opacity:.8;font-weight:500')}>Puncte Tixello</div>
+              <div style={sx('font-size:11px;opacity:.8;font-weight:500')}>Puncte Tics</div>
               <div style={sx('font-size:34px;font-weight:600;margin-top:2px')}>
                 {cur} <span style={sx('font-size:15px;opacity:.7')}>pct</span>
               </div>
@@ -179,7 +179,7 @@ export function Invite() {
           <div style={sx('font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5')}>
             Prietenul primește <b>10 lei</b> la prima comandă.
             <br />
-            Iar rețeaua ta Tixello crește cu fiecare invitație.
+            Iar rețeaua ta Tics crește cu fiecare invitație.
           </div>
           <div
             style={sx('margin-top:16px;background:rgba(255,255,255,.14);border:1px dashed rgba(255,255,255,.4);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px')}

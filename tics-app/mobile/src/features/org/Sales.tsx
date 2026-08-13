@@ -155,7 +155,7 @@ export function Sales() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid var(--border)' }}>
             <span className="muted" style={{ fontSize: 13.5 }}>
-              Comision Tixello 3%
+              Comision Tics 3%
             </span>
             <b style={{ fontSize: 13.5, color: 'var(--text)' }}>{money(fee)}</b>
           </div>

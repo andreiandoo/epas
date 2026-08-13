@@ -13,7 +13,7 @@ import { useOrgAccount } from './useOrgAccount';
 import { fetchOrgTickets } from '../../api/orgApp';
 import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, type OtaState } from '../../ota';
 
-const APP_VERSION = 'Tixello · Cont organizator';
+const APP_VERSION = 'Tics · Cont organizator';
 
 /** Card „Actualizări" — OTA self-hosted (§14). Vizibil in ambele shell-uri. */
 export function UpdateCard() {

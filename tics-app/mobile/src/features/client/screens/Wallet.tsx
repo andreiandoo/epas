@@ -99,7 +99,7 @@ export function Wallet() {
             <Ic svg={I.star} />
           </div>
           <div style={sx('flex:1')}>
-            <div style={sx('font-weight:600;font-size:14px')}>{livePoints} puncte Tixello</div>
+            <div style={sx('font-weight:600;font-size:14px')}>{livePoints} puncte Tics</div>
             <div className="muted" style={sx('font-size:11.5px')}>
               Convertești în reduceri la bilete
             </div>

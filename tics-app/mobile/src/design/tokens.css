@@ -1,7 +1,7 @@
 /* =========================================================
    TIXELLO DESIGN SYSTEM — tokenuri (§4 din TIXELLO_BUILD_GUIDE.md)
    Sursa canonica: blocul :root din organizer-app.html / client-app.html.
-   Regula temelor: paleta implicita (dark Tixello) e definita pe :root;
+   Regula temelor: paleta implicita (dark Tics) e definita pe :root;
    temele alternative se aplica prin [data-app-theme] pe containerul .app.
    Nicio culoare nu traieste doar intr-un @media.
    ========================================================= */
@@ -17,7 +17,7 @@
   --accent-border: rgba(139, 92, 246, 0.34);
   --accent-glow: rgba(124, 58, 237, 0.6);
 
-  /* ---- Neutrals — DEFAULT = Tixello dark ---- */
+  /* ---- Neutrals — DEFAULT = Tics dark ---- */
   --bg: #0a0711;
   --bg-2: #0e0a18;
   --surface: #151122;
@@ -89,7 +89,7 @@
   --safe-bottom: 0px;
 }
 
-/* ---- Tema: Standard (Tixello light — indigo pe alb/lavanda) ---- */
+/* ---- Tema: Standard (Tics light — indigo pe alb/lavanda) ---- */
 [data-app-theme='light'] {
   --bg: #f4f2fb;
   --bg-2: #ffffff;

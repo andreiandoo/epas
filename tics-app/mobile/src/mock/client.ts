@@ -65,7 +65,7 @@ export const EV: Record<string, ClientEvent> = {
   },
   salina: {
     id: 'salina', t: 'Salina Turda — Tur & Agrement', s: 'Salina Turda', type: 'experience', cat: 'Experiențe', city: 'Turda', ven: 'turda',
-    d: 'Zilnic', mon: '', day: '', time: '09–17', from: 35, tone: 'linear-gradient(150deg,#0f4c4a,#12b3a6)', g: '⛰', rat: '4.8', by: 'Experiență Tixello', seatmap: false,
+    d: 'Zilnic', mon: '', day: '', time: '09–17', from: 35, tone: 'linear-gradient(150deg,#0f4c4a,#12b3a6)', g: '⛰', rat: '4.8', by: 'Experiență Tics', seatmap: false,
     tt: [
       { n: 'Bilet Adult', desc: 'Acces salină + roată panoramică + barcă pe lac subteran.', p: 50, pts: 50, seat: false },
       { n: 'Bilet Copil', desc: '5–14 ani. Sub 5 ani gratuit.', p: 35, old: 40, pts: 35, seat: false },
@@ -74,7 +74,7 @@ export const EV: Record<string, ClientEvent> = {
   },
   atv: {
     id: 'atv', t: 'ATV Adventure în Apuseni', s: 'ATV Adventure', type: 'experience', cat: 'Experiențe', city: 'Apuseni', ven: 'turda',
-    d: 'Weekend', mon: '', day: '', time: '2h', from: 180, tone: 'linear-gradient(150deg,#7c3a12,#d97706)', g: '🏍', rat: '4.9', by: 'Experiență Tixello', seatmap: false,
+    d: 'Weekend', mon: '', day: '', time: '2h', from: 180, tone: 'linear-gradient(150deg,#7c3a12,#d97706)', g: '🏍', rat: '4.9', by: 'Experiență Tics', seatmap: false,
     tt: [
       { n: 'ATV Single', desc: 'Un ATV, o persoană, ghid inclus.', p: 220, pts: 220, seat: false },
       { n: 'ATV Duo', desc: 'Un ATV, două persoane.', p: 180, pts: 180, seat: false },
@@ -82,7 +82,7 @@ export const EV: Record<string, ClientEvent> = {
   },
   wine: {
     id: 'wine', t: 'Wine Tasting la Jidvei', s: 'Wine Tasting', type: 'experience', cat: 'Experiențe', city: 'Alba', ven: 'turda',
-    d: 'Vineri', mon: '', day: '', time: '3h', from: 90, tone: 'linear-gradient(150deg,#5b1f3a,#a83e6a)', g: '🍷', rat: '4.7', by: 'Experiență Tixello', seatmap: false,
+    d: 'Vineri', mon: '', day: '', time: '3h', from: 90, tone: 'linear-gradient(150deg,#5b1f3a,#a83e6a)', g: '🍷', rat: '4.7', by: 'Experiență Tics', seatmap: false,
     tt: [
       { n: 'Degustare 5 vinuri', desc: 'Cu platou de brânzeturi.', p: 120, pts: 120, seat: false },
       { n: 'Degustare 3 vinuri', desc: 'Introducere ghidată.', p: 90, pts: 90, seat: false },
@@ -123,7 +123,7 @@ export const WALLET_TX = [
 
 export const CLIENT_PROFILE = {
   name: 'Andrei Popescu',
-  email: 'andrei@tixello.ro',
+  email: 'andrei@tics.ro',
   initials: 'AP',
   city: 'Cluj-Napoca',
   points: 1240,

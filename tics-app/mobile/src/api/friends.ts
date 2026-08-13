@@ -1,7 +1,7 @@
 /* =========================================================
    PRIETENI (/api/app/friends).
 
-   Graful trăiește pe contul Tixello, nu pe cel de partener: un prieten de pe
+   Graful trăiește pe contul Tics, nu pe cel de partener: un prieten de pe
    ambilet.ro și unul de pe bilete.online trebuie să fie aceiași oameni în
    aplicație. De aceea toate apelurile de aici merg pe tokenul de aplicație.
 
@@ -33,7 +33,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
   const token = getAppToken();
 
   if (!token) {
-    return { ok: false, message: 'Intră în contul Tixello ca să vezi prietenii.' };
+    return { ok: false, message: 'Intră în contul Tics ca să vezi prietenii.' };
   }
 
   try {

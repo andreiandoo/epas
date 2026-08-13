@@ -52,7 +52,7 @@ export function ChooserScreen() {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 22 }}>
         <span className="brand-logo" style={{ fontSize: 18 }}>
-          Tixello
+          Tics
         </span>
       </div>
 
