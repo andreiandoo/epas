@@ -479,7 +479,7 @@ class EditOrganizerInvoice extends EditRecord
         // organizer-recipient invoices; general_client legitimately has no
         // CUI and Oblio accepts that.
         $errors = [];
-        if (empty($client['name'])) $errors[] = 'Numele clientului lipsește.';
+        if (!$isGeneralClient && empty($client['name'])) $errors[] = 'Numele clientului lipsește.';
         if (!$isGeneralClient && empty($client['cui'])) {
             $errors[] = 'CUI-ul clientului lipsește (și din factură, și din profilul organizatorului).';
         }
@@ -515,17 +515,27 @@ class EditOrganizerInvoice extends EditRecord
         $city = $addressParts[1] ?? '';
         $county = $addressParts[2] ?? '';
 
-        // For general_client invoices: blank the email so the organizer's
-        // address doesn't end up on a public buyer's invoice, and stamp the
-        // CIF column with a human-readable note ("vanzare online") instead
-        // of leaving it blank. The OblioAdapter recognises non-numeric CIF
-        // as B2C and skips the ANAF auto-complete + customer-list save.
+        // For general_client invoices we send a FIXED generic B2C client to the
+        // accounting provider ("Client Divers - Persoană Fizică"), so retail /
+        // individual sales never leak the organizer's data and Oblio always
+        // receives consistent details. The 13-zero CUI is non-numeric-real, so
+        // the OblioAdapter treats it as B2C (no ANAF auto-complete / customer
+        // save). For organizer-recipient invoices, use the real client data.
         if ($isGeneralClient) {
             $customerEmail = '';
-            $vatNumber = 'vanzare online';
+            $customerName = 'Client Divers - Persoană Fizică';
+            $vatNumber = '0000000000000';
+            $customerRegNumber = '00';
+            $customerCode = '001';
+            $street = '';
+            $city = 'sector 4';
+            $county = 'Bucuresti';
         } else {
             $customerEmail = $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '';
+            $customerName = $client['name'] ?? '';
             $vatNumber = $client['cui'] ?? '';
+            $customerRegNumber = $client['reg_com'] ?? '';
+            $customerCode = '';
         }
 
         // Invoice preparer (name + CNP) from marketplace settings. When
@@ -548,9 +558,10 @@ class EditOrganizerInvoice extends EditRecord
             'is_draft' => $useDraft,
             'doc_type' => $docType,
             'customer' => [
-                'name' => $client['name'] ?? '',
+                'name' => $customerName,
                 'vat_number' => $vatNumber,
-                'reg_number' => $client['reg_com'] ?? '',
+                'reg_number' => $customerRegNumber,
+                'code' => $customerCode,
                 'email' => $customerEmail,
                 'address' => [
                     'street' => $street,

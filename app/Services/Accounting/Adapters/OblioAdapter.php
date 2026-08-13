@@ -252,6 +252,7 @@ class OblioAdapter implements AccountingAdapterInterface
                     $isRealCif = (bool) preg_match('/^(RO)?[0-9]{2,10}$/i', $cif);
                     return [
                         'name' => $customer['name'] ?? '',
+                        'code' => trim((string) ($customer['code'] ?? '')),
                         'cif' => $cif,
                         'rc' => $customer['reg_number'] ?? '',
                         'address' => $customer['address']['street'] ?? '',
