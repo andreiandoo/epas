@@ -1,4 +1,4 @@
-# Pagina de download a build-ului de test Tixello.
+# Pagina de download a build-ului de test Tics.
 # Servita static: .htaccess-ul din public/ nu rescrie directoarele (RewriteCond !-d),
 # deci cererea ajunge aici, nu la front controller-ul Laravel.
 
@@ -21,6 +21,12 @@ Options -Indexes
         Header set Content-Disposition "attachment"
     </FilesMatch>
     <FilesMatch "\.html$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+    # apk.json si manifest.json spun pagini CE versiune e publicata. Cache-uite,
+    # pagina ar arata in continuare versiunea veche desi fisierul nou e acolo -
+    # exact problema pe care o rezolva.
+    <FilesMatch "\.json$">
         Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
     # Build intern - tinem pagina in afara indexarii.

@@ -121,19 +121,50 @@ Write-Host ("  {0}  ({1} MB)" -f $apk, $size)
 Write-Host ("  copiat si la: {0}" -f $copy)
 
 # ---- publicare la core.tixello.com/tics-app ----
-# Copiaza APK-ul versionat in public/tics-app/. Ajunge live dupa `git pull` pe server.
+#
+# Scrie si `apk.json`, pe care pagina de descarcare il citeste la incarcare.
+# Inainte, versiunea, marimea si hash-ul erau scrise DE MANA in index.html, iar
+# scriptul doar reamintea sa fie actualizate - ceea ce s-a si uitat: pagina a
+# ramas la 0.17.0 dupa ce APK-ul trecuse la 0.18.0. Un fisier scris de build nu
+# poate ramane in urma de build.
 if ($Publish) {
   $publicDir = Resolve-Path (Join-Path $root '..\..\public\tics-app') -ErrorAction SilentlyContinue
   if (-not $publicDir) { throw "Nu gasesc epas\public\tics-app (esti in afara repo-ului epas?)" }
-  $target = Join-Path $publicDir "tixello-debug-$Version.apk"
+
+  $fileName = "tics-debug-$Version.apk"
+  $target = Join-Path $publicDir $fileName
+
+  # APK-urile vechi se sterg: doua fisiere diferite in acelasi folder inseamna,
+  # inevitabil, ca cineva il instaleaza pe cel gresit.
+  Get-ChildItem -Path $publicDir -Filter '*-debug-*.apk' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne $fileName } |
+    Remove-Item -Force
+
   Copy-Item $apk $target -Force
+
   $sha = (Get-FileHash $target -Algorithm SHA256).Hash.ToLower()
+  $sizeMb = [math]::Round((Get-Item $target).Length / 1MB, 2)
+
+  $meta = [ordered]@{
+    version   = $Version
+    file      = $fileName
+    size_mb   = $sizeMb
+    sha256    = $sha
+    min_sdk   = 'Android 6.0+'
+    published = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  }
+
+  $metaPath = Join-Path $publicDir 'apk.json'
+  $json = $meta | ConvertTo-Json
+  [System.IO.File]::WriteAllText($metaPath, $json, [System.Text.UTF8Encoding]::new($false))
+
   Write-Host ''
   Write-Host 'PUBLICAT' -ForegroundColor Green
-  Write-Host ("  {0}" -f $target)
+  Write-Host ("  {0}  ({1} MB)" -f $target, $sizeMb)
   Write-Host ("  sha256: {0}" -f $sha)
-  Write-Host '  ATENTIE: actualizeaza versiunea + hash-ul in public\tics-app\index.html,' -ForegroundColor Yellow
-  Write-Host '           apoi commit + push si `git pull` pe server.' -ForegroundColor Yellow
+  Write-Host ("  {0}" -f $metaPath)
+  Write-Host '  Pagina de descarcare se actualizeaza singura din apk.json.'
+  Write-Host '  Mai ramane: commit + push, apoi `git pull` pe server.'
 }
 
 if ($Install) {

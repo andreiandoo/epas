@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0A0711">
-<title>Tixello — build de test Android</title>
+<title>Tics — build de test Android</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238B5CF6'/%3E%3Cpath d='M9 11h14M16 11v12' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -71,20 +71,20 @@ td:first-child{white-space:nowrap;padding-right:14px}
 <body>
 <div class="wrap">
 
-  <div class="brand"><span class="logo">Tixello</span></div>
+  <div class="brand"><span class="logo">Tics</span></div>
 
   <h1>Build de test — Android</h1>
   <p class="sub">
-    Aplicația mobilă unică Tixello: <b style="color:var(--text)">client + organizator într-un singur build</b>.
-    Versiunea de mai jos e un build <em>debug</em> pentru testare internă, cu date mock — nu se conectează încă
-    la backend-ul real.
+    Aplicația mobilă <b style="color:var(--text)">Tics</b>: client + organizator într-un singur build.
+    Versiunea de mai jos e un build <em>debug</em>, pentru testare internă. Rulează pe datele reale din
+    Tics — evenimente, bilete, conturi — nu pe date inventate.
   </p>
 
   <div class="card" style="border-color:var(--cyan-border);background:linear-gradient(160deg,var(--cyan-tint),var(--surface))">
     <h2><span class="n" style="background:var(--cyan-tint);color:var(--cyan)">i</span> Două versiuni diferite</h2>
     <p style="font-size:13.5px;color:var(--text-2);line-height:1.65">
-      <b>APK-ul</b> e doar carcasa nativă (cameră, NFC, plăți) și <b>se schimbă rar</b>.
-      Versiunea curentă e <b>0.17.0</b> și include deja toate ecranele portate până acum.
+      <b>APK-ul</b> e doar carcasa nativă (cameră, NFC, plăți, tastele de volum) și <b>se schimbă rar</b>.
+      Versiunea curentă e <b id="apkv2" style="color:var(--cyan)">se verifică…</b>.
     </p>
     <p style="font-size:13.5px;color:var(--text-2);line-height:1.65;margin-top:9px">
       <b>Conținutul</b> (toate ecranele) vine prin OTA și se schimbă des. Versiunea publicată acum:
@@ -98,18 +98,25 @@ td:first-child{white-space:nowrap;padding-right:14px}
   </div>
 
   <div class="card">
-    <a class="dl" href="tixello-debug-0.17.0.apk" download>
+    <!-- Versiunea, marimea si hash-ul se citesc din apk.json, scris de
+         build-apk.ps1 -Publish. Erau valori scrise de mana aici, iar pagina a
+         ramas la 0.17.0 dupa ce APK-ul trecuse la 0.18.0 — un fisier scris de
+         build nu poate ramane in urma de build. -->
+    <a class="dl" id="apklink" href="#" download>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       Descarcă APK-ul
     </a>
     <div class="meta">
-      <span class="pill">APK v0.17.0</span>
-      <span class="pill">6,47 MB</span>
-      <span class="pill">Android 6.0+</span>
+      <span class="pill" id="apkv">APK …</span>
+      <span class="pill" id="apksize">—</span>
+      <span class="pill" id="apksdk">Android 6.0+</span>
       <span class="pill g">OTA + diagnostic</span>
     </div>
-    <div class="hash">SHA-256: 8a93d5a00a86a71336b203d9291db4b2bbdc970c982c26dafc0395fdbfc668b0</div>
+    <div class="hash" id="apkhash">SHA-256: se verifică…</div>
+    <div class="meta" style="margin-top:6px">
+      <span class="pill" id="apkwhen"></span>
+    </div>
   </div>
 
   <div class="card">
@@ -131,15 +138,15 @@ td:first-child{white-space:nowrap;padding-right:14px}
     <p style="font-size:13.5px;color:var(--text-2);margin-bottom:6px">Orice parolă funcționează.</p>
     <table>
       <tr>
-        <td><code>andrei@tixello.ro</code></td>
+        <td><code>andrei@tics.ro</code></td>
         <td>client + 3 organizatori → apare pasul <b>„Alege contul"</b></td>
       </tr>
       <tr>
-        <td><code>client@tixello.ro</code></td>
+        <td><code>client@tics.ro</code></td>
         <td>doar client → intră direct, fără pas intermediar</td>
       </tr>
       <tr>
-        <td><code>operator@tixello.ro</code></td>
+        <td><code>operator@tics.ro</code></td>
         <td>doar organizatori (standard, festival, leisure)</td>
       </tr>
     </table>
@@ -186,12 +193,37 @@ td:first-child{white-space:nowrap;padding-right:14px}
   </div>
 
   <div class="foot">
-    Tixello · build de test generat din <code style="font-size:10.5px">tics-app/mobile</code><br>
+    Tics · build de test generat din <code style="font-size:10.5px">tics-app/mobile</code><br>
     Pentru un build nou: <code style="font-size:10.5px">.\build-apk.ps1</code>
   </div>
 
 </div>
 <script>
+  // APK-ul: acelasi principiu ca la bundle — pagina nu tine minte nimic, citeste
+  // ce a scris ultimul build.
+  fetch('apk.json', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (a) {
+      var link = document.getElementById('apklink');
+      if (link) { link.href = a.file; link.setAttribute('download', a.file); }
+
+      var set = function (id, text) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+
+      set('apkv', 'APK v' + a.version);
+      set('apkv2', a.version);
+      set('apksize', String(a.size_mb).replace('.', ',') + ' MB');
+      if (a.min_sdk) set('apksdk', a.min_sdk);
+      set('apkhash', 'SHA-256: ' + a.sha256);
+      set('apkwhen', a.published ? 'publicat ' + new Date(a.published).toLocaleString('ro-RO') : '');
+    })
+    .catch(function () {
+      var el = document.getElementById('apkhash');
+      if (el) el.textContent = 'APK indisponibil momentan.';
+    });
+
   // Versiunea de continut se citeste live din manifest, ca pagina sa nu ramana
   // in urma la fiecare publicare de bundle.
   fetch('manifest.json', { cache: 'no-store' })
