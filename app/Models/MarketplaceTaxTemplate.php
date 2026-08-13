@@ -2276,7 +2276,7 @@ class MarketplaceTaxTemplate extends Model
             // early so existing PDFs stay bit-identical.
             $ticketBreakdown = self::enrichBreakdownWithLiveDiscount($payout, $ticketBreakdown);
 
-            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
+            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $variables['payout_vat_rate'] ?? '0%', $formatPrice);
             $variables['refund_breakdown_rows'] = self::buildPayoutRefundBreakdownRows($payout, $formatPrice);
 
             // Preprinted tickets (physical tickets sent by courier)
@@ -2433,7 +2433,7 @@ class MarketplaceTaxTemplate extends Model
         return $breakdown;
     }
 
-    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
+    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, string $vatRateLabel, callable $formatPrice): string
     {
         // Expand each saved breakdown row by its `tiers` field when present.
         // buildBreakdownFromSelection writes one tier per distinct paid price
@@ -2717,7 +2717,7 @@ class MarketplaceTaxTemplate extends Model
                 . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . $taxNoteHtml . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . '</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">' . $vatStr . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">' . $vatRateLabel . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; color:#888;">' . $vatStr . '</td>'
                 . '</tr>';
 
