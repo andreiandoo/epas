@@ -2124,6 +2124,27 @@ class EditEvent extends EditRecord
             ->get()
             ->keyBy(fn ($p) => $p->period_from->format('Y-m-d'));
 
+        // Existing per-society deconturi (isolated leisure feature), grouped by
+        // period_start, so each society row can show a link to its generated
+        // decont instead of the "Generează decont" button. Fetched fresh (not
+        // cached) so generating / deleting a decont reflects immediately.
+        $societyDeconturi = \App\Models\MarketplacePayout::where('event_id', $event->id)
+            ->whereNotNull('issuing_company')
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->get(['id', 'issuing_company', 'decont_series', 'reference', 'period_start', 'created_at'])
+            ->groupBy(fn ($p) => $p->period_start->format('Y-m-d'));
+
+        $mkDecontLink = function ($payout) {
+            if (!$payout) {
+                return null;
+            }
+            return [
+                'label' => $payout->decont_series ?: ($payout->reference ?: ('#' . $payout->id)),
+                'created' => $payout->created_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i'),
+                'url' => \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $payout->id]),
+            ];
+        };
+
         $periods = [];
         // Calendar half-month periods: [1..15] and [16..end-of-month]. The
         // project's first settlement period is 16-31.07.2026.
@@ -2148,6 +2169,13 @@ class EditEvent extends EditRecord
             $data['generated_at'] = $flag?->generated_at?->format('d.m.Y H:i');
             $data['settled_at'] = $flag?->settled_at?->format('d.m.Y H:i');
             $data['is_current'] = $isCurrent;
+
+            // Per-society generated decont (link) for this period, if any.
+            $periodPayouts = $societyDeconturi->get($key, collect());
+            $data['deconturi'] = [
+                'primary' => $mkDecontLink($periodPayouts->firstWhere('issuing_company', 'primary')),
+                'secondary' => $mkDecontLink($periodPayouts->firstWhere('issuing_company', 'secondary')),
+            ];
 
             // Skip the current, still-open period until it actually has sales, so a
             // brand-new half-month doesn't show as an empty decont period.
@@ -2418,14 +2446,14 @@ class EditEvent extends EditRecord
         $flag->save();
         Cache::forget("leisure_decont_v2_{$event->id}_{$periodFrom}");
 
-        $url = \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $payout]);
         Notification::make()
             ->title('Decont generat')
-            ->body("Decontul {$payout->reference} a fost creat. Îl găsești în Deconturi.")
+            ->body("Decontul {$payout->reference} a fost creat. Butonul devine link către decont.")
             ->success()
             ->send();
 
-        // Land the operator directly on the freshly created decont.
-        $this->redirect($url);
+        // Stay on the Deconturi tab: the re-render replaces this society's
+        // "Generează decont" button with a link to the freshly created decont
+        // (and lets the operator generate the other society without leaving).
     }
 }

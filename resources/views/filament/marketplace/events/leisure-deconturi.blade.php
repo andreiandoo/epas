@@ -178,26 +178,42 @@
                     @forelse ($decontButtons as $skey => $srow)
                         @php
                             $sName = $srow['name'] ?? ($skey === 'primary' ? 'Societatea 1' : 'Societatea 2');
-                            $sGross = (float) ($srow['online_revenue'] ?? 0);
-                            $sComm = (float) ($srow['online_commission'] ?? 0);
-                            $sNet = (float) ($srow['ambilet_owes_venue'] ?? 0);
-                            $sTickets = (int) ($srow['tickets'] ?? 0);
-                            $confirmMsg = 'Generezi decontul pentru ' . $sName . ' (' . $roDate($p['from']) . ' – ' . $roDate($p['to']) . ')?'
-                                . "\n\nVânzări online (brut, = suma decont): " . $fmt($sGross) . ' ' . $cur . '  ·  ' . $sTickets . ' bilete'
-                                . "\nComision inclus (de facturat separat către societate): " . $fmt($sComm) . ' ' . $cur
-                                . "\nNet efectiv (după comision): " . $fmt($sNet) . ' ' . $cur
-                                . "\n\nSe creează decontul + documentul PDF pe această societate.";
+                            $existingDecont = $p['deconturi'][$skey] ?? null;
                         @endphp
-                        <button type="button"
-                            wire:click="generateSocietyDecont('{{ $skey }}', '{{ $p['from'] }}', '{{ $p['to'] }}')"
-                            wire:confirm="{{ $confirmMsg }}"
-                            wire:target="generateSocietyDecont"
-                            wire:loading.attr="disabled"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">
-                            <svg wire:loading.remove wire:target="generateSocietyDecont" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            <svg wire:loading wire:target="generateSocietyDecont" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 8h4z"></path></svg>
-                            Generează decont · {{ $sName }}
-                        </button>
+                        @if ($existingDecont)
+                            {{-- Decont deja generat pe această societate + perioadă →
+                                 seria + data/ora, link către decont (tab nou). Reapare
+                                 butonul dacă decontul e șters (datele sunt live). --}}
+                            <a href="{{ $existingDecont['url'] }}" target="_blank" rel="noopener"
+                               title="Deschide decontul {{ $existingDecont['label'] }} (tab nou)"
+                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Decont {{ $existingDecont['label'] }} · {{ $existingDecont['created'] }} · {{ $sName }}</span>
+                                <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </a>
+                        @else
+                            @php
+                                $sGross = (float) ($srow['online_revenue'] ?? 0);
+                                $sComm = (float) ($srow['online_commission'] ?? 0);
+                                $sNet = (float) ($srow['ambilet_owes_venue'] ?? 0);
+                                $sTickets = (int) ($srow['tickets'] ?? 0);
+                                $confirmMsg = 'Generezi decontul pentru ' . $sName . ' (' . $roDate($p['from']) . ' – ' . $roDate($p['to']) . ')?'
+                                    . "\n\nVânzări online (brut, = suma decont): " . $fmt($sGross) . ' ' . $cur . '  ·  ' . $sTickets . ' bilete'
+                                    . "\nComision inclus (de facturat separat către societate): " . $fmt($sComm) . ' ' . $cur
+                                    . "\nNet efectiv (după comision): " . $fmt($sNet) . ' ' . $cur
+                                    . "\n\nSe creează decontul + documentul PDF pe această societate.";
+                            @endphp
+                            <button type="button"
+                                wire:click="generateSocietyDecont('{{ $skey }}', '{{ $p['from'] }}', '{{ $p['to'] }}')"
+                                wire:confirm="{{ $confirmMsg }}"
+                                wire:target="generateSocietyDecont"
+                                wire:loading.attr="disabled"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                <svg wire:loading.remove wire:target="generateSocietyDecont" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                <svg wire:loading wire:target="generateSocietyDecont" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 8h4z"></path></svg>
+                                Generează decont · {{ $sName }}
+                            </button>
+                        @endif
                     @empty
                         <span class="text-xs text-gray-400">Nu există vânzări de decontat în această perioadă.</span>
                     @endforelse
