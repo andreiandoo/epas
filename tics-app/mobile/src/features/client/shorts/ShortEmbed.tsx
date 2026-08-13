@@ -100,6 +100,14 @@ export function ShortEmbed({ videoId, active, muted, duration, onProgress, onCom
     controls: '0',
     modestbranding: '1',
     rel: '0',
+    /* Tot ce mai poate fi stins din player. Nu se pot folosi oricum —
+       iframe-ul are `pointer-events:none`, ca atingerea sa ajunga la feed —
+       deci orice comanda vizibila e doar zgomot peste imagine. */
+    fs: '0',
+    disablekb: '1',
+    iv_load_policy: '3',
+    cc_load_policy: '0',
+    color: 'white',
     loop: '1',
     // `loop` are efect doar impreuna cu o lista care contine acelasi clip
     playlist: videoId,
@@ -107,17 +115,30 @@ export function ShortEmbed({ videoId, active, muted, duration, onProgress, onCom
   });
 
   return (
-    <iframe
-      ref={frame}
-      className="shembed"
-      // remontare la schimbarea clipului, ca playerul sa nu ramana pe cel vechi
-      key={videoId}
-      src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`}
-      title="Short"
-      frameBorder="0"
-      allow="autoplay; encrypted-media; picture-in-picture"
-      allowFullScreen
-      style={sx('border:0')}
-    />
+    <>
+      <iframe
+        ref={frame}
+        className="shembed"
+        // remontare la schimbarea clipului, ca playerul sa nu ramana pe cel vechi
+        key={videoId}
+        src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`}
+        title="Short"
+        frameBorder="0"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen
+        style={sx('border:0')}
+      />
+
+      {/* Benzile care acopera ce ramane din player.
+
+          `controls=0` stinge bara de comenzi, dar YouTube tot deseneaza, la
+          pornire si la bucla, titlul sus si linia de progres jos. Parametrii nu
+          le pot opri (`modestbranding` e ignorat din 2023), iar taierea prin
+          `scale` ar trebui dusa atat de departe incat s-ar pierde din imagine.
+          Doua benzi de degrade catre negru le acopera fara sa se vada: sus si
+          jos, cadrul e oricum sub scrimul feedului. */}
+      <div className="shembed-mask top" aria-hidden="true" />
+      <div className="shembed-mask bottom" aria-hidden="true" />
+    </>
   );
 }

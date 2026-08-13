@@ -303,21 +303,49 @@
 /* =========================================================
    HARTA OpenStreetMap (Leaflet)
 
-   Dalele OSM sunt luminoase, iar aplicatia e intunecata: fara nicio corectie,
-   harta sare din pagina ca o fereastra alba. Filtrul se pune DOAR pe stratul
-   de dale — pinurile si atributia raman la culorile lor, altfel marcajele
-   albe ar deveni gri si linkul de atributie ilizibil.
+   TON
+   Dalele OSM sunt facute pentru hartie alba: uscat bej, apa albastru deschis,
+   drumuri albe. Puse intr-o aplicatie intunecata, arata ca o fereastra
+   deschisa in perete. Nu exista dale intunecate gratuite si fara cheie, deci
+   culoarea se face in browser:
+     invert(1)          — uscatul devine inchis, dar apa devine portocalie
+     hue-rotate(185deg) — readuce apa la albastru; uscatul ramane inchis
+     saturate/brightness — o coboara la nivelul restului aplicatiei
+   Peste ele, un strat subtire de indigo (`soft-light`) o leaga de paleta.
 
-   Nu e o „harta dark" reala (aia cere alt set de dale, cu cheie); e aceeasi
-   harta, tinuta putin mai jos ca luminozitate. Strazile si etichetele raman
-   citibile — verificat pe zoom 9-16.
+   Filtrul se pune DOAR pe stratul de dale. Pinurile si atributia raman la
+   culorile lor — altfel marcajele albe ar deveni negre (invert!), iar linkul
+   de atributie ilizibil.
+
+   Cand se ia o cheie de dale intunecate, se sterge tot blocul asta: harta va
+   veni deja in tonul potrivit.
    ========================================================= */
 .leaflet-container {
-  background: #12101c;
+  background: #0c0a16;
   font: inherit;
 }
+
+/* Dalele: intai le facem monocrome, apoi le inversam.
+
+   `grayscale` INAINTE de `invert` nu e un ocol: fara el raman nuantele OSM
+   (verde de parc, galben de sosea), iar inversarea le duce in maslin si roz —
+   incercat, arata mai rau decat harta luminoasa. Monocrom + tinta de indigo dau
+   o harta care pare desenata pentru aplicatia asta. */
 .leaflet-tile-pane {
-  filter: brightness(0.82) saturate(0.9) contrast(1.06);
+  /* Lantul, in ordine, si de ce fiecare veriga:
+       grayscale — scapa de verdele de parc si galbenul de sosea; inversate,
+                   ajung maslin si roz (incercat: mai rau decat harta alba)
+       invert    — hartia alba devine fundal inchis
+       brightness/contrast — o coboara la nivelul aplicatiei
+       sepia     — coloreaza griul (singurul mod de a adauga nuanta pe ceva
+                   desaturat, fara un al doilea strat)
+       hue-rotate— muta sepia din maro in indigo
+       saturate  — aduce nuanta la intensitatea paletei
+
+     Tinta e facuta din filtre, nu dintr-un strat cu `mix-blend-mode`: stratul
+     ar fi trebuit sa se amestece cu un panou care are deja `filter`, ceea ce
+     il pune in alt context de compunere — incercat, nu colora nimic. */
+  filter: grayscale(1) invert(1) brightness(0.6) contrast(1.05) sepia(0.62) hue-rotate(212deg) saturate(1.9);
 }
 .leaflet-control-attribution {
   background: rgba(12, 10, 22, 0.72) !important;

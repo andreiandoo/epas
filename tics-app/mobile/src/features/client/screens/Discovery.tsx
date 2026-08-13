@@ -17,6 +17,7 @@ import { CAT_TO_FEED } from '../../../api/ticsRadar';
 import { CityTag } from '../cityTag';
 import { useNav } from '../nav';
 import { OsmMap } from '../osmMap';
+import type { CatalogVenueReview } from '../../../api/catalog';
 import { useClient } from '../../../store/client';
 
 type Ev = Record<string, any>;
@@ -633,12 +634,16 @@ export function Venue({ id }: { id?: string }) {
   const { go } = useNav();
   const demo = (VEN as Record<string, Ev>)[id || 'arena'] as Ev | undefined;
   const live = useCatalogVenue(demo ? undefined : id);
+  /* Starea sta DEASUPRA iesirilor timpurii: un hook chemat dupa un `return`
+     ruleaza doar la unele randari si strica ordinea hook-urilor. */
+  const [shownReviews, setShownReviews] = useState(3);
 
   if (!demo && live.loading) return <CatalogLoading title="Locație" />;
   if (!demo && !live.data) return <MissingContent what="Locația" />;
 
   const v = demo ?? (live.data as { rec: Ev }).rec;
   const isLive = !demo;
+  const reviews: CatalogVenueReview[] = isLive ? (live.data?.reviews ?? []) : [];
 
   const list: Ev[] = isLive
     ? (live.data?.events ?? [])
@@ -665,11 +670,13 @@ export function Venue({ id }: { id?: string }) {
         <div className="row" style={sx('gap:10px')}>
           {([
             ['Capacitate', v.cap],
-            ['Oraș', v.city],
+            /* „Oraș" a plecat: orasul e deja scris sub numele salii, in hero,
+               si iar in adresa. Un card intreg pentru a treia repetare. */
             /* „4.8" era o valoare fixa in prototip. Pe o locatie reala punem
                nota Google, si doar cand exista — o nota inventata pe pagina
                unei sali adevarate ar fi o afirmatie falsa despre ea. */
             v._rating ? ['Rating', `${Number(v._rating).toFixed(1)} ⭐`] : null,
+            v._reviewCount ? ['Recenzii', String(v._reviewCount)] : null,
           ].filter(Boolean) as [string, string][]).map((s) => (
             <div key={s[0]} className="card" style={sx('flex:1;text-align:center;padding:12px')}>
               <div style={sx('font-weight:600;font-size:15px')}>{s[1]}</div>
@@ -742,6 +749,77 @@ export function Venue({ id }: { id?: string }) {
             >
               {v._desc}
             </p>
+          </>
+        ) : null}
+
+        {/* ---------- RECENZII ----------
+            Vin din Google (`google_reviews_payload`), erau deja in raspuns si
+            nu se afisau nicaieri. Se arata cu autor si vechime, ca sa se vada
+            ca sunt de la oameni si cat de proaspete sunt. Nimic inventat: fara
+            recenzii, sectiunea nu exista. */}
+        {reviews.length ? (
+          <>
+            <div className="between" style={sx('margin-top:24px;margin-bottom:12px')}>
+              <div className="h2" style={sx('font-size:15px')}>
+                Ce spun oamenii
+              </div>
+              {v._rating ? (
+                <span className="muted" style={sx('font-size:11.5px;font-weight:600')}>
+                  {Number(v._rating).toFixed(1)} ⭐ · Google
+                </span>
+              ) : null}
+            </div>
+            <div style={sx('display:flex;flex-direction:column;gap:11px')}>
+              {reviews.slice(0, shownReviews).map((r, i) => (
+                <div key={`${r.author_name ?? 'anon'}-${r.time ?? i}`} className="card" style={sx('padding:14px')}>
+                  <div className="row" style={sx('gap:10px')}>
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: '50%',
+                        flex: 'none',
+                        background: r.profile_photo_url
+                          ? `url('${r.profile_photo_url}') center/cover`
+                          : 'var(--surface-3)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {r.profile_photo_url ? '' : (r.author_name ?? '?').slice(0, 1).toUpperCase()}
+                    </div>
+                    <div style={sx('flex:1;min-width:0')}>
+                      <div style={sx('font-weight:600;font-size:13px')}>{r.author_name ?? 'Anonim'}</div>
+                      <div className="muted" style={sx('font-size:11px;margin-top:1px')}>
+                        {r.relative_time_description ?? ''}
+                      </div>
+                    </div>
+                    {typeof r.rating === 'number' ? (
+                      <span className="chip-mini">{r.rating} ⭐</span>
+                    ) : null}
+                  </div>
+                  {r.text ? (
+                    <p
+                      className="muted"
+                      style={sx('font-size:12.5px;line-height:1.6;margin-top:9px;white-space:pre-line')}
+                    >
+                      {r.text}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {reviews.length > shownReviews ? (
+              <button
+                className="cta ghost"
+                style={sx('margin-top:12px;padding:11px')}
+                onClick={() => setShownReviews(reviews.length)}
+              >
+                Vezi toate recenziile ({reviews.length})
+              </button>
+            ) : null}
           </>
         ) : null}
 

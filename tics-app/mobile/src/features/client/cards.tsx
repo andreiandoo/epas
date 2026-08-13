@@ -28,6 +28,16 @@ import { useNav } from './nav';
 export const eventTarget = (ev: UiEvent): [string, Record<string, unknown>] =>
   (ev as unknown as { radar?: boolean }).radar ? ['ticsoffers', { id: ev.id }] : ['event', { id: ev.id }];
 
+/**
+ * Are evenimentul un pret de aratat?
+ *
+ * Un eveniment fara tipuri de bilet active (inca nepuse la vanzare, sau
+ * vandute doar la casa) n-are „de la". Zero nu e raspunsul: „de la 0 lei"
+ * spune ca e gratis, ceea ce e o informatie falsa, nu una lipsa.
+ */
+export const hasPrice = (ev: UiEvent): boolean =>
+  typeof (ev as unknown as { from?: number }).from === 'number' && (ev as unknown as { from: number }).from > 0;
+
 export function EvMini({ ev, st }: { ev: UiEvent; st?: string }) {
   const { go } = useNav();
   return (
@@ -56,10 +66,12 @@ export function EvMini({ ev, st }: { ev: UiEvent; st?: string }) {
               <span>{ev.city}</span>
             </span>
           </div>
-          <div className="cprice" style={sx('margin-top:9px')}>
-            <small>de la</small>
-            {money(ev.from)} lei
-          </div>
+          {hasPrice(ev) ? (
+            <div className="cprice" style={sx('margin-top:9px')}>
+              <small>de la</small>
+              {money(ev.from)} lei
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -99,8 +111,14 @@ export function ExpCard({ ev }: { ev: UiEvent }) {
           </div>
           <div className="between" style={sx('margin-top:9px')}>
             <span className="cprice">
-              <small>de la</small>
-              {money(ev.from)} lei
+              {hasPrice(ev) ? (
+                <>
+                  <small>de la</small>
+                  {money(ev.from)} lei
+                </>
+              ) : (
+                <small>vezi biletele</small>
+              )}
             </span>
             <span className="gpill" style={sx('background:rgba(34,197,94,.92);border-color:transparent')}>
               <Ic svg={I.cal} /> alegi data
@@ -234,7 +252,7 @@ export function EvRow({ ev }: { ev: UiEvent }) {
             marginTop: '8px',
           }}
         >
-          de la {money(ev.from)} lei
+          {hasPrice(ev) ? `de la ${money(ev.from)} lei` : 'vezi biletele'}
         </div>
       </div>
     </div>
@@ -291,8 +309,14 @@ export function FeaturedCard({ ev }: { ev: UiEvent }) {
             </div>
             <div className="between" style={sx('margin-top:12px')}>
               <span className="cprice" style={sx('font-size:18px')}>
-                <small>de la</small>
-                {money(ev.from)} lei
+                {hasPrice(ev) ? (
+                  <>
+                    <small>de la</small>
+                    {money(ev.from)} lei
+                  </>
+                ) : (
+                  <small>vezi biletele</small>
+                )}
               </span>
               <span className="gpill" style={sx('background:#fff;color:#141020;border-color:#fff')}>
                 Vezi bilete <Ic svg={I.arrow} />

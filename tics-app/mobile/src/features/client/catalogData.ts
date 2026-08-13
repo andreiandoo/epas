@@ -87,7 +87,9 @@ export function toEventRecord(e: CatalogEvent): EventRecord {
       mon: e.month ?? '',
       day: e.day ?? '',
       time: e.time ?? '',
-      from: e.price_from ?? 0,
+      /* `undefined`, nu 0: „de la 0 lei" e un pret, si unul fals. Cardurile
+       stiu sa nu afiseze randul cand pretul lipseste. */
+    from: e.price_from ?? undefined,
       tone: toneFor(e.id),
       // `g` e emoji-ul decorativ din prototip; cu poster real nu se mai vede
       g: '🎫',

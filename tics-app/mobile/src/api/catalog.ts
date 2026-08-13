@@ -101,7 +101,25 @@ export type CatalogArtist = {
   events: CatalogEventBrief[];
 };
 
-export type CatalogVenueReview = { author?: string; rating?: number; text?: string; time?: string };
+/**
+ * O recenzie Google, exact cum o trimite serverul.
+ *
+ * Campurile erau declarate `author` si `time: string` — nu asa se cheama si nu
+ * asta sunt. Payload-ul real are `author_name`, `profile_photo_url`,
+ * `relative_time_description` si `time` ca UNIX seconds. Cu numele gresite,
+ * orice randare ar fi afisat casute goale.
+ */
+export type CatalogVenueReview = {
+  author_name?: string;
+  profile_photo_url?: string;
+  author_url?: string;
+  rating?: number;
+  text?: string;
+  /** UNIX, in secunde. */
+  time?: number;
+  /** „acum 3 luni" — deja tradus de Google in limba ceruta. */
+  relative_time_description?: string;
+};
 
 export type CatalogVenue = {
   id: number;

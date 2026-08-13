@@ -88,7 +88,22 @@ export function Event({ id }: { id?: string }) {
         }
       />
 
-      <div className="poster" style={{ background: ev._bg ?? bgv(ev), height: 388, borderRadius: '0 0 30px 30px' }}>
+      {/* Inaltimea: 80% din ecran cand avem AFISUL real, 388px cand nu avem.
+
+          Afisele de eveniment sunt verticale (2:3 sau mai inguste). La 388px,
+          `cover` taia din ele mai mult de jumatate — vedeai o banda din mijloc
+          si nu-ti puteai da seama ce e pe afis. La 80vh, un 2:3 intra aproape
+          intreg. Pentru evenimentele din Radar, care n-au imagine la noi si
+          primesc un degrade, 80vh ar fi insemnat un ecran intreg de culoare —
+          deci raman la inaltimea din prototip. */}
+      <div
+        className="poster"
+        style={{
+          background: ev._bg ?? bgv(ev),
+          height: ev.poster ? 'min(80vh, 720px)' : 388,
+          borderRadius: '0 0 30px 30px',
+        }}
+      >
         <div
           style={sx('position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 26%,rgba(11,9,18,.97))')}
         />

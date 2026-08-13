@@ -73,7 +73,12 @@ const ARTIST = {
   cover: null,
   links: { youtube: 'https://youtube.com/@sukarnation' },
   followers: { youtube: 120000 },
-  events: [{ ...EVENT, venue: EVENT.venue }],
+  events: [
+    { ...EVENT, venue: EVENT.venue },
+    /* Eveniment fara tipuri de bilet active: `price_from` e null, iar cardul
+       NU are voie sa arate „de la 0 lei" — zero e un pret, si unul fals. */
+    { ...EVENT, id: 7777, slug: 'fara-pret', title: 'Fara pret inca', price_from: null },
+  ],
 };
 
 const VENUE = {
@@ -96,7 +101,24 @@ const VENUE = {
   location_approx: false,
   rating: 4.6,
   review_count: 88,
-  reviews: [],
+  reviews: [
+    {
+      author_name: 'Ion Popescu',
+      profile_photo_url: null,
+      rating: 5,
+      text: 'Sala are o acustica excelenta.',
+      time: 1766854195,
+      relative_time_description: 'acum 3 luni',
+    },
+    {
+      author_name: 'Maria Ionescu',
+      profile_photo_url: null,
+      rating: 4,
+      text: 'Parcare greu de gasit.',
+      time: 1760000000,
+      relative_time_description: 'acum 6 luni',
+    },
+  ],
   events: [{ ...EVENT, venue: EVENT.venue }],
 };
 
@@ -178,6 +200,7 @@ const VENUE = {
           { ...EVENT, id: 901, title: 'Aproape de tot', lat: 44.44, lng: 26.11 },
           { ...EVENT, id: 902, title: 'Mai departe', lat: 44.9, lng: 25.4 },
           { ...EVENT, id: 903, title: 'Al treilea', lat: 44.6, lng: 26.4 },
+          { ...EVENT, id: 904, title: 'La aceeasi adresa', lat: 44.6, lng: 26.4 },
         ],
       });
     }
@@ -325,6 +348,7 @@ const VENUE = {
       map: !!card?.querySelector('.leaflet-container'),
       tiles: card?.querySelectorAll('.leaflet-tile').length ?? 0,
       pins: card?.querySelectorAll('.leaflet-marker-icon').length ?? 0,
+      grouped: card ? [...card.querySelectorAll('.leaflet-marker-icon')].filter((m) => /evenimente aici/.test(m.title)).length : 0,
       attrib: card?.querySelector('.leaflet-control-attribution')?.textContent ?? '',
     };
   });
@@ -334,6 +358,9 @@ const VENUE = {
   /* Atributia OSM nu e decor: e conditia sub care avem voie sa folosim dalele. */
   check('atributia OSM e prezenta', /OpenStreetMap/.test(near.attrib), near.attrib.slice(0, 60));
   check('pinurile din dreptunghi apar pe harta', near.pins >= 3, `${near.pins} pini`);
+  /* Evenimentele de la aceeasi adresa devin UN pin cu numar. Fara asta,
+     Bucurestiul era un teanc de 60 de bulinuce peste centru. */
+  check('doua evenimente la aceeasi adresa devin un singur pin', near.grouped === 1, `${near.grouped} pin grupat`);
   check('distantele reale apar in lista', /1\.9 km/.test(near.body) && /78\.4 km/.test(near.body), near.body.slice(0, 120));
 
   /* ---------- eveniment ---------- */
@@ -389,6 +416,13 @@ const VENUE = {
   check('harta locatiei se randeaza', venueMap.map);
   check('locatia are exact un pin', venueMap.pins === 1, `${venueMap.pins} pini`);
   check('coordonate exacte => fara avertisment de aproximare', !venueMap.approx);
+
+  const venueBody = await bodyText();
+  check('cardul „Oraș" a disparut', !/Cluj-Napoca\s*Oraș/.test(venueBody));
+  check('recenziile reale apar', /Sala are o acustica excelenta/.test(venueBody));
+  check('recenzia poarta autor si vechime', /Ion Popescu/.test(venueBody) && /acum 3 luni/.test(venueBody));
+  /* Regresie: un eveniment fara pret nu trebuie sa scrie „de la 0 lei". */
+  check('fara pret nu inseamna „de la 0 lei"', !/de la 0 lei/.test(venueBody), venueBody.slice(0, 60));
 
   check('nota reala apare, nu 4.8 fix', txt.includes('4.6') && !txt.includes('4.8'));
 

@@ -387,3 +387,22 @@
 @media (prefers-reduced-motion: reduce) {
   .app-client .shchrome .shdescwrap { transition: none }
 }
+
+/* Benzile care ascund resturile de player YouTube (titlu sus, progres jos).
+   Stau peste iframe (z-index 1) si sub comenzile noastre (z-index 5-6). */
+.app-client .short .shembed-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 9%;
+  z-index: 2;
+  pointer-events: none;
+}
+.app-client .short .shembed-mask.top {
+  top: 0;
+  background: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.86) 55%, transparent 100%);
+}
+.app-client .short .shembed-mask.bottom {
+  bottom: 0;
+  background: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.86) 55%, transparent 100%);
+}

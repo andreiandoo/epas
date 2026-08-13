@@ -653,6 +653,21 @@ class CatalogController extends Controller
     {
         try {
             return $query
+                /* `select('events.*')` NU e decorativ.
+
+                   Apelantii trimit aici `->events()->getQuery()`. Pentru
+                   artist, `events()` e belongsToMany, deci interogarea are un
+                   JOIN cu tabelul-pivot — iar `getQuery()` returneaza
+                   constrangerile FARA select-ul pe care relatia il adauga abia
+                   la `get()`. Rezultat: `select *` peste join, si coloana `id`
+                   a pivotului o suprascrie pe cea a evenimentului.
+
+                   Efectul in aplicatie: fisa artistului lista evenimente cu
+                   id-uri de pivot. Cardul arata „de la 0 lei" (tipurile de
+                   bilet se cautau dupa un id inexistent) si, la atingere,
+                   ducea la „Evenimentul nu a putut fi găsit" — pentru un
+                   eveniment care exista si se deschidea corect din alta parte. */
+                ->select('events.*')
                 ->with(['venue', 'eventTypes'])
                 ->when(
                     true,
