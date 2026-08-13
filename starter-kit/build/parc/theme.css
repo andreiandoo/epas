@@ -1,0 +1,83 @@
+/* ==========================================================================
+   THEME — Nordvale  (kind: leisure)
+
+   Design language taken from verticals/demo-leisure (the Nordvale HTML set):
+   deep pine green on warm cream, acid-lime as the single loud accent, ember
+   orange for warmth. Fraunces (optical serif) for display, DM Sans for text.
+
+   Everything here is a token override. No structural CSS, no new selectors —
+   only brand values and a few accents on existing .kit-* classes.
+   ========================================================================== */
+:root {
+  /* Brand ---------------------------------------------------------------- */
+  --kit-primary:       #09251d;   /* pine — the forest */
+  --kit-primary-dark:  #061a15;   /* pine-dark */
+  --kit-on-primary:    #fffdf6;   /* cream, for text on pine */
+  --kit-accent:        #dffc62;   /* acid — used sparingly, it shouts */
+
+  /* Surfaces — warm light theme ------------------------------------------ */
+  --kit-bg:            #fffdf6;   /* cream */
+  --kit-surface:       #ffffff;
+  --kit-surface-2:     #f0ecdf;   /* oat */
+  --kit-text:          #16231e;   /* ink */
+  --kit-text-muted:    #5c6b64;
+  --kit-border:        #e2ddcc;
+
+  /* Status --------------------------------------------------------------- */
+  --kit-success:       #2f6f4e;
+  --kit-warning:       #f27b4a;   /* ember */
+  --kit-error:         #b3341f;
+
+  /* Typography ----------------------------------------------------------- */
+  --kit-font-body:     'DM Sans', system-ui, sans-serif;
+  --kit-font-display:  'Fraunces', Georgia, serif;
+  --kit-font-weight-display: 600;
+
+  /* Shape — soft and outdoorsy, not corporate ---------------------------- */
+  --kit-radius:        1.25rem;
+  --kit-radius-sm:     0.75rem;
+
+  /* Booking calendar: a deeper green than the default reads better on cream,
+     and ember for "last places" matches the design's warning tone. */
+  --kit-seat-free:     #2f6f4e;
+  --kit-seat-held:     #f27b4a;
+  --kit-seat-selected: #09251d;
+}
+
+/* Accents on existing classes — no structure, only polish ----------------- */
+
+/* The display serif is set optically; tighten it a touch at large sizes. */
+.kit-display { letter-spacing: -0.02em; }
+
+/* Primary button: pine with a cream label, lifting to acid on hover — the one
+   place the loud colour is allowed to take over. */
+.kit-btn--primary:hover {
+  background: var(--kit-accent);
+  color: var(--kit-primary);
+}
+
+.kit-btn--outline:hover {
+  background: var(--kit-primary);
+  color: var(--kit-on-primary);
+  border-color: var(--kit-primary);
+}
+
+/* Cards sit on cream, so a hairline plus a soft lift reads better than a
+   heavy drop shadow. */
+.kit-event-card,
+.kit-rental { transition: transform .18s ease, box-shadow .18s ease; }
+.kit-event-card:hover,
+.kit-rental:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(9, 37, 29, .10); }
+
+/* The booking widget is the centrepiece of a leisure site — give it presence. */
+.kit-booking { box-shadow: 0 10px 30px rgba(9, 37, 29, .07); }
+.kit-booking__chip.is-selected,
+.kit-booking__day.is-selected { box-shadow: 0 0 0 3px rgba(223, 252, 98, .45); }
+
+/* CTA band inverts to pine, separating the page without adding a colour. */
+.kit-cta {
+  background: var(--kit-primary);
+  color: var(--kit-on-primary);
+  border-color: var(--kit-primary);
+}
+.kit-cta .kit-display { color: var(--kit-on-primary); }

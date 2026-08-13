@@ -167,6 +167,37 @@ export const fetchCatalogEvents = (
   return get<CatalogEventBrief[]>(`/tenant-client/catalog/events${qs ? `?${qs}` : ''}`, signal);
 };
 
+export type NearbyEvent = CatalogEventBrief & { lat: number; lng: number; distance_km: number };
+
+export type NearbyResult = {
+  center: { lat: number; lng: number };
+  radius_km: number;
+  events: NearbyEvent[];
+};
+
+/**
+ * Evenimentele din jurul unui punct, deja ordonate dupa distanta de server.
+ * Fara coordonate, centrul se deduce din numele orasului — asa functia merge
+ * si cand utilizatorul refuza (sau nu i se cere) permisiunea de locatie.
+ */
+export const fetchNearbyEvents = (
+  at: { lat: number; lng: number } | { city: string },
+  opts: { radius?: number; limit?: number } = {},
+  signal?: AbortSignal,
+) => {
+  const params = new URLSearchParams();
+  if ('lat' in at) {
+    params.set('lat', String(at.lat));
+    params.set('lng', String(at.lng));
+  } else {
+    params.set('city', at.city);
+  }
+  params.set('radius', String(opts.radius ?? 100));
+  params.set('limit', String(opts.limit ?? 20));
+
+  return get<NearbyResult>(`/tenant-client/catalog/events/nearby?${params.toString()}`, signal);
+};
+
 export type CatalogSearch = {
   events: CatalogEventBrief[];
   artists: { id: number; slug: string | null; name: string | null; role: string | null; image: string | null }[];

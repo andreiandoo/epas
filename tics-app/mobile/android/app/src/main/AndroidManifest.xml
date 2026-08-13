@@ -45,4 +45,11 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- „Lângă tine": evenimentele pe o rază de 100 km. COARSE, nu FINE —
+         la scara asta pozitia exacta nu schimba nimic, iar permisiunea
+         aproximativa e mult mai des acceptata. Refuzul NU dezactiveaza
+         functia: centrul devine orasul ales in aplicatie. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
 </manifest>

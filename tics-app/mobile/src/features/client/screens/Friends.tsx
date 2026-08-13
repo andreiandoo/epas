@@ -21,6 +21,8 @@ import { I } from '../../../mock/prototype';
 import { BottomNav, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
+import { ConnectTics } from '../connectTics';
+import { getAppToken } from '../../../api/orgApp';
 import {
   blockFriend,
   fetchFriends,
@@ -146,7 +148,13 @@ export function Friends() {
         <div style={sx('width:42px')} />
       </TopBar>
 
-      {error ? (
+      {/* Lipsa tokenului de tics NU e o eroare de afisat, e ceva ce se poate
+          rezolva pe loc. Inainte ramaneai in fata textului „Intră în contul
+          tics" fara nicio cale spre acel cont — inclusiv dupa ce te
+          autentificasesi cu succes. */}
+      {error && !getAppToken() ? (
+        <ConnectTics what="Lista de prieteni" onDone={() => void load()} />
+      ) : error ? (
         <div className="pad" style={sx('margin-top:40px;text-align:center')}>
           <div style={sx('font-size:40px;opacity:.5')}>🤝</div>
           <div className="muted" style={sx('font-size:12.5px;margin-top:10px;line-height:1.5')}>{error}</div>

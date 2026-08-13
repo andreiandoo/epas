@@ -232,11 +232,15 @@ const check = (name, ok, extra = '') => {
     body: document.body.textContent.replace(/\s+/g, ' ').slice(0, 300),
   }));
   check('ecranul de prieteni se deschide din Profil', opened && /Prietenii mei/.test(friendsScreen.title), friendsScreen.title);
-  /* Fara cont Tixello, ecranul TREBUIE sa spuna asta, nu sa ramana gol: aici
-     nu exista date demo, iar un ecran alb ar parea o eroare. */
+  /* Fara cont tics, ecranul TREBUIE sa ofere legarea contului, nu doar sa
+     explice de ce e gol: mesajul de dinainte era un capat de drum — spunea
+     „intra in contul tics" fara nicio cale spre acel cont. */
+  const canConnect = await page.evaluate(
+    () => document.querySelectorAll('input[type="password"]').length > 0,
+  );
   check(
-    'fara cont, ecranul explica de ce e gol',
-    /Intră în contul tics/.test(friendsScreen.body),
+    'fara cont, ecranul ofera legarea contului tics',
+    /Conectează contul tics/.test(friendsScreen.body) && canConnect,
     friendsScreen.body.slice(0, 90),
   );
 

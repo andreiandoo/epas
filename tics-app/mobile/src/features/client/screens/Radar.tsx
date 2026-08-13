@@ -11,11 +11,12 @@ import { useEffect, useState } from 'react';
 import { Ic, cn, sx } from '../../../design/sx';
 import { ART, CAL_DAY, CAL_DOTS, I, bgv } from '../../../mock/prototype';
 import { RadarCard } from '../cards';
-import { BottomNav, DBar, TopBar } from '../kit';
+import { BottomNav, DBar, SafeTop, SecH, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useLightbox } from '../lightbox';
-import { fmtK, useRadarCities, useRadarDay, useRadarEvent, useRadarList, useRadarMonth, useRadarStats } from '../radarData';
+import { fmtK, useRadarCategories, useRadarCities, useRadarDay, useRadarEvent, useRadarList, useRadarMonth, useRadarStats } from '../radarData';
+import { CatCard, poolsFromCategories } from '../catCard';
 import { CAT_TO_TYPE, GENRE_OPTIONS, TYPE_OPTIONS, type RadarItem } from '../../../api/ticsRadar';
 import { PickerChip, PickerSheet, type Option } from '../picker';
 import { lookupCatalogVenue } from '../../../api/catalog';
@@ -58,6 +59,18 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
 
   /* Panoul complet de filtre: chip-ul "Toate" il deschide. */
   const [panel, setPanel] = useState(false);
+
+  /* Ecran-radacina (intrat din bara) vs. ecran-copil (o categorie, o zi din
+     calendar). Difera antetul si prezenta gridului de categorii. */
+  const root = !cat && stack.length <= 1;
+
+  /* Categoriile reale, pentru „Alege un vibe". Se arata patru, restul la
+     cerere: toate 12 deodata impingeau lista de evenimente cu ~1100px in jos,
+     adica exact continutul pentru care ai deschis Radarul. */
+  const cats = useRadarCategories();
+  const [allCats, setAllCats] = useState(false);
+  const pools = poolsFromCategories(cats);
+
   const [sheet, setSheet] = useState<'city' | 'type' | 'genre' | null>(null);
   const [shown, setShown] = useState(PAGE);
 
@@ -88,29 +101,50 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
     [saving !== null ? `−${saving}%` : '−22%', 'sub medie'],
   ];
 
+  const subtitle = [dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ') + ' · prețuri live';
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
-      <TopBar>
-        <div className="row" style={sx('gap:12px')}>
-          {/* Back-ul apare DOAR cand chiar exista unde te intoarce. Radarul e
-              acum tab in bara de jos, deci intrarea obisnuita nu lasa nimic in
-              stiva — iar o sageata care nu face nimic e mai rea decat lipsa ei. */}
-          {stack.length > 1 ? (
+      {root ? (
+        /* Intrat din bara de jos, Radarul e ecran-radacina: acelasi antet ca
+           „Biletele mele" si „Acasă" (eyebrow + h1 mare). Purta antetul mic de
+           ecran-copil, cu titlu de 15px, si iesea din rand fata de restul
+           aplicatiei — plus o sageata de back care n-avea unde sa duca. */
+        <div className="stickytop">
+          <SafeTop />
+          <div className="hrow">
+            <div>
+              <div className="eyebrow">Prețuri din toată piața</div>
+              <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
+                Radar
+              </h1>
+            </div>
+            <div className="icon-btn" onClick={() => go('calendar')}>
+              <Ic svg={I.cal} />
+            </div>
+          </div>
+          <div className="muted" style={sx('font-size:11.5px;margin-top:2px')}>
+            {subtitle}
+          </div>
+        </div>
+      ) : (
+        <TopBar>
+          <div className="row" style={sx('gap:12px')}>
             <div className="icon-btn" onClick={back}>
               <Ic svg={I.back} />
             </div>
-          ) : null}
-          <div>
-            <div className="h2">{cat ?? 'Radar'}</div>
-            <div className="muted" style={sx('font-size:11.5px')}>
-              {[dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ')} · prețuri live
+            <div>
+              <div className="h2">{cat ?? 'Radar'}</div>
+              <div className="muted" style={sx('font-size:11.5px')}>
+                {subtitle}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="icon-btn" onClick={() => go('calendar')}>
-          <Ic svg={I.cal} />
-        </div>
-      </TopBar>
+          <div className="icon-btn" onClick={() => go('calendar')}>
+            <Ic svg={I.cal} />
+          </div>
+        </TopBar>
+      )}
 
       <div className="pad" style={sx('margin-top:12px')}>
         <div
@@ -144,6 +178,36 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
           </div>
         </div>
       </div>
+
+      {/* ---------- ALEGE UN VIBE ----------
+          Gridul de categorii statea doar in „Explorează", iar ecranul acela
+          nu mai are intrare in bara de jos de cand Radarul i-a luat locul:
+          categoriile ajunsesera de negasit. Locul lor firesc e aici — Radarul
+          E rasfoirea pietei, categoriile sunt felul in care o rasfoiesti. */}
+      {root && pools.length ? (
+        <div className="sec">
+          <SecH
+            icon="🧭"
+            icbg="var(--surface-3)"
+            iccol="var(--ink)"
+            title="Alege un vibe"
+            sub="Tot ce se întâmplă, pe categorii"
+            more={allCats ? undefined : ['Toate', () => setAllCats(true)]}
+          />
+          <div className="pad">
+            <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
+              {(allCats ? pools : pools.slice(0, 4)).map((c) => (
+                <CatCard key={c.name} c={c} />
+              ))}
+            </div>
+            {!allCats && pools.length > 4 ? (
+              <button className="cta ghost" style={sx('margin-top:12px;padding:12px')} onClick={() => setAllCats(true)}>
+                Vezi toate categoriile ({pools.length})
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="filterbar" style={sx('margin-top:14px')}>
         <div className={cn('flt', (panel || !noFilter) && 'on')} onClick={() => setPanel((v) => !v)}>

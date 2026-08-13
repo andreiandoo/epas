@@ -4173,6 +4173,11 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/catalog/search', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'search'])
         ->name('api.tenant-client.catalog.search');
 
+    /* Trebuie declarata INAINTEA lui `/catalog/events/{key}`, altfel „nearby"
+       ar fi citit ca slug de eveniment si ar raspunde 404. */
+    Route::get('/catalog/events/nearby', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'nearby'])
+        ->name('api.tenant-client.catalog.nearby');
+
     Route::get('/catalog/events/{key}', [\App\Http\Controllers\Api\TenantClient\CatalogController::class, 'event'])
         ->name('api.tenant-client.catalog.event');
 

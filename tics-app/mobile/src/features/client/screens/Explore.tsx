@@ -5,9 +5,8 @@
      antet · card AI de preferinte · rail recomandari · card "Pe val" ·
      Calendar + Radar preturi · "Alege un vibe" (CATPOOLS) · "Langa tine"
    ========================================================= */
-import { useEffect, useRef, useState } from 'react';
 import { Ic, sx } from '../../../design/sx';
-import { CATPOOLS, EV, FEST, I, bgv } from '../../../mock/prototype';
+import { CATPOOLS, EV, I } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvMini } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
@@ -18,106 +17,9 @@ import { CityTag } from '../cityTag';
 import { radarToUi, useRadarList } from '../radarData';
 import { useClient } from '../../../store/client';
 import { useRadarCategories } from '../radarData';
-import type { RadarCategory } from '../../../api/ticsRadar';
+import { CatCard, poolsFromCategories, type Pool } from '../catCard';
 
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
-
-type Pool = { name: string; count: number; c: string; route: string; pool: Record<string, unknown>[] };
-
-/* Culorile pastilei de categorie — se rotesc, ca in prototip. */
-const CAT_COLORS = ['#be185d', '#0f766e', '#0e7490', '#b45309', '#6d28d9', '#dc2626', '#4338ca', '#0891b2'];
-
-/** Categoriile reale (TICS Radar) aduse la forma pe care o asteapta CatCard. */
-function poolsFromCategories(cats: RadarCategory[]): Pool[] {
-  return cats.map((c, i) => ({
-    name: c.cat,
-    count: c.count,
-    // culoarea oficiala a categoriei cand vine din feed; altfel paleta rotativa
-    c: c.color ?? CAT_COLORS[i % CAT_COLORS.length],
-    route: `go:ticslist:${c.type}`,
-    pool: c.samples as unknown as Record<string, unknown>[],
-  }));
-}
-
-/**
- * Cardul de categorie. INIT.explore roteste imaginea la 5s: opacity -> 0,
- * dupa 280ms schimba fundalul/emoji/titlul, apoi opacity -> 1.
- */
-function CatCard({ c }: { c: Pool }) {
-  const { go } = useNav();
-  const [k, setK] = useState(0);
-  const [visible, setVisible] = useState(true);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    if (c.pool.length < 2) return;
-    const id = setInterval(() => {
-      setVisible(false);
-      const t = setTimeout(() => {
-        setK((x) => (x + 1) % c.pool.length);
-        setVisible(true);
-      }, 280);
-      timers.current.push(t);
-    }, 5000);
-    return () => {
-      clearInterval(id);
-      timers.current.forEach(clearTimeout);
-      timers.current = [];
-    };
-  }, [c.pool.length]);
-
-  /* Categoriile fara evenimente in perioada acoperita n-au exemple; cardul
-     ramane pe identitatea categoriei, ca sa nu crape si sa nu para gol. */
-  const it = (c.pool[k] as { g: string; s: string } | undefined) ?? {
-    g: '🎟',
-    s: c.name,
-    tone: `linear-gradient(150deg, ${c.c}, #1a1428)`,
-  };
-
-  const onClick = () => {
-    // route are forma "go:ticslist:<event_type>" (categorii reale) sau, pentru
-    // datasetul prototipului, "go:category:Concerte" / "go:festival"
-    const parts = c.route.split(':');
-    if (parts[0] !== 'go') return;
-    /* "Alege un vibe" duce in Radar, filtrat pe categoria aleasa — acolo sunt
-       evenimentele reale, cu preturi comparate pe platforme. */
-    if (parts[1] === 'ticslist') return go('ticslist', { cat: c.name, catKey: parts[2] });
-    if (parts[1] === 'category') return go('ticslist', { cat: c.name });
-    go(parts[1], parts[2] ? { id: parts[2] } : undefined);
-  };
-
-  return (
-    <div className="catcard" onClick={onClick}>
-      <div
-        className="cover catcover"
-        style={{
-          background: (it as { poster?: string }).poster
-            ? `url('${(it as { poster?: string }).poster}') center/cover, #14101f`
-            : bgv(it),
-          height: 150,
-          opacity: visible ? 1 : 0,
-        }}
-      >
-        <span className="em catem">{it.g}</span>
-        <div className="scrim" />
-        <div className="btm">
-          <div className="ctitle cattitle" style={sx('font-size:13px')}>
-            {it.s}
-          </div>
-        </div>
-      </div>
-      <div className="catlabel">
-        <span className="catcount" style={{ background: c.c }}>
-          {c.count}
-        </span>
-        <span className="catname">{c.name}</span>
-        <span style={{ marginLeft: 'auto', color: c.c }}>
-          <Ic svg={I.arrow} />
-        </span>
-      </div>
-    </div>
-  );
-}
 
 export function Explore() {
   const preview = useShortsPreview();
@@ -267,45 +169,10 @@ export function Explore() {
         </div>
       </div>
 
-      <div className="sec">
-        <SecH icon={I.pin} icbg="var(--indigo-soft)" iccol="var(--indigo-2)" title="Lângă tine" sub="Pe hartă" />
-        <div className="pad">
-          <div className="mcard" onClick={() => go('festival')}>
-            <div style={sx('height:132px;background:linear-gradient(120deg,#1a1730,#0f0d18);position:relative')}>
-              <div style={sx('position:absolute;inset:0;background-image:var(--grid);background-size:24px 24px;opacity:.6')} />
-              <div
-                style={sx('position:absolute;left:40%;top:44%;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:3px solid var(--bg);box-shadow:var(--sh-p)')}
-              />
-              <div
-                style={sx('position:absolute;left:66%;top:32%;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:3px solid var(--bg)')}
-              />
-              <span className="gpill" style={sx('position:absolute;left:12px;top:12px')}>
-                📍 2 lângă tine
-              </span>
-            </div>
-            <div className="selrow">
-              <div className="iconbadge" style={{ background: FEST.tone }}>
-                🎪
-              </div>
-              <div style={sx('flex:1')}>
-                <div style={sx('font-weight:600;font-size:14px')}>Nordvale Festival</div>
-                <div className="metaline" style={sx('margin-top:3px')}>
-                  <Ic svg={I.pin} />
-                  <span>Wonderland</span>
-                  <span className="dot" />
-                  <span>8 km</span>
-                </div>
-              </div>
-              <span
-                className="circ"
-                style={sx('position:static;background:var(--surface-3);border-color:var(--line-2);color:var(--indigo-2);backdrop-filter:none')}
-              >
-                <Ic svg={I.arrow} />
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* „Langa tine" a plecat pe Acasa, unde e util la deschiderea aplicatiei,
+          si e acum construita din coordonate reale (vezi features/client/nearby).
+          Aici era o harta desenata cu doua puncte fixe si acelasi festival demo,
+          la orice ora si in orice oras — arata a harta fara sa fie una. */}
 
       <BottomNav active="explore" />
     </div>

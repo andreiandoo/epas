@@ -16,6 +16,7 @@ import { radarToUi, useRadarCities, useRadarList } from '../radarData';
 import { useCatalogEvents } from '../catalogData';
 import { useAccountStats, useTickets } from '../accountData';
 import { fetchFriends } from '../../../api/friends';
+import { NearYou } from '../nearby';
 import { useShortsPreview } from '../shorts/useShortsPreview';
 import { PickerSheet, type Option } from '../picker';
 import { useClient } from '../../../store/client';
@@ -218,6 +219,12 @@ export function Home() {
           </div>
         </div>
       </div>
+
+      {/* ---------- LANGA TINE ----------
+          Ceruta pe Acasa, si e locul potrivit: „ce se intampla in jurul meu"
+          e intrebarea cu care deschizi aplicatia. Se ascunde singura cand nu
+          stim unde esti sau cand nu e nimic pe 100 km. */}
+      <NearYou city={city} />
 
       {/* ---------- BILETELE TALE ----------
           Doar cele care urmeaza. Un bilet de acum trei luni n-are ce cauta pe

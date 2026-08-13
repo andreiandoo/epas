@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\TenantClient;
 use App\Http\Controllers\Controller;
 use App\Models\Artist;
 use App\Models\Event;
+use App\Models\GeoLocality;
 use App\Models\Venue;
 use App\Support\PlainText;
 use Illuminate\Http\JsonResponse;
@@ -106,6 +107,214 @@ class CatalogController extends Controller
             ->all();
 
         return response()->json(['success' => true, 'data' => $events]);
+    }
+
+    /**
+     * Evenimentele din jurul unui punct, ordonate dupa distanta.
+     *
+     * Filtrarea se face in DOUA trepte, si asta e intentionat:
+     *
+     * 1. In baza de date, pe un DREPTUNGHI (bounding box) in jurul punctului.
+     *    E o comparatie pe doua coloane indexabile, deci taie catalogul la
+     *    cateva zeci de randuri fara sa ceara functii trigonometrice in SQL —
+     *    care oricum ar diferi intre Postgres si SQLite (dev ruleaza pe SQLite).
+     * 2. In PHP, pe distanta REALA (haversine). Dreptunghiul e mai larg decat
+     *    cercul in colturi, deci fara treapta a doua un eveniment la 138 km ar
+     *    aparea pe o raza de 100 km.
+     *
+     * Salile FARA coordonate nu sunt excluse din interogare, ci trecute prin
+     * `geo_localities` dupa numele orasului. Altfel „langa tine" ar fi aratat
+     * doar salile carora cineva le-a completat manual lat/lng in admin —
+     * adica o parte arbitrara din catalog, fara ca utilizatorul sa poata banui
+     * ce lipseste.
+     */
+    public function nearby(Request $request): JsonResponse
+    {
+        $lat = $request->query('lat');
+        $lng = $request->query('lng');
+
+        /* Fara GPS, centrul e ORASUL ales in aplicatie. Nu e o consolare: pe o
+           raza de 100 km, diferenta dintre pozitia exacta si centrul orasului
+           schimba rareori lista — iar altfel functia ar fi existat doar pentru
+           cine accepta permisiunea de locatie. */
+        if ((! is_numeric($lat) || ! is_numeric($lng)) && trim((string) $request->query('city', '')) !== '') {
+            $center = GeoLocality::query()
+                ->where('name_ascii', $this->fold((string) $request->query('city')))
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->orderBy('sort_order')
+                ->first(['latitude', 'longitude']);
+
+            if ($center) {
+                $lat = (float) $center->latitude;
+                $lng = (float) $center->longitude;
+            }
+        }
+
+        if (! is_numeric($lat) || ! is_numeric($lng)) {
+            return response()->json(['success' => false, 'message' => 'Coordonate lipsă.'], 422);
+        }
+
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return response()->json(['success' => false, 'message' => 'Coordonate invalide.'], 422);
+        }
+
+        $radius = max(1, min((float) $request->query('radius', 100), 500));
+        $limit = max(1, min((int) $request->query('limit', 20), 50));
+
+        /* Un grad de latitudine ~111 km oriunde; unul de longitudine se
+           ingusteaza spre poli, deci se imparte la cos(lat). Marja de 1.15
+           acopera aproximarea, ca dreptunghiul sa nu taie din cerc. */
+        $dLat = ($radius / 111.045) * 1.15;
+        $cos = max(cos(deg2rad($lat)), 0.01);
+        $dLng = ($radius / (111.045 * $cos)) * 1.15;
+
+        $candidates = Event::query()
+            ->where('is_published', true)
+            ->upcoming()
+            ->whereHas('venue', function ($v) use ($lat, $lng, $dLat, $dLng) {
+                $v->where(function ($q) use ($lat, $lng, $dLat, $dLng) {
+                    $q->whereBetween('lat', [$lat - $dLat, $lat + $dLat])
+                        ->whereBetween('lng', [$lng - $dLng, $lng + $dLng]);
+                })
+                    ->orWhereNull('lat')
+                    ->orWhereNull('lng');
+            })
+            ->with(['venue', 'ticketTypes', 'eventTypes'])
+            /* 400, nu 20: dreptunghiul lasa sa treaca si salile fara
+               coordonate (li se afla orasul abia in PHP), iar ordonarea e dupa
+               DATA, nu dupa distanta. Cu o limita mica, un eveniment de maine
+               de la 300 km ar fi ocupat locul unuia de peste o luna de la 5 km. */
+            ->orderByRaw('COALESCE(event_date, range_start_date) ASC NULLS LAST')
+            ->limit(400)
+            ->get();
+
+        $coords = $this->resolveVenueCoordinates($candidates);
+
+        $near = $candidates
+            ->map(function (Event $e) use ($coords, $lat, $lng) {
+                $point = $coords[$e->venue?->id] ?? null;
+
+                if (! $point) {
+                    return null;
+                }
+
+                return [
+                    'event' => $e,
+                    'lat' => $point[0],
+                    'lng' => $point[1],
+                    'km' => $this->haversine($lat, $lng, $point[0], $point[1]),
+                ];
+            })
+            ->filter()
+            ->filter(fn (array $row) => $row['km'] <= $radius)
+            ->sortBy('km')
+            ->take($limit)
+            ->map(fn (array $row) => $this->eventPayload($row['event'], full: false) + [
+                'lat' => round($row['lat'], 5),
+                'lng' => round($row['lng'], 5),
+                'distance_km' => round($row['km'], 1),
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'center' => ['lat' => $lat, 'lng' => $lng],
+                'radius_km' => $radius,
+                'events' => $near,
+            ],
+        ]);
+    }
+
+    /**
+     * Coordonata fiecarei sali din setul dat: a ei, sau a orasului ei.
+     *
+     * Localitatile se citesc INTR-O SINGURA interogare, pe numele pliat (fara
+     * diacritice, litere mici) — coloana `name_ascii` exista exact pentru asta
+     * si e indexata. O interogare per sala ar fi insemnat cateva zeci de
+     * SELECT-uri pentru un ecran care se deschide la fiecare pornire.
+     *
+     * @param  \Illuminate\Support\Collection<int, Event>  $events
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function resolveVenueCoordinates($events): array
+    {
+        $out = [];
+        $needCity = [];
+
+        foreach ($events as $event) {
+            $venue = $event->venue;
+
+            if (! $venue || isset($out[$venue->id])) {
+                continue;
+            }
+
+            if ($venue->lat !== null && $venue->lng !== null) {
+                $out[$venue->id] = [(float) $venue->lat, (float) $venue->lng];
+
+                continue;
+            }
+
+            $city = $this->fold((string) ($venue->city ?? ''));
+
+            if ($city !== '') {
+                $needCity[$venue->id] = $city;
+            }
+        }
+
+        if ($needCity === []) {
+            return $out;
+        }
+
+        $localities = GeoLocality::query()
+            ->whereIn('name_ascii', array_values(array_unique($needCity)))
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            /* Municipiul inaintea satului omonim: „Alba Iulia" e mai probabil
+               orasul decat o localitate componenta cu acelasi nume.
+               `unique` INAINTE de `keyBy` nu e decorativ: `keyBy` pastreaza
+               ULTIMA aparitie a unei chei, deci ar fi ales exact satul, adica
+               fix pe dos fata de ordonare. */
+            ->orderBy('sort_order')
+            ->get(['name_ascii', 'latitude', 'longitude'])
+            ->unique('name_ascii')
+            ->keyBy('name_ascii');
+
+        foreach ($needCity as $venueId => $city) {
+            $hit = $localities->get($city);
+
+            if ($hit) {
+                $out[$venueId] = [(float) $hit->latitude, (float) $hit->longitude];
+            }
+        }
+
+        return $out;
+    }
+
+    /** Distanta pe sfera, in kilometri. */
+    private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $r = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    /** Litere mici, fara diacritice — forma in care sunt indexate localitatile. */
+    private function fold(string $value): string
+    {
+        $t = mb_strtolower(trim($value));
+
+        return strtr($t, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
     }
 
     /**

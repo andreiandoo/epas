@@ -102,6 +102,12 @@ const VENUE = {
   const page = await browser.newPage();
   await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
 
+  /* Pozitie fixa (Piata Universitatii), ca „Lângă tine" sa aiba de unde
+     porni. Fara permisiunea asta, sectiunea se ascunde — comportamentul
+     corect, dar atunci n-am testa harta. */
+  await browser.defaultBrowserContext().overridePermissions(new URL(APP).origin, ['geolocation']);
+  await page.setGeolocation({ latitude: 44.4268, longitude: 26.1025 });
+
   const errors = [];
   page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
 
@@ -158,6 +164,18 @@ const VENUE = {
 
     if (url.includes('/tenant-client/shorts') && !url.includes('/events')) {
       return json(req, { feed: 'for_you', items: [shortFor(feedMode)], playback: null, next_cursor: null });
+    }
+
+    // „nearby" inaintea fisei: altfel ruta ar fi citita ca slug de eveniment
+    if (url.includes('/catalog/events/nearby')) {
+      return json(req, {
+        center: { lat: 44.4268, lng: 26.1025 },
+        radius_km: 100,
+        events: [
+          { ...EVENT, id: 901, title: 'Aproape de tot', lat: 44.44, lng: 26.11, distance_km: 1.9 },
+          { ...EVENT, id: 902, title: 'Mai departe', lat: 44.9, lng: 25.4, distance_km: 78.4 },
+        ],
+      });
     }
 
     // lista (fara id) inaintea fisei, altfel „events?" ar cadea pe fisa
@@ -252,6 +270,29 @@ const VENUE = {
 
       return true;
     }, label);
+
+  /* ---------- „Lângă tine" pe Acasa ----------
+     Sectiunea deseneaza pozitii calculate din lat/lng, deci se verifica si ca
+     ajunge in ecran, si ca punctele chiar sunt DIFERITE: o proiectie gresita
+     le-ar aduna pe toate in acelasi loc, iar harta ar arata plauzibil si ar fi
+     complet inutila. */
+  await goHome();
+  await wait(1600);
+  const near = await page.evaluate(() => {
+    const heading = [...document.querySelectorAll('div')].find((e) => e.textContent.trim() === 'Lângă tine');
+    const card = heading?.closest('.pad');
+    const pins = card ? [...card.querySelectorAll('button[aria-label]')].filter((b) => /km/.test(b.getAttribute('aria-label'))) : [];
+
+    return {
+      visible: !!card,
+      body: card?.textContent.replace(/\s+/g, ' ') ?? '',
+      spots: pins.map((b) => `${b.style.left}|${b.style.top}`),
+    };
+  });
+  check('sectiunea „Lângă tine" apare pe Acasa', near.visible, near.body.slice(0, 80));
+  check('harta poarta un punct per eveniment', near.spots.length === 2, near.spots.join(' , '));
+  check('punctele nu se suprapun', new Set(near.spots).size === near.spots.length, near.spots.join(' , '));
+  check('distantele reale apar', /1\.9 km/.test(near.body) && /78\.4 km/.test(near.body), near.body.slice(0, 120));
 
   /* ---------- eveniment ---------- */
   await openScreen('event');

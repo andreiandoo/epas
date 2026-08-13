@@ -11,7 +11,6 @@
 import { useEffect, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import {
-  AFF,
   ART,
   ATTENDED,
   EV,
@@ -29,7 +28,9 @@ import { BottomNav, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useFavorites, useNotifications, useReviews, useTickets, type SavedItem } from '../accountData';
-import { fetchFriends, inviteFriendByEmail } from '../../../api/friends';
+import { fetchFriends, inviteFriendByEmail, type FriendsState } from '../../../api/friends';
+import { ConnectTics } from '../connectTics';
+import { getAppToken } from '../../../api/orgApp';
 
 type Ev = Record<string, any>;
 const evOf = (id: string) => (EV as Record<string, Ev>)[id];
@@ -154,28 +155,67 @@ export function Points() {
 export function Invite() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
-  const demoAff = AFF as Ev;
 
-  /* Codul si invitatiile REALE, din contul tics. Ecranul afisa datele demo
-     (cod „ANDREI2X", 12 invitati) inclusiv dupa autentificare — deci un cod pe
-     care nimeni nu-l putea folosi. Fara cont, ramane exemplul din prototip, ca
-     ecranul sa fie navigabil. */
-  const [real, setReal] = useState<{ code: string; url: string; invited: number } | null>(null);
+  /* Ecranul rula PE DATELE DEMO: cod „ANDREI2X", 12 invitati, o lista de
+     prieteni inventata si o sectiune „Prietenii prietenilor" care nu are
+     corespondent in API. Un cod de invitatie fals e activ daunator — il dai
+     mai departe si nu merge pentru nimeni. Acum: ori datele contului tau, ori
+     cererea de a lega contul. Nimic intre. */
+  const [real, setReal] = useState<FriendsState | null>(null);
+  const [tick, setTick] = useState(0);
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const linked = !!getAppToken();
 
   useEffect(() => {
+    if (!linked) return;
+
     let alive = true;
     void fetchFriends().then((r) => {
-      if (!alive || !r.ok) return;
-      setReal({ code: r.data.invite_code, url: r.data.invite_url, invited: r.data.invited.length + r.data.friends.length });
+      if (alive && r.ok) setReal(r.data);
     });
 
     return () => {
       alive = false;
     };
-  }, []);
+  }, [tick, linked]);
 
-  const aff = real ? { ...demoAff, code: real.code, url: real.url, invited: real.invited } : demoAff;
-  const [email, setEmail] = useState('');
+  const send = () => {
+    if (!email.trim()) {
+      showToast('Completează un email');
+
+      return;
+    }
+
+    setSending(true);
+    void inviteFriendByEmail(email.trim()).then((r) => {
+      setSending(false);
+      showToast(r.ok ? 'Invitație trimisă la ' + email.trim() : r.message);
+      if (r.ok) {
+        setEmail('');
+        setTick((n) => n + 1);
+      }
+    });
+  };
+
+  const share = async () => {
+    if (!real) return;
+
+    const text = 'Hai pe tics! Codul meu de invitație: ' + real.invite_code;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'tics', text, url: real.invite_url });
+
+        return;
+      }
+
+      await navigator.clipboard.writeText(text + '\n' + real.invite_url);
+      showToast('Link copiat');
+    } catch {
+      /* foaia de share inchisa de utilizator — nu e eroare */
+    }
+  };
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -186,145 +226,150 @@ export function Invite() {
           </div>
           <div className="h2">Invită prieteni</div>
         </div>
-        <div className="icon-btn">
-          <Ic svg={I.info} />
-        </div>
+        <div style={sx('width:42px')} />
       </TopBar>
 
-      <div className="pad" style={sx('margin-top:14px')}>
-        <div
-          className="card"
-          style={sx('padding:20px;text-align:center;background:linear-gradient(160deg,var(--indigo-3),#2a1065);border:1px solid var(--line-2);color:#fff;position:relative;overflow:hidden')}
-        >
-          <div style={sx('font-size:18px;font-weight:600')}>Invită-ți prietenii 🎉</div>
-          <div style={sx('font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5')}>
-            Prietenul primește <b>10 lei</b> la prima comandă.
-            <br />
-            Iar rețeaua ta tics crește cu fiecare invitație.
-          </div>
-          <div
-            style={sx('margin-top:16px;background:rgba(255,255,255,.14);border:1px dashed rgba(255,255,255,.4);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px')}
-          >
-            <div style={sx('flex:1;text-align:left')}>
-              <div style={sx('font-size:10px;opacity:.75;font-weight:600')}>CODUL TĂU</div>
-              <div style={sx('font-size:20px;font-weight:600;letter-spacing:1px')}>{aff.code}</div>
-            </div>
-            <button
-              className="circ"
-              onClick={() => showToast('Cod copiat: ' + aff.code)}
-              style={sx('position:static;width:40px;height:40px;background:#fff;color:#141020;border-color:#fff')}
-              aria-label="Copiază codul"
+      {!linked ? <ConnectTics what="Invitațiile" onDone={() => setTick((n) => n + 1)} /> : null}
+
+      {linked && !real ? (
+        <div className="pad" style={sx('margin-top:16px;display:flex;flex-direction:column;gap:10px')}>
+          <div className="sk" style={sx('height:180px;border-radius:20px')} />
+          <div className="sk" style={sx('height:64px;border-radius:18px')} />
+        </div>
+      ) : null}
+
+      {real ? (
+        <>
+          <div className="pad" style={sx('margin-top:14px')}>
+            <div
+              className="card"
+              style={sx('padding:20px;text-align:center;background:linear-gradient(160deg,var(--indigo-3),#2a1065);border:1px solid var(--line-2);color:#fff;position:relative;overflow:hidden')}
             >
-              <Ic svg={I.copy} />
+              <div style={sx('font-size:18px;font-weight:600')}>Invită-ți prietenii 🎉</div>
+              <div style={sx('font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5')}>
+                Vedeți împreună la ce evenimente mergeți și cumpărați unii pentru alții.
+              </div>
+              <div
+                style={sx('margin-top:16px;background:rgba(255,255,255,.14);border:1px dashed rgba(255,255,255,.4);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px')}
+              >
+                <div style={sx('flex:1;text-align:left')}>
+                  <div style={sx('font-size:10px;opacity:.75;font-weight:600')}>CODUL TĂU</div>
+                  <div style={sx('font-size:20px;font-weight:600;letter-spacing:1px')}>{real.invite_code}</div>
+                </div>
+                <button
+                  className="circ"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(real.invite_code);
+                    showToast('Cod copiat: ' + real.invite_code);
+                  }}
+                  style={sx('position:static;width:40px;height:40px;background:#fff;color:#141020;border-color:#fff')}
+                  aria-label="Copiază codul"
+                >
+                  <Ic svg={I.copy} />
+                </button>
+              </div>
+              <button className="cta" style={sx('margin-top:13px;background:#fff;color:#141020')} onClick={() => void share()}>
+                <Ic svg={I.send} /> Trimite invitația
+              </button>
+            </div>
+          </div>
+
+          <div className="pad" style={sx('margin-top:16px')}>
+            <div className="label" style={sx('margin-bottom:8px')}>
+              Trimite invitația pe email
+            </div>
+            <div className="field">
+              <Ic svg={I.mail} />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@prieten.ro"
+                inputMode="email"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') send();
+                }}
+              />
+            </div>
+            <button className="cta" style={sx('margin-top:12px')} disabled={sending} onClick={send}>
+              <Ic svg={I.send} /> {sending ? 'Se trimite…' : 'Trimite invitația'}
             </button>
           </div>
-        </div>
-      </div>
 
-      <div className="pad" style={sx('margin-top:16px')}>
-        <div className="label" style={sx('margin-bottom:8px')}>
-          Trimite invitația pe email
-        </div>
-        <div className="field">
-          <Ic svg={I.mail} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@prieten.ro" inputMode="email" />
-        </div>
-        <button
-          className="cta"
-          style={sx('margin-top:12px')}
-          onClick={() => {
-            if (!email) {
-              showToast('Completează un email');
-
-              return;
-            }
-
-            /* Trimite CU ADEVARAT invitatia cand exista cont; altfel ramane
-               confirmarea din prototip. Un mesaj de succes pentru o invitatie
-               care n-a plecat e mai rau decat un refuz. */
-            if (real) {
-              void inviteFriendByEmail(email).then((r) =>
-                showToast(r.ok ? 'Invitație trimisă la ' + email : r.message),
-              );
-
-              return;
-            }
-
-            showToast('Invitație trimisă la ' + email);
-          }}
-        >
-          <Ic svg={I.send} /> Trimite invitația
-        </button>
-      </div>
-
-      <div className="pad" style={sx('margin-top:16px')}>
-        <div className="row" style={sx('gap:10px')}>
-          {[
-            [aff.invited, 'Invitații trimise'],
-            [aff.friends.length, 'Au acceptat'],
-          ].map((s) => (
-            <div key={String(s[1])} className="card" style={sx('flex:1;text-align:center;padding:15px')}>
-              <div style={sx('font-size:22px;font-weight:600')}>{s[0]}</div>
-              <div className="muted" style={sx('font-size:10px;font-weight:500;text-transform:uppercase;margin-top:3px')}>
-                {s[1]}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="pad" style={sx('margin-top:20px')}>
-        <div className="h2" style={sx('font-size:15px;margin-bottom:10px')}>
-          Prietenii tăi
-        </div>
-        <div style={sx('display:flex;flex-direction:column;gap:10px')}>
-          {(aff.friends as [string, string, string][]).map((f) => (
-            <div key={f[0]} className="listitem">
-              <div style={sx('width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-4));display:grid;place-items:center;color:#fff;font-weight:600;font-size:12px')}>
-                {f[1]}
-              </div>
-              <div style={sx('flex:1')}>
-                <div style={sx('font-weight:600;font-size:13.5px')}>{f[0]}</div>
-                <div className="muted" style={sx('font-size:11px')}>
-                  {f[2]}
+          <div className="pad" style={sx('margin-top:16px')}>
+            <div className="row" style={sx('gap:10px')}>
+              {([
+                [real.invited.length, 'În așteptare'],
+                [real.friends.length, 'Au acceptat'],
+              ] as [number, string][]).map((st) => (
+                <div key={st[1]} className="card" style={sx('flex:1;text-align:center;padding:15px')}>
+                  <div style={sx('font-size:22px;font-weight:600')}>{st[0]}</div>
+                  <div className="muted" style={sx('font-size:10px;font-weight:500;text-transform:uppercase;margin-top:3px')}>
+                    {st[1]}
+                  </div>
                 </div>
-              </div>
-              <span className="badge" style={sx('background:var(--green-soft);color:var(--green-2)')}>
-                prieten
-              </span>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="pad" style={sx('margin-top:18px')}>
-        <div className="between" style={sx('margin-bottom:10px')}>
-          <div className="h2" style={sx('font-size:15px')}>
-            Prietenii prietenilor
           </div>
-          <span className="muted" style={sx('font-size:11px;font-weight:600')}>
-            rețeaua ta extinsă
-          </span>
-        </div>
-        <div style={sx('display:flex;flex-direction:column;gap:10px')}>
-          {(aff.fof as [string, string, string][]).map((f) => (
-            <div key={f[0]} className="listitem" style={sx('opacity:.9')}>
-              <div style={sx('width:38px;height:38px;border-radius:12px;background:var(--surface-3);display:grid;place-items:center;color:var(--muted);font-weight:600;font-size:12px')}>
-                {f[1]}
+
+          {real.friends.length ? (
+            <div className="pad" style={sx('margin-top:20px')}>
+              <div className="h2" style={sx('font-size:15px;margin-bottom:10px')}>
+                Prietenii tăi
               </div>
-              <div style={sx('flex:1')}>
-                <div style={sx('font-weight:500;font-size:13px')}>{f[0]}</div>
-                <div className="muted" style={sx('font-size:11px')}>
-                  {f[2]}
-                </div>
+              <div style={sx('display:flex;flex-direction:column;gap:10px')}>
+                {real.friends.map((f) => (
+                  <div key={f.id} className="listitem">
+                    <div style={sx('width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--indigo-2),var(--indigo-4));display:grid;place-items:center;color:#fff;font-weight:600;font-size:12px')}>
+                      {f.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+                    </div>
+                    <div style={sx('flex:1;min-width:0')}>
+                      <div style={sx('font-weight:600;font-size:13.5px')}>{f.name}</div>
+                    </div>
+                    <span className="badge" style={sx('background:var(--green-soft);color:var(--green-2)')}>
+                      prieten
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-        <div className="muted" style={sx('font-size:11px;text-align:center;margin-top:12px;line-height:1.5')}>
-          Când adaugi beneficiari la checkout sau cineva folosește codul tău, îi păstrăm în rețeaua ta. 💜
-        </div>
-      </div>
+          ) : null}
+
+          {/* Invitatiile trimise si neacceptate inca. Aici era „Prietenii
+              prietenilor" — o retea extinsa pe care serverul n-o calculeaza si
+              n-o expune nicaieri; erau trei nume scrise in prototip. */}
+          {real.invited.length ? (
+            <div className="pad" style={sx('margin-top:20px')}>
+              <div className="h2" style={sx('font-size:15px;margin-bottom:10px')}>
+                Invitații trimise
+              </div>
+              <div style={sx('display:flex;flex-direction:column;gap:10px')}>
+                {real.invited.map((iv) => (
+                  <div key={iv.email} className="listitem" style={sx('opacity:.9')}>
+                    <div style={sx('width:38px;height:38px;border-radius:12px;background:var(--surface-3);display:grid;place-items:center;color:var(--muted)')}>
+                      <Ic svg={I.mail} />
+                    </div>
+                    <div style={sx('flex:1;min-width:0')}>
+                      <div style={sx('font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                        {iv.email}
+                      </div>
+                    </div>
+                    <span className="badge">așteaptă</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {!real.friends.length && !real.invited.length ? (
+            <div className="pad" style={sx('margin-top:20px')}>
+              <div className="muted" style={sx('font-size:12px;text-align:center;line-height:1.55')}>
+                Încă n-ai invitat pe nimeni. Trimite codul de mai sus — când cineva îl folosește, apare aici. 💜
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
       <div style={sx('height:14px')} />
       <BottomNav active="profile" />
     </div>

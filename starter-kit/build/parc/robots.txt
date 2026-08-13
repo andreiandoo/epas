@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://parc.tixello.ro/sitemap.xml
