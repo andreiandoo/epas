@@ -116,10 +116,10 @@ export function AppBottomNav() {
 
   const items: [id: string, icon: string, label: string][] = [
     ['home', I.nhome, 'Acasă'],
-    ['tickets', I.nticket, 'Bilete'],
     ['ticslist', I.nexplore, 'Radar'],
-    ['wallet', I.nscan, 'Portofel'],
-    ['profile', I.nprofile, 'Profil'],
+    ['shorts', I.wave, 'Pe val'],
+    ['tickets', I.nticket, 'Biletele mele'],
+    ['profile', I.nprofile, 'Contul meu'],
   ];
 
   return (

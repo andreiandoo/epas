@@ -44,7 +44,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
   const token = getAppToken();
 
   if (!token) {
-    return { ok: false, error: { code: 'no_account', message: 'Intră în contul Tics ca să cumperi bilete.' } };
+    return { ok: false, error: { code: 'no_account', message: 'Intră în contul tics ca să cumperi bilete.' } };
   }
 
   try {

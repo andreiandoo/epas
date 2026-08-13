@@ -229,10 +229,13 @@ const short = (id, title, likes) => ({
      34px pentru text si 32 pentru rail. Verificam ca ambele stau pe ea. */
   check('blocul de text sta pe linia comuna', geom.infoGap >= 45, `${Math.round(geom.infoGap)}px de jos`);
   check('rail-ul sta pe linia comuna', geom.railGap >= 43, `${Math.round(geom.railGap)}px de jos`);
+  /* „Pe val" e acum tab, deci bara ramane vizibila peste feed, iar comenzile
+     short-ului trebuie sa stea DEASUPRA ei — nu aliniate cu ea, cum era cand
+     bara se ascundea aici. */
   check(
-    'bara de jos e aliniata cu comenzile din shorts',
-    Math.abs(geom.navGap - geom.railGap) <= 1,
-    `nav ${Math.round(geom.navGap)}px vs rail ${Math.round(geom.railGap)}px`,
+    'comenzile din shorts stau deasupra barei de jos',
+    geom.railGap > geom.navGap + 40,
+    `rail ${Math.round(geom.railGap)}px vs nav ${Math.round(geom.navGap)}px`,
   );
 
   /* ---------- 3b. titlul lung se micsoreaza, descrierea se plieaza ---------- */

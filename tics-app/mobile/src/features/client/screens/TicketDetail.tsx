@@ -279,7 +279,7 @@ export function Transfer({ id, pi }: { id?: string; pi?: number }) {
           <div className="label">Cui trimiți?</div>
           <div className="scroll-x" style={sx('padding:0 0 4px;margin:0 0 8px')}>
             <button className="chip ind on">📱 Telefon / email</button>
-            <button className="chip">👥 Contacte Tics</button>
+            <button className="chip">👥 Contacte tics</button>
           </div>
           <div className="field">
             <Ic svg={I.user} />

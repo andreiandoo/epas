@@ -17,6 +17,7 @@ import { SafeTop } from '../kit';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
 import { customerLogin } from '../../../api/customer';
+import { appLogin } from '../../../api/orgApp';
 import type { IdentityKind } from '../../../api/client';
 
 type Ev = Record<string, any>;
@@ -49,9 +50,9 @@ export function Splash({ onDone }: { onDone: () => void }) {
       <span className="spark" style={sx('bottom:22%;right:22%;animation-delay:1.8s')}>✧</span>
       <div className="core">
         <div className="mark">
-          <Raw html={ticsMark('#fff', 52)} />
+          <Raw html={ticsMark('#fff', 72)} />
         </div>
-        <div className="wm">Tics</div>
+        <div className="wm">tics</div>
         <div className="tl">Evenimente, experiențe & cashless.</div>
       </div>
       <div className="prog">
@@ -101,7 +102,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <SafeTop />
       <div className="between pad" style={sx('padding-top:4px')}>
         <div className="row" style={sx('gap:6px;font-weight:600;font-size:16px;color:var(--ink)')}>
-          <Raw html={ticsMark('var(--indigo-2)', 18)} /> Tics
+          <Raw html={ticsMark('var(--indigo-2)', 26)} /> tics
         </div>
         <button className="chip" onClick={onDone} style={sx('border:0;background:transparent;color:var(--muted)')}>
           Sari peste
@@ -219,6 +220,12 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
         return;
       }
 
+      /* Aceleasi credentiale, si pentru contul tics: prietenii si cumpararea
+         merg pe el, iar fara asta te autentificai cu succes si ecranul de
+         prieteni iti spunea in continuare „Intră în contul tics". Esecul e
+         tacut — n-ar avea ce sa faca omul cu eroarea in acel moment. */
+      void appLogin(email.trim(), pass);
+
       /* Un client REAL intra direct in aplicatie, nu in ecranul de alegere.
          Inainte se chema `login(identityFor(email))` indiferent de rezultat,
          iar `identityFor` deduce tipul contului din PREFIXUL adresei — o regula
@@ -241,7 +248,7 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
         <SafeTop />
         <div style={sx('position:relative;padding:20px 24px 0')}>
           <div style={sx('width:50px;height:50px;border-radius:16px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;backdrop-filter:blur(8px)')}>
-            <Raw html={ticsMark('#fff', 28)} />
+            <Raw html={ticsMark('#fff', 40)} />
           </div>
           <div style={sx('font-size:25px;font-weight:600;letter-spacing:-.03em;margin-top:14px')}>Bine ai revenit 👋</div>
           <div style={sx('font-size:13.5px;color:rgba(255,255,255,.82);margin-top:4px')}>

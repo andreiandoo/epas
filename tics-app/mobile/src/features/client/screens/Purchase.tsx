@@ -77,9 +77,9 @@ export function cartCompute(evId: string) {
   /* COMISIONUL nu mai e 2% fix.
      Fiecare eveniment isi poarta regula (`_pricing`, de la server):
        - eveniment de MARKETPLACE -> comisionul marketplace-ului, in modul lui.
-         Tics nu mai adauga nimic: isi ia partea de la marketplace, iar un al
+         tics nu mai adauga nimic: isi ia partea de la marketplace, iar un al
          doilea comision ar taxa cumparatorul de doua ori pentru acelasi bilet;
-       - eveniment de TENANT -> comisionul Tics, adaugat peste pret.
+       - eveniment de TENANT -> comisionul tics, adaugat peste pret.
      `included` inseamna ca e deja in pretul afisat, deci pentru cumparator
      linia e zero — nu o ascundem, o aratam ca „inclus".
      Pe evenimentele demo, unde nu exista `_pricing`, ramane 2% ca in prototip. */
@@ -636,7 +636,7 @@ export function Cart() {
       customer: {
         email: customer?.email ?? '',
         first_name: first || 'Client',
-        last_name: rest.join(' ') || 'Tics',
+        last_name: rest.join(' ') || 'tics',
         phone: customer?.phone ?? undefined,
       },
     });
@@ -874,7 +874,7 @@ export function Cart() {
               <Ic svg={I.wallet} />
             </div>
             <div style={sx('flex:1')}>
-              <div style={sx('font-weight:500;font-size:13px')}>Portofel Tics</div>
+              <div style={sx('font-weight:500;font-size:13px')}>Portofel tics</div>
               <div className="muted" style={sx('font-size:11px')}>
                 Sold {lei(useClient.getState().balance)} lei
               </div>
@@ -893,11 +893,11 @@ export function Cart() {
             <span style={sx('font-weight:500')}>{c.subtotal} lei</span>
           </div>
           {/* Cine ia comisionul si cat — scris exact, nu „2%" fix: pe un
-              eveniment de marketplace comisionul e al lor, iar Tics nu mai
+              eveniment de marketplace comisionul e al lor, iar tics nu mai
               adauga nimic peste. */}
           <div className="between" style={sx('padding:5px 0')}>
             <span className="muted" style={sx('font-size:13px')}>
-              {c.pricing.source === 'marketplace' ? 'Taxă de serviciu' : 'Taxă Tics'} ({c.pricing.rate}%)
+              {c.pricing.source === 'marketplace' ? 'Taxă de serviciu' : 'Taxă tics'} ({c.pricing.rate}%)
             </span>
             <span style={sx('font-weight:500')}>
               {c.feeIncluded ? 'inclusă în preț' : `${lei(c.fee)} lei`}

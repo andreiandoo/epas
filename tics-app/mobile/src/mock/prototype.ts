@@ -44,17 +44,17 @@ export const VEN={
     swan:{id:'swan',t:'Lacul Lebedelor',s:'Lacul Lebedelor',type:'event',cat:'Teatru',city:'Cluj',ven:'sala',d:'18 Apr',mon:'Apr',day:'18',time:'19:00',from:80,tone:'linear-gradient(150deg,#2a2150,#7c3aed)',g:'🩰',rat:'4.9',by:'Teatrul Național',
       artists:[],gallery:['linear-gradient(135deg,#7c3aed,#2a2150)'],video:false,friends:[],seatmap:true,
       tt:[{n:'Parter',desc:'Rândurile 1–10, vizibilitate optimă.',p:120,pts:120,seat:true},{n:'Balcon',desc:'Etaj, vedere de ansamblu.',p:80,pts:80,seat:true}],bundles:[]},
-    salina:{id:'salina',t:'Salina Turda — Tur & Agrement',s:'Salina Turda',type:'experience',cat:'Experiențe',city:'Turda',ven:'turda',d:'Zilnic',mon:'',day:'',time:'09–17',from:35,tone:'linear-gradient(150deg,#0f4c4a,#12b3a6)',g:'⛰',rat:'4.8',by:'Experiență Tics',
+    salina:{id:'salina',t:'Salina Turda — Tur & Agrement',s:'Salina Turda',type:'experience',cat:'Experiențe',city:'Turda',ven:'turda',d:'Zilnic',mon:'',day:'',time:'09–17',from:35,tone:'linear-gradient(150deg,#0f4c4a,#12b3a6)',g:'⛰',rat:'4.8',by:'Experiență tics',
       artists:[],gallery:['linear-gradient(135deg,#12b3a6,#0f4c4a)','linear-gradient(135deg,#0f766e,#134e4a)'],video:true,friends:['AP'],seatmap:false,
       tt:[{n:'Bilet Adult',desc:'Acces salină + roată panoramică + barcă pe lac subteran.',p:50,pts:50,seat:false},{n:'Bilet Copil',desc:'5–14 ani. Sub 5 ani gratuit.',p:35,old:40,pts:35,seat:false},{n:'Family Pass',desc:'2 adulți + 2 copii.',p:140,old:170,pts:140,seat:false}],bundles:[]},
-    atv:{id:'atv',t:'ATV Adventure în Apuseni',s:'ATV Adventure',type:'experience',cat:'Experiențe',city:'Apuseni',ven:'turda',d:'Weekend',mon:'',day:'',time:'2h',from:180,tone:'linear-gradient(150deg,#7c3a12,#d97706)',g:'🏍',rat:'4.9',by:'Experiență Tics',
+    atv:{id:'atv',t:'ATV Adventure în Apuseni',s:'ATV Adventure',type:'experience',cat:'Experiențe',city:'Apuseni',ven:'turda',d:'Weekend',mon:'',day:'',time:'2h',from:180,tone:'linear-gradient(150deg,#7c3a12,#d97706)',g:'🏍',rat:'4.9',by:'Experiență tics',
       artists:[],gallery:['linear-gradient(135deg,#d97706,#7c3a12)'],video:false,friends:[],seatmap:false,
       tt:[{n:'ATV Single',desc:'Un ATV, o persoană, ghid inclus.',p:220,pts:220,seat:false},{n:'ATV Duo',desc:'Un ATV, două persoane.',p:180,pts:180,seat:false}],bundles:[]},
-    wine:{id:'wine',t:'Wine Tasting la Jidvei',s:'Wine Tasting',type:'experience',cat:'Experiențe',city:'Alba',ven:'turda',d:'Vineri',mon:'',day:'',time:'3h',from:90,tone:'linear-gradient(150deg,#5b1f3a,#a83e6a)',g:'🍷',rat:'4.7',by:'Experiență Tics',
+    wine:{id:'wine',t:'Wine Tasting la Jidvei',s:'Wine Tasting',type:'experience',cat:'Experiențe',city:'Alba',ven:'turda',d:'Vineri',mon:'',day:'',time:'3h',from:90,tone:'linear-gradient(150deg,#5b1f3a,#a83e6a)',g:'🍷',rat:'4.7',by:'Experiență tics',
       artists:[],gallery:['linear-gradient(135deg,#a83e6a,#5b1f3a)'],video:false,friends:['DL'],seatmap:false,
       tt:[{n:'Degustare 5 vinuri',desc:'Cu platou de brânzeturi.',p:120,pts:120,seat:false},{n:'Degustare 3 vinuri',desc:'Introducere ghidată.',p:90,pts:90,seat:false}],bundles:[]},
   };
-  // Radar — Tics urmărește piața și te trimite la cea mai bună ofertă (linkuri, nu vinde direct)
+  // Radar — tics urmărește piața și te trimite la cea mai bună ofertă (linkuri, nu vinde direct)
   export const TICS={
     smiley:{id:'smiley',s:'Smiley Live',cat:'Concerte',city:'Arad',venName:'Arena Arad',addr:'Str. Iuliu Maniu 1',day:'02',mon:'Mai',time:'20:00',tone:'linear-gradient(150deg,#4c1d95,#a78bfa)',g:'🎙',stock:'40+',rat:'4.8',
       desc:'Smiley revine live cu band complet, un show de peste 2 ore cu toate hiturile și surprize de scenă. O seară de pop românesc la cel mai înalt nivel.',

@@ -38,7 +38,7 @@ const DEMO_PROPERTIES: Property[] = [
     kind: 'client',
     key: 'client',
     name: 'Andrei Popescu',
-    sub: 'Cont client Tics',
+    sub: 'Cont client tics',
     email: 'andrei@tics.ro',
     icon: 'user',
     av: 'purple',

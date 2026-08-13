@@ -1,5 +1,5 @@
 /* =========================================================
-   Marca „Tics".
+   Marca „tics".
 
    Extrasa din elements/icons/icon-white-1024.svg, FARA dreptunghiul de fundal:
    in aplicatie glifa sta peste fundaluri diferite (gradient de login, card alb,

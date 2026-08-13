@@ -1,11 +1,11 @@
 /* =========================================================
-   API-ul de ORGANIZATOR al aplicației Tics (/api/app/org/*).
+   API-ul de ORGANIZATOR al aplicației tics (/api/app/org/*).
 
    Aplicatia nu vorbeste direct cu lumea partenerului si NU are cheia lui de
    API: o cheie compilata in APK se poate extrage din fisier. Serverul e cel
    care tine cheile si ruteaza spre lumea in care traieste organizatorul.
 
-   Tokenul de sesiune e al contului Tics, nu al partenerului.
+   Tokenul de sesiune e al contului tics, nu al partenerului.
    ========================================================= */
 import { anchorFromResponse } from '../offline/clock';
 import type { CachedTicket } from '../offline/db';
@@ -237,4 +237,40 @@ export async function posSale(payload: {
 
   if (!r) return { ok: false, error: 'Nu am putut contacta serverul.' };
   return r.success ? { ok: true, sale: r.data } : { ok: false, error: r.error ?? 'Vânzare eșuată.' };
+}
+
+/**
+ * Autentificare in contul tics al aplicatiei (`/api/app/auth/login`).
+ *
+ * DE CE EXISTA DOUA AUTENTIFICARI
+ * Ecranele de cont (bilete, portofel, comenzi) merg pe contul de CLIENT al
+ * platformei; prietenii si cumpararea merg pe contul TICS, care traverseaza
+ * toate marketplace-urile. Sunt doua sisteme reale, nu o scapare de design.
+ *
+ * Utilizatorul nu trebuie insa sa se autentifice de doua ori cu aceleasi date.
+ * Dupa un login de client reusit incercam, tacut, si contul tics cu ACELEASI
+ * credentiale. Daca exista, ecranul de prieteni functioneaza imediat; daca nu,
+ * nu se intampla nimic si nu apare nicio eroare — n-ar avea ce sa faca omul cu
+ * ea in acel moment.
+ */
+export async function appLogin(email: string, password: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${APP_API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) return false;
+
+    const body = (await res.json()) as { success?: boolean; data?: { token?: string } };
+
+    if (!body?.success || !body.data?.token) return false;
+
+    setAppToken(body.data.token);
+
+    return true;
+  } catch {
+    return false;
+  }
 }

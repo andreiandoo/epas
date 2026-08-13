@@ -284,7 +284,7 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
         track({ short_id: short.id, type: 'share', feed });
       }
 
-      const title = short.title ?? 'Tics';
+      const title = short.title ?? 'tics';
 
       // Web Share API cand exista (Capacitor o expune in WebView), altfel
       // clipboard. Fara plugin nativ suplimentar in aceasta faza.

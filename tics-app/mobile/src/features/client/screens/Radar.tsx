@@ -48,7 +48,7 @@ const dayLabel = (day?: number) => {
 };
 
 export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; type?: string; catKey?: string; day?: number }) {
-  const { go, back } = useNav();
+  const { go, back, stack } = useNav();
   const city = useClient((s) => s.city);
   const setCity = useClient((s) => s.setCity);
   const f = useClient((s) => s.radarF);
@@ -92,9 +92,14 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
     <div className="grid" style={sx('min-height:100%')}>
       <TopBar>
         <div className="row" style={sx('gap:12px')}>
-          <div className="icon-btn" onClick={back}>
-            <Ic svg={I.back} />
-          </div>
+          {/* Back-ul apare DOAR cand chiar exista unde te intoarce. Radarul e
+              acum tab in bara de jos, deci intrarea obisnuita nu lasa nimic in
+              stiva — iar o sageata care nu face nimic e mai rea decat lipsa ei. */}
+          {stack.length > 1 ? (
+            <div className="icon-btn" onClick={back}>
+              <Ic svg={I.back} />
+            </div>
+          ) : null}
           <div>
             <div className="h2">{cat ?? 'Radar'}</div>
             <div className="muted" style={sx('font-size:11.5px')}>

@@ -1,7 +1,7 @@
 /* =========================================================
    RAPOARTE (§6.4) — doar admin. Rata check-in, total vandute,
    ora de varf, performanta pe tip bilet, distributie orara,
-   card „Decontare & payout" (comision Tics 3%, Stripe Connect T+3),
+   card „Decontare & payout" (comision tics 3%, Stripe Connect T+3),
    export CSV.
    ========================================================= */
 import { Button, Card, Icon, money } from '../../design/components';
@@ -165,7 +165,7 @@ export function Reports() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
           <span className="muted" style={{ fontSize: 13.5 }}>
-            Comision Tics ({COMMISSION_PCT}%)
+            Comision tics ({COMMISSION_PCT}%)
           </span>
           <b style={{ fontSize: 13.5, color: 'var(--danger)' }}>− {money(commission)}</b>
         </div>

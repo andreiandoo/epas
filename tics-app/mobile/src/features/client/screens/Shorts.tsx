@@ -17,6 +17,7 @@ import { ART, EV, I, VEN, bgv, galFor, money, poster } from '../../../mock/proto
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { LiveShorts } from '../shorts/LiveShorts';
+import { BottomNav } from '../kit';
 import { useHorizontalSwipe } from '../shorts/useHorizontalSwipe';
 
 type Ev = Record<string, any>;
@@ -94,7 +95,16 @@ function Act({ children, label, onClick }: { children: React.ReactNode; label?: 
 }
 
 export function Shorts() {
-  return <LiveShorts feed="for_you" fallback={<PrototypeShorts />} />;
+  return (
+    <>
+      <LiveShorts feed="for_you" fallback={<PrototypeShorts />} />
+      {/* „Pe val" e acum tab in bara de jos, deci bara ramane vizibila peste
+          feed — ca la orice aplicatie de video vertical. Comenzile short-ului
+          urca deasupra ei prin `--ep-nav-space` (shorts.css); fara asta,
+          butonul de bilete ar fi stat exact sub bara. */}
+      <BottomNav active="shorts" />
+    </>
+  );
 }
 
 /** Feed-ul din prototip — fallback cand EPAS n-are inca short-uri publicate. */

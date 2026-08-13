@@ -37,9 +37,12 @@ export function Wallet() {
         <SafeTop />
         <div className="hrow">
           <div className="row" style={sx('gap:12px;min-width:0')}>
-            <div className="icon-btn" onClick={sback}>
-              <Ic svg={I.back} />
-            </div>
+            {/* Vezi Radar: fara ecran anterior nu se deseneaza nicio sageata. */}
+            {stack.length > 1 ? (
+              <div className="icon-btn" onClick={sback}>
+                <Ic svg={I.back} />
+              </div>
+            ) : null}
             <div>
               <div className="eyebrow">Cashless</div>
               <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
@@ -99,7 +102,7 @@ export function Wallet() {
             <Ic svg={I.star} />
           </div>
           <div style={sx('flex:1')}>
-            <div style={sx('font-weight:600;font-size:14px')}>{livePoints} puncte Tics</div>
+            <div style={sx('font-weight:600;font-size:14px')}>{livePoints} puncte tics</div>
             <div className="muted" style={sx('font-size:11.5px')}>
               Convertești în reduceri la bilete
             </div>

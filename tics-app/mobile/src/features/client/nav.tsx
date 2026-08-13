@@ -18,7 +18,7 @@ export type Frame = { id: string; data?: Record<string, unknown>; key: number };
 /* Ecranele care se inlocuiesc intre ele in bara de jos. „ticslist" (Radar) a
    intrat aici odata cu mutarea lui in bara: fara asta, un tap pe Radar ar fi
    stivuit ecrane la nesfarsit in loc sa comute intre taburi. */
-export const TAB_SCREENS = ['home', 'explore', 'ticslist', 'tickets', 'wallet', 'profile'];
+export const TAB_SCREENS = ['home', 'explore', 'ticslist', 'shorts', 'tickets', 'wallet', 'profile'];
 
 /** Durata tranzitiei din client.css (.screen { transition: ... .4s }). */
 const EXIT_MS = 420;

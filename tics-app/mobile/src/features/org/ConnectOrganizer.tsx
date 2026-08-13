@@ -74,7 +74,7 @@ export function ConnectOrganizer({
       <div>
         <div className="h1">Conectează-ți contul</div>
         <div className="sub" style={{ marginTop: 4, lineHeight: 1.5 }}>
-          Ai deja evenimente la un partener Tics? Autentifică-te cu contul de organizator
+          Ai deja evenimente la un partener tics? Autentifică-te cu contul de organizator
           de acolo — evenimentele, porțile și echipa vin automat.
         </div>
       </div>

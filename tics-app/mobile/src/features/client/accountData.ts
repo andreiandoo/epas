@@ -65,25 +65,37 @@ function fmtDate(iso: string | null): string {
 export function groupTickets(list: ApiTicket[]): TicketGroup[] {
   const byKey = new Map<string, TicketGroup>();
 
+  /* Ziua de azi, ca sa stim ce e „viitor". Serverul NU trimite un `is_upcoming`
+     — il calculam noi din data evenimentului. */
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   for (const t of list) {
-    const key = String(t.event_id ?? `order-${t.order_id ?? 'x'}`);
+    /* Gruparea se face pe SLUG-ul evenimentului: raspunsul nu poarta id-ul lui.
+       Fara slug, biletul isi tine propriul rand — mai bine un card in plus decat
+       doua evenimente diferite amestecate sub acelasi titlu. */
+    const key = t.event_slug ?? `ticket-${t.id}`;
+    const when = t.date ? new Date(t.date) : null;
+
     let g = byKey.get(key);
     if (!g) {
       g = {
         ev: key,
-        title: t.event ?? 'Bilet',
+        title: t.event_name ?? 'Bilet',
         venue: t.venue ?? '',
         date: fmtDate(t.date),
-        time: (t.time ?? '').slice(0, 5),
+        time: when && !Number.isNaN(when.getTime()) && when.getUTCHours() + when.getUTCMinutes() > 0
+          ? `${String(when.getUTCHours()).padStart(2, '0')}:${String(when.getUTCMinutes()).padStart(2, '0')}`
+          : '',
         passes: [],
         seat: '',
-        cat: t.type ?? '',
-        upcoming: t.is_upcoming,
+        cat: t.ticket_type ?? '',
+        upcoming: when ? when >= today : true,
         live: true,
       };
       byKey.set(key, g);
     }
-    g.passes.push({ name: t.type ?? 'Bilet', code: t.code });
+    g.passes.push({ name: t.ticket_type ?? 'Bilet', code: t.code });
     if (t.seat_label) g.seat = g.seat ? `${g.seat}, ${t.seat_label}` : t.seat_label;
   }
 
@@ -339,9 +351,12 @@ export function useWallet() {
 
       setTx(
         orders.map((o) => ({
-          title: o.reference ? `Comanda ${o.reference}` : `Comanda #${o.id}`,
-          when: o.created_at ? new Date(o.created_at).toLocaleDateString('ro-RO') : '',
-          amount: `-${(o.total ?? 0).toFixed(2).replace('.', ',')}`,
+          title: o.order_number ? `Comanda ${o.order_number}` : `Comanda #${o.id}`,
+          /* `date` vine deja formatata de server („08 Aug 2026"); n-o mai
+             reformatam, ca sa nu ajungem cu doua formate diferite in acelasi
+             ecran cand serverul isi schimba locale-ul. */
+          when: o.date ?? '',
+          amount: `-${String(o.total ?? '0').replace('.', ',')}`,
           credit: false,
         })),
       );

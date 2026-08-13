@@ -3,7 +3,7 @@
    vizibil acolo.
 
    Hook separat de `catalogData`, desi tot despre un eveniment e vorba: astea
-   cer cont Tics si se schimba des (cineva tocmai a cumparat), pe cand fisa
+   cer cont tics si se schimba des (cineva tocmai a cumparat), pe cand fisa
    evenimentului e publica si se cacheaza. Amestecate, ori am fi cachea-t ceva
    ce trebuie proaspat, ori am fi cerut din nou ceva ce nu se schimba.
    ========================================================= */
@@ -17,7 +17,7 @@ export function useEventFriends(eventId: number | null) {
     if (!eventId || !Number.isFinite(eventId)) return;
 
     const r = await fetchEventFriends(eventId);
-    /* Esecul e tacut prin design: fara cont Tics raspunsul e o eroare, iar
+    /* Esecul e tacut prin design: fara cont tics raspunsul e o eroare, iar
        un eveniment nu trebuie sa arate un bloc de eroare pentru o functie
        optionala. */
     if (r.ok) setData(r.data);

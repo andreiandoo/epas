@@ -84,14 +84,14 @@
   right: 74px;
   /* +2px fata de linia comuna: blocul de text are un descendent mai jos decat
      rail-ul, iar la aceeasi valoare parea cu un fir mai jos decat el. */
-  bottom: calc(var(--ep-bottom-line) + 2px);
+  bottom: calc(var(--ep-nav-space) + 2px);
   z-index: 5;
 }
 
 .app-client .shchrome .rail {
   position: absolute;
   right: 16px;
-  bottom: var(--ep-bottom-line);
+  bottom: var(--ep-nav-space);
   width: 42px;
   display: flex;
   flex-direction: column;

@@ -99,9 +99,10 @@ const check = (name, ok, extra = '') => {
   /* ---------- 3. filtrele Radar ---------- */
   const titlesNow = () =>
     page.evaluate(() => [...document.querySelectorAll('.mcard.radar .ctitle')].map((e) => e.textContent));
-  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Acasă"]')?.click());
-  await wait(1000);
-  await clickText('Vezi tot');
+  /* Radarul are acum intrare proprie in bara de jos; „Vezi tot" de pe Acasa
+     duce in alta parte de cand ecranul a fost restructurat. */
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Radar"]')?.click());
+  await wait(1200);
   // lista porneste goala (fara date demo), deci asteptam cardurile reale
   await page.waitForFunction(() => document.querySelectorAll('.mcard.radar').length > 0, { timeout: 40000 }).catch(() => {});
   await wait(1200);
@@ -156,7 +157,7 @@ const check = (name, ok, extra = '') => {
   /* Dupa eticheta, nu dupa index: bara are acum cinci intrari si alta ordine,
      iar un index scris fix ar fi trimis testul in alt ecran la fiecare
      rearanjare. */
-  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Profil"]')?.click());
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Contul meu"]')?.click());
   await wait(1200);
   await page.evaluate(() => {
     const el = document.querySelectorAll('.screen');
@@ -187,7 +188,7 @@ const check = (name, ok, extra = '') => {
   /* ---------- preferintele se retin intre porniri ---------- */
   /* Profil -> Setări cont -> Preferințele mele. `.bnav .nav` are patru intrari
      (butonul din mijloc e `.fab`, nu `.nav`), deci profilul e ultima. */
-  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Profil"]')?.click());
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Contul meu"]')?.click());
   await wait(1000);
   const prefBefore = await page.evaluate(() => localStorage.getItem('tixello.prefs'));
   await clickText('Setări cont');
@@ -217,7 +218,7 @@ const check = (name, ok, extra = '') => {
   check('orasul ales e pastrat intre porniri', savedCity !== null, `„${savedCity}"`);
 
   /* ---------- ecranul de prieteni ---------- */
-  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Profil"]')?.click());
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Contul meu"]')?.click());
   await wait(900);
   const opened = await page.evaluate(() => {
     const el = [...document.querySelectorAll('.listitem')].find((e) => /Prietenii mei/.test(e.textContent ?? ''));
@@ -235,7 +236,7 @@ const check = (name, ok, extra = '') => {
      nu exista date demo, iar un ecran alb ar parea o eroare. */
   check(
     'fara cont, ecranul explica de ce e gol',
-    /Intră în contul Tics/.test(friendsScreen.body),
+    /Intră în contul tics/.test(friendsScreen.body),
     friendsScreen.body.slice(0, 90),
   );
 

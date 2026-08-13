@@ -176,7 +176,7 @@ export function Stay22({ id }: { id?: string }) {
             </div>
             {/* Obligatoriu, nu decorativ: linkurile de rezervare sunt afiliate. */}
             <div className="muted" style={sx('font-size:10px;text-align:center;margin-top:8px;line-height:1.5')}>
-              Rezervările se fac pe site-urile partenere. Tics poate primi un comision, fără cost suplimentar pentru tine.
+              Rezervările se fac pe site-urile partenere. tics poate primi un comision, fără cost suplimentar pentru tine.
             </div>
           </div>
         </>

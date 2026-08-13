@@ -720,7 +720,7 @@ export function SetBilling() {
       <div className="pad">
         {isCompany ? (
           <>
-            <Fld label="Denumire firmă" ph="ex: Tics SRL" />
+            <Fld label="Denumire firmă" ph="ex: tics SRL" />
             <Fld label="CUI / CIF" ph="RO12345678" />
             <Fld label="Nr. Reg. Comerțului" ph="J12/345/2020" />
             <Fld label="Bancă" ph="Denumirea băncii" />
@@ -887,13 +887,13 @@ function LegalPage({ title, intro, secs }: { title: string; intro: string; secs:
 export const SetTerms = () => (
   <LegalPage
     title="Termeni & condiții"
-    intro="Bine ai venit pe Tics. Prin folosirea aplicației ești de acord cu termenii de mai jos, care reglementează achiziția de bilete și accesul la evenimente și experiențe."
+    intro="Bine ai venit pe tics. Prin folosirea aplicației ești de acord cu termenii de mai jos, care reglementează achiziția de bilete și accesul la evenimente și experiențe."
     secs={[
       ['Contul tău', 'Ești responsabil de păstrarea în siguranță a datelor de acces. Un cont e personal și nu poate fi cedat altei persoane.'],
       ['Bilete & comenzi', 'Biletele emise sunt nominale și valabile doar pentru evenimentul indicat. Codul QR e unic — o singură scanare validă per bilet.'],
       ['Retururi', 'Politica de retur depinde de organizator. Pentru evenimente anulate, contravaloarea se restituie automat în portofel sau pe cardul folosit.'],
       ['Portofel cashless', 'Soldul din portofel poate fi folosit la evenimentele partenere. Sumele nefolosite pot fi retrase conform regulilor fiecărui organizator.'],
-      ['Răspundere', 'Tics e o platformă intermediară. Organizatorul rămâne responsabil de desfășurarea evenimentului.'],
+      ['Răspundere', 'tics e o platformă intermediară. Organizatorul rămâne responsabil de desfășurarea evenimentului.'],
     ]}
   />
 );
@@ -925,7 +925,7 @@ export function SetRate() {
         <div className="card" style={sx('padding:24px 18px;text-align:center')}>
           <div style={sx('font-size:52px')}>💜</div>
           <div className="h2" style={sx('font-size:17px;margin-top:10px')}>
-            Îți place Tics?
+            Îți place tics?
           </div>
           <div className="muted" style={sx('font-size:12.5px;line-height:1.5;margin-top:6px')}>
             Părerea ta ne ajută să creștem. Cât de mulțumit ești?

@@ -21,7 +21,7 @@ export function OrgAppbar() {
   return (
     <div className="appbar">
       <div className="brand">
-        <span className="brand-logo">Tics</span>
+        <span className="brand-logo">tics</span>
         <button className="brand-switch" onClick={() => openModal('switch')} type="button">
           <span className="nm">{orgName}</span>
           <Icon name="chev" size={15} />

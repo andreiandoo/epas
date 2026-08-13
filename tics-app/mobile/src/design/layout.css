@@ -10,6 +10,10 @@
    ========================================================= */
 :root {
   --ep-bottom-line: calc(var(--safe-bottom, 0px) + 45px);
+  /* Cat spatiu ocupa bara de jos, de la marginea ecranului in sus: linia
+     comuna + inaltimea barei + un respiro. Ecranele care deseneaza PESTE ea
+     (feed-ul de shorts) isi urca continutul cu atat. */
+  --ep-nav-space: calc(var(--ep-bottom-line) + 58px + 12px);
 }
 
 /* Fixa, nu lipita de ecran: e montata o singura data, in carcasa, si trebuie
@@ -49,8 +53,13 @@
 .app-client .bnav .nav.on {
   color: #fff;
 }
+/* Iconita si pastila se ridica IMPREUNA si cu ACEEASI valoare, altfel iconita
+   iese din patrat — se vedea imediat pe telefon. Pastila e centrata pe iconita
+   (margin = -jumatate din latime/inaltime, plus ridicarea), nu pozitionata
+   dupa ochi. Fara rama: bara are deja umbra proprie, iar un contur negru
+   desena un patrat in jurul patratului. */
 .app-client .bnav .nav.on svg {
-  transform: translateY(-16px) scale(1.12);
+  transform: translateY(-18px) scale(1.1);
   filter: none;
 }
 .app-client .bnav .nav.on::before {
@@ -58,15 +67,12 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 56px;
-  height: 56px;
-  /* -30px: aceeasi ridicare ca vechiul `.fab` (margin-top:-30px) */
-  margin: -58px 0 0 -28px;
-  border-radius: 19px;
+  width: 52px;
+  height: 52px;
+  margin: -44px 0 0 -26px;
+  border-radius: 17px;
   background: linear-gradient(135deg, var(--indigo), var(--indigo-3));
   box-shadow: var(--sh-p);
-  /* rama de culoarea barei, ca pastila sa para decupata din ea */
-  border: 4px solid #100d1c;
   animation: navpop .24s cubic-bezier(.3, 1.4, .4, 1);
 }
 @keyframes navpop {

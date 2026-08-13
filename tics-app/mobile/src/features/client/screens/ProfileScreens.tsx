@@ -8,7 +8,7 @@
      S.review   (1105)  formularul de recenzie (stele, taburi)
      S.notif    (1141)  notificari
    ========================================================= */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import {
   AFF,
@@ -29,6 +29,7 @@ import { BottomNav, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useFavorites, useNotifications, useReviews, useTickets, type SavedItem } from '../accountData';
+import { fetchFriends, inviteFriendByEmail } from '../../../api/friends';
 
 type Ev = Record<string, any>;
 const evOf = (id: string) => (EV as Record<string, Ev>)[id];
@@ -69,7 +70,7 @@ export function Points() {
           <div style={sx('position:absolute;right:-24px;top:-24px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08)')} />
           <div className="between">
             <div>
-              <div style={sx('font-size:11px;opacity:.8;font-weight:500')}>Puncte Tics</div>
+              <div style={sx('font-size:11px;opacity:.8;font-weight:500')}>Puncte tics</div>
               <div style={sx('font-size:34px;font-weight:600;margin-top:2px')}>
                 {cur} <span style={sx('font-size:15px;opacity:.7')}>pct</span>
               </div>
@@ -153,7 +154,27 @@ export function Points() {
 export function Invite() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
-  const aff = AFF as Ev;
+  const demoAff = AFF as Ev;
+
+  /* Codul si invitatiile REALE, din contul tics. Ecranul afisa datele demo
+     (cod „ANDREI2X", 12 invitati) inclusiv dupa autentificare — deci un cod pe
+     care nimeni nu-l putea folosi. Fara cont, ramane exemplul din prototip, ca
+     ecranul sa fie navigabil. */
+  const [real, setReal] = useState<{ code: string; url: string; invited: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchFriends().then((r) => {
+      if (!alive || !r.ok) return;
+      setReal({ code: r.data.invite_code, url: r.data.invite_url, invited: r.data.invited.length + r.data.friends.length });
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const aff = real ? { ...demoAff, code: real.code, url: real.url, invited: real.invited } : demoAff;
   const [email, setEmail] = useState('');
 
   return (
@@ -179,7 +200,7 @@ export function Invite() {
           <div style={sx('font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5')}>
             Prietenul primește <b>10 lei</b> la prima comandă.
             <br />
-            Iar rețeaua ta Tics crește cu fiecare invitație.
+            Iar rețeaua ta tics crește cu fiecare invitație.
           </div>
           <div
             style={sx('margin-top:16px;background:rgba(255,255,255,.14);border:1px dashed rgba(255,255,255,.4);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px')}
@@ -211,7 +232,26 @@ export function Invite() {
         <button
           className="cta"
           style={sx('margin-top:12px')}
-          onClick={() => showToast(email ? 'Invitație trimisă la ' + email : 'Completează un email')}
+          onClick={() => {
+            if (!email) {
+              showToast('Completează un email');
+
+              return;
+            }
+
+            /* Trimite CU ADEVARAT invitatia cand exista cont; altfel ramane
+               confirmarea din prototip. Un mesaj de succes pentru o invitatie
+               care n-a plecat e mai rau decat un refuz. */
+            if (real) {
+              void inviteFriendByEmail(email).then((r) =>
+                showToast(r.ok ? 'Invitație trimisă la ' + email : r.message),
+              );
+
+              return;
+            }
+
+            showToast('Invitație trimisă la ' + email);
+          }}
         >
           <Ic svg={I.send} /> Trimite invitația
         </button>

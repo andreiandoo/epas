@@ -7,17 +7,19 @@
      "Experiente" (banda verde) · card festival · "Radar" · bottom nav
    ========================================================= */
 import { Ic, sx } from '../../../design/sx';
-import { CATS, EV, FEST, I } from '../../../mock/prototype';
+import { CATS, EV, I } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
-import { eventBackground } from '../../../api/tenantClient';
-import { EvMini, ExpCard, FeaturedCard, RadarCard } from '../cards';
+import { EvMini } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { radarToUi, useRadarCities, useRadarList } from '../radarData';
 import { useCatalogEvents } from '../catalogData';
+import { useAccountStats, useTickets } from '../accountData';
+import { fetchFriends } from '../../../api/friends';
+import { useShortsPreview } from '../shorts/useShortsPreview';
 import { PickerSheet, type Option } from '../picker';
 import { useClient } from '../../../store/client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /* EV vine dintr-un dump verbatim (@ts-nocheck), deci fara index signature. */
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
@@ -29,11 +31,37 @@ export function Home() {
   const cities = useRadarCities();
   const [picker, setPicker] = useState(false);
   /* DOUA surse, in ordinea asta:
-       1. evenimentele NOASTRE — ale tenantilor si marketplace-urilor Tics.
+       1. evenimentele NOASTRE — ale tenantilor si marketplace-urilor tics.
           Au bilet in aplicatie, deci merg intotdeauna primele;
        2. Radarul TICS — acolo doar comparam preturi de pe alte platforme.
      Cate un singur apel de fiecare, nu unul pe sectiune: patru cereri ar
      insemna patru asteptari si patru ocazii de esec pe ecranul de pornire. */
+  const preview = useShortsPreview();
+  const { groups } = useTickets();
+  const stats = useAccountStats();
+  const localPoints = useClient((s) => s.points);
+  const points = stats?.points ?? localPoints;
+
+  /* Prietenii, pentru cardul de mai jos. Tace fara cont tics: `null` inseamna
+     „nu stim", si se afiseaza „—", nu zero — zero ar fi o afirmatie falsa. */
+  const [friends, setFriends] = useState<number | null>(null);
+  const [requests, setRequests] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchFriends().then((r) => {
+      if (!alive || !r.ok) return;
+      setFriends(r.data.friends.length);
+      setRequests(r.data.requests.length);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const upcoming = groups.filter((g) => g.upcoming && g.live);
+
   const mine = useCatalogEvents({ city: city || undefined, limit: 12 });
   const { items: radar, loading: radarLoading } = useRadarList({ limit: 14, city: city || undefined });
 
@@ -52,14 +80,7 @@ export function Home() {
      ce face aplicatia. */
   const live = pool.length > 0;
 
-  const f = live ? pool[0] : ev('coldplay');
   const forYou = live ? pool.slice(0, 6) : ['coldplay', 'celestial', 'swan'].map(ev);
-  const events = live
-    ? pool.filter((e) => e.type !== 'experience').slice(0, 8)
-    : ['coldplay', 'swan', 'celestial'].map(ev);
-  const exps = live
-    ? pool.filter((e) => e.type === 'experience').slice(0, 6)
-    : ['salina', 'atv', 'wine'].map(ev);
 
   return (
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
@@ -145,116 +166,132 @@ export function Home() {
         ))}
       </div>
 
+      {/* ---------- PENTRU TINE ----------
+          Singura banda de evenimente de pe Acasa. Inainte erau patru
+          („Pentru tine", „Evenimente", „Experiențe", „Radar") care afisau, in
+          mare, aceleasi evenimente din aceleasi surse — deci derulai mult ca sa
+          vezi de trei ori acelasi afis. Restul catalogului se ajunge din Radar
+          si din scurtaturi. */}
       <div className="sec">
-        <SecH icon="🤖" icbg="var(--indigo-soft)" iccol="var(--indigo-2)" title="Pentru tine" sub="Alese de AI pe gusturile tale" />
+        <SecH
+          icon="🤖"
+          icbg="var(--indigo-soft)"
+          iccol="var(--indigo-2)"
+          title="Pentru tine"
+          sub={city ? `În ${city}, pe gusturile tale` : 'Alese pe gusturile tale'}
+          more={['Vezi tot', () => go('category', { id: 'Toate' })]}
+        />
         <div className="rail">
           {forYou.map((e) => (
             <EvMini key={e.id} ev={e} />
           ))}
+          {!live && radarLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={`sk${i}`} className="mcard sk" style={sx('min-width:212px;height:268px')} />
+              ))
+            : null}
         </div>
       </div>
 
-      <div className="sec">
-        <SecH
-          icon={I.ticket}
-          icbg="var(--indigo-soft)"
-          iccol="var(--indigo-2)"
-          title="Evenimente"
-          sub="Concerte · teatru · festivaluri"
-          /* „Toate", nu „Concerte": sectiunea de deasupra amesteca toate
-             categoriile, deci „Vezi tot" trebuie sa duca la aceeasi lista
-             largita, nu la una singura, care mai era si goala. */
-          more={['Vezi tot', () => go('category', { id: 'Toate' })]}
-        />
-        <FeaturedCard ev={f} />
-        <div className="rail" style={sx('margin-top:13px')}>
-          {events.slice(1).map((e) => (
-            <EvMini key={e.id} ev={e} />
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="sec"
-        style={sx(
-          'padding:18px 0 20px;background:linear-gradient(180deg,rgba(34,197,94,.07),transparent 70%);border-top:1px solid var(--green-line)',
-        )}
-      >
-        <SecH
-          icon="⛰"
-          icbg="var(--green-soft)"
-          iccol="var(--green-2)"
-          title="Experiențe"
-          sub="Tururi · aventuri — alegi data ta"
-          more={['Vezi tot', () => go('category', { id: 'Experiențe' })]}
-        />
-        <div className="rail">
-          {exps.map((e) => (
-            <ExpCard key={e.id} ev={e} />
-          ))}
-        </div>
-      </div>
-
+      {/* ---------- PE VAL ----------
+          Ramane pe Acasa desi e si in bara: e cel mai bun mod de a descoperi
+          ceva nou, si merita o intrare care arata ce contine, nu doar o
+          iconita. */}
       <div className="pad sec tight">
-        <div className="mcard" onClick={() => go('festival')}>
-          <div className="cover" style={{ background: eventBackground(FEST as unknown as UiEvent), height: 172 }}>
-            <span className="em">🎪</span>
-            <div className="scrim" />
-            <div className="top">
-              <span className="gpill" style={sx('background:rgba(255,255,255,.2)')}>
-                ● În desfășurare
-              </span>
-              <span className="gpill amber">
-                <Ic svg={I.star} />
-                {FEST.rat}
-              </span>
+        <div className="wave" onClick={() => tab('shorts')} role="button" tabIndex={0}>
+          <div className="wave-bg" />
+          <div className="wave-stack" aria-hidden="true">
+            {(preview?.posters ?? []).map((src, i) => (
+              <span key={src} className={`wave-card p${i}`} style={{ backgroundImage: `url('${src}')` }} />
+            ))}
+          </div>
+          <div className="wave-text">
+            <div className="row" style={sx('gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9')}>
+              <Ic svg={I.wave} /> Pe val
             </div>
-            <div className="btm">
-              <div className="ctitle" style={sx('font-size:20px')}>
-                {FEST.t}
-              </div>
-              <div className="cmeta">
-                <span className="i">
-                  <Ic svg={I.cal} />
-                  <span>{FEST.d}</span>
-                </span>
-                <span className="i">
-                  <Ic svg={I.pin} />
-                  <span>Wonderland, Cluj</span>
-                </span>
-              </div>
-              <div className="row" style={sx('gap:7px;margin-top:11px')}>
-                <span className="gpill">🎪 Lineup 40+</span>
-                <span className="gpill">💳 Cashless</span>
-              </div>
+            <div style={sx('font-size:22px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.1')}>
+              Descoperă prin video
+            </div>
+            <div style={sx('font-size:12.5px;opacity:.88;margin-top:4px')}>
+              {preview ? `${preview.count}+ momente de la artiști și locații` : 'Scrolează evenimente ca la Shorts'}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="sec">
-        <SecH
-          icon={I.layers}
-          icbg="var(--cyan-soft)"
-          iccol="var(--cyan)"
-          title="Radar"
-          sub="Cel mai bun preț din toată piața"
-          more={['Vezi tot', () => go('ticslist')]}
-        />
-        <div className="rail">
-          {/* aceleasi date reale ca ecranul Radar (app.tics.ro), doar trei */}
-          {radar.map((t) => (
-            <RadarCard key={t.id} t={t} />
-          ))}
-          {radarLoading && !radar.length
-            ? Array.from({ length: 3 }).map((_, i) => (
+      {/* ---------- BILETELE TALE ----------
+          Doar cele care urmeaza. Un bilet de acum trei luni n-are ce cauta pe
+          ecranul de pornire; istoricul sta in „Biletele mele". */}
+      {upcoming.length ? (
+        <div className="sec">
+          <SecH
+            icon={I.ticket}
+            icbg="var(--green-soft)"
+            iccol="var(--green-2)"
+            title="Biletele tale"
+            sub={upcoming.length === 1 ? 'Urmează unul' : `Urmează ${upcoming.length}`}
+            more={['Vezi tot', () => tab('tickets')]}
+          />
+          <div className="pad" style={sx('display:flex;flex-direction:column;gap:10px')}>
+            {upcoming.slice(0, 2).map((g) => (
+              <div
+                key={g.ev}
+                className="listitem"
+                onClick={() => go('ticket', { id: g.ev })}
+                style={sx('cursor:pointer')}
+              >
                 <div
-                  key={`sk${i}`}
-                  className="mcard"
-                  style={sx('min-width:270px;height:212px;background:var(--surface-2);opacity:.6')}
-                />
-              ))
-            : null}
+                  style={sx('width:44px;height:44px;border-radius:14px;background:var(--green-soft);color:var(--green-2);display:grid;place-items:center;flex:none')}
+                >
+                  <Ic svg={I.ticket} />
+                </div>
+                <div style={sx('flex:1;min-width:0')}>
+                  <div style={sx('font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                    {g.title}
+                  </div>
+                  <div className="muted" style={sx('font-size:11.5px;margin-top:2px')}>
+                    {[g.date, g.time, g.venue].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                <span className="chip-mini">{g.passes.length} bilete</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ---------- PUNCTE + PRIETENI ----------
+          Doua carduri mici, unul langa altul: sunt scurtaturi catre contul tau,
+          nu continut de rasfoit, si n-au de ce sa ocupe cate un rand intreg. */}
+      <div className="pad sec tight">
+        <div className="row" style={sx('gap:11px;align-items:stretch')}>
+          <div
+            className="card"
+            onClick={() => go('points')}
+            style={sx('flex:1;padding:14px;cursor:pointer;background:linear-gradient(140deg,#3a2a08,#1a1526);border-color:rgba(245,158,11,.25)')}
+          >
+            <div className="row" style={sx('gap:7px;color:var(--amber);font-size:11px;font-weight:700')}>
+              <Ic svg={I.star} /> PUNCTE
+            </div>
+            <div style={sx('font-size:24px;font-weight:700;margin-top:6px;line-height:1')}>{points}</div>
+            <div className="muted" style={sx('font-size:11px;margin-top:3px')}>Vezi recompensele</div>
+          </div>
+
+          <div
+            className="card"
+            onClick={() => go('friends')}
+            style={sx('flex:1;padding:14px;cursor:pointer;background:linear-gradient(140deg,var(--indigo-soft),var(--surface-solid));border-color:var(--indigo-line)')}
+          >
+            <div className="row" style={sx('gap:7px;color:var(--indigo-2);font-size:11px;font-weight:700')}>
+              👥 PRIETENI
+            </div>
+            <div style={sx('font-size:24px;font-weight:700;margin-top:6px;line-height:1')}>
+              {friends === null ? '—' : friends}
+            </div>
+            <div className="muted" style={sx('font-size:11px;margin-top:3px')}>
+              {requests ? `${requests} cereri noi` : 'Invită și tu'}
+            </div>
+          </div>
         </div>
       </div>
 

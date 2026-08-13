@@ -158,18 +158,27 @@ export type AccountStats = {
   orders_count: number;
 };
 
+/**
+ * Forma REALA a biletului, verificata pe raspunsul serverului.
+ *
+ * Numele campurilor erau ghicite (`event`, `type`, `is_upcoming`) si niciunul
+ * nu exista: ecranul de bilete primea date corecte si le afisa goale, cu titlul
+ * „Bilet". Serverul da `event_name`, `ticket_type`, `venue`, `date` si NU
+ * spune daca biletul e viitor — se deduce din data.
+ */
 export type ApiTicket = {
+  id: number;
   code: string;
-  type: string | null;
+  qr_code: string | null;
+  event_name: string | null;
+  event_slug: string | null;
+  ticket_type: string | null;
+  status: string;
+  status_label: string | null;
   seat_label: string | null;
-  event_id: number | null;
-  event: string | null;
-  venue: string | null;
   date: string | null;
-  time: string | null;
-  is_upcoming: boolean;
-  order_id: number | null;
-  is_subscription: boolean;
+  venue: string | null;
+  order_number: string | null;
 };
 
 type Wrapped<T> = { success: boolean; data: T };
@@ -180,13 +189,16 @@ export const fetchStats = () =>
 export const fetchTickets = () =>
   call<Wrapped<ApiTicket[]>>('/tenant-client/account/tickets').then((r) => r?.data ?? null);
 
+/** Idem: `order_number`, `date` gata formatata, `total` ca SIR („80.00"). */
 export type ApiOrder = {
   id: number;
-  reference?: string | null;
+  order_number: string | null;
+  date: string | null;
+  total: string | number | null;
+  currency: string | null;
   status: string;
-  total?: number;
-  created_at?: string | null;
-  tickets_count?: number;
+  status_label: string | null;
+  items_count: number;
 };
 
 export const fetchOrders = () =>
