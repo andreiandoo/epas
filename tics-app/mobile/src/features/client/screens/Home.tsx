@@ -23,7 +23,7 @@ import { useState } from 'react';
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
 
 export function Home() {
-  const { go } = useNav();
+  const { go, tab } = useNav();
   const city = useClient((s) => s.city);
   const setCity = useClient((s) => s.setCity);
   const cities = useRadarCities();
@@ -122,14 +122,22 @@ export function Home() {
         >
           <Ic svg={I.wave} /> Pe val
         </button>
+        {/* „Descoperă" a iesit din bara de jos odata cu noua ordine (Acasa,
+            Bilete, Radar, Portofel, Profil). Ecranul exista in continuare si
+            tine „Alege un vibe", harta si zona Pe val — fara intrarea asta ar fi
+            ramas de neatins. */}
+        <button className="chip" onClick={() => tab('explore')}>
+          <Ic svg={I.search} /> Descoperă
+        </button>
         {(CATS as [string, string][]).map((c, i) => (
           <button
             key={c[0]}
             className={`chip ind ${i === 0 ? 'on' : ''}`}
             onClick={() => {
               if (i === 0) return;
-              if (c[0] === 'Festival') go('festival');
-              else go('category', { id: c[0] });
+              /* „Festival" ducea la pagina unui festival DEMO, nu la o
+                 categorie. Acum se comporta ca oricare alta pastila. */
+              go('category', { id: c[0] });
             }}
           >
             {c[1]} {c[0]}
@@ -153,7 +161,10 @@ export function Home() {
           iccol="var(--indigo-2)"
           title="Evenimente"
           sub="Concerte · teatru · festivaluri"
-          more={['Vezi tot', () => go('category', { id: 'Concerte' })]}
+          /* „Toate", nu „Concerte": sectiunea de deasupra amesteca toate
+             categoriile, deci „Vezi tot" trebuie sa duca la aceeasi lista
+             largita, nu la una singura, care mai era si goala. */
+          more={['Vezi tot', () => go('category', { id: 'Toate' })]}
         />
         <FeaturedCard ev={f} />
         <div className="rail" style={sx('margin-top:13px')}>

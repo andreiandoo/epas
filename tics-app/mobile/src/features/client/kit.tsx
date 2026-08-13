@@ -98,25 +98,44 @@ export function BottomNav({ active }: { active: string }) {
 }
 
 /** Bara propriu-zisa. Se monteaza o singura data, in carcasa. */
+/**
+ * Bara propriu-zisă. Se montează o singură dată, în carcasă.
+ *
+ * PASTILA RIDICATĂ ESTE A TABULUI ACTIV, nu a poziţiei din mijloc. Înainte,
+ * butonul central era mereu ridicat şi mereu acelaşi ecran, indiferent unde te
+ * aflai — deci accentul vizual nu spunea „eşti aici", ci doar „ăsta e butonul
+ * special". Acum se mută pe oricare tab atingi, iar cel din mijloc redevine o
+ * iconiţă obişnuită când nu e activ.
+ *
+ * Ordinea şi ecranele sunt cele cerute: Acasă, Bilete, Radar (mijloc), Portofel,
+ * Profil.
+ */
 export function AppBottomNav() {
   const { tab } = useNav();
   const { visible, active } = useBottomNavState();
 
-  const item = (id: string, icon: string) => (
-    <div className={cn('nav', active === id && 'on')} onClick={() => tab(id)}>
-      <Ic svg={icon} />
-    </div>
-  );
+  const items: [id: string, icon: string, label: string][] = [
+    ['home', I.nhome, 'Acasă'],
+    ['tickets', I.nticket, 'Bilete'],
+    ['ticslist', I.nexplore, 'Radar'],
+    ['wallet', I.nscan, 'Portofel'],
+    ['profile', I.nprofile, 'Profil'],
+  ];
 
   return (
     <div className={cn('bnav', !visible && 'hiddenbar')} aria-hidden={!visible}>
-      {item('home', I.nhome)}
-      {item('explore', I.nexplore)}
-      <div className={cn('fab', active === 'wallet' && 'on')} onClick={() => tab('wallet')}>
-        <Ic svg={I.nscan} />
-      </div>
-      {item('tickets', I.nticket)}
-      {item('profile', I.nprofile)}
+      {items.map(([id, icon, label]) => (
+        <div
+          key={id}
+          className={cn('nav', active === id && 'on')}
+          onClick={() => tab(id)}
+          role="button"
+          aria-label={label}
+          aria-current={active === id ? 'page' : undefined}
+        >
+          <Ic svg={icon} />
+        </div>
+      ))}
     </div>
   );
 }

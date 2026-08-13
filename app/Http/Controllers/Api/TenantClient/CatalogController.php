@@ -80,7 +80,7 @@ class CatalogController extends Controller
                si poate fi jsonb pe unele instalari. */
             ->when($category !== '', fn ($q) => $q->whereHas(
                 'eventTypes',
-                fn ($t) => $t->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', ['%'.mb_strtolower($category).'%']),
+                fn ($t) => $t->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', ['%'.$this->categoryStem($category).'%']),
             ))
             ->with(['venue', 'ticketTypes', 'eventTypes'])
             /* Intai cele scoase in fata de organizator, apoi dupa cat de
@@ -504,6 +504,24 @@ class CatalogController extends Controller
             'mode' => $mode === 'added_on_top' ? 'added_on_top' : 'included',
             'rate' => round($rate, 2),
         ];
+    }
+
+    /**
+     * Radacina dupa care se cauta categoria.
+     *
+     * Aplicatia trimite eticheta din interfata („Concerte", „Experiențe"), iar
+     * taxonomia scrie altfel: „Concert", „Concert live", „Experiență". O
+     * potrivire pe sirul intreg rateaza aproape tot — de aici cautarea pe
+     * primele cinci litere, fara diacritice, care acopera si singularul, si
+     * pluralul, si formele compuse. Cinci: destul cat sa nu confunde „teatru"
+     * cu „tenis", scurt cat sa prinda „Concert" din „Concerte".
+     */
+    private function categoryStem(string $label): string
+    {
+        $t = mb_strtolower(trim($label));
+        $t = strtr($t, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
+
+        return mb_substr($t, 0, 5);
     }
 
     /** @return array<int, string> */

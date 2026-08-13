@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'ro.tixello.app',
-  appName: 'Tixello',
+  appName: 'Tics',
   webDir: 'dist',
   android: {
     allowMixedContent: true,

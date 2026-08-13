@@ -34,20 +34,23 @@
   transition: transform .26s cubic-bezier(.3, .9, .3, 1), opacity .2s ease;
 }
 
-/* Tabul activ: pastila mov, ca butonul din mijloc. Ceruta dupa testul pe
-   telefon — o simpla schimbare de culoare a iconitei se pierdea pe fundalul
-   inchis al barei. */
+/* ---- tabul activ arata ca fostul buton central ----
+   Pastila ridicata s-a mutat de pe pozitia din mijloc pe tabul ACTIV: accentul
+   vizual trebuie sa raspunda la „unde sunt", nu la „care buton e special".
+   Iese in sus din bara, exact ca butonul central de dinainte. */
 .app-client .bnav .nav {
   position: relative;
 }
 .app-client .bnav .nav svg {
   position: relative;
   z-index: 1;
-  transition: transform .2s cubic-bezier(.3, 1.4, .4, 1);
+  transition: transform .22s cubic-bezier(.3, 1.4, .4, 1), color .18s;
+}
+.app-client .bnav .nav.on {
+  color: #fff;
 }
 .app-client .bnav .nav.on svg {
-  transform: scale(1.18);
-  color: #fff;
+  transform: translateY(-16px) scale(1.12);
   filter: none;
 }
 .app-client .bnav .nav.on::before {
@@ -55,20 +58,21 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
-  border-radius: 15px;
+  width: 56px;
+  height: 56px;
+  /* -30px: aceeasi ridicare ca vechiul `.fab` (margin-top:-30px) */
+  margin: -58px 0 0 -28px;
+  border-radius: 19px;
   background: linear-gradient(135deg, var(--indigo), var(--indigo-3));
   box-shadow: var(--sh-p);
-  animation: navpop .22s cubic-bezier(.3, 1.4, .4, 1);
+  /* rama de culoarea barei, ca pastila sa para decupata din ea */
+  border: 4px solid #100d1c;
+  animation: navpop .24s cubic-bezier(.3, 1.4, .4, 1);
 }
 @keyframes navpop {
-  from { transform: scale(.7); opacity: 0 }
+  from { transform: scale(.72); opacity: 0 }
   to { transform: scale(1); opacity: 1 }
 }
-/* Butonul din mijloc are deja pastila; cand e activ, doar creste. */
-.app-client .bnav .fab.on { transform: scale(1.06) }
 
 @media (prefers-reduced-motion: reduce) {
   .app-client .bnav,
@@ -262,4 +266,30 @@
   border-right: 2px solid #fff;
   border-bottom: 2px solid #fff;
   transform: rotate(42deg);
+}
+
+/* ---- eticheta de oras pe liste de rezultate ----
+   Toate ecranele de descoperire filtreaza dupa orasul ales din antetul de pe
+   Acasa, dar nicaieri nu scria asta: o lista scurta parea „nu sunt evenimente",
+   cand de fapt insemna „nu sunt in orasul asta". Pastila e si buton — duce
+   direct la schimbarea orasului, ca raspunsul sa fie la un tap distanta. */
+.app-client .citytag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--indigo-soft);
+  border: 1px solid var(--indigo-line);
+  color: var(--indigo-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.app-client .citytag svg { width: 12px; height: 12px }
+.app-client .citytag .x {
+  opacity: .7;
+  font-weight: 700;
+  margin-left: 1px;
 }

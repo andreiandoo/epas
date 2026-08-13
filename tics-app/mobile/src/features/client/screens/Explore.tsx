@@ -14,6 +14,7 @@ import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { useShortsPreview } from '../shorts/useShortsPreview';
 import { useCatalogEvents } from '../catalogData';
+import { CityTag } from '../cityTag';
 import { radarToUi, useRadarList } from '../radarData';
 import { useClient } from '../../../store/client';
 import { useRadarCategories } from '../radarData';
@@ -176,7 +177,14 @@ export function Explore() {
         </div>
       </div>
 
-      <div className="rail" style={sx('margin-top:14px')}>
+      {/* Eticheta de oras: lista de mai jos e deja filtrata, dar nimic n-o
+          spunea — o banda scurta parea „nu sunt evenimente" in loc de „nu sunt
+          in orasul ales". Un tap o scoate. */}
+      <div className="pad" style={sx('margin-top:12px')}>
+        <CityTag />
+      </div>
+
+      <div className="rail" style={sx('margin-top:10px')}>
         {rec.map((e) => (
           <EvMini key={e.id} ev={e} />
         ))}

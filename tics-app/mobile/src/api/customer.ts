@@ -116,7 +116,12 @@ async function call<T>(path: string, init?: RequestInit & { auth?: boolean }): P
 }
 
 /* ---------- autentificare ---------- */
-type LoginResponse = { success: boolean; data?: { token: string; customer: Customer } };
+/**
+ * ATENTIE la cheie: serverul intoarce clientul sub `user`, nu sub `customer`.
+ * Le acceptam pe amandoua — `customer` ramane pentru compatibilitate, in caz ca
+ * raspunsul se schimba inapoi.
+ */
+type LoginResponse = { success: boolean; data?: { token: string; customer?: Customer; user?: Customer } };
 
 /** Intoarce clientul la succes, null daca datele-s gresite sau API-ul tace. */
 export async function customerLogin(email: string, password: string, remember = true): Promise<Customer | null> {
@@ -126,9 +131,16 @@ export async function customerLogin(email: string, password: string, remember = 
     auth: false,
   });
   if (!r?.success || !r.data?.token) return null;
-  setSession(r.data.token, r.data.customer ?? null, remember);
 
-  return r.data.customer ?? null;
+  /* Fara `?? r.data.user`, functia intorcea NULL desi autentificarea reusise —
+     tokenul era bun, dar clientul lipsea. Ecranul citea null ca „date
+     nerecunoscute" si te trimitea pe contul demo, dupa o autentificare care de
+     fapt mersese. */
+  const person = r.data.customer ?? r.data.user ?? null;
+
+  setSession(r.data.token, person, remember);
+
+  return person;
 }
 
 export async function customerLogout(): Promise<void> {

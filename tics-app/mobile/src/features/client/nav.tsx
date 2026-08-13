@@ -15,7 +15,10 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 export type Frame = { id: string; data?: Record<string, unknown>; key: number };
 
 /** Ecranele de tab: tab() le inlocuieste in varf, nu le stivuieste. */
-export const TAB_SCREENS = ['home', 'explore', 'tickets', 'wallet', 'profile'];
+/* Ecranele care se inlocuiesc intre ele in bara de jos. „ticslist" (Radar) a
+   intrat aici odata cu mutarea lui in bara: fara asta, un tap pe Radar ar fi
+   stivuit ecrane la nesfarsit in loc sa comute intre taburi. */
+export const TAB_SCREENS = ['home', 'explore', 'ticslist', 'tickets', 'wallet', 'profile'];
 
 /** Durata tranzitiei din client.css (.screen { transition: ... .4s }). */
 const EXIT_MS = 420;

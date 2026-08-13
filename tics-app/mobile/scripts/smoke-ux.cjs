@@ -77,7 +77,12 @@ const check = (name, ok, extra = '') => {
   await wait(1000);
 
   /* ---------- 2. "Alege un vibe" -> Radar pe categorie ---------- */
-  await page.evaluate(() => document.querySelectorAll('.bnav .nav')[1]?.click()); // Exploreaza
+  /* „Descopera" nu mai e in bara (ordinea ceruta: Acasa, Bilete, Radar,
+     Portofel, Profil) — se intra din chip-ul de pe Acasa. */
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button.chip')].find((x) => /Descoperă/.test(x.textContent ?? ''));
+    b?.click();
+  });
   await page.waitForFunction(() => document.querySelectorAll('.catcard').length > 12, { timeout: 40000 }).catch(() => {});
   await wait(800);
   const nCats = await page.evaluate(() => document.querySelectorAll('.catcard').length);
@@ -94,7 +99,7 @@ const check = (name, ok, extra = '') => {
   /* ---------- 3. filtrele Radar ---------- */
   const titlesNow = () =>
     page.evaluate(() => [...document.querySelectorAll('.mcard.radar .ctitle')].map((e) => e.textContent));
-  await page.evaluate(() => document.querySelectorAll('.bnav .nav')[0]?.click());
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Acasă"]')?.click());
   await wait(1000);
   await clickText('Vezi tot');
   // lista porneste goala (fara date demo), deci asteptam cardurile reale
@@ -148,7 +153,10 @@ const check = (name, ok, extra = '') => {
   );
 
   /* ---------- 4 + 5. Profil -> Portofel -> back, cu scroll ---------- */
-  await page.evaluate(() => document.querySelectorAll('.bnav .nav')[3]?.click()); // Profil
+  /* Dupa eticheta, nu dupa index: bara are acum cinci intrari si alta ordine,
+     iar un index scris fix ar fi trimis testul in alt ecran la fiecare
+     rearanjare. */
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Profil"]')?.click());
   await wait(1200);
   await page.evaluate(() => {
     const el = document.querySelectorAll('.screen');
@@ -179,10 +187,7 @@ const check = (name, ok, extra = '') => {
   /* ---------- preferintele se retin intre porniri ---------- */
   /* Profil -> Setări cont -> Preferințele mele. `.bnav .nav` are patru intrari
      (butonul din mijloc e `.fab`, nu `.nav`), deci profilul e ultima. */
-  await page.evaluate(() => {
-    const navs = document.querySelectorAll('.bnav .nav');
-    navs[navs.length - 1]?.click();
-  });
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Profil"]')?.click());
   await wait(1000);
   const prefBefore = await page.evaluate(() => localStorage.getItem('tixello.prefs'));
   await clickText('Setări cont');
@@ -212,10 +217,7 @@ const check = (name, ok, extra = '') => {
   check('orasul ales e pastrat intre porniri', savedCity !== null, `„${savedCity}"`);
 
   /* ---------- ecranul de prieteni ---------- */
-  await page.evaluate(() => {
-    const navs = document.querySelectorAll('.bnav .nav');
-    navs[navs.length - 1]?.click();
-  });
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Profil"]')?.click());
   await wait(900);
   const opened = await page.evaluate(() => {
     const el = [...document.querySelectorAll('.listitem')].find((e) => /Prietenii mei/.test(e.textContent ?? ''));
@@ -238,7 +240,7 @@ const check = (name, ok, extra = '') => {
   );
 
   /* ---------- categoria nu mai cade pe evenimente demo ---------- */
-  await page.evaluate(() => document.querySelectorAll('.bnav .nav')[0]?.click());
+  await page.evaluate(() => document.querySelector('.bnav .nav[aria-label="Acasă"]')?.click());
   await wait(900);
   const wentToCategory = await page.evaluate(() => {
     const b = [...document.querySelectorAll('button.chip')].find((x) => /Teatru/.test(x.textContent ?? ''));

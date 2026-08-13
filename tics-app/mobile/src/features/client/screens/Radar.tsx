@@ -271,7 +271,7 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
         ) : null}
       </div>
       <div style={sx('height:8px')} />
-      <BottomNav active="" />
+      <BottomNav active="ticslist" />
     </div>
   );
 }

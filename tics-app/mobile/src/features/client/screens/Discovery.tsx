@@ -13,7 +13,8 @@ import { EvRow } from '../cards';
 import { BottomNav, BackTitle, CatalogLoading, DBar, MissingContent, SafeTop, SecH, TopBar } from '../kit';
 import { useCatalogArtist, useCatalogEvents, useCatalogSearch, useCatalogVenue } from '../catalogData';
 import { radarToUi, useRadarList } from '../radarData';
-import { CAT_TO_TYPE } from '../../../api/ticsRadar';
+import { CAT_TO_FEED } from '../../../api/ticsRadar';
+import { CityTag } from '../cityTag';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 
@@ -46,7 +47,10 @@ export function Category({ id }: { id?: string }) {
   const mine = useCatalogEvents({ limit: 40, category: cat === 'Toate' ? undefined : cat });
   const { items: radarItems, loading: radarLoading } = useRadarList({
     limit: 24,
-    catKey: cat === 'Toate' ? undefined : CAT_TO_TYPE[cat],
+    /* `CAT_TO_FEED`, nu `CAT_TO_TYPE`: feed-ul si API-ul TICS folosesc
+       vocabulare diferite („concerte" vs „concert"). Cu cel gresit, filtrul nu
+       potrivea nimic si categoria aparea goala. */
+    catKey: cat === 'Toate' ? undefined : CAT_TO_FEED[cat],
   });
 
   const loadingCat = mine.loading || radarLoading;
@@ -104,8 +108,11 @@ export function Category({ id }: { id?: string }) {
           title={cat}
           sub={`${list.length} din ${base.length} rezultate`}
           right={
-            <div className="icon-btn" onClick={() => go('search')}>
-              <Ic svg={I.search} />
+            <div className="row" style={sx('gap:8px')}>
+              <CityTag />
+              <div className="icon-btn" onClick={() => go('search')}>
+                <Ic svg={I.search} />
+              </div>
             </div>
           }
         />
@@ -360,8 +367,11 @@ export function Search() {
           ) : null}
 
           {results.length ? (
-            <div className="h2" style={sx('font-size:14px;margin-bottom:10px')}>
-              Evenimente
+            <div className="between" style={sx('margin-bottom:10px')}>
+              <div className="h2" style={sx('font-size:14px')}>
+                Evenimente
+              </div>
+              <CityTag />
             </div>
           ) : null}
           <div style={sx('display:flex;flex-direction:column;gap:11px')}>

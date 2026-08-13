@@ -139,6 +139,29 @@ const typeInfo = (t: string | null) => TYPE_MAP[(t ?? '').toLowerCase()] ?? TYPE
  * Tipuri intalnite: other, theater, concert, festival, kids, sport,
  * standup, food-drink, party, dance, charity.
  */
+/**
+ * Categoria din aplicatie -> cheia din FEED-ul TICS (`radar.php`).
+ *
+ * ATENTIE: e un vocabular DIFERIT de `CAT_TO_TYPE` de mai jos, care merge catre
+ * `event_type` din API. Feed-ul foloseste „concerte", „teatru", „standup";
+ * API-ul foloseste „concert", „theater". Confuzia intre ele a facut ca filtrul
+ * pe „Concerte" sa nu potriveasca nimic si categoria sa apara goala.
+ *
+ * Cheile reale, masurate pe feed: arta, concerte, teatru, festival, kids, film,
+ * standup, workshop, food-drink, party, sport, dance.
+ */
+export const CAT_TO_FEED: Record<string, string> = {
+  Concerte: 'concerte',
+  Teatru: 'teatru',
+  Festival: 'festival',
+  'Stand-up': 'standup',
+  Sport: 'sport',
+  Petrecere: 'party',
+  Copii: 'kids',
+  Film: 'film',
+  Experiențe: 'food-drink',
+};
+
 export const CAT_TO_TYPE: Record<string, string> = {
   Concerte: 'concert',
   Teatru: 'theater',
