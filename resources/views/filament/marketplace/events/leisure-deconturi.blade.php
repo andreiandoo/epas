@@ -18,7 +18,7 @@
 <div class="space-y-3">
     @forelse ($periods as $p)
         @php $cur = $p['currency'] ?? 'RON'; @endphp
-        <details class="ep-decont overflow-hidden bg-white border border-gray-200 rounded-xl dark:border-gray-700 dark:bg-gray-800" @if(!empty($p['is_current'])) open @endif>
+        <details class="ep-decont overflow-hidden bg-white border border-gray-200 rounded-xl dark:border-gray-700 dark:bg-gray-800">
             <summary class="flex flex-wrap items-center justify-between gap-3 p-4 cursor-pointer select-none">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-gray-400 transition-transform ep-chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>

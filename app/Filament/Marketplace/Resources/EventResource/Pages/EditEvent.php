@@ -2448,12 +2448,15 @@ class EditEvent extends EditRecord
 
         Notification::make()
             ->title('Decont generat')
-            ->body("Decontul {$payout->reference} a fost creat. Butonul devine link către decont.")
+            ->body("Decontul {$payout->reference} a fost creat.")
             ->success()
             ->send();
 
-        // Stay on the Deconturi tab: the re-render replaces this society's
-        // "Generează decont" button with a link to the freshly created decont
-        // (and lets the operator generate the other society without leaving).
+        // Open the freshly created decont in a NEW tab while staying on the
+        // Deconturi tab (so the operator can also generate the other society).
+        // The button also becomes a green link on re-render (fallback if the
+        // browser's popup blocker stops window.open on this deferred call).
+        $url = \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $payout]);
+        $this->js('window.open(' . json_encode($url) . ", '_blank')");
     }
 }
