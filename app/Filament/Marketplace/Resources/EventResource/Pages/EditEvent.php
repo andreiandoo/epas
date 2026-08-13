@@ -2421,13 +2421,11 @@ class EditEvent extends EditRecord
         $url = \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $payout]);
         Notification::make()
             ->title('Decont generat')
-            ->body("Decontul {$payout->reference} a fost creat cu succes.")
+            ->body("Decontul {$payout->reference} a fost creat. Îl găsești în Deconturi.")
             ->success()
-            ->actions([
-                \Filament\Notifications\Actions\Action::make('view')
-                    ->label('Vezi decontul')
-                    ->url($url),
-            ])
             ->send();
+
+        // Land the operator directly on the freshly created decont.
+        $this->redirect($url);
     }
 }

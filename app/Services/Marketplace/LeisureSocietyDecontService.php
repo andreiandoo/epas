@@ -10,7 +10,6 @@ use App\Models\MarketplacePayout;
 use App\Models\MarketplaceTaxRegistry;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\OrganizerDocument;
-use App\Models\TicketType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -64,39 +63,105 @@ class LeisureSocietyDecontService
             throw new \RuntimeException('Există deja un decont pentru această societate și perioadă.');
         }
 
-        // Period-scoped remaining tickets (same source as the manual modal),
-        // then keep only this society's ticket types. NULL / 'mix' / 'primary'
-        // all resolve to primary — matching the Deconturi tab's by_issuer split.
-        $cutoff = $to->copy()->endOfDay();
-        $items = MarketplacePayout::buildRemainingTicketsItems($event, null, $cutoff);
+        // Build the breakdown from the SAME source as the event "Vânzări" tab —
+        // SalesBreakdownService reads the ACTUAL paid price per ticket
+        // (tickets.price), which for Sf. Ana correctly reflects package-component
+        // allocation (a 150-lei package splits its price across the ADULT/COPIL
+        // component tickets, and AmBilet taxes those components). The shared
+        // MarketplacePayout::buildRemainingTicketsItems pipeline instead falls
+        // back to the ticket TYPE catalog price whenever the ticket meta has no
+        // 'catalog' key (true for these package tickets), which inflates the
+        // gross (31.580 vs the real 24.292). This path is LEISURE-ONLY — the
+        // service is invoked exclusively for isLeisureVenue() events — so
+        // ordinary/manual deconturi and every non-leisure organizer are
+        // completely unaffected.
+        $svc = app(SalesBreakdownService::class);
+        $breakdown = $svc->build(
+            $event,
+            $from->copy()->startOfDay(),
+            $to->copy()->endOfDay(),
+            excludePos: true,
+            dateColumn: 'paid_at',
+        );
 
-        $ttIds = array_values(array_filter(array_map(
-            fn ($i) => (int) ($i['ticket_type_id'] ?? 0),
-            $items
-        )));
-        $issuerMap = empty($ttIds)
-            ? []
-            : TicketType::whereIn('id', $ttIds)->pluck('issuing_company', 'id')->toArray();
-        $resolve = fn (int $ttId): string => (($issuerMap[$ttId] ?? null) === 'secondary') ? 'secondary' : 'primary';
+        // Keep only this society's ticket types. NULL / 'mix' / 'primary' all
+        // resolve to primary — matching the Deconturi tab's by_issuer split.
+        $belongsToIssuer = function (array $row) use ($issuer): bool {
+            $tt = $row['tt'] ?? null;
+            $bucket = (($tt?->issuing_company) === 'secondary') ? 'secondary' : 'primary';
+            return $bucket === $issuer;
+        };
 
-        $filtered = array_values(array_filter(
-            $items,
-            fn ($i) => $resolve((int) ($i['ticket_type_id'] ?? 0)) === $issuer
-        ));
+        $ticketBreakdown = [];
+        $finalGross = 0.0;
+        $finalCommission = 0.0;
+        $finalNet = 0.0;
+        $discountAmount = 0.0;
+        $modes = [];
 
-        if (empty($filtered)) {
+        foreach (($breakdown['per_type'] ?? []) as $row) {
+            if (!$belongsToIssuer($row)) {
+                continue;
+            }
+            $qty = (int) ($row['qty'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $gross = round((float) ($row['gross'] ?? 0), 2);
+            $comm = round((float) ($row['commission_amount'] ?? 0), 2);
+            $disc = round((float) ($row['discount'] ?? 0), 2);
+            $net = round((float) ($row['net'] ?? 0), 2);
+            $mode = (string) ($row['commission_mode'] ?? 'included');
+            $modes[] = $mode;
+
+            $finalGross += $gross;
+            $finalCommission += $comm;
+            $finalNet += $net;
+            $discountAmount += $disc;
+
+            // Canonical ticket_breakdown row shape (same keys the manual pipeline
+            // persists) so the decont PDF + payout-view "Detalii bilete" render.
+            $ticketBreakdown[] = [
+                'ticket_type_id' => (int) ($row['ticket_type_id'] ?? 0),
+                'ticket_type_name' => (string) ($row['ticket_type_name'] ?? ''),
+                'qty' => $qty,
+                'quantity' => $qty,
+                'price' => (float) ($row['price'] ?? 0),
+                'unit_price' => (float) ($row['price'] ?? 0),
+                'gross' => $gross,
+                'commission_per_ticket' => (float) ($row['commission_per_ticket'] ?? 0),
+                'commission_amount' => $comm,
+                'commission_mode' => $mode,
+                'commission_type' => $row['commission_type'] ?? null,
+                'commission_rate' => isset($row['commission_rate']) ? (float) $row['commission_rate'] : null,
+                'commission_fixed' => isset($row['commission_fixed']) ? (float) $row['commission_fixed'] : null,
+                'discount' => $disc,
+                'extras' => round((float) ($row['extras'] ?? 0), 2),
+                'net' => $net,
+                'tiers' => [],
+            ];
+        }
+
+        if (empty($ticketBreakdown)) {
             throw new \RuntimeException('Nu există bilete de decontat pentru această societate în perioada selectată.');
         }
 
-        // Same breakdown builder the manual submit uses (targetNet = null → no
-        // rescaling; the filtered selection IS the source of truth).
-        $built = MarketplacePayout::buildBreakdownFromSelection($filtered, $event, null);
-        $ticketBreakdown = $built['rows'];
-        $finalGross = round((float) ($built['totals']['gross'] ?? 0), 2);
-        $finalCommission = round((float) ($built['totals']['commission'] ?? 0), 2);
-        $finalNet = round((float) ($built['totals']['net'] ?? 0), 2);
-        $discountAmount = (float) ($built['totals']['discount'] ?? 0);
-        $commissionMode = $built['commission_mode'] ?? ($event->getEffectiveCommissionMode() ?: 'included');
+        $finalGross = round($finalGross, 2);
+        $finalCommission = round($finalCommission, 2);
+        $finalNet = round($finalNet, 2);
+        $discountAmount = round($discountAmount, 2);
+
+        // Dominant commission mode (added_on_top wins ties — different downstream
+        // effects), same rule as buildBreakdownFromSelection.
+        $uniqueModes = array_values(array_unique($modes));
+        if (count($uniqueModes) === 1) {
+            $commissionMode = $uniqueModes[0];
+        } elseif (in_array('added_on_top', $modes, true) || in_array('on_top', $modes, true)) {
+            $commissionMode = 'added_on_top';
+        } else {
+            $commissionMode = $event->getEffectiveCommissionMode() ?: 'included';
+        }
 
         // Decont amount: for commission-INCLUDED tickets the society is owed the
         // FULL gross it collected — the marketplace invoices its commission back
