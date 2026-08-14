@@ -19,13 +19,14 @@
    tarziu, rolul lui e sa aleaga si sa formuleze — nu sa produca datele.
    ========================================================= */
 import { useEffect, useMemo, useState } from 'react';
-import { Ic, cn, sx } from '../../../design/sx';
+import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { I } from '../../../mock/prototype';
+import { radarMark } from '../../../design/radarMark';
+import { CityPicker } from '../cityPicker';
 import { BottomNav, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useCatalogEvents } from '../catalogData';
-import { useRadarCities } from '../radarData';
 import type { UiEvent } from '../../../api/tenantClient';
 
 type Who = 'solo' | 'friends' | 'date' | 'family';
@@ -47,26 +48,52 @@ const BUDGETS: [number, string][] = [
 /** Cate evenimente intra intr-un plan de seara. Mai multe n-ar incapea intr-o seara. */
 const PLAN_SIZE = 2;
 
+const DOW = ['dum', 'lun', 'mar', 'mie', 'joi', 'vin', 'sâm'];
+
+/**
+ * Zilele oferite: azi + doua saptamani.
+ *
+ * Calculate o singura data, la incarcarea modulului: sunt aceleasi pentru
+ * toata sesiunea, iar recalcularea la fiecare randare ar da un tablou nou si
+ * ar reporni cererile.
+ */
+const DAYS = (() => {
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: 15 }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const label = i === 0 ? 'Azi' : i === 1 ? 'Mâine' : `${DOW[d.getDay()]} ${d.getDate()}`;
+
+    return { iso, label };
+  });
+})();
+
 export function Assistant() {
   const { go, back } = useNav();
   const city = useClient((s) => s.city);
-  const cities = useRadarCities();
 
   const [who, setWho] = useState<Who>('friends');
   const [town, setTown] = useState(city || '');
   const [budget, setBudget] = useState(250);
+  /* Ziua planului. Fara ea, planul aduna evenimente din zile diferite — doua
+     lucruri pe care nu le poti face in aceeasi seara. Gol = oricand. */
+  const [day, setDay] = useState('');
+  /* De cate ori ai cerut alte sugestii. Muta fereastra peste candidati, deci
+     apasarea da chiar ALT plan, nu acelasi reasezat. */
+  const [reroll, setReroll] = useState(0);
+  const [citySheet, setCitySheet] = useState(false);
 
   /* Se cer mai multe decat afisam: dupa filtrarea pe buget raman mai putine,
      iar un plan de un singur eveniment nu e un plan. */
-  const { items, loading } = useCatalogEvents({ city: town || undefined, limit: 24 });
-
-  /* Orasele oferite: cele din feed, dar cu al tau primul — daca ai ales deja
-     un oras in aplicatie, e cel mai probabil raspuns si la intrebarea asta. */
-  const townOptions = useMemo(() => {
-    const list = cities.slice(0, 8);
-
-    return city ? [city, ...list.filter((c) => c !== city)] : list;
-  }, [cities, city]);
+  const { items, loading } = useCatalogEvents({
+    city: town || undefined,
+    date: day || undefined,
+    limit: 30,
+  });
 
   useEffect(() => {
     if (!town && city) setTown(city);
@@ -83,17 +110,24 @@ export function Assistant() {
     const picked: UiEvent[] = [];
     let total = 0;
 
-    for (const e of usable) {
-      if (picked.length >= PLAN_SIZE) break;
+    /* „Alte sugestii" porneste cautarea mai departe in lista si o continua
+       circular. Asa a doua apasare da alt plan, nu acelasi in alta ordine —
+       iar cand ai epuizat candidatii, revii la inceput in loc sa ramai fara. */
+    const start = usable.length ? (reroll * PLAN_SIZE) % usable.length : 0;
+
+    for (let k = 0; k < usable.length && picked.length < PLAN_SIZE; k++) {
+      const e = usable[(start + k) % usable.length];
+      if (picked.includes(e)) continue;
       if (total + priceOf(e) > cap) continue;
       picked.push(e);
       total += priceOf(e);
     }
 
     return { picked, total };
-  }, [items, budget]);
+  }, [items, budget, reroll]);
 
   const whoLabel = WHO.find((w) => w[0] === who)?.[2] ?? '';
+  const dayLabel = day ? (DAYS.find((d) => d.iso === day)?.label ?? day) : 'seara';
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -103,15 +137,13 @@ export function Assistant() {
             <Ic svg={I.back} />
           </div>
           <div className="row" style={sx('gap:10px')}>
-            <div
-              style={sx('width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;font-size:17px')}
-            >
-              🤖
+            <div style={sx('width:34px;height:34px;border-radius:12px;overflow:hidden;flex:none')}>
+              <Raw html={radarMark(34)} />
             </div>
             <div>
-              <div className="h2">Asistent AI</div>
+              <div className="h2">tics AI</div>
               <div className="row" style={sx('gap:5px;font-size:11px;color:var(--green-2);font-weight:600')}>
-                <span className="livedot" /> tics AI
+                <span className="livedot" /> planuri din catalogul real
               </div>
             </div>
           </div>
@@ -122,7 +154,7 @@ export function Assistant() {
       {/* Cererea ta, ca in macheta: bula mov, aliniata la dreapta. */}
       <div className="pad" style={sx('margin-top:14px;display:flex;justify-content:flex-end')}>
         <div className="aibubble me">
-          {`Planifică-mi seara ${whoLabel.toLowerCase()}${town ? ` · ${town}` : ''}`}
+          {`Planifică-mi ${dayLabel.toLowerCase()} ${whoLabel.toLowerCase()}${town ? ` · ${town}` : ''}`}
         </div>
       </div>
 
@@ -150,23 +182,44 @@ export function Assistant() {
             ))}
           </div>
 
+          <div className="label" style={sx('margin:14px 0 8px')}>
+            Când
+          </div>
+          <div className="scroll-x" style={sx('padding:1px 0;margin:0 -2px')}>
+            <button className={cn('chip', !day && 'ind on')} onClick={() => setDay('')}>
+              Oricând
+            </button>
+            {DAYS.map((d) => (
+              <button key={d.iso} className={cn('chip', day === d.iso && 'ind on')} onClick={() => setDay(d.iso)}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+
           <div className="between" style={sx('margin:14px 0 8px')}>
             <span className="label" style={sx('margin:0')}>
               Oraș
             </span>
             <span className="muted" style={sx('font-size:10.5px')}>
-              din catalogul tics
+              orice localitate din România
             </span>
           </div>
-          <div className="scroll-x" style={sx('padding:1px 0;margin:0 -2px')}>
+          {/* Cautare, nu o lista de chip-uri: chip-urile ofereau doar orasele
+              din feed, deci cine locuieste in alta parte nu se putea alege pe
+              sine. Lista vine din `geo_localities`. */}
+          <div className="row" style={sx('gap:8px')}>
             <button className={cn('chip', !town && 'ind on')} onClick={() => setTown('')}>
               Oriunde
             </button>
-            {townOptions.map((c) => (
-              <button key={c} className={cn('chip', town === c && 'ind on')} onClick={() => setTown(c)}>
-                {c}
-              </button>
-            ))}
+            <button className="chip ind on" onClick={() => setCitySheet(true)} style={sx('flex:1;justify-content:space-between')}>
+              <span className="row" style={sx('gap:6px;min-width:0')}>
+                <Ic svg={I.pin} />
+                <span style={sx('overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>
+                  {town || 'Alege orașul'}
+                </span>
+              </span>
+              <span style={sx('color:var(--muted)')}>⌄</span>
+            </button>
           </div>
 
           <div className="label" style={sx('margin:14px 0 8px')}>
@@ -273,6 +326,27 @@ export function Assistant() {
           </div>
         ) : null}
       </div>
+
+      {/* „Alte sugestii" sta la FINAL, dupa plan: se apasa dupa ce ai citit ce
+          ti-am propus, nu inainte. */}
+      {!loading && items.length > PLAN_SIZE ? (
+        <div className="pad" style={sx('margin-top:14px')}>
+          <button className="cta ghost" onClick={() => setReroll((n) => n + 1)} style={sx('padding:13px')}>
+            <Ic svg={I.star} /> Dă-mi alte sugestii
+          </button>
+        </div>
+      ) : null}
+
+      {citySheet ? (
+        <CityPicker
+          value={town}
+          onPick={(c) => {
+            setTown(c);
+            setReroll(0);
+          }}
+          onClose={() => setCitySheet(false)}
+        />
+      ) : null}
 
       <div style={{ height: 'var(--ep-nav-space)' }} />
       <BottomNav active="explore" />

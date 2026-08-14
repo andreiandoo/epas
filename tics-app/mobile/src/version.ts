@@ -13,7 +13,7 @@
    ========================================================= */
 
 /** Scrisa de build. NU edita manual. */
-export const APP_VERSION = 'v4.8.0';
+export const APP_VERSION = 'v4.9.0';
 
 /**
  * Versiunea bundle-ului chiar instalat pe telefon.

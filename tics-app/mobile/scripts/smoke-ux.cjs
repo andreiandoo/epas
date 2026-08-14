@@ -101,8 +101,23 @@ const check = (name, ok, extra = '') => {
     body: document.body.textContent.replace(/\s+/g, ' ').slice(0, 200),
   }));
   check('banda „Recomandări AI" exista', ai.band, ai.cta);
-  check('butonul duce in Asistent AI', /Asistent AI/.test(assistant.title), assistant.title);
+  check('butonul duce in „tics AI"', /tics AI/.test(assistant.title), assistant.title);
   check('asistentul compune un plan', /Planul tău/.test(assistant.body) || assistant.bubbles >= 2, `${assistant.bubbles} bule`);
+
+  /* Selectoarele cerute: ziua (planurile trebuie sa fie in ACEEASI seara) si
+     orasul cautabil (orice localitate, nu doar cele din feed). */
+  const controls = await page.evaluate(() => {
+    const t = document.body.textContent.replace(/\s+/g, ' ');
+
+    return {
+      day: /Când/.test(t) && /Azi/.test(t) && /Mâine/.test(t),
+      cityBtn: /Alege orașul|Oriunde/.test(t),
+      reroll: /Dă-mi alte sugestii/.test(t),
+    };
+  });
+  check('exista selector de zi', controls.day);
+  check('orasul se alege dintr-o cautare', controls.cityBtn);
+  check('exista butonul de alte sugestii', controls.reroll);
   /* Back-ul din Asistent: TopBar randeaza `.stickytop > .hrow`, nu `.topbar`. */
   await page.evaluate(() => document.querySelector('.stickytop .hrow .icon-btn')?.click());
   await wait(1200);

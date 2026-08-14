@@ -69,6 +69,11 @@ class CatalogController extends Controller
         $limit = max(1, min((int) $request->query('limit', 20), 50));
         $city = trim((string) $request->query('city', ''));
         $category = trim((string) $request->query('category', ''));
+        /* O zi anume (Y-m-d). Cerut de „tics AI": un plan de seara are sens
+           doar daca toate evenimentele din el sunt in ACEEASI seara — pana
+           acum planul putea aduna doua evenimente la trei saptamani distanta. */
+        $date = trim((string) $request->query('date', ''));
+        $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : '';
 
         $events = Event::query()
             ->where('is_published', true)
@@ -79,6 +84,17 @@ class CatalogController extends Controller
                de categorie ramanea gol. `LIKE` pe numele tipului de eveniment
                prinde variantele, iar `CAST` e obligatoriu: numele e traductibil
                si poate fi jsonb pe unele instalari. */
+            /* Ziua se compara pe `event_date`, dar si pe intervalul unui
+               festival: un festival de trei zile chiar „are loc" in fiecare
+               dintre ele si trebuie sa apara cand ceri una. */
+            ->when($date !== '', fn ($q) => $q->where(function ($w) use ($date) {
+                $w->whereDate('event_date', $date)
+                    ->orWhere(function ($r) use ($date) {
+                        $r->whereNotNull('range_start_date')
+                            ->whereDate('range_start_date', '<=', $date)
+                            ->whereDate('range_end_date', '>=', $date);
+                    });
+            }))
             ->when($category !== '', fn ($q) => $q->whereHas(
                 'eventTypes',
                 fn ($t) => $t->whereRaw('LOWER(CAST(name AS TEXT)) LIKE ?', ['%'.$this->categoryStem($category).'%']),
@@ -642,6 +658,42 @@ class CatalogController extends Controller
             'reviews' => $reviews['reviews'] ?? [],
             'events' => $this->upcomingEvents($venue->events()->getQuery()),
         ]]);
+    }
+
+    /**
+     * Orasele din Romania, pentru selectoarele din aplicatie.
+     *
+     * Pana acum, selectoarele ofereau doar orasele care APAR in feed-ul
+     * Radarului — cateva zeci. Cine locuieste in alta parte nu se putea alege
+     * pe sine. Sursa e `geo_localities` (dataset propriu, RO complet), nu
+     * catalogul: intrebarea „unde stau" n-are legatura cu „unde avem noi
+     * evenimente".
+     *
+     * Fara cautare se intorc cele mai importante (dupa `sort_order`), ca
+     * lista sa nu fie goala la deschidere.
+     */
+    public function cities(Request $request): JsonResponse
+    {
+        $q = $this->fold((string) $request->query('q', ''));
+        $limit = max(1, min((int) $request->query('limit', 40), 100));
+
+        $rows = GeoLocality::query()
+            ->when($q !== '', fn ($b) => $b->where('name_ascii', 'LIKE', $q.'%'))
+            ->orderBy('sort_order')
+            ->orderBy('name_native')
+            ->limit($limit)
+            ->get(['name_native', 'name_ascii']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $rows
+                /* Localitatile omonime (sate cu numele orasului) ar aparea de
+                   doua-trei ori in lista; ramane prima, cea mai importanta. */
+                ->unique('name_ascii')
+                ->pluck('name_native')
+                ->values()
+                ->all(),
+        ]);
     }
 
     /**

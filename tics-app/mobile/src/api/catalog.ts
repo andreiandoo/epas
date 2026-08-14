@@ -189,13 +189,15 @@ export const fetchCatalogEvent = (id: string | number, signal?: AbortSignal) =>
  * preturi, aici chiar vindem bilet.
  */
 export const fetchCatalogEvents = (
-  opts: { city?: string; limit?: number; category?: string } = {},
+  opts: { city?: string; limit?: number; category?: string; date?: string } = {},
   signal?: AbortSignal,
 ) => {
   const params = new URLSearchParams();
   if (opts.city) params.set('city', opts.city);
   if (opts.limit) params.set('limit', String(opts.limit));
   if (opts.category) params.set('category', opts.category);
+  // `date` e Y-m-d; prinde si festivalurile al caror interval acopera ziua
+  if (opts.date) params.set('date', opts.date);
 
   const qs = params.toString();
 
@@ -253,6 +255,15 @@ export const fetchEventsInBounds = (
 
   return get<BoundsResult>(`/tenant-client/catalog/events/in-bounds?${params.toString()}`, signal);
 };
+
+/**
+ * Orasele din Romania, pentru selectoare.
+ *
+ * Din `geo_localities`, nu din feed: selectoarele ofereau doar orasele in care
+ * avem evenimente, deci cine locuia in alta parte nu se putea alege pe sine.
+ */
+export const fetchCities = (q = '', signal?: AbortSignal) =>
+  get<string[]>(`/tenant-client/catalog/cities${q ? `?q=${encodeURIComponent(q)}` : ''}`, signal);
 
 export type CatalogSearch = {
   events: CatalogEventBrief[];

@@ -5,7 +5,8 @@
      antet · card AI de preferinte · rail recomandari · card "Pe val" ·
      Calendar + Radar preturi · "Alege un vibe" (CATPOOLS) · "Langa tine"
    ========================================================= */
-import { Ic, cn, sx } from '../../../design/sx';
+import { Ic, Raw, cn, sx } from '../../../design/sx';
+import { radarMark } from '../../../design/radarMark';
 import { CATPOOLS, EV, I } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvMini } from '../cards';
@@ -102,17 +103,22 @@ export function Explore() {
           className="row"
           style={sx('gap:7px;color:#c4b5fd;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;position:relative')}
         >
-          <Ic svg={I.star} /> Recomandări AI
+          <Ic svg={I.star} /> tics AI
         </div>
         <div style={sx('font-size:24px;font-weight:700;letter-spacing:-.03em;margin-top:8px;position:relative')}>
           Ce ai chef să faci?
         </div>
         <div style={sx('font-size:13px;opacity:.85;margin-top:5px;position:relative')}>
-          Alege un vibe, iar tics îți alege evenimentele.
+          Alege un vibe, iar tics AI îți alege evenimentele.
         </div>
 
         <button className="airec-cta" onClick={() => go('assistant')}>
-          🤖 Planifică-mi seara <Ic svg={I.arrow} />
+          {/* Marca radar in loc de emoji-ul de robot: e semnul „tics AI",
+              acelasi din antetul ecranului in care duce butonul. */}
+          <span style={sx('display:grid;place-items:center;width:22px;height:22px;border-radius:7px;overflow:hidden')}>
+            <Raw html={radarMark(22)} />
+          </span>
+          Planifică-mi seara <Ic svg={I.arrow} />
         </button>
 
         <div className="scroll-x" style={sx('margin-top:13px;padding:1px 0;position:relative')}>
@@ -130,7 +136,10 @@ export function Explore() {
 
         <div className="between" style={sx('margin-top:16px;position:relative')}>
           <div className="row" style={sx('gap:7px;font-size:14px;font-weight:600')}>
-            🤖 Pentru tine
+            <span style={sx('display:grid;place-items:center;width:20px;height:20px;border-radius:6px;overflow:hidden')}>
+              <Raw html={radarMark(20)} />
+            </span>
+            Pentru tine
           </div>
           <button
             onClick={() => go('prefsEdit')}
