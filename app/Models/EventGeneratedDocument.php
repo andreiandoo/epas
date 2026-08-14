@@ -128,9 +128,17 @@ class EventGeneratedDocument extends Model
             $organizer = MarketplaceOrganizer::find($event->marketplace_organizer_id);
         }
 
-        // Get tax registry if exists
+        // Resolve tax registry — event-level selection wins over the
+        // marketplace's "first active" fallback. Without this the PDF
+        // rendered the marketplace's default registry regardless of what
+        // the operator picked in the event's Direcție fiscală field
+        // (bug reproducer: event 4776, Cafeneaua Artistilor Buzău,
+        // event picked "DGITL Buzău" but PDF rendered "DGITL Sector 1").
         $taxRegistry = null;
-        if ($marketplace) {
+        if ($event->marketplace_tax_registry_id) {
+            $taxRegistry = MarketplaceTaxRegistry::find($event->marketplace_tax_registry_id);
+        }
+        if (!$taxRegistry && $marketplace) {
             $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
                 ->where('is_active', true)
                 ->first();
