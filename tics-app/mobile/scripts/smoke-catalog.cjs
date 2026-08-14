@@ -288,7 +288,11 @@ const VENUE = {
      verifice chiar traseul pe care il face utilizatorul. */
   const enterShorts = () =>
     page.evaluate(() => {
-      const el = [...document.querySelectorAll('button.chip')].find((b) => b.textContent.trim() === 'Pe val');
+      /* Prin BARA de jos: chip-ul „Pe val" din antetul de pe Acasa a fost scos
+         (era redundant cu bannerul de mai jos si cu tabul din bara). */
+      const el = [...document.querySelectorAll('.bnav .nav')].find(
+        (n) => (n.getAttribute('aria-label') || '') === 'Pe val',
+      );
       el?.click();
 
       return !!el;

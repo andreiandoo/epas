@@ -11,11 +11,11 @@
 import { useEffect, useState } from 'react';
 import { Ic, sx } from '../../../design/sx';
 import { AFF, I } from '../../../mock/prototype';
-import { BottomNav, SafeTop } from '../kit';
+import { Avatar, BottomNav, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
-import { customerName, initialsOf, useAccountStats, useCustomer } from '../accountData';
+import { customerName, useAccountStats, useCustomer } from '../accountData';
 import { applyPendingUpdate, checkForUpdate, getOtaState, onOtaChange, otaDiagnostics, type OtaState } from '../../../ota';
 
 /** [emoji, eticheta, actiune] — exact lista din prototip. */
@@ -114,6 +114,7 @@ export function Profile() {
 
   /* Contul real, cand exista; altfel ramanem pe cel demo din prototip. */
   const customer = useCustomer();
+  const me = customer;
   const stats = useAccountStats();
   const name = customerName(customer) ?? 'Andrei Popescu';
   const email = customer?.email ?? 'andrei@tics.ro';
@@ -136,11 +137,7 @@ export function Profile() {
     <div className="grid" style={sx('min-height:100%;padding-bottom:6px')}>
       <SafeTop />
       <div style={sx('display:flex;flex-direction:column;align-items:center;padding:14px 20px 20px')}>
-        <div
-          style={sx('width:86px;height:86px;border-radius:28px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-size:28px;font-weight:600;box-shadow:var(--sh-p)')}
-        >
-          {initialsOf(name)}
-        </div>
+        <Avatar name={name} src={me?.avatar} size={86} radius={28} style="box-shadow:var(--sh-p)" />
         <div style={sx('font-weight:600;font-size:19px;margin-top:12px')}>{name}</div>
         <div className="muted" style={sx('font-size:13px')}>
           {email}

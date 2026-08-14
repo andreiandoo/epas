@@ -386,42 +386,47 @@
 }
 
 /* ---- selectorul de orase din Radar ----
-   Era un chip mic lipit de titlu, care se citea a eticheta, nu a comanda.
-   Un rand propriu, cu ac de harta si sageata, arata ca se deschide ceva. */
-.app-client .cityline {
+   Langa titlu, nu pe un rand propriu: pe toata latimea se lipea de marginea
+   antetului si arata a bara de stare. Latime marginita, cu taiere: numele
+   intregi sunt oricum scrise in titlul de deasupra. */
+.app-client .citypick {
   display: flex;
   align-items: center;
-  gap: 9px;
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px 13px;
-  border-radius: 15px;
+  gap: 6px;
+  max-width: 148px;
+  padding: 8px 11px;
+  border-radius: 13px;
   background: var(--surface-2);
   border: 1.5px solid var(--line-2);
   color: var(--ink);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  text-align: left;
 }
-.app-client .cityline:active { transform: scale(.99) }
-.app-client .cityline-ic { color: var(--indigo-2); display: grid; place-items: center }
-.app-client .cityline-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-.app-client .cityline-n {
+.app-client .citypick:active { transform: scale(.98) }
+.app-client .citypick-ic { color: var(--indigo-2); display: grid; place-items: center; flex: none }
+.app-client .citypick-ic svg { width: 15px; height: 15px }
+.app-client .citypick-txt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-client .citypick-n {
   flex: none;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
   background: var(--indigo);
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 20px;
+  line-height: 17px;
   text-align: center;
 }
-.app-client .cityline-caret { color: var(--muted); display: grid; place-items: center }
+.app-client .citypick-caret { color: var(--muted); flex: none; line-height: 1 }
 
 /* ---- despartitor intre doua sectiuni care nu se continua ---- */
 .app-client .secsplit {
@@ -429,3 +434,62 @@
   margin: 20px 20px 4px;
   background: linear-gradient(to right, transparent, var(--line-2) 18%, var(--line-2) 82%, transparent);
 }
+
+/* ---- textul din bannerul „Pe val" ----
+   Se opreste inainte de posterele din dreapta. Fara limita, titlul trecea
+   peste ele si se citea prin imagini. */
+.app-client .wave-text { max-width: 58%; }
+
+/* ---- bannerul „Descoperă" ----
+   Aceeasi forma ca „Pe val", alta culoare: sunt doua intrari de acelasi rang,
+   iar daca ar arata diferit una ar parea mai importanta. */
+.app-client .wave.discover .wave-bg {
+  background: linear-gradient(120deg, #1e3a8a, #4c1d95, #6d28d9);
+}
+.app-client .wave.discover .wave-text { max-width: 72%; }
+.app-client .discover-glyph {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 62px;
+  opacity: .32;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ---- banda de zile din „tics Calendar" ----
+   O zi fara evenimente ramane vizibila, dar stinsa si neatingibila: sarita cu
+   totul, banda ar fi avut goluri si n-ai fi stiut daca lipseste sau n-are
+   nimic. */
+.app-client .daypill {
+  flex: none;
+  width: 56px;
+  padding: 9px 0 8px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line-2);
+  color: var(--ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.app-client .daypill:active { transform: scale(.97) }
+.app-client .daypill.empty { opacity: .42; cursor: default }
+.app-client .daypill-dow {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.app-client .daypill-num { font-size: 19px; font-weight: 700; line-height: 1.05 }
+.app-client .daypill-n {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green-2);
+}
+.app-client .daypill.empty .daypill-n { color: var(--faint) }

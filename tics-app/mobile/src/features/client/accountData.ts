@@ -163,8 +163,26 @@ export function useAccountStats() {
 }
 
 /** Cine e conectat; null cand rulam pe contul demo. */
+/**
+ * Clientul autentificat.
+ *
+ * `useState(getCustomer)` retinea valoarea de la PRIMA randare si nu se mai
+ * uita niciodata inapoi — deci poza de profil incarcata intr-un ecran nu
+ * aparea in celelalte pana la repornirea aplicatiei. Se citeste la fiecare
+ * montare si la revenirea in aplicatie.
+ */
 export function useCustomer() {
-  const [c] = useState(getCustomer);
+  const [c, setC] = useState(getCustomer);
+
+  useEffect(() => {
+    setC(getCustomer());
+
+    const onFocus = () => setC(getCustomer());
+    window.addEventListener('focus', onFocus);
+
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   return c;
 }
 

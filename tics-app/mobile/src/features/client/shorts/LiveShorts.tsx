@@ -59,7 +59,7 @@ type Props = {
 export function LiveShorts({ feed = 'for_you', fallback }: Props) {
   const { items, playbackHints, loading, unavailable, onIndexChange, patch } = useShortsFeed(feed);
   const { track } = useShortTelemetry();
-  const { go, back } = useNav();
+  const { go, back, tab, stack } = useNav();
   const showToast = useClient((s) => s.showToast);
 
   const { autoplayAllowed, dataSaver: localDataSaver, prefetchCount: localPrefetch } = usePlaybackPreferences();
@@ -408,7 +408,17 @@ export function LiveShorts({ feed = 'for_you', fallback }: Props) {
     else if (short.owner?.type === 'venue' && short.owner.id) go('venue', { id: short.owner.id });
   }, [items, activeIndex, go, feed]);
 
-  const swipe = useHorizontalSwipe(back, openDetail);
+  /* Swipe spre dreapta = iesire.
+
+     `back` singur nu ajunge de cand „Pe val" e tab in bara: intrat de acolo,
+     stiva n-are ecran anterior si gestul nu facea nimic — utilizatorul tragea
+     si ramanea in feed. Fara ecran in urma, iesirea duce Acasa. */
+  const leave = useCallback(() => {
+    if (stack.length > 1) back();
+    else tab('home');
+  }, [stack.length, back, tab]);
+
+  const swipe = useHorizontalSwipe(leave, openDetail);
 
   /* Data, separata de restul detaliilor — se afiseaza altfel. */
   const details = activeShort?.owner?.details ?? [];

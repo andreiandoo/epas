@@ -77,10 +77,11 @@ const check = (name, ok, extra = '') => {
   await wait(1000);
 
   /* ---------- 2. "Alege un vibe" -> Radar pe categorie ---------- */
-  /* „Descopera" nu mai e in bara (ordinea ceruta: Acasa, Bilete, Radar,
-     Portofel, Profil) — se intra din chip-ul de pe Acasa. */
+  /* „Descoperă" nu e in bara: se intra din BANNERUL de pe Acasa. Era un chip
+     in randul de categorii, ceea ce il facea sa arate a filtru, desi e un
+     ecran intreg. */
   await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button.chip')].find((x) => /Descoperă/.test(x.textContent ?? ''));
+    const b = [...document.querySelectorAll('.wave.discover')][0];
     b?.click();
   });
   await page.waitForFunction(() => document.querySelectorAll('.catcard').length > 12, { timeout: 40000 }).catch(() => {});
@@ -242,13 +243,15 @@ const check = (name, ok, extra = '') => {
   await wait(2500);
 
   const cityLineOpened = await page.evaluate(() => {
-    const b = document.querySelector('.cityline');
+    const b = document.querySelector('.citypick');
     b?.click();
 
     return !!b;
   });
   await wait(700);
-  check('selectorul de orase e un rand propriu, nu un chip', cityLineOpened);
+  /* Selectorul sta langa titlu (nu pe un rand propriu, cum era o versiune) si
+     isi scurteaza textul — numele intregi sunt oricum in titlul de deasupra. */
+  check('selectorul de orase sta langa titlu', cityLineOpened);
 
   /* Doua orase, fara ca foaia sa se inchida intre ele: o foaie care se inchide
      la prima bifa face imposibila alegerea a doua. */
@@ -278,8 +281,8 @@ const check = (name, ok, extra = '') => {
 
   const header = await page.evaluate(() => ({
     eyebrow: document.querySelector('.eyebrow')?.textContent ?? '',
-    line: document.querySelector('.cityline-txt')?.textContent ?? '',
-    badge: document.querySelector('.cityline-n')?.textContent ?? '',
+    line: document.querySelector('.citypick-txt')?.textContent ?? '',
+    badge: document.querySelector('.citypick-n')?.textContent ?? '',
     live: /prețuri comparate live/.test(document.body.textContent),
   }));
   check('titlul poarta orasele alese', header.eyebrow.includes(' și ') || /\+\d/.test(header.eyebrow), header.eyebrow);

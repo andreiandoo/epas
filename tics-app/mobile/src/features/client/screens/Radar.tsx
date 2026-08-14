@@ -120,6 +120,11 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
         ? picked.join(' și ')
         : `${picked[0]} +${picked.length - 1}`;
 
+  /* Eticheta de pe BUTON. Mai scurta decat cea din titlu: butonul sta langa
+     titlu si nu poate creste — numele lungi („Sfântu Gheorghe") se taie, iar
+     numarul de langa spune ca mai sunt. */
+  const pickLabel = picked.length === 0 ? 'Toată țara' : picked[0];
+
   /* Ce restrange lista chiar acum, in cuvinte. Orasul e primul: e filtrul cel
      mai des uitat, fiindca se alege din alt ecran. */
   const active = [
@@ -144,38 +149,34 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
           <div className="hrow">
             <div style={sx('min-width:0')}>
               {/* Titlul spune ce vezi ACUM: se schimba odata cu orasele alese,
-                  nu ramane „România" cand tu cauti in Ploiesti. */}
+                  nu ramane „România" cand tu cauti in Ploiesti. Aici incap
+                  toate numele, deci selectorul de dedesubt le poate scurta. */}
               <div className="eyebrow">Orice eveniment din {whereLabel}</div>
               <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
                 Radar
               </h1>
             </div>
-            <div className="icon-btn" onClick={() => go('calendar')}>
-              <Ic svg={I.cal} />
+
+            {/* Selectorul sta LANGA titlu, nu pe un rand propriu pe toata
+                latimea: acolo se lipea de marginea antetului si arata ca o
+                bara de stare, nu ca o comanda. Numele se scurteaza — oricum
+                sunt scrise intregi deasupra, in titlu. */}
+            <div className="row" style={sx('gap:8px;flex:none')}>
+              <button className="citypick" onClick={() => setSheet('city')} aria-label="Alege orașele">
+                <span className="citypick-ic">
+                  <Ic svg={I.pin} />
+                </span>
+                <span className="citypick-txt">{pickLabel}</span>
+                {picked.length > 1 ? <span className="citypick-n">{picked.length}</span> : null}
+                <span className="citypick-caret" aria-hidden="true">
+                  ⌄
+                </span>
+              </button>
+              <div className="icon-btn" onClick={() => go('calendar')}>
+                <Ic svg={I.cal} />
+              </div>
             </div>
           </div>
-
-          {/* Selectorul de orase.
-
-              Era un chip mic, lipit de titlu, care arata a eticheta. Acum e un
-              rand propriu, cu ac de harta, orasele alese si un semn clar ca se
-              deschide o lista. Se pot alege MAI MULTE: locuiesti intre doua
-              orase sau urmaresti un turneu, iar pana acum trebuia sa cauti
-              de doua ori. */}
-          <button
-            className="cityline"
-            onClick={() => setSheet('city')}
-            aria-label="Alege orașele"
-          >
-            <span className="cityline-ic">
-              <Ic svg={I.pin} />
-            </span>
-            <span className="cityline-txt">{whereLabel}</span>
-            {picked.length ? <span className="cityline-n">{picked.length}</span> : null}
-            <span className="cityline-caret" aria-hidden="true">
-              ⌄
-            </span>
-          </button>
 
           {dayLabel(day) ? (
             <div className="muted" style={sx('font-size:11.5px;margin-top:6px')}>

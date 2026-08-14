@@ -613,6 +613,11 @@ export function Reviews() {
      evenimentului, nu id-ul lui — daca API-ul incepe sa dea `event_id`,
      inlocuieste comparatia de mai jos cu una pe id. */
   const reviewed = new Set((list ?? []).map((r) => (r.event ?? '').trim().toLowerCase()));
+  /* Evenimentele VIITOARE la care ai bilet. Nu poti lasa recenzie inca, dar e
+     util sa stii ca vei putea — altfel ecranul pare gol fara motiv, desi ai
+     bilete cumparate. */
+  const upcomingTickets = ticketsLive ? groups.filter((g) => g.upcoming) : [];
+
   const toReview: { ev: string; name: string; when: string; poster: Ev }[] = ticketsLive
     ? groups
         .filter((g) => !g.upcoming && !reviewed.has(g.title.trim().toLowerCase()))
@@ -672,11 +677,60 @@ export function Reviews() {
         <div style={sx('width:42px')} />
       </TopBar>
 
+      {/* ---------- CE E CU ECRANUL ASTA ----------
+          Erau trei situatii in care ecranul nu spunea nimic: n-ai bilete
+          deloc, ai bilete doar la evenimente care n-au avut loc inca, sau ai
+          fost si nu stiai ca poti scrie. Un ecran gol nu explica de ce e gol.
+          Se afiseaza doar cand nu exista deja continut de recenzat. */}
+      {!loading && !toReview.length ? (
+        <div className="pad" style={sx('margin-top:14px')}>
+          <div className="card" style={sx('padding:16px')}>
+            <div style={sx('font-size:26px;text-align:center;opacity:.65')}>★</div>
+            <div className="h2" style={sx('font-size:14.5px;margin-top:9px;text-align:center')}>
+              {upcomingTickets.length ? 'Încă nu ai la ce scrie' : 'Aici vei scrie recenzii'}
+            </div>
+            <p className="muted" style={sx('font-size:12.5px;line-height:1.6;margin-top:8px;text-align:center')}>
+              {upcomingTickets.length
+                ? `Ai bilet la ${upcomingTickets.length === 1 ? 'un eveniment care urmează' : `${upcomingTickets.length} evenimente care urmează`}. După ce se încheie, apar aici și le poți da o notă.`
+                : 'După fiecare eveniment la care mergi cu bilet din tics, îl găsești aici și poți lăsa o notă și câteva rânduri. Recenziile ajută pe cine vine după tine.'}
+            </p>
+          </div>
+
+          {/* Ce urmeaza, pe nume: „ai bilet la 2 evenimente" e vag, iar omul
+              vrea sa stie la CARE. */}
+          {upcomingTickets.length ? (
+            <div style={sx('margin-top:12px;display:flex;flex-direction:column;gap:9px')}>
+              {upcomingTickets.slice(0, 4).map((g) => (
+                <div key={g.ev} className="listitem" style={sx('opacity:.92')}>
+                  <div
+                    style={sx('width:38px;height:38px;border-radius:12px;background:var(--surface-3);color:var(--muted);display:grid;place-items:center')}
+                  >
+                    <Ic svg={I.cal} />
+                  </div>
+                  <div style={sx('flex:1;min-width:0')}>
+                    <div style={sx('font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                      {g.title}
+                    </div>
+                    <div className="muted" style={sx('font-size:11px;margin-top:1px')}>
+                      {[g.date, g.venue].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                  <span className="chip-mini">după eveniment</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {toReview.length ? (
         <div className="pad" style={sx('margin-top:14px')}>
           <div className="label" style={sx('margin-bottom:9px')}>
             De recenzat · ai participat
           </div>
+          <p className="muted" style={sx('font-size:12px;line-height:1.55;margin:-4px 0 10px')}>
+            Ai fost la {toReview.length === 1 ? 'acest eveniment' : 'aceste evenimente'} — poți lăsa o notă și câteva rânduri.
+          </p>
           <div style={sx('display:flex;flex-direction:column;gap:11px')}>
             {toReview.map((a) => (
               <div key={a.ev} className="card" style={sx('padding:13px')}>

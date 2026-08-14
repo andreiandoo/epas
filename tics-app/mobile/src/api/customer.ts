@@ -78,6 +78,35 @@ function setSession(t: string | null, c: Customer | null, remember = true) {
 }
 
 export const clearCustomer = () => setSession(null, null);
+
+/**
+ * Modifica clientul din sesiune, pe loc.
+ *
+ * Exista pentru cazuri ca poza de profil: raspunsul serverului schimba un
+ * singur camp, dar clientul e memorat (in memorie si in localStorage) si
+ * nimeni nu-l reimprospata. Fara asta, poza aparea pana ieseai din ecran si
+ * apoi „disparea" — de fapt reveneai la copia veche, cu `avatar: null`.
+ *
+ * Se rescrie si copia persistata, ca schimbarea sa treaca de repornire.
+ */
+export function patchCustomer(changes: Partial<Customer>): Customer | null {
+  getToken();
+  if (!customer) return null;
+
+  customer = { ...customer, ...changes };
+
+  try {
+    const raw = localStorage.getItem(TOKEN_LS);
+    if (raw) {
+      const v = JSON.parse(raw) as { token: string; customer: Customer | null };
+      localStorage.setItem(TOKEN_LS, JSON.stringify({ ...v, customer }));
+    }
+  } catch {
+    /* persistenta blocata: schimbarea ramane pe sesiunea curenta */
+  }
+
+  return customer;
+}
 export const isLoggedIn = () => !!getToken();
 
 /* ---------- transport ---------- */
@@ -322,13 +351,21 @@ export async function uploadAvatar(file: File): Promise<string | null> {
     body,
   });
 
-  return r?.success ? (r.data?.avatar ?? null) : null;
+  if (!r?.success) return null;
+
+  const url = r.data?.avatar ?? null;
+  patchCustomer({ avatar: url });
+
+  return url;
 }
 
 export const removeAvatar = () =>
-  call<Wrapped<{ avatar: null }>>('/tenant-client/account/avatar', { method: 'DELETE' }).then(
-    (r) => r?.success === true,
-  );
+  call<Wrapped<{ avatar: null }>>('/tenant-client/account/avatar', { method: 'DELETE' }).then((r) => {
+    const ok = r?.success === true;
+    if (ok) patchCustomer({ avatar: null });
+
+    return ok;
+  });
 
 export const updateProfile = (payload: Record<string, unknown>) =>
   call<Wrapped<Customer>>('/tenant-client/account/profile', {

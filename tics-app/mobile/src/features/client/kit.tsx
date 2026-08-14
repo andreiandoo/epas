@@ -280,3 +280,56 @@ export function ListSkeleton({ rows = 3, height = 76 }: { rows?: number; height?
     </div>
   );
 }
+
+/**
+ * Poza de profil, sau initialele.
+ *
+ * Un singur loc, pentru ca erau trei: antetul de pe Acasa (scris fix „AP"),
+ * ecranul de Profil (doar initiale) si Setari. Cine isi incarca poza voia s-o
+ * vada peste tot, nu doar in ecranul in care a incarcat-o.
+ */
+export function Avatar({
+  name,
+  src,
+  size = 40,
+  radius,
+  style,
+}: {
+  name: string;
+  src?: string | null;
+  size?: number;
+  radius?: number;
+  style?: string;
+}) {
+  const initials =
+    name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase() || '?';
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius ?? Math.round(size * 0.33),
+        background: src
+          ? `url('${src}') center/cover`
+          : 'linear-gradient(135deg,var(--indigo),var(--indigo-4))',
+        display: 'grid',
+        placeItems: 'center',
+        color: '#fff',
+        fontWeight: 600,
+        fontSize: Math.max(11, Math.round(size * 0.33)),
+        flex: 'none',
+        ...(style ? sx(style) : null),
+      }}
+    >
+      {src ? '' : initials}
+    </div>
+  );
+}

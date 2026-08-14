@@ -5,15 +5,14 @@
      antet · card AI de preferinte · rail recomandari · card "Pe val" ·
      Calendar + Radar preturi · "Alege un vibe" (CATPOOLS) · "Langa tine"
    ========================================================= */
-import { Ic, sx } from '../../../design/sx';
+import { Ic, cn, sx } from '../../../design/sx';
 import { CATPOOLS, EV, I } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvMini } from '../cards';
 import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
-import { useShortsPreview } from '../shorts/useShortsPreview';
 import { useCatalogEvents } from '../catalogData';
-import { radarToUi, useRadarList } from '../radarData';
+import { radarToUi, useRadarList, useRadarMonth } from '../radarData';
 import { useClient } from '../../../store/client';
 import { useRadarCategories } from '../radarData';
 import { CatCard, poolsFromCategories, type Pool } from '../catCard';
@@ -21,7 +20,6 @@ import { CatCard, poolsFromCategories, type Pool } from '../catCard';
 const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
 
 export function Explore() {
-  const preview = useShortsPreview();
   const { go } = useNav();
   const cats = useRadarCategories();
   /* Pana raspunde app.tics.ro ramanem pe categoriile prototipului, ca sectiunea
@@ -39,6 +37,39 @@ export function Explore() {
      filtrat. Aici se cauta larg. */
   const mine = useCatalogEvents({ limit: 6 });
   const { items: radar } = useRadarList({ limit: 6 });
+
+  /* Luna curenta din feed, pentru banda de zile. Aceeasi sursa ca ecranul de
+     Calendar, deci cifrele nu pot sa difere intre cele doua. */
+  const today = new Date();
+  const month = useRadarMonth(today.getFullYear(), today.getMonth());
+  const monthLoading = month.loading;
+
+  const DOW = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+  /* Doua saptamani incepand de AZI. Nu luna calendaristica: pe 28 ale lunii,
+     o banda „luna curenta" ar arata trei zile si ar parea goala. */
+  const daysStrip = (() => {
+    const out: { stamp: number; num: number; dow: string; count: number }[] = [];
+    const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+
+      /* Contorul exista doar pentru zilele din luna incarcata; pentru zilele
+         care trec in luna urmatoare ramane 0 pana se cere si aia. */
+      const count = d.getMonth() === today.getMonth() ? (month.data?.counts[d.getDate()] ?? 0) : 0;
+
+      out.push({
+        stamp: Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
+        num: d.getDate(),
+        dow: i === 0 ? 'Azi' : DOW[d.getDay()],
+        count,
+      });
+    }
+
+    return out;
+  })();
 
   const pool = [...mine.items, ...radar.map(radarToUi)];
   const rec = pool.length ? pool.slice(0, 6) : ['coldplay', 'salina', 'swan'].map(ev);
@@ -92,38 +123,41 @@ export function Explore() {
         ))}
       </div>
 
-      {/* ---------- „Pe val" ----------
-          Era un gradient fix cu un text peste: arata ca un banner publicitar,
-          nu ca o intrare in continut. Acum poarta chiar posterele din feed,
-          deci se vede DIN CE intri, si se innoieste singur pe masura ce apar
-          short-uri noi. Fara postere (feed gol sau offline) ramane varianta
-          simpla, care nu depinde de retea. */}
-      <div className="pad" style={sx('margin-top:18px')}>
-        <div className="wave" onClick={() => go('shorts')} role="button" tabIndex={0}>
-          <div className="wave-bg" />
+      {/* Bannerul „Pe val" a plecat de aici: e deja pe Acasa, iar „Pe val"
+          are propriul tab in bara de jos. A treia intrare catre acelasi ecran,
+          pe un ecran care ar trebui sa arate ce ALTCEVA mai exista. */}
 
-          <div className="wave-stack" aria-hidden="true">
-            {(preview?.posters ?? []).map((src, i) => (
-              <span key={src} className={`wave-card p${i}`} style={{ backgroundImage: `url('${src}')` }} />
-            ))}
-          </div>
-
-          <div className="wave-text">
-            <div className="row" style={sx('gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9')}>
-              <Ic svg={I.wave} /> Pe val
-            </div>
-            <div style={sx('font-size:22px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.1')}>
-              Descoperă prin video
-            </div>
-            <div style={sx('font-size:12.5px;opacity:.88;margin-top:4px')}>
-              {preview
-                ? `${preview.count}+ momente de la artiști, locații și evenimente`
-                : 'Scrolează evenimente ca la Shorts'}
-            </div>
-            <span className="wave-cta">
-              <Ic svg={I.play} /> Începe
-            </span>
-          </div>
+      {/* ---------- TICS CALENDAR ----------
+          Banda de zile, incepand cu azi, cu numarul de evenimente pe fiecare.
+          O zi atinsa deschide Radarul filtrat pe ea; „Vezi luna" deschide
+          grila intreaga. Cifrele vin din acelasi feed ca restul Radarului. */}
+      <div className="sec">
+        <SecH
+          icon={I.cal}
+          icbg="var(--green-soft)"
+          iccol="var(--green-2)"
+          title="tics Calendar"
+          sub={monthLoading ? 'Se încarcă…' : `${daysStrip.reduce((n, d) => n + d.count, 0)} evenimente în perioada asta`}
+          more={['Vezi luna', () => go('calendar')]}
+        />
+        <div className="scroll-x" style={sx('padding:2px 0')}>
+          {daysStrip.map((d) => (
+            <button
+              key={d.stamp}
+              className={cn('daypill', d.count === 0 && 'empty')}
+              onClick={() => go('ticslist', { day: d.stamp })}
+              disabled={d.count === 0}
+            >
+              <span className="daypill-dow">{d.dow}</span>
+              <span className="daypill-num">{d.num}</span>
+              <span className="daypill-n">{d.count === 0 ? '—' : d.count}</span>
+            </button>
+          ))}
+          {monthLoading && !daysStrip.length
+            ? Array.from({ length: 7 }).map((_, i) => (
+                <div key={`sk${i}`} className="sk" style={sx('width:56px;height:76px;border-radius:16px;flex:none')} />
+              ))
+            : null}
         </div>
       </div>
 

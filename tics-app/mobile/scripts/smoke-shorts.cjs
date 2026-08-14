@@ -138,10 +138,14 @@ const short = (id, title, likes) => ({
   await clickText('Andrei Popescu');
   await wait(1400);
 
-  /* ---------- intram in „Pe val" (chip-ul din antetul de pe Acasa) ---------- */
+  /* ---------- intram in „Pe val" (tabul din bara de jos) ---------- */
   const enterShorts = () =>
     page.evaluate(() => {
-      const el = [...document.querySelectorAll('button.chip')].find((b) => b.textContent.trim() === 'Pe val');
+      /* Prin BARA de jos: chip-ul „Pe val" din antetul de pe Acasa a fost scos
+         (era redundant cu bannerul de mai jos si cu tabul din bara). */
+      const el = [...document.querySelectorAll('.bnav .nav')].find(
+        (n) => (n.getAttribute('aria-label') || '') === 'Pe val',
+      );
       el?.click();
 
       return !!el;
@@ -317,7 +321,7 @@ const short = (id, title, likes) => ({
      ocupata, de gestul de sistem „inapoi". */
   await swipe(150, 340); // stanga -> dreapta
   const leftAfter = await page.evaluate(() => !!document.querySelector('.shchrome'));
-  check('swipe stanga->dreapta iese din shorts (inapoi)', !leftAfter);
+  check('swipe stanga->dreapta iese din shorts', !leftAfter);
 
   // ne intoarcem si incercam celalalt sens
   await page.evaluate(() => document.querySelectorAll('.bnav .nav')[0]?.click());

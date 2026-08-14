@@ -10,12 +10,13 @@ import { Ic, sx } from '../../../design/sx';
 import { CATS, EV, I } from '../../../mock/prototype';
 import type { UiEvent } from '../../../api/tenantClient';
 import { EvMini } from '../cards';
-import { BottomNav, SafeTop, SecH } from '../kit';
+import { Avatar, BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { radarToUi, useRadarCities, useRadarList } from '../radarData';
 import { useCatalogEvents } from '../catalogData';
 import { useAccountStats, useTickets } from '../accountData';
 import { fetchFriends } from '../../../api/friends';
+import { customerName, useCustomer } from '../accountData';
 import { NearYou } from '../nearby';
 import { useShortsPreview } from '../shorts/useShortsPreview';
 import { PickerSheet, type Option } from '../picker';
@@ -27,6 +28,8 @@ const ev = (id: string) => (EV as Record<string, unknown>)[id] as UiEvent;
 
 export function Home() {
   const { go, tab } = useNav();
+  const me = useCustomer();
+  const meName = customerName(me) ?? 'Contul tău';
   const city = useClient((s) => s.city);
   const setCity = useClient((s) => s.setCity);
   const cities = useRadarCities();
@@ -89,7 +92,8 @@ export function Home() {
         <SafeTop />
         <div className="hdr" style={sx('padding:4px 20px 11px')}>
           <div className="row" style={sx('gap:11px')}>
-            <div className="avatar">AP</div>
+            {/* Poza reala, nu initialele demo „AP" scrise in cod. */}
+            <Avatar name={meName} src={me?.avatar} size={40} radius={13} />
             {/* orasul filtreaza Radarul; lista vine din evenimentele reale */}
             <div style={sx('cursor:pointer')} onClick={() => setPicker(true)}>
               <div className="loc-l">
@@ -135,22 +139,9 @@ export function Home() {
       </div>
 
       <div className="rail" style={sx('margin-top:15px;padding-bottom:2px')}>
-        <button
-          className="chip"
-          onClick={() => go('shorts')}
-          style={sx(
-            'background:linear-gradient(120deg,#0e7490,#7c3aed,#ec4899);color:#fff;border-color:transparent;font-weight:600',
-          )}
-        >
-          <Ic svg={I.wave} /> Pe val
-        </button>
-        {/* „Descoperă" a iesit din bara de jos odata cu noua ordine (Acasa,
-            Bilete, Radar, Portofel, Profil). Ecranul exista in continuare si
-            tine „Alege un vibe", harta si zona Pe val — fara intrarea asta ar fi
-            ramas de neatins. */}
-        <button className="chip" onClick={() => tab('explore')}>
-          <Ic svg={I.search} /> Descoperă
-        </button>
+        {/* Aici erau doua chip-uri, „Pe val" si „Descoperă". Amandoua duceau
+            in ECRANE INTREGI, nu filtrau randul de categorii de langa ele —
+            deci se citeau gresit. Au coborat, ca bannere. */}
         {(CATS as [string, string][]).map((c, i) => (
           <button
             key={c[0]}
@@ -206,16 +197,42 @@ export function Home() {
               <span key={src} className={`wave-card p${i}`} style={{ backgroundImage: `url('${src}')` }} />
             ))}
           </div>
+          {/* Textul se opreste la 58% din latime: posterele din dreapta sunt
+              parte din banner, iar titlul trecea peste ele. */}
           <div className="wave-text">
             <div className="row" style={sx('gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9')}>
               <Ic svg={I.wave} /> Pe val
             </div>
-            <div style={sx('font-size:22px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.1')}>
-              Descoperă prin video
+            <div style={sx('font-size:21px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.1')}>
+              Reels &amp; Shorts
             </div>
-            <div style={sx('font-size:12.5px;opacity:.88;margin-top:4px')}>
-              {preview ? `${preview.count}+ momente de la artiști și locații` : 'Scrolează evenimente ca la Shorts'}
+            <div style={sx('font-size:12px;opacity:.88;margin-top:4px;line-height:1.35')}>
+              Momente de la artiști, evenimente și locații
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ---------- DESCOPERĂ ----------
+          Era un chip in randul de categorii, langa „Concerte" si „Teatru" —
+          adica arata ca inca un filtru, desi e un ecran intreg, cu categorii,
+          calendar si recomandari. Tratat ca atare: banner propriu. */}
+      <div className="pad sec tight">
+        <div className="wave discover" onClick={() => tab('explore')} role="button" tabIndex={0}>
+          <div className="wave-bg" />
+          <div className="wave-text">
+            <div className="row" style={sx('gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9')}>
+              <Ic svg={I.compass} /> Descoperă
+            </div>
+            <div style={sx('font-size:21px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.1')}>
+              Tot ce se întâmplă
+            </div>
+            <div style={sx('font-size:12px;opacity:.88;margin-top:4px;line-height:1.35')}>
+              Categorii, calendar și recomandări pe gusturile tale
+            </div>
+          </div>
+          <div className="discover-glyph" aria-hidden="true">
+            🧭
           </div>
         </div>
       </div>
@@ -314,6 +331,10 @@ export function Home() {
         />
       ) : null}
 
+      {/* Spatiul de sub ultimul card. `--ep-nav-space` tine cont de bara, de
+          voalul de sub ea si de bara de gesturi a telefonului — cardul de
+          Puncte ajungea dedesubt. */}
+      <div style={{ height: 'var(--ep-nav-space)' }} />
       <BottomNav active="home" />
     </div>
   );
