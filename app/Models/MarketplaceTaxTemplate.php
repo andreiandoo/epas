@@ -450,6 +450,15 @@ class MarketplaceTaxTemplate extends Model
                 ? $marketplace->getNextContractNumber()
                 : $marketplace->getCurrentContractNumber();
 
+            // Invoice preparer (Settings → Personalization → Emitere facturi Oblio).
+            // Set HERE (unconditional) so event-scoped documents (PV distrugere,
+            // Impozit spectacole, Cerere vizare) get it too. There is a
+            // duplicate assignment inside the if($payout) block below at line
+            // ~2347 that keeps decont docs working the same as before — that
+            // one is harmless because it re-sets the same value. Kept for
+            // rollback safety; can be removed later.
+            $variables['marketplace_invoice_preparer'] = $marketplace->settings['invoice_preparer'] ?? $marketplace->contact_name ?? '';
+
             // Signature image
             if ($marketplace->signature_image && \Illuminate\Support\Facades\Storage::disk('public')->exists($marketplace->signature_image)) {
                 $content = \Illuminate\Support\Facades\Storage::disk('public')->get($marketplace->signature_image);

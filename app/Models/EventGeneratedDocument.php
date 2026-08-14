@@ -199,7 +199,7 @@ class EventGeneratedDocument extends Model
         $fileSize = Storage::disk('public')->size($filePath);
 
         // Create record
-        return self::create([
+        $doc = self::create([
             'marketplace_client_id' => $marketplaceClientId,
             'event_id' => $event->id,
             'marketplace_tax_template_id' => $template->id,
@@ -216,6 +216,52 @@ class EventGeneratedDocument extends Model
                 'variables_used' => array_keys($variables),
             ],
         ]);
+
+        // Dual-write into `organizer_documents` so event-scoped documents
+        // (cerere_avizare, declaratie_impozite, pv_distrugere) also show
+        // up in /marketplace/organizer-documents alongside contracts and
+        // decont-uri (which already live there). Same file_path — no
+        // duplication on disk.
+        //
+        // $skipNotificationOnCreate is flipped ON before insert so admins
+        // generating event docs don't inadvertently ping the organizer's
+        // inbox each time. The event Documente tab has its own explicit
+        // "trimite pe email" flow when the doc is truly ready to be sent.
+        try {
+            $wasSkipping = \App\Models\OrganizerDocument::$skipNotificationOnCreate;
+            \App\Models\OrganizerDocument::$skipNotificationOnCreate = true;
+            \App\Models\OrganizerDocument::create([
+                'marketplace_client_id' => $marketplaceClientId,
+                'marketplace_organizer_id' => $event->marketplace_organizer_id,
+                'event_id' => $event->id,
+                'marketplace_payout_id' => null,
+                'tax_template_id' => $template->id,
+                'title' => $template->name,
+                'document_type' => $template->type,
+                'file_path' => $filePath,
+                'file_name' => $filename,
+                'file_size' => $fileSize,
+                'document_data' => [
+                    'source' => 'event_generated_document',
+                    'source_id' => $doc->id,
+                    'template_name' => $template->name,
+                    'template_type' => $template->type,
+                ],
+                'html_content' => null,
+                'issued_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('EventGeneratedDocument: dual-write to OrganizerDocument failed', [
+                'event_id' => $event->id,
+                'template_id' => $template->id,
+                'source_id' => $doc->id,
+                'error' => $e->getMessage(),
+            ]);
+        } finally {
+            \App\Models\OrganizerDocument::$skipNotificationOnCreate = $wasSkipping;
+        }
+
+        return $doc;
     }
 
     /**
