@@ -576,6 +576,54 @@ class EventResource extends Resource
                                         ->columnSpanFull(),
                                 ]),
                             ])->columns(1),
+
+                        // Alerts / lipsuri operaționale — afișează ce documente
+                        // trebuie generate sau refăcute pentru acest eveniment
+                        // (cerere avizare, decont, factură, impozit spectacole,
+                        // PV distrugere). Calculat de EventAlertsService pe
+                        // baza state-ului live (docs generate, ticket types
+                        // modificate, eveniment publicat / trecut). Rendering
+                        // apare doar dacă există alerte — record inexistent
+                        // (create form) sau clean sheet ascunde secțiunea.
+                        SC\Section::make($t('Alerte operaționale', 'Operational alerts'))
+                            ->description($t(
+                                'Documente / acțiuni ce lipsesc pentru acest eveniment. Rezolvă-le înainte de a considera evenimentul închis administrativ.',
+                                'Documents / actions still missing for this event. Resolve before closing it out administratively.'
+                            ))
+                            ->icon('heroicon-o-exclamation-triangle')
+                            ->visible(fn (?Event $record): bool =>
+                                $record !== null
+                                && $record->exists
+                                && count(app(\App\Services\EventAlertsService::class)->getAlerts($record)) > 0)
+                            ->schema([
+                                Forms\Components\Placeholder::make('event_alerts_list')
+                                    ->label('')
+                                    ->content(function (?Event $record) {
+                                        if (!$record || !$record->exists) return '';
+                                        $alerts = app(\App\Services\EventAlertsService::class)->getAlerts($record);
+                                        if (empty($alerts)) return '';
+
+                                        $html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+                                        foreach ($alerts as $a) {
+                                            $title = htmlspecialchars((string) ($a['title'] ?? ''));
+                                            $msg = htmlspecialchars((string) ($a['message'] ?? ''));
+                                            $url = $a['action_url'] ?? null;
+                                            $html .= '<div style="display:flex;gap:12px;padding:12px 14px;border:1px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.06);border-radius:8px;align-items:flex-start;">';
+                                            $html .= '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#ef4444;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px;">!</div>';
+                                            $html .= '<div style="flex:1;min-width:0;">';
+                                            $html .= '<div style="font-weight:600;font-size:14px;">' . $title . '</div>';
+                                            $html .= '<div style="font-size:13px;opacity:0.8;margin-top:2px;">' . $msg . '</div>';
+                                            $html .= '</div>';
+                                            if ($url) {
+                                                $html .= '<a href="' . htmlspecialchars($url) . '" style="flex-shrink:0;padding:6px 14px;background:#ef4444;color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;">Rezolvă</a>';
+                                            }
+                                            $html .= '</div>';
+                                        }
+                                        $html .= '</div>';
+                                        return new HtmlString($html);
+                                    })
+                                    ->columnSpanFull(),
+                            ]),
                                     ]), // End Tab 1: Detalii
 
                                 // ========== TAB 2: VANZARI ==========
@@ -5374,6 +5422,33 @@ class EventResource extends Resource
 
                         return new HtmlString($html);
                     }),
+
+                // Alerts badge — red circle with count of "missing/redo"
+                // documents (cerere avizare, decont, factură, impozit,
+                // PV distrugere). Hidden when count = 0 so clean events
+                // don't add visual noise. Count comes from
+                // EventAlertsService which is cache-backed (5min TTL +
+                // explicit invalidation on state changes), so this column
+                // adds ~zero query cost per row.
+                Tables\Columns\TextColumn::make('alerts_count')
+                    ->label('!')
+                    ->alignCenter()
+                    ->toggleable()
+                    ->getStateUsing(fn (Event $record): int =>
+                        app(\App\Services\EventAlertsService::class)->getAlertsCount($record))
+                    ->formatStateUsing(function (int $state): HtmlString {
+                        if ($state <= 0) {
+                            return new HtmlString('');
+                        }
+                        return new HtmlString(
+                            '<span title="' . $state . ' alerte operaționale — deschide evenimentul pentru detalii" '
+                            . 'style="display:inline-flex;align-items:center;justify-content:center;'
+                            . 'min-width:24px;height:24px;padding:0 6px;border-radius:12px;'
+                            . 'background:#ef4444;color:#ffffff;font-weight:700;font-size:12px;'
+                            . 'line-height:1;">' . $state . '</span>'
+                        );
+                    }),
+
                 Tables\Columns\IconColumn::make('seating_layout_id')
                     ->label('Seating')
                     ->boolean()

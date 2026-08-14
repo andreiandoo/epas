@@ -164,6 +164,41 @@ class AppServiceProvider extends ServiceProvider
            care au deja un short, deci o imagine schimbata nu s-ar propaga
            niciodata. Vezi ShortSourceImageObserver. */
         \App\Models\Event::observe(\App\Observers\ShortSourceImageObserver::class);
+
+        /* EventAlerts cache invalidation — flush the cached alert set
+           for an event whenever state that could resolve/re-introduce an
+           alert changes. Uses inline closures to avoid modifying five
+           different model boot() methods just for this concern. The
+           EventGeneratedDocument model handles its own invalidation in
+           its booted() method because it was already being touched. */
+        $flushByEventId = function ($model) {
+            if ($eventId = $model->event_id ?? null) {
+                \App\Services\EventAlertsService::flushCache((int) $eventId);
+            }
+        };
+        \App\Models\MarketplacePayout::created($flushByEventId);
+        \App\Models\MarketplacePayout::deleted($flushByEventId);
+        \App\Models\OrganizerDocument::created($flushByEventId);
+        \App\Models\OrganizerDocument::deleted($flushByEventId);
+        \App\Models\TicketType::created($flushByEventId);
+        \App\Models\TicketType::updated($flushByEventId);
+        \App\Models\TicketType::deleted($flushByEventId);
+        \App\Models\Invoice::created(function ($inv) {
+            if ($inv->marketplace_payout_id) {
+                $eventId = \App\Models\MarketplacePayout::whereKey($inv->marketplace_payout_id)->value('event_id');
+                if ($eventId) {
+                    \App\Services\EventAlertsService::flushCache((int) $eventId);
+                }
+            }
+        });
+        \App\Models\Event::updated(function ($event) {
+            // Only publish-state changes affect the cerere_avizare alert;
+            // any other Event update (title, description, etc.) is
+            // irrelevant to alert state.
+            if ($event->wasChanged(['is_published', 'is_cancelled', 'event_date', 'range_end_date'])) {
+                \App\Services\EventAlertsService::flushCache((int) $event->id);
+            }
+        });
         \App\Models\Artist::observe(\App\Observers\ShortSourceImageObserver::class);
         \App\Models\Venue::observe(\App\Observers\ShortSourceImageObserver::class);
         // PERF P2/8 — invalidate event_stats:v1:{event_id} cache on ticket

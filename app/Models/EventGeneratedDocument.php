@@ -10,6 +10,24 @@ use Illuminate\Support\Str;
 
 class EventGeneratedDocument extends Model
 {
+    protected static function booted(): void
+    {
+        // Any create/delete on an event's generated docs may resolve
+        // (or re-introduce) an alert. Bust the cached alert set so the
+        // events list badge + Detalii tab reflect state within seconds
+        // instead of waiting for the 5-min TTL to lapse.
+        static::created(function ($doc) {
+            if ($doc->event_id) {
+                \App\Services\EventAlertsService::flushCache((int) $doc->event_id);
+            }
+        });
+        static::deleted(function ($doc) {
+            if ($doc->event_id) {
+                \App\Services\EventAlertsService::flushCache((int) $doc->event_id);
+            }
+        });
+    }
+
     protected $fillable = [
         'marketplace_client_id',
         'event_id',
