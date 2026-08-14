@@ -9,13 +9,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ic, cn, sx } from '../../../design/sx';
 import { I } from '../../../mock/prototype';
-import { BottomNav, SetHead, TopBar } from '../kit';
+import { BottomNav, ListSkeleton, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useSession } from '../../../store/session';
 import { usePaymentMethods } from '../accountData';
 import { addPaymentMethod, isLoggedIn, removeAvatar, uploadAvatar } from '../../../api/customer';
-import { customerName, initialsOf, useCustomer } from '../accountData';
+import { customerName, initialsOf, useCustomer, useOrders } from '../accountData';
 import { APP_VERSION } from '../../../version';
 import { fetchFriends, setFriendsVisibility } from '../../../api/friends';
 
@@ -182,7 +182,6 @@ const SECTIONS: [string, Row[]][] = [
 export function Settings() {
   const { go, back } = useNav();
   const prefsSel = useClient((s) => s.prefsSel);
-  const logout = useSession((s) => s.logout);
   const me = useCustomer();
   const meName = customerName(me) ?? 'Cont demonstrativ';
   const meInitials = initialsOf(meName);
@@ -291,11 +290,9 @@ export function Settings() {
         </div>
       ))}
 
-      <div className="pad" style={sx('margin-top:18px')}>
-        <button className="cta ghost" onClick={logout} style={sx('color:var(--red);border-color:rgba(240,97,109,.3)')}>
-          Deconectare
-        </button>
-      </div>
+      {/* Butonul de deconectare a plecat de aici: exista deja in Profil, iar
+          doua iesiri din cont in ecrane vecine inseamna doar ca una din ele e
+          apasata din greseala. */}
       <div style={sx('height:14px')} />
       <BottomNav active="profile" />
     </div>
@@ -420,10 +417,32 @@ export function SetPersonal() {
 export function SetSecurity() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
-  const sessions: [string, string, string][] = [
-    ['📱', 'iPhone 15 · Cluj-Napoca', 'acum'],
-    ['💻', 'Chrome · Windows', 'acum 2 zile'],
-  ];
+  /* „iPhone 15 · Cluj-Napoca" si „Chrome · Windows" erau scrise in cod.
+
+     Serverul NU tine o listă de sesiuni: tokenul de client e unul singur, fara
+     evidenta pe dispozitiv. Doua randuri inventate intr-un ecran de securitate
+     sunt mai rele decat niciunul — cineva le-ar citi ca pe o lista reala si
+     ar crede ca altcineva ii e in cont, sau invers, ca nu e.
+
+     Se arata DISPOZITIVUL ACESTA, care e singurul lucru pe care il stim cu
+     adevarat. Restul e spus in cuvinte. */
+  const thisDevice = (() => {
+    const ua = navigator.userAgent;
+    const os = /Android/i.test(ua)
+      ? 'Android'
+      : /iPhone|iPad|iPod/i.test(ua)
+        ? 'iOS'
+        : /Windows/i.test(ua)
+          ? 'Windows'
+          : /Mac/i.test(ua)
+            ? 'macOS'
+            : 'dispozitiv necunoscut';
+    const app = /wv|Capacitor/i.test(ua) ? 'aplicația tics' : 'browser';
+
+    return `${app} · ${os}`;
+  })();
+
+  const sessions: [string, string, string][] = [['📱', thisDevice, 'sesiunea curentă']];
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <SetHead title="Parolă & securitate" />
@@ -723,6 +742,7 @@ export function SetBilling() {
      o firma are denumire si CUI, nu nume si CNP. */
   const [kind, setKind] = useState<'person' | 'company'>('person');
   const isCompany = kind === 'company';
+  const billName = customerName(useCustomer()) ?? '';
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -755,14 +775,17 @@ export function SetBilling() {
           </>
         ) : (
           <>
-            <Fld label="Nume complet" val="Andrei Popescu" ph="Nume complet" />
+            {/* Numele si adresa erau scrise fix („Andrei Popescu",
+                „Str. Memorandumului 28"): pe un ecran de facturare, datele
+                altcuiva se salveaza pe factura ta. */}
+            <Fld label="Nume complet" val={billName} ph="Nume complet" />
             <Fld label="CNP" ph="Cod numeric personal" />
           </>
         )}
-        <Fld label="Adresă" val="Str. Memorandumului 28" ph="Stradă, număr" />
+        <Fld label="Adresă" val="" ph="Stradă, număr" />
         <div className="row" style={sx('gap:11px')}>
           <div style={sx('flex:1')}>
-            <Fld label="Oraș" val="Cluj-Napoca" ph="Oraș" />
+            <Fld label="Oraș" val="" ph="Oraș" />
           </div>
           <div style={sx('flex:1')}>
             <Fld label="Cod poștal" val="400114" ph="Cod" />
@@ -789,12 +812,42 @@ const INVOICES: [string, string, string, string, string][] = [
 
 export function SetInvoices() {
   const showToast = useClient((s) => s.showToast);
+  const { orders, loading } = useOrders();
+
+  /* Facturile REALE sunt comenzile tale. `INVOICES` era o lista scrisa in cod
+     („Coldplay", „UNTOLD 4 zile"), deci fiecare utilizator vedea acelasi
+     istoric — al nimanui.
+
+     Descarcarea PDF nu exista inca pe server; butonul spune asta cinstit, nu
+     se preface ca descarca. */
+  const rows: [string, string, string, string, string][] = loading
+    ? []
+    : orders.length
+      ? orders.map((o) => [
+          o.order_number ?? `#${o.id}`,
+          o.items_count ? `${o.items_count} bilete` : 'Comandă',
+          o.date ?? '',
+          `${String(o.total ?? '0')} ${o.currency ?? 'lei'}`,
+          (o.status_label ?? o.status ?? '').toLowerCase(),
+        ])
+      : (INVOICES as [string, string, string, string, string][]).slice(0, 0);
+
   return (
     <div className="grid" style={sx('min-height:100%')}>
       <SetHead title="Istoric facturi" />
-      <div className="pad" style={sx('margin-top:14px')}>
+      {loading ? <ListSkeleton rows={3} height={86} /> : null}
+
+      {!loading && !rows.length ? (
+        <div className="pad" style={sx('margin-top:16px')}>
+          <div className="muted" style={sx('font-size:12.5px;line-height:1.6;text-align:center;padding:18px 0')}>
+            Nu ai comenzi încă. Fiecare comandă apare aici, cu numărul și suma ei.
+          </div>
+        </div>
+      ) : null}
+
+      <div className="pad" style={sx('margin-top:14px')} hidden={!rows.length}>
         <div style={sx('display:flex;flex-direction:column;gap:11px')}>
-          {INVOICES.map((inv) => (
+          {rows.map((inv) => (
             <div key={inv[0]} className="card" style={sx('padding:14px')}>
               <div className="between">
                 <div style={sx('min-width:0')}>
@@ -808,8 +861,8 @@ export function SetInvoices() {
                 <span
                   className="badge"
                   style={{
-                    background: inv[4] === 'plătită' ? 'var(--green-soft)' : 'var(--surface-3)',
-                    color: inv[4] === 'plătită' ? 'var(--green-2)' : 'var(--muted)',
+                    background: /plat|achit|final/i.test(inv[4]) ? 'var(--green-soft)' : 'var(--surface-3)',
+                    color: /plat|achit|final/i.test(inv[4]) ? 'var(--green-2)' : 'var(--muted)',
                     flex: 'none',
                   }}
                 >

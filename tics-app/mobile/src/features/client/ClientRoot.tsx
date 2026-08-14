@@ -39,6 +39,7 @@ import { Calendar, TicsList, TicsOffers } from './screens/Radar';
 import { Festival } from './screens/Festival';
 import { Stay22 } from './screens/Stay22';
 import { Shorts } from './screens/Shorts';
+import { Assistant } from './screens/Assistant';
 import { LightboxProvider } from './lightbox';
 import { AppBottomNav } from './kit';
 import { FriendProfile, Friends } from './screens/Friends';
@@ -99,6 +100,7 @@ const SCREENS: Record<string, ScreenFn> = {
   festival: () => <Festival />,
   stay22: (d) => <Stay22 id={d.id as string} />,
   shorts: () => <Shorts />,
+  assistant: () => <Assistant />,
 };
 
 function Placeholder({ id }: { id: string }) {

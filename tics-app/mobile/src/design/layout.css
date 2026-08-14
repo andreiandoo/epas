@@ -348,6 +348,9 @@
    Cand se ia o cheie de dale intunecate, se sterge tot blocul asta: harta va
    veni deja in tonul potrivit.
    ========================================================= */
+/* `.app-client` in fata, ca sa batem foaia lui Leaflet, care se incarca
+   dinamic si ajunge dupa a noastra in `<head>`. */
+.app-client .leaflet-container,
 .leaflet-container {
   background: #0c0a16;
   font: inherit;
@@ -493,3 +496,83 @@
   color: var(--green-2);
 }
 .app-client .daypill.empty .daypill-n { color: var(--faint) }
+
+/* =========================================================
+   RECOMANDĂRI AI (Explorează) + Asistent
+
+   Banda mov ocupa tot randul si se continua cu randul de recomandari, ca in
+   macheta: cardul de dinainte era mic si ducea la setarile de interese, adica
+   la configurare, nu la un raspuns.
+   ========================================================= */
+.app-client .airec {
+  position: relative;
+  overflow: hidden;
+  margin-top: 14px;
+  padding: 18px 20px 16px;
+  background: linear-gradient(160deg, #4c1d95 0%, #3b1580 45%, #2a1065 100%);
+  color: #fff;
+}
+.app-client .airec-glow {
+  position: absolute;
+  right: -18%;
+  top: -40%;
+  width: 80%;
+  height: 130%;
+  background: radial-gradient(circle, rgba(167, 139, 250, .45), transparent 62%);
+  pointer-events: none;
+}
+.app-client .airec-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 13px 20px;
+  border-radius: 999px;
+  background: #fff;
+  color: #17122b;
+  border: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, .7);
+}
+.app-client .airec-cta:active { transform: scale(.98) }
+.app-client .airec-chip {
+  flex: none;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .22);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Randul de recomandari continua banda, fara cusatura intre ele. */
+.app-client .airec-rail {
+  background: linear-gradient(180deg, #2a1065, #241056);
+  padding-top: 12px;
+  padding-bottom: 16px;
+  margin-top: 0;
+}
+
+/* ---- bulele din Asistent ---- */
+.app-client .aibubble {
+  max-width: 82%;
+  padding: 12px 15px;
+  border-radius: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.app-client .aibubble.me {
+  background: linear-gradient(135deg, var(--indigo), var(--indigo-3));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}

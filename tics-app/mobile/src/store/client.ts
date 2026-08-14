@@ -204,7 +204,13 @@ export const useClient = create<ClientState>((set, get) => ({
   expDate: seed.expDate,
   expDay: seed.expDay,
   addons: { ...seed.addons },
-  calDay: seed.calDay,
+  /* AZI, nu ziua 8 din prototip.
+
+     `seed.calDay` e 8 fiindca asa era in datasetul din care s-a portat
+     ecranul. Deschideai Calendarul in august si iti arata 8 august, cu
+     evenimentele acelei zile — pareau „primele rezultate", desi erau dintr-o
+     zi aleasa arbitrar acum jumatate de an. */
+  calDay: new Date().getDate(),
   fStage: seed.fStage,
   fDay: seed.fDay,
   saved: [...seed.saved],

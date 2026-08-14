@@ -23,6 +23,7 @@ import {
   toggleFavorite,
   type AccountStats,
   type ApiNotification,
+  type ApiOrder,
   type ApiPaymentMethod,
   type ApiReview,
   type ApiTicket,
@@ -403,4 +404,30 @@ export function useWallet() {
   }, []);
 
   return { tx, balance, live: tx !== null || balance !== null };
+}
+
+/**
+ * Comenzile contului — sursa reala a „Istoricului de facturi".
+ *
+ * Ecranul rula pe o lista scrisa in cod („Coldplay", „UNTOLD 4 zile"), deci
+ * toti utilizatorii vedeau acelasi istoric, care nu era al nimanui.
+ */
+export function useOrders() {
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [loading, setLoading] = useState(isLoggedIn());
+
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+
+    let alive = true;
+    fetchOrders()
+      .then((list) => alive && list && setOrders(list))
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return { orders, loading };
 }

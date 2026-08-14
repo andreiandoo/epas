@@ -11,8 +11,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { EV, I, MYTIX, VEN, poster } from '../../../mock/prototype';
-import { BottomNav, TopBar } from '../kit';
+import { BottomNav, TopBar, MissingContent } from '../kit';
 import { useNav } from '../nav';
+import { useTickets } from '../accountData';
 import { Qr } from '../qr';
 
 type Pass = { name: string; code: string; checkedIn?: string };
@@ -103,12 +104,31 @@ function CheckinBlock({ p }: { p: Pass }) {
 /* ---------- S.ticket + INIT.ticket ---------- */
 export function TicketDetail({ id, pi }: { id?: string; pi?: number }) {
   const { go, back } = useNav();
-  const list = MYTIX as unknown as Ticket[];
+
+  /* Biletele REALE ale contului, cand exista sesiune.
+
+     Ecranul citea direct `MYTIX` — biletele prototipului — deci orice bilet
+     deschis din „Biletele mele" arata Coldplay si Salina Turda, indiferent
+     cine esti. Grupurile reale au aceeasi forma (`ev`, `passes`, `seat`,
+     `cat`), asa ca restul ecranului ramane neatins. */
+  const { groups, live } = useTickets();
+  const list = (live ? groups : (MYTIX as unknown as Ticket[])) as unknown as Ticket[];
   const tk = list.find((t) => t.ev === id) || list[0];
   const pi0 = Number(pi || 0);
-  const ev = (EV as Record<string, Ev>)[tk.ev];
-  const venue = (VEN as Record<string, { name: string }>)[ev.ven as string];
+
+  /* Pentru biletele reale nu exista o fisa in datasetul prototipului. Titlul,
+     data si sala vin din grupul insusi — nu se cauta in `EV`, unde n-au ce sa
+     gaseasca si de unde ar veni evenimentul altcuiva. */
+  const g = live ? (tk as unknown as { title?: string; venue?: string; date?: string; time?: string; cat?: string }) : null;
+  const ev = (
+    g
+      ? { s: g.title ?? 'Bilet', d: g.date ?? '', time: g.time ?? '', cat: g.cat ?? '', city: g.venue ?? '', type: 'event', ven: '' }
+      : (EV as Record<string, Ev>)[tk.ev]
+  ) as Ev;
+  const venue = g ? { name: g.venue ?? '' } : (VEN as Record<string, { name: string }>)[ev.ven as string];
   const n = tk.passes.length;
+
+  if (!tk) return <MissingContent what="Biletul" />;
 
   const slider = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(pi0);

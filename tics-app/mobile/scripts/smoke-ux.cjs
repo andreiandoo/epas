@@ -86,6 +86,27 @@ const check = (name, ok, extra = '') => {
   });
   await page.waitForFunction(() => document.querySelectorAll('.catcard').length > 12, { timeout: 40000 }).catch(() => {});
   await wait(800);
+  /* Banda „Recomandări AI" si intrarea in Asistent, dupa macheta. */
+  const ai = await page.evaluate(() => {
+    const band = document.querySelector('.airec');
+    const cta = document.querySelector('.airec-cta');
+    cta?.click();
+
+    return { band: !!band, cta: cta?.textContent.replace(/\s+/g, ' ').trim() ?? '' };
+  });
+  await wait(1600);
+  const assistant = await page.evaluate(() => ({
+    title: document.querySelector('.h2')?.textContent ?? '',
+    bubbles: document.querySelectorAll('.aibubble').length,
+    body: document.body.textContent.replace(/\s+/g, ' ').slice(0, 200),
+  }));
+  check('banda „Recomandări AI" exista', ai.band, ai.cta);
+  check('butonul duce in Asistent AI', /Asistent AI/.test(assistant.title), assistant.title);
+  check('asistentul compune un plan', /Planul tău/.test(assistant.body) || assistant.bubbles >= 2, `${assistant.bubbles} bule`);
+  /* Back-ul din Asistent: TopBar randeaza `.stickytop > .hrow`, nu `.topbar`. */
+  await page.evaluate(() => document.querySelector('.stickytop .hrow .icon-btn')?.click());
+  await wait(1200);
+
   const nCats = await page.evaluate(() => document.querySelectorAll('.catcard').length);
   check('categorii reale in "Alege un vibe"', nCats > 6, `${nCats} categorii`);
   const catName = await page.evaluate(() => {

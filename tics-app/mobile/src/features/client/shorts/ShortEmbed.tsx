@@ -67,8 +67,11 @@ export function ShortEmbed({ videoId, active, muted, duration, onProgress, onCom
       post('playVideo');
     };
 
-    // Playerul nu asculta imediat dupa montare; reincercam de cateva ori.
-    const timers = [200, 600, 1500].map((t) => setTimeout(send, t));
+    /* Playerul nu asculta imediat dupa montare, iar autoplay-ul poate fi
+       refuzat si mai tarziu (revenire din fundal, economie de date). Sase
+       incercari intinse pe 12 secunde acopera cazurile vazute; comanda e
+       idempotenta, deci pe un clip care ruleaza nu face nimic. */
+    const timers = [200, 600, 1500, 3000, 6000, 12000].map((t) => setTimeout(send, t));
 
     return () => timers.forEach(clearTimeout);
   }, [active, muted]);
@@ -95,6 +98,17 @@ export function ShortEmbed({ videoId, active, muted, duration, onProgress, onCom
       if (!done && ms >= total) {
         done = true;
         onComplete?.();
+
+        /* Bucla, facuta de noi. `loop=1` singur nu functioneaza (are nevoie de
+           o lista), iar lista aducea butoanele de navigare peste imagine. */
+        frame.current?.contentWindow?.postMessage(
+          JSON.stringify({ event: 'command', func: 'seekTo', args: [0, true] }),
+          '*',
+        );
+        frame.current?.contentWindow?.postMessage(
+          JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
+          '*',
+        );
       }
     }, 500);
 
@@ -119,9 +133,17 @@ export function ShortEmbed({ videoId, active, muted, duration, onProgress, onCom
     iv_load_policy: '3',
     cc_load_policy: '0',
     color: 'white',
-    loop: '1',
-    // `loop` are efect doar impreuna cu o lista care contine acelasi clip
-    playlist: videoId,
+    /* FARA `playlist`.
+
+       `loop=1` are efect doar impreuna cu o lista care contine acelasi clip —
+       asa scria si aici. Dar lista pune playerul in modul PLAYLIST, iar acolo
+       YouTube deseneaza butoanele ⏮ / ⏭ in mijlocul cadrului. Alea se vedeau
+       peste video, impreuna cu pauza. Bucla o refacem noi, din ceasul de mai
+       jos, cand clipul si-a atins durata: un `seekTo(0)` + `playVideo`.
+
+       `controls=0` nu le poate scoate: nu sunt „comenzi", sunt navigare in
+       lista. */
+    loop: '0',
     enablejsapi: '1',
   });
 

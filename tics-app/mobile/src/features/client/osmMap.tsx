@@ -132,7 +132,16 @@ export function OsmMap({
         keyboard: interactive,
       });
 
-      L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIB }).addTo(m);
+      L.tileLayer(TILE_URL, {
+        maxZoom: 19,
+        attribution: TILE_ATTRIB,
+        /* Tine mai multe randuri de dale in afara cadrului, ca o glisare
+           rapida sa aiba din ce desena. Cu valoarea implicita (2), miscarea
+           iuti depasea zona incarcata si ramanea gol. */
+        keepBuffer: 4,
+        /* Cere dale si IN TIMPUL miscarii, nu doar cand se opreste. */
+        updateWhenIdle: false,
+      }).addTo(m);
 
       if (showMe) {
         L.circleMarker([center.lat, center.lng], {
@@ -259,7 +268,11 @@ export function OsmMap({
         `position:relative;z-index:0;isolation:isolate;height:${height}px;border-radius:20px;overflow:hidden;border:1px solid var(--line-2);background:#0c0a16`,
       )}
     >
-      <div ref={host} style={sx('position:absolute;inset:0')} />
+      {/* Fundalul se pune SI inline, nu doar in CSS: foaia de stil a lui
+          Leaflet se incarca dinamic, deci ajunge in `<head>` DUPA a noastra si
+          `.leaflet-container{background:#ddd}` castiga la egalitate de
+          specificitate. De acolo venea petecul alb la glisare rapida. */}
+      <div ref={host} style={sx('position:absolute;inset:0;background:#0c0a16')} />
       {!ready ? <div className="sk" style={sx('position:absolute;inset:0')} /> : null}
     </div>
   );

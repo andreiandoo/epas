@@ -91,33 +91,64 @@ export function Explore() {
         </div>
       </div>
 
-      <div className="pad" style={sx('margin-top:14px')}>
+      {/* ---------- RECOMANDĂRI AI ----------
+          Dupa macheta din elements/designs: banda mov care ocupa tot randul,
+          intrebarea, butonul alb care duce in Asistent, si scurtaturile de
+          dedesubt. Cardul de dinainte era mai mic si ducea doar la editarea
+          intereselor — adica la setari, nu la un raspuns. */}
+      <div className="airec">
+        <div className="airec-glow" aria-hidden="true" />
         <div
-          onClick={() => go('prefsEdit')}
-          style={sx(
-            'cursor:pointer;border-radius:20px;overflow:hidden;background:linear-gradient(135deg,var(--indigo-3),#2a1065);border:1px solid var(--line-2);color:#fff;padding:16px;position:relative',
-          )}
+          className="row"
+          style={sx('gap:7px;color:#c4b5fd;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;position:relative')}
         >
-          <div style={sx('position:absolute;right:-10px;bottom:-18px;font-size:88px;opacity:.2')}>🤖</div>
-          <div
+          <Ic svg={I.star} /> Recomandări AI
+        </div>
+        <div style={sx('font-size:24px;font-weight:700;letter-spacing:-.03em;margin-top:8px;position:relative')}>
+          Ce ai chef să faci?
+        </div>
+        <div style={sx('font-size:13px;opacity:.85;margin-top:5px;position:relative')}>
+          Alege un vibe, iar tics îți alege evenimentele.
+        </div>
+
+        <button className="airec-cta" onClick={() => go('assistant')}>
+          🤖 Planifică-mi seara <Ic svg={I.arrow} />
+        </button>
+
+        <div className="scroll-x" style={sx('margin-top:13px;padding:1px 0;position:relative')}>
+          {([
+            ['🌙', 'Diseară'],
+            ['🧘', 'Weekend relaxant'],
+            ['🥂', 'Cu prietenii'],
+            ['👨‍👩‍👧', 'Cu familia'],
+          ] as [string, string][]).map(([emoji, label]) => (
+            <button key={label} className="airec-chip" onClick={() => go('assistant')}>
+              {emoji} {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="between" style={sx('margin-top:16px;position:relative')}>
+          <div className="row" style={sx('gap:7px;font-size:14px;font-weight:600')}>
+            🤖 Pentru tine
+          </div>
+          <button
+            onClick={() => go('prefsEdit')}
             className="row"
-            style={sx('gap:6px;color:#c4b5fd;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase')}
+            style={sx('gap:5px;background:none;border:0;color:#c4b5fd;font:inherit;font-size:12.5px;cursor:pointer')}
           >
-            <Ic svg={I.star} /> Recomandat pentru tine
-          </div>
-          <div style={sx('font-size:16px;font-weight:600;margin-top:7px;letter-spacing:-.02em')}>
-            Pentru că îți place {prefsSel.slice(0, 2).join(' & ') || 'muzica'}
-          </div>
-          <div className="row" style={sx('gap:6px;font-size:12px;opacity:.85;margin-top:5px')}>
-            {prefsSel.length} interese · editează <Ic svg={I.arrow} />
-          </div>
+            personalizează <Ic svg={I.arrow} />
+          </button>
+        </div>
+        <div className="muted" style={sx('font-size:11px;margin-top:3px;position:relative;color:rgba(255,255,255,.6)')}>
+          {prefsSel.length} interese · {prefsSel.slice(0, 2).join(' & ') || 'încă neconfigurat'}
         </div>
       </div>
 
       {/* Eticheta de oras a plecat odata cu filtrul: n-are ce anunta cand
           lista nu mai e restransa la un oras. */}
 
-      <div className="rail" style={sx('margin-top:10px')}>
+      <div className="rail airec-rail">
         {rec.map((e) => (
           <EvMini key={e.id} ev={e} />
         ))}

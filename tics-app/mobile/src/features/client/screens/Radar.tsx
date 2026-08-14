@@ -147,34 +147,34 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
         <div className="stickytop">
           <SafeTop />
           <div className="hrow">
-            <div style={sx('min-width:0')}>
+            <div style={sx('min-width:0;flex:1')}>
               {/* Titlul spune ce vezi ACUM: se schimba odata cu orasele alese,
                   nu ramane „România" cand tu cauti in Ploiesti. Aici incap
                   toate numele, deci selectorul de dedesubt le poate scurta. */}
               <div className="eyebrow">Orice eveniment din {whereLabel}</div>
-              <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
-                Radar
-              </h1>
+              {/* Selectorul sta pe ACEEASI linie cu titlul, in acelasi bloc.
+                  Ca frate al blocului de titlu impingea antetul si tot ce
+                  urma se decala. Numele se scurteaza pe buton — sunt oricum
+                  scrise intregi deasupra. */}
+              <div className="row" style={sx('gap:9px;margin-top:2px;min-width:0')}>
+                <h1 className="h1" style={sx('font-size:23px;flex:none')}>
+                  Radar
+                </h1>
+                <button className="citypick" onClick={() => setSheet('city')} aria-label="Alege orașele">
+                  <span className="citypick-ic">
+                    <Ic svg={I.pin} />
+                  </span>
+                  <span className="citypick-txt">{pickLabel}</span>
+                  {picked.length > 1 ? <span className="citypick-n">{picked.length}</span> : null}
+                  <span className="citypick-caret" aria-hidden="true">
+                    ⌄
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {/* Selectorul sta LANGA titlu, nu pe un rand propriu pe toata
-                latimea: acolo se lipea de marginea antetului si arata ca o
-                bara de stare, nu ca o comanda. Numele se scurteaza — oricum
-                sunt scrise intregi deasupra, in titlu. */}
-            <div className="row" style={sx('gap:8px;flex:none')}>
-              <button className="citypick" onClick={() => setSheet('city')} aria-label="Alege orașele">
-                <span className="citypick-ic">
-                  <Ic svg={I.pin} />
-                </span>
-                <span className="citypick-txt">{pickLabel}</span>
-                {picked.length > 1 ? <span className="citypick-n">{picked.length}</span> : null}
-                <span className="citypick-caret" aria-hidden="true">
-                  ⌄
-                </span>
-              </button>
-              <div className="icon-btn" onClick={() => go('calendar')}>
-                <Ic svg={I.cal} />
-              </div>
+            <div className="icon-btn" onClick={() => go('calendar')} style={{ flex: 'none' }}>
+              <Ic svg={I.cal} />
             </div>
           </div>
 
@@ -895,6 +895,15 @@ export function Calendar() {
   const calDay = useClient((s) => s.calDay);
 
   const now = new Date();
+
+  /* Cand te intorci in luna curenta, ziua selectata revine la AZI daca cea
+     retinuta e din trecut — altfel ramaneai pe o zi care a trecut intre timp
+     si Calendarul deschidea o lista goala. */
+  useEffect(() => {
+    if (calDay < now.getDate()) useClient.setState({ calDay: now.getDate() });
+    // se verifica o singura data, la deschiderea ecranului
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [ym, setYm] = useState<[number, number]>([now.getFullYear(), now.getMonth()]);
   const [year, month] = ym;
 
