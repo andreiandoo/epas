@@ -49,6 +49,12 @@ class OrganizerLeadResource extends Resource
     protected static ?string $modelLabel = 'Lead';
     protected static ?string $pluralModelLabel = 'Lead-uri partener';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    // Hidden from Administrator / Moderator — Super Administrator only.
+    public static function canAccess(): bool
+    {
+        return (bool) auth('marketplace_admin')->user()?->isSuperAdmin();
+    }
     protected static ?int $navigationSort = 20;
 
     /**

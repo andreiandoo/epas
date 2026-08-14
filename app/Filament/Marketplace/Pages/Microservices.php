@@ -13,6 +13,12 @@ class Microservices extends Page
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-puzzle-piece';
     protected static ?string $navigationLabel = 'Microservices';
     protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+
+    // Hidden from Administrator / Moderator — Super Administrator only.
+    public static function canAccess(): bool
+    {
+        return (bool) auth('marketplace_admin')->user()?->isSuperAdmin();
+    }
     protected static ?int $navigationSort = 0;
     protected string $view = 'filament.marketplace.pages.microservices';
 

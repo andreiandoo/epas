@@ -38,6 +38,14 @@ class CouponCodeResource extends Resource
 
     protected static ?string $navigationParentItem = 'Coupon Campaigns';
 
+    // Super Administrator keeps Coupon Codes nested under Coupon Campaigns.
+    // For Administrator / Moderator (who no longer see Microservices), surface
+    // Coupon Codes at the top level — in place of the hidden Microservices item.
+    public static function getNavigationParentItem(): ?string
+    {
+        return auth('marketplace_admin')->user()?->isSuperAdmin() ? 'Coupon Campaigns' : null;
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Tools';
 
     protected static ?int $navigationSort = 15;

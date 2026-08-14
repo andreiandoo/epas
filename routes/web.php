@@ -303,7 +303,7 @@ Route::get('/.well-known/apple-developer-merchantid-domain-association', ApplePa
     ->name('apple-pay.verification');
 
 // Marketplace Document Generation API
-Route::middleware(['web', 'auth'])->prefix('marketplace/api')->group(function () {
+Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace/api')->group(function () {
     Route::post('/events/{eventId}/generate-document', function (int $eventId) {
         $event = \App\Models\Event::findOrFail($eventId);
         $templateId = request()->input('template_id');
@@ -313,7 +313,7 @@ Route::middleware(['web', 'auth'])->prefix('marketplace/api')->group(function ()
             $document = \App\Models\EventGeneratedDocument::generateDocument(
                 event: $event,
                 template: $template,
-                generatedBy: auth()->user()
+                generatedBy: auth('marketplace_admin')->user()
             );
             return response()->json(['success' => true, 'message' => "Document generat: {$document->filename}"]);
         } catch (\Throwable $e) {

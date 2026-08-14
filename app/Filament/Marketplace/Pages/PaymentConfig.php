@@ -21,6 +21,12 @@ class PaymentConfig extends Page implements HasForms
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-credit-card';
     protected static ?string $navigationLabel = 'Metode de plată';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    // Hidden from Administrator / Moderator — Super Administrator only.
+    public static function canAccess(): bool
+    {
+        return (bool) auth('marketplace_admin')->user()?->isSuperAdmin();
+    }
     protected static ?int $navigationSort = 10;
     protected string $view = 'filament.marketplace.pages.payment-config';
 

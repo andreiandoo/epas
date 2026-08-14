@@ -24,6 +24,12 @@ class AccountingConfig extends Page implements HasForms
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
     protected static ?string $navigationLabel = 'Contabilitate';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    // Hidden from Administrator / Moderator — Super Administrator only.
+    public static function canAccess(): bool
+    {
+        return (bool) auth('marketplace_admin')->user()?->isSuperAdmin();
+    }
     protected static ?int $navigationSort = 11;
     protected string $view = 'filament.marketplace.pages.accounting-config';
 

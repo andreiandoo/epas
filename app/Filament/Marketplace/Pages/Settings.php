@@ -23,6 +23,12 @@ class Settings extends Page
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationLabel = 'Setări';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    // Hidden from Administrator / Moderator — Super Administrator only.
+    public static function canAccess(): bool
+    {
+        return (bool) auth('marketplace_admin')->user()?->isSuperAdmin();
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.settings';
 
