@@ -1580,16 +1580,34 @@ class ListPayouts extends ListRecords
         // still surfaced via 'refunds' for the modal info line.
         $netRevenue = $netRevenueFromBreakdown;
 
-        // Previous payouts
+        // Previous payouts. amount = organizer take; refund_amount = customer
+        // refund already accounted for on this payout row. The TOTAL claim
+        // that a payout has on the event's revenue is amount + refund_amount
+        // (money going out of Ambilet's account in both directions for this
+        // event slice). Balance must subtract BOTH — subtracting only amount
+        // leaves the refund_amount portion looking "still available" and
+        // produces phantom sold. Reproducer: payout 3291 on event 4659 —
+        // amount=4860 + refund_amount=160 = 5020 = full net; balance was
+        // rendering 160 lei instead of 0.
         $paidPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->where('status', 'completed')
             ->sum('amount');
+        $paidPayoutRefunds = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event->id)
+            ->where('status', 'completed')
+            ->sum('refund_amount');
 
         $pendingPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->whereIn('status', ['pending', 'approved', 'processing'])
             ->sum('amount');
+        $pendingPayoutRefunds = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['pending', 'approved', 'processing'])
+            ->sum('refund_amount');
+
+        $totalPayoutClaims = $paidPayouts + $paidPayoutRefunds + $pendingPayouts + $pendingPayoutRefunds;
 
         return [
             'gross' => round($grossRevenue, 2),
@@ -1601,7 +1619,7 @@ class ListPayouts extends ListRecords
             'net' => round($netRevenue, 2),
             'paid' => round($paidPayouts, 2),
             'pending' => round($pendingPayouts, 2),
-            'balance' => round(max(0, $netRevenue - $paidPayouts - $pendingPayouts), 2),
+            'balance' => round(max(0, $netRevenue - $totalPayoutClaims), 2),
             // For partial payout: how much gross/commission was already paid
             'paid_gross' => round($paidPayouts > 0 ? $paidPayouts + ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
             'paid_commission' => round($paidPayouts > 0 ? ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),

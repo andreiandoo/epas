@@ -194,13 +194,6 @@ class OrderResource extends Resource
                                     ->action(fn ($record) => static::downloadAllTicketsPdf($record)),
                             ])->fullWidth(),
                             SC\Actions::make([
-                                Action::make('print_invoice')
-                                    ->label('Printează factura')
-                                    ->icon('heroicon-o-printer')
-                                    ->color('gray')
-                                    ->visible(fn ($record) => $record->source !== 'external_import' && $record->status !== 'expired'),
-                            ])->fullWidth(),
-                            SC\Actions::make([
                                 Action::make('change_status')
                                     ->label('Schimbă status')
                                     ->icon('heroicon-o-arrow-path')
