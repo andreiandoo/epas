@@ -114,14 +114,20 @@ export function Explore() {
 
         <button className="airec-cta" onClick={() => go('assistant')}>
           {/* Marca radar in loc de emoji-ul de robot: e semnul „tics AI",
-              acelasi din antetul ecranului in care duce butonul. */}
-          <span style={sx('display:grid;place-items:center;width:22px;height:22px;border-radius:7px;overflow:hidden')}>
-            <Raw html={radarMark(22)} />
+              acelasi din antetul ecranului in care duce butonul.
+
+              Pe patrat INCHIS: glifa e off-white, iar pe butonul alb se
+              pierdea complet — se vedea doar un contur verde. */}
+          <span style={sx('display:grid;place-items:center;width:26px;height:26px;border-radius:8px;overflow:hidden;background:#141821;flex:none')}>
+            <Raw html={radarMark(26)} />
           </span>
           Planifică-mi seara <Ic svg={I.arrow} />
         </button>
 
-        <div className="scroll-x" style={sx('margin-top:13px;padding:1px 0;position:relative')}>
+        {/* `bleed`: iese din padding-ul benzii, ca randul sa poata ajunge la
+            marginea ecranului. Fara el ramanea o fasie goala in dreapta, iar
+            ultimul buton parea taiat inainte de margine. */}
+        <div className="scroll-x bleed" style={sx('margin-top:13px;position:relative')}>
           {([
             ['🌙', 'Diseară'],
             ['🧘', 'Weekend relaxant'],
@@ -168,19 +174,36 @@ export function Explore() {
           pe un ecran care ar trebui sa arate ce ALTCEVA mai exista. */}
 
       {/* ---------- TICS CALENDAR ----------
-          Banda de zile, incepand cu azi, cu numarul de evenimente pe fiecare.
-          O zi atinsa deschide Radarul filtrat pe ea; „Vezi luna" deschide
-          grila intreaga. Cifrele vin din acelasi feed ca restul Radarului. */}
-      <div className="sec">
-        <SecH
-          icon={I.cal}
-          icbg="var(--green-soft)"
-          iccol="var(--green-2)"
-          title="tics Calendar"
-          sub={monthLoading ? 'Se încarcă…' : `${daysStrip.reduce((n, d) => n + d.count, 0)} evenimente în perioada asta`}
-          more={['Vezi luna', () => go('calendar')]}
-        />
-        <div className="scroll-x" style={sx('padding:2px 0')}>
+          Aceeasi forma ca banda „tics AI": fundal propriu, antet scris, si
+          continutul lipit de el. Ca sectiune obisnuita, cu SecH, arata ca inca
+          o lista dintre multe — desi e alt fel de a cauta, pe zile. */}
+      <div className="calband">
+        <div className="calband-glow" aria-hidden="true" />
+        <div
+          className="row"
+          style={sx('gap:7px;color:#86efac;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;position:relative')}
+        >
+          <Ic svg={I.cal} /> tics Calendar
+        </div>
+        <div className="between" style={sx('margin-top:8px;position:relative')}>
+          <div style={sx('font-size:21px;font-weight:700;letter-spacing:-.03em;line-height:1.15')}>
+            Ce zi ai liberă?
+          </div>
+          <button
+            onClick={() => go('calendar')}
+            className="row"
+            style={sx('gap:5px;background:none;border:0;color:#86efac;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;flex:none')}
+          >
+            Vezi luna <Ic svg={I.arrow} />
+          </button>
+        </div>
+        <div style={sx('font-size:12.5px;opacity:.82;margin-top:4px;position:relative')}>
+          {monthLoading
+            ? 'Număr evenimentele…'
+            : `${daysStrip.reduce((n, d) => n + d.count, 0)} evenimente în următoarele două săptămâni`}
+        </div>
+
+        <div className="scroll-x bleed" style={sx('margin-top:14px;position:relative')}>
           {daysStrip.map((d) => (
             <button
               key={d.stamp}

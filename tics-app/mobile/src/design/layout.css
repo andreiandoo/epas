@@ -576,3 +576,72 @@
   color: #fff;
   font-weight: 600;
 }
+
+/* ---- banda de sus a Radarului ----
+   Aceeasi forma ca „tics AI" din Explorează: o propozitie care explica ce
+   castigi, nu trei cifre lipite pe care trebuia sa le interpretezi singur. */
+.app-client .radarband {
+  position: relative;
+  overflow: hidden;
+  margin-top: 14px;
+  padding: 18px 20px 17px;
+  background: linear-gradient(160deg, #0f2f3a 0%, #0c2331 48%, #0a1622 100%);
+  color: #fff;
+}
+.app-client .radarband-glow {
+  position: absolute;
+  right: -14%;
+  top: -46%;
+  width: 74%;
+  height: 130%;
+  background: radial-gradient(circle, rgba(45, 214, 238, .34), transparent 62%);
+  pointer-events: none;
+}
+
+/* Sageata selectorului de oras: desenata, ca sa stea pe linia textului
+   indiferent de font. */
+.app-client .citypick-caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--muted);
+}
+
+/* Randul care iese din padding-ul benzii ca sa atinga marginea ecranului.
+   Fara el ramanea o fasie goala in dreapta si ultimul buton parea taiat
+   inainte de margine. Prima pastila ramane aliniata cu textul de deasupra. */
+.app-client .airec .scroll-x.bleed,
+.app-client .calband .scroll-x.bleed {
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* ---- banda „tics Calendar" ---- */
+.app-client .calband {
+  position: relative;
+  overflow: hidden;
+  margin-top: 16px;
+  padding: 18px 20px 17px;
+  background: linear-gradient(160deg, #123a2c 0%, #0f2f26 48%, #0b1c18 100%);
+  color: #fff;
+}
+.app-client .calband-glow {
+  position: absolute;
+  left: -12%;
+  top: -44%;
+  width: 70%;
+  height: 128%;
+  background: radial-gradient(circle, rgba(52, 211, 153, .3), transparent 62%);
+  pointer-events: none;
+}
+/* Pastilele de zi, pe fundal verde: cele din tema ar fi disparut in banda. */
+.app-client .calband .daypill {
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+.app-client .calband .daypill-dow { color: rgba(255, 255, 255, .62) }
+.app-client .calband .daypill-n { color: #86efac }
+.app-client .calband .daypill.empty .daypill-n { color: rgba(255, 255, 255, .4) }

@@ -105,7 +105,14 @@ export function Assistant() {
      Ordinea nu e estetica — asa se petrece o seara, iar suma trebuie sa intre
      in buget PE PERSOANA. */
   const plan = useMemo(() => {
-    const usable = items.filter((e) => priceOf(e) > 0).sort((a, b) => priceOf(a) - priceOf(b));
+    /* ORDINEA CATALOGULUI, nu cea a pretului.
+
+       Sortate crescator dupa pret, planurile ieseau mereu din cele mai
+       ieftine lucruri din tara — „Aquapark 5 lei" plus „AmBilet 10 lei" — ceea
+       ce e o lista de chilipiruri, nu o seara. Catalogul vine deja ordonat
+       dupa ce e scos in fata si dupa cat de aproape e; bugetul ramane o
+       limita, nu un criteriu de alegere. */
+    const usable = items.filter((e) => priceOf(e) > 0);
     const cap = budget || Number.POSITIVE_INFINITY;
     const picked: UiEvent[] = [];
     let total = 0;
@@ -218,7 +225,9 @@ export function Assistant() {
                   {town || 'Alege orașul'}
                 </span>
               </span>
-              <span style={sx('color:var(--muted)')}>⌄</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style={{ color: 'rgba(255,255,255,.75)', flex: 'none' }} aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </button>
           </div>
 

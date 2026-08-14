@@ -103,11 +103,6 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
   const cityOptions: Option[] = [['', 'Toată România'], ...cities.map((c) => [c, c] as Option)];
   const labelOf = (opts: Option[], v: string, fb: string) => opts.find((o) => o[0] === v)?.[1] ?? fb;
 
-  const stats: [string, string][] = [
-    [live ? fmtK(live.liveEvents) : '3.2k', 'evenimente'],
-    [live ? String(live.platforms) : '20', 'platforme'],
-    [saving !== null ? `−${saving}%` : '−22%', 'sub medie'],
-  ];
 
   const subtitle = [dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ');
 
@@ -166,9 +161,12 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
                   </span>
                   <span className="citypick-txt">{pickLabel}</span>
                   {picked.length > 1 ? <span className="citypick-n">{picked.length}</span> : null}
-                  <span className="citypick-caret" aria-hidden="true">
-                    ⌄
-                  </span>
+                  {/* Sageata desenata, nu caracterul „⌄": acela se randeaza
+                      diferit de la un font la altul si statea prea sus,
+                      dezaliniat fata de text. */}
+                  <svg className="citypick-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -203,36 +201,31 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
         </TopBar>
       )}
 
-      <div className="pad" style={sx('margin-top:12px')}>
+      {/* ---------- CE FACE RADARUL ----------
+          Inainte era o caseta cu „Radar live" si trei cifre lipite (3.6k
+          evenimente · 20 platforme · −22% sub medie). Cifrele sunt bune, dar
+          nu spuneau NIMIC despre ce castigi tu — trebuia sa deduci singur.
+          Aceeasi forma ca banda „tics AI" din Explorează: o propozitie care
+          explica, cu cifrele reale in ea. */}
+      <div className="radarband">
+        <div className="radarband-glow" aria-hidden="true" />
         <div
-          style={sx('border-radius:22px;overflow:hidden;background:radial-gradient(120% 130% at 100% 0%,rgba(45,214,238,.18),transparent 55%),linear-gradient(140deg,#10222b,#0b1420);border:1px solid rgba(45,214,238,.28);padding:17px 16px;position:relative')}
+          className="row"
+          style={sx('gap:7px;color:var(--cyan);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;position:relative')}
         >
-          <div style={sx('position:absolute;right:-6px;top:-8px;font-size:78px;opacity:.14')}>📡</div>
-          <div
-            className="row"
-            style={sx('gap:7px;color:var(--cyan);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase')}
-          >
-            <span className="livedot" />
-            Radar live
-          </div>
-          <div style={sx('font-size:17px;font-weight:600;margin-top:8px;letter-spacing:-.02em')}>
-            Cel mai bun preț din toată piața
-          </div>
-          <div className="row" style={sx('gap:20px;margin-top:14px')}>
-            {stats.map((s) => (
-              <div key={s[1]}>
-                <div style={sx('font-size:19px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums')}>
-                  {s[0]}
-                </div>
-                <div
-                  className="muted"
-                  style={sx('font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:1px')}
-                >
-                  {s[1]}
-                </div>
-              </div>
-            ))}
-          </div>
+          <span className="livedot" /> Radar live
+        </div>
+        <div style={sx('font-size:22px;font-weight:700;letter-spacing:-.03em;margin-top:8px;line-height:1.15;position:relative')}>
+          Urmărim {live ? fmtK(live.liveEvents) : 'mii de'} evenimente,
+          <br />
+          de pe {live ? live.platforms : 20} platforme
+        </div>
+        <div style={sx('font-size:13px;opacity:.85;margin-top:6px;line-height:1.45;position:relative')}>
+          Îți găsim cel mai bun preț la fiecare.
+          {saving !== null ? ` În medie, cu ${saving}% sub restul pieței.` : ''}
+        </div>
+        <div style={sx('font-size:13px;font-weight:600;margin-top:9px;position:relative;color:var(--cyan)')}>
+          Facem economie la bani, nu la distracție.
         </div>
       </div>
 
