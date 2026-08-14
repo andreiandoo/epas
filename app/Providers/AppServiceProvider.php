@@ -147,6 +147,9 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
+        /* Cadourile din aplicatie: intentiile scrise la checkout devin
+           transferuri abia cand comanda e platita. Vezi GiftPurchaseService. */
+        \App\Models\Order::observe(\App\Observers\GiftIntentOrderObserver::class);
         \App\Models\Order::observe(\App\Observers\ServerSidePurchaseOrderObserver::class);
         \App\Models\Order::observe(\App\Observers\ActivityBookingOrderObserver::class);
         // Credits the short an order came from, and takes it back on refund

@@ -78,10 +78,26 @@ async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
   }
 }
 
+/**
+ * Un bilet daruit unui prieten.
+ *
+ * Serverul retine INTENTIA la crearea comenzii si o transforma in transfer
+ * abia cand plata intra — daca plata esueaza, nimeni nu primeste un bilet
+ * pentru care nu s-a platit. Vezi GiftPurchaseService.
+ */
+export type CheckoutGift = {
+  account_id?: number;
+  email?: string;
+  name?: string;
+  quantity?: number;
+  message?: string;
+};
+
 export const createOrder = (payload: {
   event_id: number;
   tickets: CheckoutTicket[];
   customer: CheckoutCustomer;
+  gifts?: CheckoutGift[];
 }) => call<{ order_id?: number; id?: number }>('/checkout/order', { method: 'POST', body: JSON.stringify(payload) });
 
 export const startPayment = (orderId: number) =>

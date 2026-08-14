@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\MarketplaceClient\PaymentController as MarketplaceP
 use App\Http\Controllers\Api\TenantClient\OrderController as TenantOrderController;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\Tixello\GiftPurchaseService;
 use App\Models\MarketplaceClient;
 use App\Models\Order;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
@@ -70,10 +71,57 @@ class CheckoutController extends Controller
 
             $this->impersonate($request, $client);
 
-            return app(MarketplaceOrdersController::class)->create($request);
+            $response = app(MarketplaceOrdersController::class)->create($request);
+
+            /* Cadourile se scriu DUPA ce comanda a fost creata cu succes.
+               Inainte n-ar avea `order_id`, iar dupa plata ar fi prea tarziu:
+               observatorul de comanda le converteste exact la momentul in care
+               banii intra. Vezi GiftPurchaseService. */
+            $this->recordGifts($request, $response);
+
+            return $response;
         }
 
+        /* Evenimentele de tenant nu pot fi daruite: transferul de bilet e legat
+           de `marketplace_customers`, iar pentru tenanti nu exista echivalent.
+           Aplicatia nu ofera optiunea acolo — aici doar nu o inventam. */
         return $this->createTenantOrder($request, $event);
+    }
+
+    /**
+     * Scrie intentiile de cadou pentru comanda tocmai creata.
+     *
+     * Esecul NU rastoarna comanda: biletele sunt cumparate si platite; un cadou
+     * care n-a putut fi inregistrat se rezolva dintr-un ecran, pe cand o
+     * comanda intoarsa din cauza unui camp secundar nu se rezolva deloc.
+     */
+    private function recordGifts(Request $request, JsonResponse $response): void
+    {
+        $gifts = $request->input('gifts');
+
+        if (! is_array($gifts) || $gifts === []) {
+            return;
+        }
+
+        $payload = $response->getData(true);
+        $orderId = $payload['data']['order']['id'] ?? $payload['data']['id'] ?? null;
+
+        if (($payload['success'] ?? false) !== true || ! $orderId) {
+            return;
+        }
+
+        try {
+            $order = Order::find($orderId);
+
+            if ($order) {
+                app(GiftPurchaseService::class)->record($order, $request->attributes->get('tixello_account'), $gifts);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Intentiile de cadou nu s-au putut scrie', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

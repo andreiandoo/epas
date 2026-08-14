@@ -4072,6 +4072,19 @@ Route::prefix('app')->middleware('throttle:120,1')->group(function () {
         /* ---- prieteni ----
            Descoperire DOAR prin cod / link de invitatie: o cautare dupa nume sau
            email ar transforma aplicatia intr-un director de clienti. */
+        /* „Cumparam impreuna" — grupurile din aplicatie peste `group_bookings`,
+           care pana acum n-aveau nicio ruta de client. */
+        Route::get('/groups', [\App\Http\Controllers\Api\TixelloApp\GroupsController::class, 'index'])
+            ->name('api.app.groups');
+        Route::post('/groups', [\App\Http\Controllers\Api\TixelloApp\GroupsController::class, 'store'])
+            ->middleware('throttle:20,1')->name('api.app.groups.store');
+        Route::get('/groups/{group}', [\App\Http\Controllers\Api\TixelloApp\GroupsController::class, 'show'])
+            ->name('api.app.groups.show');
+        Route::post('/groups/{group}/invite', [\App\Http\Controllers\Api\TixelloApp\GroupsController::class, 'invite'])
+            ->middleware('throttle:30,1')->name('api.app.groups.invite');
+        Route::post('/groups/{group}/cancel', [\App\Http\Controllers\Api\TixelloApp\GroupsController::class, 'cancel'])
+            ->name('api.app.groups.cancel');
+
         Route::get('/friends', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'index'])
             ->name('api.app.friends');
         Route::post('/friends/redeem', [\App\Http\Controllers\Api\TixelloApp\FriendsController::class, 'redeem'])

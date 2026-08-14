@@ -13,6 +13,7 @@ import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { ADDONS, EV, EXPDAYS, I, VEN, lei, occInfo, poster } from '../../../mock/prototype';
 import { TopBar, BackTitle, CatalogLoading, MissingContent, SafeTop } from '../kit';
 import { useNav } from '../nav';
+import { GiftPicker, type GiftTarget } from '../giftPicker';
 import { useClient, ttCountsFor } from '../../../store/client';
 import { cachedEvent, useCatalogEvent } from '../catalogData';
 import { createOrder, startPayment } from '../../../api/checkout';
@@ -621,6 +622,8 @@ export function Cart() {
   const c = cartCompute(evId);
   const customer = useCustomer();
   const [paying, setPaying] = useState(false);
+  /* Cui daruiesti bilete din comanda asta. Gol = toate sunt ale tale. */
+  const [gifts, setGifts] = useState<GiftTarget[]>([]);
 
   /**
    * Plata.
@@ -670,6 +673,11 @@ export function Cart() {
         last_name: rest.join(' ') || 'tics',
         phone: customer?.phone ?? undefined,
       },
+      /* Cadourile merg odata cu comanda. Serverul le tine ca intentie si le
+         transforma in transferuri abia dupa plata. */
+      gifts: gifts.length
+        ? gifts.map((g) => ({ account_id: g.accountId, email: g.email, name: g.name, quantity: 1 }))
+        : undefined,
     });
 
     if (!order.ok) {
@@ -954,6 +962,14 @@ export function Cart() {
           </div>
         </div>
       </div>
+
+      {/* Cadourile stau dupa sumar si inainte de plata: e ultima decizie
+          inainte sa dai banii, si trebuie luata cu totalul in fata ochilor. */}
+      <GiftPicker
+        max={c.items.filter((it) => !it.addon).reduce((n, it) => n + it.q, 0)}
+        value={gifts}
+        onChange={setGifts}
+      />
 
       <div className="dock">
         <button className="cta" onClick={() => void pay()} disabled={paying}>
