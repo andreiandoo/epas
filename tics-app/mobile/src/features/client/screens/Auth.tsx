@@ -193,10 +193,43 @@ const LockIcon = () => (
 /* =========================================================
    S.login
    ========================================================= */
+/**
+ * Adresa cu care te-ai autentificat ultima data, cand ai bifat „Ține-mă minte".
+ *
+ * Se tine SEPARAT de sesiune, si asta e ideea: sesiunea dispare la delogare,
+ * dar „ține-mă minte" inseamna tocmai ca adresa trebuie sa supravietuiasca
+ * delogarii. Fara asta, dupa logout campul se umplea la loc cu adresa demo din
+ * prototip — adica exact contul din care tocmai iesisesi ca sa intri in al tau.
+ *
+ * Doar adresa. Parola nu se tine minte nicaieri.
+ */
+const REMEMBER_LS = 'tics.login.email';
+
+const rememberedEmail = (): string | null => {
+  try {
+    return localStorage.getItem(REMEMBER_LS);
+  } catch {
+    return null;
+  }
+};
+
+export const setRememberedEmail = (email: string | null): void => {
+  try {
+    if (email) localStorage.setItem(REMEMBER_LS, email);
+    else localStorage.removeItem(REMEMBER_LS);
+  } catch {
+    /* stocare blocata: campul porneste gol, nimic nu se strica */
+  }
+};
+
 export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegister: () => void }) {
   const login = useSession((s) => s.login);
-  const [email, setEmail] = useState('andrei@tics.ro');
-  const [pass, setPass] = useState('password');
+  const known = rememberedEmail();
+  /* Adresa demo ramane doar cand n-a intrat nimeni real pe telefonul asta —
+     altfel ecranul de login ar fi gol la prima deschidere si n-ai avea cu ce
+     incerca aplicatia. */
+  const [email, setEmail] = useState(known ?? 'andrei@tics.ro');
+  const [pass, setPass] = useState(known ? '' : 'password');
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -215,6 +248,10 @@ export function Login({ onForgot, onRegister }: { onForgot: () => void; onRegist
     setErr(null);
     try {
       const real = await customerLogin(email.trim(), pass, remember);
+
+      /* Adresa se tine minte doar la o autentificare REUSITA si doar daca ai
+         bifat. Bifa debifata sterge si ce era retinut inainte. */
+      if (real) setRememberedEmail(remember ? email.trim() : null);
 
       if (!real) {
         setErr('Cont demonstrativ — datele n-au fost recunoscute.');

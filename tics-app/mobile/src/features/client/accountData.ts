@@ -123,7 +123,9 @@ function protoGroups(): TicketGroup[] {
 }
 
 export function useTickets() {
-  const [groups, setGroups] = useState<TicketGroup[]>(protoGroups);
+  /* Cu sesiune reala pornim GOL, nu cu biletele prototipului: altfel primul
+     cadru arata bilete care nu sunt ale nimanui, iar dupa o secunda sar. */
+  const [groups, setGroups] = useState<TicketGroup[]>(isLoggedIn() ? [] : protoGroups);
   const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(isLoggedIn());
 
@@ -218,15 +220,24 @@ export function usePaymentMethods() {
 
 export function useNotifications() {
   const [list, setList] = useState<ApiNotification[] | null>(null);
+  /* `loading` porneste ADEVARAT cand exista sesiune: fara el, ecranul nu poate
+     face diferenta intre „inca astept raspunsul" si „nu am nimic", asa ca
+     afisa datele prototipului pana venea raspunsul — o secunda de continut
+     inventat, care apoi se schimba sub ochii omului. */
+  const [loading, setLoading] = useState(isLoggedIn());
+
   useEffect(() => {
     if (!isLoggedIn()) return;
     let alive = true;
-    fetchNotifications().then((n) => alive && n && setList(n));
+    fetchNotifications()
+      .then((n) => alive && n && setList(n))
+      .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
   }, []);
-  return list;
+
+  return { list, loading };
 }
 
 /**

@@ -26,6 +26,34 @@
   margin: 0;
 }
 
+/* Voalul de sub bara.
+
+   Bara pluteste peste continut, iar la derulare textul trecea prin spatele ei
+   si se vedea pana la marginea de jos a ecranului — inclusiv sub ea, in fasia
+   dintre bara si marginea telefonului. Un degrade care porneste de la culoarea
+   fundalului si se stinge FIX deasupra barei rezolva asta fara sa acopere ceva
+   ce citesti: sus e transparent, deci nimic de deasupra barei nu e atins.
+
+   `position: fixed` si nu un pseudo-element pe bara: bara se ascunde pe unele
+   ecrane (`.hiddenbar`), iar voalul trebuie sa plece odata cu ea — de aceea
+   are aceeasi tranzitie si aceeasi clasa de ascundere, pusa de `AppBottomNav`.
+
+   Inaltimea: de la marginea de jos pana putin peste varful barei. */
+.app-client .navveil {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--ep-bottom-line) + 58px + 26px);
+  background: linear-gradient(to top, var(--bg) 0%, var(--bg) 62%, rgba(11, 9, 18, 0) 100%);
+  pointer-events: none;
+  z-index: 29;
+  transition: opacity .2s ease;
+}
+.app-client .navveil.hiddenbar {
+  opacity: 0;
+}
+
 /* Ascunsa pe ecranele care n-o cer (eveniment, cos, shorts). Pleaca in jos si
    se stinge, in loc sa dispara brusc — dispariția brusca a unui element fix
    citeste ca o eroare de randare. */
@@ -355,4 +383,49 @@
 }
 .leaflet-control-attribution a {
   color: rgba(255, 255, 255, 0.82) !important;
+}
+
+/* ---- selectorul de orase din Radar ----
+   Era un chip mic lipit de titlu, care se citea a eticheta, nu a comanda.
+   Un rand propriu, cu ac de harta si sageata, arata ca se deschide ceva. */
+.app-client .cityline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 13px;
+  border-radius: 15px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.app-client .cityline:active { transform: scale(.99) }
+.app-client .cityline-ic { color: var(--indigo-2); display: grid; place-items: center }
+.app-client .cityline-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.app-client .cityline-n {
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+.app-client .cityline-caret { color: var(--muted); display: grid; place-items: center }
+
+/* ---- despartitor intre doua sectiuni care nu se continua ---- */
+.app-client .secsplit {
+  height: 1px;
+  margin: 20px 20px 4px;
+  background: linear-gradient(to right, transparent, var(--line-2) 18%, var(--line-2) 82%, transparent);
 }

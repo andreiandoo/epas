@@ -180,6 +180,8 @@ export type FeedQuery = {
   limit?: number;
   offset?: number;
   city?: string;
+  /** Mai multe orase deodata (Radar). Are prioritate fata de `city`. */
+  cities?: string[];
   /** cheia de categorie TICS ('teatru', 'concerte'...) */
   cat?: string;
   genre?: string;
@@ -192,7 +194,11 @@ export type FeedQuery = {
 };
 
 function match(e: FeedEvent, q: FeedQuery): boolean {
-  if (q.city && e.city !== q.city) return false;
+  /* Mai multe orase = SAU intre ele. Lista goala nu filtreaza nimic — altfel
+     „am deselectat tot" ar insemna „nu-mi arata nimic", ceea ce nu cere
+     nimeni niciodata. */
+  if (q.cities?.length && !q.cities.includes(e.city)) return false;
+  if (!q.cities?.length && q.city && e.city !== q.city) return false;
   if (q.cat && e.cat !== q.cat) return false;
   if (q.genre && (e.genre ?? '').toLowerCase() !== q.genre.toLowerCase()) return false;
   if (q.search && !e.t.toLowerCase().includes(q.search.toLowerCase())) return false;
@@ -229,7 +235,7 @@ export async function feedList(q: FeedQuery = {}): Promise<{ items: RadarItem[];
  * era o promisiune pe care lista n-o putea tine.
  */
 export async function feedCategories(
-  q: { city?: string } = {},
+  q: { city?: string; cities?: string[] } = {},
 ): Promise<{ key: string; label: string; color: string; count: number; samples: RadarItem[] }[] | null> {
   const feed = await getFeed();
   if (!feed?.cats?.length) return null;
@@ -237,7 +243,7 @@ export async function feedCategories(
   const byCat = new Map<string, FeedEvent[]>();
   for (const e of feed.events) {
     if (e.price === null) continue;
-    if (q.city && e.city !== q.city) continue;
+    if (q.cities?.length ? !q.cities.includes(e.city) : q.city && e.city !== q.city) continue;
     (byCat.get(e.cat) ?? byCat.set(e.cat, []).get(e.cat)!).push(e);
   }
 

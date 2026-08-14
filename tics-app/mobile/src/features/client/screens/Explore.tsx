@@ -13,7 +13,6 @@ import { BottomNav, SafeTop, SecH } from '../kit';
 import { useNav } from '../nav';
 import { useShortsPreview } from '../shorts/useShortsPreview';
 import { useCatalogEvents } from '../catalogData';
-import { CityTag } from '../cityTag';
 import { radarToUi, useRadarList } from '../radarData';
 import { useClient } from '../../../store/client';
 import { useRadarCategories } from '../radarData';
@@ -29,12 +28,17 @@ export function Explore() {
      sa nu apara goala; apoi le inlocuim cu cele reale (17 tipuri masurate). */
   const pools = cats.length ? poolsFromCategories(cats) : (CATPOOLS as unknown as Pool[]);
   const prefsSel = useClient((s) => s.prefsSel);
-  const city = useClient((s) => s.city);
   /* Aceeasi ordine ca pe Acasa: evenimentele NOASTRE primele — de acolo se
      poate cumpara bilet — apoi Radarul, ca sa completeze randul cand avem
      putine. Fara nimic real, ramane datasetul prototipului. */
-  const mine = useCatalogEvents({ city: city || undefined, limit: 6 });
-  const { items: radar } = useRadarList({ limit: 6, city: city || undefined });
+  /* FARA filtru de oras, intentionat.
+
+     „Explorează" inseamna „arata-mi ce exista", iar orasul ales in antet
+     ingusta lista exact ca in Radar — deci cele doua ecrane deveneau acelasi
+     lucru. Cine vrea un oras anume are Radarul, care e construit pentru
+     filtrat. Aici se cauta larg. */
+  const mine = useCatalogEvents({ limit: 6 });
+  const { items: radar } = useRadarList({ limit: 6 });
 
   const pool = [...mine.items, ...radar.map(radarToUi)];
   const rec = pool.length ? pool.slice(0, 6) : ['coldplay', 'salina', 'swan'].map(ev);
@@ -79,12 +83,8 @@ export function Explore() {
         </div>
       </div>
 
-      {/* Eticheta de oras: lista de mai jos e deja filtrata, dar nimic n-o
-          spunea — o banda scurta parea „nu sunt evenimente" in loc de „nu sunt
-          in orasul ales". Un tap o scoate. */}
-      <div className="pad" style={sx('margin-top:12px')}>
-        <CityTag />
-      </div>
+      {/* Eticheta de oras a plecat odata cu filtrul: n-are ce anunta cand
+          lista nu mai e restransa la un oras. */}
 
       <div className="rail" style={sx('margin-top:10px')}>
         {rec.map((e) => (

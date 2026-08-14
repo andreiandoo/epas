@@ -50,10 +50,21 @@ export function ShortEmbed({ videoId, active, muted, duration, onProgress, onCom
     if (!el || !active) return;
 
     const send = () => {
-      el.contentWindow?.postMessage(
-        JSON.stringify({ event: 'command', func: muted ? 'mute' : 'unMute', args: [] }),
-        '*',
-      );
+      const post = (func: string, args: unknown[] = []) =>
+        el.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+
+      post(muted ? 'mute' : 'unMute');
+
+      /* Si PORNIREA, nu doar sunetul.
+
+         `autoplay=1` esueaza in destule WebView-uri (politica de gest al
+         utilizatorului, economie de date, revenirea din fundal). Cand esueaza,
+         YouTube deseneaza peste clip toata carcasa lui — poster, buton mare de
+         redare, titlu, „Watch on YouTube". Asta se vedea drept „controale":
+         nu erau comenzi ramase aprinse, era un player oprit.
+
+         Comanda e idempotenta: pe un clip care ruleaza deja nu face nimic. */
+      post('playVideo');
     };
 
     // Playerul nu asculta imediat dupa montare; reincercam de cateva ori.

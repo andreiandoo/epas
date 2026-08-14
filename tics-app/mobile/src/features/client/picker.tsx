@@ -19,15 +19,23 @@ export function PickerSheet({
   onClose,
   searchable,
   searchPlaceholder,
+  multiple,
 }: {
   title: string;
   options: Option[];
-  value: string;
+  /** Un sir la alegere unica; un tablou la alegere multipla. */
+  value: string | string[];
   onPick: (v: string) => void;
   onClose: () => void;
   /** Lista de orase are peste 100 de intrari; derulata, e nefolosibila. */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /**
+   * Alegere multipla: foaia NU se inchide dupa fiecare bifa, iar semnul devine
+   * casuta. O foaie care se inchide dupa primul oras face imposibila alegerea a
+   * doua — trebuia redeschisa pentru fiecare.
+   */
+  multiple?: boolean;
 }) {
   const [q, setQ] = useState('');
 
@@ -78,8 +86,8 @@ export function PickerSheet({
           <div className="h2" style={sx('font-size:15px')}>
             {title}
           </div>
-          <button className="chip" onClick={onClose} style={sx('padding:5px 11px;font-size:11px')}>
-            Închide
+          <button className="chip ind on" onClick={onClose} style={sx('padding:5px 13px;font-size:11px')}>
+            {multiple ? 'Gata' : 'Închide'}
           </button>
         </div>
 
@@ -97,20 +105,31 @@ export function PickerSheet({
         ) : null}
 
         <div style={sx('overflow-y:auto;padding:4px 20px 0')}>
-          {shown.map(([v, label]) => (
-            <div
-              key={v || '__all'}
-              className="selrow"
-              onClick={() => {
-                onPick(v);
-                onClose();
-              }}
-              style={{ cursor: 'pointer', borderTop: '1px solid var(--line)' }}
-            >
-              <div style={sx('flex:1;min-width:0;font-size:13.5px;font-weight:500')}>{label}</div>
-              {v === value ? <span style={sx('color:var(--indigo-2);font-weight:700')}>✓</span> : null}
-            </div>
-          ))}
+          {shown.map(([v, label]) => {
+            const on = Array.isArray(value) ? value.includes(v) : v === value;
+            /* Randul „toate" (valoare goala) inchide foaia si la alegere
+               multipla: e o comanda, nu o bifa. */
+            const closes = !multiple || v === '';
+
+            return (
+              <div
+                key={v || '__all'}
+                className="selrow"
+                onClick={() => {
+                  onPick(v);
+                  if (closes) onClose();
+                }}
+                style={{ cursor: 'pointer', borderTop: '1px solid var(--line)' }}
+              >
+                <div style={sx('flex:1;min-width:0;font-size:13.5px;font-weight:500')}>{label}</div>
+                {multiple && v !== '' ? (
+                  <span className={on ? 'cbx on' : 'cbx'} aria-hidden="true" />
+                ) : on ? (
+                  <span style={sx('color:var(--indigo-2);font-weight:700')}>✓</span>
+                ) : null}
+              </div>
+            );
+          })}
           {!shown.length ? (
             <div className="muted" style={sx('font-size:12.5px;text-align:center;padding:20px 0')}>
               Niciun rezultat pentru „{q}".

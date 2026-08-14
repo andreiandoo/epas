@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import { Ic, Raw, cn, sx } from '../../../design/sx';
 import { EV, I, VEN, poster } from '../../../mock/prototype';
-import { BottomNav, SafeTop } from '../kit';
+import { BottomNav, ListSkeleton, SafeTop } from '../kit';
 import { useNav } from '../nav';
 import { Qr } from '../qr';
 import { useTickets } from '../accountData';
@@ -52,7 +52,9 @@ export function Tickets() {
         <button className="chip">Transferate</button>
       </div>
 
-      <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:14px')}>
+      {loading ? <ListSkeleton rows={3} height={128} /> : null}
+
+      <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:14px')} hidden={loading}>
         {shown.map((tk) => {
           /* Grupurile reale n-au corespondent in datasetul local, deci titlul,
              locul si data vin din API; pentru cele demo raman cele din EV. */

@@ -183,6 +183,9 @@ export function Settings() {
   const { go, back } = useNav();
   const prefsSel = useClient((s) => s.prefsSel);
   const logout = useSession((s) => s.logout);
+  const me = useCustomer();
+  const meName = customerName(me) ?? 'Cont demonstrativ';
+  const meInitials = initialsOf(meName);
 
   return (
     <div className="grid" style={sx('min-height:100%')}>
@@ -196,15 +199,33 @@ export function Settings() {
         <div style={sx('width:42px')} />
       </TopBar>
 
+      {/* Contul REAL. Erau scrise fix „Andrei Popescu" si „andrei@tixello.ro",
+          adica datele demo, chiar si dupa autentificare — exact ecranul in care
+          te duci ca sa verifici cu ce cont esti. */}
       <div className="pad" style={sx('margin-top:14px')}>
         <div className="card" style={sx('padding:14px;display:flex;align-items:center;gap:13px')}>
-          <div style={sx('width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--indigo),var(--indigo-4));display:grid;place-items:center;color:#fff;font-weight:600')}>
-            AP
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 16,
+              background: me?.avatar
+                ? `url('${me.avatar}') center/cover`
+                : 'linear-gradient(135deg,var(--indigo),var(--indigo-4))',
+              display: 'grid',
+              placeItems: 'center',
+              color: '#fff',
+              fontWeight: 600,
+            }}
+          >
+            {me?.avatar ? '' : meInitials}
           </div>
-          <div style={sx('flex:1')}>
-            <div style={sx('font-weight:600;font-size:15px')}>Andrei Popescu</div>
-            <div className="muted" style={sx('font-size:12px')}>
-              andrei@tixello.ro
+          <div style={sx('flex:1;min-width:0')}>
+            <div style={sx('font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+              {meName}
+            </div>
+            <div className="muted" style={sx('font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+              {me?.email ?? 'Nu ești autentificat'}
             </div>
           </div>
           <button className="chip ind on" style={sx('padding:8px 14px')} onClick={() => go('setPersonal')}>
@@ -286,11 +307,13 @@ export function SetPersonal() {
   const { back } = useNav();
   const showToast = useClient((s) => s.showToast);
   const customer = useCustomer();
+  const me = customer;
+  const meName = customerName(customer) ?? '';
   const [avatar, setAvatar] = useState<string | null>(customer?.avatar ?? null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const initials = initialsOf(customerName(customer) ?? 'Andrei Popescu');
+  const initials = initialsOf(customerName(customer) ?? '?');
 
   const pickAvatar = async (file: File) => {
     if (!isLoggedIn()) {
@@ -370,15 +393,19 @@ export function SetPersonal() {
         </div>
       </div>
       <div className="pad">
-        <Fld label="Nume complet" val="Andrei Popescu" ph="Nume complet" />
-        <Fld label="Email" val="andrei@tixello.ro" ph="email@exemplu.ro" type="email" />
-        <Fld label="Telefon" val="0722 145 388" ph="07xx xxx xxx" type="tel" />
-        <Fld label="Oraș" val="Cluj-Napoca" ph="Orașul tău" />
+        {/* Valorile reale ale contului. Erau scrise in cod, deci ecranul de
+            editare iti arata datele altcuiva — si le-ai fi salvat peste ale
+            tale fara sa observi. Orasul si data nasterii nu vin din API, deci
+            raman goale, nu „Cluj-Napoca". */}
+        <Fld label="Nume complet" val={meName} ph="Nume complet" />
+        <Fld label="Email" val={me?.email ?? ''} ph="email@exemplu.ro" type="email" />
+        <Fld label="Telefon" val={me?.phone ?? ''} ph="07xx xxx xxx" type="tel" />
+        <Fld label="Oraș" val="" ph="Orașul tău" />
         {/* `type=date` — selectorul nativ al telefonului. Cu un camp de text
             utilizatorul trebuia sa scrie singur punctele, si orice alta forma
             („12/05/1994", „12 mai 1994") ar fi fost respinsa la salvare fara
             sa-i spuna nimeni de ce. */}
-        <Fld label="Data nașterii" val="1994-05-12" type="date" />
+        <Fld label="Data nașterii" val="" type="date" />
       </div>
       <div className="pad" style={sx('margin-top:6px')}>
         <button className="cta" onClick={() => { showToast('Salvat'); back(); }}>

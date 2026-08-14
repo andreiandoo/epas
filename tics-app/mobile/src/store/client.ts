@@ -81,6 +81,27 @@ const writePrefs = (v: string[]) => {
 
 /** Orasul ales, pastrat intre porniri. */
 const CITY_LS = 'tixello.city';
+const CITIES_LS = 'tics.radar.cities';
+
+/** Orasele din Radar, pastrate intre porniri ca orice alt filtru. */
+const readCities = (): string[] => {
+  try {
+    const raw = localStorage.getItem(CITIES_LS);
+    const v = raw ? (JSON.parse(raw) as unknown) : null;
+
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeCities = (list: string[]): void => {
+  try {
+    localStorage.setItem(CITIES_LS, JSON.stringify(list));
+  } catch {
+    /* stocare blocata: filtrul ramane doar pe sesiunea curenta */
+  }
+};
 const readCity = (): string => {
   try {
     return localStorage.getItem(CITY_LS) ?? '';
@@ -123,6 +144,17 @@ type ClientState = ProtoSt & {
   /** orasul ales din antetul de pe Acasa; '' = toata tara */
   city: string;
   setCity: (city: string) => void;
+  /**
+   * Orasele alese in Radar. Gol = toata tara.
+   *
+   * Separat de `city`: acolo e UN oras, folosit de „Lângă tine" si de listele
+   * de pe Acasa, unde un centru unic chiar are sens. Radarul e ecranul de
+   * cautat, iar acolo ai des nevoie de doua-trei orase deodata (locuiesti
+   * intre ele, sau cauti un turneu).
+   */
+  cities: string[];
+  setCities: (cities: string[]) => void;
+  toggleCity: (city: string) => void;
   /** filtrele ecranului Radar */
   radarF: RadarFilters;
   setRadarF: (patch: Partial<RadarFilters>) => void;
@@ -186,6 +218,7 @@ export const useClient = create<ClientState>((set, get) => ({
   catFor: null,
   savedRadar: loadSavedRadar(),
   city: readCity(),
+  cities: readCities(),
   radarF: { ...RADAR_DEFAULTS },
   calF: { ...CAL_DEFAULTS },
   stayF: { type: 'Toate', sort: 'dist', maxPrice: 500 },
@@ -218,6 +251,18 @@ export const useClient = create<ClientState>((set, get) => ({
         saved: has ? s.saved.filter((x) => x !== item.id) : [...s.saved, item.id],
       };
     }),
+
+  setCities: (cities) => {
+    writeCities(cities);
+    set({ cities });
+  },
+
+  toggleCity: (city) => {
+    const cur = get().cities;
+    const next = cur.includes(city) ? cur.filter((c) => c !== city) : [...cur, city];
+    writeCities(next);
+    set({ cities: next });
+  },
 
   setCity: (city) => {
     /* Orasul se retine intre porniri: e o alegere pe care utilizatorul o face

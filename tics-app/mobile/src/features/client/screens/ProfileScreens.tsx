@@ -24,7 +24,7 @@ import {
   money,
   poster,
 } from '../../../mock/prototype';
-import { BottomNav, SetHead, TopBar } from '../kit';
+import { BottomNav, ListSkeleton, SetHead, TopBar } from '../kit';
 import { useNav } from '../nav';
 import { useClient } from '../../../store/client';
 import { useFavorites, useNotifications, useReviews, useTickets, type SavedItem } from '../accountData';
@@ -469,7 +469,9 @@ export function Saved() {
         </div>
       </TopBar>
 
-      {list.length ? (
+      {favs.loading ? <ListSkeleton rows={3} height={96} /> : null}
+
+      {!favs.loading && list.length ? (
         <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:12px')}>
           {list.map((ev) => (
             <div key={ev.id} className="card" style={sx('overflow:hidden;display:flex;gap:12px;padding:11px')}>
@@ -602,7 +604,7 @@ export function PrefsEdit() {
    ========================================================= */
 export function Reviews() {
   const { go, back } = useNav();
-  const { list, stats } = useReviews();
+  const { list, stats, loading } = useReviews();
   const { groups, live: ticketsLive } = useTickets();
 
   /* „De recenzat" nu are endpoint propriu, dar se poate deduce: evenimentele
@@ -701,7 +703,8 @@ export function Reviews() {
           Recenziile tale
         </div>
         <div style={sx('display:flex;flex-direction:column;gap:11px')}>
-          {rows.map((r) => (
+          {loading ? <ListSkeleton rows={3} height={104} /> : null}
+          {loading ? null : rows.map((r) => (
             <div key={r.key} className="card" style={sx('padding:14px')}>
               <div className="between">
                 <div className="row" style={sx('gap:11px')}>
@@ -864,7 +867,7 @@ export function Review({ id }: { id?: string }) {
    ========================================================= */
 export function Notif() {
   const { back } = useNav();
-  const live = useNotifications();
+  const { list: live, loading } = useNotifications();
 
   /* Notificarile reale, aduse la forma tuplului din prototip:
      [emoji, titlu, text, cand, necitit]. */
@@ -892,7 +895,8 @@ export function Notif() {
       </TopBar>
 
       <div className="pad" style={sx('margin-top:14px;display:flex;flex-direction:column;gap:10px')}>
-        {rows.map((n, i) => (
+        {loading ? <ListSkeleton rows={4} height={72} /> : null}
+        {loading ? null : rows.map((n, i) => (
           <div
             key={`${n[1]}-${i}`}
             className="listitem"

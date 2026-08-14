@@ -18,7 +18,7 @@ import { CityTag } from '../cityTag';
 import { useNav } from '../nav';
 import { OsmMap } from '../osmMap';
 import { fetchArtistShorts } from '../../../api/shorts';
-import type { CatalogVenueReview } from '../../../api/catalog';
+import type { CatalogTrack, CatalogVenueReview } from '../../../api/catalog';
 import { useClient } from '../../../store/client';
 
 type Ev = Record<string, any>;
@@ -413,6 +413,18 @@ export function Artist({ id }: { id?: string }) {
      DEASUPRA iesirilor timpurii de mai jos: un hook chemat dupa un `return`
      ruleaza doar la unele randari si strica ordinea hook-urilor. */
   const [clips, setClips] = useState<{ id: number; title: string; poster: string | null }[]>([]);
+  /* Proba audio care ruleaza acum, dupa id-ul piesei. Un singur `<audio>`,
+     reutilizat: doua probe pornite deodata inseamna doua melodii peste. */
+  const [playing, setPlaying] = useState<string | null>(null);
+  const audio = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(
+    () => () => {
+      audio.current?.pause();
+      audio.current = null;
+    },
+    [],
+  );
   /* `String(...)`, nu `.trim()` direct: `id` vine din tabela de ecrane, unde
      e tipat `as string` dar poate fi si numar (cardurile trimit id-ul numeric
      al artistului). Fara conversie, `.trim` nu exista si cade tot ecranul. */
@@ -462,6 +474,36 @@ export function Artist({ id }: { id?: string }) {
         return evs.length ? evs : [(EV as Record<string, Ev>).coldplay];
       })();
   const socList = SOCLIST as [string, string][];
+  const tracks = (isLive ? ((live.data as { tracks?: CatalogTrack[] } | null)?.tracks ?? []) : []) as CatalogTrack[];
+
+  /** Porneste proba, opreste-o daca ruleaza deja, sau deschide Spotify. */
+  const playTrack = (t: CatalogTrack) => {
+    const key = t.id || t.name;
+
+    if (playing === key) {
+      audio.current?.pause();
+      setPlaying(null);
+
+      return;
+    }
+
+    audio.current?.pause();
+
+    if (!t.preview) {
+      if (t.url) window.open(t.url, '_blank', 'noopener');
+      else showToast('Piesa nu are probă audio');
+
+      return;
+    }
+
+    const el = new Audio(t.preview);
+    el.play().then(
+      () => setPlaying(key),
+      () => showToast('Proba audio nu a pornit'),
+    );
+    el.onended = () => setPlaying(null);
+    audio.current = el;
+  };
 
   /* Cifrele de urmaritori pe care CHIAR le avem. Reteaua fara numar nu capata
      pastila: un „—" ocupa cat o cifra si nu spune nimic. */
@@ -565,9 +607,72 @@ export function Artist({ id }: { id?: string }) {
         </p>
       </div>
 
-      {/* Melodiile si clipurile vin din ARTX, un dataset fix al prototipului.
-          Pentru un artist real n-avem asa ceva in API, iar imprumutate de la
-          alt artist ar fi pur si simplu false — deci sectiunile dispar. */}
+      {/* ---------- TOP 10, DIN SPOTIFY ----------
+          Serverul cere piesele de la Spotify cu `spotify_id`-ul artistului
+          (credentialele stau in Setări → Conexiuni; un Client Secret intr-un
+          APK ar fi public). Fara `spotify_id` sau fara raspuns, sectiunea nu
+          exista — nu se imprumuta piese de la alt artist.
+
+          Proba de 30 de secunde se reda in aplicatie cand Spotify o da;
+          altfel randul deschide piesa in Spotify. */}
+      {tracks.length ? (
+        <div className="pad" style={sx('margin-top:22px')}>
+          <div className="between">
+            <div className="h2" style={sx('font-size:15px')}>
+              Top {tracks.length} melodii
+            </div>
+            <span className="row" style={sx('gap:5px;color:#1DB954;font-size:11.5px;font-weight:600')}>
+              <Ic svg={socIc.spotify} /> Spotify
+            </span>
+          </div>
+          <div className="card" style={sx('margin-top:11px;padding:2px 14px')}>
+            {tracks.map((t, i) => (
+              <div
+                key={t.id || t.name}
+                className="between"
+                onClick={() => playTrack(t)}
+                style={{
+                  padding: '11px 0',
+                  borderBottom: i < tracks.length - 1 ? '1px solid var(--line)' : undefined,
+                  cursor: 'pointer',
+                }}
+              >
+                <div className="row" style={sx('gap:13px;min-width:0')}>
+                  <span
+                    style={{
+                      width: 16,
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: i < 3 ? 'var(--green-2)' : 'var(--faint)',
+                      fontSize: 13,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <div style={sx('min-width:0')}>
+                    <div style={sx('font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                      {t.name}
+                    </div>
+                    <div className="muted" style={sx('font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>
+                      {[t.album, t.duration].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                </div>
+                <span style={sx('color:var(--muted)')}>
+                  {playing === (t.id || t.name) ? '⏸' : <Ic svg={I.play} />}
+                </span>
+              </div>
+            ))}
+          </div>
+          {tracks.every((t) => !t.preview) ? (
+            <div className="muted" style={sx('font-size:11px;margin-top:8px;text-align:center')}>
+              Spotify nu oferă probe audio pentru aceste piese — atingerea le deschide în aplicația Spotify.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Melodiile prototipului raman doar pentru artistii demo. */}
       <div className="pad" style={sx('margin-top:22px')} hidden={!x}>
         <div className="between">
           <div className="h2" style={sx('font-size:15px')}>

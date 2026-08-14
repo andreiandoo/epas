@@ -594,6 +594,8 @@ export type RadarQuery = {
   type?: string;
   /** cheia de categorie a feed-ului ('teatru', 'concerte'...) */
   catKey?: string;
+  /** Mai multe orase (Radar). Are prioritate fata de `city`. */
+  cities?: string[];
   genre?: string;
   search?: string;
   when?: 'all' | 'today' | 'weekend';
@@ -649,7 +651,7 @@ export async function fetchRadarList(
      cerut niciun filtru. Daca utilizatorul a filtrat si nu iese nimic,
      raspunsul corect e "nimic gasit", nu trei evenimente inventate. */
   const unfiltered =
-    !opts.city && !opts.type && !opts.genre && !opts.search && !opts.maxPrice && !opts.scarce &&
+    !opts.city && !opts.cities?.length && !opts.type && !opts.genre && !opts.search && !opts.maxPrice && !opts.scarce &&
     !opts.catKey && opts.day === undefined && !opts.offset && (!opts.when || opts.when === 'all');
   const empty = () => ({
     items: unfiltered ? protoItems() : [],
@@ -792,8 +794,8 @@ export type RadarCategory = {
 
 const CAT_LS = 'tics.radar.cats.v1';
 
-export async function fetchRadarCategories(city?: string): Promise<RadarCategory[]> {
-  const viaFeed = await feedCategories({ city });
+export async function fetchRadarCategories(city?: string, cities?: string[]): Promise<RadarCategory[]> {
+  const viaFeed = await feedCategories({ city, cities });
   if (viaFeed?.length) {
     return viaFeed.map((c) => ({ type: c.key, cat: c.label, g: c.samples[0]?.g ?? '🎟', count: c.count, samples: c.samples, color: c.color }));
   }

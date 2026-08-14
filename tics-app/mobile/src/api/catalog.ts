@@ -86,6 +86,19 @@ export type CatalogEvent = CatalogEventBrief & {
   artists: CatalogArtistRef[];
 };
 
+/** O piesa din topul Spotify al artistului. */
+export type CatalogTrack = {
+  id: string;
+  name: string;
+  album: string;
+  image: string | null;
+  /** deja formatata „3:41" */
+  duration: string | null;
+  /** 30 de secunde de proba; poate lipsi (drepturi teritoriale) */
+  preview: string | null;
+  url: string | null;
+};
+
 export type CatalogArtist = {
   id: number;
   slug: string | null;
@@ -99,6 +112,8 @@ export type CatalogArtist = {
   links: Partial<Record<'website' | 'facebook' | 'instagram' | 'tiktok' | 'youtube' | 'spotify', string>>;
   followers: Partial<Record<'facebook' | 'instagram' | 'tiktok' | 'youtube' | 'spotify', number>>;
   events: CatalogEventBrief[];
+  /** Gol cand artistul n-are `spotify_id` sau cand Spotify n-a raspuns. */
+  top_tracks?: CatalogTrack[];
 };
 
 /**

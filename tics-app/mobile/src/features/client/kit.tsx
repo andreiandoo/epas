@@ -123,20 +123,28 @@ export function AppBottomNav() {
   ];
 
   return (
-    <div className={cn('bnav', !visible && 'hiddenbar')} aria-hidden={!visible}>
-      {items.map(([id, icon, label]) => (
-        <div
-          key={id}
-          className={cn('nav', active === id && 'on')}
-          onClick={() => tab(id)}
-          role="button"
-          aria-label={label}
-          aria-current={active === id ? 'page' : undefined}
-        >
-          <Ic svg={icon} />
-        </div>
-      ))}
-    </div>
+    <>
+      {/* Voalul din spatele barei: ascunde ce trece pe sub ea la derulare, dar
+          nu atinge nimic de deasupra ei (degradeul se stinge in transparent).
+          Randat inaintea barei, ca sa ramana dedesubt fara sa depindem de
+          z-index-uri intre frati. */}
+      <div className={cn('navveil', !visible && 'hiddenbar')} aria-hidden="true" />
+
+      <div className={cn('bnav', !visible && 'hiddenbar')} aria-hidden={!visible}>
+        {items.map(([id, icon, label]) => (
+          <div
+            key={id}
+            className={cn('nav', active === id && 'on')}
+            onClick={() => tab(id)}
+            role="button"
+            aria-label={label}
+            aria-current={active === id ? 'page' : undefined}
+          >
+            <Ic svg={icon} />
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -251,6 +259,24 @@ export function CatalogLoading({ title }: { title?: string }) {
         <div className="sk" style={sx('height:14px;width:90%;border-radius:8px')} />
         <div className="sk" style={sx('height:14px;width:80%;border-radius:8px')} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Locul unei liste care inca se incarca.
+ *
+ * Exista ca sa nu mai umplem golul cu datele prototipului: pana venea
+ * raspunsul, ecranele de Salvate / Notificari / Recenzii / Bilete afisau o
+ * secunda continut inventat, care apoi sarea. Un dreptunghi gri spune corect
+ * „inca astept", si nu poate fi confundat cu realitatea.
+ */
+export function ListSkeleton({ rows = 3, height = 76 }: { rows?: number; height?: number }) {
+  return (
+    <div className="pad" style={sx('display:flex;flex-direction:column;gap:11px')}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="sk" style={{ height, borderRadius: 18 }} />
+      ))}
     </div>
   );
 }

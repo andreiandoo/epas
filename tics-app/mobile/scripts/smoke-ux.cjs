@@ -230,17 +230,80 @@ const check = (name, ok, extra = '') => {
   const friendsScreen = await page.evaluate(() => ({
     title: document.querySelector('.h2')?.textContent ?? '',
     body: document.body.textContent.replace(/\s+/g, ' ').slice(0, 300),
+    /* Citit ACUM, cat suntem pe ecran: verificarile de mai jos ruleaza dupa ce
+       testul a mai umblat prin aplicatie, iar DOM-ul nu mai e cel de aici. */
+    canConnect: document.querySelectorAll('input[type="password"]').length > 0,
   }));
+  /* ---------- Radar: mai multe orase deodata ---------- */
+  await page.evaluate(() => {
+    const nav = [...document.querySelectorAll('.bnav .nav')].find((n) => /Radar/.test(n.getAttribute('aria-label') || ''));
+    nav?.click();
+  });
+  await wait(2500);
+
+  const cityLineOpened = await page.evaluate(() => {
+    const b = document.querySelector('.cityline');
+    b?.click();
+
+    return !!b;
+  });
+  await wait(700);
+  check('selectorul de orase e un rand propriu, nu un chip', cityLineOpened);
+
+  /* Doua orase, fara ca foaia sa se inchida intre ele: o foaie care se inchide
+     la prima bifa face imposibila alegerea a doua. */
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.selrow')].filter((r) => !/Toată România/.test(r.textContent));
+    rows[0]?.click();
+  });
+  await wait(400);
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.selrow')].filter((r) => !/Toată România/.test(r.textContent));
+    rows[1]?.click();
+  });
+  /* Asteptam randarea: bifele sunt stare React, nu un atribut pus de click. */
+  await wait(500);
+  const multi = await page.evaluate(() => ({
+    stillOpen: !!document.querySelector('.selrow'),
+    checked: document.querySelectorAll('.selrow .cbx.on').length,
+  }));
+  check('foaia ramane deschisa intre bife', multi.stillOpen);
+  check('doua orase raman bifate', multi.checked === 2, `${multi.checked} bifate`);
+
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button.chip')].find((x) => x.textContent.trim() === 'Gata');
+    b?.click();
+  });
+  await wait(1500);
+
+  const header = await page.evaluate(() => ({
+    eyebrow: document.querySelector('.eyebrow')?.textContent ?? '',
+    line: document.querySelector('.cityline-txt')?.textContent ?? '',
+    badge: document.querySelector('.cityline-n')?.textContent ?? '',
+    live: /prețuri comparate live/.test(document.body.textContent),
+  }));
+  check('titlul poarta orasele alese', header.eyebrow.includes(' și ') || /\+\d/.test(header.eyebrow), header.eyebrow);
+  check('selectorul arata cate orase sunt', header.badge === '2', `badge="${header.badge}"`);
+  check('textul „prețuri comparate live" a disparut', !header.live);
+
+  /* Voalul din spatele barei de jos, pe orice ecran cu bara. */
+  const veil = await page.evaluate(() => {
+    const v = document.querySelector('.navveil');
+    if (!v) return null;
+    const nav = document.querySelector('.bnav').getBoundingClientRect();
+    const r = v.getBoundingClientRect();
+
+    return { below: Math.round(r.bottom), coversNav: r.top <= nav.top, h: Math.round(r.height) };
+  });
+  check('voalul acopera zona de sub bara', !!veil && veil.coversNav, veil ? `${veil.h}px inaltime` : 'lipseste');
+
   check('ecranul de prieteni se deschide din Profil', opened && /Prietenii mei/.test(friendsScreen.title), friendsScreen.title);
   /* Fara cont tics, ecranul TREBUIE sa ofere legarea contului, nu doar sa
      explice de ce e gol: mesajul de dinainte era un capat de drum — spunea
      „intra in contul tics" fara nicio cale spre acel cont. */
-  const canConnect = await page.evaluate(
-    () => document.querySelectorAll('input[type="password"]').length > 0,
-  );
   check(
     'fara cont, ecranul ofera legarea contului tics',
-    /Conectează contul tics/.test(friendsScreen.body) && canConnect,
+    /Conectează contul tics/.test(friendsScreen.body) && friendsScreen.canConnect,
     friendsScreen.body.slice(0, 90),
   );
 

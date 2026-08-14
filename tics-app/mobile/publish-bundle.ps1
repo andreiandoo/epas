@@ -44,6 +44,23 @@ function Invoke-Native {
   if ($code -ne 0) { throw "$FailMessage (exit $code)" }
 }
 
+# ---- 0. versiunea, in sursa ----
+# Ecranul de setari arata APP_VERSION din src/version.ts. Era scrisa de mana si
+# a ramas la 4.1.0 in timp ce bundle-ul ajunsese la 4.5.0. Scriind-o AICI,
+# inainte de build, nu mai poate ramane in urma - iar daca se cere -SkipWebBuild
+# dupa ce versiunea s-a schimbat, oprim: bundle-ul ar pleca cu numarul vechi.
+$versionFile = Join-Path $root 'src/version.ts'
+$verSrc = [System.IO.File]::ReadAllText($versionFile)
+$verNew = [System.Text.RegularExpressions.Regex]::Replace(
+  $verSrc, "APP_VERSION = 'v[0-9]+\.[0-9]+\.[0-9]+'", "APP_VERSION = 'v$Version'")
+if ($verNew -ne $verSrc) {
+  if ($SkipWebBuild) {
+    throw "src/version.ts era pe alta versiune. Ruleaza fara -SkipWebBuild, ca noul numar sa ajunga in bundle."
+  }
+  [System.IO.File]::WriteAllText($versionFile, $verNew, [System.Text.UTF8Encoding]::new($false))
+  Write-Host "[0/4] src/version.ts -> v$Version" -ForegroundColor Cyan
+}
+
 # ---- 1. build web ----
 Push-Location $root
 try {

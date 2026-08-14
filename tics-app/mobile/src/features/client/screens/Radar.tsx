@@ -52,6 +52,9 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
   const { go, back, stack } = useNav();
   const city = useClient((s) => s.city);
   const setCity = useClient((s) => s.setCity);
+  const picked = useClient((s) => s.cities);
+  const toggleCity = useClient((s) => s.toggleCity);
+  const setCities = useClient((s) => s.setCities);
   const f = useClient((s) => s.radarF);
   const setRadarF = useClient((s) => s.setRadarF);
   const resetRadarF = useClient((s) => s.resetRadarF);
@@ -67,7 +70,7 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
   /* Categoriile reale, pentru „Alege un vibe". Se arata patru, restul la
      cerere: toate 12 deodata impingeau lista de evenimente cu ~1100px in jos,
      adica exact continutul pentru care ai deschis Radarul. */
-  const cats = useRadarCategories(city || undefined);
+  const cats = useRadarCategories(undefined, picked);
   const [allCats, setAllCats] = useState(false);
   /* Categoriile fara niciun eveniment nu se mai arata.
 
@@ -83,7 +86,7 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
   const type = typeArg ?? (cat ? CAT_TO_TYPE[cat] : undefined) ?? f.type ?? undefined;
   const { items, loading, hasMore } = useRadarList({
     limit: shown,
-    city: city || undefined,
+    cities: picked,
     catKey,
     type: type || undefined,
     genre: f.genre || undefined,
@@ -106,12 +109,21 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
     [saving !== null ? `−${saving}%` : '−22%', 'sub medie'],
   ];
 
-  const subtitle = [dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ') + ' · prețuri live';
+  const subtitle = [dayLabel(day), city || 'Din toată România'].filter(Boolean).join(' · ');
+
+  /* Cum se numeste, in cuvinte, zona in care cauti. Peste doua orase, numele
+     lor n-ar mai incapea pe un rand de telefon. */
+  const whereLabel =
+    picked.length === 0
+      ? 'România'
+      : picked.length <= 2
+        ? picked.join(' și ')
+        : `${picked[0]} +${picked.length - 1}`;
 
   /* Ce restrange lista chiar acum, in cuvinte. Orasul e primul: e filtrul cel
      mai des uitat, fiindca se alege din alt ecran. */
   const active = [
-    city ? `orașul ${city}` : null,
+    picked.length ? (picked.length === 1 ? `orașul ${picked[0]}` : `${picked.length} orașe`) : null,
     cat ? `categoria ${cat}` : null,
     f.genre ? `genul ${labelOf(GENRE_OPTIONS, f.genre, f.genre)}` : null,
     f.when === 'today' ? 'azi' : f.when === 'weekend' ? 'weekend' : null,
@@ -130,34 +142,46 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
         <div className="stickytop">
           <SafeTop />
           <div className="hrow">
-            <div>
-              <div className="eyebrow">Orice eveniment din România</div>
-              <div className="row" style={sx('gap:9px;margin-top:2px')}>
-                <h1 className="h1" style={sx('font-size:23px')}>
-                  Radar
-                </h1>
-                {/* Orasul, langa titlu si atingibil.
-
-                    Statea doar ca text mic sub antet, alaturi de „prețuri
-                    live" — se citea a subtitlu, nu a filtru, iar schimbarea lui
-                    cerea sa stii ca se face din alt ecran. Acum se vede CE e
-                    ales si se schimba de aici. */}
-                <button
-                  className="chip ind on"
-                  onClick={() => setSheet('city')}
-                  style={sx('padding:5px 11px;font-size:12px;font-weight:600')}
-                >
-                  <Ic svg={I.pin} /> {city || 'Toată România'} ⌄
-                </button>
-              </div>
+            <div style={sx('min-width:0')}>
+              {/* Titlul spune ce vezi ACUM: se schimba odata cu orasele alese,
+                  nu ramane „România" cand tu cauti in Ploiesti. */}
+              <div className="eyebrow">Orice eveniment din {whereLabel}</div>
+              <h1 className="h1" style={sx('font-size:23px;margin-top:2px')}>
+                Radar
+              </h1>
             </div>
             <div className="icon-btn" onClick={() => go('calendar')}>
               <Ic svg={I.cal} />
             </div>
           </div>
-          <div className="muted" style={sx('font-size:11.5px;margin-top:4px')}>
-            {[dayLabel(day), 'prețuri comparate live'].filter(Boolean).join(' · ')}
-          </div>
+
+          {/* Selectorul de orase.
+
+              Era un chip mic, lipit de titlu, care arata a eticheta. Acum e un
+              rand propriu, cu ac de harta, orasele alese si un semn clar ca se
+              deschide o lista. Se pot alege MAI MULTE: locuiesti intre doua
+              orase sau urmaresti un turneu, iar pana acum trebuia sa cauti
+              de doua ori. */}
+          <button
+            className="cityline"
+            onClick={() => setSheet('city')}
+            aria-label="Alege orașele"
+          >
+            <span className="cityline-ic">
+              <Ic svg={I.pin} />
+            </span>
+            <span className="cityline-txt">{whereLabel}</span>
+            {picked.length ? <span className="cityline-n">{picked.length}</span> : null}
+            <span className="cityline-caret" aria-hidden="true">
+              ⌄
+            </span>
+          </button>
+
+          {dayLabel(day) ? (
+            <div className="muted" style={sx('font-size:11.5px;margin-top:6px')}>
+              {dayLabel(day)}
+            </div>
+          ) : null}
         </div>
       ) : (
         <TopBar>
@@ -241,6 +265,11 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
         </div>
       ) : null}
 
+      {/* Linie de despartire: gridul de categorii si lista de evenimente sunt
+          doua lucruri diferite, iar fara nimic intre ele cardurile pareau
+          primele rezultate ale listei. */}
+      {root && pools.length ? <div className="secsplit" /> : null}
+
       <div className="filterbar" style={sx('margin-top:14px')}>
         <div className={cn('flt', (panel || !noFilter) && 'on')} onClick={() => setPanel((v) => !v)}>
           <Ic svg={I.slider} /> Toate{activeCount ? ` · ${activeCount}` : ''}
@@ -275,7 +304,7 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
               <span className="label" style={sx('margin:0')}>
                 Toate filtrele
               </span>
-              <button className="chip" onClick={() => { resetRadarF(); setCity(''); }} style={sx('padding:5px 11px;font-size:11px')}>
+              <button className="chip" onClick={() => { resetRadarF(); setCities([]); setCity(''); }} style={sx('padding:5px 11px;font-size:11px')}>
                 Resetează
               </button>
             </div>
@@ -303,10 +332,11 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
 
       {sheet === 'city' ? (
         <PickerSheet
-          title="Alege orașul"
+          title="Alege orașele"
           options={cityOptions}
-          value={city}
-          onPick={setCity}
+          value={picked}
+          multiple
+          onPick={(v) => (v === '' ? setCities([]) : toggleCity(v))}
           onClose={() => setSheet(null)}
           searchable
           searchPlaceholder="Caută orașul"
@@ -377,6 +407,7 @@ export function TicsList({ cat, type: typeArg, catKey, day }: { cat?: string; ty
                          orasul — deci cand vinovat era orasul, apasarea nu
                          schimba nimic si parea stricat. */
                       resetRadarF();
+                      setCities([]);
                       setCity('');
                       if (cat) back();
                     }}

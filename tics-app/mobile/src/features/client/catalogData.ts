@@ -430,7 +430,11 @@ export function useCatalogSearch(q: string): { data: SearchResults | null; loadi
   return { data, loading };
 }
 
-const adaptArtist = (a: CatalogArtist) => ({ rec: toArtistRecord(a), events: a.events.map(toEventBrief) });
+const adaptArtist = (a: CatalogArtist) => ({
+  rec: toArtistRecord(a),
+  events: a.events.map(toEventBrief),
+  tracks: a.top_tracks ?? [],
+});
 const adaptVenue = (v: CatalogVenue) => ({
   rec: toVenueRecord(v),
   events: v.events.map(toEventBrief),

@@ -526,7 +526,59 @@ class CatalogController extends Controller
                 'spotify' => $this->count($artist->spotify_followers),
             ], fn ($v) => $v !== null),
             'events' => $events,
+            'top_tracks' => $this->topTracks($artist),
         ]]);
+    }
+
+    /**
+     * Piesele de top ale artistului, din Spotify.
+     *
+     * DE CE PRIN SERVER si nu direct din aplicatie: Spotify cere un token de
+     * aplicatie (client credentials), iar un Client Secret ajuns intr-un APK e
+     * public — oricine il poate extrage din pachet. Serverul are deja
+     * credentialele in Setări → Conexiuni si `SpotifyService` le cache-uieste
+     * (token 1h, raspuns 6h), deci nu adaugam nici latenta, nici cota.
+     *
+     * `spotify_id` lipseste la multi artisti: atunci sectiunea nu exista, nu se
+     * inventeaza nimic.
+     *
+     * Esecul nu poate darama fisa: un artist ramane util si fara playlist.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function topTracks(Artist $artist): array
+    {
+        $spotifyId = trim((string) ($artist->spotify_id ?? ''));
+
+        if ($spotifyId === '') {
+            return [];
+        }
+
+        try {
+            $tracks = app(\App\Services\SpotifyService::class)->getTopTracks($spotifyId);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return collect($tracks)
+            ->take(10)
+            ->map(fn (array $t) => [
+                'id' => $t['id'] ?? '',
+                'name' => $t['name'] ?? '',
+                'album' => $t['album'] ?? '',
+                'image' => $t['album_image'] ?? null,
+                /* Spotify da durata in milisecunde; aplicatia arata „3:41".
+                   Conversia se face o data, aici, nu in fiecare ecran. */
+                'duration' => isset($t['duration_ms']) && $t['duration_ms'] > 0
+                    ? sprintf('%d:%02d', intdiv((int) $t['duration_ms'], 60000), intdiv((int) $t['duration_ms'] % 60000, 1000))
+                    : null,
+                /* 30 de secunde de proba. Poate lipsi (drepturi teritoriale),
+                   caz in care ramane doar deschiderea in Spotify. */
+                'preview' => $t['preview_url'] ?? null,
+                'url' => $t['external_url'] ?? null,
+            ])
+            ->values()
+            ->all();
     }
 
     public function venue(Request $request, string $key): JsonResponse
