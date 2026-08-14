@@ -4461,9 +4461,22 @@ class EventResource extends Resource
                                                             ->orderByDesc('created_at')
                                                             ->get();
 
+                                                        // Dedupe: event doc generation dual-writes into
+                                                        // organizer_documents (so it shows in
+                                                        // /marketplace/organizer-documents), which caused
+                                                        // this list to render the SAME doc twice (once
+                                                        // per source). Both rows point at the same file
+                                                        // on disk, so we filter out organizer_documents
+                                                        // rows whose file_path already appears in the
+                                                        // event_generated_documents set for this event.
+                                                        // Genuine standalone OrganizerDocument rows
+                                                        // (decont PDFs) still render because their
+                                                        // file_path never overlaps.
+                                                        $eventGenPaths = $eventGeneratedDocs->pluck('file_path')->filter()->all();
                                                         $organizerDocs = \App\Models\OrganizerDocument::where('event_id', $record->id)
                                                             ->orderByDesc('created_at')
-                                                            ->get();
+                                                            ->get()
+                                                            ->reject(fn ($d) => $d->file_path && in_array($d->file_path, $eventGenPaths, true));
 
                                                         // Invoices linked to any payout of this event.
                                                         $invoices = \App\Models\Invoice::with('payout')
