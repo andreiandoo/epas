@@ -119,6 +119,28 @@ class EventGeneratedDocument extends Model
         MarketplaceTaxTemplate $template,
         ?object $generatedBy = null
     ): self {
+        // De-duplicate rapid double-fires. The tab Documente button is
+        // Alpine-mounted inside a Livewire-rendered blade — combo prone
+        // to re-hydration re-triggering pending x-on:click handlers. If
+        // a doc for this (event, template) pair was created in the last
+        // 5 seconds by the same admin, return that instead of generating
+        // a second identical PDF. Defense in depth; the frontend
+        // debounce (wire:key on the button + disabled state) is the
+        // primary fix but this guard prevents duplicate rows regardless.
+        $recent = static::where('event_id', $event->id)
+            ->where('marketplace_tax_template_id', $template->id)
+            ->where('created_at', '>=', now()->subSeconds(5))
+            ->latest('id')
+            ->first();
+        if ($recent) {
+            \Illuminate\Support\Facades\Log::info('EventGeneratedDocument: idempotency short-circuit — returning existing doc from last 5s', [
+                'event_id' => $event->id,
+                'template_id' => $template->id,
+                'existing_doc_id' => $recent->id,
+            ]);
+            return $recent;
+        }
+
         $marketplaceClientId = $event->marketplace_client_id;
         $marketplace = MarketplaceClient::find($marketplaceClientId);
 
