@@ -51,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.client.cors' => \App\Http\Middleware\TenantClientCors::class,
             'marketplace.auth' => \App\Http\Middleware\MarketplaceClientAuth::class,
             'tixello.app.auth' => \App\Http\Middleware\TixelloAppAuth::class,
+            'tixello.widget' => \App\Http\Middleware\AuthenticateTixelloWidget::class,
             'vendor.auth' => \App\Http\Middleware\AuthenticateVendor::class,
             'web-template.domain' => \App\Http\Middleware\WebTemplateDomainMapping::class,
             'cashless.active' => \App\Http\Middleware\EnsureCashlessActive::class,

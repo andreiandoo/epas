@@ -4319,3 +4319,30 @@ Route::post('tenant-client/shorts/{short}/report', [\App\Http\Controllers\Api\Ma
     ->whereNumber('short')
     ->middleware(['throttle:20,1', 'tenant.client.cors'])
     ->name('api.tenant-client.shorts.report');
+
+/*
+|--------------------------------------------------------------------------
+| Widget Tixello (Android) — cifrele întregii platforme
+|--------------------------------------------------------------------------
+|
+| Alimentează widget-ul de pe ecranul telefonului (tixello-widget-android/):
+| vânzări, bilete, clienți, venituri din comision — peste TOȚI tenanții și
+| TOATE marketplace-urile — plus ultimele comisioane încasate.
+|
+| Autentificare: token dedicat, cu viață lungă, emis cu
+| `php artisan tixello:widget-token "Telefon Andrei"`. Nu folosește nici cheia
+| de marketplace, nici sesiunea de admin — telefonul trebuie să poată fi
+| revocat separat, fără să pice altceva.
+|
+| Throttle generos (200/min): un telefon la 15 s face 4 cereri pe minut, dar
+| polling-ul se poate suprapune cu refresh-ul manual al widget-ului.
+|
+*/
+Route::prefix('tixello-widget')
+    ->middleware(['throttle:200,1', 'tixello.widget'])
+    ->group(function () {
+        Route::get('/ping', [\App\Http\Controllers\Api\TixelloWidgetController::class, 'ping'])
+            ->name('api.tixello-widget.ping');
+        Route::get('/summary', [\App\Http\Controllers\Api\TixelloWidgetController::class, 'summary'])
+            ->name('api.tixello-widget.summary');
+    });

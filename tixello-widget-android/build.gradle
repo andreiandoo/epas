@@ -1,0 +1,7 @@
+// Proiect standalone — nu are legatura cu tics-app/mobile (Capacitor).
+// Aici e o aplicatie nativa mica, al carei singur rost e widget-ul de pe
+// ecranul telefonului si alerta la comision.
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
+}

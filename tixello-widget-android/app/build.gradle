@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.tixello.widget'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.tixello.widget'
+        minSdk 26            // Android 8 — de la el exista canale de notificare
+        // Ramanem la 34 intentionat: de la targetSdk 35 Android limiteaza
+        // serviciile foreground de tip dataSync la 6 h pe zi, iar serviciul
+        // asta trebuie sa poata sta pornit permanent.
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildTypes {
+        debug {
+            // APK-ul pe care il instalezi de mana. Fara minificare, ca sa fie
+            // citibil orice stack trace din Logcat.
+            applicationIdSuffix ''
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        // AGP 8 nu mai genereaza BuildConfig implicit; il folosim pentru
+        // versiunea din User-Agent si din ecranul de configurare.
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'   // stub pentru org.json pe JVM
+}

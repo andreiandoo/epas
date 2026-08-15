@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  updatePeriodMillis=1800000 (30 min) e minimul acceptat de sistem si e doar
+  plasa de siguranta pentru desenare. Cifrele vin de la serviciul de polling si
+  de la WorkManager, mult mai des.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_stats"
+    android:description="@string/widget_stats_label"
+    android:widgetCategory="home_screen" />

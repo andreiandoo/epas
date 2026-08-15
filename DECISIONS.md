@@ -1498,3 +1498,161 @@ ce întoarce chiar feed-ul, ce primește chiar coada, ce provoacă chiar o schim
 Un test unitar verde pe un serviciu nu dovedește nimic despre cablare — e fix ce aveau deja
 toate cele patru funcționalități de mai sus. **O funcționalitate nu e livrată până nu există
 un test care dovedește că ceva o pornește.**
+
+---
+
+# Widget Tixello pentru Android
+
+Decizii luate la construirea widget-ului de telefon (`tixello-widget-android/` +
+API-ul din `app/Services/Widget`). Ghidul de utilizare e în
+`docs/tixello-widget-android.md`.
+
+---
+
+## D-101 — Aplicație nativă separată, nu un ecran nou în `tics-app/mobile`
+
+**Context.** Cerința e „un widget pe ecranul telefonului". `tics-app/mobile` există
+deja și e Capacitor (WebView + React), împachetat pentru clienți și organizatori.
+
+**Alegere.** Proiect Android nativ nou, `tixello-widget-android/`, cu APK propriu.
+
+**Alternative.** (a) Un ecran nou în aplicația Capacitor — un widget de home screen
+se desenează cu `RemoteViews`, într-un proces al launcher-ului; un WebView nu are ce
+căuta acolo, deci partea nativă ar fi trebuit scrisă oricum, dar lipită de un build
+de 30 MB pe care proprietarul nu-l vrea pe telefon. (b) Un plugin Capacitor —
+aceeași muncă nativă, plus contractul de plugin peste ea.
+
+**Impact.** APK de câteva sute de kilobytes, fără dependințe de rețea, care se
+instalează de mână și se poate revoca de pe server. Costul: două proiecte Android în
+repo. Nu au cod comun și nici nu trebuie să aibă — unul e produsul, celălalt e un
+instrument de proprietar.
+
+---
+
+## D-102 — Polling dintr-un serviciu foreground, nu push
+
+**Context.** Cerința explicită: alerte fără Firebase. Fără FCM, serverul nu poate
+trezi un telefon Android; `app/Services/Push/PushSender` e încă un contract cu o
+implementare care doar scrie în log.
+
+**Alegere.** Un serviciu foreground (`PollService`) care întreabă serverul la un
+interval configurabil (15 s … 15 min, implicit 60 s), plus un `WorkManager` periodic
+la 15 minute ca plasă de siguranță și ca repornire a serviciului.
+
+**Alternative.** (a) FCM — exact ce s-a cerut să evităm, și ar fi cerut cont Google,
+chei de server și un strat de token-uri de dispozitiv. (b) WebSocket persistent pe
+Reverb — infrastructura există (`laravel/reverb` e instalat), dar `BROADCAST_CONNECTION`
+e `null` în producție, iar un socket ținut deschis de un telefon adormit se reconectează
+oricum permanent; ar fi însemnat un daemon de întreținut pentru un singur utilizator.
+(c) Doar `WorkManager` — minimul impus de Android e 15 minute, prea lent pentru „ori de
+câte ori Tixello câștigă un comision".
+
+**Impact.** Alerta vine în cel mult un interval de polling. Prețul: notificarea
+permanentă cerută de sistem pentru orice serviciu foreground (pusă pe canal cu
+importanță minimă) și dependența de setările de baterie ale producătorului — de aceea
+aplicația are un buton direct către ecranul de optimizare a bateriei.
+
+**Consecință.** `targetSdk` rămâne 34: de la 35, Android limitează serviciile
+foreground de tip `dataSync` la 6 h pe zi, ceea ce ar rupe fix cazul de utilizare.
+
+---
+
+## D-103 — Alerta pe cursor de ID, nu pe timp
+
+**Context.** „Sună la fiecare comision nou" cere o definiție a lui „nou" care să
+supraviețuiască telefonului offline, ceasurilor nesincronizate și sincronizărilor
+suprapuse (serviciul și worker-ul pot porni în aceeași secundă).
+
+**Alegere.** Telefonul ține `last_commission_id` și îl trimite ca
+`since_commission_id`; serverul întoarce separat, în `new_commissions`, comenzile cu
+`id` mai mare. Sincronizarea trece printr-un mutex, iar ID-ul comisionului e folosit
+ca ID de notificare.
+
+**Alternative.** (a) Comparație pe `paid_at` — depinde de ceasul telefonului și
+pierde comisioanele înregistrate retroactiv. (b) Diferență calculată local între
+listele consecutive — funcționează până când două sincronizări rulează în paralel și
+alertează amândouă.
+
+**Impact.** Nici alerte duble, nici pierdute. La prima sincronizare (cursor `-1`)
+telefonul doar învață poziția, fără să sune pentru istoric.
+
+---
+
+## D-104 — Patru canale de notificare în loc de unul configurabil
+
+**Context.** Aplicația are comutatoare pentru sunet și vibrație. Din Android 8, o
+aplicație nu mai poate schimba sunetul sau vibrația unui canal deja creat.
+
+**Alegere.** Câte un canal pentru fiecare combinație (sunet+vibrație / doar sunet /
+doar vibrație / silențios); comutatorul alege canalul la momentul notificării.
+
+**Alternative.** (a) Un canal recreat la fiecare schimbare — Android ignoră
+recrearea cu același ID și păstrează setările vechi; ștergerea și recrearea pierde
+preferințele utilizatorului. (b) Trimiterea utilizatorului în Setări la fiecare
+schimbare — comutatoare care nu comută nimic.
+
+**Impact.** Modul telefonului (silențios / doar vibrații) rămâne respectat automat de
+sistem, iar comutatoarele din aplicație funcționează cu adevărat. Costul: patru
+intrări în ecranul de notificări al aplicației.
+
+---
+
+## D-105 — „Azi" se taie în `Europe/Bucharest`, nu în UTC
+
+**Context.** `config('app.timezone')` e UTC, iar widget-urile din panoul de admin
+folosesc `today()`, adică ziua UTC. Vara, în România, asta rupe ziua la 03:00.
+
+**Alegere.** Pentru widget, ziua se calculează în fusul din
+`config('tixello-widget.timezone')` (implicit `Europe/Bucharest`) și se traduce în
+margini UTC pentru interogare (`whereBetween`, nu `whereDate`).
+
+**Alternative.** (a) `whereDate` pe UTC, la fel ca panoul — cifra „azi" de pe telefon
+ar fi fost greșită între miezul nopții și 03:00, exact intervalul în care se termină
+evenimentele. (b) Schimbarea `app.timezone` — ar fi mutat interpretarea fiecărei date
+din platformă pentru o cifră de widget.
+
+**Impact.** Singura diferență acceptată față de panoul de admin; e documentată în
+`docs/tixello-widget-android.md`. Restul definițiilor (comandă plătită, bilet emis,
+comision) sunt împrumutate literal din `App\Filament\Widgets\StatsOverview`, ca să nu
+existe două adevăruri despre aceleași cifre.
+
+---
+
+## D-106 — Token propriu, cu hash în DB, nu cheie de marketplace sau sesiune de admin
+
+**Context.** Endpoint-ul întoarce cifrele întregii platforme. Telefonul are nevoie de
+un secret cu viață lungă, care nu expiră odată cu o sesiune.
+
+**Alegere.** Tabela `tixello_widget_tokens` ține doar `sha256(token)`; valoarea în
+clar se vede o singură dată, la generare. Middleware-ul `tixello.widget` cache-uiește
+**ID-ul** token-ului (5 min), nu modelul, ca revocarea să prindă efect.
+
+**Alternative.** (a) `marketplace.auth` — cheile alea sunt legate de un marketplace,
+iar aici e nevoie de vederea peste toate. (b) Sanctum pe contul de admin — un token
+de admin pe un telefon deschide tot panoul, nu doar cifrele. (c) Un token în `.env` —
+nerevocabil per dispozitiv și fără urmă de folosire.
+
+**Impact.** Poți emite câte un token per telefon și revoca unul singur
+(`php artisan tixello:widget-token --revoke=ID`), cu `last_used_at` / `last_used_ip`
+ca urmă. Costul: încă o tabelă și o comandă artisan.
+
+---
+
+## D-107 — Schemă de test „scoped", ca la Shorts
+
+**Context.** Aceeași problemă ca la D-002: istoricul complet de migrații nu poate fi
+rulat pe SQLite, iar containerul nu are Postgres.
+
+**Alegere.** `tests/database/widget-migrations/` — stub-uri doar pentru tabelele pe
+care le citește serviciul, plus migrația reală a token-urilor, rulate de
+`TixelloWidgetTestCase` pe o conexiune proprie.
+
+**Alternative.** Reutilizarea stub-urilor de la Shorts — le lipsesc coloanele
+financiare (`commission_amount`, `total_cents`, `order_number`) și tabelele
+`customers`, `marketplace_events`, `exchange_rates`; extinderea lor ar fi legat două
+suite care n-au nimic în comun.
+
+**Impact.** Suita rulează fără servicii. Ce NU dovedește: comportamentul pe schema
+reală, pe PostgreSQL. `TODO(owner)`: rulează `TixelloWidgetApiTest` o dată pe un dump
+de dev înainte de deploy — mai ales agregarea `GROUP BY currency`, unde strictețea
+Postgres diferă de SQLite.

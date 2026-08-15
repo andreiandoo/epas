@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tixello Widget</string>
+
+    <!-- Widget -->
+    <string name="widget_stats_label">Tixello — cifre</string>
+    <string name="widget_commissions_label">Tixello — comisioane</string>
+    <string name="widget_title">TIXELLO</string>
+    <string name="widget_refresh">Actualizează</string>
+    <string name="widget_sales">Vânzări</string>
+    <string name="widget_tickets">Bilete</string>
+    <string name="widget_customers">Clienți</string>
+    <string name="widget_revenue">Venituri Tixello</string>
+    <string name="widget_commissions_title">Ultimele comisioane</string>
+    <string name="widget_today_value">azi %1$s</string>
+    <string name="widget_not_synced">Neconfigurat — deschide aplicația</string>
+    <string name="widget_no_commissions">Niciun comision încă</string>
+    <string name="widget_setup_needed">configurează</string>
+    <string name="widget_error_short">eroare</string>
+    <string name="widget_commissions_footer">Azi: %1$s</string>
+
+    <!-- Notificări -->
+    <string name="notif_commission_title">Comision Tixello: %1$s</string>
+    <string name="notif_commission_summary_title">%1$d comisioane noi · %2$s</string>
+    <string name="service_notification_title">Tixello — urmăresc vânzările</string>
+    <string name="service_notification_text">Azi: %1$s · verificat %2$s</string>
+    <string name="service_notification_error">Eroare: %1$s</string>
+    <string name="service_notification_waiting">Aștept prima sincronizare…</string>
+    <string name="service_notification_stop">Oprește</string>
+
+    <!-- Ecranul de configurare -->
+    <string name="setup_server">Adresa serverului</string>
+    <string name="setup_server_hint">https://core.tixello.com</string>
+    <string name="setup_token">Token</string>
+    <string name="setup_token_hint">twg_…</string>
+    <string name="setup_token_help">Îl generezi pe server cu:\nphp artisan tixello:widget-token \"Telefonul meu\"</string>
+    <string name="setup_interval">Verifică la fiecare</string>
+    <string name="setup_interval_seconds">%1$d secunde</string>
+    <string name="setup_interval_minutes">%1$d minute</string>
+    <string name="setup_alerts">Alertă la comision nou</string>
+    <string name="setup_sound">Sunet</string>
+    <string name="setup_vibrate">Vibrație</string>
+    <string name="setup_save">Verifică și salvează</string>
+    <string name="setup_start">Pornește urmărirea</string>
+    <string name="setup_stop">Oprește urmărirea</string>
+    <string name="setup_refresh">Actualizează acum</string>
+    <string name="setup_battery">Setări baterie</string>
+    <string name="setup_notification_settings">Setări notificări</string>
+    <string name="setup_missing_fields">Completează adresa serverului și token-ul.</string>
+    <string name="setup_url_scheme">Adresa trebuie să înceapă cu https://</string>
+    <string name="setup_checking">Verific token-ul…</string>
+    <string name="setup_syncing">Sincronizez…</string>
+    <string name="setup_sync_ok">Sincronizat %1$s</string>
+    <string name="setup_check_failed">Eroare: %1$s</string>
+    <string name="setup_started">Urmărirea a pornit.</string>
+    <string name="setup_stopped">Urmărirea s-a oprit.</string>
+    <string name="setup_tracking_on">Urmărire: PORNITĂ</string>
+    <string name="setup_tracking_off">Urmărire: oprită</string>
+    <string name="setup_notifications_denied">Fără permisiunea de notificări nu poți primi alerte.</string>
+    <string name="setup_version">versiunea %1$s</string>
+    <string name="setup_battery_help">Dacă alertele întârzie, scoate aplicația din optimizarea bateriei.</string>
+
+    <!-- Cifrele din aplicație -->
+    <string name="numbers_sales">Vânzări: %1$s (azi %2$s)</string>
+    <string name="numbers_orders">Comenzi: %1$s (azi %2$s)</string>
+    <string name="numbers_tickets">Bilete: %1$s (azi %2$s)</string>
+    <string name="numbers_customers">Clienți: %1$s (azi %2$s)</string>
+    <string name="numbers_revenue">Venituri Tixello: %1$s (azi %2$s)</string>
+    <string name="numbers_last_commissions">Ultimele comisioane:</string>
+</resources>
