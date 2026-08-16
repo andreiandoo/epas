@@ -76,6 +76,7 @@ class SetupActivity : AppCompatActivity() {
         findViewById<Button>(R.id.button_start).setOnClickListener { startTracking() }
         findViewById<Button>(R.id.button_stop).setOnClickListener { stopTracking() }
         findViewById<Button>(R.id.button_refresh).setOnClickListener { syncNow() }
+        findViewById<Button>(R.id.button_test_alert).setOnClickListener { testAlert() }
         findViewById<Button>(R.id.button_battery).setOnClickListener { openBatterySettings() }
         findViewById<Button>(R.id.button_notification_settings).setOnClickListener { openNotificationSettings() }
 
@@ -198,6 +199,17 @@ class SetupActivity : AppCompatActivity() {
             WidgetRenderer.refreshAll(this@SetupActivity)
             renderNumbers()
         }
+    }
+
+    /**
+     * Alerta de proba: acelasi canal, acelasi sunet si aceeasi vibratie ca la
+     * un comision real. Asa afli acum, nu la prima vanzare, daca telefonul e
+     * pe silentios sau daca lipseste permisiunea de notificari.
+     */
+    private fun testAlert() {
+        requestNotificationPermissionIfNeeded()
+        Notifier.notifyTest(this)
+        statusView.text = getString(R.string.setup_test_alert_sent)
     }
 
     private fun renderStatus() {

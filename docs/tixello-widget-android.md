@@ -44,8 +44,17 @@ Definițiile sunt aceleași cu widget-urile din panoul de admin
 | Venituri Tixello | `SUM(orders.commission_amount)` pe aceleași comenzi                          |
 | Comisioane (listă) | ultimele comenzi plătite cu `commission_amount > 0`, cele mai noi primele  |
 
-Comenzile vechi, care țin suma doar în `total_cents`, sunt luate în calcul prin
-aceeași cădere ca în panoul de admin. Sumele în alte monede se convertesc în
+Comenzile vechi, care țin suma doar în `total_cents`, sunt luate în calcul
+**rând cu rând** (`total` dacă e setat, altfel `total_cents / 100`). Panoul de
+admin cade pe cenți doar când suma întregului grup e zero, deci pierde tăcut
+comenzile vechi amestecate cu unele noi — aici e corectat.
+
+Ce NU e scăzut: **restituirile parțiale**. O comandă rambursată integral iese
+din cifre (statusul devine `refunded`), dar una cu refund parțial rămâne cu
+`commission_amount` întreg. Panoul de admin face la fel; dacă vrei comisionul
+net, e o schimbare de definiție pe care merită s-o luăm separat.
+
+Sumele în alte monede se convertesc în
 EUR prin tabela `exchange_rates`; dacă lipsește cursul, suma respectivă rămâne
 în afara totalului (nu inventăm un curs), iar comisionul se afișează în moneda
 lui originală.
@@ -92,12 +101,45 @@ autentificare).
 TIXELLO_WIDGET_TIMEZONE=Europe/Bucharest
 TIXELLO_WIDGET_CURRENCY=EUR
 TIXELLO_WIDGET_SECONDARY_CURRENCY=RON
-TIXELLO_WIDGET_CACHE_TTL=20        # secunde de cache pentru agregate
-TIXELLO_WIDGET_POLL_INTERVAL=60    # intervalul recomandat telefoanelor
+TIXELLO_WIDGET_CACHE_TTL=20            # cache pentru cifrele de azi (ieftine)
+TIXELLO_WIDGET_CACHE_TTL_ALL_TIME=120  # cache pentru cifrele all time (scumpe)
+TIXELLO_WIDGET_POLL_INTERVAL=60        # intervalul recomandat telefoanelor
+TIXELLO_WIDGET_TODAY_BASIS=created_at  # sau paid_at, dacă „azi" = când a intrat banul
+TIXELLO_WIDGET_NEW_COMMISSIONS_CAP=20  # câte comisioane pot suna într-o rundă
 ```
+
+Cele două TTL-uri sunt separate intenționat: cifrele „all time" cer scanări
+mari (pe `tickets` nu există index pe `status`), pe când cele de azi sunt
+mărginite de un interval de dată. Un TTL scurt pe amândouă ar ține scanarea
+completă în buclă cât timp există un telefon care întreabă.
 
 `TIXELLO_WIDGET_POLL_INTERVAL` e trimis în fiecare răspuns, deci poți încetini
 toate telefoanele dintr-un singur loc dacă serverul are de suferit.
+
+### 4. Verifică pe server, înainte de telefon
+
+```bash
+php artisan tixello:widget-preview            # cifrele, formatate în terminal
+php artisan tixello:widget-preview --fresh    # fără cache, ca să vezi timpii reali
+php artisan tixello:widget-preview --json     # payload-ul brut, exact ca la telefon
+php artisan tixello:widget-preview --since=12345   # ce ar declanșa alertă
+```
+
+E cel mai rapid mod de a confirma, imediat după deploy, că numerele sunt cele
+așteptate. Dacă `--fresh` trece de ~2 secunde, comanda îți spune singură ce să
+faci.
+
+### 5. Opțional — indexuri, dacă interogările sunt lente
+
+```bash
+php artisan migrate --path=database/migrations/2026_08_15_120100_add_tixello_widget_indexes.php
+```
+
+Adaugă trei indexuri pe care le folosește și dashboard-ul de admin:
+`tickets(status, created_at)`, `orders(status, created_at)` și un index parțial
+pentru lista de comisioane. Pe PostgreSQL sunt create `CONCURRENTLY`, deci **nu
+blochează vânzările** — poate rula în timpul zilei. Pe o tabelă mare durează
+minute; e normal.
 
 ### API
 
@@ -143,6 +185,11 @@ cd tixello-widget-android
 Android va cere permisiunea de a instala din surse necunoscute — e normal
 pentru un APK care nu vine din Play Store.
 
+Versiunile următoare se instalează **peste** cea existentă, păstrând token-ul și
+setările: APK-ul e semnat cu o cheie de debug fixă, ținută în repo, iar
+`versionCode` crește cu fiecare rulare de CI. (Fără cheia fixă, fiecare build ar
+fi semnat diferit și Android ar cere dezinstalarea.)
+
 ### 2. Configurează
 
 Deschide aplicația **Tixello Widget** și completează:
@@ -157,6 +204,11 @@ Apasă **Verifică și salvează** (îți spune imediat dacă token-ul e bun), a
 **Pornește urmărirea**.
 
 Acceptă permisiunea de notificări când o cere — fără ea nu există alerte.
+
+Apasă **Testează alerta**: primești imediat o notificare de probă, pe același
+canal, cu același sunet și aceeași vibrație ca la un comision real. Așa afli
+acum, nu la prima vânzare, dacă telefonul e pe silențios sau dacă lipsește
+permisiunea.
 
 ### 3. Pune widget-urile pe ecran
 
@@ -224,7 +276,8 @@ de acolo poți opri urmărirea.
 | „Prea multe cereri"                       | mai multe telefoane pe același IP; mărește intervalul                        |
 | Widget-ul arată „configurează"            | aplicația n-a fost configurată sau token-ul a fost șters                     |
 | Cifrele stau pe loc                       | serviciul a fost oprit de sistem → *Setări baterie*, apoi *Pornește urmărirea* |
-| Nu primești sunet                         | permisiunea de notificări; telefonul pe silențios; comutatorul *Alertă la comision nou* |
+| Nu primești sunet                         | apasă *Testează alerta*; apoi permisiunea de notificări, modul telefonului, comutatorul *Alertă la comision nou* |
+| Cifrele se încarcă greu / serverul geme   | `php artisan tixello:widget-preview --fresh` arată timpii; vezi migrația de indexuri |
 | Cifrele diferă de panoul de admin         | „azi" e pe ora României aici, pe UTC în panou; restul definițiilor sunt identice |
 
 Log-urile telefonului: `adb logcat -s TixelloSync TixelloNotifier`.

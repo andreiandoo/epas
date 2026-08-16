@@ -43,14 +43,25 @@ return [
     'paid_statuses' => ['paid', 'confirmed', 'completed'],
 
     /*
-    | Cât timp (secunde) se ţin agregatele în cache. Widget-ul întreabă des
-    | (implicit la 60 s), iar `orders`/`tickets` sunt tabele mari — fără cache
-    | fiecare telefon ar declanşa un full scan.
+    | Baza după care se taie „azi" pe comenzi: `created_at` (implicit, identic
+    | cu panoul de admin) sau `paid_at` (când a intrat banul).
+    */
+    'today_basis' => env('TIXELLO_WIDGET_TODAY_BASIS', 'created_at'),
+
+    /*
+    | Cât timp (secunde) se ţin agregatele în cache.
     |
-    | Lista de comisioane NU trece prin cache-ul ăsta: ea e semnalul de alertă
-    | şi trebuie să fie proaspătă la fiecare cerere.
+    | Sunt două cache-uri, cu vieţi diferite, şi asta contează pe producţie:
+    | cifrele „all time" cer COUNT/SUM peste tot tabelul (pe `tickets` nu există
+    | index pe `status`, deci scanare completă), pe când cifrele de azi sunt
+    | mărginite de un interval de dată. Un TTL scurt pe amândouă ar ţine
+    | scanarea completă în buclă cât timp există un telefon care întreabă.
+    |
+    | Lista de comisioane NU trece prin cache: ea e semnalul de alertă şi
+    | trebuie să fie proaspătă la fiecare cerere (e ieftină — index pe `id`).
     */
     'cache_ttl' => (int) env('TIXELLO_WIDGET_CACHE_TTL', 20),
+    'cache_ttl_all_time' => (int) env('TIXELLO_WIDGET_CACHE_TTL_ALL_TIME', 120),
 
     /*
     | Câte comisioane recente întoarce endpoint-ul implicit şi cât acceptă
@@ -58,6 +69,12 @@ return [
     */
     'commissions_limit' => 5,
     'commissions_max_limit' => 50,
+
+    /*
+    | Câte comisioane pot declanşa alerte într-o singură rundă. Plafon, ca un
+    | telefon întors după o săptămână offline să nu sune de 300 de ori.
+    */
+    'new_commissions_cap' => (int) env('TIXELLO_WIDGET_NEW_COMMISSIONS_CAP', 20),
 
     /*
     | Intervalul de polling recomandat, trimis în payload. Aplicaţia îl

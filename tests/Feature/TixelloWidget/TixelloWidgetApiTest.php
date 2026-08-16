@@ -291,6 +291,84 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         $this->assertSame([], $data['new_commissions']);
     }
 
+    public function test_alerteaza_si_comisioanele_din_afara_listei_afisate(): void
+    {
+        /* Regresie: alertele se filtrau din lista de afişare (5 poziţii), deci
+           dacă între două interogări intrau 9 comisioane, 4 dispăreau fără
+           sunet. Alertele au acum interogarea lor. */
+        $ids = [];
+        foreach (range(1, 9) as $i) {
+            $ids[] = $this->makeOrder(['total' => 10 * $i, 'commission_amount' => $i]);
+        }
+
+        $cursor = $ids[0];
+
+        $data = $this->widgetGet("/api/tixello-widget/summary?since_commission_id={$cursor}")
+            ->json('data');
+
+        $this->assertCount(5, $data['commissions'], 'Widget-ul afişează tot 5.');
+        $this->assertCount(8, $data['new_commissions'], 'Dar alertele le prind pe toate cele noi.');
+        $this->assertEquals(end($ids), $data['cursor']['last_commission_id']);
+    }
+
+    public function test_alertele_sunt_plafonate(): void
+    {
+        config(['tixello-widget.new_commissions_cap' => 3]);
+
+        $first = $this->makeOrder(['total' => 10, 'commission_amount' => 1]);
+        foreach (range(1, 6) as $i) {
+            $this->makeOrder(['total' => 10, 'commission_amount' => 1]);
+        }
+
+        $data = $this->widgetGet("/api/tixello-widget/summary?since_commission_id={$first}")
+            ->json('data');
+
+        /* Un telefon întors după o pauză lungă nu trebuie să sune de 300 de ori. */
+        $this->assertCount(3, $data['new_commissions']);
+    }
+
+    public function test_cursorul_nu_da_inapoi_cand_nu_e_nimic_nou(): void
+    {
+        $order = $this->makeOrder(['total' => 100, 'commission_amount' => 5]);
+
+        $data = $this->widgetGet("/api/tixello-widget/summary?since_commission_id={$order}")
+            ->json('data');
+
+        $this->assertSame([], $data['new_commissions']);
+        $this->assertEquals($order, $data['cursor']['last_commission_id']);
+    }
+
+    public function test_comenzile_vechi_si_noi_se_aduna_impreuna(): void
+    {
+        /* Regresie: căderea pe `total_cents` se făcea pe suma întregului grup,
+           deci o comandă veche (doar cenţi) alături de una nouă (`total`) era
+           numărată ca 0. */
+        $this->makeOrder(['total' => 100, 'total_cents' => 0, 'commission_amount' => 5]);
+        $this->makeOrder(['total' => 0, 'total_cents' => 4500, 'commission_amount' => 2]);
+
+        $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
+
+        $this->assertEquals(145.0, $stats['sales']['total']);
+    }
+
+    public function test_azi_poate_fi_taiat_dupa_data_platii(): void
+    {
+        config(['tixello-widget.today_basis' => 'paid_at']);
+
+        /* Comandă intrată ieri, plătită azi: pe `paid_at` e venitul de azi. */
+        $this->makeOrder([
+            'total' => 80,
+            'commission_amount' => 8,
+            'created_at' => '2026-08-13 10:00:00',
+            'paid_at' => '2026-08-15 09:00:00',
+        ]);
+
+        $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
+
+        $this->assertEquals(80.0, $stats['sales']['today']);
+        $this->assertEquals(8.0, $stats['revenue']['today']);
+    }
+
     public function test_limita_de_comisioane_e_plafonata(): void
     {
         $this->widgetGet('/api/tixello-widget/summary?limit=999')->assertStatus(422);

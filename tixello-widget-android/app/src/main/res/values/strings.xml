@@ -27,6 +27,8 @@
     <string name="service_notification_error">Eroare: %1$s</string>
     <string name="service_notification_waiting">Aștept prima sincronizare…</string>
     <string name="service_notification_stop">Oprește</string>
+    <string name="notif_test_event">Alertă de probă</string>
+    <string name="notif_test_source">Așa vei fi anunțat la un comision real</string>
 
     <!-- Ecranul de configurare -->
     <string name="setup_server">Adresa serverului</string>
@@ -44,6 +46,8 @@
     <string name="setup_start">Pornește urmărirea</string>
     <string name="setup_stop">Oprește urmărirea</string>
     <string name="setup_refresh">Actualizează acum</string>
+    <string name="setup_test_alert">Testează alerta</string>
+    <string name="setup_test_alert_sent">Alertă trimisă — dacă n-o auzi, verifică permisiunea de notificări și modul telefonului.</string>
     <string name="setup_battery">Setări baterie</string>
     <string name="setup_notification_settings">Setări notificări</string>
     <string name="setup_missing_fields">Completează adresa serverului și token-ul.</string>

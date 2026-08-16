@@ -38,6 +38,13 @@ object Notifier {
 
     private val VIBRATION_PATTERN = longArrayOf(0, 250, 150, 250)
 
+    /**
+     * Cate notificari separate se posteaza cel mult intr-o runda. Peste atat,
+     * restul intra doar in rezumat: un telefon revenit dupa o pauza lunga nu
+     * trebuie sa-ti umple bara de stare.
+     */
+    private const val MAX_INDIVIDUAL = 5
+
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
@@ -95,7 +102,7 @@ object Notifier {
         val currency = commissions.first().displayCurrency
         val total = commissions.sumOf { it.displayAmount }
 
-        commissions.forEach { commission ->
+        commissions.take(MAX_INDIVIDUAL).forEach { commission ->
             val text = listOfNotNull(commission.event, commission.source)
                 .joinToString(" · ")
 
@@ -140,6 +147,33 @@ object Notifier {
 
             manager.notifyChecked(NOTIFICATION_SUMMARY, summary)
         }
+    }
+
+    /**
+     * Alerta de proba, din ecranul de configurare.
+     *
+     * Trece prin acelasi drum ca una reala — acelasi canal, acelasi sunet,
+     * aceeasi vibratie — pentru ca rostul ei e sa dovedeasca exact ce se va
+     * intampla la primul comision incasat, fara sa astepti o vanzare.
+     */
+    fun notifyTest(context: Context) {
+        notifyCommissions(
+            context,
+            listOf(
+                Commission(
+                    /* ID negativ: nu se poate ciocni cu un ID de comanda reala,
+                       deci alerta de proba nu suprascrie una adevarata. */
+                    id = -1L,
+                    event = context.getString(R.string.notif_test_event),
+                    source = context.getString(R.string.notif_test_source),
+                    amount = 12.34,
+                    amountCurrency = "EUR",
+                    amountConverted = null,
+                    currency = "EUR",
+                    at = null
+                )
+            )
+        )
     }
 
     private fun channelFor(context: Context): String = when {

@@ -1656,3 +1656,83 @@ suite care n-au nimic în comun.
 reală, pe PostgreSQL. `TODO(owner)`: rulează `TixelloWidgetApiTest` o dată pe un dump
 de dev înainte de deploy — mai ales agregarea `GROUP BY currency`, unde strictețea
 Postgres diferă de SQLite.
+
+---
+
+## D-108 — Alertele au interogarea lor, separată de lista afişată
+
+**Context.** Prima versiune filtra `new_commissions` din lista de 5 comisioane
+afişate. Dacă între două interogări intrau 9 comisioane, 4 dispăreau fără sunet,
+iar cursorul trecea peste ele — pierdere tăcută, exact ce nu vrei de la o alertă.
+
+**Alegere.** `new_commissions` e o interogare proprie, `WHERE id > since`,
+plafonată la `new_commissions_cap` (20). Lista de afişare rămâne la 5.
+
+**Alternative.** (a) Creşterea limitei de afişare la 20 — ar fi mutat problema cu
+un ordin de mărime, nu ar fi rezolvat-o, şi ar fi îngrăşat fiecare payload.
+(b) Fără plafon — un telefon întors după o săptămână offline ar fi sunat de sute
+de ori.
+
+**Impact.** Nicio alertă pierdută sub 20 de comisioane pe rundă. Peste, cursorul
+sare (intenţionat), iar telefonul postează cel mult 5 notificări individuale plus
+un rezumat cu numărul real.
+
+---
+
+## D-109 — Căderea `total` → `total_cents` se face pe rând, nu pe sumă
+
+**Context.** `StatsOverview::sumByCurrency()` cade pe `total_cents` doar când
+suma întregului grup e zero. Regula funcţiona pe vremea când toate comenzile
+erau vechi; azi, cu ambele forme în tabelă, o comandă veche amestecată cu una
+nouă e numărată ca 0.
+
+**Alegere.** `SUM(CASE WHEN total <> 0 THEN total ELSE total_cents / 100 END)` —
+decizia se ia per comandă.
+
+**Alternative.** Copierea exactă a panoului — consistenţă cu o cifră greşită nu e
+consistenţă. Migrarea datelor vechi în `total` — corect, dar e o migraţie de date
+pe producţie, mult peste ce cere un widget.
+
+**Impact.** Widget-ul poate arăta un total mai mare decât panoul de admin. Asta e
+diferenţa dintre corect şi vechi, nu un bug; e documentată. `TODO(owner)`:
+aceeaşi corecţie merită dusă şi în `StatsOverview`.
+
+---
+
+## D-110 — Două cache-uri cu vieţi diferite, nu unul
+
+**Context.** Cifrele „all time" cer COUNT/SUM peste toată tabela; `tickets` nu
+are index pe `status`, deci e scanare completă. Cu un singur TTL de 20 s, un
+telefon care întreabă la 60 s ţinea scanarea în buclă permanentă.
+
+**Alegere.** `all-time` la 120 s, `today` la 20 s — chei de cache separate.
+Plus o migraţie opţională cu trei indexuri, create `CONCURRENTLY` pe PostgreSQL
+ca să poată rula fără să blocheze vânzările.
+
+**Alternative.** (a) Un TTL mare pe tot — cifra „azi", singura la care te uiţi
+des, ar fi îngheţat minute întregi. (b) Doar indexuri — ar fi ajutat, dar
+scanarea rămâne mare, iar migraţia e opţională prin construcţie.
+
+**Impact.** Cifrele „all time" pot fi vechi de până la 2 minute — invizibil la
+scara lor. Comisioanele, semnalul de alertă, nu trec deloc prin cache.
+
+---
+
+## D-111 — Cheie de debug fixă, ţinută în repo
+
+**Context.** Fiecare runner de CI îşi generează propria cheie de debug, iar
+Android refuză să instaleze un APK peste unul semnat diferit. Fiecare versiune
+nouă ar fi cerut dezinstalarea aplicaţiei — adică pierderea token-ului şi a
+setărilor.
+
+**Alegere.** `app/debug.keystore` versionat, cu parola standard `android`, plus
+`versionCode` din `GITHUB_RUN_NUMBER`.
+
+**Alternative.** (a) Documentarea „dezinstalează întâi" — mută pe om o problemă
+pe care o rezolvă un fişier. (b) Cheie de release din GitHub Secrets — corect
+pentru distribuţie reală, dar aplicaţia se instalează de mână de către
+proprietar; rămâne calea deschisă când va fi nevoie.
+
+**Impact.** Actualizările se instalează peste, păstrând setările. Cheia nu e un
+secret: cu ea nu se poate publica nimic (Play Store respinge cheile de debug), iar
+cine ar folosi-o ar avea nevoie oricum de acces fizic la telefon.

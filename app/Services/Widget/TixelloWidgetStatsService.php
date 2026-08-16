@@ -46,6 +46,14 @@ class TixelloWidgetStatsService
 
         $recent = $this->recentCommissions($limit);
 
+        /* Alertele NU se filtrează din lista de afişare: dacă între două
+           interogări au intrat 9 comisioane, iar widget-ul arată 5, filtrarea
+           listei ar înghiţi 4 alerte. De aceea „ce e nou" e o interogare
+           proprie, plafonată separat. */
+        $new = $sinceCommissionId === null
+            ? []
+            : $this->recentCommissions($this->newCommissionsCap(), $sinceCommissionId);
+
         return [
             'generated_at' => now()->toIso8601String(),
             'timezone' => $this->timezone(),
@@ -56,11 +64,16 @@ class TixelloWidgetStatsService
             'commissions' => $recent,
             /* Doar comisioanele pe care telefonul NU le-a văzut încă. Ele
                declanşează sunetul/vibraţia; restul listei e doar afişaj. */
-            'new_commissions' => $sinceCommissionId === null
-                ? []
-                : array_values(array_filter($recent, fn ($c) => $c['id'] > $sinceCommissionId)),
+            'new_commissions' => $new,
             'cursor' => [
-                'last_commission_id' => $recent[0]['id'] ?? ($sinceCommissionId ?? 0),
+                /* Maximul dintre ce s-a afişat şi ce s-a alertat: cu lista de
+                   afişare goală (comisioane vechi, fără nimic nou) cursorul nu
+                   trebuie să dea înapoi. */
+                'last_commission_id' => max(
+                    $recent[0]['id'] ?? 0,
+                    $new[0]['id'] ?? 0,
+                    $sinceCommissionId ?? 0,
+                ),
             ],
         ];
     }
@@ -73,69 +86,98 @@ class TixelloWidgetStatsService
      */
     public function stats(): array
     {
-        $ttl = (int) config('tixello-widget.cache_ttl', 20);
+        /* Două cache-uri, nu unul.
+         *
+         * Cifrele „all time" cer un COUNT/SUM peste tot tabelul — pe producţie
+         * `tickets` nu are index pe `status`, deci e scanare completă. Ele se
+         * mişcă lent în procente, aşa că pot sta minute întregi în cache.
+         * Cifrele de azi sunt mărginite de un interval de dată (deci ieftine)
+         * şi sunt exact cele la care te uiţi des, deci rămân proaspete.
+         *
+         * Fără separarea asta, un TTL scurt ţinea scanarea completă în buclă
+         * cât timp exista un telefon care întreba. */
+        $allTimeTtl = (int) config('tixello-widget.cache_ttl_all_time', 120);
+        $todayTtl = (int) config('tixello-widget.cache_ttl', 20);
 
-        $build = fn () => $this->buildStats();
+        $allTime = $this->cached('tixello_widget:stats:all-time', $allTimeTtl, fn () => $this->buildAllTimeStats());
+        $today = $this->cached('tixello_widget:stats:today', $todayTtl, fn () => $this->buildTodayStats());
 
-        return $ttl > 0
-            ? Cache::remember('tixello_widget:stats', $ttl, $build)
-            : $build();
+        return [
+            'sales' => [
+                'total' => $allTime['sales']['value'],
+                'total_secondary' => $allTime['sales']['secondary'],
+                'total_orders' => $allTime['sales']['orders'],
+                'today' => $today['sales']['value'],
+                'today_secondary' => $today['sales']['secondary'],
+                'today_orders' => $today['sales']['orders'],
+            ],
+            'tickets' => [
+                'total' => $allTime['tickets'],
+                'today' => $today['tickets'],
+            ],
+            'customers' => [
+                'total' => $allTime['customers_tenant'] + $allTime['customers_marketplace'],
+                'today' => $today['customers'],
+                'tenant' => $allTime['customers_tenant'],
+                'marketplace' => $allTime['customers_marketplace'],
+            ],
+            'revenue' => [
+                /* „Venituri Tixello" = comisionul reţinut de platformă. */
+                'total' => $allTime['sales']['commission'],
+                'total_secondary' => $allTime['sales']['commission_secondary'],
+                'today' => $today['sales']['commission'],
+                'today_secondary' => $today['sales']['commission_secondary'],
+            ],
+        ];
+    }
+
+    /**
+     * @template T
+     * @param  \Closure(): T  $build
+     * @return T
+     */
+    private function cached(string $key, int $ttl, \Closure $build): mixed
+    {
+        return $ttl > 0 ? Cache::remember($key, $ttl, $build) : $build();
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildStats(): array
+    private function buildAllTimeStats(): array
+    {
+        return [
+            'sales' => $this->orderMoney(null, null),
+            'tickets' => $this->ticketsQuery()->count(),
+            'customers_tenant' => Customer::count(),
+            'customers_marketplace' => MarketplaceCustomer::count(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildTodayStats(): array
     {
         [$dayStart, $dayEnd] = $this->todayRange();
-        $paidStatuses = $this->paidStatuses();
-
-        /* --- Vânzări (valoare + număr de comenzi) ------------------------ */
-        $salesTotal = $this->orderMoney(null, null);
-        $salesToday = $this->orderMoney($dayStart, $dayEnd);
-
-        /* --- Bilete ------------------------------------------------------ */
-        $ticketsTotal = Ticket::where('status', 'valid')
-            ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
-            ->count();
-        $ticketsToday = Ticket::where('status', 'valid')
-            ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
-            ->whereBetween('created_at', [$dayStart, $dayEnd])
-            ->count();
-
-        /* --- Clienţi (tenant + marketplace, la un loc) -------------------- */
-        $customersTenant = Customer::count();
-        $customersMarketplace = MarketplaceCustomer::count();
-        $customersTenantToday = Customer::whereBetween('created_at', [$dayStart, $dayEnd])->count();
-        $customersMarketplaceToday = MarketplaceCustomer::whereBetween('created_at', [$dayStart, $dayEnd])->count();
 
         return [
-            'sales' => [
-                'total' => $salesTotal['value'],
-                'total_secondary' => $salesTotal['secondary'],
-                'total_orders' => $salesTotal['orders'],
-                'today' => $salesToday['value'],
-                'today_secondary' => $salesToday['secondary'],
-                'today_orders' => $salesToday['orders'],
-            ],
-            'tickets' => [
-                'total' => $ticketsTotal,
-                'today' => $ticketsToday,
-            ],
-            'customers' => [
-                'total' => $customersTenant + $customersMarketplace,
-                'today' => $customersTenantToday + $customersMarketplaceToday,
-                'tenant' => $customersTenant,
-                'marketplace' => $customersMarketplace,
-            ],
-            'revenue' => [
-                /* „Venituri Tixello" = comisionul reţinut de platformă. */
-                'total' => $salesTotal['commission'],
-                'total_secondary' => $salesTotal['commission_secondary'],
-                'today' => $salesToday['commission'],
-                'today_secondary' => $salesToday['commission_secondary'],
-            ],
+            'sales' => $this->orderMoney($dayStart, $dayEnd),
+            'tickets' => $this->ticketsQuery()
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
+                ->count(),
+            'customers' => Customer::whereBetween('created_at', [$dayStart, $dayEnd])->count()
+                + MarketplaceCustomer::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
         ];
+    }
+
+    /**
+     * Biletele emise de Tixello: valide şi dintr-o comandă încasată.
+     */
+    private function ticketsQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Ticket::where('status', 'valid')
+            ->whereHas('order', fn ($q) => $q->whereIn('status', $this->paidStatuses()));
     }
 
     /**
@@ -153,11 +195,19 @@ class TixelloWidgetStatsService
             ->whereIn('status', $this->paidStatuses());
 
         if ($from && $to) {
-            $query->whereBetween('created_at', [$from, $to]);
+            $query->whereBetween($this->todayColumn(), [$from, $to]);
         }
 
+        /* Căderea `total` → `total_cents` se face PE RÂND, nu pe sumă.
+           Varianta „dacă suma e 0, ia centii" (cea din panoul de admin) pierde
+           tăcut fiecare comandă veche dintr-un grup în care există şi comenzi
+           noi — adică fix ce se întâmplă acum, după migrarea pe `total`. */
         $rows = $query
-            ->selectRaw('currency, COUNT(*) as orders_count, COALESCE(SUM(total), 0) as total_sum, COALESCE(SUM(total_cents), 0) as cents_sum, COALESCE(SUM(commission_amount), 0) as commission_sum')
+            ->selectRaw(
+                'currency, COUNT(*) as orders_count,'
+                . ' COALESCE(SUM(CASE WHEN COALESCE(total, 0) <> 0 THEN total ELSE COALESCE(total_cents, 0) / 100.0 END), 0) as total_sum,'
+                . ' COALESCE(SUM(commission_amount), 0) as commission_sum'
+            )
             ->groupBy('currency')
             ->get();
 
@@ -171,13 +221,7 @@ class TixelloWidgetStatsService
                moneda de raportare, exact ca dashboard-ul de admin. */
             $rowCurrency = strtoupper((string) ($row->currency ?: $currency));
 
-            /* Comenzile vechi ţin suma în `total_cents`, cele noi în `total`.
-               Aceeaşi cădere ca în StatsOverview::sumByCurrency(). */
             $rowTotal = (float) $row->total_sum;
-            if ($rowTotal == 0.0) {
-                $rowTotal = ((float) $row->cents_sum) / 100;
-            }
-
             $rate = $this->rate($rowCurrency, $currency);
 
             /* Fără curs nu inventăm unul: suma rămâne neconvertită şi ar
@@ -209,13 +253,14 @@ class TixelloWidgetStatsService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function recentCommissions(int $limit): array
+    public function recentCommissions(int $limit, ?int $sinceId = null): array
     {
         $limit = max(1, min($limit, (int) config('tixello-widget.commissions_max_limit', 50)));
 
         $orders = Order::query()
             ->whereIn('status', $this->paidStatuses())
             ->where('commission_amount', '>', 0)
+            ->when($sinceId !== null, fn ($q) => $q->where('id', '>', $sinceId))
             ->with([
                 'event:id,title',
                 'marketplaceEvent:id,name',
@@ -286,6 +331,28 @@ class TixelloWidgetStatsService
         $end = Carbon::now($tz)->endOfDay()->utc();
 
         return [$start, $end];
+    }
+
+    /**
+     * Coloana după care se taie „azi" pe comenzi.
+     *
+     * `created_at` (implicit) = când a intrat comanda, identic cu panoul de
+     * admin. `paid_at` = când a intrat banul — mai aproape de ce înţelege un
+     * proprietar prin „vândut azi", dar mută o comandă făcută aseară şi
+     * plătită azi-dimineaţă în ziua de azi.
+     */
+    private function todayColumn(): string
+    {
+        return config('tixello-widget.today_basis') === 'paid_at' ? 'paid_at' : 'created_at';
+    }
+
+    /**
+     * Câte comisioane pot intra într-o singură rundă de alerte. Plafon, ca un
+     * telefon întors după o săptămână offline să nu primească 300 de sunete.
+     */
+    private function newCommissionsCap(): int
+    {
+        return (int) config('tixello-widget.new_commissions_cap', 20);
     }
 
     private function toSecondary(float $amountInPrimary): ?float
