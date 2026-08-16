@@ -34,6 +34,24 @@ return new class extends Migration
 
     public function up(): void
     {
+        /* OPT-IN, în mod deliberat.
+         *
+         * Migraţia stă în `database/migrations`, deci un `php artisan migrate`
+         * obişnuit ar rula-o — iar pe `orders`/`tickets` la scara producţiei
+         * asta înseamnă minute bune de I/O în mijlocul unui deploy. Mai rău:
+         * dacă un `CREATE INDEX CONCURRENTLY` eşuează (conflict de lock),
+         * migraţia pică, deploy-ul se opreşte şi rămâne un index INVALID de
+         * curăţat de mână.
+         *
+         * Widget-ul funcţionează şi fără indexurile astea; ele doar scurtează
+         * interogările. Deci alegi tu momentul:
+         *
+         *   TIXELLO_WIDGET_CREATE_INDEXES=true php artisan migrate
+         */
+        if (! filter_var(env('TIXELLO_WIDGET_CREATE_INDEXES', false), FILTER_VALIDATE_BOOLEAN)) {
+            return;
+        }
+
         if (DB::getDriverName() !== 'pgsql') {
             /* Pe alte drivere (SQLite în teste, MySQL) indexurile parţiale şi
                CONCURRENTLY nu există sau diferă. Producţia e PostgreSQL. */

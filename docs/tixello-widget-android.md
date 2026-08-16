@@ -154,15 +154,22 @@ faci.
 
 ### 5. Opțional — indexuri, dacă interogările sunt lente
 
+Migrația de indexuri **nu rulează** la un `php artisan migrate` obișnuit: e
+protejată de un flag, tocmai ca să nu prindă un deploy pe nepregătite. O pornești
+explicit, când vrei tu:
+
 ```bash
-php artisan migrate --path=database/migrations/2026_08_15_120100_add_tixello_widget_indexes.php
+TIXELLO_WIDGET_CREATE_INDEXES=true php artisan migrate
 ```
 
 Adaugă trei indexuri pe care le folosește și dashboard-ul de admin:
 `tickets(status, created_at)`, `orders(status, created_at)` și un index parțial
 pentru lista de comisioane. Pe PostgreSQL sunt create `CONCURRENTLY`, deci **nu
 blochează vânzările** — poate rula în timpul zilei. Pe o tabelă mare durează
-minute; e normal.
+minute; e normal. Dacă un `CREATE INDEX CONCURRENTLY` eșuează (conflict de lock),
+PostgreSQL lasă în urmă un index marcat INVALID, pe care îl ștergi cu
+`DROP INDEX <nume>` și reiei — motivul pentru care pasul ăsta e separat de
+deploy.
 
 ### API
 
