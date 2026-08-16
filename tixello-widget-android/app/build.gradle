@@ -3,6 +3,14 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Numarul rularii de CI, calculat inainte de blocul android {}.
+//
+// Scris inline ca `versionCode (expr) as int`, expresia a picat evaluarea
+// proiectului cu „Value is null" — Groovy citeste altfel decat pare o comanda
+// urmata de paranteza si de un cast. Aici totul e explicit: o variabila
+// calculata separat si atribuire cu `=`, fara comenzi DSL ambigue.
+def buildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
 android {
     namespace 'com.tixello.widget'
     compileSdk 35
@@ -17,8 +25,8 @@ android {
         // Numarul rularii de CI ca versionCode: fiecare APK construit e „mai
         // nou" decat cel de dinainte, deci se instaleaza peste el fara sa
         // dezinstalezi. Local, fara CI, ramane 1.
-        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
-        versionName '1.0.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+        versionCode = buildNumber
+        versionName = "1.0.${buildNumber}".toString()
     }
 
     signingConfigs {
