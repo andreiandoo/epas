@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Agregatele pe care le arată widget-ul de Android.
@@ -25,6 +26,10 @@ use Illuminate\Support\Facades\Cache;
  */
 class TixelloWidgetStatsService
 {
+    public function __construct(private readonly TixelloRevenueService $revenue)
+    {
+    }
+
     /**
      * Cursuri valutare memoizate pe durata cererii — `ExchangeRate::getRate`
      * face până la două interogări per apel şi e chemat în buclă.
@@ -122,11 +127,25 @@ class TixelloWidgetStatsService
                 'marketplace' => $allTime['customers_marketplace'],
             ],
             'revenue' => [
-                /* „Venituri Tixello" = comisionul reţinut de platformă. */
-                'total' => $allTime['sales']['commission'],
-                'total_secondary' => $allTime['sales']['commission_secondary'],
-                'today' => $today['sales']['commission'],
-                'today_secondary' => $today['sales']['commission_secondary'],
+                /* „Venituri Tixello" = ce încasează platforma: comision din
+                   bilete (rata fiecărui tenant / marketplace) + partea din
+                   servicii + taxele one-time. NU `orders.commission_amount` —
+                   acela e comisionul marketplace-ului către organizatorii lui. */
+                'total' => $allTime['revenue']['total'],
+                'total_secondary' => $this->toSecondary($allTime['revenue']['total']),
+                'today' => $today['revenue']['total'],
+                'today_secondary' => $this->toSecondary($today['revenue']['total']),
+                /* Defalcare, ca să se vadă din ce se compune cifra mare. */
+                'tickets_total' => $allTime['revenue']['tickets'],
+                'tickets_today' => $today['revenue']['tickets'],
+                'services_total' => $allTime['revenue']['services'],
+                'services_today' => $today['revenue']['services'],
+                'one_time_total' => $allTime['revenue']['one_time'],
+                'one_time_today' => $today['revenue']['one_time'],
+                /* Abonamentele lunare sunt o RATĂ, nu o sumă acumulată: a le
+                   aduna în „all time" ar produce o cifră fără sens. Widget-ul
+                   le arată separat, ca „+X/lună". */
+                'recurring_monthly' => $allTime['revenue']['recurring_monthly'],
             ],
         ];
     }
@@ -151,6 +170,7 @@ class TixelloWidgetStatsService
             'tickets' => $this->ticketsQuery()->count(),
             'customers_tenant' => Customer::count(),
             'customers_marketplace' => MarketplaceCustomer::count(),
+            'revenue' => $this->revenueFor(null, null),
         ];
     }
 
@@ -168,7 +188,56 @@ class TixelloWidgetStatsService
                 ->count(),
             'customers' => Customer::whereBetween('created_at', [$dayStart, $dayEnd])->count()
                 + MarketplaceCustomer::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+            'revenue' => $this->revenueFor($dayStart, $dayEnd),
         ];
+    }
+
+    /**
+     * Veniturile Tixello pentru un interval (sau all time, cu null/null).
+     *
+     * Fiecare sursă vine pe monede, deci conversia se face aici, o singură
+     * dată. Ce n-are curs rămâne afară, ca peste tot — nu inventăm cursuri.
+     *
+     * @return array<string, float>
+     */
+    private function revenueFor(?Carbon $from, ?Carbon $to): array
+    {
+        $tickets = $this->convertByCurrency(
+            $this->revenue->ticketCommissionByCurrency($from, $to, $this->todayColumn())
+        );
+        $services = $this->convertByCurrency(
+            $this->revenue->serviceRevenueByCurrency($from, $to)
+        );
+        $oneTime = round($this->revenue->oneTimeRevenue($from, $to), 2);
+
+        return [
+            'tickets' => $tickets,
+            'services' => $services,
+            'one_time' => $oneTime,
+            'total' => round($tickets + $services + $oneTime, 2),
+            'recurring_monthly' => round($this->revenue->monthlyRecurringRevenue(), 2),
+        ];
+    }
+
+    /**
+     * @param  array<string, float>  $byCurrency
+     */
+    private function convertByCurrency(array $byCurrency): float
+    {
+        $target = $this->currency();
+        $total = 0.0;
+
+        foreach ($byCurrency as $currency => $amount) {
+            $rate = $this->rate(strtoupper($currency), $target);
+
+            if ($rate === null) {
+                continue;
+            }
+
+            $total += $amount * $rate;
+        }
+
+        return round($total, 2);
     }
 
     /**
@@ -177,22 +246,22 @@ class TixelloWidgetStatsService
     private function ticketsQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return Ticket::where('status', 'valid')
-            ->whereHas('order', fn ($q) => $q->whereIn('status', $this->paidStatuses()));
+            ->whereHas('order', fn ($q) => $q->whereIn('status', $this->saleStatuses()));
     }
 
     /**
      * Sume de bani pe comenzi plătite, convertite în moneda de raportare.
      *
      * Agregarea se face pe monedă într-o singură interogare şi abia apoi se
-     * converteşte, pentru că `orders.total` şi `orders.commission_amount` sunt
-     * în moneda comenzii, nu într-una comună.
+     * converteşte, pentru că sumele sunt în moneda comenzii, nu într-una
+     * comună.
      *
-     * @return array{value: float, secondary: float|null, commission: float, commission_secondary: float|null, orders: int}
+     * @return array{value: float, secondary: float|null, orders: int}
      */
     private function orderMoney(?Carbon $from, ?Carbon $to): array
     {
         $query = Order::query()
-            ->whereIn('status', $this->paidStatuses());
+            ->whereIn('status', $this->saleStatuses());
 
         if ($from && $to) {
             $query->whereBetween($this->todayColumn(), [$from, $to]);
@@ -205,15 +274,13 @@ class TixelloWidgetStatsService
         $rows = $query
             ->selectRaw(
                 'currency, COUNT(*) as orders_count,'
-                . ' COALESCE(SUM(CASE WHEN COALESCE(total, 0) <> 0 THEN total ELSE COALESCE(total_cents, 0) / 100.0 END), 0) as total_sum,'
-                . ' COALESCE(SUM(commission_amount), 0) as commission_sum'
+                . ' COALESCE(SUM(CASE WHEN COALESCE(total, 0) <> 0 THEN total ELSE COALESCE(total_cents, 0) / 100.0 END), 0) as total_sum'
             )
             ->groupBy('currency')
             ->get();
 
         $currency = $this->currency();
         $value = 0.0;
-        $commission = 0.0;
         $orders = 0;
 
         foreach ($rows as $row) {
@@ -233,15 +300,12 @@ class TixelloWidgetStatsService
             }
 
             $value += $rowTotal * $rate;
-            $commission += ((float) $row->commission_sum) * $rate;
             $orders += (int) $row->orders_count;
         }
 
         return [
             'value' => round($value, 2),
             'secondary' => $this->toSecondary($value),
-            'commission' => round($commission, 2),
-            'commission_secondary' => $this->toSecondary($commission),
             'orders' => $orders,
         ];
     }
@@ -258,20 +322,33 @@ class TixelloWidgetStatsService
         $limit = max(1, min($limit, (int) config('tixello-widget.commissions_max_limit', 50)));
 
         $orders = Order::query()
-            ->whereIn('status', $this->paidStatuses())
-            ->where('commission_amount', '>', 0)
+            ->whereIn('status', $this->saleStatuses())
+            /* Comisionul Tixello e rata clientului × valoarea comenzii, deci
+               „are comision" înseamnă „clientul are o rată > 0". Filtrul stă în
+               SQL, altfel ar trebui citite comenzi la întâmplare până se adună
+               cinci cu comision. */
+            ->where(function ($q) {
+                $q->whereExists(fn ($sub) => $sub->select(DB::raw(1))
+                    ->from('tenants')
+                    ->whereColumn('tenants.id', 'orders.tenant_id')
+                    ->where('tenants.commission_rate', '>', 0))
+                    ->orWhereExists(fn ($sub) => $sub->select(DB::raw(1))
+                        ->from('marketplace_clients')
+                        ->whereColumn('marketplace_clients.id', 'orders.marketplace_client_id')
+                        ->where('marketplace_clients.commission_rate', '>', 0));
+            })
             ->when($sinceId !== null, fn ($q) => $q->where('id', '>', $sinceId))
             ->with([
                 'event:id,title',
                 'marketplaceEvent:id,name',
-                'tenant:id,name',
-                'marketplaceClient:id,name',
+                'tenant:id,name,commission_rate',
+                'marketplaceClient:id,name,commission_rate',
                 'items:id,order_id,name',
             ])
             ->orderByDesc('id')
             ->limit($limit)
             ->get([
-                'id', 'order_number', 'currency', 'commission_amount', 'total', 'total_cents',
+                'id', 'order_number', 'currency', 'total', 'total_cents',
                 'event_id', 'marketplace_event_id', 'tenant_id', 'marketplace_client_id',
                 'paid_at', 'created_at',
             ]);
@@ -279,15 +356,19 @@ class TixelloWidgetStatsService
         $currency = $this->currency();
 
         return $orders->map(function (Order $order) use ($currency) {
-            $orderCurrency = strtoupper((string) ($order->currency ?: $currency));
-            $amount = (float) $order->commission_amount;
+            /* Partea Tixello din comanda asta — rata tenantului sau a
+               marketplace-ului, aplicată pe valoarea comenzii. */
+            $cut = $this->revenue->commissionForOrder($order);
+            $orderCurrency = $cut['currency'];
+            $amount = $cut['amount'];
             $rate = $this->rate($orderCurrency, $currency);
 
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'event' => $this->eventLabel($order),
-                'source' => $order->marketplaceClient?->name ?? $order->tenant?->name,
+                'source' => $cut['source'],
+                'rate' => $cut['rate'],
                 'amount' => round($amount, 2),
                 'amount_currency' => $orderCurrency,
                 /* null când nu există curs — aplicaţia afişează atunci suma
@@ -392,8 +473,10 @@ class TixelloWidgetStatsService
     /**
      * @return array<int, string>
      */
-    private function paidStatuses(): array
+    private function saleStatuses(): array
     {
-        return (array) config('tixello-widget.paid_statuses', ['paid', 'confirmed', 'completed']);
+        /* Sursa unica: aceleasi statusuri pe care le foloseste calculul de
+           venit. Retururile nu sterg o vanzare care a avut loc. */
+        return (array) config('tixello-widget.sale_statuses', TixelloRevenueService::SALE_STATUSES);
     }
 }

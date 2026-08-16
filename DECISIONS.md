@@ -1736,3 +1736,58 @@ proprietar; rămâne calea deschisă când va fi nevoie.
 **Impact.** Actualizările se instalează peste, păstrând setările. Cheia nu e un
 secret: cu ea nu se poate publica nimic (Play Store respinge cheile de debug), iar
 cine ar folosi-o ar avea nevoie oricum de acces fizic la telefon.
+
+---
+
+## D-112 — „Venituri Tixello" nu e `orders.commission_amount`
+
+**Context.** Prima versiune a widget-ului însuma `orders.commission_amount` ca
+venit al platformei. E greşit din temelii: coloana aia ţine comisionul
+MARKETPLACE-ULUI către organizatorii lui — chiar `config/tixello.php` o spune
+(„evenimentele de marketplace poartă comisionul marketplace-ului, iar Tixello îşi
+încasează partea de la marketplace"). Widget-ul arăta, zi de zi, banul altcuiva.
+În plus, coloana e 0 pe vânzările POS/leisure, deci ar fi subraportat şi acolo
+unde ar fi însemnat ceva.
+
+**Alegere.** Un serviciu separat, `TixelloRevenueService`, care reproduce
+formulele din locul care chiar facturează — panoul core (`BillingOverview`) şi
+`invoices:generate-tenant`:
+
+- tenant → `tenants.commission_rate` % × valoarea comenzilor tenantului;
+- marketplace → `marketplace_clients.commission_rate` % × valoarea comenzilor;
+- servicii → `ServiceOrder::TIXELLO_SHARE` (50%) din cele plătite;
+- microservicii → `billing_amount` one-time (are dată) şi lunar (rată).
+
+**Alternative.** (a) Însumarea facturilor emise — exactă, dar arată doar trecutul
+facturat; „venituri azi" ar fi fost mereu 0 între cicluri, iar alerta la fiecare
+comision imposibilă. (b) Baza din `BillingBreakdown` (preţul biletelor, nu
+valoarea comenzii) — mai fină, dar contrazice panoul core; am ales panoul, fiindcă
+acolo se emit facturile. Inconsistenţa dintre cele două pagini rămâne, documentată.
+
+**Impact.** Cifra principală a widget-ului îşi schimbă complet sensul şi mărimea.
+Abonamentele lunare NU se adună în „all time" — sunt o rată, nu o sumă; se afişează
+separat, ca „X/lună". `TODO(owner)`: cele două baze de calcul (comenzi vs. bilete)
+ar trebui unificate în aplicaţie, dar asta e o decizie de facturare, nu de widget.
+
+---
+
+## D-113 — Retururile nu ating comisionul
+
+**Context.** La un refund, `PaymentRefundService` pune pe comandă
+`status = 'refunded'` (integral) sau `'partially_refunded'` (parţial). Niciunul
+nu era în lista de statusuri a widget-ului, deci o comandă de 500 € cu o
+restituire de 5 € dispărea cu totul: şi vânzarea, şi comisionul, şi biletele
+rămase valide.
+
+**Alegere.** Ambele statusuri contează ca vânzare. Regula de afaceri, confirmată
+de proprietar: Tixello încasează comision pe vânzare, iar retururile nu i-l iau
+înapoi. `orders.commission_amount` nici nu e modificat de refund, iar
+`invoices:generate-tenant` exclude doar `cancelled` — deci facturarea reală face
+deja la fel.
+
+**Alternative.** Scăderea părţii restituite — ar fi contrazis regula de afaceri
+şi ar fi făcut widget-ul să nu semene cu factura.
+
+**Impact.** Nu intră în cifre: `pending`, `failed`, `cancelled`, `expired` —
+acolo n-a existat nicio vânzare. Widget-ul poate arăta mai mult decât panoul de
+admin, care încă foloseşte doar `paid`/`confirmed`/`completed`.

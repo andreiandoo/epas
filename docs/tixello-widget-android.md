@@ -32,36 +32,59 @@ există niciun filtru de tenant pe traseul ăsta.
 
 ### De unde vin cifrele
 
-Definițiile sunt aceleași cu widget-urile din panoul de admin
-(`App\Filament\Widgets\StatsOverview`), ca să nu ai două adevăruri:
+| Cifra    | Sursa                                                                   |
+|----------|--------------------------------------------------------------------------|
+| Vânzări  | valoarea comenzilor în care vânzarea a avut loc                          |
+| Comenzi  | numărul acelorași comenzi                                                |
+| Bilete   | `tickets` cu `status = valid` dintr-o astfel de comandă                  |
+| Clienți  | `customers` + `marketplace_customers`                                    |
 
-| Cifra            | Sursa                                                                        |
-|------------------|------------------------------------------------------------------------------|
-| Vânzări          | `SUM(orders.total)` pentru comenzile `paid` / `confirmed` / `completed`      |
-| Comenzi          | numărul acelorași comenzi                                                    |
-| Bilete           | `tickets` cu `status = valid` care atârnă de o comandă plătită               |
-| Clienți          | `customers` + `marketplace_customers`                                        |
-| Venituri Tixello | `SUM(orders.commission_amount)` pe aceleași comenzi                          |
-| Comisioane (listă) | ultimele comenzi plătite cu `commission_amount > 0`, cele mai noi primele  |
+**„Venituri Tixello" înseamnă banii care ajung la platforma core** — nu comisionul
+pe care un marketplace îl ia de la organizatorii lui. Formulele sunt luate din
+locul care chiar facturează (`App\Filament\Pages\BillingOverview` și
+`invoices:generate-tenant`):
 
-Comenzile vechi, care țin suma doar în `total_cents`, sunt luate în calcul
-**rând cu rând** (`total` dacă e setat, altfel `total_cents / 100`). Panoul de
-admin cade pe cenți doar când suma întregului grup e zero, deci pierde tăcut
-comenzile vechi amestecate cu unele noi — aici e corectat.
+| Sursă             | Cum se calculează                                                    |
+|-------------------|----------------------------------------------------------------------|
+| Comision tenant   | `tenants.commission_rate` % × valoarea comenzilor tenantului         |
+| Comision marketplace | `marketplace_clients.commission_rate` % × valoarea comenzilor      |
+| Servicii          | 50% din `service_orders` plătite (`ServiceOrder::TIXELLO_SHARE`)      |
+| Taxe one-time     | `billing_amount` pe microserviciile cu `billing_cycle = one_time`    |
+| Abonamente lunare | `billing_amount` lunar — **afișat separat**, nu adunat în total      |
 
-Ce NU e scăzut: **restituirile parțiale**. O comandă rambursată integral iese
-din cifre (statusul devine `refunded`), dar una cu refund parțial rămâne cu
-`commission_amount` întreg. Panoul de admin face la fel; dacă vrei comisionul
-net, e o schimbare de definiție pe care merită s-o luăm separat.
+Abonamentul lunar e o *rată* (bani pe lună), nu o sumă acumulată; adunat într-un
+„all time" ar da o cifră fără sens. De aceea apare ca „X/lună", pe lângă total.
 
-Sumele în alte monede se convertesc în
-EUR prin tabela `exchange_rates`; dacă lipsește cursul, suma respectivă rămâne
-în afara totalului (nu inventăm un curs), iar comisionul se afișează în moneda
-lui originală.
+> **Ce NU e „venitul Tixello":** coloana `orders.commission_amount`. Aceea e
+> comisionul marketplace-ului către organizatorii lui — bani care nu ajung
+> niciodată la platforma core — și e oricum 0 pe vânzările POS/leisure.
 
-**Diferența față de panoul de admin:** „azi" se taie la miezul nopții în
-`Europe/Bucharest`, nu în UTC. Pe un telefon ținut în România, un „azi" care
-începe la 03:00 ar fi greșit.
+**Retururile nu scad nimic.** Tixello încasează comision pe vânzare; o
+restituire, integrală sau parțială, nu i-l ia înapoi. De aceea statusurile
+`refunded` și `partially_refunded` intră la fel ca `paid` — la fel face și
+`invoices:generate-tenant`, care exclude doar `cancelled`. (Înainte, o comandă de
+500 € cu o restituire de 5 € ieșea cu totul din cifre: dispăreau și vânzarea, și
+comisionul, și biletele rămase valide.)
+
+Comenzile de tenant țin banii în `total_cents`, cele de marketplace în `total`;
+se citesc amândouă, **pe fiecare rând** — nu „dacă suma grupului e zero", care
+pierde tăcut comenzile vechi amestecate cu unele noi.
+
+Sumele în alte monede se convertesc prin `exchange_rates`; fără curs, suma
+rămâne în afara totalului (nu inventăm un curs).
+
+**Două diferențe față de panoul de admin**, ambele intenționate:
+
+1. „Azi" se taie la miezul nopții în `Europe/Bucharest`, nu în UTC. Pe un telefon
+   ținut în România, un „azi" care începe la 03:00 ar fi greșit.
+2. Vânzările includ comenzile cu retur (vezi mai sus). Panoul le exclude, deci
+   widget-ul poate arăta cifre mai mari — diferența e reală, nu o eroare.
+
+Mai există o inconsistență, în aplicație, pe care widget-ul **nu** o rezolvă:
+pagina de facturare a marketplace-ului (`BillingBreakdown`) calculează comisionul
+Tixello din *prețul biletelor*, în timp ce panoul core îl calculează din *valoarea
+comenzilor*. Widget-ul urmează panoul core, fiindcă acolo se emit facturile. Pe
+vânzările POS/leisure cele două pot să nu coincidă.
 
 ---
 

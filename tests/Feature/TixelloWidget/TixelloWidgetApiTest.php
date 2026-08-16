@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 class TixelloWidgetApiTest extends TixelloWidgetTestCase
 {
     private string $plainToken;
+    private ?int $defaultTenantId = null;
 
     protected function setUp(): void
     {
@@ -91,9 +92,9 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         $tenant = $this->makeTenant('Teatrul Mic');
         $marketplace = $this->makeMarketplace('Ambilet');
 
-        $this->makeOrder(['tenant_id' => $tenant, 'total' => 100, 'commission_amount' => 5]);
-        $this->makeOrder(['tenant_id' => $tenant, 'total' => 50, 'commission_amount' => 2.5]);
-        $this->makeOrder(['marketplace_client_id' => $marketplace, 'total' => 200, 'commission_amount' => 10]);
+        $this->makeOrder(['tenant_id' => $tenant, 'total' => 100]);
+        $this->makeOrder(['tenant_id' => $tenant, 'total' => 50]);
+        $this->makeOrder(['marketplace_client_id' => $marketplace, 'total' => 200]);
 
         $stats = $this->widgetGet('/api/tixello-widget/summary')
             ->assertOk()
@@ -101,25 +102,28 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
 
         $this->assertEquals(350.0, $stats['sales']['total']);
         $this->assertEquals(3, $stats['sales']['total_orders']);
-        $this->assertEquals(17.5, $stats['revenue']['total']);
+        /* Tenant 10% din 150 = 15; marketplace 1% din 200 = 2. */
+        $this->assertEquals(17.0, $stats['revenue']['total']);
+        $this->assertEquals(17.0, $stats['revenue']['tickets_total']);
     }
 
     public function test_doar_comenzile_platite_intra_in_cifre(): void
     {
-        $this->makeOrder(['total' => 100, 'commission_amount' => 5, 'status' => 'paid']);
-        $this->makeOrder(['total' => 999, 'commission_amount' => 99, 'status' => 'pending']);
-        $this->makeOrder(['total' => 999, 'commission_amount' => 99, 'status' => 'cancelled']);
+        $this->makeOrder(['total' => 100, 'status' => 'paid']);
+        $this->makeOrder(['total' => 999, 'status' => 'pending']);
+        $this->makeOrder(['total' => 999, 'status' => 'cancelled']);
+        $this->makeOrder(['total' => 999, 'status' => 'failed']);
 
         $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
 
         $this->assertEquals(100.0, $stats['sales']['total']);
-        $this->assertEquals(5.0, $stats['revenue']['total']);
+        $this->assertEquals(10.0, $stats['revenue']['total']);
     }
 
     public function test_comenzile_vechi_cad_pe_total_cents(): void
     {
         /* Aşa arată comenzile de dinainte de coloana `total`. */
-        $this->makeOrder(['total' => 0, 'total_cents' => 12345, 'commission_amount' => 1.23]);
+        $this->makeOrder(['total' => 0, 'total_cents' => 12345]);
 
         $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
 
@@ -130,13 +134,14 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
     {
         $this->makeExchangeRate('EUR', 'RON', 5.0);
 
-        $this->makeOrder(['total' => 100, 'commission_amount' => 10, 'currency' => 'EUR']);
-        $this->makeOrder(['total' => 500, 'commission_amount' => 50, 'currency' => 'RON']);
+        $this->makeOrder(['total' => 100, 'currency' => 'EUR']);
+        $this->makeOrder(['total' => 500, 'currency' => 'RON']);
 
         $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
 
         /* 500 RON / 5 = 100 EUR, deci 200 EUR în total. */
         $this->assertEquals(200.0, $stats['sales']['total']);
+        /* 10% din fiecare, convertit: 10 EUR + 50 RON (= 10 EUR) = 20 EUR. */
         $this->assertEquals(20.0, $stats['revenue']['total']);
         /* A doua monedă e informativă: 200 EUR × 5. */
         $this->assertEquals(1000.0, $stats['sales']['total_secondary']);
@@ -147,10 +152,10 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         /* 14 august, 22:30 UTC = 15 august, 01:30 la Bucureşti — adică AZI.
            În UTC ar cădea ieri, iar cifra ar fi greşită pentru un telefon
            ţinut în România. */
-        $this->makeOrder(['total' => 40, 'commission_amount' => 4, 'created_at' => '2026-08-14 22:30:00']);
+        $this->makeOrder(['total' => 40, 'created_at' => '2026-08-14 22:30:00']);
 
         /* 15 august, 22:30 UTC = 16 august, 01:30 la Bucureşti — adică MÂINE. */
-        $this->makeOrder(['total' => 70, 'commission_amount' => 7, 'created_at' => '2026-08-15 22:30:00']);
+        $this->makeOrder(['total' => 70, 'created_at' => '2026-08-15 22:30:00']);
 
         $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
 
@@ -161,8 +166,8 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
 
     public function test_biletele_se_numara_doar_valide_si_din_comenzi_platite(): void
     {
-        $paid = $this->makeOrder(['total' => 100, 'commission_amount' => 5]);
-        $pending = $this->makeOrder(['total' => 100, 'commission_amount' => 5, 'status' => 'pending']);
+        $paid = $this->makeOrder(['total' => 100]);
+        $pending = $this->makeOrder(['total' => 100,  'status' => 'pending']);
 
         $this->makeTicket($paid, 'valid', '2026-08-15 09:00:00');
         $this->makeTicket($paid, 'valid', '2026-08-10 09:00:00');
@@ -204,7 +209,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
                 'tenant_id' => $tenant,
                 'event_id' => $event,
                 'total' => 10 * $i,
-                'commission_amount' => $i,
+                
             ]);
         }
 
@@ -231,7 +236,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
             'marketplace_client_id' => $marketplace,
             'marketplace_event_id' => $marketplaceEvent,
             'total' => 300,
-            'commission_amount' => 15,
+            
         ]);
 
         $commission = $this->widgetGet('/api/tixello-widget/summary')->json('data.commissions.0');
@@ -242,7 +247,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
 
     public function test_fara_eveniment_pe_comanda_cade_pe_numele_liniei(): void
     {
-        $order = $this->makeOrder(['total' => 100, 'commission_amount' => 5]);
+        $order = $this->makeOrder(['total' => 100]);
 
         DB::table('order_items')->insert([
             'order_id' => $order,
@@ -259,17 +264,27 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         $this->assertSame('Bilet Gala', $commission['event']);
     }
 
-    public function test_comenzile_fara_comision_nu_apar_in_lista(): void
+    public function test_clientii_cu_rata_zero_nu_produc_comision(): void
     {
-        $this->makeOrder(['total' => 100, 'commission_amount' => 0]);
+        /* Comisionul Tixello e rata clientului × valoarea comenzii. Un client
+           fără rată (contract special, migrare în curs) nu aduce venit, deci
+           nu are ce căuta nici în listă, nici în alerte. */
+        $tenantFaraRata = $this->makeTenant('Tenant fără rată', 0.0);
 
-        $this->assertSame([], $this->widgetGet('/api/tixello-widget/summary')->json('data.commissions'));
+        $this->makeOrder(['tenant_id' => $tenantFaraRata, 'total' => 1000]);
+
+        $data = $this->widgetGet('/api/tixello-widget/summary')->json('data');
+
+        $this->assertSame([], $data['commissions']);
+        $this->assertEquals(0.0, $data['stats']['revenue']['total']);
+        /* Vânzarea însă s-a întâmplat şi se vede ca atare. */
+        $this->assertEquals(1000.0, $data['stats']['sales']['total']);
     }
 
     public function test_doar_comisioanele_noi_declanseaza_alerta(): void
     {
-        $first = $this->makeOrder(['total' => 100, 'commission_amount' => 5]);
-        $second = $this->makeOrder(['total' => 200, 'commission_amount' => 10]);
+        $first = $this->makeOrder(['total' => 100]);
+        $second = $this->makeOrder(['total' => 200, ]);
 
         $data = $this->widgetGet("/api/tixello-widget/summary?since_commission_id={$first}")
             ->json('data');
@@ -282,7 +297,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
 
     public function test_fara_cursor_nimic_nu_e_marcat_ca_nou(): void
     {
-        $this->makeOrder(['total' => 100, 'commission_amount' => 5]);
+        $this->makeOrder(['total' => 100]);
 
         $data = $this->widgetGet('/api/tixello-widget/summary')->json('data');
 
@@ -298,7 +313,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
            sunet. Alertele au acum interogarea lor. */
         $ids = [];
         foreach (range(1, 9) as $i) {
-            $ids[] = $this->makeOrder(['total' => 10 * $i, 'commission_amount' => $i]);
+            $ids[] = $this->makeOrder(['total' => 10 * $i]);
         }
 
         $cursor = $ids[0];
@@ -315,9 +330,9 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
     {
         config(['tixello-widget.new_commissions_cap' => 3]);
 
-        $first = $this->makeOrder(['total' => 10, 'commission_amount' => 1]);
+        $first = $this->makeOrder(['total' => 10]);
         foreach (range(1, 6) as $i) {
-            $this->makeOrder(['total' => 10, 'commission_amount' => 1]);
+            $this->makeOrder(['total' => 10]);
         }
 
         $data = $this->widgetGet("/api/tixello-widget/summary?since_commission_id={$first}")
@@ -329,7 +344,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
 
     public function test_cursorul_nu_da_inapoi_cand_nu_e_nimic_nou(): void
     {
-        $order = $this->makeOrder(['total' => 100, 'commission_amount' => 5]);
+        $order = $this->makeOrder(['total' => 100]);
 
         $data = $this->widgetGet("/api/tixello-widget/summary?since_commission_id={$order}")
             ->json('data');
@@ -343,8 +358,8 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         /* Regresie: căderea pe `total_cents` se făcea pe suma întregului grup,
            deci o comandă veche (doar cenţi) alături de una nouă (`total`) era
            numărată ca 0. */
-        $this->makeOrder(['total' => 100, 'total_cents' => 0, 'commission_amount' => 5]);
-        $this->makeOrder(['total' => 0, 'total_cents' => 4500, 'commission_amount' => 2]);
+        $this->makeOrder(['total' => 100, 'total_cents' => 0, ]);
+        $this->makeOrder(['total' => 0, 'total_cents' => 4500, ]);
 
         $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
 
@@ -358,7 +373,7 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         /* Comandă intrată ieri, plătită azi: pe `paid_at` e venitul de azi. */
         $this->makeOrder([
             'total' => 80,
-            'commission_amount' => 8,
+            
             'created_at' => '2026-08-13 10:00:00',
             'paid_at' => '2026-08-15 09:00:00',
         ]);
@@ -375,6 +390,134 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
     }
 
     // =====================================================================
+    // Veniturile Tixello core
+    // =====================================================================
+
+    public function test_venitul_e_al_tixello_nu_al_marketplaceului(): void
+    {
+        /* Regresie de fond: prima versiune însuma `orders.commission_amount`,
+           care e comisionul MARKETPLACE-ULUI către organizatorii lui — bani
+           care nu ajung niciodată la Tixello. Aici marketplace-ul ia 20%, dar
+           Tixello are 1%: cifra trebuie să fie 2, nu 40. */
+        $marketplace = $this->makeMarketplace('Ambilet', 1.0);
+
+        DB::table('orders')->insert([
+            'marketplace_client_id' => $marketplace,
+            'status' => 'paid',
+            'total' => 200,
+            'total_cents' => 0,
+            'commission_amount' => 40,
+            'currency' => 'EUR',
+            'paid_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
+
+        $this->assertEquals(2.0, $stats['revenue']['total']);
+    }
+
+    public function test_fiecare_client_aduce_venit_cu_rata_lui(): void
+    {
+        $ieftin = $this->makeMarketplace('Marketplace 1%', 1.0);
+        $scump = $this->makeTenant('Tenant 12%', 12.0);
+
+        $this->makeOrder(['marketplace_client_id' => $ieftin, 'total' => 1000]);
+        $this->makeOrder(['tenant_id' => $scump, 'total' => 1000]);
+
+        $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
+
+        $this->assertEquals(130.0, $stats['revenue']['total']);
+    }
+
+    public function test_retururile_nu_iau_comisionul_inapoi(): void
+    {
+        /* Regula de afaceri: comisionul e pe vânzare. O restituire, integrală
+           sau parţială, nu i-l ia lui Tixello. Înainte, comanda ieşea cu totul
+           din cifre — dispărea şi vânzarea. */
+        $tenant = $this->makeTenant('Teatru', 10.0);
+
+        $this->makeOrder(['tenant_id' => $tenant, 'total' => 500, 'status' => 'partially_refunded']);
+        $this->makeOrder(['tenant_id' => $tenant, 'total' => 300, 'status' => 'refunded']);
+
+        $stats = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats');
+
+        $this->assertEquals(800.0, $stats['sales']['total']);
+        $this->assertEquals(80.0, $stats['revenue']['total']);
+    }
+
+    public function test_serviciile_aduc_jumatate_din_valoare(): void
+    {
+        $marketplace = $this->makeMarketplace('Ambilet', 1.0);
+
+        DB::table('service_orders')->insert([
+            'marketplace_client_id' => $marketplace,
+            'service_type' => 'featuring',
+            'total' => 300,
+            'currency' => 'EUR',
+            'payment_status' => 'paid',
+            'status' => 'completed',
+            'paid_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        /* Neplătit — nu e venit. */
+        DB::table('service_orders')->insert([
+            'marketplace_client_id' => $marketplace,
+            'total' => 999,
+            'currency' => 'EUR',
+            'payment_status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $revenue = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats.revenue');
+
+        /* TIXELLO_SHARE = 50% din 300. */
+        $this->assertEquals(150.0, $revenue['services_total']);
+        $this->assertEquals(150.0, $revenue['services_today']);
+        $this->assertEquals(150.0, $revenue['total']);
+    }
+
+    public function test_abonamentele_lunare_se_arata_separat_nu_adunate(): void
+    {
+        $marketplace = $this->makeMarketplace('Ambilet', 1.0);
+
+        DB::table('marketplace_client_microservices')->insert([
+            'marketplace_client_id' => $marketplace,
+            'is_active' => true,
+            'billing_amount' => 99,
+            'billing_cycle' => 'monthly',
+            'activated_at' => now()->subMonths(3),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('marketplace_client_microservices')->insert([
+            'marketplace_client_id' => $marketplace,
+            'is_active' => true,
+            'billing_amount' => 500,
+            'billing_cycle' => 'one_time',
+            'activated_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $revenue = $this->widgetGet('/api/tixello-widget/summary')->json('data.stats.revenue');
+
+        /* Taxa one-time are dată, deci intră în total şi în „azi". */
+        $this->assertEquals(500.0, $revenue['one_time_total']);
+        $this->assertEquals(500.0, $revenue['one_time_today']);
+        $this->assertEquals(500.0, $revenue['total']);
+
+        /* Abonamentul lunar e o RATĂ, nu o sumă acumulată: se arată separat,
+           altfel „all time" ar fi o cifră fără sens. */
+        $this->assertEquals(99.0, $revenue['recurring_monthly']);
+    }
+
+    // =====================================================================
     // Helpere
     // =====================================================================
 
@@ -383,10 +526,11 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         return $this->withToken($this->plainToken)->getJson($uri);
     }
 
-    private function makeTenant(string $name): int
+    private function makeTenant(string $name, float $commissionRate = 10.0): int
     {
         return DB::table('tenants')->insertGetId([
             'name' => $name,
+            'commission_rate' => $commissionRate,
             'slug' => str($name)->slug()->value(),
             'status' => 'active',
             'created_at' => now(),
@@ -394,10 +538,11 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
         ]);
     }
 
-    private function makeMarketplace(string $name): int
+    private function makeMarketplace(string $name, float $commissionRate = 1.0): int
     {
         return DB::table('marketplace_clients')->insertGetId([
             'name' => $name,
+            'commission_rate' => $commissionRate,
             'slug' => str($name)->slug()->value(),
             'status' => 'active',
             'created_at' => now(),
@@ -424,12 +569,17 @@ class TixelloWidgetApiTest extends TixelloWidgetTestCase
     {
         $createdAt = $attributes['created_at'] ?? now()->toDateTimeString();
 
+        /* Fără un client cu rată, comanda n-ar produce venit Tixello, iar
+           testele ar verifica zerouri. Cel implicit are 10%. */
+        if (! isset($attributes['tenant_id']) && ! isset($attributes['marketplace_client_id'])) {
+            $attributes['tenant_id'] = $this->defaultTenantId ??= $this->makeTenant('Tenant implicit', 10.0);
+        }
+
         return DB::table('orders')->insertGetId(array_merge([
             'status' => 'paid',
             'payment_status' => 'paid',
             'total' => 0,
             'total_cents' => 0,
-            'commission_amount' => 0,
             'currency' => 'EUR',
             'paid_at' => $createdAt,
             'created_at' => $createdAt,

@@ -37,10 +37,16 @@ return [
     'secondary_currency' => env('TIXELLO_WIDGET_SECONDARY_CURRENCY', 'RON'),
 
     /*
-    | Statusurile de comandă considerate „vânzare încasată". Identice cu
-    | App\Filament\Widgets\StatsOverview, ca să nu existe două adevăruri.
+    | Statusurile care înseamnă „vânzarea a avut loc".
+    |
+    | Includ `partially_refunded` şi `refunded`, pentru că Tixello încasează
+    | comision pe vânzare, iar retururile nu i-l iau înapoi. La fel face şi
+    | `invoices:generate-tenant`, care exclude doar `cancelled`.
+    |
+    | Fără ele, o comandă de 500 € cu o restituire de 5 € ieşea cu totul din
+    | cifre — dispăreau şi vânzarea, şi comisionul, şi biletele rămase valide.
     */
-    'paid_statuses' => ['paid', 'confirmed', 'completed'],
+    'sale_statuses' => \App\Services\Widget\TixelloRevenueService::SALE_STATUSES,
 
     /*
     | Baza după care se taie „azi" pe comenzi: `created_at` (implicit, identic

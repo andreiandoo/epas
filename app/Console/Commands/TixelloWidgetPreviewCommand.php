@@ -65,8 +65,15 @@ class TixelloWidgetPreviewCommand extends Command
                 ['Bilete', number_format($s['tickets']['total']), number_format($s['tickets']['today'])],
                 ['Clienţi', number_format($s['customers']['total']), number_format($s['customers']['today'])],
                 ['Venituri Tixello', $this->money($s['revenue']['total'], $currency), $this->money($s['revenue']['today'], $currency)],
+                ['  ├ comision bilete', $this->money($s['revenue']['tickets_total'], $currency), $this->money($s['revenue']['tickets_today'], $currency)],
+                ['  ├ servicii (50%)', $this->money($s['revenue']['services_total'], $currency), $this->money($s['revenue']['services_today'], $currency)],
+                ['  └ taxe one-time', $this->money($s['revenue']['one_time_total'], $currency), $this->money($s['revenue']['one_time_today'], $currency)],
             ]
         );
+
+        /* Abonamentele lunare sunt o rată, nu o sumă acumulată — de aceea stau
+           în afara tabelului, nu adunate în „Total". */
+        $this->line('Abonamente active: ' . $this->money($s['revenue']['recurring_monthly'], $currency) . ' / lună');
 
         $this->newLine();
         $this->info('Ultimele comisioane');

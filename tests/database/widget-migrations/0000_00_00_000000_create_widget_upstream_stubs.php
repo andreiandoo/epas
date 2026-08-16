@@ -25,6 +25,8 @@ return new class extends Migration
                 $table->string('name')->nullable();
                 $table->string('slug')->nullable();
                 $table->string('status')->default('active');
+                /* Rata Tixello către tenant — din ea iese venitul platformei. */
+                $table->decimal('commission_rate', 8, 2)->nullable();
                 $table->timestamps();
             });
         }
@@ -35,8 +37,40 @@ return new class extends Migration
                 $table->string('name')->nullable();
                 $table->string('slug')->nullable();
                 $table->string('status')->default('active');
+                /* Rata pe care marketplace-ul o plăteşte lui Tixello. */
+                $table->decimal('commission_rate', 8, 2)->nullable();
                 $table->timestamps();
                 $table->softDeletes();
+            });
+        }
+
+        if (! Schema::hasTable('service_orders')) {
+            Schema::create('service_orders', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('marketplace_client_id')->nullable();
+                $table->string('service_type')->nullable();
+                $table->decimal('total', 12, 2)->default(0);
+                $table->string('currency', 3)->nullable();
+                $table->string('payment_status')->nullable();
+                $table->string('status')->nullable();
+                $table->timestamp('paid_at')->nullable();
+                $table->timestamps();
+                /* ServiceOrder e soft-deleting. */
+                $table->softDeletes();
+            });
+        }
+
+        if (! Schema::hasTable('marketplace_client_microservices')) {
+            Schema::create('marketplace_client_microservices', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('marketplace_client_id')->nullable();
+                $table->foreignId('microservice_id')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->decimal('billing_amount', 12, 2)->nullable();
+                $table->string('billing_cycle')->nullable();
+                $table->timestamp('activated_at')->nullable();
+                $table->timestamp('expires_at')->nullable();
+                $table->timestamps();
             });
         }
 
@@ -204,6 +238,7 @@ return new class extends Migration
     public function down(): void
     {
         foreach ([
+            'marketplace_client_microservices', 'service_orders',
             'activity_log', 'exchange_rates', 'tickets', 'order_items', 'orders',
             'marketplace_events', 'events', 'marketplace_contact_list_subscribers',
             'marketplace_contact_lists', 'marketplace_customers', 'customers',
