@@ -199,9 +199,11 @@ class MarketplaceTaxTemplate extends Model
             '{{stamps_column_count}}' => 'Câte sub-coloane are secțiunea Timbre (folosit ca colspan)',
             '{{stamps_column_headers_html}}' => 'HTML: <th> per timbru activ, cu nume + procent',
             '{{stamps_column_values_html}}' => 'HTML: <td> per timbru activ, cu valoarea calculată',
-            '{{stamps_percents_joined}}' => 'Procente timbre concat. ex: "5%" sau "5% + 2%"',
-            '{{stamps_formula_label}}' => 'Formula col 3 numerotare (SUM), ex: "3 = 2 x (5% + 2%)"',
-            '{{stamps_numbering_html}}' => 'HTML: <td> per timbru cu formulă individuală (3=2x(5%), 4=2x(2%))',
+            '{{stamps_music_percents_joined}}' => 'Procente timbre culturale/muzicale (fără monument), ex: "5%"',
+            '{{stamps_monument_header_suffix}}' => 'Sufix header monument, ex: " + 2% Timbru Monument" sau gol',
+            '{{stamps_percents_joined}}' => 'Toate procentele concat., ex: "5%" sau "5% + 2%"',
+            '{{stamps_formula_label}}' => 'Formula col 3 numerotare, ex: "3 = 2 x (5% + 2%)"',
+            '{{stamps_numbering_html}}' => 'HTML: un <td colspan=N> cu formula combinată pentru row numerotare',
             '{{tax_registry_tax_rate_percent}}' => 'Cota registry cu semnul %, ex: "2%"',
             '{{humanitarian_percent}}' => 'Procent umanitar (default 0.00)',
             '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
@@ -1438,22 +1440,22 @@ class MarketplaceTaxTemplate extends Model
 
             $headersHtml = '';
             $valuesHtml = '';
-            $percentLabels = [];
-            // Styling matches the declaratie_impozite template's other <th>
-            // cells (border 1.5px #111, font-size 6.5pt, padding 3px, bold)
-            // so the sub-header row doesn't stand out visually. When the
-            // operator pastes the fragment inside their template the two
-            // sets of headers look uniform.
+            $musicPercentLabels = []; // only general_taxes (Q6 header: "5% (cinema…)")
+            $allPercentLabels = [];   // music + monument (formula: "5% + 2%")
             $thStyle = 'border:1.5px solid #111; text-align:center; vertical-align:middle; padding:3px; font-size:6.5pt; line-height:1.15; font-weight:bold;';
             $tdStyle = 'border:1.5px solid #111; text-align:right; padding:5px 4px; font-size:7pt;';
-            foreach ($stampsBreakdown as $s) {
+            foreach ($stampsBreakdown as $idx => $s) {
+                $isMonument = ($s['name'] ?? '') === 'Timbru monumente';
                 $labelPct = $s['is_percent']
                     ? rtrim(rtrim(number_format($s['percent'], 2), '0'), '.') . '%'
                     : number_format($s['value'], 2) . ' lei fix';
                 $headersHtml .= '<th style="' . $thStyle . '">' . e($s['name']) . '<br>' . $labelPct . '</th>';
                 $valuesHtml .= '<td style="' . $tdStyle . '">' . number_format($s['value'], 2) . '</td>';
                 if ($s['is_percent']) {
-                    $percentLabels[] = $labelPct;
+                    $allPercentLabels[] = $labelPct;
+                    if (!$isMonument) {
+                        $musicPercentLabels[] = $labelPct;
+                    }
                 }
             }
             // When no stamps apply at all, emit one empty placeholder cell so
@@ -1465,42 +1467,40 @@ class MarketplaceTaxTemplate extends Model
             $variables['stamps_column_headers_html'] = $headersHtml;
             $variables['stamps_column_values_html'] = $valuesHtml;
 
-            // Percent labels joined for the parent "Timbre" header (e.g.
-            // "5%" for a single tax, "5% + 2%" when monument applies).
-            // Falls back to "0%" when no percent taxes apply — the
-            // dropdown formula still renders sensibly.
-            $variables['stamps_percents_joined'] = !empty($percentLabels)
-                ? implode(' + ', $percentLabels)
+            // Music-only percents (general_taxes, without monument) — for
+            // the parent Timbre header prefix ("Timbre: 5% (cinema…)").
+            $variables['stamps_music_percents_joined'] = !empty($musicPercentLabels)
+                ? implode(' + ', $musicPercentLabels)
                 : '0%';
 
-            // Formula string for the col-3 numbering row.
-            // e.g. "3 = 2 x (5%)" or "3 = 2 x (5% + 2%)" per Q6 layout.
-            $variables['stamps_formula_label'] = '3 = 2 x (' . ($variables['stamps_percents_joined']) . ')';
+            // Monument header suffix ("+ 2% Timbru Monument") — empty when
+            // the venue is not a monument, so the parent Timbre header
+            // reads naturally without a dangling " + " when the venue
+            // is not a monument.
+            $variables['stamps_monument_header_suffix'] = $hasMonumentStamp
+                ? ' + ' . rtrim(rtrim(number_format($monumentStampPercent, 2), '0'), '.') . '% Timbru Monument'
+                : '';
 
-            // Numbering-row cells for the stamp columns. One <td> per stamp
-            // with its own formula label: "3 = 2 x (5%)", "4 = 2 x (2%)"
-            // etc. Column numbering starts at 3 (col 0 = Nr crt, col 1 =
-            // Tipul, col 2 = Vânzare, col 3+ = stamps). Templates paste
-            // this directly instead of a single hard-coded cell so the row
-            // grows / shrinks with the number of active stamps.
-            $numberingHtml = '';
-            $colIdx = 3;
-            foreach ($stampsBreakdown as $s) {
-                $labelPct = $s['is_percent']
-                    ? rtrim(rtrim(number_format($s['percent'], 2), '0'), '.') . '%'
-                    : number_format($s['value'], 2) . ' lei';
-                $formula = $s['is_percent']
-                    ? $colIdx . ' = 2 x (' . $labelPct . ')'
-                    : $colIdx;
-                $numberingHtml .= '<td style="border:1.5px solid #111; text-align:center; padding:2px 0; font-size:6pt;">' . $formula . '</td>';
-                $colIdx++;
-            }
-            if ($stampsColumnCount === 0) {
-                // No active stamps — still emit one placeholder cell so
-                // the numbering row keeps its column count consistent.
-                $numberingHtml = '<td style="border:1.5px solid #111; text-align:center; padding:2px 0; font-size:6pt;">3</td>';
-            }
-            $variables['stamps_numbering_html'] = $numberingHtml;
+            // Full percent-list joined (music + monument) — used in the
+            // formula for the col-3 numbering row: "5% + 2%".
+            $variables['stamps_percents_joined'] = !empty($allPercentLabels)
+                ? implode(' + ', $allPercentLabels)
+                : '0%';
+
+            // Formula string for the col-3 numbering row: single label
+            // covering ALL stamp columns as one accounting concept.
+            $variables['stamps_formula_label'] = '3 = 2 x (' . $variables['stamps_percents_joined'] . ')';
+
+            // Numbering-row cell for the stamp columns: ONE <td> with
+            // colspan spanning every stamp sub-column, showing the
+            // combined formula "3 = 2 x (5% + 2%)". Body row still has
+            // one <td> per stamp (via stamps_column_values_html) so the
+            // numbering colspan and the body value cells align.
+            $stampsNumberingHtml = '<td colspan="' . max(1, $stampsColumnCount) . '" '
+                . 'style="border:1.5px solid #111; text-align:center; padding:2px 0; font-size:6pt;">'
+                . $variables['stamps_formula_label']
+                . '</td>';
+            $variables['stamps_numbering_html'] = $stampsNumberingHtml;
 
             // tax_registry_tax_rate is already exposed as a raw number (e.g.
             // "2.00"). Provide a display-formatted "2%" variant so the col-6
