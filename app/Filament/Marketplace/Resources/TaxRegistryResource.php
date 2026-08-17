@@ -149,7 +149,10 @@ class TaxRegistryResource extends Resource
 
                         Forms\Components\TextInput::make('website_url')
                             ->label('Website URL')
-                            ->url()
+                            // ->url() removed 2026-08-17 — some tax
+                            // registries publish plain hostnames ("dgitl-s1.ro")
+                            // instead of proper URLs, and the validator
+                            // rejected them. Field is now free text.
                             ->maxLength(255)
                             ->placeholder('https://...'),
 

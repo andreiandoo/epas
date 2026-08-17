@@ -810,15 +810,19 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['event_date_full'] = $eventDateFullStr;
 
-            // Row description for the declaratie_impozite main table (col 1):
-            //   "manifestare {adjective}: {name} / data: {date} la locatia:
-            //    {venue}, {address} / {city} calcul conf. Legii nr. 227/2015
-            //    privind Codul fiscal, CAPITOLUL VII. Impozitul pe spectacole,
-            //    ART. 481, alineat (2) pct. a"
+            // Row description for the declaratie_impozite main table (col 1).
+            // Layout:
+            //   <strong>manifestare {adjective}: {name}</strong> / data: {date}
+            //     / la locatia: {venue}, {address} / {city}
+            //   <br>calcul conf. Legii nr. 227/2015 …
             //
-            // Empty fragments collapse cleanly (no orphan separators) so the
-            // string stays legible even for events with a missing venue city
-            // or an "altele" manifestation type.
+            // - "manifestare X: name" is bolded (operator emphasis on the show
+            //   header so the fiscal registry can scan the row).
+            // - The legal footer goes on a new line via <br> so it sits
+            //   visually under the fact block instead of running on.
+            // - Empty fragments collapse cleanly (no orphan separators) so the
+            //   string stays legible for events without a venue city or with
+            //   manifestation_type = altele.
             $rowVenueName = $variables['venue_name'] ?? '';
             $rowVenueAddress = $variables['venue_address'] ?? '';
             $rowVenueCity = $variables['event_city'] ?? '';
@@ -826,10 +830,11 @@ class MarketplaceTaxTemplate extends Model
             $rowDescPrefix = $rowAdjective !== ''
                 ? "manifestare {$rowAdjective}: "
                 : 'manifestare: ';
-            $rowDescParts = [];
-            $rowDescParts[] = rtrim($rowDescPrefix . ($variables['event_name'] ?? ''));
+            $rowNameBold = '<strong>' . rtrim($rowDescPrefix . ($variables['event_name'] ?? '')) . '</strong>';
+
+            $rowFactParts = [$rowNameBold];
             if ($eventDateFullStr !== '') {
-                $rowDescParts[] = 'data: ' . $eventDateFullStr;
+                $rowFactParts[] = 'data: ' . $eventDateFullStr;
             }
             $venueSegments = array_filter([$rowVenueName, $rowVenueAddress], fn ($s) => trim((string) $s) !== '');
             if (!empty($venueSegments)) {
@@ -837,10 +842,10 @@ class MarketplaceTaxTemplate extends Model
                 if (trim((string) $rowVenueCity) !== '') {
                     $venueLine .= ' / ' . $rowVenueCity;
                 }
-                $rowDescParts[] = $venueLine;
+                $rowFactParts[] = $venueLine;
             }
-            $rowDescParts[] = 'calcul conf. Legii nr. 227/2015 privind Codul fiscal, CAPITOLUL VII. Impozitul pe spectacole, ART. 481, alineat (2) pct. a';
-            $variables['tax_declaration_row_description'] = implode(' / ', $rowDescParts);
+            $legalFooter = 'calcul conf. Legii nr. 227/2015 privind Codul fiscal, CAPITOLUL VII. Impozitul pe spectacole, ART. 481, alineat (2) pct. a';
+            $variables['tax_declaration_row_description'] = implode(' / ', $rowFactParts) . '<br>' . $legalFooter;
 
             // Calculate totals
             $totalAvailable = 0;
@@ -1433,14 +1438,19 @@ class MarketplaceTaxTemplate extends Model
             $headersHtml = '';
             $valuesHtml = '';
             $percentLabels = [];
+            // Styling matches the declaratie_impozite template's other <th>
+            // cells (border 1.5px #111, font-size 6.5pt, padding 3px, bold)
+            // so the sub-header row doesn't stand out visually. When the
+            // operator pastes the fragment inside their template the two
+            // sets of headers look uniform.
+            $thStyle = 'border:1.5px solid #111; text-align:center; vertical-align:middle; padding:3px; font-size:6.5pt; line-height:1.15; font-weight:bold;';
+            $tdStyle = 'border:1.5px solid #111; text-align:right; padding:5px 4px; font-size:7pt;';
             foreach ($stampsBreakdown as $s) {
                 $labelPct = $s['is_percent']
                     ? rtrim(rtrim(number_format($s['percent'], 2), '0'), '.') . '%'
                     : number_format($s['value'], 2) . ' lei fix';
-                $headersHtml .= '<th style="border:1px solid #000; padding:4px; text-align:center; font-size:11px;">'
-                    . e($s['name']) . '<br/>' . $labelPct . '</th>';
-                $valuesHtml .= '<td style="border:1px solid #000; padding:4px; text-align:right;">'
-                    . number_format($s['value'], 2) . '</td>';
+                $headersHtml .= '<th style="' . $thStyle . '">' . e($s['name']) . '<br>' . $labelPct . '</th>';
+                $valuesHtml .= '<td style="' . $tdStyle . '">' . number_format($s['value'], 2) . '</td>';
                 if ($s['is_percent']) {
                     $percentLabels[] = $labelPct;
                 }
@@ -1448,8 +1458,8 @@ class MarketplaceTaxTemplate extends Model
             // When no stamps apply at all, emit one empty placeholder cell so
             // colspan="1" stays visually consistent with the parent header.
             if ($stampsColumnCount === 0) {
-                $headersHtml = '<th style="border:1px solid #000; padding:4px;">—</th>';
-                $valuesHtml = '<td style="border:1px solid #000; padding:4px; text-align:right;">0.00</td>';
+                $headersHtml = '<th style="' . $thStyle . '">—</th>';
+                $valuesHtml = '<td style="' . $tdStyle . '">0.00</td>';
             }
             $variables['stamps_column_headers_html'] = $headersHtml;
             $variables['stamps_column_values_html'] = $valuesHtml;
