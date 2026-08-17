@@ -53,28 +53,50 @@
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-right">
-                                @if($row['existing_payout'])
-                                    {{-- The decont series itself is the link, styled as a button. --}}
-                                    <a href="{{ \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $row['existing_payout']->id]) }}"
+                                @php
+                                    $hasPayout = (bool) $row['existing_payout'];
+                                    $hasBalance = $row['balance'] > 0;
+                                    $payoutUrl = $hasPayout
+                                        ? \App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $row['existing_payout']->id])
+                                        : null;
+                                @endphp
+
+                                @if($hasPayout && !$hasBalance)
+                                    {{-- Fully settled: nothing left to decont, so the
+                                         decont series itself is the link. --}}
+                                    <a href="{{ $payoutUrl }}"
                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white rounded-lg bg-primary-600 hover:bg-primary-500 whitespace-nowrap">
                                         <x-heroicon-m-eye class="w-3.5 h-3.5 shrink-0" />
                                         {{ $row['existing_payout']->reference }}
                                     </a>
                                 @else
-                                    {{-- Button shows for every finished event without an
-                                         existing payout — including sold=0 cases. The
-                                         controller (generateEventDecont) handles 0-net
-                                         deconts with a clear admin_notes annotation. --}}
-                                    <button type="button"
-                                            wire:click="generateEventDecont({{ $row['event']->id }})"
-                                            wire:loading.attr="disabled"
-                                            wire:target="generateEventDecont({{ $row['event']->id }})"
-                                            class="inline-flex items-center gap-1 rounded-lg {{ $row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0 ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200' }} px-2.5 py-1 text-xs font-medium disabled:opacity-50 whitespace-nowrap"
-                                            title="{{ $row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0 ? '' : 'Eveniment fără sold — decont pentru documentare (net 0)' }}">
-                                        <x-heroicon-m-document-plus class="w-3.5 h-3.5 shrink-0" />
-                                        <span wire:loading.remove wire:target="generateEventDecont({{ $row['event']->id }})">Generează decont</span>
-                                        <span wire:loading wire:target="generateEventDecont({{ $row['event']->id }})">Se generează...</span>
-                                    </button>
+                                    {{-- Generate button shows when (a) no decont yet
+                                         (incl. sold=0 documentation deconts) OR (b) a
+                                         decont already exists but a positive remaining
+                                         balance is still to be settled — a top-up decont
+                                         that covers only the sales made since the last
+                                         one (buildRemainingTicketsItems excludes the
+                                         already-settled tickets). In case (b) the last
+                                         decont is linked underneath. --}}
+                                    <div class="inline-flex flex-col items-end gap-1">
+                                        <button type="button"
+                                                wire:click="generateEventDecont({{ $row['event']->id }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="generateEventDecont({{ $row['event']->id }})"
+                                                class="inline-flex items-center gap-1 rounded-lg {{ $row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0 ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200' }} px-2.5 py-1 text-xs font-medium disabled:opacity-50 whitespace-nowrap"
+                                                title="{{ $row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0 ? '' : 'Eveniment fără sold — decont pentru documentare (net 0)' }}">
+                                            <x-heroicon-m-document-plus class="w-3.5 h-3.5 shrink-0" />
+                                            <span wire:loading.remove wire:target="generateEventDecont({{ $row['event']->id }})">Generează decont</span>
+                                            <span wire:loading wire:target="generateEventDecont({{ $row['event']->id }})">Se generează...</span>
+                                        </button>
+                                        @if($hasPayout)
+                                            <a href="{{ $payoutUrl }}"
+                                               class="inline-flex items-center gap-1 text-xs text-primary-600 hover:underline dark:text-primary-400 whitespace-nowrap">
+                                                <x-heroicon-m-eye class="w-3 h-3 shrink-0" />
+                                                Ultimul decont: {{ $row['existing_payout']->reference }}
+                                            </a>
+                                        @endif
+                                    </div>
                                 @endif
                             </td>
                         </tr>

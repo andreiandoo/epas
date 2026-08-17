@@ -1290,9 +1290,14 @@ class ListPayouts extends ListRecords
             $cityName = $toStr($event->city ?: ($event->venue?->city ?? null));
             $venueCity = trim(implode(', ', array_filter([$venueName, $cityName])));
 
+            // The LAST decont made on this event (not the first) — this is the
+            // one surfaced as "Ultimul decont" under the "Generează decont"
+            // button when a remaining balance still exists. latest('id') so a
+            // freshly created second decont becomes the linked one.
             $existingPayout = MarketplacePayout::where('event_id', $event->id)
                 ->where('marketplace_client_id', $marketplaceClientId)
                 ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+                ->latest('id')
                 ->first();
 
             $balance = $organizer ? self::calculateEventBalance($event) : 0;
@@ -1339,18 +1344,21 @@ class ListPayouts extends ListRecords
             return;
         }
 
-        // Guard: don't open the create modal if an active payout already
-        // exists (the finished-events list already hides the button in this
-        // case, but keep the defence in depth).
+        // Guard: an active payout already exists on this event. We now ALLOW a
+        // second (top-up) decont when there is still a positive remaining
+        // balance — buildRemainingTicketsItems already excludes the tickets
+        // already settled in the prior decont(s), so the new decont only
+        // covers sales made since. Block only when nothing is left to settle
+        // (balance <= 0), to avoid generating an empty duplicate.
         $existing = MarketplacePayout::where('event_id', $event->id)
             ->where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
             ->exists();
 
-        if ($existing) {
+        if ($existing && self::calculateEventBalance($event) <= 0) {
             \Filament\Notifications\Notification::make()
                 ->title('Decont existent')
-                ->body('Există deja un decont pentru acest eveniment.')
+                ->body('Există deja un decont pentru acest eveniment și nu mai există sold rămas.')
                 ->warning()
                 ->send();
             return;
