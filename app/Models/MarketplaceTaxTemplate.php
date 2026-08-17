@@ -200,7 +200,8 @@ class MarketplaceTaxTemplate extends Model
             '{{stamps_column_headers_html}}' => 'HTML: <th> per timbru activ, cu nume + procent',
             '{{stamps_column_values_html}}' => 'HTML: <td> per timbru activ, cu valoarea calculată',
             '{{stamps_percents_joined}}' => 'Procente timbre concat. ex: "5%" sau "5% + 2%"',
-            '{{stamps_formula_label}}' => 'Formula col 3 numerotare, ex: "3 = 2 x (5% + 2%)"',
+            '{{stamps_formula_label}}' => 'Formula col 3 numerotare (SUM), ex: "3 = 2 x (5% + 2%)"',
+            '{{stamps_numbering_html}}' => 'HTML: <td> per timbru cu formulă individuală (3=2x(5%), 4=2x(2%))',
             '{{tax_registry_tax_rate_percent}}' => 'Cota registry cu semnul %, ex: "2%"',
             '{{humanitarian_percent}}' => 'Procent umanitar (default 0.00)',
             '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
@@ -1475,6 +1476,31 @@ class MarketplaceTaxTemplate extends Model
             // Formula string for the col-3 numbering row.
             // e.g. "3 = 2 x (5%)" or "3 = 2 x (5% + 2%)" per Q6 layout.
             $variables['stamps_formula_label'] = '3 = 2 x (' . ($variables['stamps_percents_joined']) . ')';
+
+            // Numbering-row cells for the stamp columns. One <td> per stamp
+            // with its own formula label: "3 = 2 x (5%)", "4 = 2 x (2%)"
+            // etc. Column numbering starts at 3 (col 0 = Nr crt, col 1 =
+            // Tipul, col 2 = Vânzare, col 3+ = stamps). Templates paste
+            // this directly instead of a single hard-coded cell so the row
+            // grows / shrinks with the number of active stamps.
+            $numberingHtml = '';
+            $colIdx = 3;
+            foreach ($stampsBreakdown as $s) {
+                $labelPct = $s['is_percent']
+                    ? rtrim(rtrim(number_format($s['percent'], 2), '0'), '.') . '%'
+                    : number_format($s['value'], 2) . ' lei';
+                $formula = $s['is_percent']
+                    ? $colIdx . ' = 2 x (' . $labelPct . ')'
+                    : $colIdx;
+                $numberingHtml .= '<td style="border:1.5px solid #111; text-align:center; padding:2px 0; font-size:6pt;">' . $formula . '</td>';
+                $colIdx++;
+            }
+            if ($stampsColumnCount === 0) {
+                // No active stamps — still emit one placeholder cell so
+                // the numbering row keeps its column count consistent.
+                $numberingHtml = '<td style="border:1.5px solid #111; text-align:center; padding:2px 0; font-size:6pt;">3</td>';
+            }
+            $variables['stamps_numbering_html'] = $numberingHtml;
 
             // tax_registry_tax_rate is already exposed as a raw number (e.g.
             // "2.00"). Provide a display-formatted "2%" variant so the col-6
