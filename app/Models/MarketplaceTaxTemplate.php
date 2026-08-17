@@ -190,8 +190,20 @@ class MarketplaceTaxTemplate extends Model
             '{{total_tickets_available}}' => 'Total Tickets Available (Initial)',
             '{{total_tickets_sold}}' => 'Total Tickets Sold',
             '{{total_sales_value}}' => 'Total Sales Value',
-            '{{music_stamp_value}}' => 'Valoare timbru muzical (2% din vânzări)',
+            '{{music_stamp_value}}' => 'Valoare cumulată timbre muzicale/culturale (fără monument)',
+            '{{music_stamp_percent}}' => 'Sumă procente timbre muzicale/culturale (ex: 5.00)',
+            '{{monument_stamp_percent}}' => 'Procent timbru monumente (2.00 dacă venue e monument, altfel gol)',
+            '{{monument_stamp_value}}' => 'Valoare timbru monumente (gol dacă venue nu e monument)',
+            '{{has_monument_stamp}}' => '1 dacă venue e monument istoric, 0 altfel',
+            '{{total_stamps_value}}' => 'Total timbre (muzical + monument)',
+            '{{stamps_column_count}}' => 'Câte sub-coloane are secțiunea Timbre (folosit ca colspan)',
+            '{{stamps_column_headers_html}}' => 'HTML: <th> per timbru activ, cu nume + procent',
+            '{{stamps_column_values_html}}' => 'HTML: <td> per timbru activ, cu valoarea calculată',
+            '{{humanitarian_percent}}' => 'Procent umanitar (default 0.00)',
             '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
+            '{{event_manifestation_adjective}}' => 'Adjectiv tip manifestare pentru declarație (muzicala/teatrala/etc.)',
+            '{{event_date_full}}' => 'Data eveniment expansă: multi_day listează toate datele; range/recurring păstrează spanul',
+            '{{tax_declaration_row_description}}' => 'Descriere rând pentru col 1 (manifestare {tip}: {nume} / data: {data} / la locatia: {venue}, {adresa} / {oras} / calcul conf. Legii ...)',
             '{{taxable_income}}' => 'Încasări supuse impozitului (col 5 = 2 - 3 - 4)',
             '{{tax_due}}' => 'Impozit datorat (col 7 = col 5 × cotă registry)',
             '{{tax_paid}}' => 'Impozit plătit (default 0)',
@@ -760,6 +772,73 @@ class MarketplaceTaxTemplate extends Model
                 $variables['event_manifestation_type'] = '';
             }
 
+            // Lowercase adjective form used by the declaratie_impozite row
+            // description ("manifestare {adjective}: ..."). Nulls / altele
+            // collapse to "" so the row reads "manifestare: ..." without a
+            // dangling adjective.
+            $manifestationAdjectives = [
+                'muzicala' => 'muzicala',
+                'artistica' => 'artistica',
+                'teatrala' => 'teatrala',
+                'standup' => 'stand-up',
+                'sportiva' => 'sportiva',
+            ];
+            $variables['event_manifestation_adjective'] = $manifestationAdjectives[$manifestationKey] ?? '';
+
+            // Event date — expanded form for the declaratie_impozite row
+            // description. Range / recurring keep the "start - end" span as
+            // in {{event_date}}, but multi_day EXPANDS to a comma-separated
+            // list of every slot date (operator request 2026-08-17: on
+            // multi-day festivals every date must appear in the row so the
+            // registry sees exactly which shows the declaration covers).
+            $eventDateFullStr = $eventDateStr;
+            if ($mode === 'multi_day' && !empty($event->multi_slots)) {
+                $allDates = collect($event->multi_slots)
+                    ->pluck('date')
+                    ->filter()
+                    ->sort()
+                    ->map(fn ($d) => \Carbon\Carbon::parse($d)->format('d.m.Y'))
+                    ->unique()
+                    ->values()
+                    ->all();
+                if (!empty($allDates)) {
+                    $eventDateFullStr = implode(', ', $allDates);
+                }
+            }
+            $variables['event_date_full'] = $eventDateFullStr;
+
+            // Row description for the declaratie_impozite main table (col 1):
+            //   "manifestare {adjective}: {name} / data: {date} la locatia:
+            //    {venue}, {address} / {city} calcul conf. Legii nr. 227/2015
+            //    privind Codul fiscal, CAPITOLUL VII. Impozitul pe spectacole,
+            //    ART. 481, alineat (2) pct. a"
+            //
+            // Empty fragments collapse cleanly (no orphan separators) so the
+            // string stays legible even for events with a missing venue city
+            // or an "altele" manifestation type.
+            $rowVenueName = $variables['venue_name'] ?? '';
+            $rowVenueAddress = $variables['venue_address'] ?? '';
+            $rowVenueCity = $variables['event_city'] ?? '';
+            $rowAdjective = $variables['event_manifestation_adjective'] ?? '';
+            $rowDescPrefix = $rowAdjective !== ''
+                ? "manifestare {$rowAdjective}: "
+                : 'manifestare: ';
+            $rowDescParts = [];
+            $rowDescParts[] = rtrim($rowDescPrefix . ($variables['event_name'] ?? ''));
+            if ($eventDateFullStr !== '') {
+                $rowDescParts[] = 'data: ' . $eventDateFullStr;
+            }
+            $venueSegments = array_filter([$rowVenueName, $rowVenueAddress], fn ($s) => trim((string) $s) !== '');
+            if (!empty($venueSegments)) {
+                $venueLine = 'la locatia: ' . implode(', ', $venueSegments);
+                if (trim((string) $rowVenueCity) !== '') {
+                    $venueLine .= ' / ' . $rowVenueCity;
+                }
+                $rowDescParts[] = $venueLine;
+            }
+            $rowDescParts[] = 'calcul conf. Legii nr. 227/2015 privind Codul fiscal, CAPITOLUL VII. Impozitul pe spectacole, ART. 481, alineat (2) pct. a';
+            $variables['tax_declaration_row_description'] = implode(' / ', $rowDescParts);
+
             // Calculate totals
             $totalAvailable = 0;
             $totalSold = 0;
@@ -1214,9 +1293,15 @@ class MarketplaceTaxTemplate extends Model
             }
 
             // === Calcule pentru decont impozit pe spectacole ===
-            // Sumează taxele generale aplicabile (din template->general_tax_ids)
-            // Filtrate după event_types: doar taxele care includ unul dintre tipurile evenimentului
-            $musicStampValue = 0;
+            // Per-stamp breakdown (Q6 variant B). Each active general_tax
+            // that applies to this event's types becomes its own sub-column
+            // in the "Încasările reprezentând contravaloarea timbrelor"
+            // parent column. Monument stamp (venue.has_historical_monument_tax
+            // = true) is appended as one more sub-column, but only when the
+            // venue actually carries the flag.
+            $stampsBreakdown = []; // ordered list of ['name','percent','value','is_percent']
+            $musicStampValue = 0.0;
+            $musicStampPercentSum = 0.0;
             $generalTaxIds = $template?->general_tax_ids ?? [];
 
             if (!empty($generalTaxIds) && $event) {
@@ -1227,37 +1312,73 @@ class MarketplaceTaxTemplate extends Model
                 $applicableTaxes = \App\Models\Tax\GeneralTax::whereIn('id', $generalTaxIds)
                     ->where('is_active', true)
                     ->with('eventTypes:id')
+                    ->orderByDesc('priority')
                     ->get();
 
                 foreach ($applicableTaxes as $tax) {
                     $taxEventTypeIds = $tax->eventTypes->pluck('id')->toArray();
-
-                    // Apply if: tax has no event_types restriction (global) OR matches at least one event type
                     $applies = empty($taxEventTypeIds) || !empty(array_intersect($taxEventTypeIds, $eventTypeIds));
-
                     if (!$applies) continue;
 
-                    if ($tax->value_type === 'percentage') {
-                        $musicStampValue += round($totalSalesValue * (float) $tax->value / 100, 2);
+                    // Bug fix (2026-08-17): GeneralTax::value_type is stored
+                    // as 'percent' / 'fixed' (see GeneralTax::isPercent()).
+                    // The old check for 'percentage' always fell through to
+                    // the else branch and added the raw value (e.g. 5.00
+                    // instead of 5% × totalSales).
+                    if ($tax->isPercent()) {
+                        $taxValue = round($totalSalesValue * (float) $tax->value / 100, 2);
+                        $taxPercent = (float) $tax->value;
+                        $musicStampPercentSum += $taxPercent;
                     } else {
-                        $musicStampValue += (float) $tax->value;
+                        $taxValue = (float) $tax->value;
+                        $taxPercent = 0.0;
                     }
+                    $musicStampValue += $taxValue;
+
+                    // Tax name may be scalar or translatable array — unwrap.
+                    $taxName = $tax->name;
+                    if (is_array($taxName)) {
+                        $taxName = $taxName['ro'] ?? $taxName['en'] ?? reset($taxName) ?: 'Timbru';
+                    }
+
+                    $stampsBreakdown[] = [
+                        'name' => (string) $taxName,
+                        'percent' => $taxPercent,
+                        'value' => $taxValue,
+                        'is_percent' => $tax->isPercent(),
+                    ];
                 }
             }
 
-            // Taxă monument istoric (2%) — dacă venue-ul are flag-ul activ
-            if ($event->venue && ($event->venue->has_historical_monument_tax ?? false)) {
-                $musicStampValue += round($totalSalesValue * 2 / 100, 2);
+            // Monument stamp — 2% of totalSalesValue when venue is a historical
+            // monument. Kept SEPARATE from $musicStampValue so the template
+            // can render it as its own column (Q5 variant A + Q6 variant B).
+            $monumentStampPercent = 2.0;
+            $monumentStampValue = 0.0;
+            $hasMonumentStamp = (bool) ($event->venue?->has_historical_monument_tax ?? false);
+            if ($hasMonumentStamp) {
+                $monumentStampValue = round($totalSalesValue * $monumentStampPercent / 100, 2);
+                $stampsBreakdown[] = [
+                    'name' => 'Timbru monumente',
+                    'percent' => $monumentStampPercent,
+                    'value' => $monumentStampValue,
+                    'is_percent' => true,
+                ];
             }
 
-            // Col 4 — Sume cedate in scopuri umanitare. No system field yet,
-            // defaults to 0. Surfaces as a variable so the template can
-            // reference it consistently with the other columns.
+            // Sum across ALL stamps (music + monument) used by the fiscal
+            // computation below. Kept for taxable_income = sales − stamps − hum.
+            $totalStampsValue = round($musicStampValue + $monumentStampValue, 2);
+
+            // Col 4 — Sume cedate in scopuri umanitare. Q4 confirmed 2026-08-17
+            // to stay at 0 for now; the marketplace-level configuration will
+            // land later. The variables exist so templates can already
+            // reference them without a follow-up template edit.
+            $humanitarianPercent = 0.0;
             $humanitarianAmount = 0.0;
 
-            // Încasări supuse impozitului = total vânzări - taxe aplicate - umanitare
-            // (col 5 = col 2 - col 3 - col 4)
-            $taxableIncome = round($totalSalesValue - $musicStampValue - $humanitarianAmount, 2);
+            // Încasări supuse impozitului = total vânzări − Σ timbre − umanitare
+            $taxableIncome = round($totalSalesValue - $totalStampsValue - $humanitarianAmount, 2);
 
             // Impozit datorat = cota tax registry * încasări supuse impozitului (col 7 = col 5 × col 6)
             $taxRate = $taxRegistry?->tax_rate !== null ? (float) $taxRegistry->tax_rate : 0;
@@ -1272,13 +1393,59 @@ class MarketplaceTaxTemplate extends Model
             $taxDifferenceToReceive = max(0.0, round($taxPaid - $taxDue, 2));
             $taxDifferenceToPay = max(0.0, round($taxDue - $taxPaid, 2));
 
+            // Legacy single-stamp variables (retained for backward compat with
+            // older templates that still reference {{music_stamp_value}}).
+            // music_stamp_value now excludes monument — see monument_stamp_*.
             $variables['music_stamp_value'] = number_format($musicStampValue, 2);
+            $variables['music_stamp_percent'] = number_format($musicStampPercentSum, 2);
+
+            // Monument stamp column (empty strings when venue is not a monument
+            // so the template can safely render `{{monument_stamp_value}}` in
+            // an always-present column without showing "0.00" for non-monument
+            // venues — pair with {{has_monument_stamp}} for conditional layout).
+            $variables['monument_stamp_percent'] = $hasMonumentStamp ? number_format($monumentStampPercent, 2) : '';
+            $variables['monument_stamp_value'] = $hasMonumentStamp ? number_format($monumentStampValue, 2) : '';
+            $variables['has_monument_stamp'] = $hasMonumentStamp ? '1' : '0';
+
+            // Humanitarian (Q4 — placeholder at 0 for now).
+            $variables['humanitarian_percent'] = number_format($humanitarianPercent, 2);
             $variables['humanitarian_amount'] = number_format($humanitarianAmount, 2);
+
+            // Total across all stamps (music + monument).
+            $variables['total_stamps_value'] = number_format($totalStampsValue, 2);
+
             $variables['taxable_income'] = number_format($taxableIncome, 2);
             $variables['tax_due'] = number_format($taxDue, 2);
             $variables['tax_paid'] = number_format($taxPaid, 2);
             $variables['tax_difference_to_receive'] = number_format($taxDifferenceToReceive, 2);
             $variables['tax_difference_to_pay'] = number_format($taxDifferenceToPay, 2);
+
+            // HTML fragments the template can paste directly to render
+            // one <th>/<td> per active stamp (Q6 variant B). The parent column
+            // "Încasările reprezentând contravaloarea timbrelor" wraps them
+            // with {{stamps_column_count}} used for the colspan attribute.
+            $stampsColumnCount = count($stampsBreakdown);
+            $variables['stamps_column_count'] = (string) max(1, $stampsColumnCount);
+
+            $headersHtml = '';
+            $valuesHtml = '';
+            foreach ($stampsBreakdown as $s) {
+                $labelPct = $s['is_percent']
+                    ? rtrim(rtrim(number_format($s['percent'], 2), '0'), '.') . '%'
+                    : number_format($s['value'], 2) . ' lei fix';
+                $headersHtml .= '<th style="border:1px solid #000; padding:4px; text-align:center; font-size:11px;">'
+                    . e($s['name']) . '<br/>' . $labelPct . '</th>';
+                $valuesHtml .= '<td style="border:1px solid #000; padding:4px; text-align:right;">'
+                    . number_format($s['value'], 2) . '</td>';
+            }
+            // When no stamps apply at all, emit one empty placeholder cell so
+            // colspan="1" stays visually consistent with the parent header.
+            if ($stampsColumnCount === 0) {
+                $headersHtml = '<th style="border:1px solid #000; padding:4px;">—</th>';
+                $valuesHtml = '<td style="border:1px solid #000; padding:4px; text-align:right;">0.00</td>';
+            }
+            $variables['stamps_column_headers_html'] = $headersHtml;
+            $variables['stamps_column_values_html'] = $valuesHtml;
 
             // Tax-situation table rows for page 2 of monthly tax declarations
             // ("Situatia biletelor si abonamentelor la spectacole, vandute").

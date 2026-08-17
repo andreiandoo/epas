@@ -321,6 +321,55 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace/api')-
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     })->name('marketplace.events.generate-document');
+
+    // Delete a generated event document — hard delete: removes the PDF from
+    // storage, the EventGeneratedDocument row, AND the dual-written
+    // OrganizerDocument row that points at the same file_path. After delete
+    // the Documente tab re-shows the "Generează" button for the template.
+    // Whitelisted to declaratie_impozite, cerere_avizare, pv_distrugere —
+    // decont / organizer_contract docs go through their own admin flows.
+    Route::delete('/events/{eventId}/generated-document/{docId}', function (int $eventId, int $docId) {
+        $doc = \App\Models\EventGeneratedDocument::with('template')
+            ->where('event_id', $eventId)
+            ->where('id', $docId)
+            ->first();
+        if (!$doc) {
+            return response()->json(['success' => false, 'message' => 'Document inexistent'], 404);
+        }
+        $allowedTypes = ['declaratie_impozite', 'cerere_avizare', 'pv_distrugere'];
+        $templateType = $doc->template?->type;
+        if (!in_array($templateType, $allowedTypes, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tipul acestui document nu poate fi șters din tab Documente.',
+            ], 403);
+        }
+
+        try {
+            $filePath = $doc->file_path;
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($doc, $filePath) {
+                // Remove dual-written OrganizerDocument row that points at
+                // the same PDF (created by EventGeneratedDocument::generateDocument
+                // at generate time). Delete BEFORE the disk file so a
+                // failed disk unlink doesn't leave dangling DB rows.
+                if ($filePath) {
+                    \App\Models\OrganizerDocument::where('event_id', $doc->event_id)
+                        ->where('file_path', $filePath)
+                        ->delete();
+                }
+                $doc->delete();
+                if ($filePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($filePath);
+                }
+            });
+
+            return response()->json(['success' => true, 'message' => 'Document șters']);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    })->name('marketplace.events.delete-generated-document');
 });
 
 // Admin Demo Data Management Routes

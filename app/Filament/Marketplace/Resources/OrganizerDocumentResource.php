@@ -393,6 +393,9 @@ class OrganizerDocumentResource extends Resource
                     ->color(fn ($state) => match ($state) {
                         'cerere_avizare' => 'info',
                         'declaratie_impozite' => 'success',
+                        'organizer_contract' => 'primary',
+                        'decont', 'decont_ontop', 'decont_inclus' => 'warning',
+                        'pv_distrugere' => 'danger',
                         default => 'gray',
                     }),
 

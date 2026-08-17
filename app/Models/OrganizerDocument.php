@@ -75,9 +75,12 @@ class OrganizerDocument extends Model
      */
     public const TYPES = [
         'cerere_avizare' => 'Cerere avizare',
-        'declaratie_impozite' => 'Declaratie impozite',
+        'declaratie_impozite' => 'Impozit spectacole',
         'organizer_contract' => 'Contract organizator',
         'decont' => 'Decont',
+        'decont_ontop' => 'Decont (comision peste preț)',
+        'decont_inclus' => 'Decont (comision inclus)',
+        'pv_distrugere' => 'PV distrugere bilete',
     ];
 
     // =========================================

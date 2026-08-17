@@ -92,6 +92,19 @@
                 </div>
 
                 @if($hasDocument)
+                    @php
+                        // Delete button is available only for event-scoped doc
+                        // types the operator explicitly re-generates from this
+                        // tab. Decont / organizer_contract have their own admin
+                        // flows and shouldn't be deletable from here. `$doc` may
+                        // be either an EventGeneratedDocument (has ->id used by
+                        // the delete route) or a legacy OrganizerDocument
+                        // (organizer_contract, decont) — deletable=false unless
+                        // it's an EventGeneratedDocument of a whitelisted type.
+                        $deletableTypes = ['declaratie_impozite', 'cerere_avizare', 'pv_distrugere'];
+                        $isEventGeneratedDoc = $doc instanceof \App\Models\EventGeneratedDocument;
+                        $canDelete = $isEventGeneratedDoc && in_array($template->type, $deletableTypes, true);
+                    @endphp
                     <div class="flex items-center gap-2 mt-1.5">
                         <span class="text-[10px] text-slate-700">
                             Generat {{ $doc->created_at?->format('d.m.Y H:i') }}
@@ -103,6 +116,41 @@
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             Descarcă
                         </a>
+                        @if($canDelete)
+                            <button
+                                type="button"
+                                x-data="{ loading: false }"
+                                x-on:click="
+                                    if (!confirm('Ești sigur? Documentul {{ addslashes($template->name) }} va fi șters definitiv și vei putea apoi genera unul nou.')) return;
+                                    loading = true;
+                                    fetch('/marketplace/api/events/{{ $event->id }}/generated-document/{{ $doc->id }}', {
+                                        method: 'DELETE',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                        },
+                                    })
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        loading = false;
+                                        if (data.success) {
+                                            window.location.reload();
+                                        } else {
+                                            alert(data.message || 'Eroare la ștergere');
+                                        }
+                                    })
+                                    .catch(e => { loading = false; alert('Eroare: ' + e.message); })
+                                "
+                                x-bind:disabled="loading"
+                                class="inline-flex items-center gap-1 text-[10px] font-medium text-red-600 hover:text-red-700 dark:text-red-400 disabled:opacity-50"
+                            >
+                                <svg x-show="!loading" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                <template x-if="loading">
+                                    <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                </template>
+                                <span x-text="loading ? 'Se șterge...' : 'Șterge'"></span>
+                            </button>
+                        @endif
                     </div>
                 @else
                     <div class="mt-1.5">
