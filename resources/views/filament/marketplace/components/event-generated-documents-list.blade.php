@@ -19,6 +19,12 @@
 
     // 1) EventGeneratedDocument — template() relation; type comes from the
     //    linked template (the model itself has no document_type column).
+    //
+    // Delete button is shown only for doc types the operator explicitly
+    // regenerates from this tab (declaratie_impozite, cerere_avizare,
+    // pv_distrugere). Decont / organizer_contract come through their own
+    // admin flows and shouldn't be deletable here.
+    $deletableTypes = ['declaratie_impozite', 'cerere_avizare', 'pv_distrugere'];
     foreach ($eventGeneratedDocs as $doc) {
         $template = $doc->template;
         $docType = $template?->type;
@@ -35,6 +41,9 @@
             'context' => $template?->name ? "Template: {$template->name}" : null,
             'badge_color' => 'blue',
             'icon' => 'doc',
+            'event_generated_id' => $doc->id,
+            'can_delete' => in_array($docType, $deletableTypes, true),
+            'template_name' => $template?->name ?? 'documentul',
         ]);
     }
 
@@ -171,6 +180,41 @@
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         Vezi decont
                     </a>
+                @endif
+                @if(!empty($item['can_delete']) && !empty($item['event_generated_id']))
+                    <button
+                        type="button"
+                        x-data="{ loading: false }"
+                        x-on:click="
+                            if (!confirm('Ești sigur? {{ addslashes($item['template_name']) }} va fi șters definitiv (fișier + înregistrare) și vei putea apoi genera unul nou.')) return;
+                            loading = true;
+                            fetch('/marketplace/api/events/{{ $event->id }}/generated-document/{{ $item['event_generated_id'] }}', {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                },
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                loading = false;
+                                if (data.success) {
+                                    window.location.reload();
+                                } else {
+                                    alert(data.message || 'Eroare la ștergere');
+                                }
+                            })
+                            .catch(e => { loading = false; alert('Eroare: ' + e.message); })
+                        "
+                        x-bind:disabled="loading"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition disabled:opacity-50"
+                    >
+                        <svg x-show="!loading" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <template x-if="loading">
+                            <svg class="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </template>
+                        <span x-text="loading ? 'Se șterge...' : 'Șterge'"></span>
+                    </button>
                 @endif
             </div>
         </div>

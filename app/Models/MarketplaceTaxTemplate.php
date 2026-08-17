@@ -199,6 +199,9 @@ class MarketplaceTaxTemplate extends Model
             '{{stamps_column_count}}' => 'Câte sub-coloane are secțiunea Timbre (folosit ca colspan)',
             '{{stamps_column_headers_html}}' => 'HTML: <th> per timbru activ, cu nume + procent',
             '{{stamps_column_values_html}}' => 'HTML: <td> per timbru activ, cu valoarea calculată',
+            '{{stamps_percents_joined}}' => 'Procente timbre concat. ex: "5%" sau "5% + 2%"',
+            '{{stamps_formula_label}}' => 'Formula col 3 numerotare, ex: "3 = 2 x (5% + 2%)"',
+            '{{tax_registry_tax_rate_percent}}' => 'Cota registry cu semnul %, ex: "2%"',
             '{{humanitarian_percent}}' => 'Procent umanitar (default 0.00)',
             '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
             '{{event_manifestation_adjective}}' => 'Adjectiv tip manifestare pentru declarație (muzicala/teatrala/etc.)',
@@ -1429,6 +1432,7 @@ class MarketplaceTaxTemplate extends Model
 
             $headersHtml = '';
             $valuesHtml = '';
+            $percentLabels = [];
             foreach ($stampsBreakdown as $s) {
                 $labelPct = $s['is_percent']
                     ? rtrim(rtrim(number_format($s['percent'], 2), '0'), '.') . '%'
@@ -1437,6 +1441,9 @@ class MarketplaceTaxTemplate extends Model
                     . e($s['name']) . '<br/>' . $labelPct . '</th>';
                 $valuesHtml .= '<td style="border:1px solid #000; padding:4px; text-align:right;">'
                     . number_format($s['value'], 2) . '</td>';
+                if ($s['is_percent']) {
+                    $percentLabels[] = $labelPct;
+                }
             }
             // When no stamps apply at all, emit one empty placeholder cell so
             // colspan="1" stays visually consistent with the parent header.
@@ -1446,6 +1453,25 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['stamps_column_headers_html'] = $headersHtml;
             $variables['stamps_column_values_html'] = $valuesHtml;
+
+            // Percent labels joined for the parent "Timbre" header (e.g.
+            // "5%" for a single tax, "5% + 2%" when monument applies).
+            // Falls back to "0%" when no percent taxes apply — the
+            // dropdown formula still renders sensibly.
+            $variables['stamps_percents_joined'] = !empty($percentLabels)
+                ? implode(' + ', $percentLabels)
+                : '0%';
+
+            // Formula string for the col-3 numbering row.
+            // e.g. "3 = 2 x (5%)" or "3 = 2 x (5% + 2%)" per Q6 layout.
+            $variables['stamps_formula_label'] = '3 = 2 x (' . ($variables['stamps_percents_joined']) . ')';
+
+            // tax_registry_tax_rate is already exposed as a raw number (e.g.
+            // "2.00"). Provide a display-formatted "2%" variant so the col-6
+            // cell reads naturally without hand-appending the sign in the
+            // template.
+            $rawRate = (float) ($taxRegistry?->tax_rate ?? 0);
+            $variables['tax_registry_tax_rate_percent'] = rtrim(rtrim(number_format($rawRate, 2), '0'), '.') . '%';
 
             // Tax-situation table rows for page 2 of monthly tax declarations
             // ("Situatia biletelor si abonamentelor la spectacole, vandute").
