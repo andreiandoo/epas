@@ -205,6 +205,12 @@ class MarketplaceTaxTemplate extends Model
             '{{stamps_formula_label}}' => 'Formula col 3 numerotare, ex: "3 = 2 x (5% + 2%)"',
             '{{stamps_numbering_html}}' => 'HTML: un <td colspan=N> cu formula combinată pentru row numerotare',
             '{{tax_registry_tax_rate_percent}}' => 'Cota registry cu semnul %, ex: "2%"',
+            '{{total_sales_value_gross}}' => 'Valoare vânzări BRUT (cu TVA), înainte de deducere',
+            '{{event_organizer_is_vat_payer}}' => '"1" dacă organizatorul e plătitor TVA, "0" altfel',
+            '{{event_organizer_vat_rate}}' => 'Cota TVA organizator (default 21.00)',
+            '{{event_organizer_vat_rate_percent}}' => 'Cota TVA organizator cu semn %, ex: "21%"',
+            '{{vat_amount}}' => 'Valoare TVA dedusă din vânzări (0 dacă nu e plătitor)',
+            '{{tax_situation_vat_row_html}}' => 'Rând TVA pentru tabel page 2 (înainte de TOTAL), colspan=6+1',
             '{{humanitarian_percent}}' => 'Procent umanitar (default 0.00)',
             '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
             '{{event_manifestation_adjective}}' => 'Adjectiv tip manifestare pentru declarație (muzicala/teatrala/etc.)',
@@ -1285,6 +1291,14 @@ class MarketplaceTaxTemplate extends Model
             // Other templates (cerere_avizare, PV distrugere, decont-uri)
             // keep the quota_sold-based calculation to avoid changing
             // their output as a side-effect.
+            // VAT deduction default state — used by every event so the
+            // dependent variables (vat_amount, gross vs net) exist even for
+            // non-declaratie_impozite templates.
+            $isVatPayer = false;
+            $vatRate = 0.0;
+            $vatAmount = 0.0;
+            $grossSalesValue = (float) $totalSalesValue;
+
             if ($template && $template->type === 'declaratie_impozite' && $event) {
                 $realSalesValue = 0.0;
                 foreach ($event->ticketTypes as $tt) {
@@ -1300,8 +1314,48 @@ class MarketplaceTaxTemplate extends Model
                     $realSalesValue = max(0.0, $realSalesValue - $eventDiscountSum);
                 }
                 $totalSalesValue = $realSalesValue;
+                $grossSalesValue = $realSalesValue;
+
+                // VAT deduction — when the organizer is a VAT payer, the
+                // fiscal declaration works with the NET sales (excluding
+                // VAT). Divide gross by (1 + rate/100), keep the delta as
+                // the VAT amount for page-2 disclosure.
+                //
+                // Uses the primary company's VAT settings by default —
+                // handles the vast majority of events. Sf. Ana-style events
+                // with a per-payout issuing_company can carry primary vs
+                // secondary rates; support for those is a follow-up.
+                $org = $event->marketplaceOrganizer;
+                if ($org) {
+                    $isVatPayer = $org->primary_vat_payer !== null
+                        ? (bool) $org->primary_vat_payer
+                        : (bool) ($org->vat_payer ?? false);
+                    if ($isVatPayer) {
+                        $vatRate = $org->primary_vat_rate !== null
+                            ? (float) $org->primary_vat_rate
+                            : (isset($org->tax_settings['vat_rate']) ? (float) $org->tax_settings['vat_rate'] : 21.0);
+                    }
+                }
+                if ($isVatPayer && $vatRate > 0) {
+                    $netSalesValue = $realSalesValue / (1 + $vatRate / 100);
+                    $vatAmount = round($realSalesValue - $netSalesValue, 2);
+                    $totalSalesValue = round($netSalesValue, 2);
+                }
+
                 $variables['total_sales_value'] = number_format($totalSalesValue, 2);
             }
+
+            // VAT-related variables surfaced for the declaratie_impozite
+            // template — Page 1 col 2 shows the NET (excl VAT) value; Page
+            // 2 gets a dedicated "TVA BILETE (X%)" row to declare the VAT
+            // portion of gross sales separately.
+            $variables['total_sales_value_gross'] = number_format($grossSalesValue, 2);
+            $variables['event_organizer_is_vat_payer'] = $isVatPayer ? '1' : '0';
+            $variables['event_organizer_vat_rate'] = number_format($vatRate, 2);
+            $variables['event_organizer_vat_rate_percent'] = $isVatPayer && $vatRate > 0
+                ? rtrim(rtrim(number_format($vatRate, 2), '0'), '.') . '%'
+                : '';
+            $variables['vat_amount'] = number_format($vatAmount, 2);
 
             // === Calcule pentru decont impozit pe spectacole ===
             // Per-stamp breakdown (Q6 variant B). Each active general_tax
@@ -1651,6 +1705,7 @@ class MarketplaceTaxTemplate extends Model
                         $taxSituationTotalValue += 0.0; // value stays 0 for free invitations
                         $taxSituationRowsHtml .= '<tr>'
                             . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . $rowNum . '</td>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:left;">' . htmlspecialchars($ttName) . '</td>'
                             . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($deLa) . '</td>'
                             . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($panaLa) . '</td>'
                             . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . $qty . '</td>'
@@ -1722,6 +1777,7 @@ class MarketplaceTaxTemplate extends Model
 
                     $taxSituationRowsHtml .= '<tr>'
                         . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . $rowNum . '</td>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:left;">' . htmlspecialchars($ttName) . '</td>'
                         . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($deLa) . '</td>'
                         . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($panaLa) . '</td>'
                         . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . $qty . '</td>'
@@ -1734,6 +1790,23 @@ class MarketplaceTaxTemplate extends Model
             $variables['tax_situation_table_rows'] = $taxSituationRowsHtml;
             $variables['tax_situation_total_tickets'] = $taxSituationTotalQty;
             $variables['tax_situation_total_value'] = number_format($taxSituationTotalValue, 2);
+
+            // TVA row for page 2 — placed BEFORE the TOTAL row. Renders as
+            // "TVA BILETE (21%) ... amount" only when the organizer is a
+            // VAT payer; otherwise the variable is empty so the template's
+            // <tbody> collapses back to the previous layout without a
+            // blank row. colspan="6" matches the 7-column table (Nr, Nume,
+            // De la, Pana la, Qty, Valoare unitară, Valoare totală) so the
+            // amount lands in the last column.
+            if ($isVatPayer && $vatAmount > 0) {
+                $vatLabel = 'TVA BILETE (' . $variables['event_organizer_vat_rate_percent'] . ')';
+                $variables['tax_situation_vat_row_html'] = '<tr>'
+                    . '<td colspan="6" style="border:1px solid #000; padding:3px 4px; text-align:right; font-weight:700;">' . htmlspecialchars($vatLabel) . '</td>'
+                    . '<td style="border:1px solid #000; padding:3px 4px; text-align:right; font-weight:700;">' . number_format($vatAmount, 2) . '</td>'
+                    . '</tr>';
+            } else {
+                $variables['tax_situation_vat_row_html'] = '';
+            }
 
             // PV Distrugere variables — unsold tickets (excluding subscriptions)
             $variables['unsold_tickets_rows'] = $unsoldRowsHtml;
