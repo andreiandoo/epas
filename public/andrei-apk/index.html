@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0A0711">
+<title>Tixello Widget — APK pentru Android</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563EB'/%3E%3Cpath d='M8 22l4-10 4 6 4-4 4 8' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0A0711;--surface:#151122;--surface-2:#1B1630;
+  --border:rgba(255,255,255,.09);--border-strong:rgba(255,255,255,.17);
+  --text:#F5F5FA;--text-2:#C4C6D4;--text-3:#8E92A6;--text-4:#5F6379;
+  --accent:#2563EB;--accent-700:#1D4ED8;--accent-2:#93C5FD;
+  --accent-tint:rgba(37,99,235,.15);--accent-border:rgba(37,99,235,.34);
+  --green:#22C55E;--green-tint:rgba(34,197,94,.15);--green-border:rgba(34,197,94,.34);
+  --amber:#F59E0B;--amber-tint:rgba(245,158,11,.16);--amber-border:rgba(245,158,11,.32);
+  --grad:linear-gradient(135deg,#2563EB,#1D4ED8);
+  --radius:18px;--shadow:0 22px 46px -22px rgba(0,0,0,.7);
+  --shadow-btn:0 16px 34px -14px rgba(29,78,216,.7);
+  --font:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,Menlo,Monaco,"Cascadia Code",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:var(--font);color:var(--text);letter-spacing:-.011em;min-height:100vh;
+  background:radial-gradient(820px 520px at 84% -2%,#1a2a5a,transparent 58%),
+             radial-gradient(680px 480px at -6% 102%,#12172e,transparent 55%),var(--bg);
+  -webkit-font-smoothing:antialiased;padding:28px 18px 60px;
+}
+.wrap{max-width:640px;margin:0 auto}
+.brand{display:inline-flex;align-items:center;gap:9px;margin-bottom:26px}
+.logo{font-weight:700;font-size:17px;letter-spacing:-.4px;color:#fff;background:var(--grad);
+  padding:7px 13px;border-radius:12px;box-shadow:0 6px 16px -4px rgba(29,78,216,.6)}
+h1{font-size:27px;font-weight:800;letter-spacing:-.6px;line-height:1.2}
+.sub{font-size:14.5px;color:var(--text-2);margin-top:8px;line-height:1.55}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;margin-top:16px;box-shadow:0 10px 24px -14px rgba(0,0,0,.6)}
+.card h2{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+.n{width:23px;height:23px;border-radius:8px;background:var(--accent-tint);color:var(--accent-2);
+  display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}
+.dl{display:flex;align-items:center;justify-content:center;gap:11px;background:var(--grad);color:#fff;
+  text-decoration:none;font-size:17px;font-weight:700;padding:19px;border-radius:15px;
+  box-shadow:var(--shadow-btn);margin-top:6px;transition:transform .12s}
+.dl:active{transform:scale(.985)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)}
+.pill.g{background:var(--green-tint);border-color:var(--green-border);color:var(--green)}
+.hash{font-family:var(--mono);font-size:11.5px;color:var(--text-3);margin-top:12px;word-break:break-all}
+ol,ul{margin:0;padding-left:20px}
+li{font-size:14px;color:var(--text-2);line-height:1.65;margin-bottom:8px}
+li b,li strong{color:var(--text);font-weight:600}
+code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);
+  padding:2px 7px;border-radius:6px;color:var(--accent-2);word-break:break-all}
+.note{display:flex;gap:11px;padding:15px 17px;background:var(--amber-tint);
+  border:1px solid var(--amber-border);border-radius:var(--radius);margin-top:16px}
+.note .i{color:var(--amber);font-size:20px;flex:none;line-height:1}
+.note p{font-size:13.5px;color:var(--text-2);line-height:1.55}
+.foot{text-align:center;font-size:12px;color:var(--text-4);margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <span class="logo">Tixello</span>
+    <span style="font-size:14px;color:var(--text-3)">Widget Android</span>
+  </div>
+
+  <h1>Cifrele Tixello pe home-screen</h1>
+  <p class="sub">Widget nativ Android care afișează în timp real vânzările, biletele, clienții și veniturile Tixello + notificare la fiecare comision nou.</p>
+
+  <div class="card">
+    <a class="dl" id="apklink" href="#" download>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Descarcă APK-ul
+    </a>
+    <div class="meta">
+      <span class="pill" id="apkv">APK …</span>
+      <span class="pill" id="apksize">—</span>
+      <span class="pill" id="apksdk">Android 8.0+</span>
+      <span class="pill g">side-load</span>
+    </div>
+    <div class="hash" id="apkhash">SHA-256: se verifică…</div>
+    <div class="meta" style="margin-top:6px">
+      <span class="pill" id="apkwhen"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">1</span> Instalare</h2>
+    <ol>
+      <li>Deschide pagina asta <b>direct pe telefon</b> și apasă butonul de mai sus.</li>
+      <li>Chrome te avertizează că fișierul „poate dăuna dispozitivului" — mesaj standard pentru orice APK din afara Play Store. Alege <b>Descarcă oricum</b>.</li>
+      <li>Deschide fișierul din notificarea de descărcare (sau din <b>Fișiere → Descărcări</b>).</li>
+      <li>Android cere <b>„Instalare aplicații necunoscute"</b> pentru Chrome/Fișiere — activează-o și revino.</li>
+      <li>Play Protect poate afișa „Aplicație nescanată". Alege <b>Instalează oricum</b>.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span> Configurare</h2>
+    <ol>
+      <li>Deschide app-ul <b>Tixello Widget</b>.</li>
+      <li>La <b>URL server</b>: <code>https://core.tixello.com</code></li>
+      <li>La <b>Token</b>: paste tokenul <code>twg_…</code> pe care ți l-am dat separat.</li>
+      <li>Alege intervalul de sincronizare (default: <b>60 s</b>). Mai des = mai multe request-uri.</li>
+      <li>Activează <b>Alerte sonore</b> + <b>Vibrație</b> pentru notificare la fiecare comision nou.</li>
+      <li>Buton <b>Verifică și salvează</b> → dacă totul e OK, apasă <b>Pornește urmărirea</b>.</li>
+      <li>Android cere permisiunea pentru <b>Notificări</b> — allow.</li>
+      <li>Buton <b>Testează alerta</b> — să confirmi că sunet + vibrație merg.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span> Adaugă widget-urile pe home-screen</h2>
+    <p style="font-size:13.5px;color:var(--text-2);margin-bottom:10px">Long-press pe home-screen → <b>Widgets</b> → <b>Tixello Widget</b>. Există 2 tipuri:</p>
+    <ul>
+      <li><b>Tixello — cifre</b>: all-time + azi (vânzări, bilete, clienți, venit Tixello)</li>
+      <li><b>Tixello — comisioane</b>: ultimele 5 comisioane încasate</li>
+    </ul>
+    <p style="font-size:13.5px;color:var(--text-2);margin-top:10px">Poți pune amândouă sau doar unul. Trag-drag pe home unde vrei.</p>
+  </div>
+
+  <div class="card" style="border-color:var(--amber-border);background:linear-gradient(160deg,var(--amber-tint),var(--surface))">
+    <h2><span class="n" style="background:var(--amber-tint);color:var(--amber)">!</span> Xiaomi / Samsung / Huawei / Oppo / OnePlus</h2>
+    <p style="font-size:13.5px;color:var(--text-2);line-height:1.6">
+      OEM-urile astea kill-uiesc agresiv serviciile de background. În app-ul Tixello Widget → butonul <b>Setări baterie</b> → alege app-ul → setează <b>Fără restricții / Unrestricted</b>. Altfel widget-ul se oprește după câteva ore și nu mai primești notificări.
+    </p>
+  </div>
+
+  <div class="note">
+    <span class="i">&#9888;</span>
+    <p>
+      <b>Build intern.</b> Nu distribui linkul în afara echipei. Tokenul e legat de contul tău — dacă îl pierzi, revoc-o din <code>php artisan tixello:widget-token --revoke=&lt;id&gt;</code>.
+    </p>
+  </div>
+
+  <div class="foot">
+    Tixello Widget · build generat din <code style="font-size:10.5px">tixello-widget-android/</code><br>
+    Pentru un build nou: <code style="font-size:10.5px">.\build-apk.ps1 -Publish</code>
+  </div>
+
+</div>
+<script>
+  fetch('apk.json', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (a) {
+      var link = document.getElementById('apklink');
+      if (link) { link.href = a.file; link.setAttribute('download', a.file); }
+      var set = function (id, text) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+      set('apkv', 'APK v' + (a.version || '?'));
+      set('apksize', String(a.size_mb).replace('.', ',') + ' MB');
+      if (a.min_sdk) set('apksdk', a.min_sdk);
+      set('apkhash', 'SHA-256: ' + a.sha256);
+      if (a.published) {
+        var d = new Date(a.published);
+        set('apkwhen', 'Publicat: ' + d.toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' }));
+      }
+    })
+    .catch(function () {
+      var el = document.getElementById('apkhash');
+      if (el) el.textContent = 'Nu s-a putut încărca apk.json — rulează build-apk.ps1 -Publish pe workstation.';
+    });
+</script>
+</body>
+</html>

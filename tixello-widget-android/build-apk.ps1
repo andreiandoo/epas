@@ -23,7 +23,9 @@
 param(
   [switch]$Install,
   [switch]$Clean,
-  [switch]$SkipTests
+  [switch]$SkipTests,
+  [switch]$Publish,
+  [string]$Version = '0.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -103,6 +105,52 @@ Write-Host ''
 Write-Host 'BUILD OK' -ForegroundColor Green
 Write-Host ("  {0}  ({1} MB)" -f $apk, $size)
 Write-Host ("  copiat si la: {0}" -f $copy)
+
+# ---- publicare la core.tixello.com/andrei-apk ----
+# Scrie APK-ul + apk.json in public/andrei-apk/ (folder servit de Laravel
+# public/, deci accesibil la https://core.tixello.com/andrei-apk).
+# Pagina de descarcare (index.html) citeste apk.json la load. Metadata
+# (versiune, marime, sha256, publicat_la) e generata aici, nu batuta de
+# mana — asa pagina nu ramane in urma de build.
+if ($Publish) {
+  $publicDir = Resolve-Path (Join-Path $root '..\public\andrei-apk') -ErrorAction SilentlyContinue
+  if (-not $publicDir) { throw "Nu gasesc epas\public\andrei-apk (esti in afara repo-ului epas?)" }
+
+  $fileName = "tixello-widget-$Version.apk"
+  $target = Join-Path $publicDir.Path $fileName
+
+  # APK-urile vechi din folderul de publicare se sterg — evita confuzia
+  # cand cineva descarca versiunea gresita dintr-un folder cu 3 APK-uri.
+  Get-ChildItem -Path $publicDir.Path -Filter 'tixello-widget-*.apk' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne $fileName } |
+    Remove-Item -Force
+
+  Copy-Item $apk $target -Force
+
+  $sha = (Get-FileHash $target -Algorithm SHA256).Hash.ToLower()
+  $sizeMb = [math]::Round((Get-Item $target).Length / 1MB, 2)
+
+  $meta = [ordered]@{
+    version   = $Version
+    file      = $fileName
+    size_mb   = $sizeMb
+    sha256    = $sha
+    min_sdk   = 'Android 8.0+'
+    published = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  }
+
+  $metaPath = Join-Path $publicDir.Path 'apk.json'
+  $json = $meta | ConvertTo-Json
+  [System.IO.File]::WriteAllText($metaPath, $json, [System.Text.UTF8Encoding]::new($false))
+
+  Write-Host ''
+  Write-Host 'PUBLICAT' -ForegroundColor Green
+  Write-Host ("  {0}  ({1} MB)" -f $target, $sizeMb)
+  Write-Host ("  sha256: {0}" -f $sha)
+  Write-Host ("  {0}" -f $metaPath)
+  Write-Host '  Pagina https://core.tixello.com/andrei-apk se actualizeaza singura din apk.json.'
+  Write-Host '  Mai ramane: commit + push, apoi git pull pe live.'
+}
 
 if ($Install) {
   $adb = Join-Path $env:ANDROID_HOME 'platform-tools\adb.exe'
