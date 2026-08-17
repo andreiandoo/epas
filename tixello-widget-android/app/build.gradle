@@ -1,0 +1,92 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Numarul rularii de CI, calculat inainte de blocul android {}.
+//
+// Scris inline ca `versionCode (expr) as int`, expresia a picat evaluarea
+// proiectului cu „Value is null" — Groovy citeste altfel decat pare o comanda
+// urmata de paranteza si de un cast. Aici totul e explicit: o variabila
+// calculata separat si atribuire cu `=`, fara comenzi DSL ambigue.
+def buildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
+android {
+    namespace 'com.tixello.widget'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.tixello.widget'
+        minSdk 26            // Android 8 — de la el exista canale de notificare
+        // Ramanem la 34 intentionat: de la targetSdk 35 Android limiteaza
+        // serviciile foreground de tip dataSync la 6 h pe zi, iar serviciul
+        // asta trebuie sa poata sta pornit permanent.
+        targetSdk 34
+        // Numarul rularii de CI ca versionCode: fiecare APK construit e „mai
+        // nou" decat cel de dinainte, deci se instaleaza peste el fara sa
+        // dezinstalezi. Local, fara CI, ramane 1.
+        versionCode = buildNumber
+        versionName = "1.0.${buildNumber}".toString()
+    }
+
+    signingConfigs {
+        debug {
+            // Cheie de debug FIXA, tinuta in repo.
+            //
+            // Fara ea, fiecare masina si fiecare runner de CI isi genereaza
+            // propria cheie, iar Android refuza sa instaleze un APK peste unul
+            // semnat diferit: la fiecare versiune noua ar trebui sa dezinstalezi
+            // aplicatia, pierzand token-ul si setarile.
+            //
+            // Nu e un secret: o cheie de debug nu poate publica nimic nicaieri
+            // (Play Store le respinge), iar aplicatia se instaleaza de mana, de
+            // catre proprietar. Pentru o eventuala versiune de release se
+            // foloseste alta cheie, tinuta in GitHub Secrets.
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            // APK-ul pe care il instalezi de mana. Fara minificare, ca sa fie
+            // citibil orice stack trace din Logcat.
+            applicationIdSuffix ''
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        // AGP 8 nu mai genereaza BuildConfig implicit; il folosim pentru
+        // versiunea din User-Agent si din ecranul de configurare.
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'   // stub pentru org.json pe JVM
+}

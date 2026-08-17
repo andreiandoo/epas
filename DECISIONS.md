@@ -1498,3 +1498,296 @@ ce întoarce chiar feed-ul, ce primește chiar coada, ce provoacă chiar o schim
 Un test unitar verde pe un serviciu nu dovedește nimic despre cablare — e fix ce aveau deja
 toate cele patru funcționalități de mai sus. **O funcționalitate nu e livrată până nu există
 un test care dovedește că ceva o pornește.**
+
+---
+
+# Widget Tixello pentru Android
+
+Decizii luate la construirea widget-ului de telefon (`tixello-widget-android/` +
+API-ul din `app/Services/Widget`). Ghidul de utilizare e în
+`docs/tixello-widget-android.md`.
+
+---
+
+## D-101 — Aplicație nativă separată, nu un ecran nou în `tics-app/mobile`
+
+**Context.** Cerința e „un widget pe ecranul telefonului". `tics-app/mobile` există
+deja și e Capacitor (WebView + React), împachetat pentru clienți și organizatori.
+
+**Alegere.** Proiect Android nativ nou, `tixello-widget-android/`, cu APK propriu.
+
+**Alternative.** (a) Un ecran nou în aplicația Capacitor — un widget de home screen
+se desenează cu `RemoteViews`, într-un proces al launcher-ului; un WebView nu are ce
+căuta acolo, deci partea nativă ar fi trebuit scrisă oricum, dar lipită de un build
+de 30 MB pe care proprietarul nu-l vrea pe telefon. (b) Un plugin Capacitor —
+aceeași muncă nativă, plus contractul de plugin peste ea.
+
+**Impact.** APK de câteva sute de kilobytes, fără dependințe de rețea, care se
+instalează de mână și se poate revoca de pe server. Costul: două proiecte Android în
+repo. Nu au cod comun și nici nu trebuie să aibă — unul e produsul, celălalt e un
+instrument de proprietar.
+
+---
+
+## D-102 — Polling dintr-un serviciu foreground, nu push
+
+**Context.** Cerința explicită: alerte fără Firebase. Fără FCM, serverul nu poate
+trezi un telefon Android; `app/Services/Push/PushSender` e încă un contract cu o
+implementare care doar scrie în log.
+
+**Alegere.** Un serviciu foreground (`PollService`) care întreabă serverul la un
+interval configurabil (15 s … 15 min, implicit 60 s), plus un `WorkManager` periodic
+la 15 minute ca plasă de siguranță și ca repornire a serviciului.
+
+**Alternative.** (a) FCM — exact ce s-a cerut să evităm, și ar fi cerut cont Google,
+chei de server și un strat de token-uri de dispozitiv. (b) WebSocket persistent pe
+Reverb — infrastructura există (`laravel/reverb` e instalat), dar `BROADCAST_CONNECTION`
+e `null` în producție, iar un socket ținut deschis de un telefon adormit se reconectează
+oricum permanent; ar fi însemnat un daemon de întreținut pentru un singur utilizator.
+(c) Doar `WorkManager` — minimul impus de Android e 15 minute, prea lent pentru „ori de
+câte ori Tixello câștigă un comision".
+
+**Impact.** Alerta vine în cel mult un interval de polling. Prețul: notificarea
+permanentă cerută de sistem pentru orice serviciu foreground (pusă pe canal cu
+importanță minimă) și dependența de setările de baterie ale producătorului — de aceea
+aplicația are un buton direct către ecranul de optimizare a bateriei.
+
+**Consecință.** `targetSdk` rămâne 34: de la 35, Android limitează serviciile
+foreground de tip `dataSync` la 6 h pe zi, ceea ce ar rupe fix cazul de utilizare.
+
+---
+
+## D-103 — Alerta pe cursor de ID, nu pe timp
+
+**Context.** „Sună la fiecare comision nou" cere o definiție a lui „nou" care să
+supraviețuiască telefonului offline, ceasurilor nesincronizate și sincronizărilor
+suprapuse (serviciul și worker-ul pot porni în aceeași secundă).
+
+**Alegere.** Telefonul ține `last_commission_id` și îl trimite ca
+`since_commission_id`; serverul întoarce separat, în `new_commissions`, comenzile cu
+`id` mai mare. Sincronizarea trece printr-un mutex, iar ID-ul comisionului e folosit
+ca ID de notificare.
+
+**Alternative.** (a) Comparație pe `paid_at` — depinde de ceasul telefonului și
+pierde comisioanele înregistrate retroactiv. (b) Diferență calculată local între
+listele consecutive — funcționează până când două sincronizări rulează în paralel și
+alertează amândouă.
+
+**Impact.** Nici alerte duble, nici pierdute. La prima sincronizare (cursor `-1`)
+telefonul doar învață poziția, fără să sune pentru istoric.
+
+---
+
+## D-104 — Patru canale de notificare în loc de unul configurabil
+
+**Context.** Aplicația are comutatoare pentru sunet și vibrație. Din Android 8, o
+aplicație nu mai poate schimba sunetul sau vibrația unui canal deja creat.
+
+**Alegere.** Câte un canal pentru fiecare combinație (sunet+vibrație / doar sunet /
+doar vibrație / silențios); comutatorul alege canalul la momentul notificării.
+
+**Alternative.** (a) Un canal recreat la fiecare schimbare — Android ignoră
+recrearea cu același ID și păstrează setările vechi; ștergerea și recrearea pierde
+preferințele utilizatorului. (b) Trimiterea utilizatorului în Setări la fiecare
+schimbare — comutatoare care nu comută nimic.
+
+**Impact.** Modul telefonului (silențios / doar vibrații) rămâne respectat automat de
+sistem, iar comutatoarele din aplicație funcționează cu adevărat. Costul: patru
+intrări în ecranul de notificări al aplicației.
+
+---
+
+## D-105 — „Azi" se taie în `Europe/Bucharest`, nu în UTC
+
+**Context.** `config('app.timezone')` e UTC, iar widget-urile din panoul de admin
+folosesc `today()`, adică ziua UTC. Vara, în România, asta rupe ziua la 03:00.
+
+**Alegere.** Pentru widget, ziua se calculează în fusul din
+`config('tixello-widget.timezone')` (implicit `Europe/Bucharest`) și se traduce în
+margini UTC pentru interogare (`whereBetween`, nu `whereDate`).
+
+**Alternative.** (a) `whereDate` pe UTC, la fel ca panoul — cifra „azi" de pe telefon
+ar fi fost greșită între miezul nopții și 03:00, exact intervalul în care se termină
+evenimentele. (b) Schimbarea `app.timezone` — ar fi mutat interpretarea fiecărei date
+din platformă pentru o cifră de widget.
+
+**Impact.** Singura diferență acceptată față de panoul de admin; e documentată în
+`docs/tixello-widget-android.md`. Restul definițiilor (comandă plătită, bilet emis,
+comision) sunt împrumutate literal din `App\Filament\Widgets\StatsOverview`, ca să nu
+existe două adevăruri despre aceleași cifre.
+
+---
+
+## D-106 — Token propriu, cu hash în DB, nu cheie de marketplace sau sesiune de admin
+
+**Context.** Endpoint-ul întoarce cifrele întregii platforme. Telefonul are nevoie de
+un secret cu viață lungă, care nu expiră odată cu o sesiune.
+
+**Alegere.** Tabela `tixello_widget_tokens` ține doar `sha256(token)`; valoarea în
+clar se vede o singură dată, la generare. Middleware-ul `tixello.widget` cache-uiește
+**ID-ul** token-ului (5 min), nu modelul, ca revocarea să prindă efect.
+
+**Alternative.** (a) `marketplace.auth` — cheile alea sunt legate de un marketplace,
+iar aici e nevoie de vederea peste toate. (b) Sanctum pe contul de admin — un token
+de admin pe un telefon deschide tot panoul, nu doar cifrele. (c) Un token în `.env` —
+nerevocabil per dispozitiv și fără urmă de folosire.
+
+**Impact.** Poți emite câte un token per telefon și revoca unul singur
+(`php artisan tixello:widget-token --revoke=ID`), cu `last_used_at` / `last_used_ip`
+ca urmă. Costul: încă o tabelă și o comandă artisan.
+
+---
+
+## D-107 — Schemă de test „scoped", ca la Shorts
+
+**Context.** Aceeași problemă ca la D-002: istoricul complet de migrații nu poate fi
+rulat pe SQLite, iar containerul nu are Postgres.
+
+**Alegere.** `tests/database/widget-migrations/` — stub-uri doar pentru tabelele pe
+care le citește serviciul, plus migrația reală a token-urilor, rulate de
+`TixelloWidgetTestCase` pe o conexiune proprie.
+
+**Alternative.** Reutilizarea stub-urilor de la Shorts — le lipsesc coloanele
+financiare (`commission_amount`, `total_cents`, `order_number`) și tabelele
+`customers`, `marketplace_events`, `exchange_rates`; extinderea lor ar fi legat două
+suite care n-au nimic în comun.
+
+**Impact.** Suita rulează fără servicii. Ce NU dovedește: comportamentul pe schema
+reală, pe PostgreSQL. `TODO(owner)`: rulează `TixelloWidgetApiTest` o dată pe un dump
+de dev înainte de deploy — mai ales agregarea `GROUP BY currency`, unde strictețea
+Postgres diferă de SQLite.
+
+---
+
+## D-108 — Alertele au interogarea lor, separată de lista afişată
+
+**Context.** Prima versiune filtra `new_commissions` din lista de 5 comisioane
+afişate. Dacă între două interogări intrau 9 comisioane, 4 dispăreau fără sunet,
+iar cursorul trecea peste ele — pierdere tăcută, exact ce nu vrei de la o alertă.
+
+**Alegere.** `new_commissions` e o interogare proprie, `WHERE id > since`,
+plafonată la `new_commissions_cap` (20). Lista de afişare rămâne la 5.
+
+**Alternative.** (a) Creşterea limitei de afişare la 20 — ar fi mutat problema cu
+un ordin de mărime, nu ar fi rezolvat-o, şi ar fi îngrăşat fiecare payload.
+(b) Fără plafon — un telefon întors după o săptămână offline ar fi sunat de sute
+de ori.
+
+**Impact.** Nicio alertă pierdută sub 20 de comisioane pe rundă. Peste, cursorul
+sare (intenţionat), iar telefonul postează cel mult 5 notificări individuale plus
+un rezumat cu numărul real.
+
+---
+
+## D-109 — Căderea `total` → `total_cents` se face pe rând, nu pe sumă
+
+**Context.** `StatsOverview::sumByCurrency()` cade pe `total_cents` doar când
+suma întregului grup e zero. Regula funcţiona pe vremea când toate comenzile
+erau vechi; azi, cu ambele forme în tabelă, o comandă veche amestecată cu una
+nouă e numărată ca 0.
+
+**Alegere.** `SUM(CASE WHEN total <> 0 THEN total ELSE total_cents / 100 END)` —
+decizia se ia per comandă.
+
+**Alternative.** Copierea exactă a panoului — consistenţă cu o cifră greşită nu e
+consistenţă. Migrarea datelor vechi în `total` — corect, dar e o migraţie de date
+pe producţie, mult peste ce cere un widget.
+
+**Impact.** Widget-ul poate arăta un total mai mare decât panoul de admin. Asta e
+diferenţa dintre corect şi vechi, nu un bug; e documentată. `TODO(owner)`:
+aceeaşi corecţie merită dusă şi în `StatsOverview`.
+
+---
+
+## D-110 — Două cache-uri cu vieţi diferite, nu unul
+
+**Context.** Cifrele „all time" cer COUNT/SUM peste toată tabela; `tickets` nu
+are index pe `status`, deci e scanare completă. Cu un singur TTL de 20 s, un
+telefon care întreabă la 60 s ţinea scanarea în buclă permanentă.
+
+**Alegere.** `all-time` la 120 s, `today` la 20 s — chei de cache separate.
+Plus o migraţie opţională cu trei indexuri, create `CONCURRENTLY` pe PostgreSQL
+ca să poată rula fără să blocheze vânzările.
+
+**Alternative.** (a) Un TTL mare pe tot — cifra „azi", singura la care te uiţi
+des, ar fi îngheţat minute întregi. (b) Doar indexuri — ar fi ajutat, dar
+scanarea rămâne mare, iar migraţia e opţională prin construcţie.
+
+**Impact.** Cifrele „all time" pot fi vechi de până la 2 minute — invizibil la
+scara lor. Comisioanele, semnalul de alertă, nu trec deloc prin cache.
+
+---
+
+## D-111 — Cheie de debug fixă, ţinută în repo
+
+**Context.** Fiecare runner de CI îşi generează propria cheie de debug, iar
+Android refuză să instaleze un APK peste unul semnat diferit. Fiecare versiune
+nouă ar fi cerut dezinstalarea aplicaţiei — adică pierderea token-ului şi a
+setărilor.
+
+**Alegere.** `app/debug.keystore` versionat, cu parola standard `android`, plus
+`versionCode` din `GITHUB_RUN_NUMBER`.
+
+**Alternative.** (a) Documentarea „dezinstalează întâi" — mută pe om o problemă
+pe care o rezolvă un fişier. (b) Cheie de release din GitHub Secrets — corect
+pentru distribuţie reală, dar aplicaţia se instalează de mână de către
+proprietar; rămâne calea deschisă când va fi nevoie.
+
+**Impact.** Actualizările se instalează peste, păstrând setările. Cheia nu e un
+secret: cu ea nu se poate publica nimic (Play Store respinge cheile de debug), iar
+cine ar folosi-o ar avea nevoie oricum de acces fizic la telefon.
+
+---
+
+## D-112 — „Venituri Tixello" nu e `orders.commission_amount`
+
+**Context.** Prima versiune a widget-ului însuma `orders.commission_amount` ca
+venit al platformei. E greşit din temelii: coloana aia ţine comisionul
+MARKETPLACE-ULUI către organizatorii lui — chiar `config/tixello.php` o spune
+(„evenimentele de marketplace poartă comisionul marketplace-ului, iar Tixello îşi
+încasează partea de la marketplace"). Widget-ul arăta, zi de zi, banul altcuiva.
+În plus, coloana e 0 pe vânzările POS/leisure, deci ar fi subraportat şi acolo
+unde ar fi însemnat ceva.
+
+**Alegere.** Un serviciu separat, `TixelloRevenueService`, care reproduce
+formulele din locul care chiar facturează — panoul core (`BillingOverview`) şi
+`invoices:generate-tenant`:
+
+- tenant → `tenants.commission_rate` % × valoarea comenzilor tenantului;
+- marketplace → `marketplace_clients.commission_rate` % × valoarea comenzilor;
+- servicii → `ServiceOrder::TIXELLO_SHARE` (50%) din cele plătite;
+- microservicii → `billing_amount` one-time (are dată) şi lunar (rată).
+
+**Alternative.** (a) Însumarea facturilor emise — exactă, dar arată doar trecutul
+facturat; „venituri azi" ar fi fost mereu 0 între cicluri, iar alerta la fiecare
+comision imposibilă. (b) Baza din `BillingBreakdown` (preţul biletelor, nu
+valoarea comenzii) — mai fină, dar contrazice panoul core; am ales panoul, fiindcă
+acolo se emit facturile. Inconsistenţa dintre cele două pagini rămâne, documentată.
+
+**Impact.** Cifra principală a widget-ului îşi schimbă complet sensul şi mărimea.
+Abonamentele lunare NU se adună în „all time" — sunt o rată, nu o sumă; se afişează
+separat, ca „X/lună". `TODO(owner)`: cele două baze de calcul (comenzi vs. bilete)
+ar trebui unificate în aplicaţie, dar asta e o decizie de facturare, nu de widget.
+
+---
+
+## D-113 — Retururile nu ating comisionul
+
+**Context.** La un refund, `PaymentRefundService` pune pe comandă
+`status = 'refunded'` (integral) sau `'partially_refunded'` (parţial). Niciunul
+nu era în lista de statusuri a widget-ului, deci o comandă de 500 € cu o
+restituire de 5 € dispărea cu totul: şi vânzarea, şi comisionul, şi biletele
+rămase valide.
+
+**Alegere.** Ambele statusuri contează ca vânzare. Regula de afaceri, confirmată
+de proprietar: Tixello încasează comision pe vânzare, iar retururile nu i-l iau
+înapoi. `orders.commission_amount` nici nu e modificat de refund, iar
+`invoices:generate-tenant` exclude doar `cancelled` — deci facturarea reală face
+deja la fel.
+
+**Alternative.** Scăderea părţii restituite — ar fi contrazis regula de afaceri
+şi ar fi făcut widget-ul să nu semene cu factura.
+
+**Impact.** Nu intră în cifre: `pending`, `failed`, `cancelled`, `expired` —
+acolo n-a existat nicio vânzare. Widget-ul poate arăta mai mult decât panoul de
+admin, care încă foloseşte doar `paid`/`confirmed`/`completed`.

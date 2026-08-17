@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Widget-ul sta peste orice fundal de ecran, deci are paleta lui, fixa si
+      inchisa la culoare — nu urmeaza tema telefonului. Ecranul de configurare,
+      in schimb, foloseste DayNight.
+    -->
+    <color name="widget_background">#F00E1424</color>
+    <color name="widget_text">#FFF3F5F9</color>
+    <color name="widget_muted">#FF8B94A8</color>
+    <color name="widget_divider">#33FFFFFF</color>
+    <color name="widget_accent">#FF3DDC97</color>
+    <color name="widget_gold">#FFF2C14E</color>
+
+    <color name="brand">#FF3DDC97</color>
+</resources>
