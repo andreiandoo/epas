@@ -1327,13 +1327,21 @@ class MarketplaceTaxTemplate extends Model
                 // secondary rates; support for those is a follow-up.
                 $org = $event->marketplaceOrganizer;
                 if ($org) {
-                    $isVatPayer = $org->primary_vat_payer !== null
-                        ? (bool) $org->primary_vat_payer
-                        : (bool) ($org->vat_payer ?? false);
+                    // Fix (2026-08-17): organizatorii cu o singură companie
+                    // au vat_payer=true în UI-ul Date Legale dar
+                    // primary_vat_payer=false (default) — nu multi-company.
+                    // Vechiul check `primary_vat_payer !== null` picka false
+                    // explicit și bloca fallback-ul, așa că declarația
+                    // rămânea pe brut. Acum: ORICARE flag adevărat → plătitor.
+                    $isVatPayer = (bool) ($org->primary_vat_payer ?? false)
+                        || (bool) ($org->secondary_vat_payer ?? false)
+                        || (bool) ($org->vat_payer ?? false);
                     if ($isVatPayer) {
                         $vatRate = $org->primary_vat_rate !== null
                             ? (float) $org->primary_vat_rate
-                            : (isset($org->tax_settings['vat_rate']) ? (float) $org->tax_settings['vat_rate'] : 21.0);
+                            : ($org->secondary_vat_rate !== null
+                                ? (float) $org->secondary_vat_rate
+                                : (isset($org->tax_settings['vat_rate']) ? (float) $org->tax_settings['vat_rate'] : 21.0));
                     }
                 }
                 if ($isVatPayer && $vatRate > 0) {
