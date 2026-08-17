@@ -855,7 +855,8 @@ class MarketplaceTaxTemplate extends Model
                 $rowFactParts[] = $venueLine;
             }
             $legalFooter = 'calcul conf. Legii nr. 227/2015 privind Codul fiscal, CAPITOLUL VII. Impozitul pe spectacole, ART. 481, alineat (2) pct. a';
-            $variables['tax_declaration_row_description'] = implode(' / ', $rowFactParts) . '<br>' . $legalFooter;
+            $variables['tax_declaration_row_description'] = implode(' / ', $rowFactParts)
+                . '<br><span style="font-size:6.5pt;">' . $legalFooter . '</span>';
 
             // Calculate totals
             $totalAvailable = 0;
