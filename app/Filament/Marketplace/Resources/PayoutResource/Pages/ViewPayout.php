@@ -1255,9 +1255,6 @@ class ViewPayout extends ViewRecord
                 continue;
             }
 
-            $lineTotal = round($qty * $commPerTicket, 2);
-            $subtotal += $lineTotal;
-
             $ticketTypeName = (string) ($item['ticket_type_name'] ?? 'Bilet');
 
             $displayQty = $qty;
@@ -1266,9 +1263,19 @@ class ViewPayout extends ViewRecord
                 $billQty = (int) ($billablePos[(int) ($item['ticket_type_id'] ?? 0)] ?? 0);
                 if ($billQty > 0) {
                     $displayQty = $billQty;
-                    $displayUnit = round($lineTotal / $billQty, 2);
+                    $displayUnit = round(round($qty * $commPerTicket, 2) / $billQty, 2);
                 }
             }
+
+            // Amount = displayQty * displayUnit (both at 2-decimal precision).
+            // Invariant: qty × unit_price = amount exactly on the printed
+            // invoice, so summing the article column reconciles to subtotal
+            // without a residual bani-of-rounding gap. Subtotal accumulates
+            // from the recomputed lineTotal — may drift by a few bani from
+            // payout.commission_amount when the split loses precision, and
+            // that drift is the correct one to show on the fiscal invoice.
+            $lineTotal = round($displayQty * $displayUnit, 2);
+            $subtotal += $lineTotal;
 
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
@@ -1313,12 +1320,10 @@ class ViewPayout extends ViewRecord
         foreach ($onlineIncludedRows as $row) {
             $qty = (int) ($row['qty'] ?? 0);
             $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
-            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
-            if ($qty <= 0 || $lineTotal <= 0) {
+            $rowCommission = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
+            if ($qty <= 0 || $rowCommission <= 0) {
                 continue;
             }
-
-            $subtotal += $lineTotal;
 
             $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
 
@@ -1328,9 +1333,18 @@ class ViewPayout extends ViewRecord
                 $billQty = (int) ($billableOnline[(int) ($row['ticket_type_id'] ?? 0)] ?? 0);
                 if ($billQty > 0) {
                     $displayQty = $billQty;
-                    $displayUnit = round($lineTotal / $billQty, 2);
+                    $displayUnit = round($rowCommission / $billQty, 2);
                 }
             }
+
+            // Amount = displayQty * displayUnit (both at 2-decimal precision).
+            // Same invariant as the POS block: qty × unit_price = amount
+            // exactly, so the article sum reconciles to subtotal without a
+            // rounding residual. Subtotal accumulates from the recomputed
+            // lineTotal (may differ by a few bani from the payout's
+            // commission_amount when the billQty split loses precision).
+            $lineTotal = round($displayQty * $displayUnit, 2);
+            $subtotal += $lineTotal;
 
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
