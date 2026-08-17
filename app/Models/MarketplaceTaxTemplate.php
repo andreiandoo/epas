@@ -210,7 +210,8 @@ class MarketplaceTaxTemplate extends Model
             '{{event_organizer_vat_rate}}' => 'Cota TVA organizator (default 21.00)',
             '{{event_organizer_vat_rate_percent}}' => 'Cota TVA organizator cu semn %, ex: "21%"',
             '{{vat_amount}}' => 'Valoare TVA dedusă din vânzări (0 dacă nu e plătitor)',
-            '{{tax_situation_vat_row_html}}' => 'Rând TVA pentru tabel page 2 (înainte de TOTAL), colspan=6+1',
+            '{{tax_situation_vat_row_html}}' => 'Rând "TVA BILETE (X%)" pentru tabel page 2 — gol când organizator nu e plătitor TVA',
+            '{{tax_situation_net_row_html}}' => 'Rând "VALOARE BILETE VANDUTE FARA TVA" cu valoarea netă — gol când organizator nu e plătitor TVA',
             '{{humanitarian_percent}}' => 'Procent umanitar (default 0.00)',
             '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
             '{{event_manifestation_adjective}}' => 'Adjectiv tip manifestare pentru declarație (muzicala/teatrala/etc.)',
@@ -1812,8 +1813,18 @@ class MarketplaceTaxTemplate extends Model
                     . '<td colspan="6" style="border:1px solid #000; padding:3px 4px; text-align:right; font-weight:700;">' . htmlspecialchars($vatLabel) . '</td>'
                     . '<td style="border:1px solid #000; padding:3px 4px; text-align:right; font-weight:700;">' . number_format($vatAmount, 2) . '</td>'
                     . '</tr>';
+                // "VALOARE BILETE VANDUTE FARA TVA" — net after VAT
+                // subtraction. Comes right after the VAT row so the
+                // accountant sees gross → VAT → net at a glance.
+                // Empty when the organizer is not a VAT payer so the
+                // layout collapses back to the standard totals block.
+                $variables['tax_situation_net_row_html'] = '<tr>'
+                    . '<td colspan="6" style="border:1px solid #000; padding:3px 4px; text-align:right; font-weight:700;">VALOARE BILETE VANDUTE FARA TVA</td>'
+                    . '<td style="border:1px solid #000; padding:3px 4px; text-align:right; font-weight:700;">' . number_format($totalSalesValue, 2) . '</td>'
+                    . '</tr>';
             } else {
                 $variables['tax_situation_vat_row_html'] = '';
+                $variables['tax_situation_net_row_html'] = '';
             }
 
             // PV Distrugere variables — unsold tickets (excluding subscriptions)
