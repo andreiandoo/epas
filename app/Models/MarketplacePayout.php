@@ -943,6 +943,46 @@ class MarketplacePayout extends Model
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
     }
 
+    /**
+     * Legal identity of the ORGANIZER party (client / beneficiary) for any
+     * invoice tied to THIS payout, as {name, cui, reg_com, address}.
+     *
+     * Leisure per-society deconturi are tagged issuing_company='secondary'
+     * and must bill the SECONDARY society (e.g. "Csomadcom SRL"), NOT the
+     * organizer's primary company (e.g. "Asociatia Pro Szent Anna"). This
+     * mirrors the swap the decont PDF already performs in
+     * MarketplaceTaxTemplate::getVariablesForContext so the invoice and the
+     * decont always name the same society. Ordinary payouts (issuing_company
+     * null) resolve to the primary company, unchanged.
+     *
+     * @return array{name:string,cui:string,reg_com:string,address:string}
+     */
+    public function organizerInvoiceParty(): array
+    {
+        $organizer = $this->organizer;
+        if (!$organizer) {
+            return ['name' => '', 'cui' => '', 'reg_com' => '', 'address' => ''];
+        }
+
+        $company = ($this->issuing_company === 'secondary' && $organizer->has_secondary_issuer)
+            ? 'secondary'
+            : 'primary';
+        $d = $organizer->getIssuerData($company);
+
+        $address = implode(', ', array_filter([
+            $d['address'] ?? null,
+            $d['city'] ?? null,
+            $d['county'] ?? null,
+        ]));
+
+        return [
+            'name' => (string) ($d['name'] ?: $organizer->name),
+            'cui' => (string) ($d['tax_id'] ?? ''),
+            'reg_com' => (string) ($d['registration'] ?? ''),
+            'address' => $address,
+        ];
+    }
+
     public function approvedByUser(): BelongsTo
     {
         return $this->belongsTo(MarketplaceAdmin::class, 'approved_by');

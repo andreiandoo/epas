@@ -446,28 +446,37 @@ class EditOrganizerInvoice extends EditRecord
         // ANAF data on every "Client general" invoice.
         $org = $invoice->organizer;
         if ($org && !$isGeneralClient) {
-            if (empty($client['cui']) && !empty($org->company_tax_id)) {
-                $client['cui'] = $org->company_tax_id;
-                $meta['client']['cui'] = $org->company_tax_id;
+            // Resolve the correct society for this invoice's decont. Leisure
+            // secondary deconturi (payout.issuing_company='secondary') bill the
+            // SECONDARY society (e.g. Csomadcom SRL); ordinary invoices resolve
+            // to the organizer's primary company. Falls back to the raw primary
+            // columns when there's no linked payout.
+            $party = $invoice->payout?->organizerInvoiceParty() ?? [
+                'name' => $org->company_name ?? $org->name,
+                'cui' => $org->company_tax_id ?? '',
+                'reg_com' => $org->company_registration ?? '',
+                'address' => implode(', ', array_filter([$org->company_address, $org->company_city, $org->company_county])),
+            ];
+
+            if (empty($client['cui']) && !empty($party['cui'])) {
+                $client['cui'] = $party['cui'];
+                $meta['client']['cui'] = $party['cui'];
                 $metaUpdated = true;
             }
-            if (empty($client['name']) && !empty($org->company_name)) {
-                $client['name'] = $org->company_name ?? $org->name;
-                $meta['client']['name'] = $client['name'];
+            if (empty($client['name']) && !empty($party['name'])) {
+                $client['name'] = $party['name'];
+                $meta['client']['name'] = $party['name'];
                 $metaUpdated = true;
             }
-            if (empty($client['reg_com']) && !empty($org->company_registration)) {
-                $client['reg_com'] = $org->company_registration;
-                $meta['client']['reg_com'] = $org->company_registration;
+            if (empty($client['reg_com']) && !empty($party['reg_com'])) {
+                $client['reg_com'] = $party['reg_com'];
+                $meta['client']['reg_com'] = $party['reg_com'];
                 $metaUpdated = true;
             }
-            if (empty($client['address'])) {
-                $addr = implode(', ', array_filter([$org->company_address, $org->company_city, $org->company_county]));
-                if ($addr) {
-                    $client['address'] = $addr;
-                    $meta['client']['address'] = $addr;
-                    $metaUpdated = true;
-                }
+            if (empty($client['address']) && !empty($party['address'])) {
+                $client['address'] = $party['address'];
+                $meta['client']['address'] = $party['address'];
+                $metaUpdated = true;
             }
         }
 

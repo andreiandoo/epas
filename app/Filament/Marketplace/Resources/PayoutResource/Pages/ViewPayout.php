@@ -740,11 +740,11 @@ class ViewPayout extends ViewRecord
                             'address' => '',
                         ];
                     } else {
-                        $client = [
-                            'name' => $organizer->company_name ?? $organizer->name,
-                            'cui' => $organizer->cui ?? '',
-                            'address' => $organizer->address ?? '',
-                        ];
+                        // Organizer-recipient: bill the society this decont
+                        // settles (secondary society for leisure secondary
+                        // deconturi, primary otherwise) — same helper the POS
+                        // organizer invoice uses.
+                        $client = $payout->organizerInvoiceParty();
                     }
 
                     $lastInvoice = Invoice::where('marketplace_client_id', $marketplace->id)
@@ -1388,12 +1388,14 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        // POS commission is always charged to the organizer (the one that collected cash via app)
-        $client = [
-            'name' => $organizer->company_name ?? $organizer->name,
-            'cui' => $organizer->cui ?? '',
-            'address' => $organizer->address ?? '',
-        ];
+        // POS commission is always charged to the organizer (the one that
+        // collected cash via app). Resolve the exact society this decont
+        // settles — leisure secondary deconturi (issuing_company='secondary')
+        // bill the SECONDARY society (e.g. Csomadcom SRL), not the primary
+        // (Asociatia). Ordinary payouts resolve to the primary company, so
+        // this also pre-fills cui/reg_com at creation instead of leaving them
+        // for the send-to-accounting backfill.
+        $client = $payout->organizerInvoiceParty();
 
         $lastInvoice = Invoice::where('marketplace_client_id', $marketplace->id)
             ->orderByDesc('id')
