@@ -2078,13 +2078,29 @@ class MarketplaceTaxTemplate extends Model
                 $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
                 $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                 $commPer = (float) ($item['commission_per_ticket'] ?? 0);
-                $commission = $commPer * $qty;
+                $commission = isset($item['commission_amount'])
+                    ? (float) $item['commission_amount']
+                    : ($commPer * $qty);
                 $itemMode = $item['commission_mode'] ?? null;
-                $gross = $price * $qty + ($itemMode === 'added_on_top' ? $commission : 0);
+                // Prefer stored gross / net (single source of truth, same
+                // precedence as MarketplacePayout::getBreakdownTotals() +
+                // the payout-ticket-breakdown blade). Recomputing price × qty
+                // drifts when `price` is a weighted-average rounded to 4
+                // decimals — e.g. payout 3296 ADULT stored gross=9102 vs
+                // recompute 28.27 × 322 = 9102.94, cumulating to +1.37 lei on
+                // the total "Total fără TVA" and "Total de plată" lines
+                // against the 23,226 already printed on row 1a (which uses
+                // the stored value).
+                $gross = isset($item['gross'])
+                    ? (float) $item['gross']
+                    : ($price * $qty + ($itemMode === 'added_on_top' ? $commission : 0));
+                $net = isset($item['net'])
+                    ? (float) $item['net']
+                    : ($gross - $commission);
 
                 $grossExclPos += $gross;
                 $commissionExclPos += $commission;
-                $netExclPos += ($gross - $commission);
+                $netExclPos += $net;
             }
             // Fall back to stored values if no breakdown (e.g. legacy payouts)
             $payoutGross = $hasBreakdown ? $grossExclPos : (float) ($payout->gross_amount ?? 0);
