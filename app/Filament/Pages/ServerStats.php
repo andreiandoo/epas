@@ -28,8 +28,14 @@ class ServerStats extends Page
     public ?string $phpMemoryLimit = null;
     public bool $shellAvailable = true;
 
-    // Database size (cheap pg catalog queries — no shell/root needed).
+    // Database size + live activity (cheap pg catalog queries — no shell/root).
     public array $database = [];
+    public array $pgConfig = [];
+    public array $pgSummary = [];
+    public array $pgActivity = [];
+
+    /** @var array<int|string, array<string, mixed>> pg_stat_activity keyed by pid, for process enrichment */
+    protected array $pgByPid = [];
 
     // Expensive, opt-in directory breakdown.
     public array $dirSizes = [];
@@ -136,11 +142,100 @@ class ServerStats extends Page
         // --- Uptime ---
         $this->uptime = $this->readUptime();
 
+        // --- PostgreSQL: size, config, live connections ---
+        // Run BEFORE topProcesses so postgres backends can be annotated with
+        // their pg_stat_activity row (db / user / app / state).
+        $this->database = $this->readDatabaseSizes();
+        $this->pgConfig = $this->readPgConfig();
+        $this->pgActivity = $this->readPgActivity();
+        $this->pgSummary = $this->summarizePgActivity($this->pgActivity);
+        $this->pgByPid = collect($this->pgActivity)->keyBy('pid')->all();
+
         // --- Top processes by memory ---
         $this->processes = $this->topProcesses();
+    }
 
-        // --- PostgreSQL database size + top tables ---
-        $this->database = $this->readDatabaseSizes();
+    protected function readPgConfig(): array
+    {
+        if (config('database.default') !== 'pgsql') {
+            return [];
+        }
+        try {
+            $c = \DB::selectOne("
+                select current_setting('shared_buffers')      as shared_buffers,
+                       current_setting('effective_cache_size') as effective_cache_size,
+                       current_setting('work_mem')             as work_mem,
+                       current_setting('maintenance_work_mem') as maintenance_work_mem,
+                       current_setting('max_connections')      as max_connections,
+                       (select count(*) from pg_stat_activity) as current_connections,
+                       (select count(*) from pg_stat_activity where state = 'idle in transaction') as idle_in_transaction
+            ");
+            return (array) $c;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    protected function readPgActivity(): array
+    {
+        if (config('database.default') !== 'pgsql') {
+            return [];
+        }
+        try {
+            $rows = \DB::select("
+                select pid,
+                       datname,
+                       usename,
+                       coalesce(nullif(application_name, ''), '—') as application_name,
+                       coalesce(host(client_addr), 'local')        as client,
+                       coalesce(state, 'unknown')                  as state,
+                       greatest(0, extract(epoch from (now() - state_change))::int)  as idle_secs,
+                       greatest(0, extract(epoch from (now() - backend_start))::int) as age_secs,
+                       left(regexp_replace(coalesce(query, ''), '\\s+', ' ', 'g'), 120) as query
+                from pg_stat_activity
+                where backend_type = 'client backend'
+                order by (state = 'active') desc, state_change asc nulls last
+            ");
+
+            return array_map(fn ($r) => [
+                'pid' => (int) $r->pid,
+                'datname' => $r->datname ?? '—',
+                'usename' => $r->usename ?? '—',
+                'application_name' => $r->application_name,
+                'client' => $r->client,
+                'state' => $r->state,
+                'idle_secs' => (int) $r->idle_secs,
+                'idle_h' => $this->humanDuration((int) $r->idle_secs),
+                'age_h' => $this->humanDuration((int) $r->age_secs),
+                'query' => trim((string) $r->query),
+            ], $rows);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    protected function summarizePgActivity(array $activity): array
+    {
+        if (empty($activity)) {
+            return [];
+        }
+        $byState = [];
+        $byDb = [];
+        $byApp = [];
+        foreach ($activity as $c) {
+            $byState[$c['state']] = ($byState[$c['state']] ?? 0) + 1;
+            $byDb[$c['datname']] = ($byDb[$c['datname']] ?? 0) + 1;
+            $byApp[$c['application_name']] = ($byApp[$c['application_name']] ?? 0) + 1;
+        }
+        arsort($byDb);
+        arsort($byApp);
+
+        return [
+            'total' => count($activity),
+            'by_state' => $byState,
+            'by_db' => $byDb,
+            'by_app' => $byApp,
+        ];
     }
 
     /**
@@ -341,7 +436,7 @@ class ServerStats extends Page
                 'command' => $p[2],
                 'mem_pct' => (float) $p[3],
                 'rss_h' => $this->humanSize((int) $p[4] * 1024),
-                'description' => $this->describeProcess($p[2], $p[5]),
+                'description' => $this->describeProcess($p[2], $p[5], (int) $p[0]),
             ];
         }
         return $rows;
@@ -352,13 +447,30 @@ class ServerStats extends Page
      * its process title (visible in args) to describe each backend's job, so we
      * decode that; other well-known daemons get a static label.
      */
-    protected function describeProcess(string $comm, string $args): string
+    protected function describeProcess(string $comm, string $args, ?int $pid = null): string
     {
         $args = trim($args);
         $lower = strtolower($comm . ' ' . $args);
 
         if ($comm === 'postgres' || str_starts_with($args, 'postgres:')) {
             $title = strtolower(trim((string) preg_replace('/^postgres:\s*[\d\/a-z]*:?\s*/i', '', $args)));
+
+            // Client backend → enrich with the live pg_stat_activity row so the
+            // operator sees WHICH database/user/app this connection serves
+            // instead of a bare "idle".
+            $act = $pid !== null ? ($this->pgByPid[$pid] ?? null) : null;
+            if ($act) {
+                $who = 'baza „' . $act['datname'] . '", user „' . $act['usename'] . '"'
+                    . ($act['application_name'] !== '—' ? ', app „' . $act['application_name'] . '"' : '')
+                    . ($act['client'] !== 'local' ? ', client ' . $act['client'] : '');
+                $stateLabel = match ($act['state']) {
+                    'active' => 'ACTIVĂ (rulează o interogare)',
+                    'idle' => 'inactivă (idle de ' . $act['idle_h'] . ')',
+                    'idle in transaction' => '⚠️ idle in transaction de ' . $act['idle_h'] . ' (ține locks)',
+                    default => $act['state'],
+                };
+                return 'PostgreSQL — conexiune ' . $stateLabel . ' — ' . $who;
+            }
 
             return match (true) {
                 str_contains($title, 'checkpointer')                 => 'PostgreSQL — checkpointer (scrie periodic datele pe disc)',
@@ -460,5 +572,21 @@ class ServerStats extends Page
         $power = min((int) floor(log($bytes, 1024)), count($units) - 1);
 
         return number_format($bytes / (1024 ** $power), $power > 0 ? 2 : 0) . ' ' . $units[$power];
+    }
+
+    public function humanDuration(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return '0s';
+        }
+        $d = intdiv($seconds, 86400);
+        $h = intdiv($seconds % 86400, 3600);
+        $m = intdiv($seconds % 3600, 60);
+        $s = $seconds % 60;
+
+        if ($d > 0) return "{$d}z {$h}h";
+        if ($h > 0) return "{$h}h {$m}m";
+        if ($m > 0) return "{$m}m {$s}s";
+        return "{$s}s";
     }
 }

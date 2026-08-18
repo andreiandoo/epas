@@ -167,6 +167,90 @@
             </x-filament::section>
         @endif
 
+        {{-- PostgreSQL connections + memory config --}}
+        @if(!empty($pgConfig) || !empty($pgActivity))
+            <x-filament::section>
+                <x-slot name="heading">PostgreSQL — conexiuni & memorie</x-slot>
+                <x-slot name="description">De aici vezi exact ce e fiecare conexiune „idle": ce bază, ce user, ce aplicație, de cât timp.</x-slot>
+
+                @if(!empty($pgConfig))
+                    <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        @php
+                            $cfgItems = [
+                                ['shared_buffers', 'Shared buffers', 'memorie partajată (o singură dată!)'],
+                                ['effective_cache_size', 'Effective cache', 'estimare cache OS'],
+                                ['work_mem', 'Work mem', 'per operație de sortare'],
+                                ['max_connections', 'Max conexiuni', 'limita configurată'],
+                                ['current_connections', 'Conexiuni acum', 'total deschise'],
+                                ['idle_in_transaction', 'Idle in transaction', 'de urmărit'],
+                            ];
+                        @endphp
+                        @foreach($cfgItems as [$key, $label, $hint])
+                            <div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-white/5">
+                                <div class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $label }}</div>
+                                <div class="mt-0.5 text-lg font-bold text-gray-900 dark:text-white">{{ $pgConfig[$key] ?? '—' }}</div>
+                                <div class="text-[10px] text-gray-400 dark:text-gray-500">{{ $hint }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if(!empty($pgSummary))
+                    <div class="mb-4 flex flex-wrap gap-2 text-xs">
+                        @foreach(($pgSummary['by_state'] ?? []) as $state => $count)
+                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium
+                                {{ $state === 'active' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400'
+                                   : ($state === 'idle in transaction' ? 'bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400'
+                                   : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300') }}">
+                                {{ $count }} × {{ $state }}
+                            </span>
+                        @endforeach
+                        @foreach(($pgSummary['by_db'] ?? []) as $db => $count)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 font-medium text-primary-700 dark:bg-primary-400/10 dark:text-primary-400">
+                                {{ $count }} pe „{{ $db }}"
+                            </span>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if(!empty($pgActivity))
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-200 text-left dark:border-white/10">
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">PID</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Bază</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">User</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Aplicație</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Client</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Stare</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">De</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-white/5">
+                                @foreach($pgActivity as $conn)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+                                        <td class="px-3 py-2 font-mono text-gray-500 dark:text-gray-400">{{ $conn['pid'] }}</td>
+                                        <td class="px-3 py-2 font-mono text-gray-900 dark:text-white">{{ $conn['datname'] }}</td>
+                                        <td class="px-3 py-2 font-mono text-gray-700 dark:text-gray-300">{{ $conn['usename'] }}</td>
+                                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $conn['application_name'] }}</td>
+                                        <td class="px-3 py-2 font-mono text-gray-500 dark:text-gray-400">{{ $conn['client'] }}</td>
+                                        <td class="px-3 py-2">
+                                            <span class="{{ $conn['state'] === 'active' ? 'text-emerald-600 dark:text-emerald-400' : ($conn['state'] === 'idle in transaction' ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400') }}">
+                                                {{ $conn['state'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ $conn['idle_h'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Textul interogărilor e vizibil doar pentru propriile conexiuni (restul necesită rol de monitorizare). „Client = local" înseamnă conexiune prin socket, pe același server (ex. PgBouncer / aplicația locală).</p>
+                @endif
+            </x-filament::section>
+        @endif
+
         {{-- Directory breakdown (opt-in) --}}
         <x-filament::section>
             <x-slot name="heading">Spațiu pe directoare (doar aplicația)</x-slot>
