@@ -94,8 +94,13 @@ class SearchController extends BaseController
 
         $events = Event::query()
             ->with(['venue:id,name,city', 'marketplaceEventCategory', 'ticketTypes' => function ($q) {
+                // MUST include `name` + `meta` so isTestPos() can detect
+                // Test POS tickets — without them the filter below silently
+                // sees meta=null, name=null and returns false for every
+                // ticket, letting the 10-lei smoke-test row leak into the
+                // "de la X lei" min-price calculation.
                 $q->where('status', 'active')
-                    ->select(['id', 'event_id', 'price_cents', 'sale_price_cents']);
+                    ->select(['id', 'event_id', 'name', 'meta', 'price_cents', 'sale_price_cents']);
             }])
             ->where('is_published', true)
             ->where(function ($q) {
