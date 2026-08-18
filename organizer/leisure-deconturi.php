@@ -181,10 +181,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
 
+        // Build the flat rows list — decont row followed by its Oblio invoices
+        // as first-class sibling rows (indented visually), each with its own
+        // expand chevron. Structure per payout:
+        //   [DECONT row] → click expands → breakdown sub-row (colspan)
+        //   [INVOICE row] (sibling of decont) → click expands → articles sub-row
+        //   [INVOICE row] …
         tbody.innerHTML = payouts.map(p => {
             const isOpen = openBreakdownIds.has(p.id);
             const pdfCell = p.pdf_url
-                ? `<a href="${p.pdf_url}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>PDF</a>`
+                ? `<a href="${p.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>PDF</a>`
                 : '<span class="text-[11px] text-muted">—</span>';
             const chevron = `<svg class="w-4 h-4 text-muted transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
 
@@ -192,6 +198,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 ? `<span class="font-bold text-secondary">${escapeHtml(p.decont_series)}</span>`
                 : `<span class="text-muted">${escapeHtml(p.reference || '#'+p.id)}</span>`;
 
+            // DECONT row.
             const row = `<tr class="hover:bg-slate-50 cursor-pointer" data-dc-toggle="${p.id}">
                 <td class="px-4 py-3">${chevron}</td>
                 <td class="px-4 py-3">${serieBadge}<div class="text-[10px] text-muted">${escapeHtml(p.reference || '')}</div></td>
@@ -204,14 +211,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <td class="px-4 py-3 text-center">${pdfCell}</td>
             </tr>`;
 
+            // DECONT breakdown expand row (bilete emise).
             let breakdownRow = '';
             if (isOpen) {
                 const rows = p.breakdown || [];
-                const invoices = p.invoices || [];
-
-                let breakdownTable = '';
                 if (!rows.length) {
-                    breakdownTable = `<p class="text-xs text-muted py-2">Nu există detaliu ticket_breakdown pentru acest decont.</p>`;
+                    breakdownRow = `<tr class="bg-slate-50/60"><td colspan="9" class="px-6 py-3 text-xs text-muted">Nu există detaliu ticket_breakdown pentru acest decont.</td></tr>`;
                 } else {
                     const subRows = rows.map(b => `<tr class="border-t border-slate-200">
                         <td class="px-2 py-1.5 text-xs">${escapeHtml(b.name)}</td>
@@ -222,118 +227,109 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <td class="px-2 py-1.5 text-xs text-right text-muted">${fmtMoney(b.discount)}</td>
                         <td class="px-2 py-1.5 text-xs text-right font-semibold text-emerald-800">${fmtMoney(b.net)}</td>
                     </tr>`).join('');
-                    breakdownTable = `<p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Detaliu bilete emise pe acest decont</p>
-                        <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden mb-4">
-                            <thead class="text-[10px] uppercase text-muted bg-slate-100">
-                                <tr>
-                                    <th class="px-2 py-1.5 text-left">Tip bilet</th>
-                                    <th class="px-2 py-1.5 text-right">Cant.</th>
-                                    <th class="px-2 py-1.5 text-right">Preț unit</th>
-                                    <th class="px-2 py-1.5 text-right">Brut</th>
-                                    <th class="px-2 py-1.5 text-right text-blue-700">Comision</th>
-                                    <th class="px-2 py-1.5 text-right">Reducere</th>
-                                    <th class="px-2 py-1.5 text-right">Net</th>
-                                </tr>
-                            </thead>
-                            <tbody>${subRows}</tbody>
-                        </table>`;
+                    breakdownRow = `<tr class="bg-slate-50/60">
+                        <td colspan="9" class="px-6 py-3">
+                            <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Detaliu bilete emise pe acest decont</p>
+                            <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
+                                <thead class="text-[10px] uppercase text-muted bg-slate-100">
+                                    <tr>
+                                        <th class="px-2 py-1.5 text-left">Tip bilet</th>
+                                        <th class="px-2 py-1.5 text-right">Cant.</th>
+                                        <th class="px-2 py-1.5 text-right">Preț unit</th>
+                                        <th class="px-2 py-1.5 text-right">Brut</th>
+                                        <th class="px-2 py-1.5 text-right text-blue-700">Comision</th>
+                                        <th class="px-2 py-1.5 text-right">Reducere</th>
+                                        <th class="px-2 py-1.5 text-right">Net</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${subRows}</tbody>
+                            </table>
+                        </td>
+                    </tr>`;
                 }
-
-                // Invoices accordion — one row per Oblio-sent invoice; click
-                // expands to article breakdown (name, description, qty, unit, amount).
-                let invoicesBlock = '';
-                if (!invoices.length) {
-                    invoicesBlock = `<p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Facturi emise (Oblio)</p>
-                        <p class="text-xs text-muted italic">Nicio factură emisă în contabilitate pentru acest decont.</p>`;
-                } else {
-                    const invRows = invoices.map(inv => {
-                        const invOpen = openInvoiceIds.has(inv.id);
-                        const invChevron = `<svg class="w-3.5 h-3.5 text-muted transition-transform ${invOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
-                        const invPdf = inv.accounting_pdf_url
-                            ? `<a href="${inv.accounting_pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded hover:bg-emerald-100">PDF</a>`
-                            : '<span class="text-[10px] text-muted">-</span>';
-                        const stageLabel = INV_STAGE_LABEL[inv.accounting_stage] || inv.accounting_stage;
-                        const dateLabel = inv.issue_date
-                            ? new Date(inv.issue_date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' })
-                            : '-';
-                        const invHead = `<tr class="hover:bg-blue-50 cursor-pointer border-t border-slate-200" data-inv-toggle="${inv.id}">
-                            <td class="px-2 py-1.5 text-xs">${invChevron}</td>
-                            <td class="px-2 py-1.5 text-xs font-semibold">${escapeHtml(inv.number || ('#' + inv.id))}</td>
-                            <td class="px-2 py-1.5 text-xs">${escapeHtml(inv.type_label || inv.type || '')}</td>
-                            <td class="px-2 py-1.5 text-xs">${escapeHtml(stageLabel)}</td>
-                            <td class="px-2 py-1.5 text-xs">${dateLabel}</td>
-                            <td class="px-2 py-1.5 text-xs text-right font-semibold">${fmtMoney(inv.amount)} ${inv.currency || 'RON'}</td>
-                            <td class="px-2 py-1.5 text-xs text-center">${invStatusPill(inv.status)}</td>
-                            <td class="px-2 py-1.5 text-xs text-center">${invPdf}</td>
-                        </tr>`;
-
-                        let invItemsRow = '';
-                        if (invOpen) {
-                            const items = inv.items || [];
-                            if (!items.length) {
-                                invItemsRow = `<tr class="bg-white"><td colspan="8" class="px-4 py-2 text-[11px] text-muted italic">Factura nu are articole înregistrate.</td></tr>`;
-                            } else {
-                                const itemBody = items.map(it => `<tr class="border-t border-slate-100">
-                                    <td class="px-2 py-1.5 text-[11px] align-top">
-                                        <div class="font-semibold">${escapeHtml(it.name || '')}</div>
-                                        ${it.description && it.description !== it.name ? `<div class="text-muted mt-0.5 text-[10px]">${escapeHtml(it.description)}</div>` : ''}
-                                    </td>
-                                    <td class="px-2 py-1.5 text-[11px] text-right">${Number(it.quantity || 0).toLocaleString('ro-RO')}</td>
-                                    <td class="px-2 py-1.5 text-[11px] text-right">${fmtMoney(it.unit_price)}</td>
-                                    <td class="px-2 py-1.5 text-[11px] text-right font-semibold">${fmtMoney(it.amount)}</td>
-                                </tr>`).join('');
-                                invItemsRow = `<tr class="bg-white"><td colspan="8" class="px-4 py-2">
-                                    <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-1.5">Articole factură</p>
-                                    <table class="w-full text-[11px] border border-slate-200 rounded overflow-hidden">
-                                        <thead class="bg-slate-50 text-[10px] uppercase text-muted">
-                                            <tr>
-                                                <th class="px-2 py-1 text-left">Denumire / descriere</th>
-                                                <th class="px-2 py-1 text-right">Cant.</th>
-                                                <th class="px-2 py-1 text-right">Preț unit</th>
-                                                <th class="px-2 py-1 text-right">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>${itemBody}</tbody>
-                                    </table>
-                                </td></tr>`;
-                            }
-                        }
-                        return invHead + invItemsRow;
-                    }).join('');
-
-                    invoicesBlock = `<p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Facturi emise (Oblio)</p>
-                        <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
-                            <thead class="text-[10px] uppercase text-muted bg-slate-100">
-                                <tr>
-                                    <th class="px-2 py-1.5 text-left w-8"></th>
-                                    <th class="px-2 py-1.5 text-left">Nr. factură</th>
-                                    <th class="px-2 py-1.5 text-left">Tip</th>
-                                    <th class="px-2 py-1.5 text-left">Stagiu</th>
-                                    <th class="px-2 py-1.5 text-left">Data</th>
-                                    <th class="px-2 py-1.5 text-right">Sumă</th>
-                                    <th class="px-2 py-1.5 text-center">Status</th>
-                                    <th class="px-2 py-1.5 text-center">PDF</th>
-                                </tr>
-                            </thead>
-                            <tbody>${invRows}</tbody>
-                        </table>`;
-                }
-
-                breakdownRow = `<tr class="bg-slate-50/60">
-                    <td colspan="9" class="px-6 py-4">
-                        ${breakdownTable}
-                        ${invoicesBlock}
-                    </td>
-                </tr>`;
             }
-            return row + breakdownRow;
+
+            // INVOICE rows — one per Oblio-sent invoice, each a sibling of the
+            // parent decont row (same table columns, indented + tinted so the
+            // parent-child grouping is visually obvious). Click on an invoice
+            // row expands its articles below it.
+            let invoiceRows = '';
+            const invoices = p.invoices || [];
+            invoices.forEach(inv => {
+                const invOpen = openInvoiceIds.has(inv.id);
+                const invChevron = `<svg class="w-4 h-4 text-blue-600 transition-transform ${invOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
+                const invPdf = inv.accounting_pdf_url
+                    ? `<a href="${inv.accounting_pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100">PDF</a>`
+                    : '<span class="text-[11px] text-muted">—</span>';
+                const stageLabel = INV_STAGE_LABEL[inv.accounting_stage] || inv.accounting_stage;
+                const dateLabel = inv.issue_date
+                    ? new Date(inv.issue_date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' })
+                    : '-';
+                // Number cell: Oblio number BIG, Tixello internal small below.
+                const numberCell = inv.accounting_number
+                    ? `<span class="font-bold text-blue-800">${escapeHtml(inv.accounting_number)}</span><div class="text-[10px] text-muted">${escapeHtml(inv.number || '')}</div>`
+                    : `<span class="font-semibold text-secondary">${escapeHtml(inv.number || ('#' + inv.id))}</span>`;
+
+                invoiceRows += `<tr class="bg-blue-50/40 hover:bg-blue-100/50 cursor-pointer border-l-4 border-blue-300" data-inv-toggle="${inv.id}">
+                    <td class="px-4 py-2.5 pl-8">${invChevron}</td>
+                    <td class="px-4 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-blue-600 font-bold uppercase">Factură</span>
+                            <span class="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-white text-blue-800 border border-blue-200">${escapeHtml(inv.type_label || inv.type || '')}</span>
+                            <span class="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-white text-slate-600 border border-slate-200">${escapeHtml(stageLabel)}</span>
+                        </div>
+                        <div class="mt-0.5">${numberCell}</div>
+                    </td>
+                    <td class="px-4 py-2.5 text-xs">Data: <strong>${dateLabel}</strong></td>
+                    <td class="px-4 py-2.5">${invStatusPill(inv.status)}</td>
+                    <td class="px-4 py-2.5 text-right text-xs text-muted">Subtotal: ${fmtMoney(inv.subtotal)}</td>
+                    <td class="px-4 py-2.5 text-right text-xs text-muted">TVA: ${fmtMoney(inv.vat_amount)}</td>
+                    <td class="px-4 py-2.5 text-right text-muted">—</td>
+                    <td class="px-4 py-2.5 text-right font-bold text-blue-800">${fmtMoney(inv.amount)} ${inv.currency || 'RON'}</td>
+                    <td class="px-4 py-2.5 text-center">${invPdf}</td>
+                </tr>`;
+
+                if (invOpen) {
+                    const items = inv.items || [];
+                    if (!items.length) {
+                        invoiceRows += `<tr class="bg-blue-50/20"><td colspan="9" class="px-8 py-3 text-xs text-muted italic">Factura nu are articole înregistrate.</td></tr>`;
+                    } else {
+                        const itemBody = items.map(it => `<tr class="border-t border-slate-100">
+                            <td class="px-2 py-1.5 text-[11px] align-top">
+                                <div class="font-semibold">${escapeHtml(it.name || '')}</div>
+                                ${it.description && it.description !== it.name ? `<div class="text-muted mt-0.5 text-[10px]">${escapeHtml(it.description)}</div>` : ''}
+                            </td>
+                            <td class="px-2 py-1.5 text-[11px] text-right">${Number(it.quantity || 0).toLocaleString('ro-RO')}</td>
+                            <td class="px-2 py-1.5 text-[11px] text-right">${fmtMoney(it.unit_price)}</td>
+                            <td class="px-2 py-1.5 text-[11px] text-right font-semibold">${fmtMoney(it.amount)}</td>
+                        </tr>`).join('');
+                        invoiceRows += `<tr class="bg-blue-50/20">
+                            <td colspan="9" class="px-8 py-3">
+                                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Articole factură</p>
+                                <table class="w-full text-[11px] bg-white border border-slate-200 rounded-lg overflow-hidden">
+                                    <thead class="text-[10px] uppercase text-muted bg-slate-100">
+                                        <tr>
+                                            <th class="px-2 py-1.5 text-left">Denumire / descriere</th>
+                                            <th class="px-2 py-1.5 text-right">Cant.</th>
+                                            <th class="px-2 py-1.5 text-right">Preț unit</th>
+                                            <th class="px-2 py-1.5 text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${itemBody}</tbody>
+                                </table>
+                            </td>
+                        </tr>`;
+                    }
+                }
+            });
+
+            return row + breakdownRow + invoiceRows;
         }).join('');
 
-        // Wire up toggle for payout row
+        // Wire up toggle for decont rows
         tbody.querySelectorAll('[data-dc-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
-                if (ev.target.closest('[data-inv-toggle]')) return; // click on invoice row bubbles up otherwise
                 const id = parseInt(tr.dataset.dcToggle, 10);
                 if (openBreakdownIds.has(id)) openBreakdownIds.delete(id);
                 else openBreakdownIds.add(id);
@@ -341,11 +337,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Wire up toggle for invoice sub-accordion
+        // Wire up toggle for invoice rows (siblings of decont)
         tbody.querySelectorAll('[data-inv-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
-                ev.stopPropagation();
                 const id = parseInt(tr.dataset.invToggle, 10);
                 if (openInvoiceIds.has(id)) openInvoiceIds.delete(id);
                 else openInvoiceIds.add(id);
