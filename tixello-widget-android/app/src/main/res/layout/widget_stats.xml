@@ -159,7 +159,14 @@
         </LinearLayout>
     </LinearLayout>
 
-    <View
+    <!--
+      Divider - FrameLayout in loc de View: RemoteViews nu accepta plain
+      <View> (nu-i marcat cu @RemoteView), doar sub-clasele whitelist-uite.
+      Cand inflaterul intalnea <View>, tot layout-ul cadea silent si
+      widget-ul aparea complet gol pe home-screen. FrameLayout e in
+      whitelist si merge la fel de bine ca o linie 1dp cu background.
+    -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="6dp"
