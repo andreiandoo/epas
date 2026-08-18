@@ -63,19 +63,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div class="bg-white border rounded-2xl border-border overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="text-xs uppercase bg-slate-50 text-muted">
-                        <tr>
-                            <th class="px-4 py-3 text-left w-8"></th>
-                            <th class="px-4 py-3 text-left">Serie decont</th>
-                            <th class="px-4 py-3 text-left">Perioadă</th>
-                            <th class="px-4 py-3 text-left">Societate</th>
-                            <th class="px-4 py-3 text-right">Venit brut</th>
-                            <th class="px-4 py-3 text-right text-blue-700">Comision</th>
-                            <th class="px-4 py-3 text-right">Reduceri</th>
-                            <th class="px-4 py-3 text-right font-bold">Net încasat</th>
-                            <th class="px-4 py-3 text-center">PDF</th>
-                        </tr>
-                    </thead>
                     <tbody id="dc-rows" class="divide-y divide-border">
                         <tr><td class="px-4 py-6 text-center text-muted" colspan="9">Se încarcă...</td></tr>
                     </tbody>
@@ -221,10 +208,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <td class="px-4 py-2.5">${numberCell}</td>
                 <td class="px-4 py-2.5 text-xs">${period(p)}</td>
                 <td class="px-4 py-2.5">${societyBadge(p)}</td>
-                <td class="px-4 py-2.5 text-right">${fmtMoney(p.gross_amount)} RON</td>
-                <td class="px-4 py-2.5 text-right text-blue-700 font-semibold">${fmtMoney(p.commission_amount)} RON</td>
-                <td class="px-4 py-2.5 text-right text-muted">${fmtMoney(p.discount_amount)} RON</td>
-                <td class="px-4 py-2.5 text-right font-bold text-emerald-800">${fmtMoney(p.amount)} RON</td>
+                <td class="px-4 py-2.5 text-right text-xs text-muted">Vanzari: <strong class="text-emerald-900">${fmtMoney(p.gross_amount)} RON</strong></td>
+                <td class="px-4 py-2.5 text-right text-xs text-muted">Comision: <strong class="text-blue-700">${fmtMoney(p.commission_amount)} RON</strong></td>
+                <td class="px-4 py-2.5"></td>
+                <td class="px-4 py-2.5"></td>
                 <td class="px-4 py-2.5 text-center">${pdfCell}</td>
             </tr>`;
 
