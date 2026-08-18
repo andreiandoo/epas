@@ -4808,6 +4808,11 @@ class LeisureController extends BaseController
                     // Prefer fiscal PDF; fall back to proforma when only that was sent.
                     $accountingPdfUrl = $acc['pdf_url'] ?? $proforma['pdf_url'] ?? null;
                     $accountingStage = $accExtRef ? 'fiscala' : 'proforma';
+                    // Oblio-issued number (e.g. AMBFF2342) — shown as the
+                    // primary identifier on the accordion; the internal
+                    // Tixello series (F-9862066) is shown as a small
+                    // secondary label underneath.
+                    $accountingNumber = $acc['invoice_number'] ?? $proforma['invoice_number'] ?? null;
 
                     // Article items straight from meta.items (both `name` and
                     // legacy `description`-only rows accepted).
@@ -4825,7 +4830,8 @@ class LeisureController extends BaseController
 
                     $invoicesData[] = [
                         'id' => $inv->id,
-                        'number' => $inv->number,
+                        'number' => $inv->number, // Tixello internal (e.g. F-9862066)
+                        'accounting_number' => $accountingNumber, // Oblio-issued (e.g. AMBFF2342)
                         'type' => $typeKey,
                         'type_label' => $typeLabel,
                         'amount' => (float) $inv->amount,
