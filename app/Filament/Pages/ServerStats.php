@@ -230,11 +230,55 @@ class ServerStats extends Page
         arsort($byDb);
         arsort($byApp);
 
+        // Pre-build display chips (label + css) in PHP so the Blade view stays
+        // free of multi-line ternaries in attributes (a compile footgun).
+        $chips = [];
+        foreach ($byState as $state => $count) {
+            $chips[] = [
+                'label' => $count . ' × ' . $state,
+                'class' => $state === 'active'
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400'
+                    : ($state === 'idle in transaction'
+                        ? 'bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400'
+                        : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'),
+            ];
+        }
+        foreach ($byDb as $db => $count) {
+            $chips[] = [
+                'label' => $count . ' pe „' . $db . '"',
+                'class' => 'bg-primary-50 text-primary-700 dark:bg-primary-400/10 dark:text-primary-400',
+            ];
+        }
+
         return [
             'total' => count($activity),
             'by_state' => $byState,
             'by_db' => $byDb,
             'by_app' => $byApp,
+            'chips' => $chips,
+        ];
+    }
+
+    /**
+     * Memory-config cards for the PostgreSQL section (built in PHP to keep the
+     * Blade loop trivial — no @php array + list-destructuring foreach).
+     *
+     * @return array<int, array{label:string,value:string,hint:string}>
+     */
+    public function getConfigCards(): array
+    {
+        $c = $this->pgConfig;
+        if (empty($c)) {
+            return [];
+        }
+
+        return [
+            ['label' => 'Shared buffers', 'value' => (string) ($c['shared_buffers'] ?? '—'), 'hint' => 'memorie partajată (o singură dată!)'],
+            ['label' => 'Effective cache', 'value' => (string) ($c['effective_cache_size'] ?? '—'), 'hint' => 'estimare cache OS'],
+            ['label' => 'Work mem', 'value' => (string) ($c['work_mem'] ?? '—'), 'hint' => 'per operație de sortare'],
+            ['label' => 'Max conexiuni', 'value' => (string) ($c['max_connections'] ?? '—'), 'hint' => 'limita configurată'],
+            ['label' => 'Conexiuni acum', 'value' => (string) ($c['current_connections'] ?? '—'), 'hint' => 'total deschise'],
+            ['label' => 'Idle in transaction', 'value' => (string) ($c['idle_in_transaction'] ?? '—'), 'hint' => 'de urmărit'],
         ];
     }
 

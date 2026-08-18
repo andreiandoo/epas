@@ -173,42 +173,22 @@
                 <x-slot name="heading">PostgreSQL — conexiuni & memorie</x-slot>
                 <x-slot name="description">De aici vezi exact ce e fiecare conexiune „idle": ce bază, ce user, ce aplicație, de cât timp.</x-slot>
 
-                @if(!empty($pgConfig))
+                @if(!empty($this->getConfigCards()))
                     <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                        @php
-                            $cfgItems = [
-                                ['shared_buffers', 'Shared buffers', 'memorie partajată (o singură dată!)'],
-                                ['effective_cache_size', 'Effective cache', 'estimare cache OS'],
-                                ['work_mem', 'Work mem', 'per operație de sortare'],
-                                ['max_connections', 'Max conexiuni', 'limita configurată'],
-                                ['current_connections', 'Conexiuni acum', 'total deschise'],
-                                ['idle_in_transaction', 'Idle in transaction', 'de urmărit'],
-                            ];
-                        @endphp
-                        @foreach($cfgItems as [$key, $label, $hint])
+                        @foreach($this->getConfigCards() as $card)
                             <div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-white/5">
-                                <div class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $label }}</div>
-                                <div class="mt-0.5 text-lg font-bold text-gray-900 dark:text-white">{{ $pgConfig[$key] ?? '—' }}</div>
-                                <div class="text-[10px] text-gray-400 dark:text-gray-500">{{ $hint }}</div>
+                                <div class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $card['label'] }}</div>
+                                <div class="mt-0.5 text-lg font-bold text-gray-900 dark:text-white">{{ $card['value'] }}</div>
+                                <div class="text-[10px] text-gray-400 dark:text-gray-500">{{ $card['hint'] }}</div>
                             </div>
                         @endforeach
                     </div>
                 @endif
 
-                @if(!empty($pgSummary))
+                @if(!empty($pgSummary['chips'] ?? []))
                     <div class="mb-4 flex flex-wrap gap-2 text-xs">
-                        @foreach(($pgSummary['by_state'] ?? []) as $state => $count)
-                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium
-                                {{ $state === 'active' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400'
-                                   : ($state === 'idle in transaction' ? 'bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400'
-                                   : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300') }}">
-                                {{ $count }} × {{ $state }}
-                            </span>
-                        @endforeach
-                        @foreach(($pgSummary['by_db'] ?? []) as $db => $count)
-                            <span class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 font-medium text-primary-700 dark:bg-primary-400/10 dark:text-primary-400">
-                                {{ $count }} pe „{{ $db }}"
-                            </span>
+                        @foreach($pgSummary['chips'] as $chip)
+                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium {{ $chip['class'] }}">{{ $chip['label'] }}</span>
                         @endforeach
                     </div>
                 @endif
