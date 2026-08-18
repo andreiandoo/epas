@@ -144,6 +144,19 @@ Schedule::command('orders:reconcile-expired')
         // Silent success — the command logs only when it actually fixes rows
     });
 
+// Daily full database backup (pg_dump custom format) at 03:00. The command
+// prunes local dumps older than backup.retention.daily (default 7) days, so
+// storage never grows unbounded. Encryption/compression default off (see
+// config/backup.php); the -Fc dump is already zlib-compressed. Runs as the
+// site user via the scheduler, so storage/backups is writable by it.
+Schedule::command('db:backup --verify')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        \Log::error('Daily database backup (db:backup) failed');
+    });
+
 // Schedule invoice status transition from 'new' to 'outstanding' (daily at 1 AM)
 Schedule::command('invoices:transition-new --grace-days=3')
     ->dailyAt('01:00')

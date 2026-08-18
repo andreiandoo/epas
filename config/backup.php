@@ -80,7 +80,10 @@ return [
     */
 
     'encryption' => [
-        'enabled' => env('BACKUP_ENCRYPTION_ENABLED', true),
+        // Off by default: local same-server backups don't need it and turning
+        // it on REQUIRES BACKUP_ENCRYPTION_KEY (the command throws without it).
+        // Enable + set the key only for offsite/remote backups.
+        'enabled' => env('BACKUP_ENCRYPTION_ENABLED', false),
         'algorithm' => env('BACKUP_ENCRYPTION_ALGORITHM', 'aes-256-cbc'),
         'key' => env('BACKUP_ENCRYPTION_KEY'), // Must be set in production
     ],
@@ -92,7 +95,10 @@ return [
     */
 
     'compression' => [
-        'enabled' => env('BACKUP_COMPRESSION_ENABLED', true),
+        // Off by default: the PostgreSQL custom format (-Fc) is already
+        // zlib-compressed, so an extra gzip pass adds CPU/time for almost no
+        // size gain. Enable only for plain-format dumps.
+        'enabled' => env('BACKUP_COMPRESSION_ENABLED', false),
         'algorithm' => env('BACKUP_COMPRESSION_ALGORITHM', 'gzip'), // gzip, bzip2, xz
         'level' => env('BACKUP_COMPRESSION_LEVEL', 6), // 1-9
     ],

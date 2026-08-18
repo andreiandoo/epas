@@ -134,9 +134,16 @@ class DatabaseBackupCommand extends Command
             '--username=' . $config['username'],
             '--dbname=' . $config['database'],
             '--format=' . $backupConfig['format'],
-            '--jobs=' . $backupConfig['jobs'],
             '--file=' . $outputFile,
         ];
+
+        // --jobs (parallel dump) is ONLY valid for the directory format.
+        // With custom/plain/tar pg_dump aborts: "parallel backup only
+        // supported for the directory format". Add it exclusively when the
+        // configured format actually supports it.
+        if (($backupConfig['format'] ?? 'custom') === 'directory' && (int) ($backupConfig['jobs'] ?? 1) > 1) {
+            $command[] = '--jobs=' . (int) $backupConfig['jobs'];
+        }
 
         // Add schema filter if specified
         if (!empty($backupConfig['schemas'])) {
@@ -246,20 +253,25 @@ class DatabaseBackupCommand extends Command
         $algorithm = config('backup.compression.algorithm');
         $level = config('backup.compression.level');
 
-        $outputPath = match ($algorithm) {
-            'gzip' => $path . '.gz',
-            'bzip2' => $path . '.bz2',
-            'xz' => $path . '.xz',
+        $ext = match ($algorithm) {
+            'gzip' => 'gz',
+            'bzip2' => 'bz2',
+            'xz' => 'xz',
             default => throw new \RuntimeException("Unsupported compression: {$algorithm}"),
         };
 
-        $command = match ($algorithm) {
-            'gzip' => ['gzip', "-{$level}", '-c', $path],
-            'bzip2' => ['bzip2', "-{$level}", '-c', $path],
-            'xz' => ['xz', "-{$level}", '-c', $path],
+        // Compress IN PLACE. The previous approach captured the compressor's
+        // stdout via getOutput() and file_put_contents()'d it — loading the
+        // entire (multi-GB) archive into PHP memory and risking OOM. Running
+        // the compressor without -c makes it rewrite `path` → `path.ext` and
+        // delete the original itself, streaming on disk with no PHP buffer.
+        $bin = match ($algorithm) {
+            'gzip' => 'gzip',
+            'bzip2' => 'bzip2',
+            'xz' => 'xz',
         };
 
-        $process = new Process($command);
+        $process = new Process([$bin, "-{$level}", '--force', $path]);
         $process->setTimeout(3600);
         $process->run();
 
@@ -267,12 +279,7 @@ class DatabaseBackupCommand extends Command
             throw new ProcessFailedException($process);
         }
 
-        file_put_contents($outputPath, $process->getOutput());
-
-        // Remove uncompressed file
-        unlink($path);
-
-        return $outputPath;
+        return $path . '.' . $ext;
     }
 
     /**
@@ -354,21 +361,19 @@ class DatabaseBackupCommand extends Command
     protected function cleanupOldBackups(): void
     {
         $localPath = config('backup.storage.local_path');
-        $retention = config('backup.retention');
+        $days = (int) (config('backup.retention.daily') ?? 7);
+        $cutoff = now()->subDays($days)->getTimestamp();
 
-        // Get all backup files
-        $files = glob("{$localPath}/backup_*");
-
-        // Sort by modification time (oldest first)
-        usort($files, fn($a, $b) => filemtime($a) - filemtime($b));
-
-        // Keep only the configured number of daily backups
-        $toKeep = $retention['daily'];
-        $toDelete = array_slice($files, 0, max(0, count($files) - $toKeep));
-
-        foreach ($toDelete as $file) {
-            unlink($file);
-            $this->line("Deleted old backup: " . basename($file));
+        // Age-based retention: delete daily dumps older than N days so the
+        // backups directory never grows unbounded (the literal "keep at most
+        // N days" rule). Only our own `backup_*` artifacts are touched —
+        // ad-hoc dumps (e.g. pre-reconcile-*.dump) are deliberately left for
+        // manual pruning so a safety snapshot is never auto-deleted.
+        foreach (glob("{$localPath}/backup_*") ?: [] as $file) {
+            if (is_file($file) && filemtime($file) < $cutoff) {
+                @unlink($file);
+                $this->line('Deleted old backup: ' . basename($file));
+            }
         }
     }
 
