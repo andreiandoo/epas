@@ -115,8 +115,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     };
 
     let currentEventId = null;
-    let openBreakdownIds = new Set(); // decontarea expandată
-    let openInvoiceIds = new Set();    // factura expandată (arată articolele)
+    let openPeriodKeys = new Set();   // perioadele expandate (parent accordion)
+    let openBreakdownIds = new Set(); // decont-uri expandate (grandchild — bilete)
+    let openInvoiceIds = new Set();   // facturi expandate (grandchild — articole)
 
     async function loadPayouts() {
         if (!currentEventId) return;
@@ -181,42 +182,56 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
 
-        // Build the flat rows list — decont row followed by its Oblio invoices
-        // as first-class sibling rows (indented visually), each with its own
-        // expand chevron. Structure per payout:
-        //   [DECONT row] → click expands → breakdown sub-row (colspan)
-        //   [INVOICE row] (sibling of decont) → click expands → articles sub-row
-        //   [INVOICE row] …
-        tbody.innerHTML = payouts.map(p => {
+        // Group payouts by settlement period (period_start + period_end pair)
+        // so each period becomes a parent accordion that expands to its
+        // children (deconturi + facturi). Newest period on top.
+        const byPeriod = {};
+        payouts.forEach(p => {
+            const key = (p.period_start || '') + '_' + (p.period_end || '');
+            if (!byPeriod[key]) {
+                byPeriod[key] = { key, period_start: p.period_start, period_end: p.period_end, payouts: [] };
+            }
+            byPeriod[key].payouts.push(p);
+        });
+        const groups = Object.values(byPeriod).sort((a, b) => (b.period_start || '').localeCompare(a.period_start || ''));
+
+        function periodLabel(g) {
+            if (!g.period_start && !g.period_end) return 'Fără perioadă';
+            const s = g.period_start ? new Date(g.period_start).toLocaleDateString('ro-RO', { day:'2-digit', month:'short' }) : '—';
+            const e = g.period_end ? new Date(g.period_end).toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+            return s + ' – ' + e;
+        }
+
+        // Render a single decont child row (chevron + inline summary), plus
+        // its bilet-breakdown sub-row when expanded.
+        function renderDecontChild(p) {
             const isOpen = openBreakdownIds.has(p.id);
+            const chevron = `<svg class="w-4 h-4 text-emerald-700 transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
             const pdfCell = p.pdf_url
-                ? `<a href="${p.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>PDF</a>`
+                ? `<a href="${p.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-200">PDF</a>`
                 : '<span class="text-[11px] text-muted">—</span>';
-            const chevron = `<svg class="w-4 h-4 text-muted transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
+            const numberCell = `<div class="flex items-center gap-2">
+                    <span class="text-[10px] text-emerald-700 font-bold uppercase">decont</span>
+                    <span class="font-bold text-emerald-900">${escapeHtml(p.decont_series || p.reference || ('#' + p.id))}</span>
+                </div>
+                <div class="text-[10px] text-muted mt-0.5">${escapeHtml(p.reference || '')}</div>`;
 
-            const serieBadge = p.decont_series
-                ? `<span class="font-bold text-secondary">${escapeHtml(p.decont_series)}</span>`
-                : `<span class="text-muted">${escapeHtml(p.reference || '#'+p.id)}</span>`;
-
-            // DECONT row.
-            const row = `<tr class="hover:bg-slate-50 cursor-pointer" data-dc-toggle="${p.id}">
-                <td class="px-4 py-3">${chevron}</td>
-                <td class="px-4 py-3">${serieBadge}<div class="text-[10px] text-muted">${escapeHtml(p.reference || '')}</div></td>
-                <td class="px-4 py-3 text-xs">${period(p)}</td>
-                <td class="px-4 py-3">${societyBadge(p)}</td>
-                <td class="px-4 py-3 text-right">${fmtMoney(p.gross_amount)} RON</td>
-                <td class="px-4 py-3 text-right text-blue-700 font-semibold">${fmtMoney(p.commission_amount)} RON</td>
-                <td class="px-4 py-3 text-right text-muted">${fmtMoney(p.discount_amount)} RON</td>
-                <td class="px-4 py-3 text-right font-bold text-emerald-800">${fmtMoney(p.amount)} RON</td>
-                <td class="px-4 py-3 text-center">${pdfCell}</td>
+            let row = `<tr class="bg-emerald-50/60 hover:bg-emerald-100/60 cursor-pointer border-l-4 border-emerald-400" data-dc-toggle="${p.id}">
+                <td class="px-4 py-2.5 pl-10">${chevron}</td>
+                <td class="px-4 py-2.5">${numberCell}</td>
+                <td class="px-4 py-2.5 text-xs">${period(p)}</td>
+                <td class="px-4 py-2.5">${societyBadge(p)}</td>
+                <td class="px-4 py-2.5 text-right">${fmtMoney(p.gross_amount)} RON</td>
+                <td class="px-4 py-2.5 text-right text-blue-700 font-semibold">${fmtMoney(p.commission_amount)} RON</td>
+                <td class="px-4 py-2.5 text-right text-muted">${fmtMoney(p.discount_amount)} RON</td>
+                <td class="px-4 py-2.5 text-right font-bold text-emerald-800">${fmtMoney(p.amount)} RON</td>
+                <td class="px-4 py-2.5 text-center">${pdfCell}</td>
             </tr>`;
 
-            // DECONT breakdown expand row (bilete emise).
-            let breakdownRow = '';
             if (isOpen) {
                 const rows = p.breakdown || [];
                 if (!rows.length) {
-                    breakdownRow = `<tr class="bg-slate-50/60"><td colspan="9" class="px-6 py-3 text-xs text-muted">Nu există detaliu ticket_breakdown pentru acest decont.</td></tr>`;
+                    row += `<tr class="bg-emerald-50/30"><td colspan="9" class="px-10 py-3 text-xs text-muted">Nu există detaliu ticket_breakdown pentru acest decont.</td></tr>`;
                 } else {
                     const subRows = rows.map(b => `<tr class="border-t border-slate-200">
                         <td class="px-2 py-1.5 text-xs">${escapeHtml(b.name)}</td>
@@ -227,106 +242,156 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <td class="px-2 py-1.5 text-xs text-right text-muted">${fmtMoney(b.discount)}</td>
                         <td class="px-2 py-1.5 text-xs text-right font-semibold text-emerald-800">${fmtMoney(b.net)}</td>
                     </tr>`).join('');
-                    breakdownRow = `<tr class="bg-slate-50/60">
-                        <td colspan="9" class="px-6 py-3">
-                            <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Detaliu bilete emise pe acest decont</p>
-                            <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
-                                <thead class="text-[10px] uppercase text-muted bg-slate-100">
-                                    <tr>
-                                        <th class="px-2 py-1.5 text-left">Tip bilet</th>
-                                        <th class="px-2 py-1.5 text-right">Cant.</th>
-                                        <th class="px-2 py-1.5 text-right">Preț unit</th>
-                                        <th class="px-2 py-1.5 text-right">Brut</th>
-                                        <th class="px-2 py-1.5 text-right text-blue-700">Comision</th>
-                                        <th class="px-2 py-1.5 text-right">Reducere</th>
-                                        <th class="px-2 py-1.5 text-right">Net</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${subRows}</tbody>
-                            </table>
-                        </td>
-                    </tr>`;
+                    row += `<tr class="bg-emerald-50/30"><td colspan="9" class="px-10 py-3">
+                        <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Detaliu bilete emise pe acest decont</p>
+                        <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <thead class="text-[10px] uppercase text-muted bg-slate-100">
+                                <tr>
+                                    <th class="px-2 py-1.5 text-left">Tip bilet</th>
+                                    <th class="px-2 py-1.5 text-right">Cant.</th>
+                                    <th class="px-2 py-1.5 text-right">Preț unit</th>
+                                    <th class="px-2 py-1.5 text-right">Brut</th>
+                                    <th class="px-2 py-1.5 text-right text-blue-700">Comision</th>
+                                    <th class="px-2 py-1.5 text-right">Reducere</th>
+                                    <th class="px-2 py-1.5 text-right">Net</th>
+                                </tr>
+                            </thead>
+                            <tbody>${subRows}</tbody>
+                        </table>
+                    </td></tr>`;
                 }
             }
+            return row;
+        }
 
-            // INVOICE rows — one per Oblio-sent invoice, each a sibling of the
-            // parent decont row (same table columns, indented + tinted so the
-            // parent-child grouping is visually obvious). Click on an invoice
-            // row expands its articles below it.
-            let invoiceRows = '';
-            const invoices = p.invoices || [];
-            invoices.forEach(inv => {
-                const invOpen = openInvoiceIds.has(inv.id);
-                const invChevron = `<svg class="w-4 h-4 text-blue-600 transition-transform ${invOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
-                const invPdf = inv.accounting_pdf_url
-                    ? `<a href="${inv.accounting_pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100">PDF</a>`
-                    : '<span class="text-[11px] text-muted">—</span>';
-                const stageLabel = INV_STAGE_LABEL[inv.accounting_stage] || inv.accounting_stage;
-                const dateLabel = inv.issue_date
-                    ? new Date(inv.issue_date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' })
-                    : '-';
-                // Number cell: Oblio number BIG, Tixello internal small below.
-                const numberCell = inv.accounting_number
-                    ? `<span class="font-bold text-blue-800">${escapeHtml(inv.accounting_number)}</span><div class="text-[10px] text-muted">${escapeHtml(inv.number || '')}</div>`
-                    : `<span class="font-semibold text-secondary">${escapeHtml(inv.number || ('#' + inv.id))}</span>`;
+        // Render a single factura child row (sibling of decont) + its
+        // articole sub-row when expanded. Uses the parent payout's society
+        // (issuer of the invoice) for the society badge.
+        function renderInvoiceChild(inv, parentPayout) {
+            const invOpen = openInvoiceIds.has(inv.id);
+            const chevron = `<svg class="w-4 h-4 text-amber-700 transition-transform ${invOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
+            const invPdf = inv.accounting_pdf_url
+                ? `<a href="${inv.accounting_pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-100 text-amber-900 border border-amber-200 rounded-lg hover:bg-amber-200">PDF</a>`
+                : '<span class="text-[11px] text-muted">—</span>';
+            const dateLabel = inv.issue_date
+                ? new Date(inv.issue_date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' })
+                : '-';
+            // Number cell: Oblio number BIG, Tixello internal small below,
+            // prefixed by "factura" label (per operator request).
+            const numberCell = inv.accounting_number
+                ? `<div class="flex items-center gap-2">
+                        <span class="text-[10px] text-amber-700 font-bold uppercase">factura</span>
+                        <span class="font-bold text-amber-900">${escapeHtml(inv.accounting_number)}</span>
+                    </div>
+                    <div class="text-[10px] text-muted mt-0.5">${escapeHtml(inv.number || '')}</div>`
+                : `<div class="flex items-center gap-2">
+                        <span class="text-[10px] text-amber-700 font-bold uppercase">factura</span>
+                        <span class="font-semibold text-amber-900">${escapeHtml(inv.number || ('#' + inv.id))}</span>
+                    </div>`;
 
-                invoiceRows += `<tr class="bg-blue-50/40 hover:bg-blue-100/50 cursor-pointer border-l-4 border-blue-300" data-inv-toggle="${inv.id}">
-                    <td class="px-4 py-2.5 pl-8">${invChevron}</td>
-                    <td class="px-4 py-2.5">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] text-blue-600 font-bold uppercase">Factură</span>
-                            <span class="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-white text-blue-800 border border-blue-200">${escapeHtml(inv.type_label || inv.type || '')}</span>
-                            <span class="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-white text-slate-600 border border-slate-200">${escapeHtml(stageLabel)}</span>
-                        </div>
-                        <div class="mt-0.5">${numberCell}</div>
-                    </td>
-                    <td class="px-4 py-2.5 text-xs">Data: <strong>${dateLabel}</strong></td>
-                    <td class="px-4 py-2.5">${invStatusPill(inv.status)}</td>
-                    <td class="px-4 py-2.5 text-right text-xs text-muted">Subtotal: ${fmtMoney(inv.subtotal)}</td>
-                    <td class="px-4 py-2.5 text-right text-xs text-muted">TVA: ${fmtMoney(inv.vat_amount)}</td>
-                    <td class="px-4 py-2.5 text-right text-muted">—</td>
-                    <td class="px-4 py-2.5 text-right font-bold text-blue-800">${fmtMoney(inv.amount)} ${inv.currency || 'RON'}</td>
-                    <td class="px-4 py-2.5 text-center">${invPdf}</td>
-                </tr>`;
+            let row = `<tr class="bg-amber-50/60 hover:bg-amber-100/60 cursor-pointer border-l-4 border-amber-400" data-inv-toggle="${inv.id}">
+                <td class="px-4 py-2.5 pl-10">${chevron}</td>
+                <td class="px-4 py-2.5">${numberCell}</td>
+                <td class="px-4 py-2.5 text-xs">Data: <strong>${dateLabel}</strong></td>
+                <td class="px-4 py-2.5">${societyBadge(parentPayout)}</td>
+                <td class="px-4 py-2.5 text-right text-xs text-muted">Subtotal: ${fmtMoney(inv.subtotal)}</td>
+                <td class="px-4 py-2.5 text-right text-xs text-muted">TVA: ${fmtMoney(inv.vat_amount)}</td>
+                <td class="px-4 py-2.5 text-right text-muted">—</td>
+                <td class="px-4 py-2.5 text-right font-bold text-amber-900">${fmtMoney(inv.amount)} ${inv.currency || 'RON'}</td>
+                <td class="px-4 py-2.5 text-center">${invPdf}</td>
+            </tr>`;
 
-                if (invOpen) {
-                    const items = inv.items || [];
-                    if (!items.length) {
-                        invoiceRows += `<tr class="bg-blue-50/20"><td colspan="9" class="px-8 py-3 text-xs text-muted italic">Factura nu are articole înregistrate.</td></tr>`;
-                    } else {
-                        const itemBody = items.map(it => `<tr class="border-t border-slate-100">
-                            <td class="px-2 py-1.5 text-[11px] align-top">
-                                <div class="font-semibold">${escapeHtml(it.name || '')}</div>
-                                ${it.description && it.description !== it.name ? `<div class="text-muted mt-0.5 text-[10px]">${escapeHtml(it.description)}</div>` : ''}
-                            </td>
-                            <td class="px-2 py-1.5 text-[11px] text-right">${Number(it.quantity || 0).toLocaleString('ro-RO')}</td>
-                            <td class="px-2 py-1.5 text-[11px] text-right">${fmtMoney(it.unit_price)}</td>
-                            <td class="px-2 py-1.5 text-[11px] text-right font-semibold">${fmtMoney(it.amount)}</td>
-                        </tr>`).join('');
-                        invoiceRows += `<tr class="bg-blue-50/20">
-                            <td colspan="9" class="px-8 py-3">
-                                <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Articole factură</p>
-                                <table class="w-full text-[11px] bg-white border border-slate-200 rounded-lg overflow-hidden">
-                                    <thead class="text-[10px] uppercase text-muted bg-slate-100">
-                                        <tr>
-                                            <th class="px-2 py-1.5 text-left">Denumire / descriere</th>
-                                            <th class="px-2 py-1.5 text-right">Cant.</th>
-                                            <th class="px-2 py-1.5 text-right">Preț unit</th>
-                                            <th class="px-2 py-1.5 text-right">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>${itemBody}</tbody>
-                                </table>
-                            </td>
-                        </tr>`;
-                    }
+            if (invOpen) {
+                const items = inv.items || [];
+                if (!items.length) {
+                    row += `<tr class="bg-amber-50/30"><td colspan="9" class="px-10 py-3 text-xs text-muted italic">Factura nu are articole înregistrate.</td></tr>`;
+                } else {
+                    const itemBody = items.map(it => `<tr class="border-t border-slate-100">
+                        <td class="px-2 py-1.5 text-[11px] align-top">
+                            <div class="font-semibold">${escapeHtml(it.name || '')}</div>
+                            ${it.description && it.description !== it.name ? `<div class="text-muted mt-0.5 text-[10px]">${escapeHtml(it.description)}</div>` : ''}
+                        </td>
+                        <td class="px-2 py-1.5 text-[11px] text-right">${Number(it.quantity || 0).toLocaleString('ro-RO')}</td>
+                        <td class="px-2 py-1.5 text-[11px] text-right">${fmtMoney(it.unit_price)}</td>
+                        <td class="px-2 py-1.5 text-[11px] text-right font-semibold">${fmtMoney(it.amount)}</td>
+                    </tr>`).join('');
+                    row += `<tr class="bg-amber-50/30"><td colspan="9" class="px-10 py-3">
+                        <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Articole factură</p>
+                        <table class="w-full text-[11px] bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <thead class="text-[10px] uppercase text-muted bg-slate-100">
+                                <tr>
+                                    <th class="px-2 py-1.5 text-left">Denumire / descriere</th>
+                                    <th class="px-2 py-1.5 text-right">Cant.</th>
+                                    <th class="px-2 py-1.5 text-right">Preț unit</th>
+                                    <th class="px-2 py-1.5 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${itemBody}</tbody>
+                        </table>
+                    </td></tr>`;
                 }
-            });
+            }
+            return row;
+        }
 
-            return row + breakdownRow + invoiceRows;
+        // Render one PERIOD accordion group.
+        tbody.innerHTML = groups.map(g => {
+            const isOpen = openPeriodKeys.has(g.key);
+            const chevron = `<svg class="w-4 h-4 text-slate-600 transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
+
+            // Aggregate summary for the parent row.
+            let sumNet = 0, sumGross = 0, sumComm = 0, cntInv = 0;
+            g.payouts.forEach(p => {
+                sumNet += Number(p.amount || 0);
+                sumGross += Number(p.gross_amount || 0);
+                sumComm += Number(p.commission_amount || 0);
+                cntInv += (p.invoices || []).length;
+            });
+            const cntDec = g.payouts.length;
+            const summary = `${cntDec} decont${cntDec === 1 ? '' : 'uri'} · ${cntInv} factur${cntInv === 1 ? 'ă' : 'i'}`;
+
+            let out = `<tr class="bg-slate-100 hover:bg-slate-200 cursor-pointer font-semibold" data-period-toggle="${g.key}">
+                <td class="px-4 py-3">${chevron}</td>
+                <td class="px-4 py-3">
+                    <span class="text-[10px] text-slate-600 font-bold uppercase">Perioada</span>
+                    <div class="text-secondary font-bold">${periodLabel(g)}</div>
+                </td>
+                <td class="px-4 py-3 text-xs text-muted">${summary}</td>
+                <td class="px-4 py-3"></td>
+                <td class="px-4 py-3 text-right text-xs text-muted">${fmtMoney(sumGross)} RON</td>
+                <td class="px-4 py-3 text-right text-xs text-blue-700">${fmtMoney(sumComm)} RON</td>
+                <td class="px-4 py-3"></td>
+                <td class="px-4 py-3 text-right font-bold text-emerald-800">${fmtMoney(sumNet)} RON</td>
+                <td class="px-4 py-3"></td>
+            </tr>`;
+
+            if (isOpen) {
+                // Children: interleave decont child + its invoice children.
+                // Each payout emits: [decont row] [invoice rows...] so the
+                // decont-to-facturi grouping stays visible even inside a
+                // shared period.
+                g.payouts.forEach(p => {
+                    out += renderDecontChild(p);
+                    (p.invoices || []).forEach(inv => {
+                        out += renderInvoiceChild(inv, p);
+                    });
+                });
+            }
+            return out;
         }).join('');
 
-        // Wire up toggle for decont rows
+        // Wire up toggle for period parent rows
+        tbody.querySelectorAll('[data-period-toggle]').forEach(tr => {
+            tr.addEventListener('click', (ev) => {
+                if (ev.target.closest('a')) return;
+                const key = tr.dataset.periodToggle;
+                if (openPeriodKeys.has(key)) openPeriodKeys.delete(key);
+                else openPeriodKeys.add(key);
+                render(window.__dcLast || []);
+            });
+        });
+
+        // Wire up toggle for decont child rows
         tbody.querySelectorAll('[data-dc-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
@@ -337,7 +402,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Wire up toggle for invoice rows (siblings of decont)
+        // Wire up toggle for invoice child rows (siblings of decont)
         tbody.querySelectorAll('[data-inv-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
