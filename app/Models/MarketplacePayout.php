@@ -1134,8 +1134,19 @@ class MarketplacePayout extends Model
             $itemMode = $item['commission_mode'] ?? null;
             $isOnTop = in_array($itemMode, ['added_on_top', 'on_top'], true);
 
-            $commission = $commPer * $qty;
-            $gross = $price * $qty + ($isOnTop ? $commission : 0);
+            // Prefer the snapshot's stored values when present — same precedence
+            // as $net below. Recomputing from `price × qty` drifts by cents when
+            // the stored `price` was a weighted-average rounded to 4 decimals
+            // (e.g. ADULT on payout 3296: stored gross=9102.00 vs recompute
+            // 28.27 × 322 = 9102.94, +0.94). Cumulated across ticket types this
+            // was the 1.37 diff between the tab Deconturi total (23,226 = sum
+            // stored gross) and the payout page total (23,227.37 = sum recompute).
+            $commission = isset($item['commission_amount'])
+                ? (float) $item['commission_amount']
+                : $commPer * $qty;
+            $gross = isset($item['gross'])
+                ? (float) $item['gross']
+                : ($price * $qty + ($isOnTop ? $commission : 0));
 
             $discount = $hasPerRowDiscount
                 ? (float) ($item['discount'] ?? 0)
