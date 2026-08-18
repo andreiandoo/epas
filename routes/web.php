@@ -439,6 +439,12 @@ Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
         ->name('admin.tenant.package.regenerate');
     Route::get('/tenants/{tenant}/domains/{domain}/package/instructions', [PackageController::class, 'instructions'])
         ->name('admin.tenant.package.instructions');
+
+    // Stream a database backup for download (super-admin gated in the
+    // controller). Slash-free filename pattern is the first traversal guard.
+    Route::get('/database-backups/download/{filename}', [\App\Http\Controllers\Admin\DatabaseBackupController::class, 'download'])
+        ->where('filename', '[A-Za-z0-9._-]+')
+        ->name('admin.database-backups.download');
 });
 
 // Admin Contract Management Routes
