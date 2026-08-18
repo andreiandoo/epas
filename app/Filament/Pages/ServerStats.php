@@ -28,6 +28,9 @@ class ServerStats extends Page
     public ?string $phpMemoryLimit = null;
     public bool $shellAvailable = true;
 
+    // Database size (cheap pg catalog queries — no shell/root needed).
+    public array $database = [];
+
     // Expensive, opt-in directory breakdown.
     public array $dirSizes = [];
     public bool $dirScanned = false;
@@ -135,6 +138,44 @@ class ServerStats extends Page
 
         // --- Top processes by memory ---
         $this->processes = $this->topProcesses();
+
+        // --- PostgreSQL database size + top tables ---
+        $this->database = $this->readDatabaseSizes();
+    }
+
+    /**
+     * PostgreSQL live size (a big chunk of /var/lib/postgresql) + the largest
+     * tables incl. their indexes/toast. Cheap system-catalog reads over the
+     * existing connection — no shell, no filesystem, no root.
+     */
+    protected function readDatabaseSizes(): array
+    {
+        if (config('database.default') !== 'pgsql') {
+            return [];
+        }
+        try {
+            $meta = \DB::selectOne('select current_database() as db, pg_database_size(current_database()) as size');
+            $tables = \DB::select(
+                "select c.relname as name, pg_total_relation_size(c.oid) as size
+                 from pg_class c
+                 join pg_namespace n on n.oid = c.relnamespace
+                 where n.nspname = 'public' and c.relkind = 'r'
+                 order by pg_total_relation_size(c.oid) desc
+                 limit 12"
+            );
+
+            return [
+                'name' => $meta->db ?? '',
+                'size' => (int) ($meta->size ?? 0),
+                'size_h' => $this->humanSize((int) ($meta->size ?? 0)),
+                'tables' => array_map(fn ($t) => [
+                    'name' => $t->name,
+                    'size_h' => $this->humanSize((int) $t->size),
+                ], $tables),
+            ];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -279,7 +320,10 @@ class ServerStats extends Page
 
     protected function topProcesses(): array
     {
-        $raw = $this->shell('ps -eo pid,user,comm,pmem,rss --sort=-rss 2>/dev/null | head -n 11');
+        // args LAST + un-truncated: for PostgreSQL the process title carried in
+        // args reveals what each backend is actually doing (idle client,
+        // autovacuum, checkpointer, ...) — `comm` only ever says "postgres".
+        $raw = $this->shell('ps -eo pid,user,comm,pmem,rss,args --sort=-rss 2>/dev/null | head -n 11');
         if (!$raw) {
             return [];
         }
@@ -287,8 +331,8 @@ class ServerStats extends Page
         $lines = preg_split('/\r?\n/', trim($raw));
         array_shift($lines); // header
         foreach ($lines as $line) {
-            $p = preg_split('/\s+/', trim($line), 5);
-            if (count($p) < 5) {
+            $p = preg_split('/\s+/', trim($line), 6);
+            if (count($p) < 6) {
                 continue;
             }
             $rows[] = [
@@ -297,9 +341,57 @@ class ServerStats extends Page
                 'command' => $p[2],
                 'mem_pct' => (float) $p[3],
                 'rss_h' => $this->humanSize((int) $p[4] * 1024),
+                'description' => $this->describeProcess($p[2], $p[5]),
             ];
         }
         return $rows;
+    }
+
+    /**
+     * Human explanation of a process from its comm + full args. PostgreSQL sets
+     * its process title (visible in args) to describe each backend's job, so we
+     * decode that; other well-known daemons get a static label.
+     */
+    protected function describeProcess(string $comm, string $args): string
+    {
+        $args = trim($args);
+        $lower = strtolower($comm . ' ' . $args);
+
+        if ($comm === 'postgres' || str_starts_with($args, 'postgres:')) {
+            $title = strtolower(trim((string) preg_replace('/^postgres:\s*[\d\/a-z]*:?\s*/i', '', $args)));
+
+            return match (true) {
+                str_contains($title, 'checkpointer')                 => 'PostgreSQL — checkpointer (scrie periodic datele pe disc)',
+                str_contains($title, 'background writer')            => 'PostgreSQL — background writer (golește bufferele modificate)',
+                str_contains($title, 'walwriter')                    => 'PostgreSQL — WAL writer (jurnalul de tranzacții)',
+                str_contains($title, 'autovacuum launcher')          => 'PostgreSQL — autovacuum launcher',
+                str_contains($title, 'autovacuum worker')            => 'PostgreSQL — autovacuum worker (curăță/analizează tabele)',
+                str_contains($title, 'logical replication launcher') => 'PostgreSQL — logical replication launcher',
+                str_contains($title, 'walsender')                    => 'PostgreSQL — WAL sender (replicare)',
+                str_contains($title, 'walreceiver')                  => 'PostgreSQL — WAL receiver (replicare)',
+                str_contains($title, 'archiver')                     => 'PostgreSQL — WAL archiver',
+                str_contains($title, 'startup')                      => 'PostgreSQL — startup / recovery',
+                str_contains($title, 'parallel worker')              => 'PostgreSQL — parallel query worker',
+                str_contains($title, 'idle in transaction')          => 'PostgreSQL — conexiune client (idle in transaction — ⚠️ ține locks)',
+                str_contains($title, 'idle')                         => 'PostgreSQL — conexiune client inactivă (idle)',
+                $title !== ''                                        => 'PostgreSQL — conexiune client activă: ' . \Illuminate\Support\Str::limit($title, 70),
+                default                                              => 'PostgreSQL — proces server',
+            };
+        }
+
+        return match (true) {
+            str_contains($lower, 'mysqld')                                => 'MySQL/MariaDB — server de baze de date (alt serviciu/site)',
+            str_contains($lower, 'php-fpm')                               => 'PHP-FPM — worker care rulează aplicația web (Laravel)',
+            $comm === 'php'                                               => 'PHP — worker/CLI (web, sau artisan/queue/scheduler)',
+            str_contains($lower, 'nginx')                                 => 'Nginx — server web (servește request-urile HTTP)',
+            str_contains($lower, 'apache') || str_contains($lower, 'httpd') => 'Apache — server web',
+            str_contains($lower, 'redis')                                 => 'Redis — cache / cozi',
+            str_contains($lower, 'node')                                  => 'Node.js — proces JS (build/asset/serviciu)',
+            str_contains($lower, 'supervisor')                            => 'Supervisor — manager procese (queue workers)',
+            str_contains($lower, 'sshd')                                  => 'SSH daemon',
+            str_contains($lower, 'systemd')                               => 'systemd — manager de sistem',
+            default                                                       => $comm,
+        };
     }
 
     protected function cpuCores(): int

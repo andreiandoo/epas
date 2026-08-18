@@ -106,7 +106,8 @@
                             <tr class="border-b border-gray-200 text-left dark:border-white/10">
                                 <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">PID</th>
                                 <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">User</th>
-                                <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Comandă</th>
+                                <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Proces</th>
+                                <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Ce este / ce face</th>
                                 <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">RAM</th>
                                 <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">%RAM</th>
                             </tr>
@@ -117,6 +118,7 @@
                                     <td class="px-3 py-2 font-mono text-gray-500 dark:text-gray-400">{{ $proc['pid'] }}</td>
                                     <td class="px-3 py-2 font-mono text-gray-500 dark:text-gray-400">{{ $proc['user'] }}</td>
                                     <td class="px-3 py-2 font-mono text-gray-900 dark:text-white">{{ $proc['command'] }}</td>
+                                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $proc['description'] ?? '' }}</td>
                                     <td class="px-3 py-2 text-right font-mono">{{ $proc['rss_h'] }}</td>
                                     <td class="px-3 py-2 text-right font-mono">{{ $proc['mem_pct'] }}%</td>
                                 </tr>
@@ -124,6 +126,44 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
+                    ℹ️ La PostgreSQL, coloana <strong>RAM</strong> (RSS) per proces include și <strong>memoria partajată</strong> (<code>shared_buffers</code>), aceeași pentru toate backend-urile — deci <strong>NU se adună</strong>. Memoria reală ≈ <code>shared_buffers</code> (o singură dată) + puțin per conexiune. „idle in transaction" = conexiune care ține tranzacția deschisă (poate bloca vacuum-ul) — de urmărit dacă apar multe.
+                </div>
+            </x-filament::section>
+        @endif
+
+        {{-- PostgreSQL database size --}}
+        @if(!empty($database))
+            <x-filament::section>
+                <x-slot name="heading">Bază de date PostgreSQL</x-slot>
+                <x-slot name="description">Dimensiunea bazei live „{{ $database['name'] }}" (parte din <code>/var</code>) + cele mai mari tabele (cu indexuri).</x-slot>
+
+                <div class="mb-4 flex items-baseline gap-2">
+                    <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ $database['size_h'] }}</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">total bază de date</span>
+                </div>
+
+                @if(!empty($database['tables']))
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-200 text-left dark:border-white/10">
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Tabel</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Dimensiune (cu indexuri)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-white/5">
+                                @foreach($database['tables'] as $tbl)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+                                        <td class="px-3 py-2 font-mono text-gray-900 dark:text-white">{{ $tbl['name'] }}</td>
+                                        <td class="px-3 py-2 text-right font-mono">{{ $tbl['size_h'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </x-filament::section>
         @endif
 
