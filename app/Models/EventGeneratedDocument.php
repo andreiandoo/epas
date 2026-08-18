@@ -215,6 +215,32 @@ class EventGeneratedDocument extends Model
             $htmlContent .= '<div style="page-break-before: always;"></div>' . $htmlContentPage2;
         }
 
+        // Fix (2026-08-18): DomPDF renders numeric HTML entities in the
+        // Latin-1 range (e.g. &#xe2; for â) correctly but drops chars
+        // in the Latin Extended-A range (e.g. &#x103; for ă) inside
+        // table headers with tight styling — user reported "?" instead
+        // of ă on the Page 2 table for declaratie_impozite. Converting
+        // NUMERIC entities (decimal and hex) to raw UTF-8 sidesteps the
+        // parser path that trips on those chars. Named entities
+        // (&amp;, &lt;, &gt;, &nbsp; …) are LEFT ALONE so the HTML
+        // structure and standard escapes remain intact.
+        $htmlContent = preg_replace_callback(
+            '/&#(x[0-9a-fA-F]+|[0-9]+);/',
+            function ($m) {
+                $code = $m[1];
+                if ($code[0] === 'x' || $code[0] === 'X') {
+                    $codepoint = hexdec(substr($code, 1));
+                } else {
+                    $codepoint = (int) $code;
+                }
+                if ($codepoint <= 0 || $codepoint > 0x10FFFF) {
+                    return $m[0];
+                }
+                return mb_chr($codepoint, 'UTF-8');
+            },
+            $htmlContent
+        );
+
         // Generate PDF using DomPDF
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($htmlContent);
 
