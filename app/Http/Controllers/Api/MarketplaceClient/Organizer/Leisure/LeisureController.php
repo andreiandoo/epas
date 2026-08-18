@@ -4684,10 +4684,27 @@ class LeisureController extends BaseController
         // pentru cazul in care e un team member logat)
         $eventOrganizerId = $eventModel->marketplace_organizer_id ?? $organizer->id;
 
+        // Resolve issuing-company names once per event so the API can send
+        // display-ready names ("ASOCIATIA PRO SZENT ANNA" / "Csomadcom SRL")
+        // instead of raw 'primary' / 'secondary' slugs. Fetch fresh — the
+        // parent MarketplaceOrganizer isn't loaded on the payout query below.
+        $eventOrg = \App\Models\MarketplaceOrganizer::find($eventOrganizerId);
+        $societyNames = [
+            'primary' => (string) ($eventOrg?->company_name ?? ''),
+            'secondary' => (string) ($eventOrg?->secondary_company_name ?? ''),
+        ];
+
         $payouts = \App\Models\MarketplacePayout::query()
             ->where('marketplace_organizer_id', $eventOrganizerId)
             ->where('event_id', $eventModel->id)
-            ->with(['decontDocument:id,marketplace_payout_id,file_path,file_name'])
+            ->with([
+                'decontDocument:id,marketplace_payout_id,file_path,file_name',
+                // Load ALL invoices tied to this payout (organizer + POS +
+                // general_client). The HasOne relations on the model each
+                // filter by meta->is_pos_commission — we want the unfiltered
+                // set so any Oblio-sent invoice surfaces on the accordion.
+                'invoicesForPayout',
+            ])
             ->orderByDesc('created_at')
             ->get([
                 'id',
@@ -4704,6 +4721,7 @@ class LeisureController extends BaseController
                 'fees_amount',
                 'status',
                 'source',
+                'issuing_company',
                 'ticket_breakdown',
                 'created_at',
                 'completed_at',
@@ -4715,7 +4733,7 @@ class LeisureController extends BaseController
                 'title' => $this->localizedTitle($eventModel),
             ],
             'currency' => $payouts->first()?->currency ?? 'RON',
-            'payouts' => $payouts->map(function ($p) {
+            'payouts' => $payouts->map(function ($p) use ($societyNames) {
                 $doc = $p->decontDocument;
                 $docUrl = null;
                 if ($doc && $doc->file_path) {
@@ -4745,6 +4763,83 @@ class LeisureController extends BaseController
                         'net' => round($net, 2),
                     ];
                 }
+
+                // Society resolution: primary/secondary → display name from
+                // organizer, "-" for legacy payouts without issuing_company.
+                $issuer = $p->issuing_company;
+                $societyName = '-';
+                $societyKey = null;
+                if ($issuer === 'primary' || $issuer === 'secondary') {
+                    $societyKey = $issuer;
+                    $resolved = $societyNames[$issuer] ?? '';
+                    $societyName = $resolved !== '' ? $resolved : ucfirst($issuer);
+                }
+
+                // Invoices linked to this payout, filtered to only those that
+                // were actually sent to Oblio (either as proformă or fiscală).
+                // Local drafts without an accounting external_ref are hidden —
+                // the organizer only sees invoices that count as issued.
+                $invoicesData = [];
+                foreach (($p->invoicesForPayout ?? collect()) as $inv) {
+                    $meta = is_array($inv->meta) ? $inv->meta : [];
+                    $acc = $meta['accounting'] ?? [];
+                    $proforma = $meta['accounting_proforma'] ?? [];
+                    $accExtRef = $acc['external_ref'] ?? null;
+                    $proExtRef = $proforma['external_ref'] ?? null;
+                    if (!$accExtRef && !$proExtRef) {
+                        continue; // Not sent to Oblio yet — hide from organizer view.
+                    }
+
+                    // Type label — organizer/general_client comes from
+                    // meta.recipient_type; POS commission has meta.is_pos_commission=true.
+                    $isPos = (bool) ($meta['is_pos_commission'] ?? false);
+                    $recipientType = $meta['recipient_type'] ?? 'organizer';
+                    if ($isPos) {
+                        $typeKey = 'pos_commission';
+                        $typeLabel = 'POS';
+                    } elseif ($recipientType === 'general_client') {
+                        $typeKey = 'general_client';
+                        $typeLabel = 'Client general';
+                    } else {
+                        $typeKey = 'organizer';
+                        $typeLabel = 'Organizator';
+                    }
+
+                    // Prefer fiscal PDF; fall back to proforma when only that was sent.
+                    $accountingPdfUrl = $acc['pdf_url'] ?? $proforma['pdf_url'] ?? null;
+                    $accountingStage = $accExtRef ? 'fiscala' : 'proforma';
+
+                    // Article items straight from meta.items (both `name` and
+                    // legacy `description`-only rows accepted).
+                    $items = [];
+                    foreach (($meta['items'] ?? []) as $it) {
+                        if (!is_array($it)) continue;
+                        $items[] = [
+                            'name' => (string) ($it['name'] ?? $it['description'] ?? ''),
+                            'description' => (string) ($it['description'] ?? ''),
+                            'quantity' => (float) ($it['quantity'] ?? 1),
+                            'unit_price' => (float) ($it['unit_price'] ?? $it['price'] ?? 0),
+                            'amount' => (float) ($it['amount'] ?? 0),
+                        ];
+                    }
+
+                    $invoicesData[] = [
+                        'id' => $inv->id,
+                        'number' => $inv->number,
+                        'type' => $typeKey,
+                        'type_label' => $typeLabel,
+                        'amount' => (float) $inv->amount,
+                        'subtotal' => (float) $inv->subtotal,
+                        'vat_amount' => (float) $inv->vat_amount,
+                        'currency' => $inv->currency ?? 'RON',
+                        'status' => $inv->status,
+                        'issue_date' => optional($inv->issue_date)->toDateString(),
+                        'accounting_stage' => $accountingStage, // 'fiscala' | 'proforma'
+                        'accounting_pdf_url' => $accountingPdfUrl,
+                        'items' => $items,
+                    ];
+                }
+
                 return [
                     'id' => $p->id,
                     'reference' => $p->reference,
@@ -4758,12 +4853,15 @@ class LeisureController extends BaseController
                     'currency' => $p->currency ?? 'RON',
                     'status' => $p->status,
                     'source' => $p->source,
+                    'issuing_company' => $societyKey,
+                    'society_name' => $societyName,
                     'period_start' => optional($p->period_start)->toDateString(),
                     'period_end' => optional($p->period_end)->toDateString(),
                     'created_at' => optional($p->created_at)->toIso8601String(),
                     'completed_at' => optional($p->completed_at)->toIso8601String(),
                     'pdf_url' => $docUrl,
                     'breakdown' => $breakdownRows,
+                    'invoices' => $invoicesData,
                 ];
             })->values(),
         ]);

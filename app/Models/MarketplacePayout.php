@@ -1081,6 +1081,15 @@ class MarketplacePayout extends Model
             });
     }
 
+    public function invoicesForPayout(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        // Every invoice linked to this payout (organizer + general_client + POS
+        // commission). Used by API surfaces that need the full set — e.g. the
+        // leisure organizer /organizator/deconturi page lists all Oblio-sent
+        // invoices per payout in an accordion.
+        return $this->hasMany(\App\Models\Invoice::class, 'marketplace_payout_id');
+    }
+
     public function posInvoice(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         // Separate invoice that charges the organizer for commissions on POS/app sales,

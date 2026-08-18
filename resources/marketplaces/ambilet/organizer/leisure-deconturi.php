@@ -68,7 +68,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <th class="px-4 py-3 text-left w-8"></th>
                             <th class="px-4 py-3 text-left">Serie decont</th>
                             <th class="px-4 py-3 text-left">Perioadă</th>
-                            <th class="px-4 py-3 text-left">Status</th>
+                            <th class="px-4 py-3 text-left">Societate</th>
                             <th class="px-4 py-3 text-right">Venit brut</th>
                             <th class="px-4 py-3 text-right text-blue-700">Comision</th>
                             <th class="px-4 py-3 text-right">Reduceri</th>
@@ -89,25 +89,34 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 (function(){
     const $ = (id) => document.getElementById(id);
     const fmtMoney = (v) => Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const STATUS_LABEL = {
-        pending: 'În așteptare',
-        approved: 'Aprobat',
-        processing: 'Procesare',
-        completed: 'Completat',
-        rejected: 'Respins',
-        cancelled: 'Anulat',
+    const SOCIETY_COLOR = {
+        primary: 'bg-blue-100 text-blue-800',
+        secondary: 'bg-purple-100 text-purple-800',
     };
-    const STATUS_COLOR = {
+
+    // Invoice status pill (used inside the invoices accordion, per payout).
+    const INV_STATUS_LABEL = {
+        paid: 'Achitată',
+        outstanding: 'Neachitată',
+        pending: 'În așteptare',
+        cancelled: 'Anulată',
+        refunded: 'Rambursată',
+    };
+    const INV_STATUS_COLOR = {
+        paid: 'bg-emerald-100 text-emerald-800',
+        outstanding: 'bg-amber-100 text-amber-800',
         pending: 'bg-amber-100 text-amber-800',
-        approved: 'bg-sky-100 text-sky-800',
-        processing: 'bg-indigo-100 text-indigo-800',
-        completed: 'bg-emerald-100 text-emerald-800',
-        rejected: 'bg-rose-100 text-rose-800',
         cancelled: 'bg-slate-100 text-slate-700',
+        refunded: 'bg-rose-100 text-rose-800',
+    };
+    const INV_STAGE_LABEL = {
+        fiscala: 'Fiscală',
+        proforma: 'Proformă',
     };
 
     let currentEventId = null;
-    let openBreakdownIds = new Set(); // ce breakdown-uri sunt expandate
+    let openBreakdownIds = new Set(); // decontarea expandată
+    let openInvoiceIds = new Set();    // factura expandată (arată articolele)
 
     async function loadPayouts() {
         if (!currentEventId) return;
@@ -127,10 +136,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
-    function statusPill(status) {
-        const cls = STATUS_COLOR[status] || 'bg-slate-100 text-slate-700';
-        const label = STATUS_LABEL[status] || status;
-        return `<span class="inline-block px-2 py-0.5 text-[11px] font-medium rounded-full ${cls}">${label}</span>`;
+    function societyBadge(p) {
+        const key = p.issuing_company;
+        const name = p.society_name || '-';
+        if (!key || name === '-') {
+            return '<span class="text-muted text-xs">-</span>';
+        }
+        const cls = SOCIETY_COLOR[key] || 'bg-slate-100 text-slate-700';
+        return `<span class="inline-block px-2 py-0.5 text-[11px] font-medium rounded-full ${cls}">${escapeHtml(name)}</span>`;
+    }
+
+    function invStatusPill(s) {
+        const cls = INV_STATUS_COLOR[s] || 'bg-slate-100 text-slate-700';
+        const label = INV_STATUS_LABEL[s] || s;
+        return `<span class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ${cls}">${escapeHtml(label)}</span>`;
     }
 
     function escapeHtml(s) { return String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
@@ -177,7 +196,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <td class="px-4 py-3">${chevron}</td>
                 <td class="px-4 py-3">${serieBadge}<div class="text-[10px] text-muted">${escapeHtml(p.reference || '')}</div></td>
                 <td class="px-4 py-3 text-xs">${period(p)}</td>
-                <td class="px-4 py-3">${statusPill(p.status)}</td>
+                <td class="px-4 py-3">${societyBadge(p)}</td>
                 <td class="px-4 py-3 text-right">${fmtMoney(p.gross_amount)} RON</td>
                 <td class="px-4 py-3 text-right text-blue-700 font-semibold">${fmtMoney(p.commission_amount)} RON</td>
                 <td class="px-4 py-3 text-right text-muted">${fmtMoney(p.discount_amount)} RON</td>
@@ -188,8 +207,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             let breakdownRow = '';
             if (isOpen) {
                 const rows = p.breakdown || [];
+                const invoices = p.invoices || [];
+
+                let breakdownTable = '';
                 if (!rows.length) {
-                    breakdownRow = `<tr class="bg-slate-50/60"><td colspan="9" class="px-6 py-3 text-xs text-muted">Nu există detaliu ticket_breakdown pentru acest decont.</td></tr>`;
+                    breakdownTable = `<p class="text-xs text-muted py-2">Nu există detaliu ticket_breakdown pentru acest decont.</p>`;
                 } else {
                     const subRows = rows.map(b => `<tr class="border-t border-slate-200">
                         <td class="px-2 py-1.5 text-xs">${escapeHtml(b.name)}</td>
@@ -200,39 +222,133 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <td class="px-2 py-1.5 text-xs text-right text-muted">${fmtMoney(b.discount)}</td>
                         <td class="px-2 py-1.5 text-xs text-right font-semibold text-emerald-800">${fmtMoney(b.net)}</td>
                     </tr>`).join('');
-                    breakdownRow = `<tr class="bg-slate-50/60">
-                        <td colspan="9" class="px-6 py-3">
-                            <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Detaliu bilete emise pe acest decont</p>
-                            <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
-                                <thead class="text-[10px] uppercase text-muted bg-slate-100">
-                                    <tr>
-                                        <th class="px-2 py-1.5 text-left">Tip bilet</th>
-                                        <th class="px-2 py-1.5 text-right">Cant.</th>
-                                        <th class="px-2 py-1.5 text-right">Preț unit</th>
-                                        <th class="px-2 py-1.5 text-right">Brut</th>
-                                        <th class="px-2 py-1.5 text-right text-blue-700">Comision</th>
-                                        <th class="px-2 py-1.5 text-right">Reducere</th>
-                                        <th class="px-2 py-1.5 text-right">Net</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${subRows}</tbody>
-                            </table>
-                        </td>
-                    </tr>`;
+                    breakdownTable = `<p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Detaliu bilete emise pe acest decont</p>
+                        <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden mb-4">
+                            <thead class="text-[10px] uppercase text-muted bg-slate-100">
+                                <tr>
+                                    <th class="px-2 py-1.5 text-left">Tip bilet</th>
+                                    <th class="px-2 py-1.5 text-right">Cant.</th>
+                                    <th class="px-2 py-1.5 text-right">Preț unit</th>
+                                    <th class="px-2 py-1.5 text-right">Brut</th>
+                                    <th class="px-2 py-1.5 text-right text-blue-700">Comision</th>
+                                    <th class="px-2 py-1.5 text-right">Reducere</th>
+                                    <th class="px-2 py-1.5 text-right">Net</th>
+                                </tr>
+                            </thead>
+                            <tbody>${subRows}</tbody>
+                        </table>`;
                 }
+
+                // Invoices accordion — one row per Oblio-sent invoice; click
+                // expands to article breakdown (name, description, qty, unit, amount).
+                let invoicesBlock = '';
+                if (!invoices.length) {
+                    invoicesBlock = `<p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Facturi emise (Oblio)</p>
+                        <p class="text-xs text-muted italic">Nicio factură emisă în contabilitate pentru acest decont.</p>`;
+                } else {
+                    const invRows = invoices.map(inv => {
+                        const invOpen = openInvoiceIds.has(inv.id);
+                        const invChevron = `<svg class="w-3.5 h-3.5 text-muted transition-transform ${invOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
+                        const invPdf = inv.accounting_pdf_url
+                            ? `<a href="${inv.accounting_pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 rounded hover:bg-emerald-100">PDF</a>`
+                            : '<span class="text-[10px] text-muted">-</span>';
+                        const stageLabel = INV_STAGE_LABEL[inv.accounting_stage] || inv.accounting_stage;
+                        const dateLabel = inv.issue_date
+                            ? new Date(inv.issue_date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' })
+                            : '-';
+                        const invHead = `<tr class="hover:bg-blue-50 cursor-pointer border-t border-slate-200" data-inv-toggle="${inv.id}">
+                            <td class="px-2 py-1.5 text-xs">${invChevron}</td>
+                            <td class="px-2 py-1.5 text-xs font-semibold">${escapeHtml(inv.number || ('#' + inv.id))}</td>
+                            <td class="px-2 py-1.5 text-xs">${escapeHtml(inv.type_label || inv.type || '')}</td>
+                            <td class="px-2 py-1.5 text-xs">${escapeHtml(stageLabel)}</td>
+                            <td class="px-2 py-1.5 text-xs">${dateLabel}</td>
+                            <td class="px-2 py-1.5 text-xs text-right font-semibold">${fmtMoney(inv.amount)} ${inv.currency || 'RON'}</td>
+                            <td class="px-2 py-1.5 text-xs text-center">${invStatusPill(inv.status)}</td>
+                            <td class="px-2 py-1.5 text-xs text-center">${invPdf}</td>
+                        </tr>`;
+
+                        let invItemsRow = '';
+                        if (invOpen) {
+                            const items = inv.items || [];
+                            if (!items.length) {
+                                invItemsRow = `<tr class="bg-white"><td colspan="8" class="px-4 py-2 text-[11px] text-muted italic">Factura nu are articole înregistrate.</td></tr>`;
+                            } else {
+                                const itemBody = items.map(it => `<tr class="border-t border-slate-100">
+                                    <td class="px-2 py-1.5 text-[11px] align-top">
+                                        <div class="font-semibold">${escapeHtml(it.name || '')}</div>
+                                        ${it.description && it.description !== it.name ? `<div class="text-muted mt-0.5 text-[10px]">${escapeHtml(it.description)}</div>` : ''}
+                                    </td>
+                                    <td class="px-2 py-1.5 text-[11px] text-right">${Number(it.quantity || 0).toLocaleString('ro-RO')}</td>
+                                    <td class="px-2 py-1.5 text-[11px] text-right">${fmtMoney(it.unit_price)}</td>
+                                    <td class="px-2 py-1.5 text-[11px] text-right font-semibold">${fmtMoney(it.amount)}</td>
+                                </tr>`).join('');
+                                invItemsRow = `<tr class="bg-white"><td colspan="8" class="px-4 py-2">
+                                    <p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-1.5">Articole factură</p>
+                                    <table class="w-full text-[11px] border border-slate-200 rounded overflow-hidden">
+                                        <thead class="bg-slate-50 text-[10px] uppercase text-muted">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left">Denumire / descriere</th>
+                                                <th class="px-2 py-1 text-right">Cant.</th>
+                                                <th class="px-2 py-1 text-right">Preț unit</th>
+                                                <th class="px-2 py-1 text-right">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${itemBody}</tbody>
+                                    </table>
+                                </td></tr>`;
+                            }
+                        }
+                        return invHead + invItemsRow;
+                    }).join('');
+
+                    invoicesBlock = `<p class="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">Facturi emise (Oblio)</p>
+                        <table class="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <thead class="text-[10px] uppercase text-muted bg-slate-100">
+                                <tr>
+                                    <th class="px-2 py-1.5 text-left w-8"></th>
+                                    <th class="px-2 py-1.5 text-left">Nr. factură</th>
+                                    <th class="px-2 py-1.5 text-left">Tip</th>
+                                    <th class="px-2 py-1.5 text-left">Stagiu</th>
+                                    <th class="px-2 py-1.5 text-left">Data</th>
+                                    <th class="px-2 py-1.5 text-right">Sumă</th>
+                                    <th class="px-2 py-1.5 text-center">Status</th>
+                                    <th class="px-2 py-1.5 text-center">PDF</th>
+                                </tr>
+                            </thead>
+                            <tbody>${invRows}</tbody>
+                        </table>`;
+                }
+
+                breakdownRow = `<tr class="bg-slate-50/60">
+                    <td colspan="9" class="px-6 py-4">
+                        ${breakdownTable}
+                        ${invoicesBlock}
+                    </td>
+                </tr>`;
             }
             return row + breakdownRow;
         }).join('');
 
-        // Wire up toggle
+        // Wire up toggle for payout row
         tbody.querySelectorAll('[data-dc-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
-                // Nu toggle daca s-a apasat pe link PDF
                 if (ev.target.closest('a')) return;
+                if (ev.target.closest('[data-inv-toggle]')) return; // click on invoice row bubbles up otherwise
                 const id = parseInt(tr.dataset.dcToggle, 10);
                 if (openBreakdownIds.has(id)) openBreakdownIds.delete(id);
                 else openBreakdownIds.add(id);
-                // Re-render pastreaza starea
+                render(window.__dcLast || []);
+            });
+        });
+
+        // Wire up toggle for invoice sub-accordion
+        tbody.querySelectorAll('[data-inv-toggle]').forEach(tr => {
+            tr.addEventListener('click', (ev) => {
+                if (ev.target.closest('a')) return;
+                ev.stopPropagation();
+                const id = parseInt(tr.dataset.invToggle, 10);
+                if (openInvoiceIds.has(id)) openInvoiceIds.delete(id);
+                else openInvoiceIds.add(id);
                 render(window.__dcLast || []);
             });
         });
