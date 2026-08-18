@@ -46,3 +46,7 @@ nul
 
 # Local dev databases (scoped shorts schema — see scripts/shorts-dev-migrate.sh)
 /database/*.sqlite
+
+# One-shot backfill CSVs — sensitive per-organizer data, never checked in
+/cui-cu-probleme.csv
+/*-backfill.csv
