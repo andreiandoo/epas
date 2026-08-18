@@ -20,7 +20,14 @@
         $itemMode = $item['commission_mode'] ?? null;
         $isOnTop = in_array($itemMode, ['added_on_top', 'on_top'], true);
         $commission = $commPerTicket * $qty;
-        $gross = $price * $qty + ($isOnTop ? $commission : 0);
+        // Prefer the snapshot's stored gross when present — matches
+        // MarketplacePayout::getBreakdownTotals() so the two views agree.
+        // The stored value is SUM(tickets.price) from the DB, which can drift
+        // from a naive price × qty when `price` is a weighted average
+        // (e.g. payout 3296 ADULT: stored 9102 vs 28.27 × 322 = 9102.94).
+        $gross = isset($item['gross'])
+            ? (float) $item['gross']
+            : ($price * $qty + ($isOnTop ? $commission : 0));
         $net = isset($item['net']) ? (float) $item['net'] : ($gross - $commission);
 
         return [
@@ -104,10 +111,18 @@
                     $commission = (float) ($item['commission_amount'] ?? ($commPerTicket * $qty));
                     $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
                     $isOnTop = in_array($commissionMode, ['added_on_top', 'on_top'], true);
-                    // Total brut afiseaza ce a platit clientul. Calculam mereu din
-                    // price/qty/commission, ca sa fim consistenti intre snapshot-uri
-                    // noi (gross stocat = price*qty) si vechi (gross nestocat).
-                    $gross = $price * $qty + ($isOnTop ? $commission : 0);
+                    // Total brut afiseaza ce a platit clientul. Preferam
+                    // valoarea gross STOCATA pe rand (single source of truth,
+                    // acelasi precedent ca in MarketplacePayout::getBreakdownTotals()).
+                    // Recomputarea price × qty introduce drift atunci cand `price`
+                    // este o medie ponderata rotunjita — ex: payout 3296 ADULT
+                    // stored gross=9102 vs recompute 28.27 × 322 = 9102.94, ceea ce
+                    // ridica totalul acestui bloc la 23,227.37 in loc de 23,226 real.
+                    // Fallback la vechea formula doar pentru snapshot-uri legacy
+                    // care nu au campul `gross` scris pe rand.
+                    $gross = isset($item['gross'])
+                        ? (float) $item['gross']
+                        : ($price * $qty + ($isOnTop ? $commission : 0));
                     // Net bilete = ce primeste organizatorul din vanzarea biletelor, inainte de discount/extras.
                     // included: gross = price*qty (comision in pret) -> net = gross - commission
                     // added_on_top: gross = price*qty + commission -> net = gross - commission = price*qty
