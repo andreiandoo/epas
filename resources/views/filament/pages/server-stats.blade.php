@@ -129,8 +129,13 @@
 
         {{-- Directory breakdown (opt-in) --}}
         <x-filament::section>
-            <x-slot name="heading">Spațiu pe directoare (aplicație)</x-slot>
+            <x-slot name="heading">Spațiu pe directoare (doar aplicația)</x-slot>
             <x-slot name="description">Cel mai scump calcul — pornit manual din butonul „Analizează directoare". Rezultat păstrat 15 min.</x-slot>
+
+            <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
+                ⚠️ Acesta e <strong>doar directorul aplicației</strong>. Diferența față de „ocupat" pe disc ({{ $disk['used_h'] ?? '—' }}) e ocupată de <strong>alte lucruri de pe server</strong> — datele PostgreSQL, alte site-uri, loguri, sistem — pe care user-ul web nu le poate scana fără <code>root</code>. Pentru breakdown complet al discului, rulează în SSH:
+                <code class="mt-1 block break-all rounded bg-gray-100 p-2 dark:bg-black/30">sudo du -bx --max-depth=1 / 2>/dev/null | sort -rn | head -20 | awk '{printf "%.2f GB\t%s\n",$1/1073741824,$2}'</code>
+            </div>
 
             @if(!$dirScanned)
                 <div class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">

@@ -79,22 +79,17 @@ class ServerStats extends Page
         $this->shellAvailable = $this->shellAvailable();
         $this->phpMemoryLimit = (string) ini_get('memory_limit');
 
-        // --- Disk (filesystem containing the app) ---
-        $total = @disk_total_space(base_path()) ?: 0;
-        $free = @disk_free_space(base_path()) ?: 0;
-        $used = max(0, $total - $free);
-        $this->disk = [
-            'total' => $total,
-            'free' => $free,
-            'used' => $used,
-            'percent' => $total > 0 ? round($used / $total * 100, 1) : 0,
-            'total_h' => $this->humanSize($total),
-            'free_h' => $this->humanSize($free),
-            'used_h' => $this->humanSize($used),
-        ];
-
         // --- All mounted filesystems (df) ---
         $this->mounts = $this->readMounts();
+
+        // --- Disk (filesystem containing the app) ---
+        // Prefer the df row for the app's mount so the card and the df table
+        // agree. The statvfs fallback (disk_total/free) computes used = total −
+        // available, which WRONGLY counts the ~5% root-reserved space as
+        // "used" (disk_free_space returns space available to non-root), so the
+        // card read ~10 GB higher than df. df's Used column excludes the
+        // reserve — that is the real "occupied by files" figure.
+        $this->disk = $this->diskForApp($this->mounts);
 
         // --- Memory + swap (/proc/meminfo) ---
         $mem = $this->readMeminfo();
@@ -220,6 +215,9 @@ class ServerStats extends Page
             $rows[] = [
                 'fs' => $fs,
                 'mount' => $mount,
+                'total_b' => $total,
+                'used_b' => $used,
+                'avail_b' => $avail,
                 'total_h' => $this->humanSize($total),
                 'used_h' => $this->humanSize($used),
                 'avail_h' => $this->humanSize($avail),
@@ -227,6 +225,56 @@ class ServerStats extends Page
             ];
         }
         return $rows;
+    }
+
+    /**
+     * Resolve the disk-usage card from the df row of the filesystem that
+     * actually holds the app (longest mount path that prefixes base_path).
+     * Falls back to statvfs when df is unavailable — noting that the fallback
+     * over-reports "used" by the root-reserved space.
+     */
+    protected function diskForApp(array $mounts): array
+    {
+        $base = base_path();
+        $best = null;
+        $bestLen = -1;
+        foreach ($mounts as $m) {
+            $mp = rtrim($m['mount'], '/');
+            $isMatch = $m['mount'] === '/' || $base === $mp || str_starts_with($base, $mp . '/');
+            if ($isMatch && strlen($mp) > $bestLen) {
+                $best = $m;
+                $bestLen = strlen($mp);
+            }
+        }
+
+        if ($best) {
+            return [
+                'total' => $best['total_b'],
+                'free' => $best['avail_b'],
+                'used' => $best['used_b'],
+                'percent' => $best['percent'],
+                'total_h' => $this->humanSize($best['total_b']),
+                'free_h' => $this->humanSize($best['avail_b']),
+                'used_h' => $this->humanSize($best['used_b']),
+                'source' => 'df',
+            ];
+        }
+
+        // Fallback (df unavailable): statvfs. NOTE: 'used' here includes the
+        // ~5% root reserve, so it reads slightly higher than df would.
+        $total = @disk_total_space($base) ?: 0;
+        $free = @disk_free_space($base) ?: 0;
+        $used = max(0, $total - $free);
+        return [
+            'total' => $total,
+            'free' => $free,
+            'used' => $used,
+            'percent' => $total > 0 ? round($used / $total * 100, 1) : 0,
+            'total_h' => $this->humanSize($total),
+            'free_h' => $this->humanSize($free),
+            'used_h' => $this->humanSize($used),
+            'source' => 'statvfs',
+        ];
     }
 
     protected function topProcesses(): array
