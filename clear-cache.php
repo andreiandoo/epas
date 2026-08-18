@@ -154,6 +154,25 @@ if (isset($_GET['clear'])) {
     } else {
         echo "   API cache (api_cached): directory not present.\n";
     }
+
+    // Clear proxy.php file-based cache (dirname(__DIR__) . '/cache/api/*.json').
+    // The proxy caches every /api/proxy.php?action=X&... response as a
+    // separate file keyed by (action + params), with per-action TTLs
+    // (e.g. 120s for search, 30s for events, hours for taxonomies).
+    // Without this, each unique query keeps serving its old response
+    // until its own TTL elapses — the classic post-deploy symptom of
+    // "some queries look right, others still show old data".
+    $proxyCacheDir = __DIR__ . '/cache/api';
+    if (is_dir($proxyCacheDir)) {
+        $cleared = 0;
+        foreach (glob($proxyCacheDir . '/*.json') as $f) {
+            @unlink($f);
+            $cleared++;
+        }
+        echo "   Proxy cache (cache/api): $cleared files cleared.\n";
+    } else {
+        echo "   Proxy cache (cache/api): directory not present.\n";
+    }
 } else {
     echo "5. Add ?clear to URL to clear ALL caches.\n";
 }
