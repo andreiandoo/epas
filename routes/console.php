@@ -128,6 +128,22 @@ Schedule::command('marketplace:cleanup-expired-orders')
         // Silent success
     });
 
+// Backstop reconcile for orders stuck in a terminal status (expired /
+// cancelled / refunded / failed) that still carry pending|valid tickets —
+// i.e. their stock/seat release never ran. The Order::saved observer now
+// handles all four in real time, but this catches stragglers where the
+// observer didn't fire (direct DB writes, observer exceptions, historical
+// rows). Critically it covers 'failed', which the older observer omitted and
+// which no other scheduled job swept, so failed-payment reservations used to
+// linger and inflate quota_sold indefinitely. Idempotent + floored decrements.
+Schedule::command('orders:reconcile-expired')
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        // Silent success — the command logs only when it actually fixes rows
+    });
+
 // Schedule invoice status transition from 'new' to 'outstanding' (daily at 1 AM)
 Schedule::command('invoices:transition-new --grace-days=3')
     ->dailyAt('01:00')

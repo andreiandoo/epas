@@ -314,7 +314,17 @@ class Order extends Model
                     // per-ticket status (some refunded, the rest still valid).
                     // Releasing seats / stock is also already handled
                     // per-ticket in the refund flow.
-                } elseif (in_array($newStatus, ['cancelled', 'expired'])) {
+                } elseif (in_array($newStatus, ['cancelled', 'expired', 'failed'])) {
+                    // 'failed' = permanent payment failure (Netopia error_type 2).
+                    // It is terminal: the payment cannot be retried on the same
+                    // order (PaymentController::initiate requires status='pending';
+                    // a retry creates a NEW order), and a permanently-failed
+                    // transaction is never followed by a success callback. So it
+                    // must release its reservation exactly like cancelled/expired —
+                    // otherwise the pending tickets linger forever and quota_sold
+                    // stays inflated, which over-counted "sold" on availability,
+                    // deconturi and the PV Distrugere document (unsold = quota_total
+                    // - quota_sold). 'failed' was simply omitted here originally.
                     $order->tickets()->update(['status' => 'cancelled']);
                     $order->releaseSeatsAndRestoreStock();
                 } elseif ($newStatus === 'pending') {
