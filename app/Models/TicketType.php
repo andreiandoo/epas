@@ -653,6 +653,26 @@ class TicketType extends Model
     }
 
     /**
+     * Test-POS ticket detector.
+     *
+     * Test POS tickets must never appear in public listings, min-price
+     * calculations, or organizer/marketplace reporting. Newly-provisioned
+     * ones carry meta.is_test = true (see Event::ensureTestTicketType()),
+     * but hand-created legacy rows sometimes only match on name — hence
+     * the belt-and-suspenders check on both signals.
+     */
+    public function isTestPos(): bool
+    {
+        if (($this->meta['is_test'] ?? false) === true) {
+            return true;
+        }
+        $rawName = is_array($this->name)
+            ? ($this->name['ro'] ?? $this->name['en'] ?? '')
+            : (string) $this->name;
+        return trim(mb_strtolower($rawName)) === 'test pos';
+    }
+
+    /**
      * Configure activity logging
      */
     public function getActivitylogOptions(): LogOptions

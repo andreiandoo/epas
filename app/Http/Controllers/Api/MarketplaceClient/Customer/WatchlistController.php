@@ -119,8 +119,11 @@ class WatchlistController extends BaseController
                     ->where('event_id', $event->id)
                     ->where('status', 'active')
                     // Exclude invitation + Test POS ticket types from "de la".
+                    // Legacy Test POS rows may lack meta.is_test but still be
+                    // named "Test POS", so we filter on both signals.
                     ->whereRaw("COALESCE((meta->>'is_test')::boolean, false) = false")
                     ->whereRaw("COALESCE((meta->>'is_invitation')::boolean, false) = false")
+                    ->whereRaw("LOWER(TRIM(CAST(name AS TEXT))) != 'test pos'")
                     ->selectRaw('MIN(COALESCE(sale_price_cents, price_cents)) as min_price_cents')
                     ->first();
                 $minPrice = $minPriceResult && $minPriceResult->min_price_cents

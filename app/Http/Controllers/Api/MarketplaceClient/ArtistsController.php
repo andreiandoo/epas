@@ -369,7 +369,7 @@ class ArtistsController extends BaseController
                 }
 
                 $minPriceCents = $ticketTypes
-                    ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))
+                    ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos())
                     ->map(function ($tt) use ($matchedPerformance) {
                         $baseCents = $tt->sale_price_cents ?? $tt->price_cents;
                         // Check performance override
@@ -685,7 +685,7 @@ class ArtistsController extends BaseController
             }
 
             $minPriceCents = $ticketTypes
-                ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))
+                ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos())
                 ->map(function ($tt) use ($matchedPerformance) {
                     $baseCents = $tt->sale_price_cents ?? $tt->price_cents;
                     if ($matchedPerformance) {

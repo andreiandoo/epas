@@ -185,7 +185,7 @@ class SearchController extends BaseController
             // Exclude invitation + Test POS ticket types so "de la" never shows
             // the hidden 10-lei smoke-test ticket as the starting price.
             $allPrices = $event->ticketTypes
-                ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !($tt->meta['is_test'] ?? false))
+                ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos())
                 ->map(function ($tt) {
                     if ($tt->sale_price_cents !== null && $tt->sale_price_cents > 0) {
                         return $tt->sale_price_cents;
