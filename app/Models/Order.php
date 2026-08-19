@@ -396,8 +396,46 @@ class Order extends Model
                 $eventSeatingId = $item['event_seating_id'];
                 $seatUids = $item['seat_uids'];
 
+                // NEVER free a seat that a DIFFERENT order's still-active ticket
+                // holds. Two orders can carry the SAME seat_uids in their meta:
+                // a customer whose first order failed then re-bought the exact
+                // same seats in a second, successful order. Both orders' tickets
+                // reference those seat_uids, so releasing the failed/cancelled
+                // one used to blindly flip the seats to 'available' even though
+                // the paid order's valid tickets owned them (event 4658: failed
+                // order 180137 freed seats S1002-1-9/10/11 that paid order 180143
+                // held). Exclude any seat referenced by another order's
+                // valid/used/pending ticket. Compare event_seating_id as text
+                // since `meta->>` returns text.
+                $foreignUids = \App\Models\Ticket::query()
+                    ->where('order_id', '!=', $this->id)
+                    ->whereIn('status', ['valid', 'used', 'pending'])
+                    ->where('meta->event_seating_id', (string) $eventSeatingId)
+                    ->whereIn('meta->seat_uid', $seatUids)
+                    ->get(['id', 'meta'])
+                    ->map(fn ($t) => data_get($t->meta, 'seat_uid'))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $releasableUids = array_values(array_diff($seatUids, $foreignUids));
+
+                if (!empty($foreignUids)) {
+                    Log::channel('marketplace')->warning('Order: skipped releasing seats owned by another active order', [
+                        'order_id' => $this->id,
+                        'order_number' => $this->order_number,
+                        'event_seating_id' => $eventSeatingId,
+                        'kept_seats' => $foreignUids,
+                    ]);
+                }
+
+                if (empty($releasableUids)) {
+                    continue;
+                }
+
                 $released = EventSeat::where('event_seating_id', $eventSeatingId)
-                    ->whereIn('seat_uid', $seatUids)
+                    ->whereIn('seat_uid', $releasableUids)
                     ->whereIn('status', ['held', 'sold'])
                     ->update([
                         'status' => 'available',
@@ -406,7 +444,7 @@ class Order extends Model
                     ]);
 
                 SeatHold::where('event_seating_id', $eventSeatingId)
-                    ->whereIn('seat_uid', $seatUids)
+                    ->whereIn('seat_uid', $releasableUids)
                     ->delete();
 
                 if ($released > 0) {
