@@ -172,7 +172,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function esc(v) { return String(v || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
     function rowHtml(r) {
         const plate = r.vehicle_plate
-            ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-slate-100 text-slate-700 rounded border border-slate-300">${esc(r.vehicle_plate)}</span>`
+            ? `<span class="inline-block px-2 py-0.5 text-[14px] font-mono font-bold bg-slate-100 text-slate-800 rounded border border-slate-300">${esc(r.vehicle_plate)}</span>`
             : '<span class="text-muted">—</span>';
         return `
             <tr class="hover:bg-slate-50">

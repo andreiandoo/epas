@@ -1863,6 +1863,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.settlement.cumulative':
+        // GET /organizer/events/{id}/leisure/settlement/cumulative → cifre cumulate 16.07.2026 → azi
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/settlement/cumulative';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.cashier.current':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
