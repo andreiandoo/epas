@@ -11,6 +11,10 @@
     <string name="widget_tickets">Bilete</string>
     <string name="widget_customers">Clienți</string>
     <string name="widget_revenue">Venituri Tixello</string>
+    <string name="widget_artists">Artiști</string>
+    <string name="widget_venues">Locații</string>
+    <string name="widget_monthly">Luna curentă vs precedentă</string>
+    <string name="widget_monthly_summary">%1$s: %2$s · %3$s: %4$s (%5$s)</string>
     <string name="widget_commissions_title">Ultimele comisioane</string>
     <string name="widget_today_value">azi %1$s</string>
     <string name="widget_not_synced">Neconfigurat — deschide aplicația</string>

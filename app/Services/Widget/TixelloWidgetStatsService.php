@@ -2,11 +2,13 @@
 
 namespace App\Services\Widget;
 
+use App\Models\Artist;
 use App\Models\Customer;
 use App\Models\ExchangeRate;
 use App\Models\MarketplaceCustomer;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Models\Venue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -103,9 +105,11 @@ class TixelloWidgetStatsService
          * cât timp exista un telefon care întreba. */
         $allTimeTtl = (int) config('tixello-widget.cache_ttl_all_time', 120);
         $todayTtl = (int) config('tixello-widget.cache_ttl', 20);
+        $monthlyTtl = (int) config('tixello-widget.cache_ttl_monthly', 300);
 
         $allTime = $this->cached('tixello_widget:stats:all-time', $allTimeTtl, fn () => $this->buildAllTimeStats());
         $today = $this->cached('tixello_widget:stats:today', $todayTtl, fn () => $this->buildTodayStats());
+        $monthly = $this->cached('tixello_widget:stats:monthly', $monthlyTtl, fn () => $this->buildMonthlyStats());
 
         return [
             'sales' => [
@@ -125,6 +129,14 @@ class TixelloWidgetStatsService
                 'today' => $today['customers'],
                 'tenant' => $allTime['customers_tenant'],
                 'marketplace' => $allTime['customers_marketplace'],
+            ],
+            'artists' => [
+                'total' => $allTime['artists'],
+                'today' => $today['artists'],
+            ],
+            'venues' => [
+                'total' => $allTime['venues'],
+                'today' => $today['venues'],
             ],
             'revenue' => [
                 /* „Venituri Tixello" = ce încasează platforma: comision din
@@ -146,6 +158,15 @@ class TixelloWidgetStatsService
                    aduna în „all time" ar produce o cifră fără sens. Widget-ul
                    le arată separat, ca „+X/lună". */
                 'recurring_monthly' => $allTime['revenue']['recurring_monthly'],
+            ],
+            /* Luna curentă vs luna trecută — pentru banda de comparație din
+               widget. Cache separat (5 min default) — cifrele lunare nu se
+               mișcă la fel de repede ca „azi", nu are rost refresh la 20s. */
+            'monthly' => [
+                'current' => $monthly['current'],
+                'previous' => $monthly['previous'],
+                'current_label' => $monthly['current_label'],
+                'previous_label' => $monthly['previous_label'],
             ],
         ];
     }
@@ -170,6 +191,8 @@ class TixelloWidgetStatsService
             'tickets' => $this->ticketsQuery()->count(),
             'customers_tenant' => Customer::count(),
             'customers_marketplace' => MarketplaceCustomer::count(),
+            'artists' => Artist::count(),
+            'venues' => Venue::count(),
             'revenue' => $this->revenueFor(null, null),
         ];
     }
@@ -188,7 +211,50 @@ class TixelloWidgetStatsService
                 ->count(),
             'customers' => Customer::whereBetween('created_at', [$dayStart, $dayEnd])->count()
                 + MarketplaceCustomer::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+            'artists' => Artist::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+            'venues' => Venue::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
             'revenue' => $this->revenueFor($dayStart, $dayEnd),
+        ];
+    }
+
+    /**
+     * Luna curentă vs luna precedentă — folosit pentru banda de comparație
+     * de sub Venit Tixello. Intervalele se taie în fusul configurat.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildMonthlyStats(): array
+    {
+        $tz = $this->timezone();
+        $now = Carbon::now($tz);
+
+        $currentStart = $now->copy()->startOfMonth()->utc();
+        $currentEnd = $now->copy()->endOfMonth()->utc();
+        $previousMonthCarbon = $now->copy()->subMonthNoOverflow();
+        $previousStart = $previousMonthCarbon->copy()->startOfMonth()->utc();
+        $previousEnd = $previousMonthCarbon->copy()->endOfMonth()->utc();
+
+        return [
+            'current' => $this->monthlySlice($currentStart, $currentEnd),
+            'previous' => $this->monthlySlice($previousStart, $previousEnd),
+            'current_label' => $now->translatedFormat('M Y'),      // ex. „Aug 2026"
+            'previous_label' => $previousMonthCarbon->translatedFormat('M Y'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function monthlySlice(Carbon $from, Carbon $to): array
+    {
+        return [
+            'sales' => $this->orderMoney($from, $to),
+            'tickets' => $this->ticketsQuery()->whereBetween('created_at', [$from, $to])->count(),
+            'customers' => Customer::whereBetween('created_at', [$from, $to])->count()
+                + MarketplaceCustomer::whereBetween('created_at', [$from, $to])->count(),
+            'artists' => Artist::whereBetween('created_at', [$from, $to])->count(),
+            'venues' => Venue::whereBetween('created_at', [$from, $to])->count(),
+            'revenue' => $this->revenueFor($from, $to),
         ];
     }
 
@@ -241,12 +307,20 @@ class TixelloWidgetStatsService
     }
 
     /**
-     * Biletele emise de Tixello: valide şi dintr-o comandă încasată.
+     * Biletele emise real prin Tixello:
+     *   - status IN valid/used (biletul e sau a fost folosit legitim; excludem
+     *     invitațiile, cancelled, refunded, void, POS test)
+     *   - order în status paid/confirmed/completed (aliniat cu admin
+     *     StatsOverview + BillingBreakdown)
+     *   - order NU e import legacy/external/test
      */
     private function ticketsQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return Ticket::where('status', 'valid')
-            ->whereHas('order', fn ($q) => $q->whereIn('status', $this->saleStatuses()));
+        return Ticket::query()
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', fn ($q) => $q
+                ->whereIn('status', $this->saleStatuses())
+                ->whereNotIn('source', TixelloRevenueService::EXCLUDED_SOURCES));
     }
 
     /**
@@ -261,7 +335,8 @@ class TixelloWidgetStatsService
     private function orderMoney(?Carbon $from, ?Carbon $to): array
     {
         $query = Order::query()
-            ->whereIn('status', $this->saleStatuses());
+            ->whereIn('status', $this->saleStatuses())
+            ->whereNotIn('source', TixelloRevenueService::EXCLUDED_SOURCES);
 
         if ($from && $to) {
             $query->whereBetween($this->todayColumn(), [$from, $to]);
@@ -323,6 +398,7 @@ class TixelloWidgetStatsService
 
         $orders = Order::query()
             ->whereIn('status', $this->saleStatuses())
+            ->whereNotIn('source', TixelloRevenueService::EXCLUDED_SOURCES)
             /* Comisionul Tixello e rata clientului × valoarea comenzii, deci
                „are comision" înseamnă „clientul are o rată > 0". Filtrul stă în
                SQL, altfel ar trebui citite comenzi la întâmplare până se adună

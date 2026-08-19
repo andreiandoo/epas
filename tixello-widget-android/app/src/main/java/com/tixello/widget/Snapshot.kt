@@ -24,6 +24,17 @@ data class Commission(
     val displayCurrency: String get() = if (amountConverted != null) currency else amountCurrency
 }
 
+/** Slice cu cifrele unei luni (curenta sau precedenta). */
+data class MonthlySlice(
+    val label: String,
+    val sales: Double,
+    val tickets: Long,
+    val customers: Long,
+    val artists: Long,
+    val venues: Long,
+    val revenue: Double
+)
+
 data class Snapshot(
     val generatedAt: String?,
     val currency: String,
@@ -39,8 +50,14 @@ data class Snapshot(
     val ticketsToday: Long,
     val customersTotal: Long,
     val customersToday: Long,
+    val artistsTotal: Long,
+    val artistsToday: Long,
+    val venuesTotal: Long,
+    val venuesToday: Long,
     val revenueTotal: Double,
     val revenueToday: Double,
+    val monthlyCurrent: MonthlySlice?,
+    val monthlyPrevious: MonthlySlice?,
     val commissions: List<Commission>,
     val newCommissions: List<Commission>,
     val lastCommissionId: Long
@@ -53,7 +70,10 @@ data class Snapshot(
             val sales = stats.optJSONObject("sales") ?: JSONObject()
             val tickets = stats.optJSONObject("tickets") ?: JSONObject()
             val customers = stats.optJSONObject("customers") ?: JSONObject()
+            val artists = stats.optJSONObject("artists") ?: JSONObject()
+            val venues = stats.optJSONObject("venues") ?: JSONObject()
             val revenue = stats.optJSONObject("revenue") ?: JSONObject()
+            val monthly = stats.optJSONObject("monthly")
 
             return Snapshot(
                 generatedAt = json.optStringOrNull("generated_at"),
@@ -70,12 +90,53 @@ data class Snapshot(
                 ticketsToday = tickets.optLong("today", 0L),
                 customersTotal = customers.optLong("total", 0L),
                 customersToday = customers.optLong("today", 0L),
+                artistsTotal = artists.optLong("total", 0L),
+                artistsToday = artists.optLong("today", 0L),
+                venuesTotal = venues.optLong("total", 0L),
+                venuesToday = venues.optLong("today", 0L),
                 revenueTotal = revenue.optDouble("total", 0.0).orZero(),
                 revenueToday = revenue.optDouble("today", 0.0).orZero(),
+                monthlyCurrent = monthly?.optJSONObject("current")?.toMonthlySlice(
+                    monthly.optString("current_label", "Luna asta")
+                ),
+                monthlyPrevious = monthly?.optJSONObject("previous")?.toMonthlySlice(
+                    monthly.optString("previous_label", "Luna trecuta")
+                ),
                 commissions = json.optJSONArray("commissions").toCommissions(),
                 newCommissions = json.optJSONArray("new_commissions").toCommissions(),
                 lastCommissionId = json.optJSONObject("cursor")?.optLong("last_commission_id", 0L) ?: 0L
             )
+        }
+
+        private fun JSONObject.toMonthlySlice(label: String): MonthlySlice {
+            /* Server-ul trimite fiecare metrica cu structura ei
+               (sales are 'value', tickets/customers/artists/venues are 'total',
+               revenue are 'total'), deci parsam fiecare bucket separat. */
+            val salesObj = optJSONObject("sales") ?: JSONObject()
+            val ticketsCount = optJSONObject("tickets")?.let {
+                if (it.has("total")) it.optLong("total", 0L) else it.optLong("today", 0L)
+            } ?: 0L
+            val customersCount = optLongOrScalar("customers")
+            val artistsCount = optLongOrScalar("artists")
+            val venuesCount = optLongOrScalar("venues")
+            val revenueObj = optJSONObject("revenue") ?: JSONObject()
+
+            return MonthlySlice(
+                label = label,
+                sales = salesObj.optDouble("value", 0.0).orZero(),
+                tickets = ticketsCount,
+                customers = customersCount,
+                artists = artistsCount,
+                venues = venuesCount,
+                revenue = revenueObj.optDouble("total", 0.0).orZero()
+            )
+        }
+
+        private fun JSONObject.optLongOrScalar(key: String): Long {
+            if (!has(key) || isNull(key)) return 0L
+            val obj = optJSONObject(key)
+            if (obj != null) return obj.optLong("total", 0L)
+            return optLong(key, 0L)
         }
 
         fun parse(raw: String): Snapshot? = try {

@@ -44,34 +44,72 @@ object WidgetRenderer {
         applyHeader(context, views)
 
         if (snapshot == null) {
-            views.setTextViewText(R.id.stat_sales_value, "—")
-            views.setTextViewText(R.id.stat_tickets_value, "—")
-            views.setTextViewText(R.id.stat_customers_value, "—")
-            views.setTextViewText(R.id.stat_revenue_value, "—")
-            views.setTextViewText(R.id.stat_sales_today, "")
-            views.setTextViewText(R.id.stat_tickets_today, "")
-            views.setTextViewText(R.id.stat_customers_today, "")
-            views.setTextViewText(R.id.stat_revenue_today, "")
+            /* Fara snapshot: umplem locurile cu — ca sa se vada structura,
+               nu un widget gol care nedumereste user-ul. */
+            listOf(
+                R.id.stat_sales_value, R.id.stat_revenue_value,
+                R.id.stat_tickets_value, R.id.stat_customers_value,
+                R.id.stat_artists_value, R.id.stat_venues_value
+            ).forEach { views.setTextViewText(it, "—") }
+
+            listOf(
+                R.id.stat_sales_today, R.id.stat_revenue_today,
+                R.id.stat_tickets_today, R.id.stat_customers_today,
+                R.id.stat_artists_today, R.id.stat_venues_today,
+                R.id.stat_monthly_summary
+            ).forEach { views.setTextViewText(it, "") }
 
             return views
         }
 
         val currency = snapshot.currency
 
-        views.setTextViewText(R.id.stat_sales_value, Format.moneyCompact(snapshot.salesTotal, currency))
-        views.setTextViewText(R.id.stat_sales_today, Format.deltaMoney(snapshot.salesToday, currency))
+        /* Rand 1: cele 2 cifre WIDE (vanzari + venit Tixello) — complete, nu compact. */
+        views.setTextViewText(R.id.stat_sales_value, Format.money(snapshot.salesTotal, currency))
+        views.setTextViewText(
+            R.id.stat_sales_today,
+            context.getString(R.string.widget_today_value, Format.deltaMoney(snapshot.salesToday, currency))
+        )
 
+        views.setTextViewText(R.id.stat_revenue_value, Format.money(snapshot.revenueTotal, currency))
+        views.setTextViewText(
+            R.id.stat_revenue_today,
+            context.getString(R.string.widget_today_value, Format.deltaMoney(snapshot.revenueToday, currency))
+        )
+
+        /* Rand 2: cele 4 counts (bilete, clienti, artisti, locatii). */
         views.setTextViewText(R.id.stat_tickets_value, Format.count(snapshot.ticketsTotal))
         views.setTextViewText(R.id.stat_tickets_today, Format.delta(snapshot.ticketsToday))
 
         views.setTextViewText(R.id.stat_customers_value, Format.count(snapshot.customersTotal))
         views.setTextViewText(R.id.stat_customers_today, Format.delta(snapshot.customersToday))
 
-        views.setTextViewText(R.id.stat_revenue_value, Format.moneyCompact(snapshot.revenueTotal, currency))
-        views.setTextViewText(
-            R.id.stat_revenue_today,
-            context.getString(R.string.widget_today_value, Format.deltaMoney(snapshot.revenueToday, currency))
-        )
+        views.setTextViewText(R.id.stat_artists_value, Format.count(snapshot.artistsTotal))
+        views.setTextViewText(R.id.stat_artists_today, Format.delta(snapshot.artistsToday))
+
+        views.setTextViewText(R.id.stat_venues_value, Format.count(snapshot.venuesTotal))
+        views.setTextViewText(R.id.stat_venues_today, Format.delta(snapshot.venuesToday))
+
+        /* Rand 3: comparatie lunara (venit Tixello) — folosim revenue ca metrica
+           principala pentru comparatie, delta% arata evolutia. */
+        val current = snapshot.monthlyCurrent
+        val previous = snapshot.monthlyPrevious
+        if (current != null && previous != null) {
+            val delta = Format.deltaPercent(current.revenue, previous.revenue)
+            views.setTextViewText(
+                R.id.stat_monthly_summary,
+                context.getString(
+                    R.string.widget_monthly_summary,
+                    current.label,
+                    Format.money(current.revenue, currency),
+                    previous.label,
+                    Format.money(previous.revenue, currency),
+                    delta
+                )
+            )
+        } else {
+            views.setTextViewText(R.id.stat_monthly_summary, "—")
+        }
 
         return views
     }

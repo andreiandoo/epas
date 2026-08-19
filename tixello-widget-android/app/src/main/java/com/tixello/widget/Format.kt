@@ -8,8 +8,10 @@ import kotlin.math.abs
 /**
  * Formatare romaneasca: mie cu punct, zecimale cu virgula.
  *
- * Widget-ul are latimea unui ecran de telefon impartita la trei, deci cifrele
- * mari se scurteaza („1,25 mil"). Ecranul de configurare le arata intregi.
+ * User a cerut explicit numere COMPLETE, nu prescurtate — deci nu mai
+ * folosim „mil" / „mii" nicaieri in widget. Numerele intregi (bilete,
+ * clienti, artisti, venue-uri) apar cu separator de mii; sumele au 2
+ * zecimale (sau zero pentru sume rotunde daca vrem sa economisim spatiu).
  */
 object Format {
 
@@ -19,11 +21,9 @@ object Format {
     }
 
     private val money = DecimalFormat("#,##0.00", symbols)
-    /* Milioanele pastreaza doua zecimale (1,25 mil), miile una (123,4 mii):
-       la milion, o singura zecimala ar ascunde zeci de mii. */
-    private val millions = DecimalFormat("#,##0.##", symbols)
-    private val thousands = DecimalFormat("#,##0.#", symbols)
+    private val moneyNoDecimals = DecimalFormat("#,##0", symbols)
     private val integer = DecimalFormat("#,##0", symbols)
+    private val percent = DecimalFormat("#,##0.#", symbols)
 
     /** Simbolul monedei, cand exista unul scurt si recunoscut. */
     fun currencySymbol(currency: String): String = when (currency.uppercase()) {
@@ -34,7 +34,7 @@ object Format {
         else -> currency.uppercase()
     }
 
-    /** Suma intreaga: `€12.345,67`, `12.345,67 lei`. */
+    /** Suma completa cu 2 zecimale: `€12.345,67`, `12.345,67 lei`. */
     fun money(value: Double, currency: String): String {
         val symbol = currencySymbol(currency)
         val amount = money.format(value)
@@ -42,35 +42,38 @@ object Format {
         return if (symbol.length == 1) "$symbol$amount" else "$amount $symbol"
     }
 
-    /** Suma scurtata pentru widget: `€1,25 mil`, `€12,3 mii`, `€345,60`. */
-    fun moneyCompact(value: Double, currency: String): String {
+    /** Suma completa fara zecimale — pentru cifre foarte mari cand spatiu e strans. */
+    fun moneyRounded(value: Double, currency: String): String {
         val symbol = currencySymbol(currency)
-        val amount = compactNumber(value)
+        val amount = moneyNoDecimals.format(value)
 
         return if (symbol.length == 1) "$symbol$amount" else "$amount $symbol"
     }
 
-    /** Numere intregi cu separator de mii, scurtate peste 100.000. */
-    fun count(value: Long): String =
-        if (abs(value) >= 100_000) compactNumber(value.toDouble()) else integer.format(value)
+    /**
+     * Alias de compatibilitate pentru codul vechi care apela moneyCompact.
+     * Redirectat la money() ca sa nu apara prescurtari.
+     */
+    fun moneyCompact(value: Double, currency: String): String = money(value, currency)
+
+    /** Numere intregi cu separator de mii, mereu complete. */
+    fun count(value: Long): String = integer.format(value)
 
     /** `+12` / `0` — pentru randul „azi". */
     fun delta(value: Long): String = if (value > 0) "+${count(value)}" else count(value)
 
     fun deltaMoney(value: Double, currency: String): String {
-        val formatted = moneyCompact(value, currency)
+        val formatted = money(value, currency)
 
         return if (value > 0) "+$formatted" else formatted
     }
 
-    private fun compactNumber(value: Double): String {
-        val absolute = abs(value)
-
-        return when {
-            absolute >= 1_000_000 -> millions.format(value / 1_000_000) + " mil"
-            absolute >= 100_000 -> thousands.format(value / 1_000) + " mii"
-            else -> money.format(value)
-        }
+    /** `+12,3%` / `-4,5%` / `—` pentru delta lunar. */
+    fun deltaPercent(current: Double, previous: Double): String {
+        if (previous <= 0.0) return if (current > 0.0) "nou" else "—"
+        val pct = (current - previous) / previous * 100.0
+        val sign = if (pct > 0) "+" else ""
+        return "$sign${percent.format(pct)}%"
     }
 
     /** „acum", „acum 4 min", „acum 2 h", „ieri". */
