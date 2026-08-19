@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\BoatRental;
 use App\Models\Event;
 use App\Models\LeisureBoat;
+use App\Models\LeisureOrderDeletionLog;
 use App\Models\LeisureResourceLock;
 use App\Models\LeisureShift;
 use App\Models\MarketplaceOrganizer;
@@ -2772,6 +2773,606 @@ class LeisureController extends BaseController
         // multi-request-uri simultane sa piardă timp pe agregare identică.
         \Illuminate\Support\Facades\Cache::put($cacheKey, $responsePayload, 300);
         return $this->success($responsePayload);
+    }
+
+    // ========================================================================
+    // ORDERS — pagina noua /organizator/leisure-orders (list + acordeon + delete)
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/orders
+     *   ?from=&to=&search=&source=pos|online&status=&page=&per_page=
+     *
+     * Lista paginata de comenzi cu meta esentiala pentru pagina Comenzi.
+     * Biletele NU sunt incluse (lazy load prin orderShow cand user expandeaza row).
+     */
+    public function ordersIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'search' => 'nullable|string|max:100',
+            'source' => 'nullable|in:pos,online',
+            'status' => 'nullable|string|max:32',
+            'per_page' => 'nullable|integer|min:1|max:200',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $tz = 'Europe/Bucharest';
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'], $tz)->startOfDay()
+            : Carbon::now($tz)->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'], $tz)->endOfDay()
+            : Carbon::now($tz)->endOfDay();
+        $perPage = (int) ($validated['per_page'] ?? 30);
+
+        $q = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('paid_at', [$from, $to]);
+
+        if (!empty($validated['status'])) {
+            $q->where('status', $validated['status']);
+        }
+        if (!empty($validated['source'])) {
+            if ($validated['source'] === 'pos') $q->where('source', 'pos');
+            else $q->where('source', '!=', 'pos');
+        }
+        if (!empty($validated['search'])) {
+            $s = $validated['search'];
+            $q->where(function ($sq) use ($s) {
+                $sq->where('order_number', 'ilike', "%{$s}%")
+                    ->orWhere('customer_name', 'ilike', "%{$s}%")
+                    ->orWhere('customer_email', 'ilike', "%{$s}%");
+            });
+        }
+
+        $paginator = $q->orderByDesc('paid_at')
+            ->withCount(['tickets as tickets_count' => function ($tq) {
+                $tq->whereNotIn('status', ['cancelled', 'refunded']);
+            }])
+            ->paginate($perPage, ['id', 'order_number', 'source', 'status', 'total', 'currency', 'paid_at', 'created_at', 'customer_name', 'customer_email', 'customer_phone', 'meta']);
+
+        // Preload team members pt operator_name
+        $tmIds = [];
+        foreach ($paginator->items() as $o) {
+            $tmId = $o->meta['cashier_team_member_id'] ?? null;
+            if ($tmId) $tmIds[(int) $tmId] = true;
+        }
+        $tmNames = [];
+        if (!empty($tmIds)) {
+            \App\Models\MarketplaceOrganizerTeamMember::query()
+                ->whereIn('id', array_keys($tmIds))
+                ->get(['id', 'name'])
+                ->each(function ($tm) use (&$tmNames) { $tmNames[$tm->id] = $tm->name; });
+        }
+
+        $rows = collect($paginator->items())->map(function ($o) use ($tmNames) {
+            $meta = is_array($o->meta ?? null) ? $o->meta : [];
+            $pm = $meta['payment_method'] ?? null;
+            $tmId = $meta['cashier_team_member_id'] ?? null;
+            $operator = $tmId ? ($tmNames[(int) $tmId] ?? ('Angajat #' . $tmId)) : ($o->source === 'pos' ? 'InfoPoint' : null);
+            $sessionId = $meta['cashier_session_id'] ?? null;
+            return [
+                'id' => $o->id,
+                'order_number' => $o->order_number,
+                'source' => $o->source,
+                'status' => $o->status,
+                'total' => (float) $o->total,
+                'currency' => $o->currency,
+                'paid_at' => optional($o->paid_at)->toIso8601String(),
+                'created_at' => optional($o->created_at)->toIso8601String(),
+                'customer_name' => $o->customer_name,
+                'customer_email' => $o->customer_email,
+                'customer_phone' => $o->customer_phone,
+                'payment_method' => $pm,
+                'cashier_session_id' => $sessionId,
+                'operator_name' => $operator,
+                'tickets_count' => (int) ($o->tickets_count ?? 0),
+            ];
+        });
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'orders' => $rows->values(),
+            'pagination' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/orders/{orderId}
+     * Returneaza detalii + bilete pentru acordeon expand.
+     */
+    public function orderShow(Request $request, int $event, int $orderId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $order = Order::query()
+            ->where('id', $orderId)
+            ->where('event_id', $eventModel->id)
+            ->with(['tickets:id,order_id,ticket_type_id,code,barcode,price,status,checked_in_at,meta', 'tickets.ticketType:id,name,service_category'])
+            ->first();
+        if (!$order) return $this->error('Order not found', 404);
+
+        $tickets = $order->tickets->map(function ($t) {
+            $tt = $t->ticketType;
+            $ttName = $tt->name ?? '—';
+            if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+            $meta = is_array($t->meta ?? null) ? $t->meta : [];
+            if (!empty($meta['label_override'])) $ttName = $meta['label_override'];
+            return [
+                'id' => $t->id,
+                'code' => $t->code ?: $t->barcode,
+                'ticket_type' => $ttName,
+                'service_category' => $tt->service_category ?? 'access',
+                'price' => (float) ($t->price ?? 0),
+                'status' => $t->status,
+                'checked_in_at' => optional($t->checked_in_at)->toIso8601String(),
+                'from_package' => !empty($meta['from_package']),
+                'is_umbrella' => !empty($meta['is_package_umbrella']),
+                'visit_date' => $meta['visit_date'] ?? null,
+            ];
+        });
+
+        return $this->success([
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'source' => $order->source,
+            'status' => $order->status,
+            'total' => (float) $order->total,
+            'currency' => $order->currency,
+            'paid_at' => optional($order->paid_at)->toIso8601String(),
+            'created_at' => optional($order->created_at)->toIso8601String(),
+            'customer_name' => $order->customer_name,
+            'customer_email' => $order->customer_email,
+            'customer_phone' => $order->customer_phone,
+            'meta' => $order->meta,
+            'tickets' => $tickets,
+        ]);
+    }
+
+    /**
+     * DELETE /marketplace-client/organizer/events/{event}/leisure/orders/{orderId}
+     * Body: { note: "motiv obligatoriu" }
+     *
+     * Sterge orderul + biletele + order_items dintr-o tranzactie, cu:
+     *  1. Snapshot audit persistat in leisure_order_deletion_logs (JSONB blob)
+     *  2. Regenerare closing_snapshot pt sesiunea casa (daca era in sesiune inchisa)
+     *  3. Nota interna OBLIGATORIE
+     */
+    public function orderDestroy(Request $request, int $event, int $orderId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'note' => 'required|string|min:3|max:1000',
+        ]);
+
+        $order = Order::query()
+            ->where('id', $orderId)
+            ->where('event_id', $eventModel->id)
+            ->with(['tickets:id,order_id,ticket_type_id,code,barcode,price,status,checked_in_at,meta', 'tickets.ticketType:id,name,service_category'])
+            ->first();
+        if (!$order) return $this->error('Order not found', 404);
+
+        // Detect actor (team_member vs organizer)
+        $actorType = 'organizer';
+        $actorId = $organizer->id;
+        $actorName = $organizer->name ?? $organizer->company_name;
+        $actorEmail = $organizer->email ?? null;
+        $tokenName = $request->user()?->currentAccessToken()?->name ?? '';
+        if (str_starts_with($tokenName, 'team-member-')) {
+            $tmId = (int) str_replace('team-member-', '', $tokenName);
+            $tm = \App\Models\MarketplaceOrganizerTeamMember::find($tmId);
+            if ($tm) {
+                $actorType = 'team_member';
+                $actorId = $tm->id;
+                $actorName = $tm->name;
+                $actorEmail = $tm->email ?? null;
+            }
+        }
+
+        // Operator name pt log (poate fi diferit de actor - operatorul de la POS)
+        $meta = is_array($order->meta ?? null) ? $order->meta : [];
+        $orderTmId = $meta['cashier_team_member_id'] ?? null;
+        $operatorName = null;
+        if ($orderTmId) {
+            $operatorTm = \App\Models\MarketplaceOrganizerTeamMember::find((int) $orderTmId);
+            $operatorName = $operatorTm?->name ?? ('Angajat #' . $orderTmId);
+        } elseif ($order->source === 'pos') {
+            $operatorName = 'InfoPoint';
+        }
+
+        // Build full snapshot pentru audit
+        $ticketsSnapshot = $order->tickets->map(function ($t) {
+            return [
+                'id' => $t->id,
+                'ticket_type_id' => $t->ticket_type_id,
+                'ticket_type_name' => $t->ticketType?->name,
+                'service_category' => $t->ticketType?->service_category,
+                'code' => $t->code,
+                'barcode' => $t->barcode,
+                'price' => (float) ($t->price ?? 0),
+                'status' => $t->status,
+                'checked_in_at' => optional($t->checked_in_at)->toIso8601String(),
+                'meta' => $t->meta,
+            ];
+        })->toArray();
+
+        $fullSnapshot = [
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'source' => $order->source,
+                'status' => $order->status,
+                'total' => (float) $order->total,
+                'currency' => $order->currency,
+                'paid_at' => optional($order->paid_at)->toIso8601String(),
+                'created_at' => optional($order->created_at)->toIso8601String(),
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+                'customer_phone' => $order->customer_phone,
+                'meta' => $order->meta,
+            ],
+            'tickets' => $ticketsSnapshot,
+        ];
+
+        $cashierSessionId = $meta['cashier_session_id'] ?? null;
+        $snapshotRegenerated = false;
+
+        \DB::transaction(function () use ($order, $eventModel, $marketplace, $organizer, $actorType, $actorId, $actorName, $actorEmail, $operatorName, $meta, $cashierSessionId, $fullSnapshot, $validated, $ticketsSnapshot, &$snapshotRegenerated) {
+            // 1. Log audit inainte de delete
+            LeisureOrderDeletionLog::create([
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => $eventModel->marketplace_organizer_id ?? $organizer->id,
+                'event_id' => $eventModel->id,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'order_source' => $order->source,
+                'order_status' => $order->status,
+                'order_total' => $order->total,
+                'order_currency' => $order->currency,
+                'order_paid_at' => $order->paid_at,
+                'order_created_at' => $order->created_at,
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+                'customer_phone' => $order->customer_phone,
+                'payment_method' => $meta['payment_method'] ?? null,
+                'cashier_session_id' => $cashierSessionId,
+                'cashier_operator_name' => $operatorName,
+                'tickets_count' => count($ticketsSnapshot),
+                'snapshot' => $fullSnapshot,
+                'note' => $validated['note'],
+                'deleted_by_type' => $actorType,
+                'deleted_by_id' => $actorId,
+                'deleted_by_name' => $actorName,
+                'deleted_by_email' => $actorEmail,
+                'deleted_at' => now(),
+            ]);
+
+            // 2. Delete cascade: order_items -> tickets -> order
+            if (\Schema::hasTable('order_items')) {
+                \DB::table('order_items')->where('order_id', $order->id)->delete();
+            }
+            Ticket::where('order_id', $order->id)->delete();
+            Order::where('id', $order->id)->delete();
+
+            // 3. Regenerare snapshot pt sesiunea inchisa
+            if ($cashierSessionId) {
+                $session = \App\Models\LeisureCashierSession::find($cashierSessionId);
+                if ($session && $session->closed_at !== null) {
+                    $newSnapshot = $this->buildCashierSnapshotForSession($session, $eventModel, $organizer);
+                    $newSnapshot['regenerated_at'] = now()->toIso8601String();
+                    $newSnapshot['regenerated_reason'] = 'order_deleted:' . $order->order_number;
+                    $session->update(['closing_snapshot' => $newSnapshot]);
+                    $snapshotRegenerated = true;
+                }
+            }
+        });
+
+        // Update log cu flag regeneration (dupa commit)
+        if ($snapshotRegenerated) {
+            LeisureOrderDeletionLog::where('order_id', $order->id)
+                ->orderByDesc('id')->limit(1)
+                ->update(['cashier_snapshot_regenerated' => true]);
+        }
+
+        return $this->success([
+            'deleted' => true,
+            'order_number' => $order->order_number,
+            'cashier_snapshot_regenerated' => $snapshotRegenerated,
+        ], 'Comanda a fost stearsa.');
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/orders/deletion-history
+     *   ?from=&to=&search=&page=&per_page=
+     *
+     * Lista ștergerilor - toate detaliile pastrate.
+     */
+    public function orderDeletionHistory(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'search' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:200',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $tz = 'Europe/Bucharest';
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'], $tz)->startOfDay()
+            : Carbon::now($tz)->subDays(60)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'], $tz)->endOfDay()
+            : Carbon::now($tz)->endOfDay();
+        $perPage = (int) ($validated['per_page'] ?? 30);
+
+        $q = LeisureOrderDeletionLog::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('deleted_at', [$from, $to])
+            ->orderByDesc('deleted_at');
+
+        if (!empty($validated['search'])) {
+            $s = $validated['search'];
+            $q->where(function ($sq) use ($s) {
+                $sq->where('order_number', 'ilike', "%{$s}%")
+                    ->orWhere('customer_name', 'ilike', "%{$s}%")
+                    ->orWhere('customer_email', 'ilike', "%{$s}%")
+                    ->orWhere('note', 'ilike', "%{$s}%");
+            });
+        }
+
+        $paginator = $q->paginate($perPage);
+
+        $rows = collect($paginator->items())->map(function ($l) {
+            return [
+                'id' => $l->id,
+                'order_number' => $l->order_number,
+                'order_source' => $l->order_source,
+                'order_status' => $l->order_status,
+                'order_total' => (float) $l->order_total,
+                'order_currency' => $l->order_currency,
+                'order_paid_at' => optional($l->order_paid_at)->toIso8601String(),
+                'customer_name' => $l->customer_name,
+                'customer_email' => $l->customer_email,
+                'customer_phone' => $l->customer_phone,
+                'payment_method' => $l->payment_method,
+                'cashier_operator_name' => $l->cashier_operator_name,
+                'cashier_session_id' => $l->cashier_session_id,
+                'tickets_count' => $l->tickets_count,
+                'note' => $l->note,
+                'deleted_by_type' => $l->deleted_by_type,
+                'deleted_by_name' => $l->deleted_by_name,
+                'deleted_by_email' => $l->deleted_by_email,
+                'deleted_at' => optional($l->deleted_at)->toIso8601String(),
+                'cashier_snapshot_regenerated' => (bool) $l->cashier_snapshot_regenerated,
+            ];
+        });
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'items' => $rows->values(),
+            'pagination' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Helper: reconstruieste closing_snapshot pentru o sesiune de casa dupa
+     * modificari (delete order). Mirror 1:1 al logicii din cashierClose().
+     */
+    private function buildCashierSnapshotForSession(\App\Models\LeisureCashierSession $session, Event $eventModel, MarketplaceOrganizer $organizer): array
+    {
+        $eventId = $session->event_id;
+        $openedAt = $session->opened_at;
+        $closedAt = $session->closed_at;
+        $issuerNames = [
+            'primary' => $organizer->company_name ?: 'SC1',
+            'secondary' => $organizer->secondary_company_name ?: null,
+            'mix' => 'Mix',
+        ];
+        // Component issuer map pt Mix packages
+        $componentIssuerMap = [];
+        $ttPkg = TicketType::where('event_id', $eventId)->where('service_category', 'package')->get();
+        foreach ($ttPkg as $tt) {
+            $outs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+            foreach ($outs as $o) {
+                $cid = (int) ($o['ticket_type_id'] ?? 0);
+                if (!$cid) continue;
+                if (!isset($componentIssuerMap[$cid])) {
+                    $ct = TicketType::find($cid);
+                    if ($ct) $componentIssuerMap[$cid] = $ct->issuing_company ?? 'primary';
+                }
+            }
+        }
+        $orders = Order::where('event_id', $eventId)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$openedAt, $closedAt])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category,issuing_company'])
+            ->get(['id', 'source', 'meta', 'total']);
+
+        $byPayment = [];
+        $byTicketType = [];
+        $byIssuer = [
+            'primary' => ['issuer' => 'primary', 'name' => $issuerNames['primary'], 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0, 'by_payment' => ['cash' => 0.0, 'card' => 0.0, 'online' => 0.0]],
+            'secondary' => ['issuer' => 'secondary', 'name' => $issuerNames['secondary'], 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0, 'by_payment' => ['cash' => 0.0, 'card' => 0.0, 'online' => 0.0]],
+        ];
+        $totalOrders = $orders->count();
+        $totalTickets = 0; $totalTicketsSold = 0; $totalTicketsVisitors = 0; $totalRevenue = 0.0;
+        $posOnlyOrders = 0; $posOnlyTickets = 0; $posOnlyTicketsSold = 0; $posOnlyTicketsVisitors = 0; $posOnlyRevenue = 0.0;
+        $posOnlyByCategory = [];
+
+        foreach ($orders as $o) {
+            $rev = (float) ($o->total ?? 0);
+            $totalRevenue += $rev;
+            $isPos = $o->source === 'pos';
+            $pmRaw = $o->meta['payment_method'] ?? null;
+            if ($isPos && $pmRaw === 'cash') $pm = 'cash';
+            elseif ($isPos && $pmRaw === 'card') $pm = 'card';
+            else $pm = 'online';
+            if (!isset($byPayment[$pm])) $byPayment[$pm] = ['method' => $pm, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $byPayment[$pm]['orders']++;
+            $byPayment[$pm]['revenue'] += $rev;
+            if ($isPos) { $posOnlyOrders++; $posOnlyRevenue += $rev; }
+            $orderTouchedIssuers = ['primary' => false, 'secondary' => false];
+
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $metaArr = is_array($t->meta ?? null) ? $t->meta : [];
+                $isFromPackage = !empty($metaArr['from_package']);
+                $isUmbrella = !empty($metaArr['is_package_umbrella']);
+                $tp = (float) ($t->price ?? 0);
+                $tt = $t->ticketType;
+                $svcCat = $tt->service_category ?? 'access';
+                $isPackageParent = ($svcCat === 'package');
+                $totalTickets++;
+                if (!$isFromPackage && $tp > 0) $totalTicketsSold++;
+                if (!$isUmbrella) $totalTicketsVisitors++;
+                $byPayment[$pm]['tickets']++;
+
+                if ($isPos) {
+                    $posOnlyTickets++;
+                    if (!$isFromPackage && $tp > 0) $posOnlyTicketsSold++;
+                    if (!$isUmbrella) $posOnlyTicketsVisitors++;
+                    if (!$isUmbrella) {
+                        $catKey = $svcCat ?: 'access';
+                        if (!isset($posOnlyByCategory[$catKey])) $posOnlyByCategory[$catKey] = ['category' => $catKey, 'tickets' => 0, 'revenue' => 0.0];
+                        $posOnlyByCategory[$catKey]['tickets']++;
+                        $posOnlyByCategory[$catKey]['revenue'] += $tp;
+                    }
+                }
+
+                $ttId = $t->ticket_type_id;
+                $ttName = $tt->name ?? "Tip #{$ttId}";
+                if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+                if (!empty($metaArr['label_override'])) {
+                    $ttName = $metaArr['label_override'];
+                    $key = 'lbl_' . $ttName;
+                } else {
+                    $key = ($isPackageParent ? 'pkg_' : 'tt_') . $ttId;
+                }
+                if (!isset($byTicketType[$key])) $byTicketType[$key] = ['ticket_type_id' => $ttId, 'name' => $ttName, 'tickets' => 0, 'revenue' => 0.0];
+                $byTicketType[$key]['tickets']++;
+                $byTicketType[$key]['revenue'] += $tp;
+
+                if ($isFromPackage) continue;
+                if ($tp <= 0) continue;
+
+                $issuer = $tt->issuing_company ?? 'primary';
+                $splits = [];
+                if ($isPackageParent && $issuer === 'mix') {
+                    $outs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+                    $allocSum = 0.0;
+                    foreach ($outs as $out) if (isset($out['price']) && is_numeric($out['price'])) $allocSum += (float) $out['price'];
+                    if ($allocSum > 0) foreach ($outs as $out) {
+                        $cid = (int) ($out['ticket_type_id'] ?? 0);
+                        $cIssuer = $componentIssuerMap[$cid] ?? 'primary';
+                        $portion = isset($out['price']) ? (float) $out['price'] : 0.0;
+                        if ($portion <= 0) continue;
+                        $splits[] = ['issuer' => $cIssuer, 'amount' => $portion];
+                    }
+                }
+                if (empty($splits)) $splits[] = ['issuer' => $issuer === 'secondary' ? 'secondary' : 'primary', 'amount' => $tp > 0 ? $tp : 1];
+                $splitTotal = array_sum(array_column($splits, 'amount'));
+                $biggest = null; $biggestAmt = -1;
+                foreach ($splits as $s) {
+                    if ($s['amount'] > $biggestAmt) { $biggestAmt = $s['amount']; $biggest = $s['issuer']; }
+                    $ratio = $splitTotal > 0 ? $s['amount'] / $splitTotal : 0;
+                    $portionRev = $tp * $ratio;
+                    $byIssuer[$s['issuer']]['revenue'] += $portionRev;
+                    $byIssuer[$s['issuer']]['by_payment'][$pm] = ($byIssuer[$s['issuer']]['by_payment'][$pm] ?? 0) + $portionRev;
+                    if (!$orderTouchedIssuers[$s['issuer']]) {
+                        $byIssuer[$s['issuer']]['orders']++;
+                        $orderTouchedIssuers[$s['issuer']] = true;
+                    }
+                }
+                if ($biggest) $byIssuer[$biggest]['tickets']++;
+            }
+        }
+        foreach ($byPayment as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byIssuer as &$row) {
+            $row['revenue'] = round($row['revenue'], 2);
+            foreach ($row['by_payment'] as $k => $v) $row['by_payment'][$k] = round($v, 2);
+        }
+        unset($row);
+        usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
+        foreach ($posOnlyByCategory as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
+        $posOnlyByCategoryList = array_values($posOnlyByCategory);
+        $catOrder = ['access' => 1, 'parking' => 2, 'activity' => 3, 'rental' => 4];
+        usort($posOnlyByCategoryList, fn ($a, $b) => ($catOrder[$a['category']] ?? 99) <=> ($catOrder[$b['category']] ?? 99));
+
+        return [
+            'totals' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'tickets_sold' => $totalTicketsSold,
+                'tickets_visitors' => $totalTicketsVisitors,
+                'revenue' => round($totalRevenue, 2),
+                'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+            ],
+            'pos_only_totals' => [
+                'orders' => $posOnlyOrders,
+                'tickets' => $posOnlyTickets,
+                'tickets_sold' => $posOnlyTicketsSold,
+                'tickets_visitors' => $posOnlyTicketsVisitors,
+                'revenue' => round($posOnlyRevenue, 2),
+                'avg_order' => $posOnlyOrders > 0 ? round($posOnlyRevenue / $posOnlyOrders, 2) : 0,
+            ],
+            'by_payment' => array_values($byPayment),
+            'by_ticket_type' => array_values($byTicketType),
+            'by_category_pos' => $posOnlyByCategoryList,
+            'by_issuer' => [
+                'primary' => $byIssuer['primary'],
+                'secondary' => $issuerNames['secondary'] ? $byIssuer['secondary'] : null,
+            ],
+        ];
     }
 
     // ========================================================================

@@ -1947,6 +1947,45 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.orders.index':
+        // GET /organizer/events/{id}/leisure/orders?from=&to=&search=&source=&status=&page=&per_page=
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        foreach (['from','to','search','source','status','page','per_page'] as $k) if (isset($_GET[$k])) $q[$k] = $_GET[$k];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/orders' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.orders.show':
+        // GET /organizer/events/{id}/leisure/orders/{orderId}
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $orderId = (int) ($_GET['order_id'] ?? 0);
+        if (!$eventId || !$orderId) { http_response_code(400); echo json_encode(['error' => 'Missing event id or order id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/orders/' . $orderId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.orders.destroy':
+        // DELETE /organizer/events/{id}/leisure/orders/{orderId} + body{note}
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $orderId = (int) ($_GET['order_id'] ?? 0);
+        if (!$eventId || !$orderId) { http_response_code(400); echo json_encode(['error' => 'Missing event id or order id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/orders/' . $orderId;
+        $method = 'DELETE';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.orders.deletion-history':
+        // GET /organizer/events/{id}/leisure/orders/deletion-history?from=&to=&search=
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        foreach (['from','to','search','page','per_page'] as $k) if (isset($_GET[$k])) $q[$k] = $_GET[$k];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/orders/deletion-history' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.scans':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }

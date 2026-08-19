@@ -2098,6 +2098,21 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/leisure/dashboard/compare', [OrganizerLeisureController::class, 'dashboardCompare'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.dashboard.compare');
+        // Orders (pagina noua Comenzi + Istoric)
+        Route::get('/events/{event}/leisure/orders/deletion-history', [OrganizerLeisureController::class, 'orderDeletionHistory'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.orders.deletion-history');
+        Route::get('/events/{event}/leisure/orders', [OrganizerLeisureController::class, 'ordersIndex'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.orders.index');
+        Route::get('/events/{event}/leisure/orders/{orderId}', [OrganizerLeisureController::class, 'orderShow'])
+            ->whereNumber('event')
+            ->whereNumber('orderId')
+            ->name('api.marketplace-client.organizer.leisure.orders.show');
+        Route::delete('/events/{event}/leisure/orders/{orderId}', [OrganizerLeisureController::class, 'orderDestroy'])
+            ->whereNumber('event')
+            ->whereNumber('orderId')
+            ->name('api.marketplace-client.organizer.leisure.orders.destroy');
         // Scanari — chart per zi + detalii pe zi
         Route::get('/events/{event}/leisure/scans', [OrganizerLeisureController::class, 'scansOverview'])
             ->whereNumber('event')
