@@ -277,9 +277,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const from = new Date(Date.now() - parseInt(days, 10) * 86400000);
         $('r-from').value = from.toISOString().slice(0,10);
         $('r-to').value = to.toISOString().slice(0,10);
-        document.querySelectorAll('.lv-range-btn').forEach(b => b.classList.remove('bg-primary', 'text-white', 'border-primary'));
+        // Fix bg-white conflict: elimin bg-white cand adaug bg-primary
+        document.querySelectorAll('.lv-range-btn').forEach(b => {
+            b.classList.remove('bg-primary', 'text-white', 'border-primary');
+            b.classList.add('bg-white');
+        });
         const btn = document.querySelector(`.lv-range-btn[data-range="${days}"]`);
-        if (btn) btn.classList.add('bg-primary', 'text-white', 'border-primary');
+        if (btn) { btn.classList.remove('bg-white'); btn.classList.add('bg-primary', 'text-white', 'border-primary'); }
         loadReport();
     }
 
