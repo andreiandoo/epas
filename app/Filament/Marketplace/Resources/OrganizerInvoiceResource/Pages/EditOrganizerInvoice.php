@@ -86,12 +86,12 @@ class EditOrganizerInvoice extends EditRecord
             $applied = $this->record->applyOblioStatus($result, $source);
             $this->record->refresh();
 
-            if (in_array($applied, ['deleted', 'stornoed'], true)) {
-                $label = $applied === 'stornoed' ? 'storno-tă în Oblio' : 'ștearsă în Oblio';
+            if (in_array($applied, ['deleted', 'stornoed', 'canceled'], true)) {
+                $label = $this->record->oblioVoidLabel() ?? 'voidată în Oblio';
                 Notification::make()
                     ->title("Factura este {$label}")
                     ->body($wasPaid
-                        ? 'Statusul local a fost resetat automat la Neachitată (nu poți avea Achitată local pe un document inexistent la contabilitate).'
+                        ? 'Statusul local a fost resetat automat la Neachitată (nu poți avea Achitată local pe un document ce nu mai reprezintă o vânzare la contabilitate).'
                         : 'Poți acum să regenerezi conținutul și să retrimiți factura.')
                     ->warning()
                     ->send();
@@ -142,7 +142,7 @@ class EditOrganizerInvoice extends EditRecord
                 if ($this->record->isVoidedInOblio()) {
                     Notification::make()->danger()
                         ->title('Nu se poate marca achitată')
-                        ->body('Factura este ' . ($this->record->isStornoedInOblio() ? 'storno-tă' : 'ștearsă') . ' în Oblio.')
+                        ->body('Factura este ' . $this->record->oblioVoidLabel() . '.')
                         ->send();
                     return;
                 }
@@ -158,10 +158,19 @@ class EditOrganizerInvoice extends EditRecord
         $oblioVoidBadge = Actions\Action::make('oblioVoidBadge')
             ->label(function () {
                 $meta = $this->record->meta ?? [];
+                // Show which void sub-state we're in — three MUTUALLY
+                // EXCLUSIVE cases per the model helper set; the timestamp
+                // makes it obvious whether the badge reflects a fresh
+                // check or a stale one.
                 if ($this->record->isStornoedInOblio()) {
                     $when = $meta['accounting']['stornoed_at'] ?? null;
                     $whenLabel = $when ? \Carbon\Carbon::parse($when)->format('d.m.Y H:i') : '';
                     return trim('Storno-tă în Oblio ' . $whenLabel);
+                }
+                if ($this->record->isCanceledInOblio()) {
+                    $when = $meta['accounting']['canceled_at'] ?? null;
+                    $whenLabel = $when ? \Carbon\Carbon::parse($when)->format('d.m.Y H:i') : '';
+                    return trim('Anulată în Oblio ' . $whenLabel);
                 }
                 if ($this->record->isDeletedInOblio()) {
                     $when = $meta['accounting']['deleted_at'] ?? null;
@@ -315,7 +324,7 @@ class EditOrganizerInvoice extends EditRecord
                 ? 'Retrimite factură fiscală (număr nou)'
                 : 'Trimite factură fiscală')
             ->modalDescription(fn () => $this->record->isVoidedInOblio()
-                ? "Factura #{$this->record->number} a fost " . ($this->record->isStornoedInOblio() ? 'storno-tă' : 'ștearsă') . " în Oblio. Se va reemite cu un număr NOU la contabilitate; vechea referință rămâne arhivată."
+                ? "Factura #{$this->record->number} a fost " . $this->record->oblioVoidLabel() . ". Se va reemite cu un număr NOU la contabilitate; vechea referință rămâne arhivată."
                 : "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
             ->visible(function () {
                 // Show when NOT live at provider — that covers both
@@ -337,9 +346,12 @@ class EditOrganizerInvoice extends EditRecord
                 // keep the full trail. The current sendToAccounting call
                 // assigns new values on the same meta.accounting slot.
                 if (!empty($this->record->meta['accounting']['external_ref'] ?? null)) {
-                    $reason = $this->record->isStornoedInOblio()
-                        ? 'stornoed_in_oblio'
-                        : ($this->record->isDeletedInOblio() ? 'deleted_in_oblio' : 'resend');
+                    $reason = match (true) {
+                        $this->record->isStornoedInOblio() => 'stornoed_in_oblio',
+                        $this->record->isCanceledInOblio() => 'canceled_in_oblio',
+                        $this->record->isDeletedInOblio()  => 'deleted_in_oblio',
+                        default                             => 'resend',
+                    };
                     $this->record->archiveCurrentOblioRef($reason);
                     $this->record->refresh();
                 }

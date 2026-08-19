@@ -389,17 +389,19 @@ class OblioAdapter implements AccountingAdapterInterface
     }
 
     /**
-     * Check whether an invoice / proforma still exists in Oblio, and whether
-     * a fiscal invoice has been storno-ed (has a credit note).
+     * Check whether an invoice / proforma still exists in Oblio + which
+     * voided sub-state it's in.
      *
      * Return contract:
-     *   ['exists' => true,  'canceled' => bool, 'raw' => ...]   - live in Oblio
-     *   ['exists' => false, 'reason'   => 'not_found']          - deleted (proforma) OR missing
+     *   ['exists' => true,  'canceled' => bool, 'has_credit_note' => bool, 'raw' => ...]
+     *      - live if !canceled
+     *      - STORNO if canceled && has_credit_note (a credit note was issued)
+     *      - CANCELED if canceled && !has_credit_note (Oblio "Anulează" — plain cancel, no NC)
+     *   ['exists' => false, 'reason'   => 'not_found']  - deleted (proforma) OR missing
      *   ['exists' => null,  'reason'   => 'error', 'message' => ...] - transient (auth, network)
      *
-     * Distinction between "deleted" (proforma) and "storno-ed" (fiscal) is
-     * made at the caller — proformas that come back not_found are truly
-     * deleted; fiscals get `canceled=true` when a credit note exists.
+     * The caller (Invoice::applyOblioStatus) uses (canceled, has_credit_note)
+     * to route between deleted_at / stornoed_at / canceled_at meta slots.
      */
     public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
     {
@@ -420,20 +422,38 @@ class OblioAdapter implements AccountingAdapterInterface
             ]);
             $data = $result['data'] ?? $result;
 
-            // Storno detection: Oblio marks storno-ed fiscals with any of
-            // these flags — we accept whichever the API returns to be robust
-            // across account plans / API versions.
+            // Canceled flag — Oblio marks both storno-ed AND plain-canceled
+            // fiscals with cancelDate / canceled=true. We only trust the
+            // primary flags here (canceled / cancelDate / stornoDate / isCanceled);
+            // credit-note presence is a SECONDARY signal used only to tell
+            // storno from cancel below, never to infer canceled=true on its
+            // own (some cancels without NC would otherwise get misfiled).
             $canceled = (bool) (
                 ($data['canceled'] ?? false)
                 || ($data['cancelDate'] ?? null)
                 || ($data['stornoDate'] ?? null)
                 || ($data['isCanceled'] ?? false)
-                || (!empty($data['creditNote']))
+            );
+
+            // Credit-note presence differentiates STORNO from plain CANCEL.
+            // Oblio surfaces the link in one of several shapes across account
+            // plans (creditNote object, stornoInvoice ref, linkedInvoices
+            // array with a NC entry, or a non-empty stornoDate string when
+            // paired with a real NC document). We accept any of them to
+            // stay robust; false positives here just downgrade "canceled" to
+            // "stornoed" which never triggers a data-loss action.
+            $hasCreditNote = (bool) (
+                !empty($data['creditNote'])
+                || !empty($data['stornoInvoice'])
+                || !empty($data['creditNoteNumber'])
+                || (isset($data['linkedInvoices']) && is_array($data['linkedInvoices'])
+                    && collect($data['linkedInvoices'])->contains(fn ($li) => (($li['type'] ?? '') === 'creditNote' || !empty($li['isCreditNote']))))
             );
 
             return [
                 'exists' => true,
                 'canceled' => $canceled,
+                'has_credit_note' => $hasCreditNote,
                 'raw' => $data,
             ];
         } catch (\Exception $e) {

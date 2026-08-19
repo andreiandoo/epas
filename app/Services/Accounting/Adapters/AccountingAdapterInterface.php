@@ -84,7 +84,10 @@ interface AccountingAdapterInterface
      * Look up the current state of an invoice / proforma at the provider.
      *
      * Contract:
-     *   ['exists' => true,  'canceled' => bool, 'raw' => ...]   - live
+     *   ['exists' => true,  'canceled' => bool, 'has_credit_note' => bool, 'raw' => ...]
+     *      - live if !canceled
+     *      - stornoed if canceled && has_credit_note (a credit note was issued)
+     *      - canceled if canceled && !has_credit_note (plain cancel, no NC)
      *   ['exists' => false, 'reason'   => 'not_found']          - deleted / missing
      *   ['exists' => null,  'reason'   => 'error', 'message' => ...] - transient (network/auth)
      *

@@ -158,18 +158,23 @@ class Invoice extends Model
 
     // ─── Accounting provider (Oblio) status helpers ──────────────────────
     //
-    // Provider state lives in meta.accounting.* — extended with:
-    //   deleted_at         (proforma removed at provider)
-    //   stornoed_at        (fiscal has a credit note at provider)
+    // Provider state lives in meta.accounting.* — three MUTUALLY EXCLUSIVE
+    // voided sub-states are tracked:
+    //   deleted_at   (proforma removed via DELETE at provider)
+    //   stornoed_at  (fiscal + credit note — "Storno" in Oblio UI)
+    //   canceled_at  (fiscal cancel WITHOUT credit note — "Anulează" in Oblio UI)
+    // plus:
     //   status_check_at    (last time we asked the provider)
     //   status_check_source ('mount' | 'manual' | 'cron')
     //   history[]          (past external_refs after resend, oldest first)
-    // The two "voided" states are kept distinct per operator request — a
-    // proforma really disappears while a fiscal only becomes canceled.
+    // Operators asked for the three-way distinction (see 2026-08 conversation)
+    // because "Anulează" on a fiscal in Oblio is a different bookkeeping event
+    // than issuing a credit note, and the UI badge has to say which one.
 
     /**
      * Provider-side proforma removal (meta.accounting.deleted_at set).
-     * True only for proformas — fiscals get isStornoedInOblio instead.
+     * True only for proformas — fiscals get isStornoedInOblio /
+     * isCanceledInOblio instead.
      */
     public function isDeletedInOblio(): bool
     {
@@ -185,13 +190,35 @@ class Invoice extends Model
     }
 
     /**
-     * Either voided state — proforma deleted OR fiscal stornoed.
-     * Convenience for buttons that behave identically in both cases
-     * (retrimit / regenerează).
+     * Provider-side fiscal cancel — Oblio "Anulează" WITHOUT a credit note.
+     * Distinct from storno (which does issue a NC) and from delete
+     * (proforma-only). Tracked in meta.accounting.canceled_at.
+     */
+    public function isCanceledInOblio(): bool
+    {
+        return !empty(($this->meta['accounting']['canceled_at'] ?? null));
+    }
+
+    /**
+     * Any of the three void sub-states — used by every button that has to
+     * refuse acting on a document that no longer represents a live sale.
      */
     public function isVoidedInOblio(): bool
     {
-        return $this->isDeletedInOblio() || $this->isStornoedInOblio();
+        return $this->isDeletedInOblio() || $this->isStornoedInOblio() || $this->isCanceledInOblio();
+    }
+
+    /**
+     * Human-readable label for the current void sub-state — used by the UI
+     * badge, modal descriptions, and reset-to-outstanding toasts so all
+     * three code paths say the same thing.
+     */
+    public function oblioVoidLabel(): ?string
+    {
+        if ($this->isStornoedInOblio()) return 'storno-tă în Oblio';
+        if ($this->isCanceledInOblio()) return 'anulată în Oblio';
+        if ($this->isDeletedInOblio())  return 'ștearsă din Oblio';
+        return null;
     }
 
     /**
@@ -244,41 +271,59 @@ class Invoice extends Model
         }
 
         if ($result['exists'] === false) {
-            $applied = 'deleted';
+            // Not found at provider. Proforma → deleted; fiscal (which Oblio
+            // never lets truly disappear) → canceled as the safest bucket
+            // since we can't tell if a credit note ever existed.
             if ($this->isFiscal()) {
-                // Fiscal that comes back "not found" is unusual — treat it as
-                // storno since Oblio doesn't let fiscals disappear. Keeps the
-                // downstream flag (isStornoedInOblio) consistent with what an
-                // operator would see in Oblio's UI.
-                $applied = 'stornoed';
-                if (empty($meta['accounting']['stornoed_at'])) {
-                    $meta['accounting']['stornoed_at'] = $now;
+                $applied = 'canceled';
+                if (empty($meta['accounting']['canceled_at'])) {
+                    $meta['accounting']['canceled_at'] = $now;
                 }
             } else {
+                $applied = 'deleted';
                 if (empty($meta['accounting']['deleted_at'])) {
                     $meta['accounting']['deleted_at'] = $now;
                 }
             }
         } elseif (!empty($result['canceled'])) {
-            $applied = 'stornoed';
-            if (empty($meta['accounting']['stornoed_at'])) {
-                $meta['accounting']['stornoed_at'] = $now;
+            // Canceled at provider — split by credit-note presence:
+            //   has_credit_note=true  → STORNO (fiscal + NC)
+            //   has_credit_note=false → plain CANCEL ("Anulează" in Oblio UI)
+            if (!empty($result['has_credit_note'])) {
+                $applied = 'stornoed';
+                if (empty($meta['accounting']['stornoed_at'])) {
+                    $meta['accounting']['stornoed_at'] = $now;
+                }
+                // If a prior manual/cron pass had marked it "canceled" and
+                // later a credit note got issued, upgrade the tag cleanly.
+                unset($meta['accounting']['canceled_at']);
+            } else {
+                $applied = 'canceled';
+                if (empty($meta['accounting']['canceled_at'])) {
+                    $meta['accounting']['canceled_at'] = $now;
+                }
+                unset($meta['accounting']['stornoed_at']);
             }
         } else {
             // Live at provider — clear stale void markers (shouldn't happen
             // in practice, but keeps the flag honest if the operator restored
             // the invoice in Oblio manually).
             $applied = 'live';
-            unset($meta['accounting']['deleted_at'], $meta['accounting']['stornoed_at']);
+            unset(
+                $meta['accounting']['deleted_at'],
+                $meta['accounting']['stornoed_at'],
+                $meta['accounting']['canceled_at']
+            );
         }
 
         $this->meta = $meta;
 
-        // Rule 4 of the spec: an invoice can't be locally 'paid' when
-        // the provider record is gone/storno — the org didn't actually
-        // pay for a canceled document. Reset to outstanding + clear the
-        // paid_at stamp so downstream (dashboards, exports) match reality.
-        if (in_array($applied, ['deleted', 'stornoed'], true) && $this->status === 'paid') {
+        // Rule 4 of the spec: an invoice can't be locally 'paid' when the
+        // provider record is voided in any way — the organizer didn't
+        // actually pay for a document that no longer represents a live
+        // sale. Reset to outstanding + clear paid_at so downstream
+        // (dashboards, exports) match reality.
+        if (in_array($applied, ['deleted', 'stornoed', 'canceled'], true) && $this->status === 'paid') {
             $this->status = 'outstanding';
             $this->paid_at = null;
         }
@@ -369,6 +414,7 @@ class Invoice extends Model
             'sent_at' => $acc['sent_at'] ?? null,
             'deleted_at' => $acc['deleted_at'] ?? null,
             'stornoed_at' => $acc['stornoed_at'] ?? null,
+            'canceled_at' => $acc['canceled_at'] ?? null,
             'reason' => $reason,
             'archived_at' => now()->toIso8601String(),
         ];
@@ -381,6 +427,7 @@ class Invoice extends Model
             $meta['accounting']['sent_at'],
             $meta['accounting']['deleted_at'],
             $meta['accounting']['stornoed_at'],
+            $meta['accounting']['canceled_at'],
             $meta['accounting']['status_check_at'],
             $meta['accounting']['status_check_source']
         );
