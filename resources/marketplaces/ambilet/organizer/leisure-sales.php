@@ -302,9 +302,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function setRange(days) {
         currentDays = days;
-        document.querySelectorAll('.lv-range-btn').forEach(b => b.classList.remove('bg-primary', 'text-white', 'border-primary'));
+        // Fix bg-white conflict: elimin bg-white cand adaug bg-primary + repopulez la deselect
+        document.querySelectorAll('.lv-range-btn').forEach(b => {
+            b.classList.remove('bg-primary', 'text-white', 'border-primary');
+            b.classList.add('bg-white');
+        });
         const btn = document.querySelector(`.lv-range-btn[data-range="${days}"]`);
-        if (btn) btn.classList.add('bg-primary', 'text-white', 'border-primary');
+        if (btn) { btn.classList.remove('bg-white'); btn.classList.add('bg-primary', 'text-white', 'border-primary'); }
         const labels = { '7': '7 zile', '14': '14 zile', '30': '1 lună', '90': '3 luni', '180': '6 luni' };
         $('lv-range-label').textContent = 'Ultimele ' + (labels[days] || days);
         const to = new Date();
@@ -324,7 +328,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!df || !dt) { alert('Selectează ambele date (de la / până la).'); return; }
         if (df > dt) { alert('„De la" trebuie să fie înainte de „Până la".'); return; }
         // Deselecteaza toate presetele - suntem in custom
-        document.querySelectorAll('.lv-range-btn').forEach(b => b.classList.remove('bg-primary', 'text-white', 'border-primary'));
+        document.querySelectorAll('.lv-range-btn').forEach(b => {
+            b.classList.remove('bg-primary', 'text-white', 'border-primary');
+            b.classList.add('bg-white');
+        });
         currentDays = null;
         currentFrom = df;
         currentTo = dt;

@@ -416,6 +416,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders\/deletion-history/)) return 'organizer.event.leisure.orders.deletion-history';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders\/\d+/)) return 'organizer.event.leisure.orders.show';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders/)) return 'organizer.event.leisure.orders.index';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/tickets\/\d+\/manual-checkin/)) return 'organizer.event.leisure.tickets.manual-checkin';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/live/)) return 'organizer.event.leisure.dashboard.live';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/raport/)) return 'organizer.event.leisure.raport';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';
@@ -569,6 +570,11 @@ const AmbiletAPI = {
         const leisureOrderMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/orders\/(\d+)/);
         if (leisureOrderMatch) {
             return `event=${encodeURIComponent(leisureOrderMatch[1])}&order_id=${encodeURIComponent(leisureOrderMatch[2])}`;
+        }
+        // Extract event + ticket id pentru manual checkin
+        const leisureTicketMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/tickets\/(\d+)/);
+        if (leisureTicketMatch) {
+            return `event=${encodeURIComponent(leisureTicketMatch[1])}&ticket_id=${encodeURIComponent(leisureTicketMatch[2])}`;
         }
         // Extract venue+gate IDs
         const venueGateMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates\/(\d+)/);

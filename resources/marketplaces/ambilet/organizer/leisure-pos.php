@@ -626,19 +626,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>`;
             }
             // Guide bonus: pentru bilete de grup cu meta.is_group_ticket +
-            // meta.group_includes_guide, emitem VIZUAL +N bilete gratis
-            // (ghid) la fiecare multiplu de min_per_order cumparat.
+            // meta.group_includes_guide, emitem VIZUAL 1 SINGUR bilet ghid gratuit
+            // pentru intreg grupul (indiferent de qty), mirror comportament backend.
+            // Vechea logica genera N ghizi la multipli (16 bilete = 2 ghizi) - BUG,
+            // 1 ghid coordoneaza intreg grupul indiferent de marime.
             let guideRow = '';
             if (tt && tt.meta && tt.meta.is_group_ticket && tt.meta.group_includes_guide) {
                 const minPerGroup = Math.max(1, parseInt(tt.min_per_order, 10) || 1);
-                const bonusCount = Math.floor(it.qty / minPerGroup);
+                const bonusCount = it.qty >= minPerGroup ? 1 : 0;
                 if (bonusCount > 0) {
                     const guideLabel = (tt.meta.group_guide_label || '').toString().trim() || 'Ghid grup';
                     const guideLabelHtml = guideLabel.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
                     guideRow = `<div class="mt-1 pt-1 border-t border-slate-200 flex items-center gap-2 text-xs">
                         <span class="text-amber-600">🎁</span>
                         <span class="flex-1 text-amber-900">
-                            <span class="font-semibold">+${bonusCount} × ${guideLabelHtml}</span>
+                            <span class="font-semibold">+1 × ${guideLabelHtml}</span>
                             <span class="text-muted"> · gratuit (bonus grup)</span>
                         </span>
                         <span class="text-emerald-700 font-semibold">0.00 RON</span>
@@ -1501,10 +1503,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     });
                 }
             }
-            // Guide bonus tickets — mirror backend posSale + printare test.
+            // Guide bonus tickets - mirror backend posSale: 1 SINGUR bilet ghid pt
+            // intreg grupul (indiferent de qty >= min_per_group).
             if (tt && tt.meta && tt.meta.is_group_ticket && tt.meta.group_includes_guide) {
                 const minPerGroup = Math.max(1, parseInt(tt.min_per_order, 10) || 1);
-                const bonusCount = Math.floor(it.qty / minPerGroup);
+                const bonusCount = it.qty >= minPerGroup ? 1 : 0;
                 const guideLabel = (tt.meta.group_guide_label || '').toString().trim() || 'Ghid grup';
                 for (let g = 0; g < bonusCount; g++) {
                     tickets.push({

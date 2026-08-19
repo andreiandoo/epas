@@ -1955,6 +1955,16 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.tickets.manual-checkin':
+        // POST /organizer/events/{id}/leisure/tickets/{ticketId}/manual-checkin
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $ticketId = (int) ($_GET['ticket_id'] ?? 0);
+        if (!$eventId || !$ticketId) { http_response_code(400); echo json_encode(['error' => 'Missing event id or ticket id']); exit; }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/tickets/' . $ticketId . '/manual-checkin';
+        $method = 'POST';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.orders.index':
         // GET /organizer/events/{id}/leisure/orders?from=&to=&search=&source=&status=&page=&per_page=
         $eventId = (int) ($_GET['event'] ?? 0);

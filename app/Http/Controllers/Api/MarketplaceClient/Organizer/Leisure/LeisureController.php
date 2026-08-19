@@ -2782,6 +2782,80 @@ class LeisureController extends BaseController
         return $this->success($responsePayload);
     }
 
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/tickets/{ticketId}/manual-checkin
+     *
+     * Marcheaza manual un bilet ca "checked in" din pagina Participanti.
+     * Idempotent: daca deja e check-in, nu-l suprascrie (return existing timestamp).
+     */
+    public function manualCheckin(Request $request, int $event, int $ticketId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        // Load ticket + verifica ca apartine acestui event (via order.event_id sau
+        // ticket_types.event_id — cover ambele patterns istorice).
+        $ticket = Ticket::query()
+            ->where('id', $ticketId)
+            ->where(function ($q) use ($eventModel) {
+                $q->whereHas('order', fn ($oq) => $oq->where('event_id', $eventModel->id))
+                    ->orWhereHas('ticketType', fn ($tq) => $tq->where('event_id', $eventModel->id));
+            })
+            ->first();
+        if (!$ticket) return $this->error('Ticket not found', 404);
+        if (in_array($ticket->status, ['cancelled', 'refunded'], true)) {
+            return $this->error('Bilet ' . $ticket->status . ' — nu se poate face check-in.', 422);
+        }
+
+        // Idempotent: daca e deja checked in, return existing
+        if ($ticket->checked_in_at !== null) {
+            return $this->success([
+                'ticket_id' => $ticket->id,
+                'code' => $ticket->code,
+                'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
+                'was_already_checked_in' => true,
+            ], 'Bilet deja validat anterior.');
+        }
+
+        // Detecteaza actor pentru audit meta
+        $actorType = 'organizer';
+        $actorName = $organizer->name ?? $organizer->company_name ?? 'Organizator';
+        $tokenName = $request->user()?->currentAccessToken()?->name ?? '';
+        if (str_starts_with($tokenName, 'team-member-')) {
+            $tmId = (int) str_replace('team-member-', '', $tokenName);
+            $tm = \App\Models\MarketplaceOrganizerTeamMember::find($tmId);
+            if ($tm) { $actorType = 'team_member'; $actorName = $tm->name; }
+        }
+
+        $now = Carbon::now();
+        $ticket->checked_in_at = $now;
+        if ($ticket->status === 'valid') $ticket->status = 'used';
+        $existingMeta = is_array($ticket->meta ?? null) ? $ticket->meta : [];
+        $ticket->meta = array_merge($existingMeta, [
+            'manual_checkin' => [
+                'by_type' => $actorType,
+                'by_name' => $actorName,
+                'at' => $now->toIso8601String(),
+                'via' => 'leisure_participants_page',
+            ],
+        ]);
+        $ticket->save();
+
+        return $this->success([
+            'ticket_id' => $ticket->id,
+            'code' => $ticket->code,
+            'checked_in_at' => $now->toIso8601String(),
+            'was_already_checked_in' => false,
+            'by' => $actorName,
+        ], 'Check-in manual efectuat.');
+    }
+
     // ========================================================================
     // ORDERS — pagina noua /organizator/leisure-orders (list + acordeon + delete)
     // ========================================================================

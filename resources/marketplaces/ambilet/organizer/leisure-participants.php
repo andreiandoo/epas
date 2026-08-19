@@ -174,8 +174,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const plate = r.vehicle_plate
             ? `<span class="inline-block px-2 py-0.5 text-[14px] font-mono font-bold bg-slate-100 text-slate-800 rounded border border-slate-300">${esc(r.vehicle_plate)}</span>`
             : '<span class="text-muted">—</span>';
+        // Coloana Check-in: fie timestamp validat, fie buton manual check-in.
+        // Butonul e ascuns pentru bilete cancelled/refunded (nu pot fi validate).
+        const canCheckin = !r.checked_in_at && !['cancelled','refunded'].includes(r.status);
+        const checkinCell = r.checked_in_at
+            ? `<span class="text-emerald-700 font-semibold">✓ ${fmtDate(r.checked_in_at)}</span>`
+            : (canCheckin
+                ? `<button type="button" class="lv-manual-checkin px-2 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded hover:bg-emerald-100 disabled:opacity-50" data-ticket-id="${r.id}" data-ticket-code="${esc(r.code || r.barcode || '')}">✓ Check-in manual</button>`
+                : '<span class="text-muted text-xs">—</span>');
         return `
-            <tr class="hover:bg-slate-50">
+            <tr class="hover:bg-slate-50" data-row-ticket-id="${r.id}">
                 <td class="px-5 py-3 font-mono text-xs text-muted">${esc(r.order_number) || '—'}</td>
                 <td class="px-5 py-3 font-mono text-xs">${r.code || r.barcode || '—'}</td>
                 <td class="px-5 py-3">
@@ -189,10 +197,47 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </td>
                 <td class="px-5 py-3 text-sm">${fmtDay(r.visit_date)}</td>
                 <td class="px-5 py-3">${statusBadge(r.status)}</td>
-                <td class="px-5 py-3 text-xs">${r.checked_in_at ? fmtDate(r.checked_in_at) : '<span class="text-muted">— neefectuat</span>'}</td>
+                <td class="px-5 py-3 text-xs lv-checkin-cell">${checkinCell}</td>
             </tr>
         `;
     }
+
+    async function manualCheckin(btn) {
+        const ticketId = btn.dataset.ticketId;
+        const code = btn.dataset.ticketCode || '#' + ticketId;
+        if (!confirm(`Confirmi check-in manual pentru biletul ${code}?`)) return;
+        const cell = btn.closest('td');
+        const origHtml = btn.outerHTML;
+        btn.disabled = true; btn.textContent = '⏳ ...';
+        try {
+            const proxyBase = (window.AMBILET && window.AMBILET.apiUrl) || '/api/proxy.php';
+            const url = proxyBase + '?action=organizer.event.leisure.tickets.manual-checkin&event=' + encodeURIComponent(currentEventId) + '&ticket_id=' + encodeURIComponent(ticketId);
+            const token = localStorage.getItem('ambilet_organizer_token') || localStorage.getItem('organizer_token') || '';
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { 'Authorization': 'Bearer ' + token } : {}),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.message || ('HTTP ' + resp.status));
+            const ts = data?.data?.checked_in_at;
+            if (cell && ts) cell.innerHTML = `<span class="text-emerald-700 font-semibold">✓ ${fmtDate(ts)}</span>`;
+            // Update in allRows pt export CSV
+            const rowIdx = allRows.findIndex(r => r.id == ticketId);
+            if (rowIdx >= 0) allRows[rowIdx].checked_in_at = ts;
+        } catch (e) {
+            alert('Eroare check-in: ' + (e?.message || 'necunoscut'));
+            if (cell) cell.innerHTML = origHtml; // restore button
+            // Re-wire click event pentru butonul restored
+            const restored = cell?.querySelector('.lv-manual-checkin');
+            if (restored) restored.addEventListener('click', () => manualCheckin(restored));
+        }
+    }
+
+    // Event delegation pentru butoanele manual-checkin (rowurile sunt append-uite dinamic)
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.lv-manual-checkin');
+        if (btn) { e.preventDefault(); manualCheckin(btn); }
+    });
 
     function appendRows(rows) {
         $('lv-rows').insertAdjacentHTML('beforeend', rows.map(rowHtml).join(''));
@@ -281,9 +326,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function setRange(days) {
         currentRange = days;
-        document.querySelectorAll('.lv-range-btn').forEach(b => b.classList.remove('bg-primary', 'text-white', 'border-primary'));
+        // Fix: eliminam bg-white din butoane cand adaugam bg-primary (conflict CSS,
+        // bg-white castiga specificitatea). Repopulam bg-white cand deselecteaza.
+        document.querySelectorAll('.lv-range-btn').forEach(b => {
+            b.classList.remove('bg-primary', 'text-white', 'border-primary');
+            b.classList.add('bg-white');
+        });
         const btn = document.querySelector(`.lv-range-btn[data-range="${days}"]`);
-        if (btn) btn.classList.add('bg-primary', 'text-white', 'border-primary');
+        if (btn) {
+            btn.classList.remove('bg-white');
+            btn.classList.add('bg-primary', 'text-white', 'border-primary');
+        }
 
         if (days === 'custom') {
             $('lv-custom-range').classList.remove('hidden');

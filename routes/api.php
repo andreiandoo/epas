@@ -2102,6 +2102,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.dashboard.compare');
         // Orders (pagina noua Comenzi + Istoric)
+        Route::post('/events/{event}/leisure/tickets/{ticketId}/manual-checkin', [OrganizerLeisureController::class, 'manualCheckin'])
+            ->whereNumber('event')
+            ->whereNumber('ticketId')
+            ->name('api.marketplace-client.organizer.leisure.tickets.manual-checkin');
         Route::get('/events/{event}/leisure/orders/deletion-history', [OrganizerLeisureController::class, 'orderDeletionHistory'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.orders.deletion-history');
