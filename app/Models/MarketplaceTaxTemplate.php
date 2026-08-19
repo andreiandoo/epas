@@ -1112,6 +1112,10 @@ class MarketplaceTaxTemplate extends Model
             // even if those tickets are fabricated (no physical paper).
             if ($event) {
                 try {
+                    // Re-sync first so the promo/coupon/RED unsold rows use the
+                    // current allocation (qty_allocated = quota_total), matching
+                    // the always-sync the cerere-avizare tables now do.
+                    app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
                     $pvAllocations = app(\App\Services\Marketplace\SeriesAllocator::class)
                         ->getForEvent($event);
                 } catch (\Throwable $e) {
@@ -1590,16 +1594,19 @@ class MarketplaceTaxTemplate extends Model
             $taxSituationTotalQty = 0;
             $taxSituationTotalValue = 0.0;
             if ($event) {
-                // Auto-sync allocations on first access for this event so
-                // a freshly-deployed environment doesn't need a manual
-                // `php artisan series:sync` to populate Phase B data.
+                // Always re-sync allocations before reading them. syncForEvent
+                // is idempotent (updateOrCreate: qty_allocated = quota_total,
+                // series recomputed from the current series_start) so this both
+                // populates Phase B on a fresh environment AND keeps the numbers
+                // live. The previous "only sync when no rows exist yet" guard
+                // FROZE the allocation at its first-generated value: after the
+                // initial cerere was generated (e.g. stock 25), later stock/price
+                // edits never propagated — a regenerated document kept showing
+                // the original stock. See event 4802 (stock 25 → 20 still printed
+                // 25). Doc generation is admin-triggered/occasional, so the extra
+                // sync cost is irrelevant.
                 try {
-                    $hasAllocations = \App\Models\EventTicketTypePromoSeries::query()
-                        ->whereIn('ticket_type_id', $event->ticketTypes->pluck('id'))
-                        ->exists();
-                    if (!$hasAllocations) {
-                        app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
-                    }
+                    app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
                 } catch (\Throwable $e) {
                     // Non-fatal — fall back to the on-the-fly derivation below.
                 }
@@ -1863,14 +1870,14 @@ class MarketplaceTaxTemplate extends Model
             if ($event) {
                 $eventTtIds = $event->ticketTypes->pluck('id');
 
-                // Auto-sync on first access — same pattern as tax_situation_table_rows.
+                // Always re-sync so qty_allocated / series reflect the CURRENT
+                // ticket-type stock & price (idempotent). This table prints
+                // $alloc->qty_allocated directly, so the old "sync only if no
+                // rows exist" guard is exactly what made stock edits invisible
+                // in a regenerated cerere avizare (event 4802: 25 → 20 kept
+                // printing 25).
                 try {
-                    $hasAlloc = \App\Models\EventTicketTypePromoSeries::query()
-                        ->whereIn('ticket_type_id', $eventTtIds)
-                        ->exists();
-                    if (!$hasAlloc) {
-                        app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
-                    }
+                    app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
                 } catch (\Throwable $e) {
                     // Non-fatal — fall through to a possibly empty allocation list.
                 }
