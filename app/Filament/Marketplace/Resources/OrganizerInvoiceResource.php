@@ -432,6 +432,40 @@ class OrganizerInvoiceResource extends Resource
                     ->copyable()
                     ->toggleable(),
 
+                // Voided-in-Oblio badge — mirrors the invoice edit page
+                // header pill. Renders nothing when the invoice is live
+                // at the provider (or was never sent), so operators can
+                // scan the list and immediately spot invoices that need
+                // regenerating + resending. Sub-state comes from the
+                // model helpers so this column and the edit page can
+                // never disagree.
+                Tables\Columns\TextColumn::make('oblio_void_state')
+                    ->label('Stare Oblio')
+                    ->badge()
+                    ->color('danger')
+                    ->state(function (Invoice $record): ?string {
+                        if ($record->isStornoedInOblio()) return 'stornoed';
+                        if ($record->isCanceledInOblio()) return 'canceled';
+                        if ($record->isDeletedInOblio())  return 'deleted';
+                        return null;
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'stornoed' => 'Storno-tă',
+                        'canceled' => 'Anulată',
+                        'deleted'  => 'Ștearsă',
+                        default    => $state,
+                    })
+                    ->tooltip(function (Invoice $record): ?string {
+                        $meta = $record->meta ?? [];
+                        $when = $meta['accounting']['stornoed_at']
+                            ?? $meta['accounting']['canceled_at']
+                            ?? $meta['accounting']['deleted_at']
+                            ?? null;
+                        if (!$when) return null;
+                        return 'Detectat la ' . \Carbon\Carbon::parse($when)->format('d.m.Y H:i');
+                    })
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('issue_date')
                     ->label('Data emiterii')
                     ->date('d.m.Y')
