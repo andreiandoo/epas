@@ -397,6 +397,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/reports\/by-issuer/)) return 'organizer.event.leisure.reports.by-issuer';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/venue-config$/)) return 'organizer.event.leisure.venue-config';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/payouts$/)) return 'organizer.event.leisure.payouts';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement\/cumulative/)) return 'organizer.event.leisure.settlement.cumulative';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement/)) return 'organizer.event.leisure.settlement';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/current$/)) return 'organizer.event.leisure.cashier.current';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/open$/)) return 'organizer.event.leisure.cashier.open';
@@ -562,6 +563,12 @@ const AmbiletAPI = {
         const rentalMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/boat-rentals\/(\d+)/);
         if (rentalMatch) {
             return `event=${encodeURIComponent(rentalMatch[1])}&rental=${encodeURIComponent(rentalMatch[2])}`;
+        }
+        // Extract event ID + order ID from leisure orders (show + delete). MUST be before
+        // the more general leisureMatch below - altfel order_id nu ajunge in proxy.
+        const leisureOrderMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/orders\/(\d+)/);
+        if (leisureOrderMatch) {
+            return `event=${encodeURIComponent(leisureOrderMatch[1])}&order_id=${encodeURIComponent(leisureOrderMatch[2])}`;
         }
         // Extract venue+gate IDs
         const venueGateMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates\/(\d+)/);

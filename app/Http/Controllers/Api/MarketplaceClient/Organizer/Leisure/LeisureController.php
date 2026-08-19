@@ -2353,17 +2353,23 @@ class LeisureController extends BaseController
             : Carbon::today()->endOfDay();
 
         // Cache: pentru volume mari (Sf. Ana ~5000+ orders/luna) endpoint-ul poate
-        // depasi timeout Cloudflare (100s). Cache 5 min pt request-uri repetate +
+        // depasi timeout Cloudflare (100s). Cache 30 min pt request-uri repetate +
         // memory/time limit local. Cache key = event+range; invalidat automat cand
         // se schimba data.
-        $cacheKey = "leisure_raport_v1_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
+        $cacheKey = "leisure_raport_v2_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
         $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
         if ($cached !== null) {
             return $this->success($cached);
         }
-        // Ridic limitele local pt cold cache (volume mari, 30 zile pe leisure).
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(90);
+        // Serve-stale: dacă avem cache expirat (versiune veche) il servim + trigger
+        // recompute in background. Pentru moment, ridic limite agresiv la cold cache.
+        @ini_set('memory_limit', '2048M');
+        @set_time_limit(300);
+        @ignore_user_abort(true);
+        $timeStart = microtime(true);
+        \Illuminate\Support\Facades\Log::info('[LeisureRaport] cold cache start', [
+            'event' => $eventModel->id, 'from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d'),
+        ]);
 
         $orders = Order::query()
             ->where('event_id', $eventModel->id)
@@ -5590,6 +5596,14 @@ class LeisureController extends BaseController
         $venueOwes   = $commPos;
         $net = round($ambiletOwes - $venueOwes, 2);
 
+        // Breakdown per societate emitenta (SC1 primary / SC2 secondary).
+        // Pentru fiecare societate: vanzari online + comisioane online, vanzari POS +
+        // comisioane POS, si valoarea de compensare (vanzari_online - comisioane totale).
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        $issuerBreakdown = $this->buildSettlementIssuerBreakdown($online, $pos, $eventOrganizer);
+
         return $this->success([
             'period'    => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
             'currency'  => $marketplace->currency ?? 'RON',
@@ -5611,7 +5625,182 @@ class LeisureController extends BaseController
                 'direction'          => $net > 0 ? 'ambilet_to_venue' : ($net < 0 ? 'venue_to_ambilet' : 'settled'),
                 'amount'             => abs($net),
             ],
+            'by_issuer' => $issuerBreakdown,
         ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/settlement/cumulative
+     *
+     * Cifre cumulate de la 2026-07-16 (start Sf Ana) pana azi:
+     *   - total zile
+     *   - vanzari online + POS
+     *   - comisioane online + POS
+     *   - breakdown pe societate cu compensarea per societate
+     * Folosit in cardurile de sus din /organizator/deconturi.
+     */
+    public function settlementCumulative(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tz = 'Europe/Bucharest';
+        $projectStart = Carbon::parse('2026-07-16', $tz)->startOfDay();
+        $now = Carbon::now($tz);
+        $daysCount = max(1, (int) $projectStart->diffInDays($now->copy()->startOfDay()) + 1);
+
+        // Cache 10 min (recalculare completa e scumpa - agregare pe 30+ zile)
+        $cacheKey = "leisure_settlement_cumulative_v1_{$eventModel->id}_" . $now->format('Y-m-d-H');
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached !== null) return $this->success($cached);
+
+        @ini_set('memory_limit', '1024M');
+        @set_time_limit(120);
+
+        /** @var \App\Services\Marketplace\SalesBreakdownService $svc */
+        $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $online = $svc->build($eventModel, $projectStart, $now, excludePos: true, dateColumn: 'paid_at');
+        $pos    = $svc->build($eventModel, $projectStart, $now, onlyPos: true,   dateColumn: 'paid_at');
+
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        $issuerBreakdown = $this->buildSettlementIssuerBreakdown($online, $pos, $eventOrganizer);
+
+        $payload = [
+            'from' => $projectStart->toDateString(),
+            'to' => $now->toDateString(),
+            'days_count' => $daysCount,
+            'currency' => $marketplace->currency ?? 'RON',
+            'online' => [
+                'gross' => round((float) $online['total_revenue'], 2),
+                'commission' => round((float) $online['total_commission'], 2),
+            ],
+            'pos' => [
+                'gross' => round((float) $pos['total_revenue'], 2),
+                'commission' => round((float) $pos['total_commission'], 2),
+            ],
+            'by_issuer' => $issuerBreakdown,
+        ];
+        \Illuminate\Support\Facades\Cache::put($cacheKey, $payload, 600);
+        return $this->success($payload);
+    }
+
+    /**
+     * Helper: breakdown per societate emitenta din 2 breakdown-uri (online + POS)
+     * ale SalesBreakdownService. Pentru fiecare societate calculeaza vanzari online +
+     * comisioane online + vanzari POS + comisioane POS + valoare compensare.
+     *
+     * Compensare = vanzari_online - (comisioane_online + comisioane_pos)
+     *   → Locatia primeste net-ul online din care se scad TOATE comisioanele.
+     *
+     * Pentru pachete Mix (issuing_company='mix'), distribuim revenue + commission
+     * proportional pe issuers componenti conform meta.package_outputs. Consistent
+     * cu logica din raport().
+     */
+    private function buildSettlementIssuerBreakdown(array $onlineBd, array $posBd, ?MarketplaceOrganizer $eventOrganizer): array
+    {
+        $primaryName = $eventOrganizer?->company_name ?: 'SC1';
+        $secondaryName = $eventOrganizer?->has_secondary_issuer ? ($eventOrganizer?->secondary_company_name ?: 'SC2') : null;
+
+        // Preload componentIssuerMap pentru Mix packages
+        $componentIssuerMap = [];
+        $mixTypes = TicketType::query()
+            ->where('event_id', $eventOrganizer?->id ? null : null) // will re-scope below
+            ->where('service_category', 'package')
+            ->where('issuing_company', 'mix')
+            ->get(['id', 'meta']);
+        // Correct scope: doar tipurile evenimentului. Reload via SalesBreakdownService per_type ids.
+        $allTypeIds = collect(($onlineBd['per_type'] ?? []))->pluck('ticket_type_id')
+            ->merge(collect(($posBd['per_type'] ?? []))->pluck('ticket_type_id'))
+            ->unique()->values();
+        if ($allTypeIds->isNotEmpty()) {
+            $mixTypes = TicketType::query()
+                ->whereIn('id', $allTypeIds)
+                ->where('service_category', 'package')
+                ->where('issuing_company', 'mix')
+                ->get(['id', 'meta']);
+            foreach ($mixTypes as $tt) {
+                $outputs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+                foreach ($outputs as $out) {
+                    $cid = (int) ($out['ticket_type_id'] ?? 0);
+                    if (!$cid) continue;
+                    if (!isset($componentIssuerMap[$cid])) {
+                        $ct = TicketType::find($cid);
+                        if ($ct) $componentIssuerMap[$cid] = ($ct->issuing_company === 'secondary') ? 'secondary' : 'primary';
+                    }
+                }
+            }
+        }
+
+        // Distribute per_type by issuer for both online + POS
+        $out = [
+            'primary' => [
+                'issuer' => 'primary', 'name' => $primaryName,
+                'online_gross' => 0.0, 'online_commission' => 0.0,
+                'pos_gross' => 0.0, 'pos_commission' => 0.0,
+            ],
+            'secondary' => [
+                'issuer' => 'secondary', 'name' => $secondaryName,
+                'online_gross' => 0.0, 'online_commission' => 0.0,
+                'pos_gross' => 0.0, 'pos_commission' => 0.0,
+            ],
+        ];
+
+        $accumulate = function (array $perType, string $channel) use (&$out, $componentIssuerMap): void {
+            foreach ($perType as $row) {
+                $gross = (float) ($row['gross'] ?? 0);
+                $comm = (float) ($row['commission_amount'] ?? 0);
+                $tt = $row['tt'] ?? null; // model
+                $issuer = ($tt?->issuing_company) ?: 'primary';
+                $splits = [];
+                if ($issuer === 'mix' && $tt && ($tt->service_category ?? '') === 'package') {
+                    $outputs = is_array($tt->meta ?? null) ? ($tt->meta['package_outputs'] ?? []) : [];
+                    $allocSum = 0.0;
+                    foreach ($outputs as $o) if (isset($o['price']) && is_numeric($o['price'])) $allocSum += (float) $o['price'];
+                    if ($allocSum > 0) foreach ($outputs as $o) {
+                        $cid = (int) ($o['ticket_type_id'] ?? 0);
+                        $cIssuer = $componentIssuerMap[$cid] ?? 'primary';
+                        $portion = isset($o['price']) ? (float) $o['price'] : 0.0;
+                        if ($portion <= 0) continue;
+                        $splits[] = ['issuer' => $cIssuer, 'amount' => $portion];
+                    }
+                }
+                if (empty($splits)) $splits[] = ['issuer' => $issuer === 'secondary' ? 'secondary' : 'primary', 'amount' => 1];
+                $splitTotal = array_sum(array_column($splits, 'amount'));
+                foreach ($splits as $s) {
+                    $ratio = $splitTotal > 0 ? $s['amount'] / $splitTotal : 0;
+                    $portionRev = $gross * $ratio;
+                    $portionCom = $comm * $ratio;
+                    $out[$s['issuer']][$channel . '_gross'] += $portionRev;
+                    $out[$s['issuer']][$channel . '_commission'] += $portionCom;
+                }
+            }
+        };
+        $accumulate($onlineBd['per_type'] ?? [], 'online');
+        $accumulate($posBd['per_type'] ?? [], 'pos');
+
+        // Compute compensation per issuer + round
+        foreach (['primary', 'secondary'] as $k) {
+            $out[$k]['online_gross'] = round($out[$k]['online_gross'], 2);
+            $out[$k]['online_commission'] = round($out[$k]['online_commission'], 2);
+            $out[$k]['pos_gross'] = round($out[$k]['pos_gross'], 2);
+            $out[$k]['pos_commission'] = round($out[$k]['pos_commission'], 2);
+            // Compensare = vanzari_online - (comisioane_online + comisioane_pos)
+            $comp = $out[$k]['online_gross'] - $out[$k]['online_commission'] - $out[$k]['pos_commission'];
+            $out[$k]['compensation'] = round($comp, 2);
+        }
+
+        return [
+            'primary' => $out['primary'],
+            'secondary' => $secondaryName ? $out['secondary'] : null,
+        ];
     }
 
     // ========================================================================

@@ -2067,6 +2067,9 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.payouts');
         // Settlement (compensare AmBilet <-> venue) per period
+        Route::get('/events/{event}/leisure/settlement/cumulative', [OrganizerLeisureController::class, 'settlementCumulative'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.settlement.cumulative');
         Route::get('/events/{event}/leisure/settlement', [OrganizerLeisureController::class, 'settlement'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.settlement');

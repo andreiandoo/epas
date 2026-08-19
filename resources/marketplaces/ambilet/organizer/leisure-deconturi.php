@@ -23,23 +23,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="dc-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900"></div>
         <div id="dc-loading" class="hidden p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
 
-        <!-- Sumar total (toate deconturile) -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Deconturi</p>
-                <p class="text-2xl font-bold text-secondary"><span id="dc-total-count">0</span></p>
+        <!-- Sumar cumulat de la 16.07.2026 pana azi -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+            <div class="p-4 bg-white border-2 rounded-2xl border-slate-300">
+                <p class="text-[10px] uppercase tracking-wider text-slate-600 font-bold">📅 Zile activitate</p>
+                <p class="text-2xl font-extrabold text-slate-900"><span id="dc-cum-days">—</span></p>
+                <p class="text-[10px] text-muted mt-0.5" id="dc-cum-period">de la 16 iul 2026</p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Total încasat (net)</p>
-                <p class="text-2xl font-bold text-secondary"><span id="dc-total-net">0.00</span> <span class="text-sm text-muted">RON</span></p>
+            <div class="p-4 bg-white border-2 rounded-2xl border-sky-200">
+                <p class="text-[10px] uppercase tracking-wider text-sky-700 font-bold">🌐 Vânzări online</p>
+                <p class="text-2xl font-extrabold text-sky-900"><span id="dc-cum-online-gross">—</span> <span class="text-xs text-sky-700">RON</span></p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Comision cumulat</p>
-                <p class="text-2xl font-bold text-blue-800"><span id="dc-total-commission">0.00</span> <span class="text-sm text-blue-700">RON</span></p>
+            <div class="p-4 bg-white border-2 rounded-2xl border-amber-200">
+                <p class="text-[10px] uppercase tracking-wider text-amber-700 font-bold">🏪 Vânzări POS</p>
+                <p class="text-2xl font-extrabold text-amber-900"><span id="dc-cum-pos-gross">—</span> <span class="text-xs text-amber-700">RON</span></p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Venit brut cumulat</p>
-                <p class="text-2xl font-bold text-secondary"><span id="dc-total-gross">0.00</span> <span class="text-sm text-muted">RON</span></p>
+            <div class="p-4 bg-white border-2 rounded-2xl border-indigo-200">
+                <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">🧾 Comisioane online</p>
+                <p class="text-2xl font-extrabold text-indigo-900"><span id="dc-cum-online-comm">—</span> <span class="text-xs text-indigo-700">RON</span></p>
+            </div>
+            <div class="p-4 bg-white border-2 rounded-2xl border-purple-200">
+                <p class="text-[10px] uppercase tracking-wider text-purple-700 font-bold">🧾 Comisioane POS</p>
+                <p class="text-2xl font-extrabold text-purple-900"><span id="dc-cum-pos-comm">—</span> <span class="text-xs text-purple-700">RON</span></p>
             </div>
         </div>
 
@@ -149,20 +154,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return s + ' → ' + e;
     }
 
-    function render(payouts) {
-        // Sumar
-        let cnt = payouts.length;
-        let sumNet = 0, sumComm = 0, sumGross = 0;
-        payouts.forEach(p => {
-            sumNet += Number(p.amount || 0);
-            sumComm += Number(p.commission_amount || 0);
-            sumGross += Number(p.gross_amount || 0);
-        });
-        $('dc-total-count').textContent = cnt;
-        $('dc-total-net').textContent = fmtMoney(sumNet);
-        $('dc-total-commission').textContent = fmtMoney(sumComm);
-        $('dc-total-gross').textContent = fmtMoney(sumGross);
+    // Cardurile de sus - cifre cumulate de la 16.07.2026 pana azi.
+    async function loadCumulative() {
+        if (!currentEventId) return;
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/settlement/cumulative`);
+            const d = res.data || {};
+            const on = d.online || {}; const po = d.pos || {};
+            $('dc-cum-days').textContent = d.days_count || 0;
+            const from = d.from ? new Date(d.from + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' }) : '16 iul 2026';
+            $('dc-cum-period').textContent = 'de la ' + from;
+            $('dc-cum-online-gross').textContent = fmtMoney(on.gross);
+            $('dc-cum-pos-gross').textContent = fmtMoney(po.gross);
+            $('dc-cum-online-comm').textContent = fmtMoney(on.commission);
+            $('dc-cum-pos-comm').textContent = fmtMoney(po.commission);
+        } catch (e) {
+            console.warn('[cumulative]', e);
+        }
+    }
 
+    function render(payouts) {
         const tbody = $('dc-rows');
         if (!payouts.length) {
             tbody.innerHTML = '<tr><td class="px-4 py-8 text-center text-muted" colspan="9">Nu există deconturi emise pentru acest eveniment.</td></tr>';
@@ -423,8 +434,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
 
-        $('dc-refresh').addEventListener('click', loadPayouts);
+        $('dc-refresh').addEventListener('click', () => { loadPayouts(); loadCumulative(); });
         loadPayouts();
+        loadCumulative();
 
         // Settlement: build half-month period selector (1-15 & 16-end, din 2026-07-15) and load.
         buildSettlePeriods();
@@ -551,6 +563,47 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>`;
         }
 
+        // Breakdown pe societate (SC1/SC2)
+        const byIssuer = d.by_issuer || {};
+        const societyCard = (iss) => {
+            if (!iss || !iss.name) return '';
+            const anyValue = (iss.online_gross || iss.pos_gross || iss.online_commission || iss.pos_commission);
+            if (!anyValue) return '';
+            const label = iss.issuer === 'primary' ? 'SC1 · Principală' : 'SC2 · Secundară';
+            const colorClass = iss.issuer === 'primary' ? 'border-blue-300 bg-blue-50/40' : 'border-purple-300 bg-purple-50/40';
+            const compClass = iss.compensation > 0 ? 'text-emerald-800' : (iss.compensation < 0 ? 'text-amber-800' : 'text-slate-700');
+            return `
+                <div class="p-4 border-2 rounded-xl ${colorClass}">
+                    <div class="mb-3">
+                        <p class="text-[10px] uppercase tracking-wider font-bold text-slate-600">${label}</p>
+                        <p class="text-sm font-bold text-secondary">${escapeHtml(iss.name)}</p>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="p-2 rounded bg-sky-50 border border-sky-200">
+                            <p class="text-[10px] uppercase font-bold text-sky-700 mb-1">🌐 Online</p>
+                            <div class="flex justify-between text-xs"><span class="text-muted">Vânzări</span><strong class="tabular-nums">${M(iss.online_gross)}</strong></div>
+                            <div class="flex justify-between text-xs"><span class="text-muted">Comisioane</span><strong class="text-blue-700 tabular-nums">${M(iss.online_commission)}</strong></div>
+                        </div>
+                        <div class="p-2 rounded bg-amber-50 border border-amber-200">
+                            <p class="text-[10px] uppercase font-bold text-amber-700 mb-1">🏪 POS</p>
+                            <div class="flex justify-between text-xs"><span class="text-muted">Vânzări</span><strong class="tabular-nums">${M(iss.pos_gross)}</strong></div>
+                            <div class="flex justify-between text-xs"><span class="text-muted">Comisioane</span><strong class="text-amber-700 tabular-nums">${M(iss.pos_commission)}</strong></div>
+                        </div>
+                        <div class="pt-2 border-t-2 border-slate-300">
+                            <p class="text-[10px] uppercase font-bold text-slate-700">Compensare (vânzări online − comisioane totale)</p>
+                            <p class="text-xl font-extrabold ${compClass} tabular-nums">${M(iss.compensation)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+        const issuerCards = societyCard(byIssuer.primary) + societyCard(byIssuer.secondary);
+        const issuerSection = issuerCards ? `
+            <div class="mt-6 pt-4 border-t border-border">
+                <h3 class="text-sm font-bold text-secondary mb-3">🏢 Breakdown pe societate</h3>
+                <div class="grid gap-4 lg:grid-cols-2">${issuerCards}</div>
+            </div>` : '';
+
         $('dc-settle-body').innerHTML = `
             <div class="grid gap-4 lg:grid-cols-3">
                 <div class="p-4 border rounded-xl border-border">
@@ -575,7 +628,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <p class="mt-3 text-[11px] text-muted">
                 Compensare: AmBilet datorează locației netul online (<strong>${M(bal.ambilet_owes_venue)}</strong>), iar locația datorează AmBilet comisionul POS (<strong>${M(bal.venue_owes_ambilet)}</strong>).
                 Soldul net = ${M(bal.ambilet_owes_venue)} − ${M(bal.venue_owes_ambilet)} = <strong>${M(bal.net)}</strong>.
-            </p>`;
+            </p>
+            ${issuerSection}`;
     }
 })();
 </script>
