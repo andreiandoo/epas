@@ -291,7 +291,7 @@
         android:layout_marginBottom="8dp"
         android:background="@color/widget_divider" />
 
-    <!-- === RAND 3: COMPARATIE LUNARA === -->
+    <!-- === RAND 3: TABEL COMPARATIE LUNARA (6 metrici × 4 coloane) === -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -304,14 +304,329 @@
             android:textColor="@color/widget_muted"
             android:textSize="10sp" />
 
-        <TextView
-            android:id="@+id/stat_monthly_summary"
+        <!-- Header rand: | (label) | Aug | Iul | Δ -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:textColor="@color/widget_muted"
+                android:textSize="9sp" />
+            <TextView
+                android:id="@+id/monthly_header_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/monthly_header_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:text="@string/widget_delta"
+                android:textColor="@color/widget_muted"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 6 randuri metrici -->
+        <LinearLayout
+            android:id="@+id/monthly_row_sales"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:text="@string/widget_sales"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_sales_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_sales_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_sales_delta"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/monthly_row_tickets"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="2dp"
-            android:maxLines="2"
-            android:ellipsize="end"
-            android:textColor="@color/widget_text"
-            android:textSize="12sp" />
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:text="@string/widget_tickets"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_tickets_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_tickets_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_tickets_delta"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/monthly_row_customers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:text="@string/widget_customers"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_customers_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_customers_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_customers_delta"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/monthly_row_artists"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:text="@string/widget_artists"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_artists_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_artists_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_artists_delta"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/monthly_row_venues"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:text="@string/widget_venues"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_venues_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_text"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_venues_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_venues_delta"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/monthly_row_revenue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:baselineAligned="false">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:text="@string/widget_revenue_short"
+                android:textColor="@color/widget_gold"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/monthly_revenue_current"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_gold"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/monthly_revenue_previous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/monthly_revenue_delta"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

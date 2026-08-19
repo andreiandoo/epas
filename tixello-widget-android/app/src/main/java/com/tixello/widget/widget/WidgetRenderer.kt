@@ -55,9 +55,19 @@ object WidgetRenderer {
             listOf(
                 R.id.stat_sales_today, R.id.stat_revenue_today,
                 R.id.stat_tickets_today, R.id.stat_customers_today,
-                R.id.stat_artists_today, R.id.stat_venues_today,
-                R.id.stat_monthly_summary
+                R.id.stat_artists_today, R.id.stat_venues_today
             ).forEach { views.setTextViewText(it, "") }
+
+            /* Golim si tabelul monthly - randurile individuale. */
+            listOf(
+                R.id.monthly_header_current, R.id.monthly_header_previous,
+                R.id.monthly_sales_current, R.id.monthly_sales_previous, R.id.monthly_sales_delta,
+                R.id.monthly_tickets_current, R.id.monthly_tickets_previous, R.id.monthly_tickets_delta,
+                R.id.monthly_customers_current, R.id.monthly_customers_previous, R.id.monthly_customers_delta,
+                R.id.monthly_artists_current, R.id.monthly_artists_previous, R.id.monthly_artists_delta,
+                R.id.monthly_venues_current, R.id.monthly_venues_previous, R.id.monthly_venues_delta,
+                R.id.monthly_revenue_current, R.id.monthly_revenue_previous, R.id.monthly_revenue_delta
+            ).forEach { views.setTextViewText(it, "—") }
 
             return views
         }
@@ -90,28 +100,100 @@ object WidgetRenderer {
         views.setTextViewText(R.id.stat_venues_value, Format.count(snapshot.venuesTotal))
         views.setTextViewText(R.id.stat_venues_today, Format.delta(snapshot.venuesToday))
 
-        /* Rand 3: comparatie lunara (venit Tixello) — folosim revenue ca metrica
-           principala pentru comparatie, delta% arata evolutia. */
+        /* Rand 3: TABEL comparatie lunara — 6 metrici × 4 coloane
+           (label | current | previous | delta%). User a cerut breakdown
+           per fiecare cifra, nu doar venit total. */
         val current = snapshot.monthlyCurrent
         val previous = snapshot.monthlyPrevious
         if (current != null && previous != null) {
-            val delta = Format.deltaPercent(current.revenue, previous.revenue)
-            views.setTextViewText(
-                R.id.stat_monthly_summary,
-                context.getString(
-                    R.string.widget_monthly_summary,
-                    current.label,
-                    Format.money(current.revenue, currency),
-                    previous.label,
-                    Format.money(previous.revenue, currency),
-                    delta
-                )
+            views.setTextViewText(R.id.monthly_header_current, current.label)
+            views.setTextViewText(R.id.monthly_header_previous, previous.label)
+
+            fillMonthlyRow(
+                views,
+                curId = R.id.monthly_sales_current,
+                prevId = R.id.monthly_sales_previous,
+                deltaId = R.id.monthly_sales_delta,
+                current = current.sales,
+                previous = previous.sales,
+                formatValue = { Format.moneyRounded(it, currency) }
+            )
+            fillMonthlyRow(
+                views,
+                curId = R.id.monthly_tickets_current,
+                prevId = R.id.monthly_tickets_previous,
+                deltaId = R.id.monthly_tickets_delta,
+                current = current.tickets.toDouble(),
+                previous = previous.tickets.toDouble(),
+                formatValue = { Format.count(it.toLong()) }
+            )
+            fillMonthlyRow(
+                views,
+                curId = R.id.monthly_customers_current,
+                prevId = R.id.monthly_customers_previous,
+                deltaId = R.id.monthly_customers_delta,
+                current = current.customers.toDouble(),
+                previous = previous.customers.toDouble(),
+                formatValue = { Format.count(it.toLong()) }
+            )
+            fillMonthlyRow(
+                views,
+                curId = R.id.monthly_artists_current,
+                prevId = R.id.monthly_artists_previous,
+                deltaId = R.id.monthly_artists_delta,
+                current = current.artists.toDouble(),
+                previous = previous.artists.toDouble(),
+                formatValue = { Format.count(it.toLong()) }
+            )
+            fillMonthlyRow(
+                views,
+                curId = R.id.monthly_venues_current,
+                prevId = R.id.monthly_venues_previous,
+                deltaId = R.id.monthly_venues_delta,
+                current = current.venues.toDouble(),
+                previous = previous.venues.toDouble(),
+                formatValue = { Format.count(it.toLong()) }
+            )
+            fillMonthlyRow(
+                views,
+                curId = R.id.monthly_revenue_current,
+                prevId = R.id.monthly_revenue_previous,
+                deltaId = R.id.monthly_revenue_delta,
+                current = current.revenue,
+                previous = previous.revenue,
+                formatValue = { Format.moneyRounded(it, currency) }
             )
         } else {
-            views.setTextViewText(R.id.stat_monthly_summary, "—")
+            /* Fara date monthly: golim toate celulele si dam '—' la fiecare. */
+            listOf(
+                R.id.monthly_header_current, R.id.monthly_header_previous
+            ).forEach { views.setTextViewText(it, "—") }
+
+            listOf(
+                R.id.monthly_sales_current, R.id.monthly_sales_previous, R.id.monthly_sales_delta,
+                R.id.monthly_tickets_current, R.id.monthly_tickets_previous, R.id.monthly_tickets_delta,
+                R.id.monthly_customers_current, R.id.monthly_customers_previous, R.id.monthly_customers_delta,
+                R.id.monthly_artists_current, R.id.monthly_artists_previous, R.id.monthly_artists_delta,
+                R.id.monthly_venues_current, R.id.monthly_venues_previous, R.id.monthly_venues_delta,
+                R.id.monthly_revenue_current, R.id.monthly_revenue_previous, R.id.monthly_revenue_delta
+            ).forEach { views.setTextViewText(it, "—") }
         }
 
         return views
+    }
+
+    private fun fillMonthlyRow(
+        views: RemoteViews,
+        curId: Int,
+        prevId: Int,
+        deltaId: Int,
+        current: Double,
+        previous: Double,
+        formatValue: (Double) -> String
+    ) {
+        views.setTextViewText(curId, formatValue(current))
+        views.setTextViewText(prevId, formatValue(previous))
+        views.setTextViewText(deltaId, Format.deltaPercent(current, previous))
     }
 
     fun buildCommissions(context: Context): RemoteViews {
