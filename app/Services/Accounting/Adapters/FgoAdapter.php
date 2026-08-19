@@ -276,6 +276,11 @@ class FgoAdapter implements AccountingAdapterInterface
         ];
     }
 
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    {
+        return ['exists' => null, 'reason' => 'error', 'message' => 'FGO: getInvoiceStatus nu este implementat.'];
+    }
+
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {
         if (!$this->authenticated) {

@@ -1147,246 +1147,22 @@ class ViewPayout extends ViewRecord
         // to the payout's issuing company so each society gets its own invoice.
         // Non-leisure (issuing_company null) → period = whole finished event and
         // filterRowsToIssuer is a no-op, so the billed POS is unchanged.
-        $posRows = $payout->filterRowsToIssuer(
-            app(\App\Services\Marketplace\SalesBreakdownService::class)
-                ->buildPosForPayout($payout->event, $payout->period_start, $payout->period_end)
-        );
-        $refundedRows = $payout->getRefundedCommissionRowsForPayout();
-        $onlineIncludedRows = $payout->getOnlineIncludedCommissionRowsForPayout();
-        $keptRows = $payout->getKeptCommissionRowsForPayout();
-
-        if (empty($posRows) && empty($refundedRows) && empty($onlineIncludedRows) && empty($keptRows)) {
-            Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
+        // Build items + subtotal + vat + amount via the shared service so
+        // this path and the "Regenerează factură" button on the invoice
+        // edit page emit identical content. Early-return notifications are
+        // preserved from the pre-refactor version.
+        $built = app(\App\Services\Invoicing\PosInvoiceContentBuilder::class)->build($payout);
+        if (isset($built['error'])) {
+            Notification::make()->title($built['error'])->warning()->send();
             return;
         }
 
-        // Organizer contract reference for the POS line description.
-        // Contract series/date come from the organizer's financiar tab —
-        // any change to that contract is reflected next time a POS
-        // invoice is generated.
-        $contractNumber = trim((string) ($organizer->contract_number_series ?? ''));
-        $contractDate = $organizer->contract_date instanceof \Carbon\Carbon
-            ? $organizer->contract_date->format('d.m.Y')
-            : (is_string($organizer->contract_date) && $organizer->contract_date !== ''
-                ? \Carbon\Carbon::parse($organizer->contract_date)->format('d.m.Y')
-                : '');
-        // Accountant-friendly short phrasing per line:
-        //   Servicii ticketing [POS ]invitatii/bilete [rambursate ]"TICKETTYPE"
-        //     [, cf. ctr. nr X/DATE][, cf. decont S/DATE][, "EVENT" / DATE]
-        // - Contract = legal reference to the underlying commercial contract
-        // - Decont = which payout / statement this line rolled up from
-        // - Ticket type = ties the invoice line to a specific SKU sold
-        // Each fragment self-hides when its source data is empty so there
-        // are no orphan commas.
-        $contractFragment = ($contractNumber !== '' || $contractDate !== '')
-            ? ', cf. ctr. nr ' . $contractNumber . '/' . $contractDate
-            : '';
-
-        $decontSeries = trim((string) ($payout->decont_series ?? ''));
-        $decontDate = $payout->created_at instanceof \Carbon\Carbon
-            ? $payout->created_at->format('d.m.Y')
-            : '';
-        $decontFragment = ($decontSeries !== '' || $decontDate !== '')
-            ? ', cf. decont ' . $decontSeries . ($decontDate !== '' ? '/' . $decontDate : '')
-            : '';
-
-        $eventCtx = $this->resolveEventContext($payout->event);
-        $eventFragment = $eventCtx['name'] !== ''
-            ? ', "' . $eventCtx['name'] . '"'
-                . ($eventCtx['date'] !== '' ? ' / ' . $eventCtx['date'] : '')
-            : '';
-
-        $items = [];
-        $subtotal = 0.0;
-
-        // Leisure per-society invoice: count only the PAID (price > 0) tickets in
-        // the quantity column. Package-component tickets (price 0) generate no
-        // commission, so counting them inflated the qty and produced a confusing
-        // "unit price" (e.g. 241.45 / 1103 = 0.22 instead of the real 2.30 floor
-        // on the 105 paid tickets). The line AMOUNT is unchanged — only the
-        // displayed quantity + unit price reflect the taxable tickets. Non-leisure
-        // (issuing_company null) keeps the raw counts, so nothing changes there.
-        $billablePos = collect();
-        $billableOnline = collect();
-        if ($payout->issuing_company) {
-            $bFrom = $payout->period_start?->copy()->startOfDay();
-            $bTo = $payout->period_end?->copy()->endOfDay();
-            $bTtIds = collect($posRows)->pluck('ticket_type_id')
-                ->merge(collect($onlineIncludedRows)->pluck('ticket_type_id'))
-                ->filter()->unique()->values()->all();
-            $billableCount = function (bool $pos) use ($bTtIds, $bFrom, $bTo) {
-                if (empty($bTtIds)) {
-                    return collect();
-                }
-                $dateCol = $pos ? 'created_at' : 'paid_at';
-
-                return \App\Models\Ticket::query()
-                    ->whereIn('ticket_type_id', $bTtIds)
-                    ->whereIn('status', ['valid', 'used'])
-                    ->where('price', '>', 0)
-                    ->whereHas('order', function ($o) use ($pos, $bFrom, $bTo, $dateCol) {
-                        $o->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
-                            ->whereNotIn('source', ['external_import', 'pos_test']);
-                        if ($pos) {
-                            $o->whereIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
-                        } else {
-                            $o->whereNotIn('source', array_merge(\App\Services\Marketplace\SalesBreakdownService::POS_SOURCES, ['test_order']));
-                        }
-                        if ($bFrom) {
-                            $o->where($dateCol, '>=', $bFrom);
-                        }
-                        if ($bTo) {
-                            $o->where($dateCol, '<=', $bTo);
-                        }
-                    })
-                    ->selectRaw('ticket_type_id, count(*) as c')
-                    ->groupBy('ticket_type_id')
-                    ->pluck('c', 'ticket_type_id');
-            };
-            $billablePos = $billableCount(true);
-            $billableOnline = $billableCount(false);
-        }
-
-        // (1) POS commission lines — one per ticket type sold via POS.
-        foreach ($posRows as $item) {
-            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-            $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
-            if ($qty <= 0 || $commPerTicket <= 0) {
-                continue;
-            }
-
-            $ticketTypeName = (string) ($item['ticket_type_name'] ?? 'Bilet');
-
-            $displayQty = $qty;
-            $displayUnit = $commPerTicket;
-            if ($payout->issuing_company) {
-                $billQty = (int) ($billablePos[(int) ($item['ticket_type_id'] ?? 0)] ?? 0);
-                if ($billQty > 0) {
-                    $displayQty = $billQty;
-                    $displayUnit = round(round($qty * $commPerTicket, 2) / $billQty, 2);
-                }
-            }
-
-            // Amount = displayQty * displayUnit (both at 2-decimal precision).
-            // Invariant: qty × unit_price = amount exactly on the printed
-            // invoice, so summing the article column reconciles to subtotal
-            // without a residual bani-of-rounding gap. Subtotal accumulates
-            // from the recomputed lineTotal — may drift by a few bani from
-            // payout.commission_amount when the split loses precision, and
-            // that drift is the correct one to show on the fiscal invoice.
-            $lineTotal = round($displayQty * $displayUnit, 2);
-            $subtotal += $lineTotal;
-
-            $items[] = [
-                'name' => 'Taxa ticketing (POS)',
-                'description' => trim('Servicii ticketing POS invitatii/bilete "' . $ticketTypeName . '"'
-                    . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $displayQty,
-                'unit_price' => $displayUnit,
-                'amount' => $lineTotal,
-            ];
-        }
-
-        // (2) Refunded-ticket commission lines — commission returned to the
-        //     customer on full refunds. Marketplace recovers it from the
-        //     organizer here. One line per ticket type that had any
-        //     commission_refunded=true items.
-        foreach ($refundedRows as $row) {
-            $qty = (int) ($row['qty'] ?? 0);
-            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
-            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
-            if ($qty <= 0 || $lineTotal <= 0) {
-                continue;
-            }
-
-            $subtotal += $lineTotal;
-
-            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
-
-            $items[] = [
-                'name' => 'Comision bilet rambursat integral',
-                'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $ticketTypeName . '"'
-                    . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $qty,
-                'unit_price' => $commPerTicket,
-                'amount' => $lineTotal,
-            ];
-        }
-
-        // (3) Online commission lines — INCLUDED-mode events only. The 6%
-        //     was baked into the customer-facing ticket price at sale time,
-        //     so the organizer never sent it to Ambilet separately.
-        //     Recovered here. One line per ticket type sold online.
-        foreach ($onlineIncludedRows as $row) {
-            $qty = (int) ($row['qty'] ?? 0);
-            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
-            $rowCommission = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
-            if ($qty <= 0 || $rowCommission <= 0) {
-                continue;
-            }
-
-            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
-
-            $displayQty = $qty;
-            $displayUnit = $commPerTicket;
-            if ($payout->issuing_company) {
-                $billQty = (int) ($billableOnline[(int) ($row['ticket_type_id'] ?? 0)] ?? 0);
-                if ($billQty > 0) {
-                    $displayQty = $billQty;
-                    $displayUnit = round($rowCommission / $billQty, 2);
-                }
-            }
-
-            // Amount = displayQty * displayUnit (both at 2-decimal precision).
-            // Same invariant as the POS block: qty × unit_price = amount
-            // exactly, so the article sum reconciles to subtotal without a
-            // rounding residual. Subtotal accumulates from the recomputed
-            // lineTotal (may differ by a few bani from the payout's
-            // commission_amount when the billQty split loses precision).
-            $lineTotal = round($displayQty * $displayUnit, 2);
-            $subtotal += $lineTotal;
-
-            $items[] = [
-                'name' => 'Comision online inclus în preț bilet',
-                'description' => trim('Servicii ticketing invitatii/bilete "' . $ticketTypeName . '"'
-                    . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $displayQty,
-                'unit_price' => $displayUnit,
-                'amount' => $lineTotal,
-            ];
-        }
-
-        // (4) Kept-commission credit lines — negative amounts. For partial
-        //     refunds where the operator chose "fara taxa"
-        //     (commission_refunded=false), Ambilet is already holding the
-        //     commission portion of the refunded ticket. Subtract it so we
-        //     don't double-bill.
-        foreach ($keptRows as $row) {
-            $qty = (int) ($row['qty'] ?? 0);
-            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
-            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
-            if ($qty <= 0 || $lineTotal <= 0) {
-                continue;
-            }
-
-            $subtotal -= $lineTotal;
-
-            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
-
-            $items[] = [
-                'name' => 'Storno comision reținut din rambursare parțială',
-                'description' => trim('Storno servicii ticketing "' . $ticketTypeName . '"'
-                    . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $qty,
-                'unit_price' => -$commPerTicket,
-                'amount' => -$lineTotal,
-            ];
-        }
-
-        if ($subtotal <= 0) {
-            Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
-            return;
-        }
+        // Items + subtotal already computed by the service above. Pull
+        // them out into locals so the existing Invoice::create() call
+        // (unchanged below) keeps compiling; the four legacy foreach
+        // loops that used to populate $items are gone.
+        $items = $built['items'];
+        $subtotal = $built['subtotal'];
 
         // POS commission is always charged to the organizer (the one that
         // collected cash via app). Resolve the exact society this decont
@@ -1403,9 +1179,11 @@ class ViewPayout extends ViewRecord
         $nextNumber = $lastInvoice ? ((int) preg_replace('/\D/', '', $lastInvoice->number) + 1) : 1;
         $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
-        $vatRate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0;
-        $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
-        $total = $subtotal + $vatAmount;
+        // VAT already computed by the builder; pull it out into locals so
+        // the Invoice::create() call below stays syntactically unchanged.
+        $vatRate = $built['vat_rate'];
+        $vatAmount = $built['vat_amount'];
+        $total = $built['amount'];
 
         $invoice = Invoice::create([
             'marketplace_client_id' => $marketplace->id,

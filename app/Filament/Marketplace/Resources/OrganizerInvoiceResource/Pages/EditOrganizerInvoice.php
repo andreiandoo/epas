@@ -33,19 +33,148 @@ class EditOrganizerInvoice extends EditRecord
         return [];
     }
 
+    /**
+     * Auto-check the invoice's live state at the accounting provider every
+     * time an operator opens this page. Per operator spec: no caching —
+     * they want the freshest state on every mount. Only runs when we have
+     * an external_ref (nothing to check otherwise); silently no-ops when
+     * the connector is missing or the adapter returns "unknown", so a
+     * transient error never blocks the page from loading.
+     *
+     * Rule 4 of the spec: if the check flips the invoice to
+     * deleted/stornoed and it was locally 'paid', applyOblioStatus() resets
+     * status → outstanding + clears paid_at. We flash a toast so the
+     * operator knows why the status pill they were expecting is missing.
+     */
+    public function mount(int | string $record): void
+    {
+        parent::mount($record);
+        $this->autoCheckOblioStatus('mount', silentUnchanged: true);
+    }
+
+    /**
+     * Ping the accounting provider for this invoice's current state and
+     * mutate meta.accounting accordingly via Invoice::applyOblioStatus().
+     * Shared by the mount()-auto-check and the manual "Verifică status
+     * Oblio" header button.
+     *
+     * $silentUnchanged: on mount we don't want a toast when nothing
+     * changed (that would fire on every page open). The manual button
+     * always shows the outcome.
+     */
+    protected function autoCheckOblioStatus(string $source, bool $silentUnchanged = false): ?string
+    {
+        $meta = $this->record->meta ?? [];
+        $externalRef = $meta['accounting']['external_ref'] ?? null;
+        $docType = $meta['accounting']['doc_type'] ?? 'invoice';
+        if (empty($externalRef)) {
+            return null;
+        }
+
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) {
+            return null;
+        }
+
+        try {
+            $wasPaid = $this->record->status === 'paid';
+            $result = app(AccountingService::class)->getMarketplaceInvoiceStatus(
+                $marketplace->id,
+                $externalRef,
+                $docType
+            );
+            $applied = $this->record->applyOblioStatus($result, $source);
+            $this->record->refresh();
+
+            if (in_array($applied, ['deleted', 'stornoed'], true)) {
+                $label = $applied === 'stornoed' ? 'storno-tă în Oblio' : 'ștearsă în Oblio';
+                Notification::make()
+                    ->title("Factura este {$label}")
+                    ->body($wasPaid
+                        ? 'Statusul local a fost resetat automat la Neachitată (nu poți avea Achitată local pe un document inexistent la contabilitate).'
+                        : 'Poți acum să regenerezi conținutul și să retrimiți factura.')
+                    ->warning()
+                    ->send();
+            } elseif ($applied === 'live' && !$silentUnchanged) {
+                Notification::make()
+                    ->title('Factura este activă în Oblio')
+                    ->success()
+                    ->send();
+            } elseif ($applied === 'unknown' && !$silentUnchanged) {
+                Notification::make()
+                    ->title('Status Oblio necunoscut')
+                    ->body($result['message'] ?? 'Verificare eșuată — reîncearcă mai târziu.')
+                    ->warning()
+                    ->send();
+            }
+            return $applied;
+        } catch (\Throwable $e) {
+            \Log::warning('[EditOrganizerInvoice.autoCheckOblioStatus] failed', [
+                'invoice_id' => $this->record->id,
+                'source' => $source,
+                'error' => $e->getMessage(),
+            ]);
+            if (!$silentUnchanged) {
+                Notification::make()
+                    ->title('Nu s-a putut verifica status Oblio')
+                    ->body($e->getMessage())
+                    ->warning()
+                    ->send();
+            }
+            return null;
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         // Primary standalone action — completing the invoice payment status.
+        // Hidden when the invoice is voided at the provider — you can't be
+        // "paid" locally on a document that no longer exists at Oblio (rule 4
+        // of the spec). If someone flipped the state after the button was
+        // rendered, the action() itself refuses too.
         $markPaid = Actions\Action::make('markPaid')
             ->label('Marchează Achitată')
             ->icon('heroicon-o-check-circle')
             ->color('success')
             ->requiresConfirmation()
-            ->visible(fn () => $this->record->status !== 'paid')
+            ->visible(fn () => $this->record->status !== 'paid' && !$this->record->isVoidedInOblio())
             ->action(function () {
+                if ($this->record->isVoidedInOblio()) {
+                    Notification::make()->danger()
+                        ->title('Nu se poate marca achitată')
+                        ->body('Factura este ' . ($this->record->isStornoedInOblio() ? 'storno-tă' : 'ștearsă') . ' în Oblio.')
+                        ->send();
+                    return;
+                }
                 $this->record->markAsPaid('manual');
                 Notification::make()->success()->title('Factură marcată ca achitată.')->send();
                 $this->fillForm();
+            });
+
+        // Persistent "Voided in Oblio" indicator — informational button
+        // that just shows the current void state as a red pill. Clicking
+        // it re-runs the check (same as $checkOblioStatus). Only rendered
+        // when the invoice is actually voided.
+        $oblioVoidBadge = Actions\Action::make('oblioVoidBadge')
+            ->label(function () {
+                $meta = $this->record->meta ?? [];
+                if ($this->record->isStornoedInOblio()) {
+                    $when = $meta['accounting']['stornoed_at'] ?? null;
+                    $whenLabel = $when ? \Carbon\Carbon::parse($when)->format('d.m.Y H:i') : '';
+                    return trim('Storno-tă în Oblio ' . $whenLabel);
+                }
+                if ($this->record->isDeletedInOblio()) {
+                    $when = $meta['accounting']['deleted_at'] ?? null;
+                    $whenLabel = $when ? \Carbon\Carbon::parse($when)->format('d.m.Y H:i') : '';
+                    return trim('Ștearsă din Oblio ' . $whenLabel);
+                }
+                return '';
+            })
+            ->icon('heroicon-o-exclamation-triangle')
+            ->color('danger')
+            ->visible(fn () => $this->record->isVoidedInOblio())
+            ->action(function () {
+                $this->autoCheckOblioStatus('manual', silentUnchanged: false);
             });
 
         // eFactura status indicator (dynamic label/color) — kept standalone as
@@ -165,17 +294,33 @@ class EditOrganizerInvoice extends EditRecord
             });
 
         $sendAccounting = Actions\Action::make('sendAccounting')
-            ->label('Trimite Factură Fiscală')
+            ->label(function () {
+                // "Retrimite" label when we're resending after a
+                // storno/delete in Oblio — surfaces the fact that a fresh
+                // Oblio number will be assigned (the old one is archived
+                // in meta.accounting.history and won't be reused).
+                if ($this->record->isVoidedInOblio()) {
+                    $prev = $this->record->meta['accounting']['history'] ?? [];
+                    $lastRef = !empty($prev) ? end($prev)['external_ref'] ?? null : null;
+                    return $lastRef
+                        ? "Retrimite Factură Fiscală (fost {$lastRef})"
+                        : 'Retrimite Factură Fiscală';
+                }
+                return 'Trimite Factură Fiscală';
+            })
             ->icon('heroicon-o-calculator')
             ->color('warning')
             ->requiresConfirmation()
-            ->modalHeading('Trimite factură fiscală')
-            ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
+            ->modalHeading(fn () => $this->record->isVoidedInOblio()
+                ? 'Retrimite factură fiscală (număr nou)'
+                : 'Trimite factură fiscală')
+            ->modalDescription(fn () => $this->record->isVoidedInOblio()
+                ? "Factura #{$this->record->number} a fost " . ($this->record->isStornoedInOblio() ? 'storno-tă' : 'ștearsă') . " în Oblio. Se va reemite cu un număr NOU la contabilitate; vechea referință rămâne arhivată."
+                : "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
             ->visible(function () {
-                $meta = $this->record->meta ?? [];
-                // Factura fiscală deja emisă → nu retrimite. (O proformă
-                // existentă e OK — trimiterea fiscalei o convertește.)
-                if (!empty($meta['accounting']['external_ref'])) {
+                // Show when NOT live at provider — that covers both
+                // "never sent" and "sent then deleted/stornoed at Oblio".
+                if ($this->record->hasLiveOblioInvoice()) {
                     return false;
                 }
                 if (!static::marketplaceHasMicroservice('accounting-connectors')) {
@@ -186,7 +331,74 @@ class EditOrganizerInvoice extends EditRecord
                 return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
             })
             ->action(function () {
+                // Before overwriting meta.accounting with the new send
+                // result, archive the previous external_ref (+ pdf_url +
+                // deleted_at markers) into meta.accounting.history so we
+                // keep the full trail. The current sendToAccounting call
+                // assigns new values on the same meta.accounting slot.
+                if (!empty($this->record->meta['accounting']['external_ref'] ?? null)) {
+                    $reason = $this->record->isStornoedInOblio()
+                        ? 'stornoed_in_oblio'
+                        : ($this->record->isDeletedInOblio() ? 'deleted_in_oblio' : 'resend');
+                    $this->record->archiveCurrentOblioRef($reason);
+                    $this->record->refresh();
+                }
                 $this->sendToAccounting($this->record, 'invoice');
+            });
+
+        // Manual "Verifică status Oblio" — force-refresh state on demand.
+        // Auto-check on mount already runs silently; this button is for
+        // when the operator just deleted/storno-ed in Oblio and doesn't
+        // want to reload the whole page.
+        $checkOblioStatus = Actions\Action::make('checkOblioStatus')
+            ->label('Verifică status Oblio')
+            ->icon('heroicon-o-magnifying-glass')
+            ->color('gray')
+            ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['external_ref']))
+            ->action(function () {
+                $this->autoCheckOblioStatus('manual', silentUnchanged: false);
+            });
+
+        // "Regenerează factură" — rebuild items + amount from payout
+        // snapshot. Never touches the provider (organizer must Send
+        // Fiscal after this to actually emit the new document). Hidden
+        // whenever the invoice is live at Oblio — you can't rewrite the
+        // content of a document that still exists there.
+        $regenerateContent = Actions\Action::make('regenerateContent')
+            ->label('Regenerează factură')
+            ->icon('heroicon-o-arrow-path-rounded-square')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->modalHeading('Regenerează conținutul facturii')
+            ->modalDescription(fn () => "Se vor reface articolele + sumele din decontul {$this->record->payout?->reference} pe baza vânzărilor curente. Factura NU va fi trimisă automat la Oblio — după regenerare folosește 'Retrimite Factură Fiscală'.")
+            ->visible(fn () => !$this->record->hasLiveOblioInvoice() && $this->record->marketplace_payout_id)
+            ->action(function () {
+                try {
+                    $diff = $this->record->rebuildFromPayout();
+                    $old = $diff['old'];
+                    $new = $diff['new'];
+                    $delta = $new['amount'] - $old['amount'];
+                    Notification::make()
+                        ->title('Factură regenerată')
+                        ->body(sprintf(
+                            'Articole: %d → %d · Total: %s → %s RON (%s%s)',
+                            $old['items_count'],
+                            $new['items_count'],
+                            number_format($old['amount'], 2),
+                            number_format($new['amount'], 2),
+                            $delta >= 0 ? '+' : '',
+                            number_format($delta, 2)
+                        ))
+                        ->success()
+                        ->send();
+                    $this->redirect(OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record]));
+                } catch (\Throwable $e) {
+                    Notification::make()
+                        ->title('Regenerarea a eșuat')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+                }
             });
 
         $sendEfactura = Actions\Action::make('sendEfactura')
@@ -273,6 +485,9 @@ class EditOrganizerInvoice extends EditRecord
             ->successRedirectUrl(fn () => OrganizerInvoiceResource::getUrl('index'));
 
         return [
+            // Red void-state indicator renders first so it's the most
+            // visible thing an operator sees when opening a broken invoice.
+            $oblioVoidBadge,
             $markPaid,
             $efacturaStatus,
             Actions\ActionGroup::make([
@@ -289,6 +504,8 @@ class EditOrganizerInvoice extends EditRecord
                 $viewProformaPdf,
                 $viewAccountingPdf,
                 $refreshAccountingPdf,
+                $checkOblioStatus,
+                $regenerateContent,
             ])
                 ->label('Documente ▾')
                 ->icon('heroicon-o-document-text')

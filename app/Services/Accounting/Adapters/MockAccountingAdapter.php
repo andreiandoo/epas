@@ -77,6 +77,11 @@ class MockAccountingAdapter implements AccountingAdapterInterface
         ];
     }
 
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    {
+        return ['exists' => true, 'canceled' => false, 'raw' => ['mock' => true, 'external_ref' => $externalRef]];
+    }
+
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {
         return [

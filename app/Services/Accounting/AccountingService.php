@@ -349,6 +349,32 @@ class AccountingService
     }
 
     /**
+     * Look up the live state of a marketplace invoice at the accounting
+     * provider. Returns the adapter's getInvoiceStatus contract
+     * (see AccountingAdapterInterface). Falls back to exists=null with a
+     * reason when the connector is missing so callers don't wrongly treat
+     * a live invoice as gone.
+     */
+    public function getMarketplaceInvoiceStatus(int $marketplaceClientId, string $externalRef, string $docType = 'invoice'): array
+    {
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+        if (!$connector) {
+            return ['exists' => null, 'reason' => 'error', 'message' => 'Fără conector activ.'];
+        }
+
+        try {
+            $auth = json_decode(Crypt::decryptString($connector->auth), true);
+            $adapter = $this->getAdapter($connector->provider, $auth);
+            return $adapter->getInvoiceStatus($externalRef, $docType);
+        } catch (\Throwable $e) {
+            return ['exists' => null, 'reason' => 'error', 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Delete an invoice / proforma from the accounting provider for a
      * marketplace client. Returns {success, message, supported} — safe to
      * call on adapters that don't implement deletion.

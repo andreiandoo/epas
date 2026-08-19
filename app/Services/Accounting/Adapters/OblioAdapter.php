@@ -389,6 +389,74 @@ class OblioAdapter implements AccountingAdapterInterface
     }
 
     /**
+     * Check whether an invoice / proforma still exists in Oblio, and whether
+     * a fiscal invoice has been storno-ed (has a credit note).
+     *
+     * Return contract:
+     *   ['exists' => true,  'canceled' => bool, 'raw' => ...]   - live in Oblio
+     *   ['exists' => false, 'reason'   => 'not_found']          - deleted (proforma) OR missing
+     *   ['exists' => null,  'reason'   => 'error', 'message' => ...] - transient (auth, network)
+     *
+     * Distinction between "deleted" (proforma) and "storno-ed" (fiscal) is
+     * made at the caller — proformas that come back not_found are truly
+     * deleted; fiscals get `canceled=true` when a credit note exists.
+     */
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    {
+        if (!$this->authenticated) {
+            return ['exists' => null, 'reason' => 'error', 'message' => 'Nu este autentificat.'];
+        }
+
+        try {
+            $parts = explode('/', $externalRef);
+            $seriesName = $parts[0] ?? $this->seriesName;
+            $number = $parts[1] ?? $externalRef;
+            $endpoint = $docType === 'proforma' ? '/api/docs/proforma' : '/api/docs/invoice';
+
+            $result = $this->apiRequest('GET', $endpoint, [
+                'cif' => $this->cif,
+                'seriesName' => $seriesName,
+                'number' => $number,
+            ]);
+            $data = $result['data'] ?? $result;
+
+            // Storno detection: Oblio marks storno-ed fiscals with any of
+            // these flags — we accept whichever the API returns to be robust
+            // across account plans / API versions.
+            $canceled = (bool) (
+                ($data['canceled'] ?? false)
+                || ($data['cancelDate'] ?? null)
+                || ($data['stornoDate'] ?? null)
+                || ($data['isCanceled'] ?? false)
+                || (!empty($data['creditNote']))
+            );
+
+            return [
+                'exists' => true,
+                'canceled' => $canceled,
+                'raw' => $data,
+            ];
+        } catch (\Exception $e) {
+            $msg = $e->getMessage();
+            // apiRequest throws "Oblio API error (404): …" for missing docs.
+            // Anything with 404 or the standard Oblio "not found" phrasing is
+            // treated as deleted; other errors bubble up as unknown so the
+            // caller doesn't wrongly mark a live invoice as gone on a
+            // transient network hiccup.
+            if (str_contains($msg, '(404)') || stripos($msg, 'not found') !== false || stripos($msg, 'nu exist') !== false) {
+                return ['exists' => false, 'reason' => 'not_found'];
+            }
+
+            Log::warning('Oblio getInvoiceStatus unknown error', [
+                'external_ref' => $externalRef,
+                'doc_type' => $docType,
+                'error' => $msg,
+            ]);
+            return ['exists' => null, 'reason' => 'error', 'message' => $msg];
+        }
+    }
+
+    /**
      * {@inheritdoc}
      *
      * Oblio supports deletion of proformas via DELETE /api/docs/proforma.

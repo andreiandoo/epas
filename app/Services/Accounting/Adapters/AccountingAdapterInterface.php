@@ -81,6 +81,23 @@ interface AccountingAdapterInterface
     public function deleteInvoice(string $externalRef, string $docType = 'invoice'): array;
 
     /**
+     * Look up the current state of an invoice / proforma at the provider.
+     *
+     * Contract:
+     *   ['exists' => true,  'canceled' => bool, 'raw' => ...]   - live
+     *   ['exists' => false, 'reason'   => 'not_found']          - deleted / missing
+     *   ['exists' => null,  'reason'   => 'error', 'message' => ...] - transient (network/auth)
+     *
+     * Adapters that can't reach the provider (mocks, offline drivers) must
+     * return exists=null with a reason so callers never mistake "unknown"
+     * for "gone".
+     *
+     * @param string $externalRef Full reference like "SERIES/NUMBER"
+     * @param string $docType 'invoice' | 'proforma'
+     */
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array;
+
+    /**
      * Get customer list (for sync/import)
      *
      * @return array [{id, name, vat_number, ...}]

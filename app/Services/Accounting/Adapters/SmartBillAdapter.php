@@ -402,6 +402,17 @@ class SmartBillAdapter implements AccountingAdapterInterface
 
     /**
      * {@inheritdoc}
+     *
+     * Not yet wired to a SmartBill endpoint — returns unknown so the caller
+     * doesn't mistakenly treat a live invoice as gone.
+     */
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    {
+        return ['exists' => null, 'reason' => 'error', 'message' => 'SmartBill: getInvoiceStatus nu este implementat.'];
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function createCreditNote(string $invoiceExternalRef, array $refund): array
     {
