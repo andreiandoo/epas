@@ -94,7 +94,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="flex items-center justify-between px-5 py-3 border-b border-border bg-slate-50">
                     <div>
                         <h2 class="font-bold text-secondary">📊 Comparativ · azi vs perioade anterioare</h2>
-                        <p class="text-xs text-muted">Ziua întreagă (00:00 – 23:59). Delta % față de azi.</p>
+                        <p class="text-xs text-muted" id="ld-compare-subtitle">Comparare fair — până la aceeași oră ca azi. Delta % față de azi.</p>
                     </div>
                     <span class="text-[10px] text-muted" id="ld-compare-note"></span>
                 </div>
@@ -375,10 +375,15 @@ const LeisureDash = {
                     ${cells}
                 </tr>`;
             }).join('');
-            // Sub-note cu datele efective ale zilelor comparate
+            // Sub-note cu datele efective ale zilelor comparate + ora cutoff
             const noteEl = document.getElementById('ld-compare-note');
+            const subEl = document.getElementById('ld-compare-subtitle');
+            const cutoff = (res.data || {}).cutoff_time;
+            if (subEl && cutoff) {
+                subEl.textContent = `Comparare fair — cifrele pentru fiecare zi sunt până la ora ${cutoff} (aceeași oră ca azi).`;
+            }
             if (noteEl && snaps.yesterday && snaps.today) {
-                noteEl.textContent = 'Azi ' + snaps.today.date + ' · vs ' + snaps.yesterday.date + ' / ' + (snaps.last_week?.date || '—') + ' / ' + (snaps.last_month?.date || '—') + ' / ' + (snaps.last_year?.date || '—');
+                noteEl.textContent = 'Azi ' + snaps.today.date + (cutoff ? ' până la ' + cutoff : '') + ' · vs ' + snaps.yesterday.date + ' / ' + (snaps.last_week?.date || '—') + ' / ' + (snaps.last_month?.date || '—') + ' / ' + (snaps.last_year?.date || '—');
             }
         } catch (e) {
             console.warn('compare', e);

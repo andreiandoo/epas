@@ -99,8 +99,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <table class="w-full text-sm">
                     <thead class="text-xs uppercase bg-slate-50 text-muted">
                         <tr>
+                            <th class="px-5 py-3 text-left">Nr. comandă</th>
                             <th class="px-5 py-3 text-left">Cod bilet</th>
                             <th class="px-5 py-3 text-left">Nume / Email</th>
+                            <th class="px-5 py-3 text-left">Nr. înmatric.</th>
                             <th class="px-5 py-3 text-left">Tip bilet</th>
                             <th class="px-5 py-3 text-left">Data vizită</th>
                             <th class="px-5 py-3 text-left">Status</th>
@@ -167,16 +169,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return `<span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded ${m[0]} ${m[1]}">${m[2]}</span>`;
     }
 
+    function esc(v) { return String(v || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
     function rowHtml(r) {
+        const plate = r.vehicle_plate
+            ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-slate-100 text-slate-700 rounded border border-slate-300">${esc(r.vehicle_plate)}</span>`
+            : '<span class="text-muted">—</span>';
         return `
             <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 font-mono text-xs text-muted">${esc(r.order_number) || '—'}</td>
                 <td class="px-5 py-3 font-mono text-xs">${r.code || r.barcode || '—'}</td>
                 <td class="px-5 py-3">
-                    <div class="font-medium text-secondary">${r.customer_name || '—'}</div>
-                    <div class="text-xs text-muted">${r.customer_email || ''}</div>
+                    <div class="font-medium text-secondary">${esc(r.customer_name) || '—'}</div>
+                    <div class="text-xs text-muted">${esc(r.customer_email) || ''}</div>
                 </td>
+                <td class="px-5 py-3 text-xs">${plate}</td>
                 <td class="px-5 py-3">
-                    <div class="text-sm">${r.ticket_type || '—'}</div>
+                    <div class="text-sm">${esc(r.ticket_type) || '—'}</div>
                     <div class="mt-0.5">${categoryBadge(r.service_category)}</div>
                 </td>
                 <td class="px-5 py-3 text-sm">${fmtDay(r.visit_date)}</td>
@@ -207,12 +215,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function populateTypes(types) {
         const menu = $('lv-type-menu');
-        menu.innerHTML = (types || []).map(t => `
+        // Sort: access primele (default participanti), apoi parking/activity/rental/extra/package.
+        const catOrder = { access: 1, parking: 2, activity: 3, rental: 4, extra: 5, package: 6 };
+        const sorted = (types || []).slice().sort((a, b) => {
+            const oa = catOrder[a.service_category] || 99;
+            const ob = catOrder[b.service_category] || 99;
+            return oa - ob || String(a.name).localeCompare(String(b.name));
+        });
+        // Grupare vizuala pe categorie cu badge cat mic langa nume
+        menu.innerHTML = sorted.map(t => {
+            const cat = t.service_category || 'access';
+            const badgeCat = categoryBadge(cat);
+            return `
             <label class="flex items-center gap-2 px-2 py-1.5 text-sm rounded cursor-pointer hover:bg-slate-50">
                 <input type="checkbox" value="${t.id}" class="lv-type-cb rounded border-border text-primary">
-                <span>${escapeHtml(t.name)}</span>
-            </label>
-        `).join('') || '<div class="px-2 py-2 text-xs text-muted">Niciun tip de bilet.</div>';
+                <span class="flex-1">${escapeHtml(t.name)}</span>
+                ${badgeCat}
+            </label>`;
+        }).join('') || '<div class="px-2 py-2 text-xs text-muted">Niciun tip de bilet.</div>';
         menu.querySelectorAll('.lv-type-cb').forEach(cb => cb.addEventListener('change', () => {
             updateTypeLabel();
             updateResetBtn();
@@ -368,11 +388,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function exportCsv() {
         const rows = allRows;
         if (!rows.length) { alert('Niciun rând de exportat.'); return; }
-        const header = ['Cod', 'Nume', 'Email', 'Tip bilet', 'Categorie', 'Societate', 'Data vizita', 'Status', 'Check-in'];
+        const header = ['Nr. comanda', 'Cod bilet', 'Nume', 'Email', 'Nr. inmatriculare', 'Tip bilet', 'Categorie', 'Societate', 'Data vizita', 'Status', 'Check-in'];
         const csv = [header.join(',')].concat(rows.map(r => [
+            r.order_number || '',
             r.code || r.barcode || '',
             (r.customer_name || '').replace(/"/g, '""'),
             r.customer_email || '',
+            r.vehicle_plate || '',
             (r.ticket_type || '').replace(/"/g, '""'),
             r.service_category || '',
             r.issuing_company || '',

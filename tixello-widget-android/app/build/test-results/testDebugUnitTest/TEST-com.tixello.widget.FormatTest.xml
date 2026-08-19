@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tixello.widget.FormatTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-08-17T09:56:16" hostname="DESKTOP-Q6AFG8A" time="0.028">
+  <properties/>
+  <testcase name="randul de azi are semn doar cand e pozitiv" classname="com.tixello.widget.FormatTest" time="0.01"/>
+  <testcase name="numerele intregi primesc separator de mii" classname="com.tixello.widget.FormatTest" time="0.002"/>
+  <testcase name="vechimea sincronizarii e in cuvinte" classname="com.tixello.widget.FormatTest" time="0.006"/>
+  <testcase name="sumele mici se scriu intregi" classname="com.tixello.widget.FormatTest" time="0.009"/>
+  <testcase name="sumele mari se scurteaza in widget" classname="com.tixello.widget.FormatTest" time="0.001"/>
+  <testcase name="moneda necunoscuta ramane cod" classname="com.tixello.widget.FormatTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

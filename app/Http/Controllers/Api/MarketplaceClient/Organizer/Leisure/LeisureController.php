@@ -461,18 +461,19 @@ class LeisureController extends BaseController
         $visitTo = isset($validated['visit_to']) ? Carbon::parse($validated['visit_to'])->toDateString() : null;
 
         // Base scope: paid/completed tickets for this event within the PAYMENT window.
-        // PARTICIPANTS = only "access" tickets (service_category NULL or 'access').
-        // This deliberately excludes:
-        //   - package umbrella tickets (service_category='package') — e.g. a
-        //     "Familie 2+1" buy emits 1 umbrella + its access components; we count
-        //     only the components (the actual people), never the umbrella;
-        //   - parking / activity / rental / extra tickets (not people).
+        // PARTICIPANTS = default "access" tickets (service_category NULL or 'access').
+        // Cand user selecteaza EXPLICIT un tip din alta categorie (ex: parcare zona
+        // noapte), scoatem restrictia access-only ca sa poata vedea si acele bilete.
+        // Fara asta, dropdown-ul "Tip bilet" nu poate include parking/activity/rental.
+        $accessOnlyBase = empty($ticketTypeIds);
         $base = \App\Models\Ticket::query()
             ->whereHas('order', fn ($q) => $q
                 ->where('event_id', $eventModel->id)
                 ->whereIn('status', ['completed', 'paid'])
-                ->whereBetween('paid_at', [$from, $to]))
-            ->whereHas('ticketType', fn ($q) => $q->byServiceCategory('access'));
+                ->whereBetween('paid_at', [$from, $to]));
+        if ($accessOnlyBase) {
+            $base->whereHas('ticketType', fn ($q) => $q->byServiceCategory('access'));
+        }
 
         // Header filters (status / ticket type / visit-date / search) — applied to
         // BOTH the paginated list and the stats query so the cards match the view.
@@ -514,7 +515,7 @@ class LeisureController extends BaseController
         };
 
         $query = (clone $base)->with([
-            'order:id,customer_name,customer_email,customer_phone,paid_at,status,total',
+            'order:id,order_number,customer_name,customer_email,customer_phone,paid_at,status,total,meta',
             'ticketType:id,name,service_category,issuing_company,valid_date',
         ]);
         $applyFilters($query);
@@ -532,12 +533,16 @@ class LeisureController extends BaseController
             $visit = $metaVisit
                 ?? optional($t->ticketType?->valid_date)->toDateString()
                 ?? optional($t->order?->paid_at)->toDateString();
+            $orderMeta = is_array($t->order?->meta ?? null) ? $t->order->meta : [];
+            $vehiclePlate = $orderMeta['vehicle_plate'] ?? null;
             return [
                 'id' => $t->id,
                 'code' => $t->code,
                 'barcode' => $t->barcode,
+                'order_number' => $t->order->order_number ?? null,
                 'customer_name' => $t->order->customer_name ?? null,
                 'customer_email' => $t->order->customer_email ?? null,
+                'vehicle_plate' => $vehiclePlate,
                 'ticket_type' => $t->ticketType->name ?? null,
                 'ticket_type_id' => $t->ticket_type_id,
                 'service_category' => $t->ticketType->service_category ?? 'access',
@@ -549,16 +554,18 @@ class LeisureController extends BaseController
         });
 
         // Ticket types of this event — populates the "Tip bilet" filter dropdown.
-        // Only access types (people), matching the participants scope above.
+        // Includem TOATE tipurile (nu doar access), sa acopere si parking/activity/
+        // rental. Base scope se comuta pe access-only doar cand niciun tip nu e
+        // selectat; cand user selecteaza expres un tip parking, il gaseste.
         $ticketTypes = $eventModel->ticketTypes()
-            ->byServiceCategory('access')
             ->orderBy('sort_order')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'service_category'])
             ->map(fn ($tt) => [
                 'id' => $tt->id,
                 'name' => is_array($tt->name)
                     ? ($tt->name['ro'] ?? $tt->name['en'] ?? (reset($tt->name) ?: ('#' . $tt->id)))
                     : ($tt->name ?? ('#' . $tt->id)),
+                'service_category' => $tt->service_category ?? 'access',
             ])
             ->values();
 
@@ -2344,6 +2351,19 @@ class LeisureController extends BaseController
             ? Carbon::parse($validated['to'])->endOfDay()
             : Carbon::today()->endOfDay();
 
+        // Cache: pentru volume mari (Sf. Ana ~5000+ orders/luna) endpoint-ul poate
+        // depasi timeout Cloudflare (100s). Cache 5 min pt request-uri repetate +
+        // memory/time limit local. Cache key = event+range; invalidat automat cand
+        // se schimba data.
+        $cacheKey = "leisure_raport_v1_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached !== null) {
+            return $this->success($cached);
+        }
+        // Ridic limitele local pt cold cache (volume mari, 30 zile pe leisure).
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(90);
+
         $orders = Order::query()
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['completed', 'paid'])
@@ -2716,7 +2736,7 @@ class LeisureController extends BaseController
             $byIssuer[$k]['vat_rate'] = $issuerVat[$k]['vat_rate'];
         }
 
-        return $this->success([
+        $responsePayload = [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'currency' => $orders->first()?->currency ?? 'RON',
@@ -2746,7 +2766,12 @@ class LeisureController extends BaseController
                 'primary' => array_merge($byIssuer['primary'], ['name' => $issuerNames['primary']]),
                 'secondary' => $issuerNames['secondary'] ? array_merge($byIssuer['secondary'], ['name' => $issuerNames['secondary']]) : null,
             ],
-        ]);
+            'cached_at' => now()->toIso8601String(),
+        ];
+        // Cache 5 min: reduce load pt utilizatori care re-deschide pagina + evita
+        // multi-request-uri simultane sa piardă timp pe agregare identică.
+        \Illuminate\Support\Facades\Cache::put($cacheKey, $responsePayload, 300);
+        return $this->success($responsePayload);
     }
 
     // ========================================================================
@@ -4238,7 +4263,8 @@ class LeisureController extends BaseController
         if (!$eventModel) return $this->error('Event not found', 404);
 
         $tz = 'Europe/Bucharest';
-        $today = Carbon::now($tz)->startOfDay();
+        $now = Carbon::now($tz);
+        $today = $now->copy()->startOfDay();
 
         // Perioadele de comparat: fiecare = ziua intreaga pt data respectiva
         $periods = [
@@ -4249,14 +4275,23 @@ class LeisureController extends BaseController
             'last_year'  => $today->copy()->subYear(),   // aceeasi data anul trecut
         ];
 
+        // FAIR TIMING: la ora curenta X, "azi" acopera doar 00:00-now (partial).
+        // Compararea cu istorice pana la 23:59 (zi intreaga) e nefair - istoricele
+        // par mult mai mari. Aplicam cutoff = ora curenta pe TOATE perioadele
+        // ("pana la ora X din fiecare zi"). Sfarsit-de-zi ramane afisat doar
+        // pentru istorice sub "full_day" opt (nu implementat aici).
+        $cutoffHms = $now->format('H:i:s');
+
         $result = [];
         foreach ($periods as $key => $day) {
-            // Azi cache scurt (60s), istorice cache lung 24h (imutabile)
-            $ttl = $key === 'today' ? 60 : 86400;
-            $cacheKey = "leisure_compare_v2_{$eventModel->id}_{$key}_" . $day->format('Y-m-d');
+            // Azi cache scurt (60s), istorice mai lung (600s) pt ca ora cutoff
+            // se schimba minut-de-minut. Anterior aveam 24h dar acum snapshot-ul
+            // depinde de ora curenta -> nu mai e imutabil.
+            $ttl = $key === 'today' ? 60 : 600;
+            $cacheKey = "leisure_compare_v3_{$eventModel->id}_{$key}_" . $day->format('Y-m-d') . '_' . $now->format('H');
             try {
-                $result[$key] = Cache::remember($cacheKey, $ttl, function () use ($eventModel, $day, $tz) {
-                    return $this->buildDaySnapshot($eventModel->id, $day, $tz);
+                $result[$key] = Cache::remember($cacheKey, $ttl, function () use ($eventModel, $day, $tz, $cutoffHms) {
+                    return $this->buildDaySnapshot($eventModel->id, $day, $tz, $cutoffHms);
                 });
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('[LeisureCompare] snapshot failed', [
@@ -4285,6 +4320,8 @@ class LeisureController extends BaseController
 
         return $this->success([
             'timezone' => $tz,
+            'cutoff_time' => $now->format('H:i'),
+            'note' => 'Comparare fair: cifrele pentru fiecare zi sunt pana la ora ' . $now->format('H:i') . ' (aceeasi ora ca azi).',
             'snapshots' => $result,
         ]);
     }
@@ -4299,14 +4336,20 @@ class LeisureController extends BaseController
     }
 
     /**
-     * Snapshot pt o zi calendaristica intreaga (00:00-23:59 RO tz). Metrici =
-     * aceleasi definitii ca dashboardLive (aliniate 1:1). Returneaza floats/ints
-     * simpli — computare rapida (agregare in DB, fara SalesBreakdownService).
+     * Snapshot pt o zi RO tz. Cand primeste $cutoffHms (ex: "08:30:00"), fereastra
+     * este 00:00 → cutoffHms; altfel = zi calendaristica intreaga.
+     * Cutoff-ul permite compararea fair intre azi partial si istorice pana la
+     * aceeasi ora ("azi 8:00 vs ieri 8:00" in loc de "azi 8:00 vs ieri 23:59").
      */
-    private function buildDaySnapshot(int $eventId, Carbon $dayRo, string $tz): array
+    private function buildDaySnapshot(int $eventId, Carbon $dayRo, string $tz, ?string $cutoffHms = null): array
     {
         $start = $dayRo->copy()->startOfDay()->setTimezone('UTC');
-        $end = $dayRo->copy()->endOfDay()->setTimezone('UTC');
+        if ($cutoffHms) {
+            [$h, $m, $s] = array_pad(array_map('intval', explode(':', $cutoffHms)), 3, 0);
+            $end = $dayRo->copy()->setTime($h, $m, $s)->setTimezone('UTC');
+        } else {
+            $end = $dayRo->copy()->endOfDay()->setTimezone('UTC');
+        }
 
         $orders = Order::query()
             ->where('event_id', $eventId)
