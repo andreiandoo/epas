@@ -307,20 +307,22 @@ class TixelloWidgetStatsService
     }
 
     /**
-     * Biletele emise real prin Tixello:
-     *   - status IN valid/used (biletul e sau a fost folosit legitim; excludem
-     *     invitațiile, cancelled, refunded, void, POS test)
-     *   - order în status paid/confirmed/completed (aliniat cu admin
-     *     StatsOverview + BillingBreakdown)
-     *   - order NU e import legacy/external/test
+     * Toate biletele reale de pe platformă — INCLUSIV cele importate din
+     * sistemul vechi WordPress AmBilet (legacy_import) sau din alte platforme
+     * (external_import). Widget-ul „cifre" arată activitatea totală, nu doar
+     * ce a generat comision pentru Tixello.
+     *
+     * Filtrul de status păstrează doar biletele reale (valid, used,
+     * checked_in) — excludem cancelled/void/refunded pentru că acelea nu mai
+     * există efectiv. Nu filtrăm după statusul comenzii sau după sursă:
+     * user-ul a spus explicit că se așteaptă la o cifră apropiată de
+     * `Ticket::count()` din admin (~350k), NU la cifra restrânsă pe orders
+     * plătite prin Tixello (~48k).
      */
     private function ticketsQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return Ticket::query()
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', fn ($q) => $q
-                ->whereIn('status', $this->saleStatuses())
-                ->whereNotIn('source', TixelloRevenueService::EXCLUDED_SOURCES));
+            ->whereIn('status', ['valid', 'used', 'checked_in']);
     }
 
     /**
@@ -334,9 +336,15 @@ class TixelloWidgetStatsService
      */
     private function orderMoney(?Carbon $from, ?Carbon $to): array
     {
+        /* Vânzări = activitate totală platformă (bani mișcați prin sistem),
+           INCLUSIV import-urile legacy (comenzi reale din WordPress vechi
+           migrate în Tixello). Nu excludem sursele — aliniat cu admin
+           StatsOverview care afișează venituri totale, nu doar cele
+           generate prin Tixello. Excluderea import-urilor rămâne doar pe
+           calculul de comision (TixelloRevenueService), unde e corect —
+           Tixello nu a încasat comision pe importuri istorice. */
         $query = Order::query()
-            ->whereIn('status', $this->saleStatuses())
-            ->whereNotIn('source', TixelloRevenueService::EXCLUDED_SOURCES);
+            ->whereIn('status', $this->saleStatuses());
 
         if ($from && $to) {
             $query->whereBetween($this->todayColumn(), [$from, $to]);
@@ -398,6 +406,11 @@ class TixelloWidgetStatsService
 
         $orders = Order::query()
             ->whereIn('status', $this->saleStatuses())
+            /* Comisioanele istorice (import legacy/external) sunt excluse din
+               lista de „ultimele comisioane" pentru că n-au adus venit real
+               Tixello — au fost migrate cu comisionul deja încasat prin
+               sistemul vechi. Aceeași excludere e aplicată și în
+               TixelloRevenueService pentru cifra „Venituri Tixello". */
             ->whereNotIn('source', TixelloRevenueService::EXCLUDED_SOURCES)
             /* Comisionul Tixello e rata clientului × valoarea comenzii, deci
                „are comision" înseamnă „clientul are o rată > 0". Filtrul stă în
