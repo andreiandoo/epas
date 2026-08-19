@@ -1,8 +1,8 @@
 {
-    "version":  "0.1.4",
-    "file":  "tixello-widget-0.1.4.apk",
+    "version":  "0.1.5",
+    "file":  "tixello-widget-0.1.5.apk",
     "size_mb":  3.54,
-    "sha256":  "4b9d6ba542013137a2d05302bdb81935f74790915f989d030aa68b4aedcd1e14",
+    "sha256":  "53cd34dfd685cb0de26875d9cceecb03f971b61d54aac45562e2f8bc6a370088",
     "min_sdk":  "Android 8.0+",
-    "published":  "2026-08-19T12:38:19Z"
+    "published":  "2026-08-19T13:02:54Z"
 }

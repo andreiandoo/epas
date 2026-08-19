@@ -109,25 +109,22 @@ data class Snapshot(
         }
 
         private fun JSONObject.toMonthlySlice(label: String): MonthlySlice {
-            /* Server-ul trimite fiecare metrica cu structura ei
-               (sales are 'value', tickets/customers/artists/venues are 'total',
-               revenue are 'total'), deci parsam fiecare bucket separat. */
+            /* Server-ul trimite in monthlySlice() cifrele ca SCALARI (nu ca
+               obiecte cu 'total'/'today'): 'tickets' => 5000, nu
+               'tickets' => ['total' => 5000]. Deci parsam TOATE count-urile
+               cu optLongOrScalar care handleuieste si int gol, si obiect
+               (defensiv pentru un server care ar returna cumva alta forma).
+               'sales' + 'revenue' au structura de obiect. */
             val salesObj = optJSONObject("sales") ?: JSONObject()
-            val ticketsCount = optJSONObject("tickets")?.let {
-                if (it.has("total")) it.optLong("total", 0L) else it.optLong("today", 0L)
-            } ?: 0L
-            val customersCount = optLongOrScalar("customers")
-            val artistsCount = optLongOrScalar("artists")
-            val venuesCount = optLongOrScalar("venues")
             val revenueObj = optJSONObject("revenue") ?: JSONObject()
 
             return MonthlySlice(
                 label = label,
                 sales = salesObj.optDouble("value", 0.0).orZero(),
-                tickets = ticketsCount,
-                customers = customersCount,
-                artists = artistsCount,
-                venues = venuesCount,
+                tickets = optLongOrScalar("tickets"),
+                customers = optLongOrScalar("customers"),
+                artists = optLongOrScalar("artists"),
+                venues = optLongOrScalar("venues"),
                 revenue = revenueObj.optDouble("total", 0.0).orZero()
             )
         }
