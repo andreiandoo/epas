@@ -95,10 +95,14 @@ interface AccountingAdapterInterface
      * return exists=null with a reason so callers never mistake "unknown"
      * for "gone".
      *
-     * @param string $externalRef Full reference like "SERIES/NUMBER"
-     * @param string $docType 'invoice' | 'proforma'
+     * @param string      $externalRef Full reference like "SERIES/NUMBER"
+     * @param string      $docType 'invoice' | 'proforma'
+     * @param string|null $issueDate ISO date (YYYY-MM-DD) to narrow the
+     *                    provider-side lookup window. Recommended when
+     *                    the caller has it — the OblioAdapter listing
+     *                    query has a 100-item cap.
      */
-    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array;
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice', ?string $issueDate = null): array;
 
     /**
      * Get customer list (for sync/import)

@@ -276,7 +276,7 @@ class FgoAdapter implements AccountingAdapterInterface
         ];
     }
 
-    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice', ?string $issueDate = null): array
     {
         return ['exists' => null, 'reason' => 'error', 'message' => 'FGO: getInvoiceStatus nu este implementat.'];
     }

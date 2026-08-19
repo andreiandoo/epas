@@ -392,88 +392,175 @@ class OblioAdapter implements AccountingAdapterInterface
      * Check whether an invoice / proforma still exists in Oblio + which
      * voided sub-state it's in.
      *
+     * The simple GET /api/docs/invoice endpoint returns success for BOTH
+     * live and canceled fiscals — Oblio strips the cancellation flag from
+     * that view (verified empirically 2026-08 on AMBFF/2349). The reliable
+     * source of truth is /api/docs/invoice/list, which:
+     *   - HIDES a canceled invoice from the returned list (Oblio "Anulează")
+     *   - INCLUDES stornoed invoices with stornoed="1" (credit note issued)
+     *   - INCLUDES live invoices with canceled="0" stornoed="0"
+     *
+     * Detection algorithm:
+     *   1. GET /api/docs/invoice → 404 → DELETED (proforma) / gone
+     *   2. GET /api/docs/invoice/list(issuedAfter/issuedBefore = issue_date ± 3d)
+     *      - factura găsită în listă → live sau stornoed pe baza flag-urilor
+     *      - factura NU în listă (dar simple-GET success) → CANCELED (anulată)
+     *
      * Return contract:
      *   ['exists' => true,  'canceled' => bool, 'has_credit_note' => bool, 'raw' => ...]
-     *      - live if !canceled
-     *      - STORNO if canceled && has_credit_note (a credit note was issued)
-     *      - CANCELED if canceled && !has_credit_note (Oblio "Anulează" — plain cancel, no NC)
-     *   ['exists' => false, 'reason'   => 'not_found']  - deleted (proforma) OR missing
-     *   ['exists' => null,  'reason'   => 'error', 'message' => ...] - transient (auth, network)
+     *   ['exists' => false, 'reason'   => 'not_found']
+     *   ['exists' => null,  'reason'   => 'error', 'message' => ...]
      *
-     * The caller (Invoice::applyOblioStatus) uses (canceled, has_credit_note)
-     * to route between deleted_at / stornoed_at / canceled_at meta slots.
+     * @param string      $externalRef "SERIES/NUMBER"
+     * @param string      $docType 'invoice' | 'proforma'
+     * @param string|null $issueDate ISO date used to narrow the listing
+     *                    window. Highly recommended for accuracy — without
+     *                    it we fall back to the last 90 days, which risks
+     *                    truncation past 100 items and misclassifying a
+     *                    live invoice as canceled.
      */
-    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice', ?string $issueDate = null): array
     {
         if (!$this->authenticated) {
             return ['exists' => null, 'reason' => 'error', 'message' => 'Nu este autentificat.'];
         }
 
-        try {
-            $parts = explode('/', $externalRef);
-            $seriesName = $parts[0] ?? $this->seriesName;
-            $number = $parts[1] ?? $externalRef;
-            $endpoint = $docType === 'proforma' ? '/api/docs/proforma' : '/api/docs/invoice';
+        $parts = explode('/', $externalRef);
+        $seriesName = $parts[0] ?? $this->seriesName;
+        $number = $parts[1] ?? $externalRef;
 
-            $result = $this->apiRequest('GET', $endpoint, [
+        // Step 1 — simple GET. Confirms existence + surfaces 404 for
+        // deleted proformas. Same call as before; response format is
+        // documented as {documentType, seriesName, number, total, link,
+        // einvoice, collects} with NO cancellation flag.
+        $endpoint = $docType === 'proforma' ? '/api/docs/proforma' : '/api/docs/invoice';
+        try {
+            $simple = $this->apiRequest('GET', $endpoint, [
                 'cif' => $this->cif,
                 'seriesName' => $seriesName,
                 'number' => $number,
             ]);
-            $data = $result['data'] ?? $result;
-
-            // Canceled flag — Oblio marks both storno-ed AND plain-canceled
-            // fiscals with cancelDate / canceled=true. We only trust the
-            // primary flags here (canceled / cancelDate / stornoDate / isCanceled);
-            // credit-note presence is a SECONDARY signal used only to tell
-            // storno from cancel below, never to infer canceled=true on its
-            // own (some cancels without NC would otherwise get misfiled).
-            $canceled = (bool) (
-                ($data['canceled'] ?? false)
-                || ($data['cancelDate'] ?? null)
-                || ($data['stornoDate'] ?? null)
-                || ($data['isCanceled'] ?? false)
-            );
-
-            // Credit-note presence differentiates STORNO from plain CANCEL.
-            // Oblio surfaces the link in one of several shapes across account
-            // plans (creditNote object, stornoInvoice ref, linkedInvoices
-            // array with a NC entry, or a non-empty stornoDate string when
-            // paired with a real NC document). We accept any of them to
-            // stay robust; false positives here just downgrade "canceled" to
-            // "stornoed" which never triggers a data-loss action.
-            $hasCreditNote = (bool) (
-                !empty($data['creditNote'])
-                || !empty($data['stornoInvoice'])
-                || !empty($data['creditNoteNumber'])
-                || (isset($data['linkedInvoices']) && is_array($data['linkedInvoices'])
-                    && collect($data['linkedInvoices'])->contains(fn ($li) => (($li['type'] ?? '') === 'creditNote' || !empty($li['isCreditNote']))))
-            );
-
-            return [
-                'exists' => true,
-                'canceled' => $canceled,
-                'has_credit_note' => $hasCreditNote,
-                'raw' => $data,
-            ];
         } catch (\Exception $e) {
             $msg = $e->getMessage();
-            // apiRequest throws "Oblio API error (404): …" for missing docs.
-            // Anything with 404 or the standard Oblio "not found" phrasing is
-            // treated as deleted; other errors bubble up as unknown so the
-            // caller doesn't wrongly mark a live invoice as gone on a
-            // transient network hiccup.
             if (str_contains($msg, '(404)') || stripos($msg, 'not found') !== false || stripos($msg, 'nu exist') !== false) {
                 return ['exists' => false, 'reason' => 'not_found'];
             }
-
-            Log::warning('Oblio getInvoiceStatus unknown error', [
+            Log::warning('Oblio getInvoiceStatus simple GET failed', [
                 'external_ref' => $externalRef,
                 'doc_type' => $docType,
                 'error' => $msg,
             ]);
             return ['exists' => null, 'reason' => 'error', 'message' => $msg];
         }
+        $simpleData = $simple['data'] ?? $simple;
+
+        // Proformas: no listing lookup — Oblio's list endpoint is
+        // fiscal-only, so trust the simple GET (proformas either exist
+        // and are live, or 404 → deleted, handled above).
+        if ($docType === 'proforma') {
+            return [
+                'exists' => true,
+                'canceled' => false,
+                'has_credit_note' => false,
+                'raw' => $simpleData,
+            ];
+        }
+
+        // Step 2 — listing lookup for the true cancel/storno state.
+        // Range ± 3 days around the invoice's issue date keeps us well
+        // under the 100-item page cap for typical Ambilet volume; the 90d
+        // fallback is a last resort when the caller didn't tell us when
+        // the invoice was issued (see phpdoc warning).
+        try {
+            [$after, $before] = $this->buildListingWindow($issueDate);
+            $listing = $this->apiRequest('GET', '/api/docs/invoice/list', [
+                'cif' => $this->cif,
+                'seriesName' => $seriesName,
+                'issuedAfter' => $after,
+                'issuedBefore' => $before,
+            ]);
+            $rows = $listing['data'] ?? [];
+            $windowFull = is_array($rows) && count($rows) >= 100;
+            $matched = null;
+            foreach (($rows ?? []) as $row) {
+                if (($row['seriesName'] ?? '') === $seriesName && (string) ($row['number'] ?? '') === (string) $number) {
+                    $matched = $row;
+                    break;
+                }
+            }
+
+            if ($matched === null) {
+                // Not in the listing but exists via simple GET → Oblio
+                // hides canceled invoices from list. Safeguard: only
+                // classify as canceled when we're SURE the window wasn't
+                // truncated. If it was, return unknown so the operator
+                // sees an explicit "reverify" prompt instead of a wrong
+                // "canceled" badge.
+                if ($windowFull) {
+                    return [
+                        'exists' => null,
+                        'reason' => 'error',
+                        'message' => 'Fereastra de listare Oblio a atins limita (100). Nu pot spune sigur dacă factura e activă sau anulată — trece o issue_date mai precisă sau retestează cu un range mai strâns.',
+                    ];
+                }
+                return [
+                    'exists' => true,
+                    'canceled' => true,
+                    'has_credit_note' => false,
+                    'raw' => ['simple' => $simpleData, 'listing' => 'not_present'],
+                ];
+            }
+
+            // Found in listing — trust its flags. Oblio uses string "0"/"1"
+            // for these booleans (verified 2026-08).
+            $canceled = ($matched['canceled'] ?? '0') === '1'
+                || ($matched['stornoed'] ?? '0') === '1';
+            $hasCreditNote = ($matched['stornoed'] ?? '0') === '1';
+
+            return [
+                'exists' => true,
+                'canceled' => $canceled,
+                'has_credit_note' => $hasCreditNote,
+                'raw' => $matched,
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Oblio getInvoiceStatus listing lookup failed', [
+                'external_ref' => $externalRef,
+                'error' => $e->getMessage(),
+            ]);
+            // Simple GET already confirmed existence — fall back to
+            // treating as live rather than lying about a cancel state
+            // we couldn't verify.
+            return [
+                'exists' => true,
+                'canceled' => false,
+                'has_credit_note' => false,
+                'raw' => $simpleData,
+            ];
+        }
+    }
+
+    /**
+     * Build (issuedAfter, issuedBefore) window for /api/docs/invoice/list.
+     * With an issue date: ± 3 days. Without: last 90 days ending today.
+     */
+    protected function buildListingWindow(?string $issueDate): array
+    {
+        try {
+            $anchor = $issueDate ? \Carbon\Carbon::parse($issueDate) : \Carbon\Carbon::now();
+        } catch (\Throwable $e) {
+            $anchor = \Carbon\Carbon::now();
+        }
+        if ($issueDate) {
+            return [
+                $anchor->copy()->subDays(3)->format('Y-m-d'),
+                $anchor->copy()->addDays(3)->format('Y-m-d'),
+            ];
+        }
+        return [
+            $anchor->copy()->subDays(90)->format('Y-m-d'),
+            $anchor->format('Y-m-d'),
+        ];
     }
 
     /**

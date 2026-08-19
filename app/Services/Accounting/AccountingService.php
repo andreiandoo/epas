@@ -355,7 +355,7 @@ class AccountingService
      * reason when the connector is missing so callers don't wrongly treat
      * a live invoice as gone.
      */
-    public function getMarketplaceInvoiceStatus(int $marketplaceClientId, string $externalRef, string $docType = 'invoice'): array
+    public function getMarketplaceInvoiceStatus(int $marketplaceClientId, string $externalRef, string $docType = 'invoice', ?string $issueDate = null): array
     {
         $connector = DB::table('acc_connectors')
             ->where('marketplace_client_id', $marketplaceClientId)
@@ -368,7 +368,7 @@ class AccountingService
         try {
             $auth = json_decode(Crypt::decryptString($connector->auth), true);
             $adapter = $this->getAdapter($connector->provider, $auth);
-            return $adapter->getInvoiceStatus($externalRef, $docType);
+            return $adapter->getInvoiceStatus($externalRef, $docType, $issueDate);
         } catch (\Throwable $e) {
             return ['exists' => null, 'reason' => 'error', 'message' => $e->getMessage()];
         }

@@ -303,7 +303,7 @@ class KeezAdapter implements AccountingAdapterInterface
         ];
     }
 
-    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice'): array
+    public function getInvoiceStatus(string $externalRef, string $docType = 'invoice', ?string $issueDate = null): array
     {
         return ['exists' => null, 'reason' => 'error', 'message' => 'Keez: getInvoiceStatus nu este implementat.'];
     }

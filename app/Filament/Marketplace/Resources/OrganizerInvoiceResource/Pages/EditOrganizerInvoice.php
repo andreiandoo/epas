@@ -81,7 +81,10 @@ class EditOrganizerInvoice extends EditRecord
             $result = app(AccountingService::class)->getMarketplaceInvoiceStatus(
                 $marketplace->id,
                 $externalRef,
-                $docType
+                $docType,
+                // Pass issue_date so the OblioAdapter listing lookup uses
+                // a tight ± 3 day window (avoids the 100-item page cap).
+                $this->record->issue_date?->format('Y-m-d')
             );
             $applied = $this->record->applyOblioStatus($result, $source);
             $this->record->refresh();
