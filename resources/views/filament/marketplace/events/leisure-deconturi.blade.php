@@ -36,68 +36,10 @@
                 <div class="flex flex-wrap items-center text-xs gap-x-4 gap-y-1">
                     <span class="text-gray-600 dark:text-gray-300">Vânzări: <b class="text-emerald-600 dark:text-emerald-400">{{ $fmt($p['online_revenue']) }}</b> online / <b class="text-sky-600 dark:text-sky-400">{{ $fmt($p['pos_revenue']) }}</b> POS {{ $cur }}</span>
                     <span class="text-gray-600 dark:text-gray-300">Comisioane: <b>{{ $fmt($p['online_commission']) }}</b> online / <b>{{ $fmt($p['pos_commission']) }}</b> POS</span>
-                    @if (!empty($p['compensation']) && ($p['compensation']['amount'] ?? 0) > 0.005)
-                        @php $c = $p['compensation']; @endphp
-                        <span class="text-gray-600 dark:text-gray-300">De achitat prin compensare:
-                            @if ($c['direction'] === 'ambilet_to_venue')
-                                <b class="text-emerald-700 dark:text-emerald-300">AmBilet → Locație {{ $fmt($c['amount']) }} {{ $cur }}</b>
-                            @elseif ($c['direction'] === 'venue_to_ambilet')
-                                <b class="text-amber-700 dark:text-amber-300">Locație → AmBilet {{ $fmt($c['amount']) }} {{ $cur }}</b>
-                            @else
-                                <b class="text-gray-700 dark:text-gray-300">stins prin compensare</b>
-                            @endif
-                        </span>
-                    @endif
                 </div>
             </summary>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                {{-- Compensation card — the "De achitat prin compensare" block
-                     the operator asked for. Mirrors the standalone
-                     ambilet.ro/organizator/deconturi green/amber card. --}}
-                @php $c = $p['compensation'] ?? null; @endphp
-                @if ($c && ($c['amount'] ?? 0) > 0.005)
-                    @php
-                        $isAmbiletToVenue = ($c['direction'] ?? '') === 'ambilet_to_venue';
-                        $cardBg = $isAmbiletToVenue
-                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
-                            : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800';
-                        $accent = $isAmbiletToVenue
-                            ? 'text-emerald-700 dark:text-emerald-300'
-                            : 'text-amber-700 dark:text-amber-300';
-                    @endphp
-                    <div class="p-4 mb-4 border rounded-lg {{ $cardBg }}">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="text-xs font-semibold tracking-wide uppercase {{ $accent }}">De achitat, prin compensare</div>
-                                <div class="mt-1 text-sm text-gray-800 dark:text-gray-200">
-                                    @if ($isAmbiletToVenue)
-                                        <span class="font-medium">AmBilet</span>
-                                        <svg class="inline w-3.5 h-3.5 mx-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M5 12h16"/></svg>
-                                        <span class="font-medium">Locație</span>
-                                    @else
-                                        <span class="font-medium">Locație</span>
-                                        <svg class="inline w-3.5 h-3.5 mx-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M5 12h16"/></svg>
-                                        <span class="font-medium">AmBilet</span>
-                                    @endif
-                                </div>
-                                <div class="mt-2 space-y-0.5 text-[11px] text-gray-600 dark:text-gray-400">
-                                    <div>AmBilet datorează locației (venit online net): <b>{{ $fmt($c['ambilet_owes_venue']) }} {{ $cur }}</b></div>
-                                    <div>Locația datorează AmBilet (comision POS): <b>{{ $fmt($c['venue_owes_ambilet']) }} {{ $cur }}</b></div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-2xl font-bold tabular-nums {{ $accent }}">{{ $fmt($c['amount']) }}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $cur }}</div>
-                            </div>
-                        </div>
-                    </div>
-                @elseif ($c && ($c['amount'] ?? 0) <= 0.005 && (($p['online_revenue'] ?? 0) > 0 || ($p['pos_revenue'] ?? 0) > 0))
-                    <div class="p-3 mb-4 text-sm text-center border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-900/40 dark:border-gray-700 text-gray-600 dark:text-gray-400">
-                        Datoriile se sting prin compensare — nicio sumă nu circulă efectiv.
-                    </div>
-                @endif
-
                 {{-- Per-company (issuing_company) split. Sf. Ana has 2 SC-uri:
                      SC1 = "acces" tickets (issuing_company='primary')
                      SC2 = restul (issuing_company='secondary') --}}
