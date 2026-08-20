@@ -207,6 +207,9 @@ class LeisureController extends BaseController
                     'sku' => $tt->sku,
                     'price' => $price,
                     'price_max' => (float) ($tt->price_max ?? 0),
+                    // Flag activ — folosit de POS ca sa filtreze produsele dezactivate din grid.
+                    // Fara asta, produs cu is_active=false + pos_price setat apare in grid POS.
+                    'is_active' => (bool) $tt->is_active,
                     'service_category' => $tt->effective_service_category,
                     'is_parking' => (bool) $tt->is_parking,
                     'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
@@ -1092,6 +1095,12 @@ class LeisureController extends BaseController
         foreach ($validated['items'] as $row) {
             $tt = $types->get($row['ticket_type_id']);
             if (!$tt) continue;
+            // Defensiv: blocheaza vanzarea de produse dezactivate (is_active=false),
+            // chiar daca UI le-a lasat sa treaca (cache stale, request modificat).
+            if ($tt->is_active === false) {
+                $ttName = is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name;
+                return $this->error("Produsul „{$ttName}\" este dezactivat si nu poate fi vandut.", 422);
+            }
 
             // Rezolvă varianta selectată (dacă e cazul)
             $variant = null;
