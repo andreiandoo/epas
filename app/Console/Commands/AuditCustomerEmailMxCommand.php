@@ -100,9 +100,11 @@ class AuditCustomerEmailMxCommand extends Command
 
         if ($report) {
             $fh = fopen($report, 'w');
-            fputcsv($fh, ['customer_id', 'email', 'domain', 'marketplace_client_id']);
+            // PHP 8.4 requires $escape explicitly — see convention in the
+            // rest of the codebase's CSV I/O (backslash escape).
+            fputcsv($fh, ['customer_id', 'email', 'domain', 'marketplace_client_id'], ',', '"', '\\');
             foreach ($badCustomers as $row) {
-                fputcsv($fh, $row);
+                fputcsv($fh, $row, ',', '"', '\\');
             }
             fclose($fh);
             $this->info("Report written to {$report}");

@@ -45,6 +45,17 @@ class InvoiceObserver
      */
     protected function sendInvoiceEmail(Invoice $invoice, string $eventTrigger): void
     {
+        // Marketplace-scoped invoices (marketplace_client_id set) have
+        // their own operator-driven send flow — EditOrganizerInvoice's
+        // "Trimite factura pe email" + "Trimite PDF contabilitate pe
+        // email" actions — and no tenant to notify. Bail out silently
+        // instead of logging a "Tenant email not found" warning that
+        // was spamming system-errors ~30x/week per marketplace invoice
+        // save (seen against invoice 3091 after regenerate).
+        if (!$invoice->tenant_id) {
+            return;
+        }
+
         try {
             $tenant = $invoice->tenant;
 

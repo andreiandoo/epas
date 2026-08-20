@@ -200,7 +200,11 @@ class ListOrganizers extends ListRecords
                         foreach ($selectedKeys as $key) {
                             $header[] = $fieldMap[$key]['label'] ?? $key;
                         }
-                        fputcsv($out, $header);
+                        // PHP 8.4 requires $escape explicitly (its default
+                        // becomes "" in a future version). Pass '\\' to
+                        // match the rest of this codebase's CSV I/O so
+                        // round-tripping via fgetcsv stays consistent.
+                        fputcsv($out, $header, ',', '"', '\\');
 
                         foreach ($rows as $o) {
                             $row = [];
@@ -208,7 +212,7 @@ class ListOrganizers extends ListRecords
                                 $extractor = $fieldMap[$key]['value'] ?? null;
                                 $row[] = $extractor ? (string) ($extractor($o) ?? '') : '';
                             }
-                            fputcsv($out, $row);
+                            fputcsv($out, $row, ',', '"', '\\');
                         }
 
                         fclose($out);
