@@ -557,10 +557,20 @@ class MarketplaceTaxTemplate extends Model
             $variables['organizer_city'] = $organizer->company_city ?? $organizer->city ?? '';
             $variables['organizer_county'] = $organizer->company_county ?? $organizer->state ?? '';
 
-            // VAT status - check tax_settings or marketplace settings
+            // VAT status. The organizer UI "VAT Payer" toggle writes
+            // vat_payer / primary_vat_payer — NOT tax_settings.is_vat_payer — so
+            // reading tax_settings alone printed "Neplătitor de TVA" for
+            // organizers that ARE VAT payers (organizer 449). Use the same
+            // robust any-flag check as event_organizer_is_vat_payer below
+            // (primary defaults to false, so `!== null` alone would pick the
+            // wrong value); keep tax_settings.is_vat_payer as a last fallback.
             $taxSettings = $organizer->tax_settings ?? [];
-            $isVatPayer = $taxSettings['is_vat_payer'] ?? false;
-            $vatRate = $taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 21);
+            $isVatPayer = (bool) ($organizer->primary_vat_payer ?? false)
+                || (bool) ($organizer->secondary_vat_payer ?? false)
+                || (bool) ($organizer->vat_payer ?? false)
+                || (bool) ($taxSettings['is_vat_payer'] ?? false);
+            $vatRate = $organizer->primary_vat_rate
+                ?? ($taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 21));
             $variables['organizer_vat_status'] = $isVatPayer
                 ? "plătitor TVA bilete (cota {$vatRate}%)"
                 : "Neplătitor de TVA";
