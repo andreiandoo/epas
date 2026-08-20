@@ -628,11 +628,25 @@ class LeisureController extends BaseController
             : Carbon::today()->endOfDay();
         $groupBy = $validated['group_by'] ?? 'day';
 
+        // Cache 5 min + limite ridicate (Sf. Ana 30k+ tickets pe 30 zile ~ Cloudflare timeout).
+        $cacheKey = "leisure_sales_timeline_v1_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}_{$groupBy}";
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached !== null) return $this->success($cached);
+        @ini_set('memory_limit', '1024M');
+        @set_time_limit(120);
+        @ignore_user_abort(true);
+
+        // Preload ticket types o data pentru event (nu eager pe fiecare bilet)
+        $ttMap = TicketType::query()
+            ->where('event_id', $eventModel->id)
+            ->get(['id', 'name', 'service_category'])
+            ->keyBy('id');
+
         $orders = Order::query()
             ->where('event_id', $eventModel->id)
             ->whereIn('status', ['completed', 'paid'])
             ->whereBetween('paid_at', [$from, $to])
-            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta', 'tickets.ticketType:id,name,service_category'])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta'])
             ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
 
         // Format key per groupBy
@@ -709,17 +723,18 @@ class LeisureController extends BaseController
                 $buckets[$key]['tickets']++;
                 $totalTickets++;
                 $byPaymentMethod[$pmKey]['tickets']++;
-                $cat = $ticket->ticketType->service_category ?? 'access';
+                $ttId = $ticket->ticket_type_id;
+                $ttModel = $ttMap->get($ttId);
+                $cat = $ttModel?->service_category ?? 'access';
                 $byCategory[$cat] = ($byCategory[$cat] ?? 0) + 1;
                 // Per tip bilet — foloseste label_override daca exista (guide bonus),
                 // altfel numele tipului. Grupeaza cate bucati + venit + categoria.
-                $ttId = $ticket->ticket_type_id;
                 $rawName = null;
                 if (is_array($ticket->meta ?? null) && !empty($ticket->meta['label_override'])) {
                     $rawName = $ticket->meta['label_override'];
                     $ttKey = 'lbl_' . $rawName; // grupam bilete guide bonus separat de parintele lor
                 } else {
-                    $rawName = $ticket->ticketType->name ?? "Tip #{$ttId}";
+                    $rawName = $ttModel?->name ?? "Tip #{$ttId}";
                     if (is_array($rawName)) $rawName = $rawName['ro'] ?? reset($rawName);
                     $ttKey = $cat === 'package' ? 'pkg_' . $ttId : 'tt_' . $ttId;
                 }
@@ -748,7 +763,7 @@ class LeisureController extends BaseController
         foreach ($byPaymentMethod as &$row) $row['revenue'] = round($row['revenue'], 2);
         unset($row);
 
-        return $this->success([
+        $payload = [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'group_by' => $groupBy,
@@ -763,7 +778,9 @@ class LeisureController extends BaseController
             'by_category' => $byCategory,
             'by_ticket_type' => array_values($byTicketType),
             'by_payment_method' => array_values($byPaymentMethod),
-        ]);
+        ];
+        \Illuminate\Support\Facades\Cache::put($cacheKey, $payload, 300);
+        return $this->success($payload);
     }
 
     /**
