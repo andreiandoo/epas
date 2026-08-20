@@ -544,6 +544,7 @@ class LeisureController extends BaseController
                 'code' => $t->code,
                 'barcode' => $t->barcode,
                 'order_number' => $t->order->order_number ?? null,
+                'order_paid_at' => optional($t->order?->paid_at)->toIso8601String(),
                 'customer_name' => $t->order->customer_name ?? null,
                 'customer_email' => $t->order->customer_email ?? null,
                 'vehicle_plate' => $vehiclePlate,

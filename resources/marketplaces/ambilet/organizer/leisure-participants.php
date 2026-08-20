@@ -180,11 +180,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const checkinCell = r.checked_in_at
             ? `<span class="text-emerald-700 font-semibold">✓ ${fmtDate(r.checked_in_at)}</span>`
             : (canCheckin
-                ? `<button type="button" class="lv-manual-checkin px-2 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded hover:bg-emerald-100 disabled:opacity-50" data-ticket-id="${r.id}" data-ticket-code="${esc(r.code || r.barcode || '')}">✓ Check-in manual</button>`
+                ? `<button type="button" class="lv-manual-checkin px-2 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded hover:bg-emerald-100 disabled:opacity-50" data-ticket-id="${r.id}" data-ticket-code="${esc(r.code || r.barcode || '')}">Check-in manual</button>`
                 : '<span class="text-muted text-xs">—</span>');
+        const orderTime = r.order_paid_at ? `<div class="text-[10px] text-muted">${fmtDate(r.order_paid_at)}</div>` : '';
         return `
             <tr class="hover:bg-slate-50" data-row-ticket-id="${r.id}">
-                <td class="px-5 py-3 font-mono text-xs text-muted">${esc(r.order_number) || '—'}</td>
+                <td class="px-5 py-3">
+                    <div class="font-mono text-xs text-muted">${esc(r.order_number) || '—'}</div>
+                    ${orderTime}
+                </td>
                 <td class="px-5 py-3 font-mono text-xs">${r.code || r.barcode || '—'}</td>
                 <td class="px-5 py-3">
                     <div class="font-medium text-secondary">${esc(r.customer_name) || '—'}</div>
