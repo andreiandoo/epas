@@ -389,15 +389,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-grid').classList.remove('hidden');
         // Filtreaza la nivel UI: aratam DOAR produsele bifate "Doar pentru vanzare POS".
         // Backward compat: produsele cu pos_price setat sunt si ele acceptate (gating implicit).
-        // Filtru is_active la nivel UI: ascundem produsele dezactivate (status != 'active').
+        // Filtru is_active la nivel UI: ascundem produsele dezactivate (is_active=false).
         const posTypes = (types || []).filter(t => {
             const meta = t.meta || {};
+            // (1) Filtru is_active PRIMA: daca backend spune ca produsul e dezactivat,
+            // ascundem indiferent de pos_only/pos_price. Backward compat: daca is_active
+            // lipseste din response (versiune veche a config), presupunem activ.
+            if (t.is_active === false) return false;
+            // Legacy: unele deployment-uri returneaza status='hidden' in loc de is_active.
+            if (t.status && t.status !== 'active') return false;
+            // (2) Filtru POS visibility: aratam DOAR produsele bifate "Doar POS" sau cu pos_price setat.
             const isPosOnly = !!meta.pos_only;
             const hasPosPrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '');
             if (!isPosOnly && !hasPosPrice) return false;
-            // Daca backend returneaza status='hidden' (toggle Activ debifat), filtram.
-            // Backward compat: daca status nu e expus, presupunem activ.
-            if (t.status && t.status !== 'active') return false;
             return true;
         });
         if (!posTypes.length) {
