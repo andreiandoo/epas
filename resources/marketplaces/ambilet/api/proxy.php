@@ -1991,6 +1991,8 @@ switch ($action) {
         if (!$eventId || !$orderId) { http_response_code(400); echo json_encode(['error' => 'Missing event id or order id']); exit; }
         $endpoint = '/organizer/events/' . $eventId . '/leisure/orders/' . $orderId;
         $method = 'DELETE';
+        // Body cu {note} - trebuie forward-uit explicit spre Laravel
+        $body = file_get_contents('php://input');
         $requiresAuth = true;
         break;
 
