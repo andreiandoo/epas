@@ -63,6 +63,20 @@ class AuditQuotaSold extends Command
         $under = $rows->filter(fn ($r) => $r->quota_sold < $r->active)->values();
         $over = $rows->filter(fn ($r) => $r->quota_sold > $r->active)->values();
 
+        // Classify over-counts by import-safety. SAFE to lower only when every
+        // unit counted in quota_sold has a ticket ROW (total tickets >=
+        // quota_sold): then the excess over `active` is just cancelled/refunded/
+        // expired rows whose release never decremented the counter (native
+        // phantom-sold). When total tickets < quota_sold, some sold units have
+        // NO row — a historical import set quota_sold directly — and lowering
+        // there would raise availability and enable oversell, so leave it.
+        foreach ($over as $r) {
+            $r->total = (int) DB::table('tickets')->where('ticket_type_id', $r->id)->count();
+            $r->safe = $r->total >= (int) $r->quota_sold;
+        }
+        $overSafe = $over->filter(fn ($r) => $r->safe)->values();
+        $overRisky = $over->reject(fn ($r) => $r->safe)->values();
+
         $label = function ($name) {
             $decoded = json_decode((string) $name, true);
             if (is_array($decoded)) {
@@ -77,10 +91,15 @@ class AuditQuotaSold extends Command
             $this->line("  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_total={$r->quota_total} quota_sold={$r->quota_sold} -> active={$r->active}");
         }
 
-        $this->comment('OVER-count (quota_sold > active) — phantom sold, may be legit import: ' . $over->count());
-        foreach ($over as $r) {
+        $this->comment('OVER-count SAFE (native phantom — every sold unit has a ticket row): ' . $overSafe->count());
+        foreach ($overSafe as $r) {
             $nm = $label($r->name);
-            $this->line("  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_total={$r->quota_total} quota_sold={$r->quota_sold} -> active={$r->active}");
+            $this->line("  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_total={$r->quota_total} quota_sold={$r->quota_sold} -> active={$r->active} (total_tickets={$r->total})");
+        }
+        $this->comment('OVER-count RISKY (fewer ticket rows than quota_sold — likely import, LEFT ALONE): ' . $overRisky->count());
+        foreach ($overRisky as $r) {
+            $nm = $label($r->name);
+            $this->line("  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_total={$r->quota_total} quota_sold={$r->quota_sold} active={$r->active} total_tickets={$r->total}");
         }
 
         if ($dry) {
@@ -97,13 +116,13 @@ class AuditQuotaSold extends Command
 
         if ($this->option('fix-overcount')) {
             $overFixed = 0;
-            foreach ($over as $r) {
+            foreach ($overSafe as $r) {
                 TicketType::where('id', $r->id)->update(['quota_sold' => $r->active]);
                 $overFixed++;
             }
-            $this->warn("Also lowered {$overFixed} over-count type(s) (--fix-overcount).");
+            $this->warn("Lowered {$overFixed} SAFE over-count type(s) to the real active count. {$overRisky->count()} RISKY (likely import) left untouched.");
         } elseif ($over->isNotEmpty()) {
-            $this->comment('Over-count types were NOT changed. Review them, then re-run with --fix-overcount if correct.');
+            $this->comment('Over-count types NOT changed. Re-run with --fix-overcount to lower ONLY the SAFE (native) ones; RISKY/import types are never touched.');
         }
 
         return self::SUCCESS;
