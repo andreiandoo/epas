@@ -389,6 +389,18 @@ class Order extends Model
      */
     public function releaseSeatsAndRestoreStock(): void
     {
+        // Idempotency guard. This method decrements quota_sold / quantity_sold
+        // by the order's item quantities and can be invoked MORE THAN ONCE over
+        // an order's life — multiple terminal status transitions (pending→failed,
+        // cancelled→refunded, …) each fire the saved observer, plus the
+        // orders:reconcile-expired backfill calls it too. Without this guard the
+        // repeated calls each subtract the quantity again, drifting quota_sold
+        // BELOW the real issued-ticket count and eventually defeating the
+        // oversell cap (`quota_sold + qty <= quota_total`). Release exactly once.
+        if (!empty(($this->meta ?? [])['stock_released_at'])) {
+            return;
+        }
+
         try {
             // 1. Release seats from order meta or ticket meta
             $seatInfo = $this->extractSeatInfo();
@@ -480,6 +492,14 @@ class Order extends Model
                     }
                 }
             }
+
+            // Stamp the order so a later transition / reconcile can't decrement
+            // the counters a second time (see the idempotency guard above).
+            // saveQuietly avoids re-entering the saved observer.
+            $meta = $this->meta ?? [];
+            $meta['stock_released_at'] = now()->toIso8601String();
+            $this->meta = $meta;
+            $this->saveQuietly();
         } catch (\Exception $e) {
             Log::error('Order: Failed to release seats/stock', [
                 'order_id' => $this->id,
