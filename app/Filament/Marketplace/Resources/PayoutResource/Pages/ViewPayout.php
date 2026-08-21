@@ -27,11 +27,68 @@ class ViewPayout extends ViewRecord
         $decont = $this->record->decontDocument;
         $invoice = $this->record->invoice;
 
+        // Compute drift once per render so both the visible-guard and the
+        // modal body don't re-hit SalesBreakdownService. Cheap for a single
+        // payout, but this method fires on every visible() call and Filament
+        // evaluates them dozens of times per page.
+        $drift = $this->record->getSnapshotDrift();
+
         return [
-            // Status workflow (approve / process / complete / reject) + Admin
-            // Note + Șterge decont all live in the sidebar "Acțiuni" section
-            // in the infolist. Serie-decont edit moved to an inline hintAction
-            // on the TextEntry itself.
+            // "Snapshot învechit" — red pill that only shows when the
+            // stored ticket_breakdown disagrees with a fresh live recompute.
+            // Root cause example: payout 3196 counted 50 Presale in the
+            // snapshot while a cross-cart ticket (event 3855's tt#9358 on an
+            // order belonging to org 381 for event 3848) legitimately makes
+            // it 51 live. The snapshot never refreshed after the ticket was
+            // linked, so the decont PDF understated by 129 lei until an
+            // operator manually clicked "Recalculează snapshot bilete".
+            // This badge makes the mismatch obvious BEFORE they generate.
+            Actions\Action::make('snapshotDriftBadge')
+                ->label(function () use ($drift) {
+                    $delta = ($drift['total_live_qty'] ?? 0) - ($drift['total_snapshot_qty'] ?? 0);
+                    $sign = $delta > 0 ? '+' : '';
+                    return 'Snapshot învechit (' . $sign . $delta . ' bilete)';
+                })
+                ->icon('heroicon-o-exclamation-triangle')
+                ->color('danger')
+                ->visible(fn () => !empty($drift['drifted']))
+                ->modalHeading('Snapshot bilete învechit față de vânzările reale')
+                ->modalDescription(function () use ($drift) {
+                    $rows = '';
+                    foreach (($drift['diffs'] ?? []) as $d) {
+                        $delta = (int) $d['delta'];
+                        $sign = $delta > 0 ? '+' : '';
+                        $color = $delta > 0 ? '#b91c1c' : '#0369a1';
+                        $rows .= '<tr>'
+                            . '<td style="padding:4px 8px;border-bottom:1px solid #eee;">' . htmlspecialchars($d['name'], ENT_QUOTES, 'UTF-8') . '</td>'
+                            . '<td style="padding:4px 8px;text-align:right;border-bottom:1px solid #eee;font-family:monospace;">' . $d['snapshot_qty'] . '</td>'
+                            . '<td style="padding:4px 8px;text-align:right;border-bottom:1px solid #eee;font-family:monospace;">' . $d['live_qty'] . '</td>'
+                            . '<td style="padding:4px 8px;text-align:right;border-bottom:1px solid #eee;font-family:monospace;font-weight:600;color:' . $color . ';">' . $sign . $delta . '</td>'
+                            . '</tr>';
+                    }
+                    return new \Illuminate\Support\HtmlString(
+                        '<div style="font-size:13px;line-height:1.5;">'
+                        . '<p style="margin-bottom:8px;">Snapshot-ul stocat pe acest decont diferă de vânzările reale (calculate live acum). Diferența apare când:</p>'
+                        . '<ul style="margin-bottom:12px;padding-left:20px;list-style:disc;">'
+                        . '<li>Un bilet pentru evenimentul acestui decont a ajuns într-o comandă la alt organizator (mixed cart)</li>'
+                        . '<li>Bilete au fost transferate între evenimente după crearea snapshot-ului</li>'
+                        . '<li>Decontul a fost creat manual fără click pe "Recalculează snapshot bilete"</li>'
+                        . '</ul>'
+                        . '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                        . '<thead><tr style="background:#f9fafb;border-bottom:2px solid #ddd;">'
+                        . '<th style="padding:6px 8px;text-align:left;">Tip bilet</th>'
+                        . '<th style="padding:6px 8px;text-align:right;">Snapshot</th>'
+                        . '<th style="padding:6px 8px;text-align:right;">Live</th>'
+                        . '<th style="padding:6px 8px;text-align:right;">Delta</th>'
+                        . '</tr></thead>'
+                        . '<tbody>' . $rows . '</tbody>'
+                        . '</table>'
+                        . '<p style="margin-top:12px;color:#b91c1c;"><strong>Recomandat:</strong> click pe "Recalculează snapshot bilete" înainte de a genera / regenera decontul. Fără recalc, PDF-ul va lipsi biletele detectate mai sus.</p>'
+                        . '</div>'
+                    );
+                })
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Închide'),
 
             // Recalcul snapshot din SalesBreakdownService — util pentru deconturile
             // create inainte de refactor (snapshot pe baza prețului catalog) sau

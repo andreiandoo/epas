@@ -1708,6 +1708,83 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Compare stored ticket_breakdown against a fresh recompute from live
+     * ticket data. Returns per-ticket-type quantity drift so operators can
+     * spot cases like the cross-cart Presale ticket on payout 3196 — a
+     * ticket belonging to event X sat in an order for organizer Y, and
+     * the snapshot lookup never re-scanned after that ticket was linked,
+     * so the payout under-counted by 1.
+     *
+     * Shape:
+     *   [
+     *     'drifted' => bool,
+     *     'total_snapshot_qty' => int,
+     *     'total_live_qty' => int,
+     *     'diffs' => [
+     *         ['ticket_type_id' => 9358, 'name' => 'Presale', 'snapshot_qty' => 50, 'live_qty' => 51, 'delta' => 1],
+     *         …only rows where snapshot != live are included
+     *     ],
+     *   ]
+     *
+     * "live" here mirrors what recalcBreakdownSnapshot() would compute
+     * (excludePos, same period bounds) so operators can trust that
+     * clicking "Recalculează snapshot bilete" will absorb the drift.
+     */
+    public function getSnapshotDrift(?\App\Services\Marketplace\SalesBreakdownService $service = null): array
+    {
+        $empty = ['drifted' => false, 'total_snapshot_qty' => 0, 'total_live_qty' => 0, 'diffs' => []];
+        if (!$this->event_id) {
+            return $empty;
+        }
+        $service ??= app(\App\Services\Marketplace\SalesBreakdownService::class);
+
+        $snapshotByTt = [];
+        foreach (($this->ticket_breakdown ?? []) as $row) {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            if ($ttId <= 0) continue;
+            $qty = (int) ($row['quantity'] ?? $row['qty'] ?? $row['tickets'] ?? 0);
+            $snapshotByTt[$ttId] = ($snapshotByTt[$ttId] ?? 0) + $qty;
+        }
+
+        try {
+            $live = $service->build($this->event, $this->period_start, $this->period_end, excludePos: true);
+        } catch (\Throwable $e) {
+            return $empty;
+        }
+        $liveByTt = [];
+        $names = [];
+        foreach (($live['per_type'] ?? []) as $row) {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            if ($ttId <= 0) continue;
+            $liveByTt[$ttId] = (int) ($row['qty'] ?? 0);
+            $names[$ttId] = (string) ($row['ticket_type_name'] ?? '');
+        }
+
+        $diffs = [];
+        $allTtIds = array_unique(array_merge(array_keys($snapshotByTt), array_keys($liveByTt)));
+        sort($allTtIds);
+        foreach ($allTtIds as $ttId) {
+            $snap = (int) ($snapshotByTt[$ttId] ?? 0);
+            $liv = (int) ($liveByTt[$ttId] ?? 0);
+            if ($snap === $liv) continue;
+            $diffs[] = [
+                'ticket_type_id' => $ttId,
+                'name' => $names[$ttId] ?? ('tt#' . $ttId),
+                'snapshot_qty' => $snap,
+                'live_qty' => $liv,
+                'delta' => $liv - $snap,
+            ];
+        }
+
+        return [
+            'drifted' => !empty($diffs),
+            'total_snapshot_qty' => (int) array_sum($snapshotByTt),
+            'total_live_qty' => (int) array_sum($liveByTt),
+            'diffs' => $diffs,
+        ];
+    }
+
+    /**
      * Ordered checklist of operator actions for this payout, used by the
      * "Pași de urmat" wizard on the view page. Each entry:
      *   ['key','label','done'].
