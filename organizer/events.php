@@ -1571,8 +1571,39 @@ async function loadEventForEdit(eventId) {
         updateSummaries();
 
         // Step 6: Ticket types
+        // Once the event is published, EXISTING ticket types render read-only
+        // (display-only fields, no inputs, no delete button) — Ambilet
+        // marketplace policy: touching prices/stock on live tickets would
+        // break already-sold orders. Adding NEW ticket types is still allowed
+        // (see the "Adaugă alt tip de bilet" button below the list).
+        //
+        // Marketplace operators editing the same event via Filament (admin)
+        // are NOT affected — this is a client-facing lock only.
+        //
+        // Read-only markup omits the input `name` attributes, so
+        // collectTicketTypes() (which looks up name="ticket_name_${i}")
+        // silently skips locked rows when building the payload. That
+        // keeps the backend contract identical for both draft and live
+        // edits without a second code path in the collector.
         if (event.ticket_types && event.ticket_types.length > 0) {
             const container = document.getElementById('ticket-types-container');
+            const eventIsLive = event.is_public === true;
+            // Show the locked-state notice above the ticket list only when we
+            // actually have live tickets to gate. Idempotent — same node is
+            // re-populated on every edit-fill pass.
+            let notice = document.getElementById('tickets-locked-notice');
+            if (eventIsLive) {
+                if (!notice) {
+                    notice = document.createElement('div');
+                    notice.id = 'tickets-locked-notice';
+                    notice.className = 'p-3 mb-3 text-xs border rounded-lg bg-amber-50 border-amber-200 text-amber-800';
+                    notice.innerHTML = '⚠ <strong>Eveniment publicat.</strong> Detaliile biletelor existente nu mai pot fi modificate (afectează comenzile deja plasate). Pentru schimbări pe biletele existente, contactează un operator AmBilet. Poți adăuga tipuri noi de bilete oricând.';
+                    container.parentNode.insertBefore(notice, container);
+                }
+            } else if (notice) {
+                notice.remove();
+            }
+
             // Clear default ticket type
             container.innerHTML = '';
             ticketTypeCount = 0;
@@ -1580,44 +1611,92 @@ async function loadEventForEdit(eventId) {
             event.ticket_types.forEach((tt, i) => {
                 ticketTypeCount = i + 1;
                 const removeBtn = i === 0 ? 'hidden' : '';
-                container.innerHTML += `
-                    <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
-                            <button type="button" onclick="removeTicketType(this)" class="${removeBtn} text-red-400 hover:text-red-600 remove-ticket-btn">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
+                if (eventIsLive) {
+                    // Locked card — pure display; no inputs, no delete.
+                    const fmtMoney = (v) => Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const stockLabel = tt.quantity ? (Number(tt.quantity).toLocaleString('ro-RO') + ' bilete') : 'Nelimitat';
+                    const minLabel = tt.min_per_order ? tt.min_per_order : '—';
+                    const maxLabel = tt.max_per_order ? tt.max_per_order : '—';
+                    container.innerHTML += `
+                        <div class="p-4 border border-gray-200 ticket-type-item ticket-type-locked rounded-xl bg-gray-50" data-index="${i}" data-existing-id="${tt.id || ''}" data-tt-name="${(tt.name || '').replace(/"/g,'&quot;')}" data-tt-price="${tt.price || 0}">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200 rounded-full">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    Blocat
+                                </span>
+                            </div>
+                            <div class="grid gap-3 md:grid-cols-3">
+                                <div>
+                                    <p class="text-xs label">Nume bilet</p>
+                                    <p class="text-sm font-medium text-secondary">${tt.name || '—'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs label">Preț</p>
+                                    <p class="text-sm font-medium text-secondary">${fmtMoney(tt.price)} RON</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs label">Stoc</p>
+                                    <p class="text-sm font-medium text-secondary">${stockLabel}</p>
+                                </div>
+                            </div>
+                            ${tt.description ? `
+                            <div class="mt-3">
+                                <p class="text-xs label">Descriere</p>
+                                <p class="text-sm text-secondary">${tt.description}</p>
+                            </div>` : ''}
+                            <div class="grid gap-3 mt-3 md:grid-cols-2">
+                                <div>
+                                    <p class="text-xs label">Min. bilete/comandă</p>
+                                    <p class="text-sm font-medium text-secondary">${minLabel}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs label">Max. bilete/comandă</p>
+                                    <p class="text-sm font-medium text-secondary">${maxLabel}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="grid gap-3 md:grid-cols-3">
-                            <div>
-                                <label class="text-xs label">Nume bilet <span class="text-red-500">*</span></label>
-                                <input type="text" name="ticket_name_${i}" required class="input" placeholder="ex: Standard, VIP" value="${tt.name || ''}">
+                    `;
+                } else {
+                    container.innerHTML += `
+                        <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
+                                <button type="button" onclick="removeTicketType(this)" class="${removeBtn} text-red-400 hover:text-red-600 remove-ticket-btn">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
                             </div>
-                            <div>
-                                <label class="text-xs label">Pret (RON) <span class="text-red-500">*</span></label>
-                                <input type="number" name="ticket_price_${i}" required class="input" placeholder="0.00" step="0.01" min="0" value="${tt.price || 0}">
+                            <div class="grid gap-3 md:grid-cols-3">
+                                <div>
+                                    <label class="text-xs label">Nume bilet <span class="text-red-500">*</span></label>
+                                    <input type="text" name="ticket_name_${i}" required class="input" placeholder="ex: Standard, VIP" value="${tt.name || ''}">
+                                </div>
+                                <div>
+                                    <label class="text-xs label">Pret (RON) <span class="text-red-500">*</span></label>
+                                    <input type="number" name="ticket_price_${i}" required class="input" placeholder="0.00" step="0.01" min="0" value="${tt.price || 0}">
+                                </div>
+                                <div>
+                                    <label class="text-xs label">Stoc bilete</label>
+                                    <input type="number" name="ticket_quantity_${i}" class="input" placeholder="Nelimitat" min="1" value="${tt.quantity || ''}">
+                                </div>
                             </div>
-                            <div>
-                                <label class="text-xs label">Stoc bilete</label>
-                                <input type="number" name="ticket_quantity_${i}" class="input" placeholder="Nelimitat" min="1" value="${tt.quantity || ''}">
+                            <div class="mt-3">
+                                <label class="text-xs label">Descriere bilet</label>
+                                <input type="text" name="ticket_desc_${i}" class="input" placeholder="ex: Acces general" value="${tt.description || ''}">
+                            </div>
+                            <div class="grid gap-3 mt-3 md:grid-cols-2">
+                                <div>
+                                    <label class="text-xs label">Min. bilete/comanda</label>
+                                    <input type="number" name="ticket_min_${i}" class="input" placeholder="1" min="1" value="${tt.min_per_order || ''}">
+                                </div>
+                                <div>
+                                    <label class="text-xs label">Max. bilete/comanda</label>
+                                    <input type="number" name="ticket_max_${i}" class="input" placeholder="10" min="1" value="${tt.max_per_order || ''}">
+                                </div>
                             </div>
                         </div>
-                        <div class="mt-3">
-                            <label class="text-xs label">Descriere bilet</label>
-                            <input type="text" name="ticket_desc_${i}" class="input" placeholder="ex: Acces general" value="${tt.description || ''}">
-                        </div>
-                        <div class="grid gap-3 mt-3 md:grid-cols-2">
-                            <div>
-                                <label class="text-xs label">Min. bilete/comanda</label>
-                                <input type="number" name="ticket_min_${i}" class="input" placeholder="1" min="1" value="${tt.min_per_order || ''}">
-                            </div>
-                            <div>
-                                <label class="text-xs label">Max. bilete/comanda</label>
-                                <input type="number" name="ticket_max_${i}" class="input" placeholder="10" min="1" value="${tt.max_per_order || ''}">
-                            </div>
-                        </div>
-                    </div>
-                `;
+                    `;
+                }
             });
         }
 
@@ -2197,10 +2276,19 @@ function updateSummaries() {
     if ((coverInput && coverInput.files.length > 0) || (coverPreviewEl && !coverPreviewEl.classList.contains('hidden'))) mediaItems.push('Cover');
     document.getElementById('summary-5').textContent = mediaItems.length > 0 ? mediaItems.join(', ') + ' adăugate' : '';
 
-    // Step 6 summary
+    // Step 6 summary — includes both editable inputs and locked rows
+    // (locked cards store their name/price on data-tt-* attributes so
+    // the summary stays populated on published events even though the
+    // fields aren't inputs anymore).
     const ticketItems = document.querySelectorAll('.ticket-type-item');
     const ticketSummary = [];
     ticketItems.forEach((item, i) => {
+        if (item.classList.contains('ticket-type-locked')) {
+            const tName = item.getAttribute('data-tt-name');
+            const tPrice = item.getAttribute('data-tt-price');
+            if (tName && tPrice) ticketSummary.push(`${tName}: ${tPrice} RON`);
+            return;
+        }
         const tName = item.querySelector(`[name="ticket_name_${i}"]`)?.value;
         const tPrice = item.querySelector(`[name="ticket_price_${i}"]`)?.value;
         if (tName && tPrice) ticketSummary.push(`${tName}: ${tPrice} RON`);
