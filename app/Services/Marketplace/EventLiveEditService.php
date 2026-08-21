@@ -132,7 +132,16 @@ class EventLiveEditService
     /**
      * Apply the safe fields + relations to the event immediately (used for
      * drafts, allow_live_edits organizers, and admin approval of pending
-     * changes). Never touches ticket types.
+     * changes). Existing ticket types are NEVER modified on a live event
+     * (would corrupt sold orders), but the organizer IS allowed to APPEND
+     * new ticket types — the frontend renders existing rows read-only and
+     * only submits payload rows for cards the operator explicitly added
+     * via "Adaugă alt tip de bilet".
+     *
+     * Additive-only guard: for every ticket_types row in the payload, we
+     * skip when an active ticket type with the same name already exists
+     * on the event. That way a stale/replayed submit can never duplicate
+     * or overwrite an existing type.
      */
     public function applyFields(Event $event, array $validated): void
     {
@@ -142,15 +151,70 @@ class EventLiveEditService
                 $event->update($updateData);
             }
             $this->syncRelations($event, $validated);
+            $this->appendNewTicketTypes($event, $validated['ticket_types'] ?? []);
         });
     }
 
     /**
-     * Park a live edit as a pending change set — the live event is untouched.
+     * Create NEW ticket types on the event (never modifies existing ones).
+     * Called from applyFields — safe on both draft and live events since it
+     * only inserts, never updates. Existing types are matched by
+     * case-insensitive name so a resubmit of the same payload is idempotent.
+     */
+    public function appendNewTicketTypes(Event $event, array $rows): void
+    {
+        if (empty($rows)) {
+            return;
+        }
+        // Pre-load current type names once so we can dedupe without N queries.
+        $existingNames = $event->ticketTypes()
+            ->pluck('name')
+            ->map(fn ($n) => is_array($n) ? ($n['ro'] ?? $n['en'] ?? reset($n)) : $n)
+            ->filter()
+            ->map(fn ($n) => mb_strtolower(trim((string) $n)))
+            ->all();
+        $existingSet = array_flip($existingNames);
+
+        foreach ($rows as $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $key = mb_strtolower($name);
+            if (isset($existingSet[$key])) {
+                // Already on the event (either pre-existing or added earlier
+                // in this same loop) — skip. Keeps additive-only semantics.
+                continue;
+            }
+            \App\Models\TicketType::create([
+                'event_id' => $event->id,
+                'name' => $name,
+                'description' => $row['description'] ?? null,
+                'currency' => 'RON',
+                'price_max' => $row['price'] ?? 0,
+                'capacity' => $row['quantity'] ?? null, // null becomes -1 = unlimited
+                'min_per_order' => $row['min_per_order'] ?? 1,
+                'max_per_order' => $row['max_per_order'] ?? 10,
+                'quota_sold' => 0,
+                'status' => 'active',
+            ]);
+            $existingSet[$key] = true;
+        }
+    }
+
+    /**
+     * Park a live edit as a pending change set — the live event is untouched
+     * until an admin approves. Existing ticket_types are stripped (the
+     * additive-only path only accepts new types AFTER apply/approve).
      */
     public function storePending(Event $event, array $validated): void
     {
-        unset($validated['ticket_types']); // never live-edit ticket types
+        // Parked ticket_types stay in the payload so the admin approval
+        // step (approvePending → applyFields) can insert them via the
+        // additive-only guard above. Prior behaviour dropped them
+        // entirely — that was safe when applyFields refused ticket_types
+        // outright, but now the append path can handle them so we keep
+        // them for the admin to review.
         $event->update([
             'pending_changes' => $validated,
             'pending_changes_status' => 'pending',
