@@ -1233,27 +1233,22 @@ class OrganizerResource extends Resource
                                                 'inactive' => ['#fee2e2', '#b91c1c', 'INACTIV'],
                                             ];
                                             $tz = 'Europe/Bucharest';
-                                            $activeCount = $members->where('status', 'active')->count();
-                                            $pendingCount = $members->where('status', 'pending')->count();
-                                            $inactiveCount = $members->where('status', 'inactive')->count();
-                                            $html = '<div class="space-y-2">';
-                                            $html .= '<div class="mb-3 text-sm text-gray-600">';
-                                            $html .= '<strong class="text-gray-900">' . count($members) . '</strong> membri · ';
-                                            $html .= '<span style="color:#166534;font-weight:600;">' . $activeCount . ' activi</span>';
-                                            if ($pendingCount > 0) $html .= ' · <span style="color:#92400e;font-weight:600;">' . $pendingCount . ' invitații pending</span>';
-                                            if ($inactiveCount > 0) $html .= ' · <span style="color:#b91c1c;font-weight:600;">' . $inactiveCount . ' inactivi</span>';
-                                            $html .= '</div>';
-                                            $html .= '<div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">'
-                                                . '<table style="width:100%;font-size:13px;border-collapse:collapse;">'
-                                                . '<thead style="background:#f9fafb;">'
+                                            // Inline styles cu contrast puternic (background alb explicit)
+                                            // ca sa functioneze si in dark mode Filament (unde fundal e dark si
+                                            // text implicit e light — genereaza text light pe fond gri deschis).
+                                            // Background alb explicit + text negru asigura contrast garantat.
+                                            $html = '<div style="margin:16px 8px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">';
+                                            $html .= '<div style="overflow-x:auto;">'
+                                                . '<table style="width:100%;font-size:13px;border-collapse:collapse;background:#ffffff;color:#111827;">'
+                                                . '<thead style="background:#f3f4f6;">'
                                                 . '<tr>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Nume / Email</th>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Rol</th>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Rol leisure</th>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Status</th>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Acceptată</th>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Invitată</th>'
-                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Adăugat</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Nume / Email</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Rol</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Rol leisure</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Status</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Acceptată</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Invitată</th>'
+                                                . '<th style="padding:12px 16px;text-align:left;font-weight:600;color:#111827;border-bottom:2px solid #e5e7eb;">Adăugat</th>'
                                                 . '</tr>'
                                                 . '</thead><tbody>';
                                             foreach ($members as $tm) {
@@ -1264,17 +1259,20 @@ class OrganizerResource extends Resource
                                                 $accepted = $tm->accepted_at ? $tm->accepted_at->timezone($tz)->format('d.m.Y H:i') : '<span style="color:#9ca3af;">—</span>';
                                                 $invited = $tm->invite_sent_at ? $tm->invite_sent_at->timezone($tz)->format('d.m.Y H:i') : '<span style="color:#9ca3af;">—</span>';
                                                 $createdAt = $tm->created_at ? $tm->created_at->timezone($tz)->format('d.m.Y H:i') : '—';
-                                                $html .= '<tr style="border-bottom:1px solid #f3f4f6;">'
-                                                    . '<td style="padding:10px 12px;">'
-                                                    . '<div style="font-weight:600;color:#111827;">' . e($tm->name ?? '—') . '</div>'
-                                                    . '<div style="font-size:12px;color:#6b7280;">' . e($tm->email ?? '—') . '</div>'
+                                                // Link click nume -> pagina de edit membru
+                                                $editUrl = url("/marketplace/marketplace-organizer-team-members/{$tm->id}/edit");
+                                                $nameLink = '<a href="' . e($editUrl) . '" style="color:#2563eb;font-weight:600;text-decoration:none;border-bottom:1px dashed #93c5fd;">' . e($tm->name ?? '—') . '</a>';
+                                                $html .= '<tr style="border-bottom:1px solid #f3f4f6;background:#ffffff;">'
+                                                    . '<td style="padding:14px 16px;">'
+                                                    . '<div>' . $nameLink . '</div>'
+                                                    . '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' . e($tm->email ?? '—') . '</div>'
                                                     . '</td>'
-                                                    . '<td style="padding:10px 12px;"><span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:9999px;background:' . $roleBg . ';color:' . $roleFg . ';">' . e($roleLabel) . '</span></td>'
-                                                    . '<td style="padding:10px 12px;font-size:12px;color:#374151;">' . $leisureRole . '</td>'
-                                                    . '<td style="padding:10px 12px;"><span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;background:' . $stBg . ';color:' . $stFg . ';">' . e($stLabel) . '</span></td>'
-                                                    . '<td style="padding:10px 12px;font-size:12px;color:#6b7280;">' . $accepted . '</td>'
-                                                    . '<td style="padding:10px 12px;font-size:12px;color:#6b7280;">' . $invited . '</td>'
-                                                    . '<td style="padding:10px 12px;font-size:12px;color:#6b7280;">' . $createdAt . '</td>'
+                                                    . '<td style="padding:14px 16px;"><span style="display:inline-block;padding:3px 10px;font-size:11px;font-weight:600;border-radius:9999px;background:' . $roleBg . ';color:' . $roleFg . ';">' . e($roleLabel) . '</span></td>'
+                                                    . '<td style="padding:14px 16px;font-size:12px;color:#374151;">' . $leisureRole . '</td>'
+                                                    . '<td style="padding:14px 16px;"><span style="display:inline-block;padding:3px 10px;font-size:10px;font-weight:700;border-radius:9999px;background:' . $stBg . ';color:' . $stFg . ';">' . e($stLabel) . '</span></td>'
+                                                    . '<td style="padding:14px 16px;font-size:12px;color:#4b5563;">' . $accepted . '</td>'
+                                                    . '<td style="padding:14px 16px;font-size:12px;color:#4b5563;">' . $invited . '</td>'
+                                                    . '<td style="padding:14px 16px;font-size:12px;color:#4b5563;">' . $createdAt . '</td>'
                                                     . '</tr>';
                                             }
                                             $html .= '</tbody></table></div>';
