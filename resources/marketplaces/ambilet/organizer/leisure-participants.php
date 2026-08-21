@@ -78,6 +78,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <option value="cancelled">Anulat</option>
                     <option value="refunded">Restituit</option>
                 </select>
+                <select id="lv-f-checkin" class="px-3 py-2 text-sm bg-white border border-border rounded-lg" title="Filtru check-in">
+                    <option value="">Toate check-in-urile</option>
+                    <option value="not_checked_in">🔴 Doar NEscanate</option>
+                    <option value="checked_in">🟢 Doar scanate</option>
+                </select>
                 <div class="relative" id="lv-type-wrap">
                     <button type="button" id="lv-type-btn" class="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-border rounded-lg hover:bg-slate-50">
                         <span id="lv-type-label">Toate tipurile</span>
@@ -141,6 +146,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return (window.AmbiletFmt?.datetime(iso)) || iso;
     }
 
+    // Format DD.MM.YYYY HH:MM:SS (cu secunde) - folosit pt nr comanda si check-in.
+    function fmtDateTimeSec(iso) {
+        if (!iso) return '—';
+        try {
+            const d = new Date(iso);
+            return d.toLocaleDateString('ro-RO', { day:'2-digit', month:'2-digit', year:'2-digit' })
+                + ' ' + d.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        } catch { return iso; }
+    }
+
     function fmtDay(iso) {
         if (!iso) return '—';
         return (window.AmbiletFmt?.date(iso)) || iso;
@@ -182,7 +197,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             : (canCheckin
                 ? `<button type="button" class="lv-manual-checkin px-2 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded hover:bg-emerald-100 disabled:opacity-50" data-ticket-id="${r.id}" data-ticket-code="${esc(r.code || r.barcode || '')}">Check-in manual</button>`
                 : '<span class="text-muted text-xs">—</span>');
-        const orderTime = r.order_paid_at ? `<div class="text-[10px] text-muted">${fmtDate(r.order_paid_at)}</div>` : '';
+        const orderTime = r.order_paid_at ? `<div class="text-[10px] text-muted">${fmtDateTimeSec(r.order_paid_at)}</div>` : '';
         return `
             <tr class="hover:bg-slate-50" data-row-ticket-id="${r.id}">
                 <td class="px-5 py-3">
@@ -301,6 +316,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function currentFilters() {
         return {
             status: $('lv-f-status').value || '',
+            checkin: $('lv-f-checkin').value || '',
             ticket_type_id: selectedTypeIds().join(','),
             visit_from: $('lv-f-visit-from').value || '',
             visit_to: $('lv-f-visit-to').value || '',
@@ -310,7 +326,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function filtersActive() {
         const f = currentFilters();
-        return !!(f.status || f.ticket_type_id || f.visit_from || f.visit_to || f.search);
+        return !!(f.status || f.checkin || f.ticket_type_id || f.visit_from || f.visit_to || f.search);
     }
 
     function updateResetBtn() {
@@ -319,6 +335,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function resetFilters() {
         $('lv-f-status').value = '';
+        $('lv-f-checkin').value = '';
         document.querySelectorAll('#lv-type-menu .lv-type-cb').forEach(c => c.checked = false);
         updateTypeLabel();
         $('lv-f-visit-from').value = '';
@@ -502,7 +519,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => { updateResetBtn(); loadParticipants(true); }, 300);
         });
-        ['lv-f-status', 'lv-f-visit-from', 'lv-f-visit-to'].forEach(id => {
+        ['lv-f-status', 'lv-f-checkin', 'lv-f-visit-from', 'lv-f-visit-to'].forEach(id => {
             $(id).addEventListener('change', () => { updateResetBtn(); loadParticipants(true); });
         });
         // Ticket-type multi-select dropdown open/close.

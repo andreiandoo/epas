@@ -441,6 +441,7 @@ class LeisureController extends BaseController
             'visit_from' => 'nullable|date',
             'visit_to' => 'nullable|date|after_or_equal:visit_from',
             'status' => 'nullable|in:valid,used,cancelled,refunded',
+            'checkin' => 'nullable|in:checked_in,not_checked_in',
             'ticket_type_id' => 'nullable|string',
             'search' => 'nullable|string|max:100',
             'per_page' => 'nullable|integer|min:1|max:200',
@@ -456,6 +457,7 @@ class LeisureController extends BaseController
         $perPage = (int) ($validated['per_page'] ?? 50);
         $search = $validated['search'] ?? null;
         $status = $validated['status'] ?? null;
+        $checkinFilter = $validated['checkin'] ?? null;
         // ticket_type_id supports multiple ids as a comma-separated list (e.g. "5,7").
         $ticketTypeIds = [];
         if (!empty($validated['ticket_type_id'])) {
@@ -479,9 +481,10 @@ class LeisureController extends BaseController
             $base->whereHas('ticketType', fn ($q) => $q->byServiceCategory('access'));
         }
 
-        // Header filters (status / ticket type / visit-date / search) — applied to
-        // BOTH the paginated list and the stats query so the cards match the view.
-        $applyFilters = function ($q) use ($status, $ticketTypeIds, $visitFrom, $visitTo, $search) {
+        // Header filters (status / ticket type / visit-date / search / checkin) —
+        // applied to BOTH the paginated list and the stats query so the cards
+        // match the view.
+        $applyFilters = function ($q) use ($status, $checkinFilter, $ticketTypeIds, $visitFrom, $visitTo, $search) {
             if ($status) {
                 $q->where('tickets.status', $status);
             } else {
@@ -489,6 +492,11 @@ class LeisureController extends BaseController
                 // or refunded ticket is not a person on site). An explicit status
                 // filter (e.g. 'cancelled') still overrides this.
                 $q->whereIn('tickets.status', ['valid', 'used']);
+            }
+            if ($checkinFilter === 'checked_in') {
+                $q->whereNotNull('tickets.checked_in_at');
+            } elseif ($checkinFilter === 'not_checked_in') {
+                $q->whereNull('tickets.checked_in_at');
             }
             if (!empty($ticketTypeIds)) {
                 $q->whereIn('tickets.ticket_type_id', $ticketTypeIds);
