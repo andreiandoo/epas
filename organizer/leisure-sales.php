@@ -126,22 +126,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💳 Card POS (brut)</p>
                 <p class="text-xl font-bold text-secondary"><span id="lv-stat-card">0</span> <span class="text-xs text-muted">RON</span></p>
             </div>
-            <div class="p-4 bg-white border rounded-2xl border-border">
+            <a href="/organizator/leisure-sessions" class="p-4 bg-white border rounded-2xl border-border hover:bg-slate-50 hover:border-primary transition-colors block">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">👤 Sesiuni casă POS</p>
                 <p class="text-xl font-bold text-secondary" id="lv-sessions-count">0</p>
-                <p class="mt-1 text-[10px] leading-tight text-muted" id="lv-sessions-hint">tură deschidere / închidere · operator</p>
-            </div>
-        </div>
-
-        <!-- Lista de sesiuni POS (colapsabila) - detalii tura + operator + cash/card -->
-        <div id="lv-sessions-wrap" class="mb-6 hidden">
-            <details class="bg-white border rounded-2xl border-border" open>
-                <summary class="px-4 py-3 cursor-pointer font-semibold text-secondary flex items-center gap-2">
-                    <span>👤 Detalii ture casă POS</span>
-                    <span class="ml-auto text-xs text-muted" id="lv-sessions-detail-count"></span>
-                </summary>
-                <div id="lv-sessions-list" class="p-4 space-y-2 border-t border-border"></div>
-            </details>
+                <p class="mt-1 text-[10px] leading-tight text-primary font-semibold">→ Vezi toate detaliile ture</p>
+            </a>
         </div>
 
         <!-- Chart + breakdown grid -->
@@ -437,68 +426,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-stat-card').textContent = fmtMoney(pos.card_gross);
             const sessions = Array.isArray(d.sessions) ? d.sessions : [];
             $('lv-sessions-count').textContent = sessions.length;
-            $('lv-sessions-hint').textContent = sessions.length === 1
-                ? '1 tură · ' + (sessions[0].operator || '—')
-                : sessions.length + ' ture · click jos pentru detalii';
-            renderSessions(sessions);
+            // Detaliile sesiunilor: pagina dedicata /organizator/leisure-sessions
         } catch (e) {
             console.warn('[leisure-sales] summary failed', e);
         }
-    }
-
-    function renderSessions(sessions) {
-        const wrap = $('lv-sessions-wrap');
-        const list = $('lv-sessions-list');
-        const countEl = $('lv-sessions-detail-count');
-        if (!wrap || !list) return;
-        if (!sessions || !sessions.length) {
-            wrap.classList.add('hidden');
-            return;
-        }
-        wrap.classList.remove('hidden');
-        if (countEl) countEl.textContent = sessions.length + ' tur' + (sessions.length === 1 ? 'ă' : 'e');
-        const fmtDT = iso => {
-            if (!iso) return '—';
-            try {
-                const d = new Date(iso);
-                return d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' }) + ' ' +
-                       d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-            } catch { return iso; }
-        };
-        const esc = s => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        list.innerHTML = sessions.map(s => {
-            const status = s.is_open
-                ? '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
-                : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
-            return `
-            <div class="border border-border rounded-xl p-3">
-                <div class="flex flex-wrap items-center gap-2 justify-between">
-                    <div>
-                        <p class="text-sm font-bold text-secondary">👤 ${esc(s.operator || 'Operator')}</p>
-                        <p class="text-[11px] text-muted">${fmtDT(s.opened_at)} → ${s.closed_at ? fmtDT(s.closed_at) : '⏳ în desfășurare'}</p>
-                    </div>
-                    ${status}
-                </div>
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-2 text-xs">
-                    <div class="p-2 bg-amber-50 border border-amber-200 rounded">
-                        <p class="text-[10px] text-amber-700 uppercase font-semibold">💵 Cash</p>
-                        <p class="text-sm font-bold text-amber-900 tabular-nums">${fmtMoney(s.cash)} RON</p>
-                    </div>
-                    <div class="p-2 bg-sky-50 border border-sky-200 rounded">
-                        <p class="text-[10px] text-sky-700 uppercase font-semibold">💳 Card</p>
-                        <p class="text-sm font-bold text-sky-900 tabular-nums">${fmtMoney(s.card)} RON</p>
-                    </div>
-                    <div class="p-2 bg-slate-50 border border-slate-200 rounded">
-                        <p class="text-[10px] text-slate-600 uppercase font-semibold">🧾 Comenzi</p>
-                        <p class="text-sm font-bold text-slate-900 tabular-nums">${s.orders || 0}</p>
-                    </div>
-                    <div class="p-2 bg-slate-50 border border-slate-200 rounded">
-                        <p class="text-[10px] text-slate-600 uppercase font-semibold">🎟️ Bilete</p>
-                        <p class="text-sm font-bold text-slate-900 tabular-nums">${s.tickets_sold || 0}${s.tickets_visitors && s.tickets_visitors !== s.tickets_sold ? ' <span class="text-[9px] text-muted">/ '+s.tickets_visitors+' viz.</span>' : ''}</p>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
     }
 
     window.addEventListener('load', async () => {
