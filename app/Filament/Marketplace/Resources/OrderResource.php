@@ -2159,7 +2159,14 @@ class OrderResource extends Resource
             ->orderByDesc('created_at')
             ->get();
 
-        $isFullRefund = $refundStatus === 'full';
+        // "Completă" only when the total money returned equals the order total.
+        // The DB flag refund_status='full' really means "every ticket refunded
+        // at its face value" — but a full-face refund does NOT include the
+        // added_on_top commission the customer paid, so the operator would
+        // read "Completă" while 2.50 lei (or similar) were still with
+        // Ambilet. Concrete case: order 121172 (52.50 total, 50 refunded via
+        // Netopia, 2.50 commission kept). Compare the actual money instead.
+        $isFullRefund = $orderTotal > 0 && $refundedAmount >= $orderTotal - 0.005;
         $typeLabel = $isFullRefund ? 'Completă' : 'Parțială';
         $typeColor = $isFullRefund ? '#60A5FA' : '#818CF8';
 
