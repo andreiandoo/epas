@@ -39,9 +39,9 @@ class MarketplaceOrganizerTeamMemberResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $mp = self::currentMarketplace();
+        $mpId = self::getMarketplaceClientId();
         return parent::getEloquentQuery()
-            ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $mp?->id));
+            ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $mpId));
     }
 
     public static function form(Schema $schema): Schema
