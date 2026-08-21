@@ -1186,6 +1186,103 @@ class OrganizerResource extends Resource
                                         }),
                                 ]), // end Tab 6 (Mesaje)
 
+                            // ── TAB 7: Echipa ──
+                            SC\Tabs\Tab::make('Echipa')
+                                ->key('echipa')
+                                ->icon('heroicon-o-users')
+                                ->badge(fn (?MarketplaceOrganizer $record) => $record?->teamMembers()->count() ?: null)
+                                ->badgeColor('gray')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('team_members_list')
+                                        ->hiddenLabel()
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                                        ->content(function (?MarketplaceOrganizer $record) {
+                                            if (!$record) return '';
+                                            $members = $record->teamMembers()
+                                                ->orderByDesc('created_at')
+                                                ->get();
+                                            if ($members->isEmpty()) {
+                                                return new \Illuminate\Support\HtmlString(
+                                                    '<div class="py-8 text-center text-gray-400">'
+                                                    . '<p class="text-lg">Nicio persoană în echipă</p>'
+                                                    . '<p class="text-sm">Organizatorul își adaugă membri din contul lui la /organizator/echipa.</p>'
+                                                    . '</div>'
+                                                );
+                                            }
+                                            $roleLabels = [
+                                                'admin' => 'Administrator',
+                                                'manager' => 'Manager',
+                                                'staff' => 'Staff',
+                                            ];
+                                            $roleColors = [
+                                                'admin' => ['#dbeafe', '#1e40af'],
+                                                'manager' => ['#e0e7ff', '#3730a3'],
+                                                'staff' => ['#dcfce7', '#166534'],
+                                            ];
+                                            $leisureLabels = [
+                                                'check_in' => '✅ Check-in',
+                                                'rental_operator' => '🛶 Op. închirieri',
+                                                'pos_cashier' => '💵 Casier POS',
+                                                'inventory_manager' => '📦 Mng. inventar',
+                                                'pos_manager' => '🧾 Mng. POS',
+                                                'admin' => '⭐ Admin leisure',
+                                            ];
+                                            $statusColors = [
+                                                'active' => ['#dcfce7', '#166534', 'ACTIV'],
+                                                'pending' => ['#fef3c7', '#92400e', 'INVITAT'],
+                                                'inactive' => ['#fee2e2', '#b91c1c', 'INACTIV'],
+                                            ];
+                                            $tz = 'Europe/Bucharest';
+                                            $activeCount = $members->where('status', 'active')->count();
+                                            $pendingCount = $members->where('status', 'pending')->count();
+                                            $inactiveCount = $members->where('status', 'inactive')->count();
+                                            $html = '<div class="space-y-2">';
+                                            $html .= '<div class="mb-3 text-sm text-gray-600">';
+                                            $html .= '<strong class="text-gray-900">' . count($members) . '</strong> membri · ';
+                                            $html .= '<span style="color:#166534;font-weight:600;">' . $activeCount . ' activi</span>';
+                                            if ($pendingCount > 0) $html .= ' · <span style="color:#92400e;font-weight:600;">' . $pendingCount . ' invitații pending</span>';
+                                            if ($inactiveCount > 0) $html .= ' · <span style="color:#b91c1c;font-weight:600;">' . $inactiveCount . ' inactivi</span>';
+                                            $html .= '</div>';
+                                            $html .= '<div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">'
+                                                . '<table style="width:100%;font-size:13px;border-collapse:collapse;">'
+                                                . '<thead style="background:#f9fafb;">'
+                                                . '<tr>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Nume / Email</th>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Rol</th>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Rol leisure</th>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Status</th>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Acceptată</th>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Invitată</th>'
+                                                . '<th style="padding:8px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;">Adăugat</th>'
+                                                . '</tr>'
+                                                . '</thead><tbody>';
+                                            foreach ($members as $tm) {
+                                                $roleLabel = $roleLabels[$tm->role] ?? ucfirst((string) $tm->role);
+                                                [$roleBg, $roleFg] = $roleColors[$tm->role] ?? ['#f1f5f9', '#334155'];
+                                                [$stBg, $stFg, $stLabel] = $statusColors[$tm->status] ?? ['#f1f5f9', '#334155', strtoupper($tm->status ?? '?')];
+                                                $leisureRole = $tm->leisure_role ? ($leisureLabels[$tm->leisure_role] ?? $tm->leisure_role) : '<span style="color:#9ca3af;">—</span>';
+                                                $accepted = $tm->accepted_at ? $tm->accepted_at->timezone($tz)->format('d.m.Y H:i') : '<span style="color:#9ca3af;">—</span>';
+                                                $invited = $tm->invite_sent_at ? $tm->invite_sent_at->timezone($tz)->format('d.m.Y H:i') : '<span style="color:#9ca3af;">—</span>';
+                                                $createdAt = $tm->created_at ? $tm->created_at->timezone($tz)->format('d.m.Y H:i') : '—';
+                                                $html .= '<tr style="border-bottom:1px solid #f3f4f6;">'
+                                                    . '<td style="padding:10px 12px;">'
+                                                    . '<div style="font-weight:600;color:#111827;">' . e($tm->name ?? '—') . '</div>'
+                                                    . '<div style="font-size:12px;color:#6b7280;">' . e($tm->email ?? '—') . '</div>'
+                                                    . '</td>'
+                                                    . '<td style="padding:10px 12px;"><span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:9999px;background:' . $roleBg . ';color:' . $roleFg . ';">' . e($roleLabel) . '</span></td>'
+                                                    . '<td style="padding:10px 12px;font-size:12px;color:#374151;">' . $leisureRole . '</td>'
+                                                    . '<td style="padding:10px 12px;"><span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;background:' . $stBg . ';color:' . $stFg . ';">' . e($stLabel) . '</span></td>'
+                                                    . '<td style="padding:10px 12px;font-size:12px;color:#6b7280;">' . $accepted . '</td>'
+                                                    . '<td style="padding:10px 12px;font-size:12px;color:#6b7280;">' . $invited . '</td>'
+                                                    . '<td style="padding:10px 12px;font-size:12px;color:#6b7280;">' . $createdAt . '</td>'
+                                                    . '</tr>';
+                                            }
+                                            $html .= '</tbody></table></div>';
+                                            $html .= '</div>';
+                                            return new \Illuminate\Support\HtmlString($html);
+                                        }),
+                                ]), // end Tab 7 (Echipa)
+
                         ]), // end Tabs
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
