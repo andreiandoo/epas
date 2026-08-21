@@ -122,4 +122,15 @@ class MarketplaceOrganizerTeamMemberResource extends Resource
             'edit' => Pages\EditMarketplaceOrganizerTeamMember::route('/{record}/edit'),
         ];
     }
+
+    /**
+     * Resource-ul nu are pagina de index (accesat doar via link direct din tab-ul
+     * Echipa al organizerului). Filament cere getIndexUrl() ca fallback pentru
+     * breadcrumbs + butonul "back to list" din header. Trimitem catre lista
+     * organizatorilor ca acolo se merge inapoi logic.
+     */
+    public static function getIndexUrl(?array $parameters = [], ?bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
+    {
+        return url('/marketplace/organizers');
+    }
 }
