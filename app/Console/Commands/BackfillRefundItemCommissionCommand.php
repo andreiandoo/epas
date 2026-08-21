@@ -97,10 +97,39 @@ class BackfillRefundItemCommissionCommand extends Command
 
                 $currentCommission = (float) $item->commission_amount;
                 $currentStatus = $item->status;
+                $faceValue = (float) $item->face_value;
+                $refundAmount = (float) $item->refund_amount;
+                $mode = (string) ($tt->commission_mode ?? '');
+                $commissionRefunded = (bool) $item->commission_refunded;
 
                 $changes = [];
 
-                if ($currentCommission == 0.0 && $newCommission > 0.0) {
+                // Strict Ambilet-kept-commission guard — 3 conditions that
+                // together uniquely identify a refund where Ambilet held on
+                // to the commission portion:
+                //   1. commission_mode = 'added_on_top' (kept-commission is
+                //      meaningless on 'included', where face_value already
+                //      IS the total the customer paid — a face-value-only
+                //      refund on included events returns everything to the
+                //      customer, so no commission ever stays with Ambilet).
+                //   2. commission_refunded = false (the row is not tagged
+                //      as "commission given back to customer").
+                //   3. refund_amount = face_value (the money that actually
+                //      left our account was face only — anything larger
+                //      means the commission was returned too, so we should
+                //      not backfill it as kept).
+                // Any of the three failing → skip commission_amount update.
+                // Verified 2026-08-21 on rows 12 (included, refund included
+                // commission → NOT kept), 41/42 (commission_refunded=true
+                // yet refund_amount=face → inconsistent legacy state, don't
+                // amplify), 111/141 (all three conditions match → true kept).
+                $canBackfillCommission = $currentCommission == 0.0
+                    && $newCommission > 0.0
+                    && $mode === 'added_on_top'
+                    && !$commissionRefunded
+                    && abs($refundAmount - $faceValue) < 0.005;
+
+                if ($canBackfillCommission) {
                     $changes['commission_amount'] = $newCommission;
                     $deltaCommission += ($newCommission - $currentCommission);
                     $updatedCommission++;
