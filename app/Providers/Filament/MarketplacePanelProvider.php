@@ -161,6 +161,7 @@ class MarketplacePanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Sales'),
                 NavigationGroup::make('Organizers'),
+                NavigationGroup::make('Locații'),
                 NavigationGroup::make('Shop'),
                 NavigationGroup::make('Content'),
                 NavigationGroup::make('Tools'),

@@ -46,15 +46,15 @@ class TenantResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-storefront';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Locații';
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationLabel = 'Venue Owners';
+    protected static ?string $navigationLabel = 'Proprietari locații';
 
-    protected static ?string $modelLabel = 'Venue Owner';
+    protected static ?string $modelLabel = 'Proprietar locație';
 
-    protected static ?string $pluralModelLabel = 'Venue Owners';
+    protected static ?string $pluralModelLabel = 'Proprietari locații';
 
     /**
      * Marketplace super-admins only. Regular marketplace admins never
@@ -145,15 +145,17 @@ class TenantResource extends Resource
                 ])->columns(2),
 
             SC\Section::make('Locații linked')
-                ->description('Multi-select — locațiile la care venue owner-ul va putea scana / vinde bilete în aplicație. Doar locațiile acestui marketplace apar aici.')
+                ->description('Multi-select — locațiile la care venue owner-ul va putea scana / vinde bilete în aplicație. Se afișează toate locațiile din DB (indiferent de marketplace).')
                 ->schema([
                     Forms\Components\Select::make('linked_venue_ids')
                         ->label('Venues')
                         ->multiple()
-                        ->options(function () use ($mcId) {
-                            if (!$mcId) return [];
+                        ->options(function () {
+                            // Whole venue catalog — per operator request
+                            // (2026-08-22): a marketplace super-admin can
+                            // link any venue in the DB, not just the ones
+                            // scoped to their marketplace_client_id.
                             return Venue::query()
-                                ->where('marketplace_client_id', $mcId)
                                 ->get()
                                 ->mapWithKeys(fn ($v) => [
                                     $v->id => ($v->getTranslation('name', 'ro')
@@ -166,10 +168,9 @@ class TenantResource extends Resource
                         })
                         ->searchable()
                         ->preload()
-                        ->afterStateHydrated(function ($component, $record) use ($mcId) {
-                            if ($record && $mcId) {
+                        ->afterStateHydrated(function ($component, $record) {
+                            if ($record) {
                                 $ids = Venue::where('tenant_id', $record->id)
-                                    ->where('marketplace_client_id', $mcId)
                                     ->pluck('id')
                                     ->all();
                                 $component->state($ids);

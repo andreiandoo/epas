@@ -130,12 +130,11 @@ class CreateTenant extends CreateRecord
             $tenant->save();
 
             // 2) Link the selected venues by pointing venues.tenant_id at
-            //    this tenant. Restrict strictly to the marketplace's own
-            //    venues even if the payload was tampered with — a
-            //    marketplace can only give itself venues it already owns.
+            //    this tenant. Per operator request (2026-08-22) the venue
+            //    catalog is NOT filtered on marketplace_client_id — any
+            //    venue in the DB is linkable, so we no longer clamp here.
             if (!empty($this->extracted['linked_venue_ids'])) {
                 Venue::query()
-                    ->where('marketplace_client_id', $mcId)
                     ->whereIn('id', $this->extracted['linked_venue_ids'])
                     ->update(['tenant_id' => $tenant->id]);
             }

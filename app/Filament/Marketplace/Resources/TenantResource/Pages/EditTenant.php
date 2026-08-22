@@ -70,9 +70,7 @@ class EditTenant extends EditRecord
     {
         /** @var Tenant $tenant */
         $tenant = $this->record;
-        $mcId = $tenant->created_by_marketplace_client_id;
-
-        DB::transaction(function () use ($tenant, $mcId) {
+        DB::transaction(function () use ($tenant) {
             // Owner-user updates — name + optional password reset. Email is
             // read-only on the edit form so we don't accidentally break a
             // running Android session for the tenant.
@@ -99,11 +97,11 @@ class EditTenant extends EditRecord
                 }
             }
 
-            // Venue re-sync — same marketplace-only guard as on create.
-            // Two-step: detach venues that were unchecked, attach new ones.
+            // Venue re-sync — unrestricted by marketplace_client_id per
+            // operator request (2026-08-22). Two-step diff: detach venues
+            // that were unchecked, attach the newly ticked ones.
             $newIds = $this->extracted['linked_venue_ids'];
             $currentIds = Venue::where('tenant_id', $tenant->id)
-                ->where('marketplace_client_id', $mcId)
                 ->pluck('id')
                 ->all();
 
@@ -115,7 +113,6 @@ class EditTenant extends EditRecord
             }
             if (!empty($toAttach)) {
                 Venue::query()
-                    ->where('marketplace_client_id', $mcId)
                     ->whereIn('id', $toAttach)
                     ->update(['tenant_id' => $tenant->id]);
             }
