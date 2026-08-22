@@ -32,6 +32,12 @@ class CreateTenant extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
+        \Log::info('[MarketplaceTenantCreate] handleRecordCreation reached', [
+            'data_keys' => array_keys($data),
+            'public_name' => $data['public_name'] ?? null,
+            'owner_email' => $data['owner_email'] ?? null,
+            'linked_venue_ids' => $data['linked_venue_ids'] ?? null,
+        ]);
         $mcId = TenantResource::getMarketplaceClient()?->id;
         if (!$mcId) {
             throw ValidationException::withMessages([
