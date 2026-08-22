@@ -88,6 +88,12 @@ class Tenant extends Model
         'demo_shadow_id',
         'demo_dataset',
         'demo_parent_id',
+        // Marketplace-side origin marker — set only when a marketplace
+        // super-admin creates the tenant via the marketplace panel.
+        // Null for tenants created via the core Tixello admin (unchanged
+        // legacy behaviour). Used by the marketplace panel to scope
+        // list/edit views so each marketplace only sees its own rows.
+        'created_by_marketplace_client_id',
     ];
 
     protected $casts = [
@@ -121,6 +127,26 @@ class Tenant extends Model
     public function contractTemplate(): BelongsTo
     {
         return $this->belongsTo(ContractTemplate::class);
+    }
+
+    /**
+     * Marketplace client that created this tenant via the marketplace
+     * panel (super-admin only flow). Null when created via core Tixello
+     * admin — that's the legacy majority.
+     */
+    public function createdByMarketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class, 'created_by_marketplace_client_id');
+    }
+
+    /**
+     * Restrict a query to tenants a specific marketplace created. Used
+     * by the marketplace TenantResource so a marketplace never sees or
+     * touches rows it didn't originate.
+     */
+    public function scopeForMarketplaceClient($query, int $marketplaceClientId)
+    {
+        return $query->where('created_by_marketplace_client_id', $marketplaceClientId);
     }
 
     public function contractVersions(): HasMany
