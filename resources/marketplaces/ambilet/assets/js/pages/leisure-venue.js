@@ -557,13 +557,27 @@
             }
         });
 
-        // Render items
-        $summaryItems.innerHTML = items.map(item =>
-            '<div class="flex justify-between text-gray-600">' +
-            '<span>' + item.qty + '× ' + escHtml(item.tt.name) + '</span>' +
-            '<span class="font-medium">' + formatPrice(item.lineTotal) + ' ' + (item.tt.currency || 'RON') + '</span>' +
-            '</div>'
-        ).join('');
+        // Render items + guide bonus row daca e cazul (bilete grup cu bonus).
+        // Mirror backend CheckoutController: 1 ghid gratuit per bilet grup indiferent
+        // de qty (nu N pe multipli). Utilizator vede "+1 × Ghid grup · gratuit".
+        $summaryItems.innerHTML = items.map(item => {
+            let html = '<div class="flex justify-between text-gray-600">' +
+                '<span>' + item.qty + '× ' + escHtml(item.tt.name) + '</span>' +
+                '<span class="font-medium">' + formatPrice(item.lineTotal) + ' ' + (item.tt.currency || 'RON') + '</span>' +
+            '</div>';
+            const meta = item.tt.meta || {};
+            if (meta.is_group_ticket && meta.group_includes_guide) {
+                const minPerGroup = Math.max(1, parseInt(item.tt.min_per_order, 10) || 1);
+                if (item.qty >= minPerGroup) {
+                    const guideLabel = (meta.group_guide_label || '').toString().trim() || 'Ghid grup';
+                    html += '<div class="flex justify-between text-amber-700 text-sm pl-3">' +
+                        '<span>🎁 +1 × ' + escHtml(guideLabel) + ' <span class="text-gray-500">(gratuit)</span></span>' +
+                        '<span class="font-medium text-emerald-600">0.00 ' + (item.tt.currency || 'RON') + '</span>' +
+                    '</div>';
+                }
+            }
+            return html;
+        }).join('');
 
         $totalEl.textContent = formatPrice(total) + ' RON';
         $summary.classList.remove('hidden');
@@ -598,6 +612,7 @@
 
             // Add to AmbiletCart with meta
             if (typeof AmbiletCart !== 'undefined' && AmbiletCart.addItem) {
+                const ttMeta = tt.meta || {};
                 AmbiletCart.addItem(
                     {
                         id: EVENT.id,
@@ -616,6 +631,10 @@
                         multiplier: tt.multiplier || 1,
                         is_parking: tt.is_parking,
                         requires_vehicle_info: tt.requires_vehicle_info,
+                        // Flags leisure guide bonus - persistate pt checkout preview
+                        is_group_ticket: !!ttMeta.is_group_ticket,
+                        group_includes_guide: !!ttMeta.group_includes_guide,
+                        group_guide_label: ttMeta.group_guide_label || null,
                     },
                     qty,
                     {

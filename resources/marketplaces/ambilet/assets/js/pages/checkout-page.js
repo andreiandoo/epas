@@ -586,6 +586,12 @@ const CheckoutPage = {
                 vehicleInfo: item.meta?.vehicle_info || null,
                 isParking: item.ticketType?.is_parking || false,
                 requiresVehicleInfo: item.ticketType?.requires_vehicle_info || false,
+                // Leisure guide bonus flags (persistate din leisure-venue addToCart) -
+                // folosite pentru rendering "+1 Ghid grup gratuit" in preview.
+                isGroupTicket: item.ticketType?.is_group_ticket || false,
+                groupIncludesGuide: item.ticketType?.group_includes_guide || false,
+                groupGuideLabel: item.ticketType?.group_guide_label || null,
+                minPerOrder: item.ticketType?.min_per_order || 1,
             });
         });
 
@@ -649,6 +655,20 @@ const CheckoutPage = {
                         </div>
                     </div>
                 `;
+                // Leisure guide bonus: 1 bilet ghid gratuit per bilet grup daca qty >= min_per_order.
+                // Mirror backend CheckoutController@1270 - user vede bonusul in preview.
+                if (ticket.isGroupTicket && ticket.groupIncludesGuide) {
+                    const minPerGroup = Math.max(1, parseInt(ticket.minPerOrder, 10) || 1);
+                    if (ticket.qty >= minPerGroup) {
+                        const guideLabel = (ticket.groupGuideLabel || '').toString().trim() || 'Ghid grup';
+                        itemsHtml += `
+                            <div class="flex justify-between text-sm text-amber-700 pl-3">
+                                <span>🎁 +1 × ${guideLabel} <span class="text-gray-500 text-xs">(gratuit)</span></span>
+                                <span class="font-medium text-emerald-600">0,00 RON</span>
+                            </div>
+                        `;
+                    }
+                }
             });
         });
 
