@@ -19,6 +19,16 @@ class CreateTenant extends CreateRecord
 {
     protected static string $resource = TenantResource::class;
 
+    protected function beforeValidate(): void
+    {
+        \Log::info('[MarketplaceTenantCreate] beforeValidate reached', ['data' => $this->data]);
+    }
+
+    protected function beforeCreate(): void
+    {
+        \Log::info('[MarketplaceTenantCreate] beforeCreate reached');
+    }
+
     /**
      * Everything happens inside handleRecordCreation because it's the
      * single Filament hook that receives $data directly. Splitting the
