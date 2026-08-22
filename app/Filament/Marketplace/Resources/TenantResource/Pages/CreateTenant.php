@@ -19,15 +19,6 @@ class CreateTenant extends CreateRecord
 {
     protected static string $resource = TenantResource::class;
 
-    protected function beforeValidate(): void
-    {
-        \Log::info('[MarketplaceTenantCreate] beforeValidate reached', ['data' => $this->data]);
-    }
-
-    protected function beforeCreate(): void
-    {
-        \Log::info('[MarketplaceTenantCreate] beforeCreate reached');
-    }
 
     /**
      * Everything happens inside handleRecordCreation because it's the
@@ -42,12 +33,14 @@ class CreateTenant extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
-        \Log::info('[MarketplaceTenantCreate] handleRecordCreation reached', [
-            'data_keys' => array_keys($data),
-            'public_name' => $data['public_name'] ?? null,
-            'owner_email' => $data['owner_email'] ?? null,
-            'linked_venue_ids' => $data['linked_venue_ids'] ?? null,
-        ]);
+        // $data here is post-dehydration (owner_* + linked_venue_ids
+        // fields were declared dehydrated(false) so they're stripped
+        // before Filament fills the model). Read the raw form state
+        // from $this->data instead — those keys ARE still there because
+        // Filament keeps the whole form state on the component while
+        // only $data is used for the model insert.
+        $formState = $this->data ?? [];
+
         $mcId = TenantResource::getMarketplaceClient()?->id;
         if (!$mcId) {
             throw ValidationException::withMessages([
@@ -55,12 +48,12 @@ class CreateTenant extends CreateRecord
             ]);
         }
 
-        $firstName = trim((string) ($data['owner_first_name'] ?? ''));
-        $lastName = trim((string) ($data['owner_last_name'] ?? ''));
-        $email = strtolower(trim((string) ($data['owner_email'] ?? '')));
-        $password = (string) ($data['owner_password'] ?? '');
-        $venueIds = is_array($data['linked_venue_ids'] ?? null)
-            ? array_values(array_filter(array_map('intval', $data['linked_venue_ids'])))
+        $firstName = trim((string) ($formState['owner_first_name'] ?? ''));
+        $lastName = trim((string) ($formState['owner_last_name'] ?? ''));
+        $email = strtolower(trim((string) ($formState['owner_email'] ?? '')));
+        $password = (string) ($formState['owner_password'] ?? '');
+        $venueIds = is_array($formState['linked_venue_ids'] ?? null)
+            ? array_values(array_filter(array_map('intval', $formState['linked_venue_ids'])))
             : [];
 
         if ($email === '' || $password === '') {

@@ -72,9 +72,7 @@ class TenantResource extends Resource
 
     public static function canCreate(): bool
     {
-        $result = static::currentAdminIsSuperAdmin();
-        \Log::info('[TenantResource.canCreate]', ['result' => $result, 'guard_user_id' => \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->id()]);
-        return $result;
+        return static::currentAdminIsSuperAdmin();
     }
 
     public static function canEdit($record): bool

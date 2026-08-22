@@ -49,11 +49,17 @@ class EditTenant extends EditRecord
         /** @var Tenant $tenant */
         $tenant = $record;
 
-        $firstName = trim((string) ($data['owner_first_name'] ?? ''));
-        $lastName = trim((string) ($data['owner_last_name'] ?? ''));
-        $password = (string) ($data['owner_password'] ?? '');
-        $venueIds = is_array($data['linked_venue_ids'] ?? null)
-            ? array_values(array_filter(array_map('intval', $data['linked_venue_ids'])))
+        // owner_* + linked_venue_ids fields are dehydrated(false) so
+        // they're missing from $data at this point. Pull them from the
+        // raw form state on the Livewire component instead — same
+        // trick as CreateTenant::handleRecordCreation.
+        $formState = $this->data ?? [];
+
+        $firstName = trim((string) ($formState['owner_first_name'] ?? ''));
+        $lastName = trim((string) ($formState['owner_last_name'] ?? ''));
+        $password = (string) ($formState['owner_password'] ?? '');
+        $venueIds = is_array($formState['linked_venue_ids'] ?? null)
+            ? array_values(array_filter(array_map('intval', $formState['linked_venue_ids'])))
             : [];
 
         // Strip non-tenant keys before the parent update — Tenant model
