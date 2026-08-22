@@ -218,6 +218,17 @@ const CartPage = {
         const price = item.ticketType?.price || item.price || 0;
         const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
         const quantity = item.quantity || 1;
+
+        // Leisure guide bonus: 1 ghid gratuit per bilet grup daca qty >= min_per_order.
+        // Mirror backend CheckoutController - vizibil in /cos ca "🎁 +1 x Ghid grup gratuit".
+        const isGroupTicket = item.ticketType?.is_group_ticket || false;
+        const groupIncludesGuide = item.ticketType?.group_includes_guide || false;
+        const groupGuideLabel = item.ticketType?.group_guide_label || 'Ghid grup';
+        const minPerOrderGB = Math.max(1, parseInt(item.ticketType?.min_per_order || item.min_per_order || 1, 10) || 1);
+        const showGuideBonus = isGroupTicket && groupIncludesGuide && quantity >= minPerOrderGB;
+        const guideBonusHtml = showGuideBonus
+            ? '<p class="mt-0.5 text-xs text-emerald-700 font-medium">🎁 +1 × ' + groupGuideLabel + ' <span class="text-muted font-normal">(gratuit)</span></p>'
+            : '';
         const seats = item.seats || [];
         const hasSeats = seats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
         const eventSlug = item.event?.slug || '';
@@ -291,6 +302,7 @@ const CartPage = {
                                 '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                             '</div>' +
                             (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                            guideBonusHtml +
                             (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
                             '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
                         '</div>' +
@@ -332,6 +344,7 @@ const CartPage = {
                         '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                     '</div>' +
                     (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                    guideBonusHtml +
                     (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
                     '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
                 '</div>' +
