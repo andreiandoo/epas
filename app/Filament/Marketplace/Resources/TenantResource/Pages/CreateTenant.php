@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Venue;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,50 +20,44 @@ class CreateTenant extends CreateRecord
     protected static string $resource = TenantResource::class;
 
     /**
-     * Owner-user + linked-venues are extracted out of $data (all dehydrated
-     * false in the schema) and picked up again in afterCreate. That keeps
-     * Tenant::create clean — it only receives real tenant columns.
+     * Everything happens inside handleRecordCreation because it's the
+     * single Filament hook that receives $data directly. Splitting the
+     * work between mutateFormDataBeforeCreate (extract to class prop)
+     * and afterCreate (read class prop) hits a Livewire lifecycle bug:
+     * class properties get re-hydrated between hooks and reset to their
+     * default, so the class prop we set in mutate reads back as [] in
+     * afterCreate — which is exactly what happened on tenant 38 (user
+     * created with blank name+email, zero venues linked). Doing it all
+     * in one hook + one transaction removes that fragility entirely.
      */
-    protected array $extracted = [];
-
-    protected function mutateFormDataBeforeCreate(array $data): array
+    protected function handleRecordCreation(array $data): Model
     {
-        $this->extracted = [
-            'owner_first_name' => trim((string) ($data['owner_first_name'] ?? '')),
-            'owner_last_name' => trim((string) ($data['owner_last_name'] ?? '')),
-            'owner_email' => strtolower(trim((string) ($data['owner_email'] ?? ''))),
-            'owner_password' => (string) ($data['owner_password'] ?? ''),
-            'linked_venue_ids' => is_array($data['linked_venue_ids'] ?? null)
-                ? array_values(array_filter(array_map('intval', $data['linked_venue_ids'])))
-                : [],
-        ];
-
-        unset(
-            $data['owner_first_name'],
-            $data['owner_last_name'],
-            $data['owner_email'],
-            $data['owner_password'],
-            $data['linked_venue_ids'],
-        );
-
-        // Enforce origin + tenant_type server-side even if the hidden fields
-        // were tampered with — the resource is venue-only, marketplace-owned.
         $mcId = TenantResource::getMarketplaceClient()?->id;
         if (!$mcId) {
             throw ValidationException::withMessages([
                 'public_name' => 'Marketplace context lipsă — reautentifică-te.',
             ]);
         }
-        $data['tenant_type'] = TenantType::Venue->value;
-        $data['created_by_marketplace_client_id'] = $mcId;
-        $data['status'] = $data['status'] ?? 'active';
 
-        // Email collision — the owner-user email must be free. Any existing
-        // account (organizer, artist, editor, other tenant owner) means we
-        // refuse creation with a clear message. Handling "link to existing"
-        // is a follow-up feature the operator specifically asked to keep
-        // off the table for now.
-        $existing = User::where('email', $this->extracted['owner_email'])->first();
+        $firstName = trim((string) ($data['owner_first_name'] ?? ''));
+        $lastName = trim((string) ($data['owner_last_name'] ?? ''));
+        $email = strtolower(trim((string) ($data['owner_email'] ?? '')));
+        $password = (string) ($data['owner_password'] ?? '');
+        $venueIds = is_array($data['linked_venue_ids'] ?? null)
+            ? array_values(array_filter(array_map('intval', $data['linked_venue_ids'])))
+            : [];
+
+        if ($email === '' || $password === '') {
+            throw ValidationException::withMessages([
+                'owner_email' => 'Email + parolă obligatorii pentru contul owner.',
+            ]);
+        }
+
+        // Email collision — any existing users row (organizer, artist,
+        // editor, another tenant owner) means we refuse. Linking to an
+        // existing user is deliberately off-scope for the marketplace
+        // flow per the 2026-08-22 spec.
+        $existing = User::where('email', $email)->first();
         if ($existing) {
             $role = $existing->role ?? 'necunoscut';
             $ownedTenant = Tenant::where('owner_id', $existing->id)->first();
@@ -70,60 +65,41 @@ class CreateTenant extends CreateRecord
                 ? "cont tenant existent \"" . ($ownedTenant->public_name ?? $ownedTenant->name) . '"'
                 : "cont existent cu rol \"{$role}\"";
             throw ValidationException::withMessages([
-                'owner_email' => "Adresa {$this->extracted['owner_email']} este deja folosită de un {$usage}. Alege alt email — linkarea la un cont existent nu e suportată din marketplace panel.",
+                'owner_email' => "Adresa {$email} este deja folosită de un {$usage}. Alege alt email — linkarea la un cont existent nu e suportată din marketplace panel.",
             ]);
         }
 
-        // Public name default → tenant name if missing (Tenant::name is
-        // required in the DB but the marketplace UI only asks for
-        // public_name).
-        if (empty($data['name'])) {
-            $data['name'] = $this->extracted['owner_first_name'] !== ''
-                ? trim($this->extracted['owner_first_name'] . ' ' . $this->extracted['owner_last_name'])
-                : ($data['public_name'] ?? 'Venue Owner');
-        }
-        if (empty($data['slug'])) {
-            $base = Str::slug($data['public_name'] ?? $data['name']);
-            $slug = $base;
+        $fullName = trim($firstName . ' ' . $lastName);
+        $publicName = trim((string) ($data['public_name'] ?? '')) ?: ($fullName ?: 'Venue Owner');
+
+        return DB::transaction(function () use ($data, $mcId, $email, $password, $fullName, $publicName, $venueIds) {
+            // 1) Tenant. tenant_type + origin marker are re-stamped
+            //    server-side even if the hidden fields were tampered
+            //    with. Slug is unique-suffixed against existing rows.
+            $baseSlug = Str::slug($publicName);
+            $slug = $baseSlug;
             $i = 1;
             while (Tenant::where('slug', $slug)->exists()) {
-                $slug = $base . '-' . (++$i);
+                $slug = $baseSlug . '-' . (++$i);
             }
-            $data['slug'] = $slug;
-        }
 
-        return $data;
-    }
+            $tenant = Tenant::create([
+                'name' => $fullName !== '' ? $fullName : $publicName,
+                'public_name' => $publicName,
+                'slug' => $slug,
+                'locale' => $data['locale'] ?? 'ro',
+                'tenant_type' => TenantType::Venue->value,
+                'status' => 'active',
+                'created_by_marketplace_client_id' => $mcId,
+            ]);
 
-    /**
-     * All post-create mutations run in a single transaction so a partial
-     * failure (e.g. venue sync fails) can't leave a tenant with no owner
-     * or vice versa.
-     */
-    protected function afterCreate(): void
-    {
-        /** @var Tenant $tenant */
-        $tenant = $this->record;
-
-        DB::transaction(function () use ($tenant) {
-            $mcId = $tenant->created_by_marketplace_client_id;
-
-            // 1) Create the owner user (email pre-checked as free in the
-            //    mutate step). Role='tenant' keeps this account on the same
-            //    path as tenant accounts created via /admin/tenants — the
-            //    AmBilet Android app checks user → tenant → venues from
-            //    there.
-            //
-            //    Prod schema note: users.first_name / users.last_name don't
-            //    exist on live even though the Model marks them fillable
-            //    (leftover local-dev columns). We only write to users.name
-            //    to avoid the schema-drift crash — the two form inputs are
-            //    concatenated here.
-            $fullName = trim($this->extracted['owner_first_name'] . ' ' . $this->extracted['owner_last_name']);
+            // 2) Owner user. Prod users table has only `name` (no
+            //    first_name/last_name — see project_users_schema_drift).
+            //    Concat here; the form's two-field UI stays intact.
             $owner = User::create([
-                'name' => $fullName !== '' ? $fullName : $this->extracted['owner_email'],
-                'email' => $this->extracted['owner_email'],
-                'password' => Hash::make($this->extracted['owner_password']),
+                'name' => $fullName !== '' ? $fullName : $email,
+                'email' => $email,
+                'password' => Hash::make($password),
                 'role' => 'tenant',
                 'tenant_id' => $tenant->id,
                 'marketplace_client_id' => $mcId,
@@ -133,21 +109,21 @@ class CreateTenant extends CreateRecord
             $tenant->owner_id = $owner->id;
             $tenant->save();
 
-            // 2) Link the selected venues by pointing venues.tenant_id at
-            //    this tenant. Per operator request (2026-08-22) the venue
-            //    catalog is NOT filtered on marketplace_client_id — any
-            //    venue in the DB is linkable, so we no longer clamp here.
-            if (!empty($this->extracted['linked_venue_ids'])) {
-                Venue::query()
-                    ->whereIn('id', $this->extracted['linked_venue_ids'])
-                    ->update(['tenant_id' => $tenant->id]);
+            // 3) Link the venues. Whole DB catalog per operator request
+            //    (2026-08-22) — no marketplace_client_id filter.
+            if (!empty($venueIds)) {
+                Venue::whereIn('id', $venueIds)->update(['tenant_id' => $tenant->id]);
             }
-        });
 
-        Notification::make()
+            return $tenant;
+        });
+    }
+
+    protected function getCreatedNotification(): ?Notification
+    {
+        return Notification::make()
             ->title('Venue owner creat')
             ->body('Cont creat + locațiile linked. Ownerul se poate autentifica cu emailul + parola configurate.')
-            ->success()
-            ->send();
+            ->success();
     }
 }

@@ -9,14 +9,13 @@ use App\Models\Venue;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class EditTenant extends EditRecord
 {
     protected static string $resource = TenantResource::class;
-
-    protected array $extracted = [];
 
     protected function getHeaderActions(): array
     {
@@ -28,11 +27,7 @@ class EditTenant extends EditRecord
                     /** @var Tenant $tenant */
                     $tenant = $this->record;
                     DB::transaction(function () use ($tenant) {
-                        // Detach venues so the marketplace can re-link them
-                        // to another tenant later. Venue rows survive.
                         Venue::where('tenant_id', $tenant->id)->update(['tenant_id' => null]);
-                        // Owner user goes with the tenant — its whole point
-                        // was to log in to this venue-owner account.
                         if ($tenant->owner_id) {
                             User::where('id', $tenant->owner_id)->delete();
                         }
@@ -42,53 +37,55 @@ class EditTenant extends EditRecord
     }
 
     /**
-     * Extract the non-tenant fields before Filament's mass-update runs.
+     * Same reasoning as CreateTenant::handleRecordCreation — the two
+     * inputs (owner_* fields + linked_venue_ids) live on the form only
+     * (dehydrated:false), so we intercept the Filament save hook that
+     * still has $data and do the full owner+venue sync inside one
+     * transaction. Splitting via mutate/afterSave + class prop hits the
+     * Livewire lifecycle bug that blanked out the initial create.
      */
-    protected function mutateFormDataBeforeSave(array $data): array
-    {
-        $this->extracted = [
-            'owner_first_name' => trim((string) ($data['owner_first_name'] ?? '')),
-            'owner_last_name' => trim((string) ($data['owner_last_name'] ?? '')),
-            'owner_password' => (string) ($data['owner_password'] ?? ''),
-            'linked_venue_ids' => is_array($data['linked_venue_ids'] ?? null)
-                ? array_values(array_filter(array_map('intval', $data['linked_venue_ids'])))
-                : [],
-        ];
-
-        unset(
-            $data['owner_first_name'],
-            $data['owner_last_name'],
-            $data['owner_email'],
-            $data['owner_password'],
-            $data['linked_venue_ids'],
-        );
-
-        return $data;
-    }
-
-    protected function afterSave(): void
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var Tenant $tenant */
-        $tenant = $this->record;
-        DB::transaction(function () use ($tenant) {
-            // Owner-user updates — name + optional password reset. Email is
-            // read-only on the edit form so we don't accidentally break a
-            // running Android session for the tenant.
-            //
-            // Prod schema: users only stores a single `name` column
-            // (first_name/last_name are model-fillable but not in the
-            // table). We rebuild `name` from the two form inputs when
-            // either was populated.
+        $tenant = $record;
+
+        $firstName = trim((string) ($data['owner_first_name'] ?? ''));
+        $lastName = trim((string) ($data['owner_last_name'] ?? ''));
+        $password = (string) ($data['owner_password'] ?? '');
+        $venueIds = is_array($data['linked_venue_ids'] ?? null)
+            ? array_values(array_filter(array_map('intval', $data['linked_venue_ids'])))
+            : [];
+
+        // Strip non-tenant keys before the parent update — Tenant model
+        // has no owner_* fillable columns and Filament's fillable-guard
+        // would ignore them anyway, but explicit removal keeps the DB
+        // insert payload predictable.
+        $updateData = $data;
+        unset(
+            $updateData['owner_first_name'],
+            $updateData['owner_last_name'],
+            $updateData['owner_email'],
+            $updateData['owner_password'],
+            $updateData['linked_venue_ids'],
+        );
+
+        DB::transaction(function () use ($tenant, $updateData, $firstName, $lastName, $password, $venueIds) {
+            // 1) Tenant fields
+            $tenant->fill($updateData)->save();
+
+            // 2) Owner user — name (concat) + optional password reset.
+            //    Email stays read-only on the form (avoid breaking a
+            //    live Android session for the tenant).
             if ($tenant->owner_id) {
                 $owner = User::find($tenant->owner_id);
                 if ($owner) {
                     $dirty = [];
-                    $newFullName = trim($this->extracted['owner_first_name'] . ' ' . $this->extracted['owner_last_name']);
+                    $newFullName = trim($firstName . ' ' . $lastName);
                     if ($newFullName !== '' && $newFullName !== (string) $owner->name) {
                         $dirty['name'] = $newFullName;
                     }
-                    if ($this->extracted['owner_password'] !== '') {
-                        $dirty['password'] = Hash::make($this->extracted['owner_password']);
+                    if ($password !== '') {
+                        $dirty['password'] = Hash::make($password);
                     }
                     if (!empty($dirty)) {
                         $owner->update($dirty);
@@ -96,30 +93,30 @@ class EditTenant extends EditRecord
                 }
             }
 
-            // Venue re-sync — unrestricted by marketplace_client_id per
-            // operator request (2026-08-22). Two-step diff: detach venues
-            // that were unchecked, attach the newly ticked ones.
-            $newIds = $this->extracted['linked_venue_ids'];
+            // 3) Venue re-sync — full DB catalog per operator spec
+            //    (2026-08-22). Diff current↔new and apply as
+            //    detach + attach.
             $currentIds = Venue::where('tenant_id', $tenant->id)
                 ->pluck('id')
                 ->all();
-
-            $toDetach = array_diff($currentIds, $newIds);
-            $toAttach = array_diff($newIds, $currentIds);
+            $toDetach = array_diff($currentIds, $venueIds);
+            $toAttach = array_diff($venueIds, $currentIds);
 
             if (!empty($toDetach)) {
                 Venue::whereIn('id', $toDetach)->update(['tenant_id' => null]);
             }
             if (!empty($toAttach)) {
-                Venue::query()
-                    ->whereIn('id', $toAttach)
-                    ->update(['tenant_id' => $tenant->id]);
+                Venue::whereIn('id', $toAttach)->update(['tenant_id' => $tenant->id]);
             }
         });
 
-        Notification::make()
+        return $tenant->refresh();
+    }
+
+    protected function getSavedNotification(): ?Notification
+    {
+        return Notification::make()
             ->title('Venue owner actualizat')
-            ->success()
-            ->send();
+            ->success();
     }
 }
