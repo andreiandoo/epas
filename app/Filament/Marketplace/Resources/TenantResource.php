@@ -112,6 +112,9 @@ class TenantResource extends Resource
     {
         $mcId = static::getMarketplaceClientId();
         return parent::getEloquentQuery()
+            // Eager-load venues so the "Locație" column doesn't fire an
+            // N+1 across the list page (one query per tenant otherwise).
+            ->with('venues:id,tenant_id,name')
             ->when($mcId, fn ($q) => $q->where('created_by_marketplace_client_id', $mcId))
             ->when(!$mcId, fn ($q) => $q->whereRaw('1=0'));
     }
@@ -252,11 +255,31 @@ class TenantResource extends Resource
                     ->label('Nume public')
                     ->searchable()
                     ->sortable(),
+
+                // Locație asociată — lista numelor din venues.tenant_id.
+                // Multiple venues get joined with ", " and wrap on the
+                // cell; empty tenants render an em-dash so the column
+                // stays visually aligned. Eager-loaded via ->with('venues')
+                // on getEloquentQuery to avoid N+1 on the list page.
+                Tables\Columns\TextColumn::make('linked_venues_names')
+                    ->label('Locație')
+                    ->getStateUsing(function ($record) {
+                        $names = $record->venues
+                            ->map(fn ($v) => is_array($v->name)
+                                ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name) ?: '')
+                                : (string) $v->name)
+                            ->filter()
+                            ->all();
+                        return empty($names) ? null : implode(', ', $names);
+                    })
+                    ->wrap()
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('owner.email')
                     ->label('Email owner')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('venues_count')
-                    ->label('Locații')
+                    ->label('Nr. Locații')
                     ->counts('venues')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('locale')
