@@ -74,19 +74,18 @@ class EditTenant extends EditRecord
             // Owner-user updates — name + optional password reset. Email is
             // read-only on the edit form so we don't accidentally break a
             // running Android session for the tenant.
+            //
+            // Prod schema: users only stores a single `name` column
+            // (first_name/last_name are model-fillable but not in the
+            // table). We rebuild `name` from the two form inputs when
+            // either was populated.
             if ($tenant->owner_id) {
                 $owner = User::find($tenant->owner_id);
                 if ($owner) {
                     $dirty = [];
-                    if ($this->extracted['owner_first_name'] !== '' && $this->extracted['owner_first_name'] !== (string) $owner->first_name) {
-                        $dirty['first_name'] = $this->extracted['owner_first_name'];
-                    }
-                    if ($this->extracted['owner_last_name'] !== '' && $this->extracted['owner_last_name'] !== (string) $owner->last_name) {
-                        $dirty['last_name'] = $this->extracted['owner_last_name'];
-                    }
-                    if (!empty($dirty)) {
-                        $dirty['name'] = trim(($dirty['first_name'] ?? $owner->first_name) . ' ' . ($dirty['last_name'] ?? $owner->last_name))
-                            ?: $owner->name;
+                    $newFullName = trim($this->extracted['owner_first_name'] . ' ' . $this->extracted['owner_last_name']);
+                    if ($newFullName !== '' && $newFullName !== (string) $owner->name) {
+                        $dirty['name'] = $newFullName;
                     }
                     if ($this->extracted['owner_password'] !== '') {
                         $dirty['password'] = Hash::make($this->extracted['owner_password']);

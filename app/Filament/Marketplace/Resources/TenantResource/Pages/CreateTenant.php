@@ -113,11 +113,15 @@ class CreateTenant extends CreateRecord
             //    path as tenant accounts created via /admin/tenants — the
             //    AmBilet Android app checks user → tenant → venues from
             //    there.
+            //
+            //    Prod schema note: users.first_name / users.last_name don't
+            //    exist on live even though the Model marks them fillable
+            //    (leftover local-dev columns). We only write to users.name
+            //    to avoid the schema-drift crash — the two form inputs are
+            //    concatenated here.
+            $fullName = trim($this->extracted['owner_first_name'] . ' ' . $this->extracted['owner_last_name']);
             $owner = User::create([
-                'first_name' => $this->extracted['owner_first_name'],
-                'last_name' => $this->extracted['owner_last_name'],
-                'name' => trim($this->extracted['owner_first_name'] . ' ' . $this->extracted['owner_last_name'])
-                    ?: $this->extracted['owner_email'],
+                'name' => $fullName !== '' ? $fullName : $this->extracted['owner_email'],
                 'email' => $this->extracted['owner_email'],
                 'password' => Hash::make($this->extracted['owner_password']),
                 'role' => 'tenant',

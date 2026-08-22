@@ -189,7 +189,13 @@ class TenantResource extends Resource
                         ->maxLength(255)
                         ->dehydrated(false)
                         ->afterStateHydrated(function ($component, $record) {
-                            $component->state($record?->owner?->first_name);
+                            // users table on prod only has `name`, not
+                            // first_name / last_name — split on the first
+                            // space so the two-field UI still renders
+                            // sensibly for existing rows.
+                            $name = (string) ($record?->owner?->name ?? '');
+                            [$first] = array_pad(explode(' ', $name, 2), 2, '');
+                            $component->state($first);
                         }),
 
                     Forms\Components\TextInput::make('owner_last_name')
@@ -198,7 +204,9 @@ class TenantResource extends Resource
                         ->maxLength(255)
                         ->dehydrated(false)
                         ->afterStateHydrated(function ($component, $record) {
-                            $component->state($record?->owner?->last_name);
+                            $name = (string) ($record?->owner?->name ?? '');
+                            [, $last] = array_pad(explode(' ', $name, 2), 2, '');
+                            $component->state($last);
                         }),
 
                     Forms\Components\TextInput::make('owner_email')
