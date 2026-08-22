@@ -1640,6 +1640,11 @@ require_once __DIR__ . '/includes/head.php';
                                 <span x-show="addon.line_total === 0" class="text-emerald-300">gratis</span>
                             </div>
                         </template>
+                        <div x-show="item.meta && item.meta.is_group_ticket && item.meta.group_includes_guide && item.qty >= (parseInt(item.min_per_order,10)||1)"
+                             class="flex items-center justify-between text-xs text-emerald-300 mt-0.5 pl-3">
+                            <span>🎁 +1 × <span x-text="(item.meta && item.meta.group_guide_label) ? item.meta.group_guide_label : 'Ghid grup'"></span> <span class="text-white/50">(gratuit)</span></span>
+                            <span>0.00 RON</span>
+                        </div>
                     </div>
                 </template>
             </div>
@@ -2642,6 +2647,7 @@ function reservationPage() {
                     duration_minutes: t.variant.duration_minutes ? Number(t.variant.duration_minutes) : null,
                     price: Number(parseFloat(t.variant.price)) || 0,
                 } : null;
+                const tMeta = t.meta || {};
                 const ticketPayload = {
                     id: Number(t.id) || 0,
                     name: String(t.name || ''),
@@ -2656,6 +2662,10 @@ function reservationPage() {
                     issuing_company: String(t.issuing_company || 'primary'),
                     image_url: t.image_url ? String(t.image_url) : null,
                     variant: variantInfo,
+                    // Leisure guide bonus - persistate pt afisare in /cos si /checkout preview
+                    is_group_ticket: !!tMeta.is_group_ticket,
+                    group_includes_guide: !!tMeta.group_includes_guide,
+                    group_guide_label: tMeta.group_guide_label ? String(tMeta.group_guide_label) : null,
                 };
                 const qty = parseInt(t.qty, 10) || 0;
                 if (qty <= 0) return;
