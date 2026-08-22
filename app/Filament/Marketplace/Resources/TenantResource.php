@@ -114,7 +114,7 @@ class TenantResource extends Resource
         return parent::getEloquentQuery()
             // Eager-load venues so the "Locație" column doesn't fire an
             // N+1 across the list page (one query per tenant otherwise).
-            ->with('venues:id,tenant_id,name')
+            ->with('venues:id,tenant_id,name,city')
             ->when($mcId, fn ($q) => $q->where('created_by_marketplace_client_id', $mcId))
             ->when(!$mcId, fn ($q) => $q->whereRaw('1=0'));
     }
@@ -264,13 +264,19 @@ class TenantResource extends Resource
                 Tables\Columns\TextColumn::make('linked_venues_names')
                     ->label('Locație')
                     ->getStateUsing(function ($record) {
-                        $names = $record->venues
-                            ->map(fn ($v) => is_array($v->name)
-                                ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name) ?: '')
-                                : (string) $v->name)
+                        $labels = $record->venues
+                            ->map(function ($v) {
+                                $name = is_array($v->name)
+                                    ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name) ?: '')
+                                    : (string) $v->name;
+                                if ($name === '') return null;
+                                return trim($v->city ?? '') !== ''
+                                    ? $name . ' (' . $v->city . ')'
+                                    : $name;
+                            })
                             ->filter()
                             ->all();
-                        return empty($names) ? null : implode(', ', $names);
+                        return empty($labels) ? null : implode(', ', $labels);
                     })
                     ->wrap()
                     ->placeholder('—'),

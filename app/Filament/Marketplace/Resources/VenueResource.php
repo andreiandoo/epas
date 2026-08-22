@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\VenueResource\Pages;
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Filament\Marketplace\Resources\TenantResource;
 use App\Models\Venue;
 use App\Models\MarketplaceVenueCategory;
 use Filament\Actions\EditAction;
@@ -251,6 +252,46 @@ class VenueResource extends Resource
                         '))
                         ->columnSpanFull(),
                     
+                    // Proprietar locație — appears only on edit when the
+                    // venue is linked to a marketplace-created tenant
+                    // (venues.tenant_id → tenants.owner_id → users). Click
+                    // on the owner name jumps to the tenant edit page.
+                    SC\Section::make('Proprietar locație')
+                        ->icon('heroicon-o-building-storefront')
+                        ->columnSpanFull()
+                        ->visible(fn ($record) => $record && $record->tenant_id)
+                        ->extraAttributes(['class' => 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/30'])
+                        ->schema([
+                            Forms\Components\Placeholder::make('venue_owner_info')
+                                ->hiddenLabel()
+                                ->content(function ($record) {
+                                    if (!$record?->tenant_id) return new HtmlString('<span class="text-sm text-gray-500">Nu există proprietar linked.</span>');
+                                    $tenant = \App\Models\Tenant::with('owner')->find($record->tenant_id);
+                                    if (!$tenant) return new HtmlString('<span class="text-sm text-gray-500">Tenant #' . $record->tenant_id . ' negăsit.</span>');
+                                    $tenantName = htmlspecialchars($tenant->public_name ?? $tenant->name ?? ('Tenant #' . $tenant->id), ENT_QUOTES);
+                                    $ownerName = htmlspecialchars($tenant->owner?->name ?? '—', ENT_QUOTES);
+                                    $ownerEmail = htmlspecialchars($tenant->owner?->email ?? '—', ENT_QUOTES);
+                                    $editUrl = TenantResource::getUrl('edit', ['record' => $tenant->id]);
+                                    return new HtmlString(
+                                        '<div class="flex flex-col gap-2 py-1">'
+                                        . '<div class="flex items-center gap-3">'
+                                        . '<span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">Owner:</span>'
+                                        . '<a href="' . $editUrl . '" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">'
+                                        . $ownerName
+                                        . '</a>'
+                                        . '<span class="text-xs text-gray-500 dark:text-gray-400">' . $ownerEmail . '</span>'
+                                        . '</div>'
+                                        . '<div class="flex items-center gap-3">'
+                                        . '<span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">Cont tenant:</span>'
+                                        . '<a href="' . $editUrl . '" class="text-sm text-primary-600 dark:text-primary-400 hover:underline">'
+                                        . $tenantName
+                                        . '</a>'
+                                        . '</div>'
+                                        . '</div>'
+                                    );
+                                }),
+                        ]),
+
                     SC\Grid::make(5)->schema([
                         // NAME & SLUG - EN/RO
                         SC\Section::make('Venue Identity')
