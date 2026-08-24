@@ -1379,6 +1379,26 @@ class EventResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('venue_id')
                                     ->label($t('Locație', 'Venue'))
+                                    // Monument-tax awareness badge next to
+                                    // the label. Yellow pill only appears
+                                    // when the selected venue has
+                                    // has_historical_monument_tax=true, so
+                                    // the operator sees the surcharge is
+                                    // active without scrolling to the Taxe
+                                    // section. Same visual as the previous
+                                    // below-select hint, now inline.
+                                    ->hint(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        if (!$venueId || !Venue::where('id', $venueId)->value('has_historical_monument_tax')) {
+                                            return null;
+                                        }
+                                        return new HtmlString(
+                                            '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fef3c7;border:1px solid #fbbf24;border-radius:9999px;font-size:11px;color:#92400e;font-weight:500;">'
+                                            . '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>'
+                                            . 'Monument Istoric'
+                                            . '</span>'
+                                        );
+                                    })
                                     ->searchable()
                                     ->preload()
                                     ->live()
@@ -1504,25 +1524,6 @@ class EventResource extends Resource
                                             ->openUrlInNewTab(),
                                     ])
                                     ->nullable(),
-
-                                // Monument-tax awareness: warn the operator
-                                // when the picked venue has the historical-
-                                // monument tax enabled, so it's obvious the
-                                // subsequent Taxe calculation will include
-                                // that surcharge without them having to
-                                // scroll to the Taxe section.
-                                Forms\Components\Placeholder::make('venue_monument_tax_hint')
-                                    ->hiddenLabel()
-                                    ->visible(function (SGet $get) {
-                                        $venueId = $get('venue_id');
-                                        return $venueId && (bool) Venue::where('id', $venueId)->value('has_historical_monument_tax');
-                                    })
-                                    ->content(fn () => new HtmlString(
-                                        '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;font-size:12px;color:#92400e;font-weight:500;">'
-                                        . '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>'
-                                        . '<span>Taxă Monument Istoric activă la această locație</span>'
-                                        . '</div>'
-                                    )),
 
                                 Forms\Components\TextInput::make('suggested_venue_name')
                                     ->label($t('Locație sugerată de organizator', 'Suggested venue by organizer'))
@@ -3606,13 +3607,6 @@ class EventResource extends Resource
                                                         $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
                                                         return $inh['floor_active'] && $inh['fixed'] > 0 ? $inh['fixed'] : 0;
                                                     })
-                                                    ->helperText(function (SGet $get) use ($marketplace, $t) {
-                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
-                                                        if (!($inh['floor_active'] && $inh['fixed'] > 0)) return null;
-                                                        $cur = $marketplace?->currency ?? 'RON';
-                                                        $fixedStr = number_format($inh['fixed'], 2);
-                                                        return $t("Minim permis: $fixedStr $cur/bilet (floor organizator)", "Minimum allowed: $fixedStr $cur/ticket (organizer floor)");
-                                                    })
                                                     ->step(0.01)
                                                     ->placeholder('2.00')
                                                     ->suffix($marketplace?->currency ?? 'RON')
@@ -3663,7 +3657,15 @@ class EventResource extends Resource
                                                         if (empty($lines)) {
                                                             return null;
                                                         }
-                                                        return new HtmlString('<span style="color:#6b7280;font-size:0.78rem;line-height:1.4;">' . implode('<br>', array_map('e', $lines)) . '</span>');
+                                                        // Floor line renders red so it visually
+                                                        // matches the numeric-min blocker on
+                                                        // commission_fixed above — the operator
+                                                        // sees the same constraint before and
+                                                        // after they try to save. Inheritance
+                                                        // line stays gray.
+                                                        $floorActive = $inh['floor_active'] && $inh['fixed'] > 0;
+                                                        $baseColor = $floorActive ? '#dc2626' : '#6b7280';
+                                                        return new HtmlString('<span style="color:' . $baseColor . ';font-size:0.78rem;line-height:1.4;font-weight:500;">' . implode('<br>', array_map('e', $lines)) . '</span>');
                                                     })
                                                     ->visible(function (SGet $get) use ($marketplace) {
                                                         $type = $get('commission_type');
