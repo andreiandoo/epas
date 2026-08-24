@@ -1805,7 +1805,18 @@ class TicketVariableService
             }
         }
 
-        $seriesStart = (int) ($ticketType?->series_start ?? $mktTicketType?->series_start ?? 1);
+        // Parse the trailing digits from series_start (e.g. "AMB-4744-12000-00001"
+        // → 1). Prior code cast the whole string to int which returned 0 for
+        // any prefix that started with a letter — the first sold ticket then
+        // rendered as "…-00000" instead of "…-00001". Verified 2026-08-22 on
+        // event 4744 tt 12000 where series_start is "AMB-4744-12000-00001".
+        $rawSeriesStart = (string) ($ticketType?->series_start ?? $mktTicketType?->series_start ?? '');
+        $seriesStart = 1;
+        if ($rawSeriesStart !== '' && preg_match('/(\d+)$/', $rawSeriesStart, $m)) {
+            $seriesStart = (int) $m[1];
+        } elseif (ctype_digit($rawSeriesStart)) {
+            $seriesStart = (int) $rawSeriesStart;
+        }
 
         // Calculate position based on ticket_type_id or marketplace_ticket_type_id
         if ($ticket->ticket_type_id) {

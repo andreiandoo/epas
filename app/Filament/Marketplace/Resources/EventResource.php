@@ -1504,6 +1504,26 @@ class EventResource extends Resource
                                             ->openUrlInNewTab(),
                                     ])
                                     ->nullable(),
+
+                                // Monument-tax awareness: warn the operator
+                                // when the picked venue has the historical-
+                                // monument tax enabled, so it's obvious the
+                                // subsequent Taxe calculation will include
+                                // that surcharge without them having to
+                                // scroll to the Taxe section.
+                                Forms\Components\Placeholder::make('venue_monument_tax_hint')
+                                    ->hiddenLabel()
+                                    ->visible(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        return $venueId && (bool) Venue::where('id', $venueId)->value('has_historical_monument_tax');
+                                    })
+                                    ->content(fn () => new HtmlString(
+                                        '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;font-size:12px;color:#92400e;font-weight:500;">'
+                                        . '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>'
+                                        . '<span>Taxă Monument Istoric activă la această locație</span>'
+                                        . '</div>'
+                                    )),
+
                                 Forms\Components\TextInput::make('suggested_venue_name')
                                     ->label($t('Locație sugerată de organizator', 'Suggested venue by organizer'))
                                     ->disabled()
@@ -3575,7 +3595,24 @@ class EventResource extends Resource
                                                     ->label($t('Sumă fixă', 'Fixed amount'))
                                                     ->inlineLabel($il)
                                                     ->numeric()
-                                                    ->minValue(0)
+                                                    // Floor guard: when the organizer has a
+                                                    // commission floor enabled, the fixed amount
+                                                    // per ticket cannot dip below that floor.
+                                                    // Prevents the "operator sets fix 2 lei but
+                                                    // organizer floor is 2.5 → sales charge 2.5"
+                                                    // silent divergence seen on event 4744 tt 12000
+                                                    // (2026-08-22).
+                                                    ->minValue(function (SGet $get) use ($marketplace) {
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                        return $inh['floor_active'] && $inh['fixed'] > 0 ? $inh['fixed'] : 0;
+                                                    })
+                                                    ->helperText(function (SGet $get) use ($marketplace, $t) {
+                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                        if (!($inh['floor_active'] && $inh['fixed'] > 0)) return null;
+                                                        $cur = $marketplace?->currency ?? 'RON';
+                                                        $fixedStr = number_format($inh['fixed'], 2);
+                                                        return $t("Minim permis: $fixedStr $cur/bilet (floor organizator)", "Minimum allowed: $fixedStr $cur/ticket (organizer floor)");
+                                                    })
                                                     ->step(0.01)
                                                     ->placeholder('2.00')
                                                     ->suffix($marketplace?->currency ?? 'RON')

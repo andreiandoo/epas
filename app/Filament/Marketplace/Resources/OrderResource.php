@@ -1474,42 +1474,36 @@ class OrderResource extends Resource
             $html .= "<div style='{$headStyle}'>Comision</div>";
             $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Fără comision (import extern)</span><span style='font-size:12px;color:#64748B;'>0.00 {$currency}</span></div>";
         } elseif ($orderCommission > 0 && !$isPosOrder) {
-            // Determine commission type label
+            // Commission display: universal "X.XX RON/bilet (mode)" derived
+            // from commission_amount / quantity per row. Historical bug
+            // uncovered on order 185018 (event 4744 tt 12000): checkout
+            // snapshot stores commission_rate=6 (inherited from organizer)
+            // even when the ticket type has commission_type='fixed' with
+            // commission_fixed=2. The previous label logic saw rate>0 and
+            // rendered "6.0% (peste)" while the money actually charged was
+            // 2 lei/bilet fix — see conversation 2026-08-22. Deriving from
+            // amount/qty sidesteps the ambiguity and works uniformly for
+            // both fixed and percentage commissions without touching the
+            // snapshot (backward compat for every historical order).
             $modes = collect($commissionDetails)->pluck('commission_mode')->unique();
-            $hasFixed = collect($commissionDetails)->contains(fn ($cd) => ($cd['commission_rate'] ?? 0) == 0 && ($cd['commission_amount'] ?? 0) > 0);
-            $hasPercent = collect($commissionDetails)->contains(fn ($cd) => ($cd['commission_rate'] ?? 0) > 0);
             $isOnTop = $modes->contains(fn ($m) => in_array($m, ['on_top', 'add_on_top', 'added_on_top']));
             $modeLabel = $isOnTop ? 'peste' : 'inclus';
 
-            if ($hasFixed && $hasPercent) {
-                $commLabel = "Comision mixt ({$modeLabel})";
-            } elseif ($hasFixed) {
-                $commLabel = "Comision fix ({$modeLabel})";
-            } else {
-                $rates = collect($commissionDetails)->pluck('commission_rate')->unique()->filter(fn ($r) => $r > 0);
-                $rateStr = $rates->count() === 1 ? number_format($rates->first(), 1) . '%' : 'variabil';
-                $commLabel = "Comision {$rateStr} ({$modeLabel})";
-            }
-
             $html .= "<div style='{$headStyle}'>Comision</div>";
-            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>{$commLabel}</span><span style='{$valueStyle}'>" . number_format($orderCommission, 2) . " {$currency}</span></div>";
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Comision ({$modeLabel})</span><span style='{$valueStyle}'>" . number_format($orderCommission, 2) . " {$currency}</span></div>";
 
-            // Per-type commission breakdown
+            // Per-type commission breakdown — always "N.NN RON/bilet".
             foreach ($commissionDetails as $cd) {
                 $name = $cd['ticket_type'] ?? 'Bilet';
                 if (is_array($name)) $name = $name['ro'] ?? reset($name) ?? 'Bilet';
                 $commission = (float) ($cd['commission_amount'] ?? 0);
-                $rate = (float) ($cd['commission_rate'] ?? 0);
                 $qty = (int) ($cd['quantity'] ?? 1);
                 $cdMode = in_array($cd['commission_mode'] ?? '', ['on_top', 'add_on_top', 'added_on_top']) ? 'peste' : 'inclus';
 
-                if ($commission <= 0) continue;
+                if ($commission <= 0 || $qty <= 0) continue;
 
-                $rateLabel = ($rate > 0)
-                    ? number_format($rate, 1) . '%, ' . $cdMode
-                    : number_format($commission / max(1, $qty), 2) . " lei fix, {$cdMode}";
-
-                $html .= "<div style='{$subStyle}'>" . e($name) . " x{$qty} ({$rateLabel}) — " . number_format($commission, 2) . " {$currency}</div>";
+                $perTicket = number_format($commission / $qty, 2);
+                $html .= "<div style='{$subStyle}'>" . e($name) . " x{$qty} ({$perTicket} {$currency}/bilet, {$cdMode}) — " . number_format($commission, 2) . " {$currency}</div>";
             }
 
             // Organizer receives
