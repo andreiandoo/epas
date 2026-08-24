@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Play Store upload keystore + credentials (NEVER commit)
+store-config/upload.keystore
+store-config/signing.properties
+store-config/KEYSTORE-BACKUP-CREDENTIALS.md

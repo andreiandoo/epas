@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { apiPost, apiGet, publicApiGet } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
+import { formatTime } from '../utils/formatTime';
 import TicketListScreen from './TicketListScreen';
 import SeatingMapScreen from './SeatingMapScreen';
 
@@ -727,7 +728,7 @@ export default function SalesScreen({ navigation }) {
           description: saleDescription,
           qty: cartCount,
           type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: formatTime(new Date()),
           eventId: selectedEvent?.id,
         };
 
@@ -761,7 +762,7 @@ export default function SalesScreen({ navigation }) {
                 type: 'valid',
                 name: `POS ${methodLabel}`,
                 ticketType: item.name,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                time: formatTime(new Date()),
                 code: `pos-${method}-${orderData?.id || Date.now()}-${i}`,
                 eventId: selectedEvent?.id,
                 source: `pos_${method}`,

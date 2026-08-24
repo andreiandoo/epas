@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 import { checkinByCode, getParticipants } from '../api/participants';
+import { formatTime, formatDate, formatDateTime, formatRelativeAgo } from '../utils/formatTime';
 import { publicApiGet } from '../api/client';
 import HardwareScannerInput from '../components/HardwareScannerInput';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -188,20 +189,11 @@ function ScannerCorner({ position, color }) {
 }
 
 // ─── Date Formatting Helper ─────────────────────────────────────────────
+// Backwards-compat wrapper — all timestamp rendering delegates to the
+// centralised formatTime helpers (always in Europe/Bucharest).
 function formatScanDate(isoString) {
   if (!isoString) return 'N/A';
-  try {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return isoString;
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${hours}:${minutes} (${day}-${month}-${year})`;
-  } catch {
-    return isoString;
-  }
+  return formatDateTime(isoString) || String(isoString);
 }
 
 // ─── Extract Ticket Code Helper ─────────────────────────────────────────────
@@ -491,11 +483,12 @@ export default function CheckInScreen({ navigation }) {
         type: 'duplicate',
         data: {
           message: 'Acest bilet a fost deja scanat',
-          checkedInAt: storedData?.checkedInAt || 'În această sesiune',
+          checkedInAt: storedData?.checkedInAt || null,
           code: code,
           name: storedData?.name || 'N/A',
           attendeeName: storedData?.attendeeName || storedData?.name || 'N/A',
           customerName: storedData?.customerName || storedData?.name || 'N/A',
+          phone: storedData?.phone || '',
           ticketType: storedData?.ticketType || 'N/A',
           checkedInBy: storedData?.checkedInBy || null,
           section: storedData?.section || null,
@@ -517,7 +510,7 @@ export default function CheckInScreen({ navigation }) {
         type: 'duplicate',
         name: storedData?.name || 'Deja scanat',
         ticketType: storedData?.ticketType || 'N/A',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(new Date()),
         at: Date.now(),
         code: code,
         eventId: selectedEvent?.id,
@@ -547,6 +540,10 @@ export default function CheckInScreen({ navigation }) {
             name: data.customer?.name || data.ticket?.customer_name || 'Participant',
             attendeeName: data.ticket?.attendee_name || data.customer?.name || 'Participant',
             customerName: data.order?.customer_name || data.customer?.name || 'Participant',
+            // Phone number for the buyer — backend now returns it under
+            // customer.phone (CRM record) with order.customer_phone as
+            // fallback. Empty string when unknown.
+            phone: data.customer?.phone || data.order?.customer_phone || '',
             ticketType: data.ticket?.ticket_type || 'Bilet',
             section: data.ticket?.section || null,
             row: data.ticket?.row || null,
@@ -565,6 +562,7 @@ export default function CheckInScreen({ navigation }) {
           name: result.data.name,
           attendeeName: result.data.attendeeName,
           customerName: result.data.customerName,
+          phone: result.data.phone,
           ticketType: result.data.ticketType,
           section: result.data.section,
           row: result.data.row,
@@ -587,7 +585,7 @@ export default function CheckInScreen({ navigation }) {
           type: 'valid',
           name: result.data.name,
           ticketType: result.data.ticketType,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: formatTime(new Date()),
         at: Date.now(),
           code: code,
           eventId: selectedEvent?.id,
@@ -611,9 +609,12 @@ export default function CheckInScreen({ navigation }) {
       const message = error.message || '';
 
       if (message.toLowerCase().includes('already') || message.toLowerCase().includes('checked')) {
-        // Parse datetime from error message like "Ticket already checked in at 2024-03-15 19:30:00"
-        const dateMatch = message.match(/at\s+(.+)$/i);
-        const checkedInAt = error.data?.ticket?.checked_in_at || (dateMatch ? dateMatch[1].trim() : (error.checked_in_at || 'Mai devreme'));
+        // Backend puts the ticket payload in error.data.ticket — we no
+        // longer regex the message string (fragile: old server dumped
+        // naked "Y-m-d H:i:s" UTC, new server dumps ISO 8601 with offset).
+        // If the field is missing entirely (offline retry), fall through
+        // to a "Mai devreme" placeholder.
+        const checkedInAt = error.data?.ticket?.checked_in_at || error.checked_in_at || null;
 
         const result = {
           type: 'duplicate',
@@ -624,6 +625,7 @@ export default function CheckInScreen({ navigation }) {
             name: error.data?.customer?.name || error.attendee_name || 'N/A',
             attendeeName: error.data?.ticket?.attendee_name || error.data?.customer?.name || error.attendee_name || 'N/A',
             customerName: error.data?.order?.customer_name || error.data?.customer?.name || 'N/A',
+            phone: error.data?.customer?.phone || error.data?.order?.customer_phone || '',
             ticketType: error.data?.ticket?.ticket_type || error.ticket_type || 'N/A',
             checkedInBy: error.data?.ticket?.checked_in_by || null,
             section: error.data?.ticket?.section || null,
@@ -640,6 +642,7 @@ export default function CheckInScreen({ navigation }) {
           name: result.data.name,
           attendeeName: result.data.attendeeName,
           customerName: result.data.customerName,
+          phone: result.data.phone,
           ticketType: result.data.ticketType,
           checkedInAt: checkedInAt,
           checkedInBy: result.data.checkedInBy,
@@ -660,7 +663,7 @@ export default function CheckInScreen({ navigation }) {
           type: 'duplicate',
           name: result.data.name,
           ticketType: result.data.ticketType,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: formatTime(new Date()),
         at: Date.now(),
           code: code,
           eventId: selectedEvent?.id,
@@ -690,7 +693,7 @@ export default function CheckInScreen({ navigation }) {
           type: 'invalid',
           name: 'Bilet Invalid',
           ticketType: '-',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: formatTime(new Date()),
         at: Date.now(),
           code: code,
           eventId: selectedEvent?.id,
@@ -838,31 +841,93 @@ export default function CheckInScreen({ navigation }) {
             </Text>
             {scanResult.type === 'valid' && (
               <>
-                <Text style={styles.resultName}>{scanResult.data.name}</Text>
+                {/* Primary line = beneficiary (name printed on the ticket). */}
+                <Text style={styles.resultName}>
+                  {scanResult.data.attendeeName || scanResult.data.name}
+                </Text>
+
+                {/* Ticket type + external badge on the same row. */}
                 <View style={styles.resultDetails}>
-                  <Text style={styles.resultDetail}>{scanResult.data.ticketType}</Text>
+                  <Text style={[styles.resultDetail, { fontWeight: '600' }]}>
+                    {scanResult.data.ticketType}
+                  </Text>
                   {scanResult.data.orderSource === 'external' && (
                     <Text style={{ fontSize: 11, color: '#6366f1', fontWeight: '600', backgroundColor: '#eef2ff', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 6, overflow: 'hidden' }}>Bilet extern</Text>
                   )}
                 </View>
+
+                {/* Seat coordinates — bolded so operator can direct the
+                    holder to the exact spot. */}
                 {(scanResult.data.section || scanResult.data.row || scanResult.data.seat) && (
-                  <Text style={styles.resultDetail}>
+                  <Text style={[styles.resultDetail, { fontWeight: '700', color: colors.green }]}>
                     {[
                       scanResult.data.section ? `Secțiune ${scanResult.data.section}` : null,
                       scanResult.data.row ? `Rând ${scanResult.data.row}` : null,
                       scanResult.data.seat ? `Loc ${scanResult.data.seat}` : null,
-                    ].filter(Boolean).join(', ')}
+                    ].filter(Boolean).join(' · ')}
                   </Text>
                 )}
+
+                {/* Buyer info — surfaced only when it differs from the
+                    beneficiary, so the operator doesn't see redundant lines. */}
+                {(scanResult.data.customerName
+                  && scanResult.data.customerName !== 'N/A'
+                  && scanResult.data.customerName !== scanResult.data.attendeeName
+                  && scanResult.data.customerName !== scanResult.data.name) && (
+                  <Text style={styles.resultDetail}>
+                    Cumpărat de {scanResult.data.customerName}
+                  </Text>
+                )}
+                {scanResult.data.phone ? (
+                  <Text style={styles.resultDetail}>Tel: {scanResult.data.phone}</Text>
+                ) : null}
               </>
             )}
             {scanResult.type === 'duplicate' && (
               <>
-                <Text style={styles.resultName}>{scanResult.data.name !== 'N/A' ? scanResult.data.name : ''}</Text>
+                {/* Same info as a valid scan — plus who scanned + when. */}
+                {(scanResult.data.attendeeName && scanResult.data.attendeeName !== 'N/A') ? (
+                  <Text style={styles.resultName}>{scanResult.data.attendeeName}</Text>
+                ) : null}
+
+                <View style={styles.resultDetails}>
+                  <Text style={[styles.resultDetail, { fontWeight: '600' }]}>
+                    {scanResult.data.ticketType}
+                  </Text>
+                </View>
+
+                {(scanResult.data.section || scanResult.data.row || scanResult.data.seat) && (
+                  <Text style={[styles.resultDetail, { fontWeight: '700', color: colors.amber }]}>
+                    {[
+                      scanResult.data.section ? `Secțiune ${scanResult.data.section}` : null,
+                      scanResult.data.row ? `Rând ${scanResult.data.row}` : null,
+                      scanResult.data.seat ? `Loc ${scanResult.data.seat}` : null,
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                )}
+
+                {(scanResult.data.customerName
+                  && scanResult.data.customerName !== 'N/A'
+                  && scanResult.data.customerName !== scanResult.data.attendeeName) && (
+                  <Text style={styles.resultDetail}>
+                    Cumpărat de {scanResult.data.customerName}
+                  </Text>
+                )}
+                {scanResult.data.phone ? (
+                  <Text style={styles.resultDetail}>Tel: {scanResult.data.phone}</Text>
+                ) : null}
+
+                {/* "Scanat acum X min · HH:MM · de OperatorName" — the
+                    key info the operator needs to decide whether to let
+                    the person in (fresh duplicate = same person came
+                    back, old = attempted re-use). */}
                 <View style={styles.resultDetails}>
                   <ClockIcon size={14} color={colors.amber} />
-                  <Text style={[styles.resultDetail, { color: colors.amber, marginLeft: 4 }]}>
-                    Scanat: {scanResult.data.checkedInAt}
+                  <Text style={[styles.resultDetail, { color: colors.amber, marginLeft: 4, fontWeight: '600' }]}>
+                    {scanResult.data.checkedInAt
+                      ? `${formatRelativeAgo(scanResult.data.checkedInAt)} · ${formatTime(scanResult.data.checkedInAt)}`
+                      : 'Mai devreme'}
+                    {scanResult.data.checkedInBy ? ` · de ${scanResult.data.checkedInBy}` : ''}
                   </Text>
                 </View>
               </>
@@ -1111,19 +1176,15 @@ export default function CheckInScreen({ navigation }) {
               // Prefer the raw `at` timestamp (added in v2.0.13) so we can
               // render a full date+time. Fall back to the legacy `time`
               // (HH:MM only) for scans stored before this update.
+              // Always render in Europe/Bucharest via the shared helper so
+              // operators traveling / testing on non-RO devices see the
+              // same time the venue clock shows.
               let dateLabel = '';
               let timeLabel = scan.time || '';
               if (scan.at) {
-                const d = new Date(scan.at);
-                if (!isNaN(d.getTime())) {
-                  const dd = String(d.getDate()).padStart(2, '0');
-                  const mm = String(d.getMonth() + 1).padStart(2, '0');
-                  const yy = String(d.getFullYear()).slice(-2);
-                  const hh = String(d.getHours()).padStart(2, '0');
-                  const mi = String(d.getMinutes()).padStart(2, '0');
-                  dateLabel = `${dd}.${mm}.${yy}`;
-                  timeLabel = `${hh}:${mi}`;
-                }
+                const t = formatTime(scan.at);
+                if (t) timeLabel = t;
+                dateLabel = formatDate(scan.at) || '';
               }
               return (
                 <View key={scan.id} style={styles.recentItem}>

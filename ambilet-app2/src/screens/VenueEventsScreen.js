@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { listEvents } from '../api/venueOwner';
+import { formatDate as formatDateRO } from '../utils/formatTime';
 
 const TABS = [
   { key: 'upcoming', label: 'Viitor' },
@@ -56,13 +57,7 @@ function ChevronIcon({ size = 18, color }) {
 
 function formatDate(iso) {
   if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
-  } catch {
-    return iso;
-  }
+  return formatDateRO(iso) || iso;
 }
 
 function EventCard({ event, onPress }) {

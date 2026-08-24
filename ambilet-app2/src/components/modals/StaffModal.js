@@ -16,6 +16,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { getTeamMembers } from '../../api/team';
 import { getVenueGates } from '../../api/gates';
 import { useEvent } from '../../context/EventContext';
+import { formatTime, formatRelativeAgo } from '../../utils/formatTime';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -78,8 +79,13 @@ function StaffCard({ member, gateName }) {
   const cashRaw = member.cashAmount ?? member.cash_amount ?? member.stats?.cash_amount;
   const cardRaw = member.cardAmount ?? member.card_amount ?? member.stats?.card_amount;
   const gate = member.gate || member.gate_name || gateName || null;
-  const shiftStart = member.shiftStart || member.shift_started_at || null;
-  const lastActive = member.lastActive || member.last_active_at || null;
+  // Timestamps come from the server as ISO strings — surface them in RO
+  // time via the shared helpers so a member who logged in at 17:00 RO
+  // isn't displayed as 14:00 (UTC leak).
+  const shiftStartRaw = member.shiftStart || member.shift_started_at || null;
+  const lastActiveRaw = member.lastActive || member.last_active_at || null;
+  const shiftStart = shiftStartRaw ? formatTime(shiftStartRaw) : null;
+  const lastActive = lastActiveRaw ? formatRelativeAgo(lastActiveRaw) : null;
 
   return (
     <View style={styles.staffCard}>

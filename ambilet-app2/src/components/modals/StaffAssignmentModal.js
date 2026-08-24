@@ -22,6 +22,7 @@ import { getVenueGates } from '../../api/gates';
 import { getEvents } from '../../api/events';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 import { categorizeEvent } from '../../utils/eventCategories';
+import { formatDate } from '../../utils/formatTime';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -318,7 +319,7 @@ function MemberCard({
               {upcomingEvents.map(ev => {
                 const isSel = editingEventIds.includes(ev.id);
                 const dateLabel = ev.starts_at
-                  ? new Date(ev.starts_at).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  ? formatDate(ev.starts_at)
                   : '';
                 return (
                   <TouchableOpacity
@@ -1006,7 +1007,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                         {upcomingEvents.map(ev => {
                           const isSel = inviteEventIds.includes(ev.id);
                           const dateLabel = ev.starts_at
-                            ? new Date(ev.starts_at).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            ? formatDate(ev.starts_at)
                             : '';
                           return (
                             <TouchableOpacity

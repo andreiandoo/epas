@@ -1,0 +1,4 @@
+storeFile=../../store-config/upload.keystore
+storePassword=<REPLACE_ME>
+keyAlias=ambilet-scan-upload
+keyPassword=<REPLACE_ME>

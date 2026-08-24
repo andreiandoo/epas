@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { scanLookup, createNote } from '../api/venueOwner';
+import { formatTime, formatDate } from '../utils/formatTime';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCANNER_SIZE = Math.min(300, SCREEN_WIDTH - 60);
@@ -63,12 +64,10 @@ function extractCode(input) {
 
 function formatDateTime(iso) {
   if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    const date = d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
-    const time = d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-    return `${date} · ${time}`;
-  } catch { return iso; }
+  const date = formatDate(iso);
+  const time = formatTime(iso);
+  if (!date && !time) return iso;
+  return `${date} · ${time}`;
 }
 
 function statusColor(s) {

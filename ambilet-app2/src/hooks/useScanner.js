@@ -4,6 +4,7 @@ import { publicApiGet } from '../api/client';
 import { useApp } from '../context/AppContext';
 import * as Haptics from 'expo-haptics';
 import { playSuccess, playError } from '../utils/sounds';
+import { formatTime } from '../utils/formatTime';
 
 export function useScanner() {
   const [isScanning, setIsScanning] = useState(false);
@@ -46,7 +47,7 @@ export function useScanner() {
             ticket: result.data?.ticket?.ticket_type || 'Ticket',
             seat: result.data?.ticket?.seat_label,
             message: 'Welcome! Enjoy the show.',
-            time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+            time: formatTime(new Date()),
             code,
           };
           setScanResult(scanData);
@@ -71,7 +72,7 @@ export function useScanner() {
             ticket: result.ticket_type || 'Ticket',
             seat: result.seat_label,
             message: 'Valid ticket - tap to check in',
-            time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+            time: formatTime(new Date()),
             code,
             needsConfirm: true,
           };
@@ -85,8 +86,8 @@ export function useScanner() {
             status: 'duplicate',
             name: result.attendee_name || 'Guest',
             ticket: result.ticket_type || 'Ticket',
-            message: `Already scanned${result.checked_in_at ? ' at ' + new Date(result.checked_in_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : ''}`,
-            time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+            message: `Already scanned${result.checked_in_at ? ' at ' + formatTime(result.checked_in_at) : ''}`,
+            time: formatTime(new Date()),
             code,
           };
           if (vibrationFeedback) {
@@ -100,7 +101,7 @@ export function useScanner() {
             name: null,
             ticket: null,
             message: status === 'not_found' ? 'Ticket not found' : `Ticket ${status}`,
-            time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+            time: formatTime(new Date()),
             code,
           };
           if (vibrationFeedback) {
@@ -123,7 +124,7 @@ export function useScanner() {
         name: null,
         ticket: null,
         message: message,
-        time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(new Date()),
         code,
       };
       setScanResult(scanData);

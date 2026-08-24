@@ -18,6 +18,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { getEvent, listAttendees, exportAttendees } from '../api/venueOwner';
+import { formatDate } from '../utils/formatTime';
 import { useEvent } from '../context/EventContext';
 
 function BackIcon({ size = 22, color }) {
@@ -45,12 +46,9 @@ function ChevronIcon({ size = 16, color }) {
   );
 }
 
-function formatDate(iso) {
+function formatDateSafe(iso) {
   if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
-  } catch { return iso; }
+  return formatDate(iso) || iso;
 }
 
 function statusColor(status) {
@@ -117,7 +115,7 @@ function AttendeeRow({ ticket, onPress }) {
           {ticket.order?.order_number ? ` · ${ticket.order.order_number}` : ''}
         </Text>
         {seatText && <Text style={styles.rowSeat}>{seatText}</Text>}
-        <Text style={styles.rowDate}>{formatDate(ticket.order?.placed_at)}</Text>
+        <Text style={styles.rowDate}>{formatDateSafe(ticket.order?.placed_at)}</Text>
       </View>
       <ChevronIcon />
     </TouchableOpacity>
@@ -303,7 +301,7 @@ export default function VenueEventDetailScreen({ route, navigation }) {
       {event && (
         <View style={styles.summary}>
           <Text style={styles.summaryDate}>
-            {formatDate(event.start_date)}
+            {formatDateSafe(event.start_date)}
             {event.start_time ? ` · ${event.start_time.slice(0, 5)}` : ''}
           </Text>
           {event.marketplace_organizer?.name && (

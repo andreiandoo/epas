@@ -13,6 +13,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
 import { getParticipants, checkinByBarcode } from '../api/participants';
+import { formatTime, formatDate } from '../utils/formatTime';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -96,14 +97,10 @@ function StatusBadge({ status, checkedInAt }) {
 // on unparseable input so the caller can omit the row entirely.
 function formatCheckInStamp(input) {
   if (!input) return null;
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return null;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yy = String(d.getFullYear()).slice(-2);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}.${mm}.${yy} · ${hh}:${mi}`;
+  const date = formatDate(input);
+  const time = formatTime(input);
+  if (!date && !time) return null;
+  return `${date} · ${time}`;
 }
 
 function TicketCard({ item, onCheckIn, isCheckingIn }) {

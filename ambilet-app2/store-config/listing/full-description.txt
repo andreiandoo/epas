@@ -1,0 +1,56 @@
+AmBilet este aplicația oficială pentru organizatorii de evenimente înregistrați pe platforma AmBilet.ro — soluția completă pentru vânzarea directă la intrare, scanarea rapidă a biletelor și monitorizarea în timp real a evenimentului tău.
+
+━━━ CE POȚI FACE ━━━
+
+📊 PANOU DE CONTROL
+Vezi în timp real câți oameni au intrat, câte bilete s-au vândut, ce încasări ai avut. Grafice live cu ritmul vânzărilor. Tot ce contează, pe un ecran.
+
+🎫 SCANARE RAPIDĂ
+Cameră cu focus automat + suport pentru scanere Bluetooth externe. Peste 100 scanări pe minut cu un operator experimentat. Rezolvi cozile.
+
+💳 VÂNZARE DIRECTĂ (POS)
+Vinde bilete la intrare cash, card sau prin invitații. Confirmare vizuală clară, print termic opțional. Bilete emise pe loc, valabile imediat pentru scanare.
+
+📍 SEATING (LOCURI)
+Pentru evenimente cu locuri fixe: hartă interactivă a sălii, selectezi locurile ocupate de client cu tap. Nu mai mixezi rândurile.
+
+👥 ECHIPĂ & PORȚI
+Adaugi personal, distribui responsabilitățile pe porți. Fiecare operator vede doar accesul lui. Toate scanările loghează cine + când + unde.
+
+📈 RAPOARTE
+Export CSV vânzări + check-in-uri. Vezi ce tip de bilet s-a vândut cel mai bine, la ce oră. Reconcilierea la sfârșitul evenimentului e trivială.
+
+🚨 URGENȚE
+Buton de raport urgență cu escaladare la contact responsabil. Toate raportările loghează timestamp + operator + locație.
+
+📶 OFFLINE-READY
+Merge fără internet — vânzările și scanările se sincronizează automat când revine semnalul. Poți lucra în arene subterane, festivaluri fără conexiune, oriunde.
+
+━━━ CINE POATE FOLOSI ━━━
+
+- Organizatori de evenimente cu cont AmBilet.ro activ
+- Personal angajat (staff invitat de organizator)
+- Manageri de porți / responsabili acces
+
+Ai nevoie de acreditare de la echipa AmBilet.ro pentru a te loga. Cererile de cont se fac pe ambilet.ro.
+
+━━━ SIGURANȚĂ ━━━
+
+- Login cu email + parolă emise de AmBilet (nu Facebook / Google)
+- Auto-logout după inactivitate (configurabil 5-30 min)
+- Credentiale criptate local (Android Keystore)
+- Nici o dată nu părăsește serverele AmBilet — GDPR compliant
+- Comunicare exclusivă HTTPS/TLS
+
+━━━ CERINȚE ━━━
+
+- Android 7.0 (API 24) sau mai nou
+- Cameră (pentru scanare QR)
+- Cont AmBilet.ro activ (staff sau organizator)
+- Conexiune internet recomandată (offline funcționează cu sync ulterior)
+
+━━━ SUPORT ━━━
+
+Ai probleme? Contactează echipa AmBilet.ro prin canalele oficiale sau la suport@ambilet.ro.
+
+Vezi manualul complet integrat în aplicație — Setări → Manual utilizator (29 capitole, cu screenshot-uri).

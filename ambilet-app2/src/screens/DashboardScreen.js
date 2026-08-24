@@ -16,6 +16,7 @@ import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 import { apiGet } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
+import { formatTime, formatDate } from '../utils/formatTime';
 import { colors } from '../theme/colors';
 import Skeleton from '../components/Skeleton';
 import { copyToClipboard } from '../utils/copyToClipboard';
@@ -1098,26 +1099,18 @@ function SalesBreakdownModal({ visible, onClose, eventId }) {
 // ---------------------------------------------------------------------------
 
 /**
- * Format event start date as "DD.MM.YYYY · HH:MM" using a local-time interpretation.
- * Accepts the API's `starts_at` ISO string (which is a naive local datetime) or
- * a plain date.
+ * Format event start date as "DD.MM.YYYY · HH:MM" in Europe/Bucharest via
+ * the shared helpers. When the input has no time component, the trailing
+ * " · HH:MM" is omitted.
  */
 function formatEventDate(raw) {
   if (!raw) return '';
-  try {
-    const d = new Date(raw);
-    if (isNaN(d.getTime())) return '';
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    let out = `${day}.${month}.${year}`;
-    if (typeof raw === 'string' && raw.includes('T')) {
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      out += ` · ${hh}:${mm}`;
-    }
-    return out;
-  } catch { return ''; }
+  const date = formatDate(raw);
+  if (!date) return '';
+  const hasTime = typeof raw === 'string' && raw.includes('T');
+  if (!hasTime) return date;
+  const time = formatTime(raw);
+  return time ? `${date} · ${time}` : date;
 }
 
 /**

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getTicket, createNote, updateNote, deleteNote } from '../api/venueOwner';
+import { formatTime, formatDate } from '../utils/formatTime';
 
 function BackIcon({ size = 22, color }) {
   return (
@@ -44,12 +45,10 @@ function EditIcon({ size = 16, color }) {
 
 function formatDateTime(iso) {
   if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    const date = d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
-    const time = d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-    return `${date} · ${time}`;
-  } catch { return iso; }
+  const date = formatDate(iso);
+  const time = formatTime(iso);
+  if (!date && !time) return iso;
+  return `${date} · ${time}`;
 }
 
 function statusColor(status) {

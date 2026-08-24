@@ -16,6 +16,7 @@ import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 import { colors } from '../../theme/colors';
 import { getCategoryLabel } from '../../utils/eventCategories';
 import { pickString } from '../../utils/pickString';
+import { formatTime, formatDate } from '../../utils/formatTime';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -132,23 +133,17 @@ function EventItem({ event, category, onPress }) {
   const rawDate = event.starts_at || event.event_date || event.date || event.start_date || '';
   let formattedDate = '';
   if (rawDate) {
-    try {
-      const d = new Date(rawDate);
-      if (!isNaN(d.getTime())) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        formattedDate = `${day}.${month}.${year}`;
-        // If we got a full ISO with a time component, append HH:MM
-        if (typeof rawDate === 'string' && rawDate.includes('T')) {
-          const hh = String(d.getHours()).padStart(2, '0');
-          const mm = String(d.getMinutes()).padStart(2, '0');
-          formattedDate += ` \u00B7 ${hh}:${mm}`;
-        } else if (event.start_time) {
-          formattedDate += ` \u00B7 ${event.start_time.slice(0, 5)}`;
-        }
+    // Render in Europe/Bucharest via the shared helper so a device with
+    // a non-RO timezone still shows the venue-local start time.
+    formattedDate = formatDate(rawDate);
+    if (formattedDate) {
+      if (typeof rawDate === 'string' && rawDate.includes('T')) {
+        const time = formatTime(rawDate);
+        if (time) formattedDate += ` \u00B7 ${time}`;
+      } else if (event.start_time) {
+        formattedDate += ` \u00B7 ${event.start_time.slice(0, 5)}`;
       }
-    } catch { formattedDate = ''; }
+    }
   }
   const venueLine = venueCity ? (venueName ? `${venueName}, ${venueCity}` : venueCity) : venueName;
 
