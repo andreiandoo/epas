@@ -236,6 +236,14 @@ class MarketplacePanelProvider extends PanelProvider
 
             // Secondary sidebar for Tools / Microservices / Communications / Gamification navigation
             ->renderHook('panels::body.end', fn (): string => view('filament.components.marketplace-secondary-sidebar')->render())
+            // Expose current admin role to the secondary-sidebar script so it can
+            // keep Coupon Codes / Coupon Campaigns visible in the primary Tools
+            // group for Administrator / Moderator (they can't open the secondary
+            // Microservices panel since its trigger requires super_admin access).
+            ->renderHook('panels::body.end', function () {
+                $isSuper = auth('marketplace_admin')->user()?->isSuperAdmin() ?? false;
+                return '<script>window.EP_MARKETPLACE_IS_SUPER_ADMIN = ' . ($isSuper ? 'true' : 'false') . ';</script>';
+            })
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
             // Secondary Sidebar – Alpine store & DOM interception (multi-panel)
@@ -333,6 +341,12 @@ class MarketplacePanelProvider extends PanelProvider
 
             // Items that should stay visible in the primary Tools group (not moved to secondary sidebar)
             const EP_KEEP_IN_TOOLS = ['Media Library', 'Gift Card Designs', 'Template bilete'];
+            // Administrator / Moderator cannot open the Microservices secondary
+            // panel (the trigger is super_admin-only), so surface Coupon Codes
+            // and Coupon Campaigns directly in the primary Tools group for them.
+            if (window.EP_MARKETPLACE_IS_SUPER_ADMIN === false) {
+                EP_KEEP_IN_TOOLS.push('Coupon Codes', 'Coupon Campaigns');
+            }
 
             function epSetupSecondarySidebar() {
                 const servicesGroup = document.querySelector('[data-group-label="Tools"]');
