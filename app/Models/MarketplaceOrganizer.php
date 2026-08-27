@@ -50,6 +50,17 @@ class MarketplaceOrganizer extends Authenticatable
         'representative_first_name',
         'representative_last_name',
 
+        // Individual details (persoana fizica) — used for document generation
+        // when person_type === 'pf' in place of the company_* fields.
+        'individual_full_name',
+        'individual_cnp',
+        'individual_id_series',
+        'individual_id_number',
+        'individual_address',
+        'individual_city',
+        'individual_county',
+        'individual_country',
+
         // Guarantor / Personal Details
         'guarantor_first_name',
         'guarantor_last_name',

@@ -222,6 +222,7 @@ class OrganizerResource extends Resource
                                     'pj' => 'Persoana Juridica (Legal Entity)',
                                     'pf' => 'Persoana Fizica (Individual)',
                                 ])
+                                ->live()
                                 ->native(false),
 
                             Forms\Components\Select::make('work_mode')
@@ -287,6 +288,53 @@ class OrganizerResource extends Resource
                                 ->key('date-legale')
                                 ->icon('heroicon-o-building-office')
                                 ->schema([
+
+                    // Shown only for Persoana Fizica. Feeds document-generation
+                    // variables (Impozit spectacole, Decont, PV, etc.) instead of
+                    // the Company Information fields when person_type === 'pf'.
+                    Section::make('Individual Information')
+                        ->icon('heroicon-o-user')
+                        ->description('Date persoană fizică — folosite la generarea documentelor când tipul este Persoană Fizică.')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('person_type') === 'pf')
+                        ->schema([
+                            Forms\Components\TextInput::make('individual_full_name')
+                                ->label('Nume complet')
+                                ->maxLength(255)
+                                ->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('individual_cnp')
+                                ->label('CNP')
+                                ->maxLength(13)
+                                ->helperText('13 cifre'),
+
+                            Forms\Components\TextInput::make('individual_id_series')
+                                ->label('Serie buletin')
+                                ->maxLength(5)
+                                ->extraInputAttributes(['style' => 'text-transform: uppercase']),
+
+                            Forms\Components\TextInput::make('individual_id_number')
+                                ->label('Nr. buletin')
+                                ->maxLength(20),
+
+                            Forms\Components\Textarea::make('individual_address')
+                                ->label('Adresă')
+                                ->rows(2)
+                                ->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('individual_city')
+                                ->label('Oraș')
+                                ->maxLength(100),
+
+                            Forms\Components\TextInput::make('individual_county')
+                                ->label('Județ')
+                                ->maxLength(100),
+
+                            Forms\Components\TextInput::make('individual_country')
+                                ->label('Țară')
+                                ->maxLength(100)
+                                ->default('România'),
+                        ])
+                        ->columns(2),
 
                     Section::make('Company Information')
                         ->icon('heroicon-o-building-office')
@@ -1410,6 +1458,21 @@ class OrganizerResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('person_type')
+                    ->label('Tip')
+                    ->badge()
+                    ->state(fn (MarketplaceOrganizer $r): string => match ($r->person_type) {
+                        'pf' => 'Persoană Fizică',
+                        'pj' => 'Persoană Juridică',
+                        default => '—',
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'Persoană Fizică' => 'info',
+                        'Persoană Juridică' => 'success',
+                        default => 'gray',
+                    })
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
