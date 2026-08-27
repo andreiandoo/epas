@@ -85,6 +85,32 @@ class ChatRoutingService
     }
 
     /**
+     * Explicitly assign a conversation to a specific operator (console "claim"
+     * / transfer). Increments the target's active-chat counter and, when the
+     * conversation was already assigned elsewhere, releases the previous slot.
+     */
+    public function assignTo(ChatConversation $conversation, int $adminId): void
+    {
+        DB::transaction(function () use ($conversation, $adminId) {
+            $previous = $conversation->assigned_to_marketplace_admin_id;
+            if ($previous && $previous !== $adminId) {
+                $this->presence->incrementActiveChats($previous, -1);
+            }
+
+            if ($previous !== $adminId) {
+                $this->presence->incrementActiveChats($adminId, 1);
+            }
+
+            $conversation->forceFill([
+                'assigned_to_marketplace_admin_id' => $adminId,
+                'status' => ChatConversation::STATUS_ACTIVE,
+                'assigned_at' => $conversation->assigned_at ?? now(),
+                'last_activity_at' => now(),
+            ])->save();
+        });
+    }
+
+    /**
      * Release an operator slot when a conversation ends or is transferred away.
      */
     public function release(ChatConversation $conversation): void

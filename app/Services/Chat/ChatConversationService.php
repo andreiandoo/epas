@@ -2,6 +2,8 @@
 
 namespace App\Services\Chat;
 
+use App\Events\Chat\ChatConversationUpdated;
+use App\Events\Chat\ChatMessageSent;
 use App\Models\Chat\ChatConversation;
 use App\Models\Chat\ChatMessage;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,7 @@ class ChatConversationService
         private ChatRoutingService $routing,
         private ChatScheduleService $schedule,
         private ChatPresenceService $presence,
+        private ChatTranscriptService $transcripts,
     ) {
     }
 
@@ -140,6 +143,10 @@ class ChatConversationService
         ])->save();
 
         $this->routing->release($conversation);
+        ChatConversationUpdated::dispatch($conversation);
+
+        // Best-effort transcript email to the opener (non-fatal).
+        $this->transcripts->sendTranscript($conversation);
     }
 
     /**
@@ -153,6 +160,9 @@ class ChatConversationService
             'chat_conversation_id' => $conversation->id,
             'delivered_at' => now(),
         ], $attrs))->save();
+
+        $message->setRelation('conversation', $conversation);
+        ChatMessageSent::dispatch($message);
 
         return $message;
     }

@@ -675,6 +675,49 @@ switch ($action) {
         $endpoint = '/contact';
         break;
 
+    // ---- Live Chat microservice (widget) ----
+    // Bearer is forwarded when present (logged customer/organizer) so Core can
+    // identify the opener; guests work without it. Ownership across polling is
+    // proven by the per-conversation session_token, not by auth.
+    case 'chat.bootstrap':
+        $endpoint = '/chat/bootstrap';
+        break;
+
+    case 'chat.open':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $requiresAuth = true;
+        $endpoint = '/chat/conversations';
+        break;
+
+    case 'chat.show':
+        $ref = $_GET['ref'] ?? '';
+        if (!$ref) { http_response_code(400); echo json_encode(['error' => 'Missing ref']); exit; }
+        $params = [];
+        if (isset($_GET['after'])) $params['after'] = (int)$_GET['after'];
+        if (isset($_GET['session_token'])) $params['session_token'] = $_GET['session_token'];
+        $requiresAuth = true;
+        $endpoint = '/chat/conversations/' . urlencode($ref) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'chat.message':
+        $ref = $_GET['ref'] ?? '';
+        if (!$ref) { http_response_code(400); echo json_encode(['error' => 'Missing ref']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $requiresAuth = true;
+        $endpoint = '/chat/conversations/' . urlencode($ref) . '/messages';
+        break;
+
+    case 'chat.rating':
+        $ref = $_GET['ref'] ?? '';
+        if (!$ref) { http_response_code(400); echo json_encode(['error' => 'Missing ref']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $requiresAuth = true;
+        $endpoint = '/chat/conversations/' . urlencode($ref) . '/rating';
+        break;
+
     case 'search':
         $query = $_GET['q'] ?? '';
         $limit = min((int)($_GET['limit'] ?? 10), 50);

@@ -4368,3 +4368,30 @@ Route::prefix('tixello-widget')
         Route::get('/summary', [\App\Http\Controllers\Api\TixelloWidgetController::class, 'summary'])
             ->name('api.tixello-widget.summary');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Live Chat microservice — public widget API
+|--------------------------------------------------------------------------
+|
+| Marketplace-scoped (X-API-Key via `marketplace.auth`). Opener identity, when
+| present, is derived from the Sanctum bearer inside the controller; guests are
+| allowed. Every endpoint 404s when the `live-chat` microservice is inactive
+| for the marketplace. Ownership across polling is enforced by a per-conversation
+| session token (X-Chat-Token header / session_token param), not by auth.
+|
+*/
+Route::prefix('marketplace-client/chat')
+    ->middleware(['throttle:240,1', 'marketplace.auth'])
+    ->group(function () {
+        Route::get('/bootstrap', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'bootstrap'])
+            ->name('api.marketplace-client.chat.bootstrap');
+        Route::post('/conversations', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'open'])
+            ->name('api.marketplace-client.chat.open');
+        Route::get('/conversations/{reference}', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'show'])
+            ->name('api.marketplace-client.chat.show');
+        Route::post('/conversations/{reference}/messages', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'message'])
+            ->name('api.marketplace-client.chat.message');
+        Route::post('/conversations/{reference}/rating', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'rating'])
+            ->name('api.marketplace-client.chat.rating');
+    });

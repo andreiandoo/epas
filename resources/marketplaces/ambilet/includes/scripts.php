@@ -110,6 +110,9 @@
     <script defer src="<?= asset('assets/js/components/featured-carousel.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/profile-completion-modal.js') ?>"></script>
 
+    <!-- Live Chat widget (live-chat microservice; self-hides if inactive) -->
+    <script defer src="<?= asset('assets/js/components/chat-widget.js') ?>"></script>
+
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>
 

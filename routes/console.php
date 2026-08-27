@@ -209,6 +209,19 @@ Schedule::command('changelog:generate-md')
 |--------------------------------------------------------------------------
 */
 
+// Live Chat: auto-close inactive conversations, cleanup stale presence,
+// and purge old transcripts (GDPR retention). All no-ops when no chat rows
+// exist, so they are safe on marketplaces without the microservice.
+Schedule::command('chat:close-inactive')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+Schedule::command('chat:cleanup-presence')
+    ->everyMinute()
+    ->withoutOverlapping();
+Schedule::command('chat:purge-transcripts')
+    ->dailyAt('04:00')
+    ->withoutOverlapping();
+
 // WhatsApp: Process scheduled reminders (every 10 minutes)
 Schedule::call(function () {
     $service = app(\App\Services\WhatsApp\WhatsAppService::class);

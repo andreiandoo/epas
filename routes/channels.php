@@ -28,3 +28,29 @@ Broadcast::channel('event.{eventId}.seats', function () {
 Broadcast::channel('event.{eventId}.sales', function () {
     return true;
 });
+
+/*
+| Live Chat microservice channels (used only when chat.transport=reverb).
+| Inert until an Echo client subscribes, so they have no runtime effect while
+| the widget/console stay on polling.
+|
+|   chat.operators.{marketplaceClientId}  — staff pool: an operator (marketplace
+|       admin) of that marketplace may subscribe.
+|   chat.conversation.{conversationId}    — a single thread: the assigned/allowed
+|       operator of the owning marketplace may subscribe. (Guest openers stay on
+|       polling — they cannot authenticate a private channel.)
+*/
+Broadcast::channel('chat.operators.{marketplaceClientId}', function ($user, $marketplaceClientId) {
+    $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user() ?: $user;
+    return $admin && (int) ($admin->marketplace_client_id ?? 0) === (int) $marketplaceClientId;
+}, ['guards' => ['marketplace_admin', 'web']]);
+
+Broadcast::channel('chat.conversation.{conversationId}', function ($user, $conversationId) {
+    $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user() ?: $user;
+    if (!$admin) {
+        return false;
+    }
+    $conversation = \App\Models\Chat\ChatConversation::withoutGlobalScopes()->find($conversationId);
+    return $conversation
+        && (int) $conversation->marketplace_client_id === (int) ($admin->marketplace_client_id ?? 0);
+}, ['guards' => ['marketplace_admin', 'web']]);
