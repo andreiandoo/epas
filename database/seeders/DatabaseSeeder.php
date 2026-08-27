@@ -32,6 +32,8 @@ class DatabaseSeeder extends Seeder
             // foundation for the "Online Events" MVP. Idempotent
             // updateOrCreate — safe to rerun.
             ZoomIntegrationMicroserviceSeeder::class,
+            // Live chat microservice catalog row. Idempotent updateOrCreate.
+            LiveChatMicroserviceSeeder::class,
         ]);
     }
 }

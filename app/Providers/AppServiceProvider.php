@@ -65,6 +65,8 @@ class AppServiceProvider extends ServiceProvider
             'organizer' => \App\Models\MarketplaceOrganizer::class,
             'customer' => \App\Models\MarketplaceCustomer::class,
             'staff' => \App\Models\MarketplaceAdmin::class,
+            // Live-chat opener/author also resolves artist accounts.
+            'artist' => \App\Models\MarketplaceArtistAccount::class,
         ]);
 
         // Register the marketplace-mail notification channel. Notifications
