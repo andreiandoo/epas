@@ -309,67 +309,6 @@ class EventResource extends Resource
                                     ->key('detalii')
                                     ->icon('heroicon-o-document-text')
                                     ->schema([
-                        // BASICS - Single Language based on Tenant setting
-                        SC\Section::make($t('Detalii eveniment', 'Event Details'))
-                            ->schema([
-                                SC\Group::make()
-                                    ->schema([
-                                        Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
-                                            ->label($t('Titlu eveniment', 'Event title'))
-                                            ->required()
-                                            ->maxLength(190)
-                                            ->live(onBlur: true)
-                                            ->skipRenderAfterStateUpdated()
-                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get, ?Event $record) {
-                                                // Slug is auto-generated ONLY on initial create.
-                                                // On edit, never auto-overwrite an existing slug from title changes;
-                                                // the admin can edit the slug manually if desired.
-                                                if (!$state) {
-                                                    return;
-                                                }
-                                                $baseSlug = Str::slug($state);
-                                                if ($record && $record->exists && $record->id) {
-                                                    // EDIT: only fill slug if it's currently empty; never overwrite.
-                                                    if (!$get('slug')) {
-                                                        $set('slug', $baseSlug . '-' . $record->id);
-                                                    }
-                                                    if (!$get('event_series')) {
-                                                        $set('event_series', 'AMB-' . $record->id);
-                                                    }
-                                                } else {
-                                                    // CREATE: auto-generate from title using next expected ID.
-                                                    $nextId = (Event::max('id') ?? 0) + 1;
-                                                    $set('slug', $baseSlug . '-' . $nextId);
-                                                    if (!$get('event_series')) {
-                                                        $set('event_series', 'AMB-' . $nextId);
-                                                    }
-                                                }
-                                            }),
-                                        Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
-                                            ->maxLength(190)
-                                            ->rule('alpha_dash')
-                                            // Slugs must be lowercase — the ambilet /bilete/{slug}
-                                            // route only matches [a-z0-9-]+, so an uppercase slug
-                                            // (alpha_dash allows caps) 404s the public + preview page.
-                                            ->dehydrateStateUsing(fn (?string $state) => $state !== null ? \Illuminate\Support\Str::lower($state) : $state)
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('ID-ul se generează automat din titlu', 'ID is auto-generated from title')),
-                                        Forms\Components\TextInput::make('event_series')
-                                            ->label($t('Serie eveniment', 'Event series'))
-                                            ->placeholder($t('Se generează automat: AMB-[ID]', 'Auto-generated: AMB-[ID]'))
-                                            ->maxLength(50)
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Codul unic al seriei de bilete pentru acest eveniment', 'Unique ticket series code for this event'))
-                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
-                                            ->dehydrated(true)
-                                            ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
-                                                // Auto-generate event_series if not set and record exists
-                                                if (!$state && $record && $record->exists && $record->id) {
-                                                    $set('event_series', 'AMB-' . $record->id);
-                                                }
-                                            }),
-                                    ])->columns(3)->columnSpanFull(),
-                            ]),
-
                         // FLAGS (section with background but no visible heading)
                         // Pentru leisure_venue, ascundem aceste toggle-uri — nu au sens
                         // pentru o locatie permanenta de agrement (nu "se anuleaza" sezonul).
@@ -474,9 +413,70 @@ class EventResource extends Resource
                                     ->native(false)
                                     ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                             ])->columns(1),
+                        // BASICS - Single Language based on Tenant setting
+                        SC\Section::make()
+                            ->schema([
+                                SC\Group::make()
+                                    ->schema([
+                                        Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
+                                            ->label($t('Titlu eveniment', 'Event title'))
+                                            ->required()
+                                            ->maxLength(190)
+                                            ->live(onBlur: true)
+                                            ->skipRenderAfterStateUpdated()
+                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get, ?Event $record) {
+                                                // Slug is auto-generated ONLY on initial create.
+                                                // On edit, never auto-overwrite an existing slug from title changes;
+                                                // the admin can edit the slug manually if desired.
+                                                if (!$state) {
+                                                    return;
+                                                }
+                                                $baseSlug = Str::slug($state);
+                                                if ($record && $record->exists && $record->id) {
+                                                    // EDIT: only fill slug if it's currently empty; never overwrite.
+                                                    if (!$get('slug')) {
+                                                        $set('slug', $baseSlug . '-' . $record->id);
+                                                    }
+                                                    if (!$get('event_series')) {
+                                                        $set('event_series', 'AMB-' . $record->id);
+                                                    }
+                                                } else {
+                                                    // CREATE: auto-generate from title using next expected ID.
+                                                    $nextId = (Event::max('id') ?? 0) + 1;
+                                                    $set('slug', $baseSlug . '-' . $nextId);
+                                                    if (!$get('event_series')) {
+                                                        $set('event_series', 'AMB-' . $nextId);
+                                                    }
+                                                }
+                                            }),
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->maxLength(190)
+                                            ->rule('alpha_dash')
+                                            // Slugs must be lowercase — the ambilet /bilete/{slug}
+                                            // route only matches [a-z0-9-]+, so an uppercase slug
+                                            // (alpha_dash allows caps) 404s the public + preview page.
+                                            ->dehydrateStateUsing(fn (?string $state) => $state !== null ? \Illuminate\Support\Str::lower($state) : $state)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('ID-ul se generează automat din titlu', 'ID is auto-generated from title')),
+                                        Forms\Components\TextInput::make('event_series')
+                                            ->label($t('Serie eveniment', 'Event series'))
+                                            ->placeholder($t('Se generează automat: AMB-[ID]', 'Auto-generated: AMB-[ID]'))
+                                            ->maxLength(50)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Codul unic al seriei de bilete pentru acest eveniment', 'Unique ticket series code for this event'))
+                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
+                                            ->dehydrated(true)
+                                            ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
+                                                // Auto-generate event_series if not set and record exists
+                                                if (!$state && $record && $record->exists && $record->id) {
+                                                    $set('event_series', 'AMB-' . $record->id);
+                                                }
+                                            }),
+                                    ])->columns(3)->columnSpanFull(),
+                            ]),
+
 
                         // SCHEDULE — ascuns pentru leisure_venue (folosesc venue_config.seasons in tab-ul propriu)
-                        SC\Section::make($t('Program', 'Schedule'))
+                        SC\Section::make()
                             ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
                             ->schema([
                                 Forms\Components\Radio::make('duration_mode')
@@ -4284,6 +4284,39 @@ class EventResource extends Resource
                                     })
                                     ->badgeColor('warning')
                                     ->schema([
+                                        SC\Section::make()
+                                            ->visible(fn (?Event $record) => $record && $record->exists)
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('document_status_list_tab')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?Event $record) {
+                                                        if (!$record) return '';
+
+                                                        $eventTemplates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
+                                                            ->where('is_active', true)
+                                                            ->where(function ($q) {
+                                                                $q->whereIn('trigger', ['after_event_published', 'after_event_finished', 'after_payout_completed'])
+                                                                  ->orWhereNull('trigger')
+                                                                  ->orWhereIn('type', ['cerere_avizare', 'declaratie_impozite', 'decont', 'decont_ontop', 'decont_inclus', 'pv_distrugere']);
+                                                            })
+                                                            ->where('type', '!=', 'organizer_contract')
+                                                            ->orderBy('name')
+                                                            ->get();
+
+                                                        $generatedDocs = \App\Models\EventGeneratedDocument::where('event_id', $record->id)->get();
+                                                        $organizerDocs = \App\Models\OrganizerDocument::where('event_id', $record->id)->get();
+
+                                                        return new HtmlString(
+                                                            view('filament.marketplace.components.event-document-status', [
+                                                                'event' => $record,
+                                                                'templates' => $eventTemplates,
+                                                                'generatedDocs' => $generatedDocs,
+                                                                'organizerDocs' => $organizerDocs,
+                                                            ])->render()
+                                                        );
+                                                    }),
+                                            ]),
+
                                         // New section — every PDF actually generated for this event,
                                         // from any source (EventGeneratedDocument, OrganizerDocument
                                         // for payout PDFs, plus Invoice records linked via payout).
@@ -4337,40 +4370,6 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed(false),
-
-                                        SC\Section::make($t('Generator documente', 'Document generator'))
-                                            ->icon('heroicon-o-document-text')
-                                            ->visible(fn (?Event $record) => $record && $record->exists)
-                                            ->schema([
-                                                Forms\Components\Placeholder::make('document_status_list_tab')
-                                                    ->hiddenLabel()
-                                                    ->content(function (?Event $record) {
-                                                        if (!$record) return '';
-
-                                                        $eventTemplates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
-                                                            ->where('is_active', true)
-                                                            ->where(function ($q) {
-                                                                $q->whereIn('trigger', ['after_event_published', 'after_event_finished', 'after_payout_completed'])
-                                                                  ->orWhereNull('trigger')
-                                                                  ->orWhereIn('type', ['cerere_avizare', 'declaratie_impozite', 'decont', 'decont_ontop', 'decont_inclus', 'pv_distrugere']);
-                                                            })
-                                                            ->where('type', '!=', 'organizer_contract')
-                                                            ->orderBy('name')
-                                                            ->get();
-
-                                                        $generatedDocs = \App\Models\EventGeneratedDocument::where('event_id', $record->id)->get();
-                                                        $organizerDocs = \App\Models\OrganizerDocument::where('event_id', $record->id)->get();
-
-                                                        return new HtmlString(
-                                                            view('filament.marketplace.components.event-document-status', [
-                                                                'event' => $record,
-                                                                'templates' => $eventTemplates,
-                                                                'generatedDocs' => $generatedDocs,
-                                                                'organizerDocs' => $organizerDocs,
-                                                            ])->render()
-                                                        );
-                                                    }),
-                                            ]),
                                     ]), // End Tab 9: Documente
 
                             ]), // End Tabs component
@@ -4727,7 +4726,7 @@ class EventResource extends Resource
                                     $previewUrl = $eventUrl . '?preview=1';
 
                                     return new \Illuminate\Support\HtmlString(
-                                        '<a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors shadow-sm">' .
+                                        '<a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors shadow-sm">' .
                                             '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
                                             $t('Previzualizare', 'Preview') .
                                         '</a>'
