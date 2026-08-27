@@ -961,7 +961,7 @@ class MarketplacePayout extends Model
     {
         $organizer = $this->organizer;
         if (!$organizer) {
-            return ['name' => '', 'cui' => '', 'reg_com' => '', 'address' => ''];
+            return ['name' => '', 'cui' => '', 'reg_com' => '', 'address' => '', 'is_pf' => false];
         }
 
         $company = ($this->issuing_company === 'secondary' && $organizer->has_secondary_issuer)
@@ -975,11 +975,20 @@ class MarketplacePayout extends Model
             $d['county'] ?? null,
         ]));
 
+        // Snapshotting is_pf into meta.client (via callers that write this
+        // array to invoice.meta.client) so the invoice template can render
+        // "CNP" instead of "C.I.F." in its rendered PDF even years after
+        // the organizer's person_type is toggled. Secondary company is
+        // ALWAYS a legal entity — the PF flag only applies when we ended
+        // up on the primary branch of getIssuerData.
+        $isPF = $company === 'primary' && (($organizer->person_type ?? null) === 'pf');
+
         return [
             'name' => (string) ($d['name'] ?: $organizer->name),
             'cui' => (string) ($d['tax_id'] ?? ''),
             'reg_com' => (string) ($d['registration'] ?? ''),
             'address' => $address,
+            'is_pf' => $isPF,
         ];
     }
 

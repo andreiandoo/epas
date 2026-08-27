@@ -125,8 +125,10 @@ class MarketplaceTaxTemplate extends Model
             '{{organizer_email}}' => 'Email',
             '{{organizer_phone}}' => 'Phone',
             '{{organizer_company_name}}' => 'Company Name',
-            '{{organizer_tax_id}}' => 'Tax ID / VAT',
-            '{{organizer_registration_number}}' => 'Registration Number',
+            '{{organizer_tax_id}}' => 'Tax ID / VAT (CIF pentru PJ, CNP pentru PF)',
+            '{{organizer_tax_id_label}}' => 'Etichetă Tax ID ("C.I.F." pentru PJ, "CNP" pentru PF)',
+            '{{organizer_registration_number}}' => 'Registration Number (Reg.Com. pentru PJ, Serie & nr buletin pentru PF)',
+            '{{organizer_registration_label}}' => 'Etichetă Registration ("Reg. Com. Nr." pentru PJ, "Serie & nr buletin" pentru PF)',
             '{{organizer_address}}' => 'Company Address',
             '{{organizer_city}}' => 'Company City',
             '{{organizer_county}}' => 'Company County/State',
@@ -544,18 +546,44 @@ class MarketplaceTaxTemplate extends Model
                 $orgSigB64 = 'data:' . $orgSigMime . ';base64,' . base64_encode($orgSig);
                 $variables['organizer_signature_image'] = '<img src="' . $orgSigB64 . '" alt="Semnătura organizator" style="max-height:100px;max-width:250px;display:block;" />';
             }
+            // Persoana Fizica (individual) vs Persoana Juridica (legal entity)
+            // branch. When person_type === 'pf', all identity fields resolve
+            // from individual_* columns instead of company_* — organizer 600
+            // (Imre Emeric) is the canonical PF test row.
+            $isPF = ($organizer->person_type ?? null) === 'pf';
+
             $variables['organizer_signed_name'] = $organizer->contract_signed_at
-                ? ($organizer->company_name ?: $organizer->name ?: '')
+                ? ($isPF
+                    ? ($organizer->individual_full_name ?: $organizer->name ?: '')
+                    : ($organizer->company_name ?: $organizer->name ?: ''))
                 : '';
             $variables['organizer_signed_date'] = $organizer->contract_signed_at
                 ? \Illuminate\Support\Carbon::parse($organizer->contract_signed_at)->format('d.m.Y')
                 : '';
-            $variables['organizer_company_name'] = $organizer->company_name ?? '';
-            $variables['organizer_tax_id'] = $organizer->tax_id ?? $organizer->company_tax_id ?? '';
-            $variables['organizer_registration_number'] = $organizer->registration_number ?? $organizer->company_registration ?? '';
-            $variables['organizer_address'] = $organizer->company_address ?? $organizer->address ?? '';
-            $variables['organizer_city'] = $organizer->company_city ?? $organizer->city ?? '';
-            $variables['organizer_county'] = $organizer->company_county ?? $organizer->state ?? '';
+
+            if ($isPF) {
+                $variables['organizer_company_name'] = $organizer->individual_full_name ?? '';
+                $variables['organizer_tax_id'] = $organizer->individual_cnp ?? '';
+                $variables['organizer_registration_number'] = $organizer->individual_id_series_number ?? '';
+                $variables['organizer_address'] = $organizer->individual_address ?? '';
+                $variables['organizer_city'] = $organizer->individual_city ?? '';
+                $variables['organizer_county'] = $organizer->individual_county ?? '';
+            } else {
+                $variables['organizer_company_name'] = $organizer->company_name ?? '';
+                $variables['organizer_tax_id'] = $organizer->tax_id ?? $organizer->company_tax_id ?? '';
+                $variables['organizer_registration_number'] = $organizer->registration_number ?? $organizer->company_registration ?? '';
+                $variables['organizer_address'] = $organizer->company_address ?? $organizer->address ?? '';
+                $variables['organizer_city'] = $organizer->company_city ?? $organizer->city ?? '';
+                $variables['organizer_county'] = $organizer->company_county ?? $organizer->state ?? '';
+            }
+
+            // Labels that differ between PJ and PF — use these in templates
+            // instead of hardcoding "C.I.F." / "Reg. Com. Nr." so the same
+            // template renders correctly for both. Template edits are needed
+            // in the DB rows once (see marketplace_tax_templates) to switch
+            // to {{organizer_tax_id_label}} / {{organizer_registration_label}}.
+            $variables['organizer_tax_id_label'] = $isPF ? 'CNP' : 'C.I.F.';
+            $variables['organizer_registration_label'] = $isPF ? 'Serie & nr buletin' : 'Reg. Com. Nr.';
 
             // VAT status. The organizer UI "VAT Payer" toggle writes
             // vat_payer / primary_vat_payer — NOT tax_settings.is_vat_payer — so
@@ -564,11 +592,15 @@ class MarketplaceTaxTemplate extends Model
             // robust any-flag check as event_organizer_is_vat_payer below
             // (primary defaults to false, so `!== null` alone would pick the
             // wrong value); keep tax_settings.is_vat_payer as a last fallback.
+            // Persoana Fizica is never a VAT payer under RO law → forced false
+            // regardless of any flag that may have been toggled by mistake.
             $taxSettings = $organizer->tax_settings ?? [];
-            $isVatPayer = (bool) ($organizer->primary_vat_payer ?? false)
+            $isVatPayer = $isPF ? false : (
+                (bool) ($organizer->primary_vat_payer ?? false)
                 || (bool) ($organizer->secondary_vat_payer ?? false)
                 || (bool) ($organizer->vat_payer ?? false)
-                || (bool) ($taxSettings['is_vat_payer'] ?? false);
+                || (bool) ($taxSettings['is_vat_payer'] ?? false)
+            );
             $vatRate = $organizer->primary_vat_rate
                 ?? ($taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 21));
             $variables['organizer_vat_status'] = $isVatPayer
@@ -3578,6 +3610,12 @@ class MarketplaceTaxTemplate extends Model
             'client_cui' => $client['cui'] ?? '',
             'client_reg_com' => $client['reg_com'] ?? '',
             'client_address' => $client['address'] ?? '',
+            // Labels for PJ vs PF — snapshot into invoice.meta.client.is_pf
+            // by MarketplacePayout::organizerInvoiceParty. Use these in the
+            // invoice template instead of hardcoded "C.I.F." / "Reg. Com."
+            // so a PF client's invoice renders "CNP" / "Serie & nr buletin".
+            'client_tax_id_label' => !empty($client['is_pf']) ? 'CNP' : 'C.I.F.',
+            'client_registration_label' => !empty($client['is_pf']) ? 'Serie & nr buletin' : 'Reg. Com. Nr.',
         ];
     }
 

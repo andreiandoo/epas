@@ -257,6 +257,35 @@ class MarketplaceOrganizer extends Authenticatable
             ];
         }
 
+        // Persoana Fizica organizers pay through the individual_* columns —
+        // NEVER through company_*. The primary bank + invoice series + contract
+        // number stay on the same row (they're not identity fields), and
+        // vat_payer is hard-forced to false because a PF is never a VAT payer
+        // under RO law. This mirrors the PF branch in
+        // MarketplaceTaxTemplate::getVariablesForContext so document generation
+        // (docs 1/3/4/5) and invoice snapshotting (doc 2) stay consistent.
+        if (($this->person_type ?? null) === 'pf') {
+            return [
+                'company' => 'primary',
+                'name' => $this->individual_full_name,
+                'tax_id' => $this->individual_cnp,
+                'registration' => $this->individual_id_series_number,
+                'address' => $this->individual_address,
+                'city' => $this->individual_city,
+                'county' => $this->individual_county,
+                'zip' => null,
+                'bank_name' => $this->bank_name,
+                'iban' => $this->iban,
+                'invoice_series' => $this->primary_invoice_series,
+                'last_invoice_number' => (int) ($this->primary_last_invoice_number ?? 0),
+                'vat_payer' => false,
+                'vat_rate' => null,
+                'contract_number_series' => $this->contract_number_series,
+                'contract_date' => $this->contract_date,
+                'contact_email' => $this->email,
+            ];
+        }
+
         return [
             'company' => 'primary',
             'name' => $this->company_name,
