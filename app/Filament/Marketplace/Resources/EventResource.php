@@ -475,9 +475,591 @@ class EventResource extends Resource
                                     ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                             ])->columns(1),
 
+                        // SCHEDULE — ascuns pentru leisure_venue (folosesc venue_config.seasons in tab-ul propriu)
+                        SC\Section::make($t('Program', 'Schedule'))
+                            ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
+                            ->schema([
+                                Forms\Components\Radio::make('duration_mode')
+                                    ->label($t('Durată', 'Duration'))
+                                    ->options([
+                                        'single_day' => $t('O singură zi', 'Single day'),
+                                        'range' => $t('Interval', 'Range'),
+                                        'multi_day' => $t('Mai multe zile', 'Multiple days'),
+                                        'recurring' => $t('Recurent', 'Recurring'),
+                                    ])
+                                    ->inline()
+                                    ->default('single_day')
+                                    ->required()
+                                    ->live(),
+
+                                // Single day
+                                SC\Grid::make(4)->schema([
+                                    Forms\Components\DatePicker::make('event_date')
+                                        ->label($t('Data', 'Date'))
+                                        ->minDate($minDateForEvent)
+                                        ->native(false),
+                                    Forms\Components\TimePicker::make('start_time')
+                                        ->label($t('Ora start', 'Start time'))
+                                        ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
+                                    Forms\Components\TimePicker::make('door_time')
+                                        ->label($t('Ora acces', 'Door time'))
+                                        ->seconds(false)
+                                        ->native(true),
+                                    Forms\Components\TimePicker::make('end_time')
+                                        ->label($t('Ora final', 'End time'))
+                                        ->seconds(false)
+                                        ->native(true),
+                                ])->visible(fn (SGet $get) => $get('duration_mode') === 'single_day'),
+
+                                // Range
+                                SC\Grid::make(4)->schema([
+                                    Forms\Components\DatePicker::make('range_start_date')
+                                        ->label($t('Data început', 'Start date'))
+                                        ->minDate($minDateForEvent)
+                                        ->native(false),
+                                    Forms\Components\DatePicker::make('range_end_date')
+                                        ->label($t('Data final', 'End date'))
+                                        ->native(false),
+                                    Forms\Components\TimePicker::make('range_start_time')
+                                        ->label($t('Ora start', 'Start time'))
+                                        ->seconds(false)
+                                        ->native(true),
+                                    Forms\Components\TimePicker::make('range_end_time')
+                                        ->label($t('Ora final', 'End time'))
+                                        ->seconds(false)
+                                        ->native(true),
+                                ])->visible(fn (SGet $get) => $get('duration_mode') === 'range'),
+
+                                // Multi day
+                                Forms\Components\Repeater::make('multi_slots')
+                                    ->label($t('Zile și ore', 'Days & times'))
+                                    ->schema([
+                                        Forms\Components\DatePicker::make('date')
+                                            ->label($t('Data', 'Date'))
+                                            ->minDate(function (SGet $get) use ($today) {
+                                                $currentDate = $get('date');
+                                                if ($currentDate && \Carbon\Carbon::parse($currentDate)->isPast()) {
+                                                    return null;
+                                                }
+                                                return $today;
+                                            })
+                                            ->native(false)
+                                            ->required(),
+                                        Forms\Components\TimePicker::make('start_time')
+                                            ->label($t('Start', 'Start'))
+                                            ->seconds(false)
+                                            ->native(true),
+                                        Forms\Components\TimePicker::make('door_time')
+                                            ->label($t('Acces', 'Door'))
+                                            ->seconds(false)
+                                            ->native(true),
+                                        Forms\Components\TimePicker::make('end_time')
+                                            ->label($t('Final', 'End'))
+                                            ->seconds(false)
+                                            ->native(true),
+                                    ])
+                                    ->addActionLabel($t('Adaugă altă dată', 'Add another date'))
+                                    ->default([])
+                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
+                                    ->columns(4),
+
+                                // Recurring
+                                SC\Group::make()
+                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'recurring')
+                                    ->schema([
+                                        SC\Grid::make(4)->schema([
+                                            Forms\Components\DatePicker::make('recurring_start_date')
+                                                ->label($t('Data inițială', 'Initial date'))
+                                                ->minDate($minDateForEvent)
+                                                ->native(false)
+                                                ->live(onBlur: true)
+                                                ->skipRenderAfterStateUpdated()
+                                                ->afterStateUpdated(function ($state, SSet $set) {
+                                                    if (!$state) { $set('recurring_weekday', null); return; }
+                                                    $w = Carbon::parse($state)->dayOfWeekIso;
+                                                    $set('recurring_weekday', $w);
+                                                }),
+                                            Forms\Components\TextInput::make('recurring_weekday')
+                                                ->label($t('Ziua săptămânii', 'Weekday'))
+                                                ->disabled()
+                                                ->dehydrated(false)
+                                                ->formatStateUsing(function (SGet $get) use ($t) {
+                                                    $mapRo = [1=>'Lun',2=>'Mar',3=>'Mie',4=>'Joi',5=>'Vin',6=>'Sâm',7=>'Dum'];
+                                                    $mapEn = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
+                                                    $map = $t('ro', 'en') === 'ro' ? $mapRo : $mapEn;
+                                                    return $map[$get('recurring_weekday')] ?? '';
+                                                }),
+                                            Forms\Components\Select::make('recurring_frequency')
+                                                ->label($t('Recurență', 'Recurrence'))
+                                                ->options([
+                                                    'weekly' => $t('Săptămânal', 'Weekly'),
+                                                    'monthly_nth' => $t('Lunar (a N-a zi)', 'Monthly (Nth weekday)'),
+                                                ])
+                                                ->required()
+                                                ->live(onBlur: true),
+                                            Forms\Components\TextInput::make('recurring_count')
+                                                ->label($t('Ocurențe', 'Occurrences'))
+                                                ->numeric()
+                                                ->minValue(1),
+                                        ]),
+                                        SC\Grid::make(2)
+                                            ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
+                                            ->schema([
+                                                Forms\Components\Select::make('recurring_week_of_month')
+                                                    ->label($t('Săptămâna din lună', 'Week of month'))
+                                                    ->options([
+                                                        1 => $t('Prima', 'First'),
+                                                        2 => $t('A doua', 'Second'),
+                                                        3 => $t('A treia', 'Third'),
+                                                        4 => $t('A patra', 'Fourth'),
+                                                        -1 => $t('Ultima', 'Last'),
+                                                    ])
+                                                    ->required(),
+                                            ]),
+                                        SC\Grid::make(3)->schema([
+                                            Forms\Components\TimePicker::make('recurring_start_time')
+                                                ->label($t('Ora start', 'Start time'))
+                                                ->seconds(false)->native(true)
+                                                ->required(),
+                                            Forms\Components\TimePicker::make('recurring_door_time')
+                                                ->label($t('Ora acces', 'Door time'))
+                                                ->seconds(false)->native(true),
+                                            Forms\Components\TimePicker::make('recurring_end_time')
+                                                ->label($t('Ora final', 'End time'))
+                                                ->seconds(false)->native(true),
+                                        ]),
+                                    ]),
+                            ])->columns(1),
+
+                        // LOCATION & LINKS
+                        SC\Section::make($t('Locație și Link-uri', 'Location & Links'))
+                            ->schema([
+                                Forms\Components\Select::make('venue_id')
+                                    ->label($t('Locație', 'Venue'))
+                                    // Monument-tax awareness badge next to
+                                    // the label. Yellow pill only appears
+                                    // when the selected venue has
+                                    // has_historical_monument_tax=true, so
+                                    // the operator sees the surcharge is
+                                    // active without scrolling to the Taxe
+                                    // section. Same visual as the previous
+                                    // below-select hint, now inline.
+                                    ->hint(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        if (!$venueId || !Venue::where('id', $venueId)->value('has_historical_monument_tax')) {
+                                            return null;
+                                        }
+                                        return new HtmlString(
+                                            '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fef3c7;border:1px solid #fbbf24;border-radius:9999px;font-size:11px;color:#92400e;font-weight:500;">'
+                                            . '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>'
+                                            . 'Monument Istoric'
+                                            . '</span>'
+                                        );
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->options(function () use ($marketplace) {
+                                        $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
+                                        return Venue::query()
+                                            ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries))
+                                            ->get()
+                                            ->mapWithKeys(fn ($venue) => [
+                                                $venue->id => $venue->getTranslation('name', app()->getLocale())
+                                                    . ($venue->city ? ' (' . $venue->city . ')' : '')
+                                            ])
+                                            ->sort();
+                                    })
+                                    ->getOptionLabelUsing(function ($value) {
+                                        $venue = Venue::find($value);
+                                        if (!$venue) return $value;
+                                        return $venue->getTranslation('name', app()->getLocale())
+                                            . ($venue->city ? ' (' . $venue->city . ')' : '');
+                                    })
+                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
+                                        // Changing the venue invalidates any seating
+                                        // layout previously chosen (layouts are
+                                        // venue-scoped). Without this reset the
+                                        // form keeps the old seating_layout_id in
+                                        // state — the "Harta Locuri" tab visibility
+                                        // is gated on that field, so it stays
+                                        // visible and still renders the stale
+                                        // layout. Clearing the performance id too
+                                        // because it's tied to a specific layout.
+                                        $set('seating_layout_id', null);
+                                        $set('seating_performance_id', null);
+
+                                        if ($state) {
+                                            $venue = Venue::find($state);
+                                            if ($venue) {
+                                                $set('address', $venue->address ?? $venue->full_address ?? '');
+                                                $set('website_url', $venue->website_url ?? '');
+
+                                                // Auto-fill marketplace_city_id by matching venue city name
+                                                if ($venue->city) {
+                                                    $cityName = strtolower(trim(Str::ascii($venue->city)));
+                                                    $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
+                                                        ->where('is_visible', true)
+                                                        ->get()
+                                                        ->first(function ($city) use ($cityName) {
+                                                            // Check all language variants (diacritic-insensitive)
+                                                            $nameVariants = is_array($city->name) ? $city->name : [];
+                                                            foreach ($nameVariants as $lang => $name) {
+                                                                if (strtolower(trim(Str::ascii($name))) === $cityName) {
+                                                                    return true;
+                                                                }
+                                                            }
+                                                            return false;
+                                                        });
+
+                                                    if ($matchedCity) {
+                                                        $set('marketplace_city_id', $matchedCity->id);
+                                                    } else {
+                                                        // City doesn't exist in marketplace — auto-create it
+                                                        // Normalize country to ISO 2-letter code
+                                                        $countryRaw = $venue->country ?? 'RO';
+                                                        $countryCode = mb_strlen($countryRaw) === 2 ? strtoupper($countryRaw) : (collect([
+                                                            'Romania' => 'RO', 'Germany' => 'DE', 'France' => 'FR', 'Spain' => 'ES',
+                                                            'Italy' => 'IT', 'Austria' => 'AT', 'Hungary' => 'HU', 'Bulgaria' => 'BG',
+                                                            'Moldova' => 'MD', 'Serbia' => 'RS', 'Croatia' => 'HR', 'Greece' => 'GR',
+                                                            'Poland' => 'PL', 'Czech Republic' => 'CZ', 'Slovakia' => 'SK',
+                                                            'United Kingdom' => 'GB', 'Netherlands' => 'NL', 'Belgium' => 'BE',
+                                                            'Switzerland' => 'CH', 'Portugal' => 'PT', 'Sweden' => 'SE',
+                                                            'România' => 'RO', 'Deutschland' => 'DE',
+                                                        ])->get($countryRaw, strtoupper(mb_substr($countryRaw, 0, 2))));
+
+                                                        // Promote the raw venue.city to its canonical
+                                                        // native spelling via the centralized geo
+                                                        // dataset, so a venue typed "Bucuresti"
+                                                        // creates a MarketplaceCity named "București"
+                                                        // instead of perpetuating the non-diacritic
+                                                        // form. Falls back to the raw value when
+                                                        // geo has no match (other countries / typos).
+                                                        $cityName = $venue->city;
+                                                        $cityLat = $venue->lat;
+                                                        $cityLng = $venue->lng;
+                                                        $geoLoc = \App\Support\GeoLocations::matchLocality($venue->city, null, $countryCode);
+                                                        if ($geoLoc) {
+                                                            $cityName = $geoLoc->name_native;
+                                                            $cityLat = $cityLat ?: $geoLoc->latitude;
+                                                            $cityLng = $cityLng ?: $geoLoc->longitude;
+                                                        }
+
+                                                        $newCity = MarketplaceCity::create([
+                                                            'marketplace_client_id' => $marketplace?->id,
+                                                            'name' => ['ro' => $cityName, 'en' => $cityName],
+                                                            'country' => $countryCode,
+                                                            'latitude' => $cityLat,
+                                                            'longitude' => $cityLng,
+                                                            'is_visible' => true,
+                                                        ]);
+                                                        $set('marketplace_city_id', $newCity->id);
+                                                    }
+                                                }
+
+                                                // Auto-match the fiscal directorate from the venue's
+                                                // location. Shared with the Duplicate action so both
+                                                // derive the registry identically.
+                                                $matchedRegistry = \App\Models\MarketplaceTaxRegistry::matchForVenue($venue, $marketplace?->id);
+                                                $set('marketplace_tax_registry_id', $matchedRegistry?->id);
+                                            }
+                                        }
+                                    })
+                                    ->suffixActions([
+                                        Action::make('edit_venue')
+                                            ->icon('heroicon-o-pencil-square')
+                                            ->tooltip($t('Editează locația', 'Edit venue'))
+                                            ->url(fn (SGet $get) => $get('venue_id')
+                                                ? VenueResource::getUrl('edit', ['record' => $get('venue_id')])
+                                                : null)
+                                            ->openUrlInNewTab()
+                                            ->visible(fn (SGet $get) => (bool) $get('venue_id')),
+                                        Action::make('create_venue')
+                                            ->icon('heroicon-o-plus-circle')
+                                            ->tooltip($t('Adaugă locație nouă', 'Add new venue'))
+                                            ->url(fn () => VenueResource::getUrl('create'))
+                                            ->openUrlInNewTab(),
+                                    ])
+                                    ->nullable(),
+
+                                Forms\Components\TextInput::make('suggested_venue_name')
+                                    ->label($t('Locație sugerată de organizator', 'Suggested venue by organizer'))
+                                    ->disabled()
+                                    ->visible(fn (?Event $record) => $record && !empty($record->suggested_venue_name))
+                                    ->helperText($t(
+                                        'Organizatorul a introdus manual acest nume de locație. Adaugă locația în bibliotecă și selecteaz-o din câmpul de mai sus.',
+                                        'The organizer manually entered this venue name. Add it to the venue library and select it above.'
+                                    ))
+                                    ->prefixIcon('heroicon-o-exclamation-triangle')
+                                    ->extraAttributes(['class' => 'bg-amber-50 dark:bg-amber-900/20']),
+                                Forms\Components\Select::make('seating_layout_id')
+                                    ->label($t('Harta de locuri', 'Seating Layout'))
+                                    ->searchable()
+                                    ->preload()
+                                    ->live(onBlur: true)
+                                    ->visible(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        if (!$venueId) return false;
+                                        return SeatingLayout::where('venue_id', $venueId)
+                                            ->where('status', 'published')
+                                            ->exists();
+                                    })
+                                    ->options(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        if (!$venueId) return [];
+
+                                        return SeatingLayout::query()
+                                            ->where('venue_id', $venueId)
+                                            ->where('status', 'published')
+                                            ->orderBy('name')
+                                            ->get()
+                                            ->mapWithKeys(fn ($layout) => [
+                                                $layout->id => $layout->name . ' (' . $layout->sections()->count() . ' sections)'
+                                            ]);
+                                    })
+                                    ->helperText($t('Selectează o hartă de locuri pentru locuri numerotate. Lasă gol pentru acces general.', 'Select a seating layout for assigned seating. Leave empty for general admission.'))
+                                    ->nullable(),
+                                Forms\Components\Select::make('marketplace_city_id')
+                                    ->label($t('Oraș', 'City'))
+                                    ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($marketplace, $marketplaceLanguage) {
+                                        $list = MarketplaceCity::query()
+                                            ->where('marketplace_client_id', $marketplace?->id)
+                                            ->where('is_visible', true)
+                                            ->with('region')
+                                            ->orderBy('sort_order')
+                                            ->get();
+
+                                        // Always include the currently-selected city even if it
+                                        // isn't in the visible list yet. The venue's
+                                        // afterStateUpdated handler can auto-create a new
+                                        // MarketplaceCity inside the same request; without this
+                                        // the Select would render empty until the page reloads.
+                                        $selectedId = $get('marketplace_city_id');
+                                        if ($selectedId && ! $list->contains('id', (int) $selectedId)) {
+                                            $extra = MarketplaceCity::with('region')->find($selectedId);
+                                            if ($extra) {
+                                                $list->push($extra);
+                                            }
+                                        }
+
+                                        return $list->mapWithKeys(fn ($city) => [
+                                            $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
+                                                . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
+                                        ]);
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder($t('Selectează un oraș', 'Select a city'))
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Filtrează evenimentele pe site după oraș', 'Filter events by city on the website'))
+                                    ->nullable(),
+                                Forms\Components\TextInput::make('address')
+                                    ->label($t('Adresă', 'Address'))
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('website_url')
+                                    ->label('Website')
+                                    ->url()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('facebook_url')
+                                    ->label($t('Eveniment Facebook', 'Facebook Event'))
+                                    ->url()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('event_website_url')
+                                    ->label($t('Website Eveniment', 'Event Website'))
+                                    ->url()
+                                    ->maxLength(255),
+                            ])->columns(2),
+
+                        // ONLINE EVENT — visible only when the marketplace
+                        // has the `zoom-integration` microservice activated.
+                        // MVP: URL manual + passcode; Phase 2 will add OAuth
+                        // + auto-meeting creation (the "Conectează Zoom"
+                        // button below is a stub advertising the roadmap).
+                        SC\Section::make($t('Eveniment online', 'Online event'))
+                            ->icon('heroicon-o-video-camera')
+                            ->description($t(
+                                'Bilete pentru un webinar sau eveniment livestream (Zoom, Meet, custom). Participanții primesc un link unic de acces pe email + în cont.',
+                                'Tickets for a webinar or livestream event (Zoom, Meet, custom). Attendees receive a unique access link by email + in their account.'
+                            ))
+                            ->collapsed(fn (?Event $record) => !($record?->is_online))
+                            ->visible(fn () => self::isZoomMicroserviceActive($marketplace?->id))
+                            ->schema([
+                                Forms\Components\Toggle::make('is_online')
+                                    ->label($t('Acesta este un eveniment online', 'This is an online event'))
+                                    ->helperText($t(
+                                        'Bifează pentru a marca evenimentul ca desfășurat online. Locația fizică rămâne opțională.',
+                                        'Toggle to mark this event as online. The physical venue stays optional.'
+                                    ))
+                                    ->live()
+                                    ->columnSpanFull(),
+                                Forms\Components\Select::make('online_provider')
+                                    ->label($t('Provider', 'Provider'))
+                                    ->options([
+                                        'zoom'        => 'Zoom',
+                                        'google_meet' => 'Google Meet',
+                                        'teams'       => 'Microsoft Teams',
+                                        'custom'      => $t('Alt livestream (URL custom)', 'Other livestream (custom URL)'),
+                                    ])
+                                    ->default('zoom')
+                                    ->native(false)
+                                    ->required(fn (SGet $get) => (bool) $get('is_online'))
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\TextInput::make('online_meeting_url')
+                                    ->label($t('URL meeting', 'Meeting URL'))
+                                    ->helperText($t(
+                                        'Lipește URL-ul de invitație. Nu îl trimitem direct clientului — link-ul e afișat prin gateway-ul nostru /join/{cod bilet} după validare.',
+                                        'Paste the invitation URL. We do NOT share it directly with the customer — it\'s revealed through our /join/{ticket-code} gateway after validation.'
+                                    ))
+                                    ->url()
+                                    ->maxLength(500)
+                                    ->required(fn (SGet $get) => (bool) $get('is_online'))
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online'))
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('online_passcode')
+                                    ->label($t('Parolă meeting (opțional)', 'Meeting passcode (optional)'))
+                                    ->helperText($t(
+                                        'Parola e criptată în baza de date și afișată clientului DOAR după validarea biletului.',
+                                        'The passcode is encrypted at rest and shown to the customer ONLY after ticket validation.'
+                                    ))
+                                    ->maxLength(64)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\TextInput::make('online_lobby_opens_minutes_before')
+                                    ->label($t('Lobby deschide cu (min. înainte)', 'Lobby opens (minutes before)'))
+                                    ->helperText($t(
+                                        'Câte minute înainte de start devine link-ul de acces activ. Default 15.',
+                                        'How many minutes before start the access link becomes active. Default 15.'
+                                    ))
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(120)
+                                    ->default(15)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\Select::make('online_capacity_hint')
+                                    ->label($t('Capacitate provider (opțional)', 'Provider capacity (optional)'))
+                                    ->options([
+                                        100  => '100 participanți (Zoom Basic / Pro)',
+                                        300  => '300 participanți (Zoom Business)',
+                                        500  => '500 participanți (Zoom Enterprise)',
+                                        1000 => '1000 participanți (Zoom Enterprise Plus)',
+                                    ])
+                                    ->helperText($t(
+                                        'Setează planul tău Zoom ca să te avertizăm dacă vinzi mai multe bilete decât încap în meeting.',
+                                        'Set your Zoom plan cap so we warn you when tickets exceed the meeting capacity.'
+                                    ))
+                                    ->native(false)
+                                    ->nullable()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online') && $get('online_provider') === 'zoom'),
+                                // Soft capacity warning — visible only on Edit
+                                // (needs an existing record to count tickets)
+                                // when the aggregate ticket stock exceeds the
+                                // provider cap declared above.
+                                Forms\Components\Placeholder::make('online_capacity_warning')
+                                    ->label('')
+                                    ->content(function (?Event $record, SGet $get) {
+                                        if (!$record) return null;
+                                        $cap = (int) ($get('online_capacity_hint') ?? 0);
+                                        if ($cap <= 0) return null;
+                                        try {
+                                            $totalCapacity = (int) $record->total_capacity;
+                                        } catch (\Throwable $e) {
+                                            return null;
+                                        }
+                                        if ($totalCapacity <= $cap) return null;
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<div class="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">'
+                                            . '<svg class="h-5 w-5 flex-shrink-0 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
+                                            . '<div class="text-sm text-amber-800">'
+                                            . '<div class="font-semibold text-amber-900">Ai vândut mai multe locuri decât încap în meeting</div>'
+                                            . '<p class="mt-1">Ai declarat o capacitate de <strong>' . $cap . '</strong> participanți în platformă, dar tipurile tale de bilete totalizează <strong>' . $totalCapacity . '</strong> locuri. Verifică-ți planul Zoom sau redu stocul biletelor.</p>'
+                                            . '</div>'
+                                            . '</div>'
+                                        );
+                                    })
+                                    ->visible(fn (?Event $record, SGet $get) => $record && (bool) $get('is_online') && (int) ($get('online_capacity_hint') ?? 0) > 0)
+                                    ->columnSpanFull(),
+                                Forms\Components\RichEditor::make('online_instructions')
+                                    ->label($t('Instrucțiuni de acces (opțional)', 'Access instructions (optional)'))
+                                    ->helperText($t(
+                                        'Afișat clientului pe pagina de acces (dresscode virtual, tips audio, browser recomandat etc.).',
+                                        'Shown to the customer on the access page (virtual dresscode, audio tips, recommended browser, etc.).'
+                                    ))
+                                    ->columnSpanFull()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
+                                Forms\Components\Placeholder::make('zoom_oauth_stub')
+                                    ->label('')
+                                    ->content(new \Illuminate\Support\HtmlString(
+                                        '<div class="flex items-start gap-3 rounded-xl border border-dashed border-primary-200 bg-primary-50/50 p-4">'
+                                        . '<svg class="h-6 w-6 flex-shrink-0 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
+                                        . '<div class="flex-1">'
+                                        . '<div class="font-semibold text-primary-800">Conectare directă la contul Zoom</div>'
+                                        . '<p class="mt-1 text-sm text-primary-700/80">În curând vei putea conecta contul tău Zoom pentru ca meeting-urile să fie create automat + fiecare bilet să primească un link unic de registrant (anti-share nativ).</p>'
+                                        . '<button type="button" disabled class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-1.5 text-xs font-semibold text-primary-500 cursor-not-allowed">'
+                                        . 'Conectează cont Zoom (în curând)'
+                                        . '</button>'
+                                        . '</div>'
+                                        . '</div>'
+                                    ))
+                                    ->columnSpanFull()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_online') && $get('online_provider') === 'zoom'),
+                            ])->columns(2),
+
+                        // TAX REGISTRY (linked to venue location)
+                        SC\Section::make($t('Direcție fiscală (Tax Registry)', 'Tax Registry'))
+                            ->icon('heroicon-o-building-library')
+                            ->description($t('Direcția fiscală locală folosită pentru declarațiile de impozit pe spectacole.', 'Local tax authority used for entertainment tax declarations.'))
+                            ->collapsible()
+                            ->visible(fn (SGet $get) => (bool) $get('venue_id'))
+                            ->schema([
+                                Forms\Components\Placeholder::make('tax_registry_match_info')
+                                    ->hiddenLabel()
+                                    ->content(function (SGet $get) use ($t) {
+                                        $registryId = $get('marketplace_tax_registry_id');
+                                        if ($registryId) {
+                                            $registry = \App\Models\MarketplaceTaxRegistry::find($registryId);
+                                            if ($registry) {
+                                                $name = e($registry->name);
+                                                $location = e(implode(', ', array_filter([$registry->city, $registry->county, $registry->country])));
+                                                return new HtmlString(
+                                                    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #10b981;background:#f0fdf4;border-radius:6px;color:#065f46;font-size:13px;">'
+                                                    . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                                                    . '<div><strong>' . $t('Tax Registry identificat:', 'Tax Registry found:') . '</strong> ' . $name
+                                                    . '<div style="font-size:11px;color:#047857;margin-top:2px;">' . $location . '</div></div>'
+                                                    . '</div>'
+                                                );
+                                            }
+                                        }
+                                        return new HtmlString(
+                                            '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #f59e0b;background:#fffbeb;border-radius:6px;color:#92400e;font-size:13px;">'
+                                            . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
+                                            . '<div>' . $t('Niciun Tax Registry nu se potrivește automat. Selectează manual din dropdown-ul de mai jos.', 'No Tax Registry matches automatically. Select manually from dropdown below.') . '</div>'
+                                            . '</div>'
+                                        );
+                                    }),
+
+                                Forms\Components\Select::make('marketplace_tax_registry_id')
+                                    ->label($t('Tax Registry', 'Tax Registry'))
+                                    ->options(function () use ($marketplace) {
+                                        return \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('is_active', true)
+                                            ->get()
+                                            ->mapWithKeys(fn ($r) => [
+                                                $r->id => $r->name . ' — ' . implode(', ', array_filter([$r->city, $r->county, $r->country])),
+                                            ]);
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->live(),
+                            ]),
                         // FEATURED SETTINGS (Marketplace only)
                         SC\Section::make($t('Setări Featured', 'Featured Settings'))
-                            ->description($t('Controlează unde apare acest eveniment ca featured pe site', 'Control where this event appears as featured on the marketplace website'))
+                            ->headerActions([
+                                Action::make('featuredInfo')
+                                    ->label('')
+                                    ->icon('heroicon-o-information-circle')
+                                    ->color('gray')
+                                    ->tooltip($t('Controlează unde apare acest eveniment ca featured pe site', 'Control where this event appears as featured on the marketplace website'))
+                                    ->action(fn () => null),
+                            ])
                             ->schema([
                                 SC\Grid::make(3)->schema([
                                     Forms\Components\Toggle::make('is_homepage_featured')
@@ -503,17 +1085,50 @@ class EventResource extends Resource
                                         ->partiallyRenderAfterStateUpdated(),
                                 ]),
 
-                                // FOMO toggle — gated per event. When off,
-                                // the public marketplace page is unchanged.
-                                // When on, pills/scarcity bar/toast appear.
-                                Forms\Components\Toggle::make('generate_fomo')
-                                    ->label($t('Generate FOMO', 'Generate FOMO'))
-                                    ->helperText($t(
-                                        'Activează micro-elemente de social proof (pills cu vânzări 24h și viewers, „Cerere ridicată" cu locuri rămase, mesaje toast) pe pagina publică. Cifrele afișate sunt parțial bazate pe stocul real, parțial generate pentru atmosferă.',
-                                        'Enables social-proof micro-elements (24h sold + viewers pills, "high demand" scarcity bar, toast messages) on the public page. Numbers are partly derived from real stock, partly generated for vibe.'
-                                    ))
-                                    ->onIcon('heroicon-m-fire')
-                                    ->offIcon('heroicon-m-fire')
+                                // FOMO + Custom Related toggles on the SAME row.
+                                // generate_fomo: pills/scarcity bar/toast on the
+                                // public page when on. has_custom_related: manual
+                                // "Îți recomandăm" selection.
+                                SC\Grid::make(2)->schema([
+                                    Forms\Components\Toggle::make('generate_fomo')
+                                        ->label($t('Generate FOMO', 'Generate FOMO'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t(
+                                            'Activează micro-elemente de social proof (pills cu vânzări 24h și viewers, „Cerere ridicată" cu locuri rămase, mesaje toast) pe pagina publică. Cifrele afișate sunt parțial bazate pe stocul real, parțial generate pentru atmosferă.',
+                                            'Enables social-proof micro-elements (24h sold + viewers pills, "high demand" scarcity bar, toast messages) on the public page. Numbers are partly derived from real stock, partly generated for vibe.'
+                                        ))
+                                        ->onIcon('heroicon-m-fire')
+                                        ->offIcon('heroicon-m-fire'),
+
+                                    Forms\Components\Toggle::make('has_custom_related')
+                                        ->label($t('Evenimente Conexe Personalizate', 'Custom Related Events'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează manual ce evenimente să apară în secțiunea "Îți recomandăm"', 'Manually select which events to show in the "Îți recomandăm" section'))
+                                        ->onIcon('heroicon-m-queue-list')
+                                        ->offIcon('heroicon-m-queue-list')
+                                        ->live(onBlur: true)
+                                        ->partiallyRenderAfterStateUpdated(),
+                                ]),
+
+                                Forms\Components\Select::make('custom_related_event_ids')
+                                    ->label($t('Selectează Evenimente Conexe', 'Select Related Events'))
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Alege evenimentele de afișat în secțiunea "Îți recomandăm" (max 8)', 'Choose events to display in the "Îți recomandăm" section (max 8)'))
+                                    ->multiple()
+                                    ->searchable()
+                                    ->preload()
+                                    ->maxItems(8)
+                                    ->options(function (?Event $record) use ($marketplace) {
+                                        return Event::query()
+                                            ->where('marketplace_client_id', $marketplace?->id)
+                                            ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                            ->where('is_cancelled', false)
+                                            ->orderBy('event_date', 'desc')
+                                            ->limit(100)
+                                            ->get()
+                                            ->mapWithKeys(fn ($event) => [
+                                                $event->id => ($event->title['ro'] ?? $event->title['en'] ?? 'Unnamed')
+                                                    . ' (' . ($event->event_date?->format('d.m.Y') ?? 'No date') . ')'
+                                            ]);
+                                    })
+                                    ->visible(fn (SGet $get) => (bool) $get('has_custom_related'))
                                     ->columnSpanFull(),
 
                                 // Homepage Featured Image - only shown when Homepage Featured is enabled
@@ -541,40 +1156,6 @@ class EventResource extends Resource
                                     ->imagePreviewHeight('150')
                                     ->visible(fn (SGet $get) => (bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
                                     ->columnSpanFull(),
-
-                                // Custom Related Events
-                                SC\Grid::make(1)->schema([
-                                    Forms\Components\Toggle::make('has_custom_related')
-                                        ->label($t('Evenimente Conexe Personalizate', 'Custom Related Events'))
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează manual ce evenimente să apară în secțiunea "Îți recomandăm"', 'Manually select which events to show in the "Îți recomandăm" section'))
-                                        ->onIcon('heroicon-m-queue-list')
-                                        ->offIcon('heroicon-m-queue-list')
-                                        ->live(onBlur: true)
-                                        ->partiallyRenderAfterStateUpdated(),
-
-                                    Forms\Components\Select::make('custom_related_event_ids')
-                                        ->label($t('Selectează Evenimente Conexe', 'Select Related Events'))
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Alege evenimentele de afișat în secțiunea "Îți recomandăm" (max 8)', 'Choose events to display in the "Îți recomandăm" section (max 8)'))
-                                        ->multiple()
-                                        ->searchable()
-                                        ->preload()
-                                        ->maxItems(8)
-                                        ->options(function (?Event $record) use ($marketplace) {
-                                            return Event::query()
-                                                ->where('marketplace_client_id', $marketplace?->id)
-                                                ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
-                                                ->where('is_cancelled', false)
-                                                ->orderBy('event_date', 'desc')
-                                                ->limit(100)
-                                                ->get()
-                                                ->mapWithKeys(fn ($event) => [
-                                                    $event->id => ($event->title['ro'] ?? $event->title['en'] ?? 'Unnamed')
-                                                        . ' (' . ($event->event_date?->format('d.m.Y') ?? 'No date') . ')'
-                                                ]);
-                                        })
-                                        ->visible(fn (SGet $get) => (bool) $get('has_custom_related'))
-                                        ->columnSpanFull(),
-                                ]),
                             ])->columns(1),
 
                         // Alerts / lipsuri operaționale — afișează ce documente
@@ -1212,588 +1793,6 @@ class EventResource extends Resource
                                             ->columnSpanFull(),
                                     ]),
 
-                                // ========== TAB 2: PROGRAM ==========
-                                SC\Tabs\Tab::make($t('Program', 'Schedule'))
-                                    ->key('program')
-                                    ->icon('heroicon-o-calendar')
-                                    ->lazy()
-                                    ->schema([
-                        // SCHEDULE — ascuns pentru leisure_venue (folosesc venue_config.seasons in tab-ul propriu)
-                        SC\Section::make($t('Program', 'Schedule'))
-                            ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
-                            ->schema([
-                                Forms\Components\Radio::make('duration_mode')
-                                    ->label($t('Durată', 'Duration'))
-                                    ->options([
-                                        'single_day' => $t('O singură zi', 'Single day'),
-                                        'range' => $t('Interval', 'Range'),
-                                        'multi_day' => $t('Mai multe zile', 'Multiple days'),
-                                        'recurring' => $t('Recurent', 'Recurring'),
-                                    ])
-                                    ->inline()
-                                    ->default('single_day')
-                                    ->required()
-                                    ->live(),
-
-                                // Single day
-                                SC\Grid::make(4)->schema([
-                                    Forms\Components\DatePicker::make('event_date')
-                                        ->label($t('Data', 'Date'))
-                                        ->minDate($minDateForEvent)
-                                        ->native(false),
-                                    Forms\Components\TimePicker::make('start_time')
-                                        ->label($t('Ora start', 'Start time'))
-                                        ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
-                                    Forms\Components\TimePicker::make('door_time')
-                                        ->label($t('Ora acces', 'Door time'))
-                                        ->seconds(false)
-                                        ->native(true),
-                                    Forms\Components\TimePicker::make('end_time')
-                                        ->label($t('Ora final', 'End time'))
-                                        ->seconds(false)
-                                        ->native(true),
-                                ])->visible(fn (SGet $get) => $get('duration_mode') === 'single_day'),
-
-                                // Range
-                                SC\Grid::make(4)->schema([
-                                    Forms\Components\DatePicker::make('range_start_date')
-                                        ->label($t('Data început', 'Start date'))
-                                        ->minDate($minDateForEvent)
-                                        ->native(false),
-                                    Forms\Components\DatePicker::make('range_end_date')
-                                        ->label($t('Data final', 'End date'))
-                                        ->native(false),
-                                    Forms\Components\TimePicker::make('range_start_time')
-                                        ->label($t('Ora start', 'Start time'))
-                                        ->seconds(false)
-                                        ->native(true),
-                                    Forms\Components\TimePicker::make('range_end_time')
-                                        ->label($t('Ora final', 'End time'))
-                                        ->seconds(false)
-                                        ->native(true),
-                                ])->visible(fn (SGet $get) => $get('duration_mode') === 'range'),
-
-                                // Multi day
-                                Forms\Components\Repeater::make('multi_slots')
-                                    ->label($t('Zile și ore', 'Days & times'))
-                                    ->schema([
-                                        Forms\Components\DatePicker::make('date')
-                                            ->label($t('Data', 'Date'))
-                                            ->minDate(function (SGet $get) use ($today) {
-                                                $currentDate = $get('date');
-                                                if ($currentDate && \Carbon\Carbon::parse($currentDate)->isPast()) {
-                                                    return null;
-                                                }
-                                                return $today;
-                                            })
-                                            ->native(false)
-                                            ->required(),
-                                        Forms\Components\TimePicker::make('start_time')
-                                            ->label($t('Start', 'Start'))
-                                            ->seconds(false)
-                                            ->native(true),
-                                        Forms\Components\TimePicker::make('door_time')
-                                            ->label($t('Acces', 'Door'))
-                                            ->seconds(false)
-                                            ->native(true),
-                                        Forms\Components\TimePicker::make('end_time')
-                                            ->label($t('Final', 'End'))
-                                            ->seconds(false)
-                                            ->native(true),
-                                    ])
-                                    ->addActionLabel($t('Adaugă altă dată', 'Add another date'))
-                                    ->default([])
-                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
-                                    ->columns(4),
-
-                                // Recurring
-                                SC\Group::make()
-                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'recurring')
-                                    ->schema([
-                                        SC\Grid::make(4)->schema([
-                                            Forms\Components\DatePicker::make('recurring_start_date')
-                                                ->label($t('Data inițială', 'Initial date'))
-                                                ->minDate($minDateForEvent)
-                                                ->native(false)
-                                                ->live(onBlur: true)
-                                                ->skipRenderAfterStateUpdated()
-                                                ->afterStateUpdated(function ($state, SSet $set) {
-                                                    if (!$state) { $set('recurring_weekday', null); return; }
-                                                    $w = Carbon::parse($state)->dayOfWeekIso;
-                                                    $set('recurring_weekday', $w);
-                                                }),
-                                            Forms\Components\TextInput::make('recurring_weekday')
-                                                ->label($t('Ziua săptămânii', 'Weekday'))
-                                                ->disabled()
-                                                ->dehydrated(false)
-                                                ->formatStateUsing(function (SGet $get) use ($t) {
-                                                    $mapRo = [1=>'Lun',2=>'Mar',3=>'Mie',4=>'Joi',5=>'Vin',6=>'Sâm',7=>'Dum'];
-                                                    $mapEn = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
-                                                    $map = $t('ro', 'en') === 'ro' ? $mapRo : $mapEn;
-                                                    return $map[$get('recurring_weekday')] ?? '';
-                                                }),
-                                            Forms\Components\Select::make('recurring_frequency')
-                                                ->label($t('Recurență', 'Recurrence'))
-                                                ->options([
-                                                    'weekly' => $t('Săptămânal', 'Weekly'),
-                                                    'monthly_nth' => $t('Lunar (a N-a zi)', 'Monthly (Nth weekday)'),
-                                                ])
-                                                ->required()
-                                                ->live(onBlur: true),
-                                            Forms\Components\TextInput::make('recurring_count')
-                                                ->label($t('Ocurențe', 'Occurrences'))
-                                                ->numeric()
-                                                ->minValue(1),
-                                        ]),
-                                        SC\Grid::make(2)
-                                            ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
-                                            ->schema([
-                                                Forms\Components\Select::make('recurring_week_of_month')
-                                                    ->label($t('Săptămâna din lună', 'Week of month'))
-                                                    ->options([
-                                                        1 => $t('Prima', 'First'),
-                                                        2 => $t('A doua', 'Second'),
-                                                        3 => $t('A treia', 'Third'),
-                                                        4 => $t('A patra', 'Fourth'),
-                                                        -1 => $t('Ultima', 'Last'),
-                                                    ])
-                                                    ->required(),
-                                            ]),
-                                        SC\Grid::make(3)->schema([
-                                            Forms\Components\TimePicker::make('recurring_start_time')
-                                                ->label($t('Ora start', 'Start time'))
-                                                ->seconds(false)->native(true)
-                                                ->required(),
-                                            Forms\Components\TimePicker::make('recurring_door_time')
-                                                ->label($t('Ora acces', 'Door time'))
-                                                ->seconds(false)->native(true),
-                                            Forms\Components\TimePicker::make('recurring_end_time')
-                                                ->label($t('Ora final', 'End time'))
-                                                ->seconds(false)->native(true),
-                                        ]),
-                                    ]),
-                            ])->columns(1),
-
-                        // LOCATION & LINKS
-                        SC\Section::make($t('Locație și Link-uri', 'Location & Links'))
-                            ->schema([
-                                Forms\Components\Select::make('venue_id')
-                                    ->label($t('Locație', 'Venue'))
-                                    // Monument-tax awareness badge next to
-                                    // the label. Yellow pill only appears
-                                    // when the selected venue has
-                                    // has_historical_monument_tax=true, so
-                                    // the operator sees the surcharge is
-                                    // active without scrolling to the Taxe
-                                    // section. Same visual as the previous
-                                    // below-select hint, now inline.
-                                    ->hint(function (SGet $get) {
-                                        $venueId = $get('venue_id');
-                                        if (!$venueId || !Venue::where('id', $venueId)->value('has_historical_monument_tax')) {
-                                            return null;
-                                        }
-                                        return new HtmlString(
-                                            '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fef3c7;border:1px solid #fbbf24;border-radius:9999px;font-size:11px;color:#92400e;font-weight:500;">'
-                                            . '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>'
-                                            . 'Monument Istoric'
-                                            . '</span>'
-                                        );
-                                    })
-                                    ->searchable()
-                                    ->preload()
-                                    ->live()
-                                    ->options(function () use ($marketplace) {
-                                        $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
-                                        return Venue::query()
-                                            ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries))
-                                            ->get()
-                                            ->mapWithKeys(fn ($venue) => [
-                                                $venue->id => $venue->getTranslation('name', app()->getLocale())
-                                                    . ($venue->city ? ' (' . $venue->city . ')' : '')
-                                            ])
-                                            ->sort();
-                                    })
-                                    ->getOptionLabelUsing(function ($value) {
-                                        $venue = Venue::find($value);
-                                        if (!$venue) return $value;
-                                        return $venue->getTranslation('name', app()->getLocale())
-                                            . ($venue->city ? ' (' . $venue->city . ')' : '');
-                                    })
-                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
-                                        // Changing the venue invalidates any seating
-                                        // layout previously chosen (layouts are
-                                        // venue-scoped). Without this reset the
-                                        // form keeps the old seating_layout_id in
-                                        // state — the "Harta Locuri" tab visibility
-                                        // is gated on that field, so it stays
-                                        // visible and still renders the stale
-                                        // layout. Clearing the performance id too
-                                        // because it's tied to a specific layout.
-                                        $set('seating_layout_id', null);
-                                        $set('seating_performance_id', null);
-
-                                        if ($state) {
-                                            $venue = Venue::find($state);
-                                            if ($venue) {
-                                                $set('address', $venue->address ?? $venue->full_address ?? '');
-                                                $set('website_url', $venue->website_url ?? '');
-
-                                                // Auto-fill marketplace_city_id by matching venue city name
-                                                if ($venue->city) {
-                                                    $cityName = strtolower(trim(Str::ascii($venue->city)));
-                                                    $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
-                                                        ->where('is_visible', true)
-                                                        ->get()
-                                                        ->first(function ($city) use ($cityName) {
-                                                            // Check all language variants (diacritic-insensitive)
-                                                            $nameVariants = is_array($city->name) ? $city->name : [];
-                                                            foreach ($nameVariants as $lang => $name) {
-                                                                if (strtolower(trim(Str::ascii($name))) === $cityName) {
-                                                                    return true;
-                                                                }
-                                                            }
-                                                            return false;
-                                                        });
-
-                                                    if ($matchedCity) {
-                                                        $set('marketplace_city_id', $matchedCity->id);
-                                                    } else {
-                                                        // City doesn't exist in marketplace — auto-create it
-                                                        // Normalize country to ISO 2-letter code
-                                                        $countryRaw = $venue->country ?? 'RO';
-                                                        $countryCode = mb_strlen($countryRaw) === 2 ? strtoupper($countryRaw) : (collect([
-                                                            'Romania' => 'RO', 'Germany' => 'DE', 'France' => 'FR', 'Spain' => 'ES',
-                                                            'Italy' => 'IT', 'Austria' => 'AT', 'Hungary' => 'HU', 'Bulgaria' => 'BG',
-                                                            'Moldova' => 'MD', 'Serbia' => 'RS', 'Croatia' => 'HR', 'Greece' => 'GR',
-                                                            'Poland' => 'PL', 'Czech Republic' => 'CZ', 'Slovakia' => 'SK',
-                                                            'United Kingdom' => 'GB', 'Netherlands' => 'NL', 'Belgium' => 'BE',
-                                                            'Switzerland' => 'CH', 'Portugal' => 'PT', 'Sweden' => 'SE',
-                                                            'România' => 'RO', 'Deutschland' => 'DE',
-                                                        ])->get($countryRaw, strtoupper(mb_substr($countryRaw, 0, 2))));
-
-                                                        // Promote the raw venue.city to its canonical
-                                                        // native spelling via the centralized geo
-                                                        // dataset, so a venue typed "Bucuresti"
-                                                        // creates a MarketplaceCity named "București"
-                                                        // instead of perpetuating the non-diacritic
-                                                        // form. Falls back to the raw value when
-                                                        // geo has no match (other countries / typos).
-                                                        $cityName = $venue->city;
-                                                        $cityLat = $venue->lat;
-                                                        $cityLng = $venue->lng;
-                                                        $geoLoc = \App\Support\GeoLocations::matchLocality($venue->city, null, $countryCode);
-                                                        if ($geoLoc) {
-                                                            $cityName = $geoLoc->name_native;
-                                                            $cityLat = $cityLat ?: $geoLoc->latitude;
-                                                            $cityLng = $cityLng ?: $geoLoc->longitude;
-                                                        }
-
-                                                        $newCity = MarketplaceCity::create([
-                                                            'marketplace_client_id' => $marketplace?->id,
-                                                            'name' => ['ro' => $cityName, 'en' => $cityName],
-                                                            'country' => $countryCode,
-                                                            'latitude' => $cityLat,
-                                                            'longitude' => $cityLng,
-                                                            'is_visible' => true,
-                                                        ]);
-                                                        $set('marketplace_city_id', $newCity->id);
-                                                    }
-                                                }
-
-                                                // Auto-match the fiscal directorate from the venue's
-                                                // location. Shared with the Duplicate action so both
-                                                // derive the registry identically.
-                                                $matchedRegistry = \App\Models\MarketplaceTaxRegistry::matchForVenue($venue, $marketplace?->id);
-                                                $set('marketplace_tax_registry_id', $matchedRegistry?->id);
-                                            }
-                                        }
-                                    })
-                                    ->suffixActions([
-                                        Action::make('edit_venue')
-                                            ->icon('heroicon-o-pencil-square')
-                                            ->tooltip($t('Editează locația', 'Edit venue'))
-                                            ->url(fn (SGet $get) => $get('venue_id')
-                                                ? VenueResource::getUrl('edit', ['record' => $get('venue_id')])
-                                                : null)
-                                            ->openUrlInNewTab()
-                                            ->visible(fn (SGet $get) => (bool) $get('venue_id')),
-                                        Action::make('create_venue')
-                                            ->icon('heroicon-o-plus-circle')
-                                            ->tooltip($t('Adaugă locație nouă', 'Add new venue'))
-                                            ->url(fn () => VenueResource::getUrl('create'))
-                                            ->openUrlInNewTab(),
-                                    ])
-                                    ->nullable(),
-
-                                Forms\Components\TextInput::make('suggested_venue_name')
-                                    ->label($t('Locație sugerată de organizator', 'Suggested venue by organizer'))
-                                    ->disabled()
-                                    ->visible(fn (?Event $record) => $record && !empty($record->suggested_venue_name))
-                                    ->helperText($t(
-                                        'Organizatorul a introdus manual acest nume de locație. Adaugă locația în bibliotecă și selecteaz-o din câmpul de mai sus.',
-                                        'The organizer manually entered this venue name. Add it to the venue library and select it above.'
-                                    ))
-                                    ->prefixIcon('heroicon-o-exclamation-triangle')
-                                    ->extraAttributes(['class' => 'bg-amber-50 dark:bg-amber-900/20']),
-                                Forms\Components\Select::make('seating_layout_id')
-                                    ->label($t('Harta de locuri', 'Seating Layout'))
-                                    ->searchable()
-                                    ->preload()
-                                    ->live(onBlur: true)
-                                    ->visible(function (SGet $get) {
-                                        $venueId = $get('venue_id');
-                                        if (!$venueId) return false;
-                                        return SeatingLayout::where('venue_id', $venueId)
-                                            ->where('status', 'published')
-                                            ->exists();
-                                    })
-                                    ->options(function (SGet $get) {
-                                        $venueId = $get('venue_id');
-                                        if (!$venueId) return [];
-
-                                        return SeatingLayout::query()
-                                            ->where('venue_id', $venueId)
-                                            ->where('status', 'published')
-                                            ->orderBy('name')
-                                            ->get()
-                                            ->mapWithKeys(fn ($layout) => [
-                                                $layout->id => $layout->name . ' (' . $layout->sections()->count() . ' sections)'
-                                            ]);
-                                    })
-                                    ->helperText($t('Selectează o hartă de locuri pentru locuri numerotate. Lasă gol pentru acces general.', 'Select a seating layout for assigned seating. Leave empty for general admission.'))
-                                    ->nullable(),
-                                Forms\Components\Select::make('marketplace_city_id')
-                                    ->label($t('Oraș', 'City'))
-                                    ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($marketplace, $marketplaceLanguage) {
-                                        $list = MarketplaceCity::query()
-                                            ->where('marketplace_client_id', $marketplace?->id)
-                                            ->where('is_visible', true)
-                                            ->with('region')
-                                            ->orderBy('sort_order')
-                                            ->get();
-
-                                        // Always include the currently-selected city even if it
-                                        // isn't in the visible list yet. The venue's
-                                        // afterStateUpdated handler can auto-create a new
-                                        // MarketplaceCity inside the same request; without this
-                                        // the Select would render empty until the page reloads.
-                                        $selectedId = $get('marketplace_city_id');
-                                        if ($selectedId && ! $list->contains('id', (int) $selectedId)) {
-                                            $extra = MarketplaceCity::with('region')->find($selectedId);
-                                            if ($extra) {
-                                                $list->push($extra);
-                                            }
-                                        }
-
-                                        return $list->mapWithKeys(fn ($city) => [
-                                            $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
-                                                . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
-                                        ]);
-                                    })
-                                    ->searchable()
-                                    ->preload()
-                                    ->placeholder($t('Selectează un oraș', 'Select a city'))
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Filtrează evenimentele pe site după oraș', 'Filter events by city on the website'))
-                                    ->nullable(),
-                                Forms\Components\TextInput::make('address')
-                                    ->label($t('Adresă', 'Address'))
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('website_url')
-                                    ->label('Website')
-                                    ->url()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('facebook_url')
-                                    ->label($t('Eveniment Facebook', 'Facebook Event'))
-                                    ->url()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('event_website_url')
-                                    ->label($t('Website Eveniment', 'Event Website'))
-                                    ->url()
-                                    ->maxLength(255),
-                            ])->columns(2),
-
-                        // ONLINE EVENT — visible only when the marketplace
-                        // has the `zoom-integration` microservice activated.
-                        // MVP: URL manual + passcode; Phase 2 will add OAuth
-                        // + auto-meeting creation (the "Conectează Zoom"
-                        // button below is a stub advertising the roadmap).
-                        SC\Section::make($t('Eveniment online', 'Online event'))
-                            ->icon('heroicon-o-video-camera')
-                            ->description($t(
-                                'Bilete pentru un webinar sau eveniment livestream (Zoom, Meet, custom). Participanții primesc un link unic de acces pe email + în cont.',
-                                'Tickets for a webinar or livestream event (Zoom, Meet, custom). Attendees receive a unique access link by email + in their account.'
-                            ))
-                            ->collapsed(fn (?Event $record) => !($record?->is_online))
-                            ->visible(fn () => self::isZoomMicroserviceActive($marketplace?->id))
-                            ->schema([
-                                Forms\Components\Toggle::make('is_online')
-                                    ->label($t('Acesta este un eveniment online', 'This is an online event'))
-                                    ->helperText($t(
-                                        'Bifează pentru a marca evenimentul ca desfășurat online. Locația fizică rămâne opțională.',
-                                        'Toggle to mark this event as online. The physical venue stays optional.'
-                                    ))
-                                    ->live()
-                                    ->columnSpanFull(),
-                                Forms\Components\Select::make('online_provider')
-                                    ->label($t('Provider', 'Provider'))
-                                    ->options([
-                                        'zoom'        => 'Zoom',
-                                        'google_meet' => 'Google Meet',
-                                        'teams'       => 'Microsoft Teams',
-                                        'custom'      => $t('Alt livestream (URL custom)', 'Other livestream (custom URL)'),
-                                    ])
-                                    ->default('zoom')
-                                    ->native(false)
-                                    ->required(fn (SGet $get) => (bool) $get('is_online'))
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
-                                Forms\Components\TextInput::make('online_meeting_url')
-                                    ->label($t('URL meeting', 'Meeting URL'))
-                                    ->helperText($t(
-                                        'Lipește URL-ul de invitație. Nu îl trimitem direct clientului — link-ul e afișat prin gateway-ul nostru /join/{cod bilet} după validare.',
-                                        'Paste the invitation URL. We do NOT share it directly with the customer — it\'s revealed through our /join/{ticket-code} gateway after validation.'
-                                    ))
-                                    ->url()
-                                    ->maxLength(500)
-                                    ->required(fn (SGet $get) => (bool) $get('is_online'))
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online'))
-                                    ->columnSpanFull(),
-                                Forms\Components\TextInput::make('online_passcode')
-                                    ->label($t('Parolă meeting (opțional)', 'Meeting passcode (optional)'))
-                                    ->helperText($t(
-                                        'Parola e criptată în baza de date și afișată clientului DOAR după validarea biletului.',
-                                        'The passcode is encrypted at rest and shown to the customer ONLY after ticket validation.'
-                                    ))
-                                    ->maxLength(64)
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
-                                Forms\Components\TextInput::make('online_lobby_opens_minutes_before')
-                                    ->label($t('Lobby deschide cu (min. înainte)', 'Lobby opens (minutes before)'))
-                                    ->helperText($t(
-                                        'Câte minute înainte de start devine link-ul de acces activ. Default 15.',
-                                        'How many minutes before start the access link becomes active. Default 15.'
-                                    ))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->maxValue(120)
-                                    ->default(15)
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
-                                Forms\Components\Select::make('online_capacity_hint')
-                                    ->label($t('Capacitate provider (opțional)', 'Provider capacity (optional)'))
-                                    ->options([
-                                        100  => '100 participanți (Zoom Basic / Pro)',
-                                        300  => '300 participanți (Zoom Business)',
-                                        500  => '500 participanți (Zoom Enterprise)',
-                                        1000 => '1000 participanți (Zoom Enterprise Plus)',
-                                    ])
-                                    ->helperText($t(
-                                        'Setează planul tău Zoom ca să te avertizăm dacă vinzi mai multe bilete decât încap în meeting.',
-                                        'Set your Zoom plan cap so we warn you when tickets exceed the meeting capacity.'
-                                    ))
-                                    ->native(false)
-                                    ->nullable()
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online') && $get('online_provider') === 'zoom'),
-                                // Soft capacity warning — visible only on Edit
-                                // (needs an existing record to count tickets)
-                                // when the aggregate ticket stock exceeds the
-                                // provider cap declared above.
-                                Forms\Components\Placeholder::make('online_capacity_warning')
-                                    ->label('')
-                                    ->content(function (?Event $record, SGet $get) {
-                                        if (!$record) return null;
-                                        $cap = (int) ($get('online_capacity_hint') ?? 0);
-                                        if ($cap <= 0) return null;
-                                        try {
-                                            $totalCapacity = (int) $record->total_capacity;
-                                        } catch (\Throwable $e) {
-                                            return null;
-                                        }
-                                        if ($totalCapacity <= $cap) return null;
-                                        return new \Illuminate\Support\HtmlString(
-                                            '<div class="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">'
-                                            . '<svg class="h-5 w-5 flex-shrink-0 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
-                                            . '<div class="text-sm text-amber-800">'
-                                            . '<div class="font-semibold text-amber-900">Ai vândut mai multe locuri decât încap în meeting</div>'
-                                            . '<p class="mt-1">Ai declarat o capacitate de <strong>' . $cap . '</strong> participanți în platformă, dar tipurile tale de bilete totalizează <strong>' . $totalCapacity . '</strong> locuri. Verifică-ți planul Zoom sau redu stocul biletelor.</p>'
-                                            . '</div>'
-                                            . '</div>'
-                                        );
-                                    })
-                                    ->visible(fn (?Event $record, SGet $get) => $record && (bool) $get('is_online') && (int) ($get('online_capacity_hint') ?? 0) > 0)
-                                    ->columnSpanFull(),
-                                Forms\Components\RichEditor::make('online_instructions')
-                                    ->label($t('Instrucțiuni de acces (opțional)', 'Access instructions (optional)'))
-                                    ->helperText($t(
-                                        'Afișat clientului pe pagina de acces (dresscode virtual, tips audio, browser recomandat etc.).',
-                                        'Shown to the customer on the access page (virtual dresscode, audio tips, recommended browser, etc.).'
-                                    ))
-                                    ->columnSpanFull()
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online')),
-                                Forms\Components\Placeholder::make('zoom_oauth_stub')
-                                    ->label('')
-                                    ->content(new \Illuminate\Support\HtmlString(
-                                        '<div class="flex items-start gap-3 rounded-xl border border-dashed border-primary-200 bg-primary-50/50 p-4">'
-                                        . '<svg class="h-6 w-6 flex-shrink-0 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
-                                        . '<div class="flex-1">'
-                                        . '<div class="font-semibold text-primary-800">Conectare directă la contul Zoom</div>'
-                                        . '<p class="mt-1 text-sm text-primary-700/80">În curând vei putea conecta contul tău Zoom pentru ca meeting-urile să fie create automat + fiecare bilet să primească un link unic de registrant (anti-share nativ).</p>'
-                                        . '<button type="button" disabled class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-1.5 text-xs font-semibold text-primary-500 cursor-not-allowed">'
-                                        . 'Conectează cont Zoom (în curând)'
-                                        . '</button>'
-                                        . '</div>'
-                                        . '</div>'
-                                    ))
-                                    ->columnSpanFull()
-                                    ->visible(fn (SGet $get) => (bool) $get('is_online') && $get('online_provider') === 'zoom'),
-                            ])->columns(2),
-
-                        // TAX REGISTRY (linked to venue location)
-                        SC\Section::make($t('Direcție fiscală (Tax Registry)', 'Tax Registry'))
-                            ->icon('heroicon-o-building-library')
-                            ->description($t('Direcția fiscală locală folosită pentru declarațiile de impozit pe spectacole.', 'Local tax authority used for entertainment tax declarations.'))
-                            ->collapsible()
-                            ->visible(fn (SGet $get) => (bool) $get('venue_id'))
-                            ->schema([
-                                Forms\Components\Placeholder::make('tax_registry_match_info')
-                                    ->hiddenLabel()
-                                    ->content(function (SGet $get) use ($t) {
-                                        $registryId = $get('marketplace_tax_registry_id');
-                                        if ($registryId) {
-                                            $registry = \App\Models\MarketplaceTaxRegistry::find($registryId);
-                                            if ($registry) {
-                                                $name = e($registry->name);
-                                                $location = e(implode(', ', array_filter([$registry->city, $registry->county, $registry->country])));
-                                                return new HtmlString(
-                                                    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #10b981;background:#f0fdf4;border-radius:6px;color:#065f46;font-size:13px;">'
-                                                    . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
-                                                    . '<div><strong>' . $t('Tax Registry identificat:', 'Tax Registry found:') . '</strong> ' . $name
-                                                    . '<div style="font-size:11px;color:#047857;margin-top:2px;">' . $location . '</div></div>'
-                                                    . '</div>'
-                                                );
-                                            }
-                                        }
-                                        return new HtmlString(
-                                            '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #f59e0b;background:#fffbeb;border-radius:6px;color:#92400e;font-size:13px;">'
-                                            . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
-                                            . '<div>' . $t('Niciun Tax Registry nu se potrivește automat. Selectează manual din dropdown-ul de mai jos.', 'No Tax Registry matches automatically. Select manually from dropdown below.') . '</div>'
-                                            . '</div>'
-                                        );
-                                    }),
-
-                                Forms\Components\Select::make('marketplace_tax_registry_id')
-                                    ->label($t('Tax Registry', 'Tax Registry'))
-                                    ->options(function () use ($marketplace) {
-                                        return \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('is_active', true)
-                                            ->get()
-                                            ->mapWithKeys(fn ($r) => [
-                                                $r->id => $r->name . ' — ' . implode(', ', array_filter([$r->city, $r->county, $r->country])),
-                                            ]);
-                                    })
-                                    ->searchable()
-                                    ->preload()
-                                    ->nullable()
-                                    ->live(),
-                            ]),
-                                    ]), // End Tab 2: Program
 
                                 // ========== TAB 3: CONȚINUT ==========
                                 SC\Tabs\Tab::make($t('Conținut', 'Content'))
@@ -4022,215 +4021,9 @@ class EventResource extends Resource
                             ])->collapsible()->persistCollapsed(),
                                     ]), // End Tab 4: Bilete
 
-                                // ========== TAB 5: SEO ==========
-                                SC\Tabs\Tab::make('SEO')
-                                    ->key('seo')
-                                    ->icon('heroicon-o-globe-alt')
-                                    ->lazy()
-                                    ->schema([
-                        // SEO Section (not collapsible - always visible when on SEO tab)
-                        SC\Section::make('SEO')
-                ->schema([
-                    Forms\Components\Select::make('seo_presets')
-                        ->label($t('Adaugă chei SEO din șablon', 'Add SEO keys from template'))
-                        ->multiple()
-                        ->dehydrated(false)
-                        ->options([
-                            'core'        => $t('De bază (title/description/canonical/robots)', 'Core (title/description/canonical/robots)'),
-                            'intl'        => $t('Internațional (hreflang, og:locale)', 'International (hreflang, og:locale)'),
-                            'open_graph'  => 'Open Graph (og:*)',
-                            'article'     => $t('OG Articol extras', 'OG Article extras'),
-                            'product'     => $t('OG Produs extras', 'OG Product extras'),
-                            'twitter'     => 'Twitter Cards',
-                            'jsonld'      => $t('Date structurate (JSON-LD)', 'Structured Data (JSON-LD)'),
-                            'robots_adv'  => $t('Robots avansat', 'Robots advanced'),
-                            'verify'      => $t('Verificare (Google/Bing/etc.)', 'Verification (Google/Bing/etc.)'),
-                            'feeds'       => 'Feeds (RSS/Atom/oEmbed)',
-                        ])
-                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează șabloane pentru a adăuga chei. Valorile vor fi pre-completate din datele evenimentului unde este disponibil.', 'Select templates to add keys. Values will be pre-filled from event data where available.'))
-                        ->live()
-                        ->partiallyRenderAfterStateUpdated()
-                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplaceLanguage, $marketplace) {
-                            $seo = (array) ($get('seo') ?? []);
-
-                            // Get event data for auto-fill
-                            $title = $get("title.{$marketplaceLanguage}") ?? '';
-                            $slug = $get('slug') ?? '';
-                            $description = $get("short_description.{$marketplaceLanguage}") ?? $get("description.{$marketplaceLanguage}") ?? '';
-                            $shortDesc = strip_tags($description);
-                            if (strlen($shortDesc) > 160) {
-                                $shortDesc = substr($shortDesc, 0, 157) . '...';
-                            }
-                            $posterUrl = $get('poster_url') ?? '';
-                            $heroUrl = $get('hero_image_url') ?? '';
-                            $imageUrl = $posterUrl ?: $heroUrl;
-                            $eventDate = $get('event_date') ?? '';
-                            $startTime = $get('start_time') ?? '';
-                            $endTime = $get('end_time') ?? '';
-                            $venueName = '';
-                            $venueAddress = '';
-
-                            // Try to get venue info
-                            $venueId = $get('venue_id');
-                            if ($venueId) {
-                                $venue = \App\Models\Venue::find($venueId);
-                                if ($venue) {
-                                    $venueName = $venue->getTranslation('name', $marketplaceLanguage) ?? $venue->name ?? '';
-                                    $venueAddress = $venue->address ?? '';
-                                }
-                            }
-
-                            // Get marketplace's website URL (MarketplaceClient doesn't have domains like Tenant)
-                            $baseUrl = $marketplace?->website ?? '';
-                            // Ensure it has https:// prefix
-                            if ($baseUrl && ! str_starts_with($baseUrl, 'http://') && ! str_starts_with($baseUrl, 'https://')) {
-                                $baseUrl = 'https://' . $baseUrl;
-                            }
-
-                            // Build absolute event URL
-                            $eventUrl = $baseUrl && $slug ? "{$baseUrl}/event/{$slug}" : '';
-
-                            // Build absolute image URL
-                            $absoluteImageUrl = '';
-                            if ($imageUrl) {
-                                // If it's already an absolute URL, use as-is
-                                if (str_starts_with($imageUrl, 'http://') || str_starts_with($imageUrl, 'https://')) {
-                                    $absoluteImageUrl = $imageUrl;
-                                } else {
-                                    // Build absolute URL using storage
-                                    $absoluteImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imageUrl);
-                                }
-                            }
-
-                            // Current timestamp for article times
-                            $now = now()->toIso8601String();
-
-                            $templates = [
-                                'core' => [
-                                    'meta_title'       => $title,
-                                    'meta_description' => $shortDesc,
-                                    'canonical_url'    => $eventUrl,
-                                    'robots'           => 'index,follow',
-                                    'viewport'         => 'width=device-width, initial-scale=1',
-                                    'referrer'         => 'no-referrer-when-downgrade',
-                                ],
-                                'intl' => [
-                                    'og:locale'        => $marketplaceLanguage === 'ro' ? 'ro_RO' : 'en_US',
-                                    'hreflang_map'     => '[]',
-                                ],
-                                'open_graph' => [
-                                    'og:title'         => $title,
-                                    'og:description'   => $shortDesc,
-                                    'og:type'          => 'event',
-                                    'og:url'           => $eventUrl,
-                                    'og:image'         => $absoluteImageUrl,
-                                    'og:image:alt'     => $title,
-                                    'og:image:width'   => '1200',
-                                    'og:image:height'  => '630',
-                                    'og:site_name'     => $marketplace?->public_name ?? $marketplace?->name ?? '',
-                                ],
-                                'article' => [
-                                    'article:author'         => $marketplace?->public_name ?? '',
-                                    'article:section'        => 'Events',
-                                    'article:tag'            => '',
-                                    'article:published_time' => $now,
-                                    'article:modified_time'  => $now,
-                                ],
-                                'product' => [
-                                    'product:price:amount'   => '',
-                                    'product:price:currency' => $marketplace?->currency ?? 'RON',
-                                    'product:availability'   => 'instock',
-                                ],
-                                'twitter' => [
-                                    'twitter:card'        => 'summary_large_image',
-                                    'twitter:title'       => $title,
-                                    'twitter:description' => $shortDesc,
-                                    'twitter:image'       => $absoluteImageUrl,
-                                    'twitter:site'        => '',
-                                    'twitter:creator'     => '',
-                                    'twitter:player'        => '',
-                                    'twitter:player:width'  => '',
-                                    'twitter:player:height' => '',
-                                ],
-                                'jsonld' => [
-                                    'structured_data' => json_encode([
-                                        '@context' => 'https://schema.org',
-                                        '@type'    => 'Event',
-                                        'name'     => $title,
-                                        'description' => $shortDesc,
-                                        'image'    => $absoluteImageUrl,
-                                        'startDate'=> $eventDate && $startTime ? "{$eventDate}T{$startTime}" : $eventDate,
-                                        'endDate'  => $eventDate && $endTime ? "{$eventDate}T{$endTime}" : '',
-                                        'location' => [
-                                            '@type'   => 'Place',
-                                            'name'    => $venueName,
-                                            'address' => $venueAddress,
-                                        ],
-                                        'organizer' => [
-                                            '@type' => 'Organization',
-                                            'name'  => $marketplace?->public_name ?? $marketplace?->name ?? '',
-                                            'url'   => $baseUrl,
-                                        ],
-                                        'url'     => $eventUrl,
-                                    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
-                                ],
-                                'robots_adv' => [
-                                    'max-snippet'       => '-1',
-                                    'max-image-preview' => 'large',
-                                    'max-video-preview' => '-1',
-                                    'noarchive'         => '',
-                                    'nosnippet'         => '',
-                                    'noimageindex'      => '',
-                                    'indexifembedded'   => '',
-                                    'googlebot'         => '',
-                                    'bingbot'           => '',
-                                ],
-                                'verify' => [
-                                    'google-site-verification'     => '',
-                                    'msvalidate.01'                 => '',
-                                    'p:domain_verify'               => '',
-                                    'yandex-verification'           => '',
-                                    'ahrefs-site-verification'      => '',
-                                    'facebook-domain-verification'  => '',
-                                ],
-                                'feeds' => [
-                                    'rss_url'         => $baseUrl ? "{$baseUrl}/feed/rss" : '',
-                                    'atom_url'        => $baseUrl ? "{$baseUrl}/feed/atom" : '',
-                                    'oembed_json'     => $eventUrl ? "{$eventUrl}/oembed.json" : '',
-                                    'oembed_xml'      => $eventUrl ? "{$eventUrl}/oembed.xml" : '',
-                                ],
-                            ];
-
-                            foreach ((array) $state as $group) {
-                                foreach (($templates[$group] ?? []) as $k => $v) {
-                                    if (! array_key_exists($k, $seo)) {
-                                        $seo[$k] = $v;
-                                    }
-                                }
-                            }
-
-                            $set('seo', $seo);
-                        }),
-
-                    Forms\Components\KeyValue::make('seo')
-                        ->keyLabel($t('Cheie meta', 'Meta key'))
-                        ->valueLabel($t('Valoare meta', 'Meta value'))
-                        ->addable()
-                        ->deletable()
-                        ->reorderable()
-                        ->columnSpanFull()
-                        ->default([
-                            'meta_title'       => '',
-                            'meta_description' => '',
-                            'canonical_url'    => '',
-                            'robots'           => 'index,follow',
-                        ])
-                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Adaugă tag-uri meta SEO personalizate. Folosește șabloanele de mai sus pentru a adăuga rapid seturi comune.', 'Add custom SEO meta tags. Use templates above to quickly add common sets.')),
-                ]),
-                                    ]), // End Tab 5: SEO
 
                                 // ========== TAB 6: HARTA LOCURI ==========
-                                SC\Tabs\Tab::make($t('Harta Locuri', 'Seating Map'))
+                                SC\Tabs\Tab::make($t('Harta', 'Map'))
                                     ->key('harta')
                                     ->icon('heroicon-o-map')
                                     ->visible(fn (SGet $get) => (bool) $get('seating_layout_id'))
@@ -4572,6 +4365,207 @@ class EventResource extends Resource
                                     ]), // End Tab 9: Documente
 
                             ]), // End Tabs component
+                        // SEO - sectiune de sine statatoare sub tab-uri (fost tab SEO).
+                        SC\Section::make('SEO')
+                ->schema([
+                    Forms\Components\Select::make('seo_presets')
+                        ->label($t('Adaugă chei SEO din șablon', 'Add SEO keys from template'))
+                        ->multiple()
+                        ->dehydrated(false)
+                        ->options([
+                            'core'        => $t('De bază (title/description/canonical/robots)', 'Core (title/description/canonical/robots)'),
+                            'intl'        => $t('Internațional (hreflang, og:locale)', 'International (hreflang, og:locale)'),
+                            'open_graph'  => 'Open Graph (og:*)',
+                            'article'     => $t('OG Articol extras', 'OG Article extras'),
+                            'product'     => $t('OG Produs extras', 'OG Product extras'),
+                            'twitter'     => 'Twitter Cards',
+                            'jsonld'      => $t('Date structurate (JSON-LD)', 'Structured Data (JSON-LD)'),
+                            'robots_adv'  => $t('Robots avansat', 'Robots advanced'),
+                            'verify'      => $t('Verificare (Google/Bing/etc.)', 'Verification (Google/Bing/etc.)'),
+                            'feeds'       => 'Feeds (RSS/Atom/oEmbed)',
+                        ])
+                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează șabloane pentru a adăuga chei. Valorile vor fi pre-completate din datele evenimentului unde este disponibil.', 'Select templates to add keys. Values will be pre-filled from event data where available.'))
+                        ->live()
+                        ->partiallyRenderAfterStateUpdated()
+                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplaceLanguage, $marketplace) {
+                            $seo = (array) ($get('seo') ?? []);
+
+                            // Get event data for auto-fill
+                            $title = $get("title.{$marketplaceLanguage}") ?? '';
+                            $slug = $get('slug') ?? '';
+                            $description = $get("short_description.{$marketplaceLanguage}") ?? $get("description.{$marketplaceLanguage}") ?? '';
+                            $shortDesc = strip_tags($description);
+                            if (strlen($shortDesc) > 160) {
+                                $shortDesc = substr($shortDesc, 0, 157) . '...';
+                            }
+                            $posterUrl = $get('poster_url') ?? '';
+                            $heroUrl = $get('hero_image_url') ?? '';
+                            $imageUrl = $posterUrl ?: $heroUrl;
+                            $eventDate = $get('event_date') ?? '';
+                            $startTime = $get('start_time') ?? '';
+                            $endTime = $get('end_time') ?? '';
+                            $venueName = '';
+                            $venueAddress = '';
+
+                            // Try to get venue info
+                            $venueId = $get('venue_id');
+                            if ($venueId) {
+                                $venue = \App\Models\Venue::find($venueId);
+                                if ($venue) {
+                                    $venueName = $venue->getTranslation('name', $marketplaceLanguage) ?? $venue->name ?? '';
+                                    $venueAddress = $venue->address ?? '';
+                                }
+                            }
+
+                            // Get marketplace's website URL (MarketplaceClient doesn't have domains like Tenant)
+                            $baseUrl = $marketplace?->website ?? '';
+                            // Ensure it has https:// prefix
+                            if ($baseUrl && ! str_starts_with($baseUrl, 'http://') && ! str_starts_with($baseUrl, 'https://')) {
+                                $baseUrl = 'https://' . $baseUrl;
+                            }
+
+                            // Build absolute event URL
+                            $eventUrl = $baseUrl && $slug ? "{$baseUrl}/event/{$slug}" : '';
+
+                            // Build absolute image URL
+                            $absoluteImageUrl = '';
+                            if ($imageUrl) {
+                                // If it's already an absolute URL, use as-is
+                                if (str_starts_with($imageUrl, 'http://') || str_starts_with($imageUrl, 'https://')) {
+                                    $absoluteImageUrl = $imageUrl;
+                                } else {
+                                    // Build absolute URL using storage
+                                    $absoluteImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imageUrl);
+                                }
+                            }
+
+                            // Current timestamp for article times
+                            $now = now()->toIso8601String();
+
+                            $templates = [
+                                'core' => [
+                                    'meta_title'       => $title,
+                                    'meta_description' => $shortDesc,
+                                    'canonical_url'    => $eventUrl,
+                                    'robots'           => 'index,follow',
+                                    'viewport'         => 'width=device-width, initial-scale=1',
+                                    'referrer'         => 'no-referrer-when-downgrade',
+                                ],
+                                'intl' => [
+                                    'og:locale'        => $marketplaceLanguage === 'ro' ? 'ro_RO' : 'en_US',
+                                    'hreflang_map'     => '[]',
+                                ],
+                                'open_graph' => [
+                                    'og:title'         => $title,
+                                    'og:description'   => $shortDesc,
+                                    'og:type'          => 'event',
+                                    'og:url'           => $eventUrl,
+                                    'og:image'         => $absoluteImageUrl,
+                                    'og:image:alt'     => $title,
+                                    'og:image:width'   => '1200',
+                                    'og:image:height'  => '630',
+                                    'og:site_name'     => $marketplace?->public_name ?? $marketplace?->name ?? '',
+                                ],
+                                'article' => [
+                                    'article:author'         => $marketplace?->public_name ?? '',
+                                    'article:section'        => 'Events',
+                                    'article:tag'            => '',
+                                    'article:published_time' => $now,
+                                    'article:modified_time'  => $now,
+                                ],
+                                'product' => [
+                                    'product:price:amount'   => '',
+                                    'product:price:currency' => $marketplace?->currency ?? 'RON',
+                                    'product:availability'   => 'instock',
+                                ],
+                                'twitter' => [
+                                    'twitter:card'        => 'summary_large_image',
+                                    'twitter:title'       => $title,
+                                    'twitter:description' => $shortDesc,
+                                    'twitter:image'       => $absoluteImageUrl,
+                                    'twitter:site'        => '',
+                                    'twitter:creator'     => '',
+                                    'twitter:player'        => '',
+                                    'twitter:player:width'  => '',
+                                    'twitter:player:height' => '',
+                                ],
+                                'jsonld' => [
+                                    'structured_data' => json_encode([
+                                        '@context' => 'https://schema.org',
+                                        '@type'    => 'Event',
+                                        'name'     => $title,
+                                        'description' => $shortDesc,
+                                        'image'    => $absoluteImageUrl,
+                                        'startDate'=> $eventDate && $startTime ? "{$eventDate}T{$startTime}" : $eventDate,
+                                        'endDate'  => $eventDate && $endTime ? "{$eventDate}T{$endTime}" : '',
+                                        'location' => [
+                                            '@type'   => 'Place',
+                                            'name'    => $venueName,
+                                            'address' => $venueAddress,
+                                        ],
+                                        'organizer' => [
+                                            '@type' => 'Organization',
+                                            'name'  => $marketplace?->public_name ?? $marketplace?->name ?? '',
+                                            'url'   => $baseUrl,
+                                        ],
+                                        'url'     => $eventUrl,
+                                    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                                ],
+                                'robots_adv' => [
+                                    'max-snippet'       => '-1',
+                                    'max-image-preview' => 'large',
+                                    'max-video-preview' => '-1',
+                                    'noarchive'         => '',
+                                    'nosnippet'         => '',
+                                    'noimageindex'      => '',
+                                    'indexifembedded'   => '',
+                                    'googlebot'         => '',
+                                    'bingbot'           => '',
+                                ],
+                                'verify' => [
+                                    'google-site-verification'     => '',
+                                    'msvalidate.01'                 => '',
+                                    'p:domain_verify'               => '',
+                                    'yandex-verification'           => '',
+                                    'ahrefs-site-verification'      => '',
+                                    'facebook-domain-verification'  => '',
+                                ],
+                                'feeds' => [
+                                    'rss_url'         => $baseUrl ? "{$baseUrl}/feed/rss" : '',
+                                    'atom_url'        => $baseUrl ? "{$baseUrl}/feed/atom" : '',
+                                    'oembed_json'     => $eventUrl ? "{$eventUrl}/oembed.json" : '',
+                                    'oembed_xml'      => $eventUrl ? "{$eventUrl}/oembed.xml" : '',
+                                ],
+                            ];
+
+                            foreach ((array) $state as $group) {
+                                foreach (($templates[$group] ?? []) as $k => $v) {
+                                    if (! array_key_exists($k, $seo)) {
+                                        $seo[$k] = $v;
+                                    }
+                                }
+                            }
+
+                            $set('seo', $seo);
+                        }),
+
+                    Forms\Components\KeyValue::make('seo')
+                        ->keyLabel($t('Cheie meta', 'Meta key'))
+                        ->valueLabel($t('Valoare meta', 'Meta value'))
+                        ->addable()
+                        ->deletable()
+                        ->reorderable()
+                        ->columnSpanFull()
+                        ->default([
+                            'meta_title'       => '',
+                            'meta_description' => '',
+                            'canonical_url'    => '',
+                            'robots'           => 'index,follow',
+                        ])
+                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Adaugă tag-uri meta SEO personalizate. Folosește șabloanele de mai sus pentru a adăuga rapid seturi comune.', 'Add custom SEO meta tags. Use templates above to quickly add common sets.')),
+                ])
+                ->collapsible()
+                ->collapsed(),
                     ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
                 SC\Group::make()
