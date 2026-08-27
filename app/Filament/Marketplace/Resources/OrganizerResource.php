@@ -307,14 +307,11 @@ class OrganizerResource extends Resource
                                 ->maxLength(13)
                                 ->helperText('13 cifre'),
 
-                            Forms\Components\TextInput::make('individual_id_series')
-                                ->label('Serie buletin')
-                                ->maxLength(5)
+                            Forms\Components\TextInput::make('individual_id_series_number')
+                                ->label('Serie & nr buletin')
+                                ->maxLength(40)
+                                ->placeholder('ex: AB 123456')
                                 ->extraInputAttributes(['style' => 'text-transform: uppercase']),
-
-                            Forms\Components\TextInput::make('individual_id_number')
-                                ->label('Nr. buletin')
-                                ->maxLength(20),
 
                             Forms\Components\Textarea::make('individual_address')
                                 ->label('Adresă')

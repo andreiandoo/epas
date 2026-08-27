@@ -54,8 +54,7 @@ class MarketplaceOrganizer extends Authenticatable
         // when person_type === 'pf' in place of the company_* fields.
         'individual_full_name',
         'individual_cnp',
-        'individual_id_series',
-        'individual_id_number',
+        'individual_id_series_number',
         'individual_address',
         'individual_city',
         'individual_county',

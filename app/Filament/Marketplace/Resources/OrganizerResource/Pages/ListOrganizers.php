@@ -305,16 +305,39 @@ class ListOrganizers extends ListRecords
 
     public function getTabs(): array
     {
+        // Base query respects the marketplace-scoped visibility already
+        // applied by getEloquentQuery so counters can't leak rows from
+        // other marketplaces into the current one's badges.
+        $base = fn () => $this->getResource()::getEloquentQuery();
+
         return [
-            'all' => Tab::make('All'),
+            'all' => Tab::make('All')
+                ->badge(fn () => $base()->count())
+                ->badgeColor('gray'),
             'pending' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
-                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'pending')->count())
+                ->badge(fn () => $base()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
             'active' => Tab::make('Active')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'active')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'active'))
+                ->badge(fn () => $base()->where('status', 'active')->count())
+                ->badgeColor('success'),
             'suspended' => Tab::make('Suspended')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'suspended')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'suspended'))
+                ->badge(fn () => $base()->where('status', 'suspended')->count())
+                ->badgeColor('danger'),
+            'pf' => Tab::make('Persoană Fizică')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('person_type', 'pf'))
+                ->badge(fn () => $base()->where('person_type', 'pf')->count())
+                ->badgeColor('info'),
+            'pj' => Tab::make('Persoană Juridică')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('person_type', 'pj'))
+                ->badge(fn () => $base()->where('person_type', 'pj')->count())
+                ->badgeColor('success'),
+            'unset' => Tab::make('Nesetat')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('person_type'))
+                ->badge(fn () => $base()->whereNull('person_type')->count())
+                ->badgeColor('gray'),
         ];
     }
 }
