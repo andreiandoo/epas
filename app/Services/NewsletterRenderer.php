@@ -1029,15 +1029,28 @@ class NewsletterRenderer
             return number_format($cents / 100, 0) . ' ' . $currency;
         }
 
-        $tt = $event->ticketTypes()
+        // Cheapest active ticket, EXCLUDING the 10-lei Test POS smoke-test
+        // ticket (TicketType::isTestPos) which must never drive the public
+        // "De la {price}" label. Order by price, then pick the first non-test
+        // type with a positive price.
+        $candidates = $event->ticketTypes()
             ->where('status', 'active')
             ->orderByRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) ASC')
-            ->first();
-        if (!$tt) return '';
+            ->get();
 
-        $best = (int) ($tt->sale_price_cents ?? 0) > 0
-            ? (int) $tt->sale_price_cents
-            : (int) ($tt->price_cents ?? 0);
+        $best = 0;
+        foreach ($candidates as $tt) {
+            if ($tt->isTestPos()) {
+                continue;
+            }
+            $price = (int) ($tt->sale_price_cents ?? 0) > 0
+                ? (int) $tt->sale_price_cents
+                : (int) ($tt->price_cents ?? 0);
+            if ($price > 0) {
+                $best = $price;
+                break;
+            }
+        }
         if ($best <= 0) return '';
 
         return number_format($best / 100, 0) . ' ' . $currency;

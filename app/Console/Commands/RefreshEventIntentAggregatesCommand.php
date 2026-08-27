@@ -82,6 +82,7 @@ class RefreshEventIntentAggregatesCommand extends Command
         if ($event->relationLoaded('ticketTypes')) {
             $prices = $event->ticketTypes
                 ->where('status', 'active')
+                ->reject(fn ($t) => $t->isTestPos()) // never let the 10-lei Test POS ticket set the cheapest price
                 ->pluck('price_cents')
                 ->filter(fn ($p) => $p !== null)
                 ->all();
