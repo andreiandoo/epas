@@ -318,18 +318,22 @@ class OrganizerResource extends Resource
                                 ->rows(2)
                                 ->columnSpanFull(),
 
-                            Forms\Components\TextInput::make('individual_city')
-                                ->label('Oraș')
-                                ->maxLength(100),
+                            SC\Grid::make(3)
+                                ->schema([
+                                    Forms\Components\TextInput::make('individual_city')
+                                        ->label('Oraș')
+                                        ->maxLength(100),
 
-                            Forms\Components\TextInput::make('individual_county')
-                                ->label('Județ')
-                                ->maxLength(100),
+                                    Forms\Components\TextInput::make('individual_county')
+                                        ->label('Județ')
+                                        ->maxLength(100),
 
-                            Forms\Components\TextInput::make('individual_country')
-                                ->label('Țară')
-                                ->maxLength(100)
-                                ->default('România'),
+                                    Forms\Components\TextInput::make('individual_country')
+                                        ->label('Țară')
+                                        ->maxLength(100)
+                                        ->default('România'),
+                                ])
+                                ->columnSpanFull(),
                         ])
                         ->columns(2),
 
