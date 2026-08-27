@@ -1005,8 +1005,14 @@ class EventResource extends Resource
                         // TAX REGISTRY (linked to venue location)
                         SC\Section::make($t('Direcție fiscală (Tax Registry)', 'Tax Registry'))
                             ->icon('heroicon-o-building-library')
-                            ->description($t('Direcția fiscală locală folosită pentru declarațiile de impozit pe spectacole.', 'Local tax authority used for entertainment tax declarations.'))
-                            ->collapsible()
+                            ->headerActions([
+                                Action::make('taxRegistryInfo')
+                                    ->label('')
+                                    ->icon('heroicon-o-information-circle')
+                                    ->color('gray')
+                                    ->tooltip($t('Direcția fiscală locală folosită pentru declarațiile de impozit pe spectacole.', 'Local tax authority used for entertainment tax declarations.'))
+                                    ->action(fn () => null),
+                            ])
                             ->visible(fn (SGet $get) => (bool) $get('venue_id'))
                             ->schema([
                                 Forms\Components\Placeholder::make('tax_registry_match_info')
@@ -2185,7 +2191,6 @@ class EventResource extends Resource
                             ->icon('heroicon-o-beaker')
                             ->compact()
                             ->collapsible()
-                            ->collapsed(fn (?Event $record) => !$record || !$record->exists)
                             ->visible(fn (?Event $record) => $record
                                 && $record->exists
                                 && ($record->display_template ?? null) !== 'leisure_venue')
@@ -4023,7 +4028,7 @@ class EventResource extends Resource
                                             ->columns(12)
                                             ->columnSpan(12),
                                     ]),
-                            ])->collapsible()->persistCollapsed(),
+                            ]),
                                     ]), // End Tab 4: Bilete
 
 
@@ -4722,8 +4727,8 @@ class EventResource extends Resource
                                     $previewUrl = $eventUrl . '?preview=1';
 
                                     return new \Illuminate\Support\HtmlString(
-                                        '<a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors shadow-sm">' .
-                                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
+                                        '<a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors shadow-sm">' .
+                                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
                                             $t('Previzualizare', 'Preview') .
                                         '</a>'
                                     );

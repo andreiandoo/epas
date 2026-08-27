@@ -1,7 +1,8 @@
 @php
     use App\Models\MarketplaceTaxTemplate;
 
-    // "Generator documente" — ONLY the generate actions. The generated PDFs and
+    // "Generator documente" — ONLY the generate actions. Already-generated
+    // templates render a disabled (non-clickable) button. The generated PDFs and
     // their details/download live in the separate "Documente generate" section.
     $isEventFinished = $event->isPast() || $event->status === 'archived';
     $isEventPublished = (bool) $event->is_published;
@@ -24,6 +25,14 @@
         'after_event_published' => 'Evenimentul nu e publicat',
         'after_event_finished'  => 'Evenimentul nu e încheiat',
     ];
+
+    // Already-generated lookup — a template with an existing document is shown as
+    // a disabled button (no regenerate here).
+    $existingByTemplate = collect();
+    foreach ($generatedDocs as $d) {
+        $existingByTemplate[$d->marketplace_tax_template_id] = $d;
+    }
+    $orgDocsByType = $organizerDocs->keyBy('document_type');
 @endphp
 
 <div class="flex flex-wrap gap-2">
@@ -37,9 +46,20 @@
                 $canGenerate = false;
                 $blockedReason = 'Nu există vânzări pe eveniment';
             }
+
+            $hasDocument = ($existingByTemplate[$template->id] ?? null) || ($orgDocsByType[$template->type] ?? null);
         @endphp
 
-        @if($canGenerate)
+        @if($hasDocument)
+            {{-- Already generated → non-clickable --}}
+            <span
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg cursor-not-allowed whitespace-nowrap dark:text-green-400 dark:bg-green-900/20 dark:border-green-800"
+                title="Deja generat — vezi secțiunea Documente generate"
+            >
+                <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                {{ $template->name }}
+            </span>
+        @elseif($canGenerate)
             <button
                 type="button"
                 x-data="{ loading: false }"
