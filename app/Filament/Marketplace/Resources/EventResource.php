@@ -817,7 +817,7 @@ class EventResource extends Resource
                                                 $layout->id => $layout->name . ' (' . $layout->sections()->count() . ' sections)'
                                             ]);
                                     })
-                                    ->helperText($t('Selectează o hartă de locuri pentru locuri numerotate. Lasă gol pentru acces general.', 'Select a seating layout for assigned seating. Leave empty for general admission.'))
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează o hartă de locuri pentru locuri numerotate. Lasă gol pentru acces general.', 'Select a seating layout for assigned seating. Leave empty for general admission.'))
                                     ->nullable(),
                                 Forms\Components\Select::make('marketplace_city_id')
                                     ->label($t('Oraș', 'City'))
@@ -1213,103 +1213,6 @@ class EventResource extends Resource
                                     ->icon('heroicon-o-chart-bar')
                                     ->lazy()
                                     ->schema([
-                        // 0. Test POS ticket card — auto-provisioned per event
-                        // (10 lei × 10 buc, meta.is_test = true). Excluded from
-                        // every payout / revenue calculation via
-                        // Order.source = 'pos_test' so listing it here can't
-                        // pollute the numbers below. Reset button wipes the
-                        // emitted tickets + pos_test orders and zeroes
-                        // quota_sold so the organizer can run another smoke
-                        // test without CLI access.
-                        SC\Section::make($t('Bilete Test POS', 'Test POS tickets'))
-                            ->icon('heroicon-o-beaker')
-                            ->description($t(
-                                'Bilet de test la 10 lei pentru testarea aplicației Tixello POS (vânzare + print + scan). NU se contorizează în vânzări, decont sau facturi.',
-                                'A 10-lei ticket for smoke-testing the Tixello POS app (sell + print + scan). NOT counted in any sales report, payout, or invoice.'
-                            ))
-                            ->compact()
-                            ->collapsible()
-                            ->collapsed(fn (?Event $record) => !$record || !$record->exists)
-                            ->visible(fn (?Event $record) => $record
-                                && $record->exists
-                                && ($record->display_template ?? null) !== 'leisure_venue')
-                            ->headerActions([
-                                Action::make('reset_test_pos_stock')
-                                    ->label($t('Reset stoc', 'Reset stock'))
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->color('warning')
-                                    ->requiresConfirmation()
-                                    ->modalHeading($t('Resetează stocul de test', 'Reset test stock'))
-                                    ->modalDescription($t(
-                                        'Șterge cele emise deja și readuce stocul la 10 buc. Comenzile aferente sunt șterse.',
-                                        'Deletes previously emitted test tickets and their orders, then restores stock to 10.'
-                                    ))
-                                    ->modalSubmitActionLabel($t('Resetează', 'Reset'))
-                                    ->action(function (?Event $record) use ($t): void {
-                                        if (!$record) return;
-                                        $tt = $record->ensureTestTicketType();
-                                        if (!$tt) return;
-                                        \Illuminate\Support\Facades\DB::transaction(function () use ($tt) {
-                                            $tickets = \App\Models\Ticket::where('ticket_type_id', $tt->id)->get(['id', 'order_id']);
-                                            $orderIds = $tickets->pluck('order_id')->filter()->unique()->all();
-                                            \App\Models\Ticket::where('ticket_type_id', $tt->id)->delete();
-                                            if (!empty($orderIds)) {
-                                                \App\Models\Order::whereIn('id', $orderIds)
-                                                    ->where('source', 'pos_test')
-                                                    ->delete();
-                                            }
-                                            $tt->update(['quota_sold' => 0]);
-                                        });
-                                        \Filament\Notifications\Notification::make()
-                                            ->title($t('Stoc resetat', 'Stock reset'))
-                                            ->success()
-                                            ->send();
-                                    }),
-                            ])
-                            ->schema([
-                                Forms\Components\Placeholder::make('test_pos_stats')
-                                    ->hiddenLabel()
-                                    ->content(function (?Event $record) use ($t) {
-                                        if (!$record || !$record->exists) {
-                                            return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a activa biletul de test.', 'Save the event first.') . '</div>');
-                                        }
-                                        $tt = $record->ticketTypes()
-                                            ->where(function ($q) {
-                                                $q->whereRaw("(meta->>'is_test')::boolean = true")
-                                                    ->orWhere('name', 'Test POS');
-                                            })
-                                            ->first();
-                                        if (!$tt) {
-                                            return new HtmlString('<div class="text-sm text-amber-600">' . $t('Biletul de test nu există încă (evenimentul e vechi sau leisure).', 'No test ticket yet (legacy or leisure event).') . '</div>');
-                                        }
-                                        $sold = (int) ($tt->quota_sold ?? 0);
-                                        $total = (int) ($tt->capacity ?? $tt->quota_total ?? 10);
-                                        $remaining = max(0, $total - $sold);
-                                        $soldLabel = $t('Vândute', 'Sold');
-                                        $remainingLabel = $t('Rămase', 'Remaining');
-                                        $totalLabel = $t('Total', 'Total');
-                                        $capExhausted = $remaining === 0
-                                            ? "<span class='ml-2 text-xs text-rose-500'>" . $t('epuizate — apasă Reset stoc', 'exhausted — click Reset stock') . "</span>"
-                                            : '';
-                                        return new HtmlString(
-                                            "<div class='grid grid-cols-3 gap-3'>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-white'>{$sold}</div>
-                                                    <div class='text-xs text-gray-400'>{$soldLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-emerald-400'>{$remaining}</div>
-                                                    <div class='text-xs text-gray-400'>{$remainingLabel}{$capExhausted}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-purple-400'>{$total}</div>
-                                                    <div class='text-xs text-gray-400'>{$totalLabel}</div>
-                                                </div>
-                                            </div>"
-                                        );
-                                    }),
-                            ])
-                            ->columns(1),
 
                         // 1. Quick Stats Card - Vânzări LIVE
                         SC\Section::make(fn () => new HtmlString($t('Vânzări', 'Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
@@ -1840,7 +1743,7 @@ class EventResource extends Resource
                                     ->default($marketplace?->ticket_terms ?? null),
                                 Forms\Components\RichEditor::make("thank_you_message.{$marketplaceLanguage}")
                                     ->label($t('Mesaj post-achiziție (thank-you)', 'Post-purchase message'))
-                                    ->helperText($t(
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t(
                                         'Afișat clientului pe pagina de confirmare a comenzii, imediat după plată. Poate conține text formatat, linkuri, imagini și embed video YouTube/Vimeo. Se sanitizează automat pentru XSS.',
                                         'Shown to the customer on the order confirmation page right after payment. Supports formatted text, links, images and YouTube/Vimeo video embeds. Automatically sanitized against XSS.'
                                     ))
@@ -1853,7 +1756,7 @@ class EventResource extends Resource
                                     ->url()
                                     ->maxLength(500)
                                     ->placeholder('https://www.youtube.com/watch?v=...')
-                                    ->helperText($t(
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t(
                                         'Lipește orice link YouTube (watch, share sau embed). Va fi afișat ca videoclip pe pagina publică a evenimentului.',
                                         'Paste any YouTube link (watch, share or embed). It will be shown as an embedded video on the public event page.'
                                     ))
@@ -2270,6 +2173,108 @@ class EventResource extends Resource
                                     ->icon('heroicon-o-ticket')
                                     ->lazy()
                                     ->schema([
+                        // 0. Test POS ticket card — auto-provisioned per event
+                        // (10 lei × 10 buc, meta.is_test = true). Excluded from
+                        // every payout / revenue calculation via
+                        // Order.source = 'pos_test' so listing it here can't
+                        // pollute the numbers below. Reset button wipes the
+                        // emitted tickets + pos_test orders and zeroes
+                        // quota_sold so the organizer can run another smoke
+                        // test without CLI access.
+                        SC\Section::make($t('Bilete Test POS', 'Test POS tickets'))
+                            ->icon('heroicon-o-beaker')
+                            ->compact()
+                            ->collapsible()
+                            ->collapsed(fn (?Event $record) => !$record || !$record->exists)
+                            ->visible(fn (?Event $record) => $record
+                                && $record->exists
+                                && ($record->display_template ?? null) !== 'leisure_venue')
+                            ->headerActions([
+                                Action::make('testPosInfo')
+                                    ->label('')
+                                    ->icon('heroicon-o-information-circle')
+                                    ->color('gray')
+                                    ->tooltip($t(
+                                        'Bilet de test la 10 lei pentru testarea aplicației Tixello POS (vânzare + print + scan). NU se contorizează în vânzări, decont sau facturi.',
+                                        'A 10-lei ticket for smoke-testing the Tixello POS app (sell + print + scan). NOT counted in any sales report, payout, or invoice.'
+                                    ))
+                                    ->action(fn () => null),
+                                Action::make('reset_test_pos_stock')
+                                    ->label($t('Reset stoc', 'Reset stock'))
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('warning')
+                                    ->requiresConfirmation()
+                                    ->modalHeading($t('Resetează stocul de test', 'Reset test stock'))
+                                    ->modalDescription($t(
+                                        'Șterge cele emise deja și readuce stocul la 10 buc. Comenzile aferente sunt șterse.',
+                                        'Deletes previously emitted test tickets and their orders, then restores stock to 10.'
+                                    ))
+                                    ->modalSubmitActionLabel($t('Resetează', 'Reset'))
+                                    ->action(function (?Event $record) use ($t): void {
+                                        if (!$record) return;
+                                        $tt = $record->ensureTestTicketType();
+                                        if (!$tt) return;
+                                        \Illuminate\Support\Facades\DB::transaction(function () use ($tt) {
+                                            $tickets = \App\Models\Ticket::where('ticket_type_id', $tt->id)->get(['id', 'order_id']);
+                                            $orderIds = $tickets->pluck('order_id')->filter()->unique()->all();
+                                            \App\Models\Ticket::where('ticket_type_id', $tt->id)->delete();
+                                            if (!empty($orderIds)) {
+                                                \App\Models\Order::whereIn('id', $orderIds)
+                                                    ->where('source', 'pos_test')
+                                                    ->delete();
+                                            }
+                                            $tt->update(['quota_sold' => 0]);
+                                        });
+                                        \Filament\Notifications\Notification::make()
+                                            ->title($t('Stoc resetat', 'Stock reset'))
+                                            ->success()
+                                            ->send();
+                                    }),
+                            ])
+                            ->schema([
+                                Forms\Components\Placeholder::make('test_pos_stats')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record || !$record->exists) {
+                                            return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a activa biletul de test.', 'Save the event first.') . '</div>');
+                                        }
+                                        $tt = $record->ticketTypes()
+                                            ->where(function ($q) {
+                                                $q->whereRaw("(meta->>'is_test')::boolean = true")
+                                                    ->orWhere('name', 'Test POS');
+                                            })
+                                            ->first();
+                                        if (!$tt) {
+                                            return new HtmlString('<div class="text-sm text-amber-600">' . $t('Biletul de test nu există încă (evenimentul e vechi sau leisure).', 'No test ticket yet (legacy or leisure event).') . '</div>');
+                                        }
+                                        $sold = (int) ($tt->quota_sold ?? 0);
+                                        $total = (int) ($tt->capacity ?? $tt->quota_total ?? 10);
+                                        $remaining = max(0, $total - $sold);
+                                        $soldLabel = $t('Vândute', 'Sold');
+                                        $remainingLabel = $t('Rămase', 'Remaining');
+                                        $totalLabel = $t('Total', 'Total');
+                                        $capExhausted = $remaining === 0
+                                            ? "<span class='ml-2 text-xs text-rose-500'>" . $t('epuizate — apasă Reset stoc', 'exhausted — click Reset stock') . "</span>"
+                                            : '';
+                                        return new HtmlString(
+                                            "<div class='grid grid-cols-3 gap-3'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-white'>{$sold}</div>
+                                                    <div class='text-xs text-gray-400'>{$soldLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-emerald-400'>{$remaining}</div>
+                                                    <div class='text-xs text-gray-400'>{$remainingLabel}{$capExhausted}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-purple-400'>{$total}</div>
+                                                    <div class='text-xs text-gray-400'>{$totalLabel}</div>
+                                                </div>
+                                            </div>"
+                                        );
+                                    }),
+                            ])
+                            ->columns(1),
                         // TICKETS
                         SC\Section::make($t('Bilete', 'Tickets'))
                             ->schema([
@@ -4280,7 +4285,6 @@ class EventResource extends Resource
                                         // Sorted desc by date so the latest doc is on top.
                                         SC\Section::make($t('Documente generate', 'Generated documents'))
                                             ->icon('heroicon-o-folder-open')
-                                            ->description($t('Toate PDF-urile generate pentru acest eveniment.', 'All PDF documents generated for this event.'))
                                             ->visible(fn (?Event $record) => $record && $record->exists)
                                             ->schema([
                                                 Forms\Components\Placeholder::make('event_generated_documents_list')
@@ -4329,7 +4333,7 @@ class EventResource extends Resource
                                             ->collapsible()
                                             ->collapsed(false),
 
-                                        SC\Section::make($t('Documente eveniment', 'Event Documents'))
+                                        SC\Section::make($t('Generator documente', 'Document generator'))
                                             ->icon('heroicon-o-document-text')
                                             ->visible(fn (?Event $record) => $record && $record->exists)
                                             ->schema([
