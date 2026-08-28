@@ -16,7 +16,7 @@
         ];
     @endphp
 
-    <div x-data="{ panel: null }" wire:poll.3s="heartbeat">
+    <div wire:poll.3s="heartbeat">
         {{-- Top bar: presence + quick pills --}}
         <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
             <div class="flex items-center gap-2">
@@ -46,13 +46,11 @@
             @endphp
             <div class="flex items-center gap-2 flex-wrap">
                 @foreach($pills as $p)
-                    <button type="button" x-on:click="panel = (panel === '{{ $p['key'] }}' ? null : '{{ $p['key'] }}')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition"
-                        x-bind:class="panel === '{{ $p['key'] }}' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'">
+                    <button type="button" wire:click="togglePanel('{{ $p['key'] }}')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition {{ $openPanel === $p['key'] ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200' }}">
                         <span class="w-2 h-2 rounded-full {{ $p['dot'] }}"></span>
                         {{ $p['label'] }}
-                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold"
-                            x-bind:class="panel === '{{ $p['key'] }}' ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">{{ $p['count'] }}</span>
+                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold {{ $openPanel === $p['key'] ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">{{ $p['count'] }}</span>
                     </button>
                 @endforeach
             </div>
@@ -61,45 +59,50 @@
         {{-- Dropdown pickers (absolute, one at a time; close after choosing) --}}
         <div class="relative z-20">
             {{-- Queue --}}
-            <div x-show="panel==='queue'" x-cloak x-transition @click.outside="panel=null"
+            @if($openPanel === 'queue')
+                <div
                 class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($queue as $c)
                     <div class="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="text-left flex-1 min-w-0">
+                        <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
                             <div class="flex items-center gap-1.5">
                                 <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                                 @if($c->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">ORG</span>@endif
                             </div>
                             <div class="text-[11px] text-gray-400 truncate">{{ $c->reference }} · {{ optional($c->queued_at)->diffForHumans() }}</div>
                         </button>
-                        <button type="button" wire:click="claim('{{ $c->reference }}')" x-on:click="panel=null" class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-primary-600 text-white">Preia</button>
+                        <button type="button" wire:click="claim('{{ $c->reference }}')" class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-primary-600 text-white">Preia</button>
                     </div>
                 @empty
                     <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație în așteptare.</div>
                 @endforelse
             </div>
+            @endif
 
             {{-- Offline --}}
-            <div x-show="panel==='offline'" x-cloak x-transition @click.outside="panel=null"
+            @if($openPanel === 'offline')
+                <div
                 class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($offline as $c)
                     <div class="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="text-left flex-1 min-w-0">
+                        <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
                             <span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                             <span class="block text-[11px] text-gray-400 truncate">{{ $c->guest_email ?: $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</span>
                         </button>
-                        <button type="button" wire:click="claim('{{ $c->reference }}')" x-on:click="panel=null" class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-amber-500 text-white">Preia</button>
+                        <button type="button" wire:click="claim('{{ $c->reference }}')" class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-amber-500 text-white">Preia</button>
                     </div>
                 @empty
                     <div class="px-3 py-6 text-center text-xs text-gray-400">Niciun mesaj offline.</div>
                 @endforelse
             </div>
+            @endif
 
             {{-- Mine --}}
-            <div x-show="panel==='mine'" x-cloak x-transition @click.outside="panel=null"
+            @if($openPanel === 'mine')
+                <div
                 class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($mine as $c)
-                    <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <div class="flex items-center gap-1.5">
                             <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                             @if($c->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">ORG</span>@endif
@@ -110,13 +113,15 @@
                     <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație activă.</div>
                 @endforelse
             </div>
+            @endif
 
             {{-- All (with who claimed) --}}
-            <div x-show="panel==='all'" x-cloak x-transition @click.outside="panel=null"
+            @if($openPanel === 'all')
+                <div
                 class="absolute right-0 top-0 w-full sm:w-[30rem] max-h-96 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($all as $c)
                     @php [$slabel, $sclass] = $statusMeta[$c->status] ?? ['—', 'bg-gray-100 text-gray-600']; @endphp
-                    <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <div class="flex items-center justify-between gap-2">
                             <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                             <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $sclass }}">{{ $slabel }}</span>
@@ -134,6 +139,7 @@
                     <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație.</div>
                 @endforelse
             </div>
+            @endif
         </div>
 
         {{-- Main: thread (focus) + visitor context --}}

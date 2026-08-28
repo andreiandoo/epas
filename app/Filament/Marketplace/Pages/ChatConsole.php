@@ -33,6 +33,9 @@ class ChatConsole extends Page
 
     public string $presence = ChatOperatorStatus::PRESENCE_OFFLINE;
     public ?string $activeReference = null;
+    // Which list dropdown is open (queue/offline/mine/all). Kept as Livewire
+    // state so the 3s poll re-render doesn't collapse an open picker.
+    public ?string $openPanel = null;
 
     public function getTitle(): string
     {
@@ -113,10 +116,15 @@ class ChatConsole extends Page
 
     // -------- Conversation actions --------
 
+    public function togglePanel(string $key): void
+    {
+        $this->openPanel = $this->openPanel === $key ? null : $key;
+    }
+
     public function select(string $reference): void
     {
         $this->activeReference = $reference;
-        $this->reply = '';
+        $this->openPanel = null;
         // Mark opener messages as read.
         $conversation = $this->findConversation($reference);
         if ($conversation) {
@@ -135,6 +143,7 @@ class ChatConsole extends Page
         }
         app(ChatRoutingService::class)->assignTo($conversation, (int) Auth::guard('marketplace_admin')->id());
         $this->activeReference = $reference;
+        $this->openPanel = null;
     }
 
     /**

@@ -190,28 +190,39 @@
     }
 
     function setHeaderDefault() {
+        els.title.style.whiteSpace = '';
         var org = isOrganizer() ? '<span class="amb-org-badge">ORGANIZATOR</span>' : '';
         els.title.innerHTML = 'Chat AmBilet' + org;
     }
     function setHeaderConnected(operator) {
+        els.title.style.whiteSpace = '';
         els.title.textContent = operator ? ('Conectat cu ' + operator) : 'Conectat cu un operator';
     }
     function setState(text) { if (els.state) els.state.textContent = text || ''; }
 
     function applyStatus(status, queuePosition, operator) {
+        var wasActive = currentStatus === 'active';
         currentStatus = status;
         if (operator) currentOperator = operator;
         if (status === 'active') {
             setHeaderConnected(currentOperator);
             setState('');
-            if (!lastActivityTs) lastActivityTs = Date.now();
+            // Fresh idle window when the operator connects — do NOT count the
+            // time the visitor spent waiting in the queue toward auto-close.
+            if (!wasActive) lastActivityTs = Date.now();
             startIdleWatch();
+        } else if (status === 'queued') {
+            // Hide "Chat AmBilet" and show the searching message prominently.
+            els.title.style.whiteSpace = 'normal';
+            els.title.textContent = 'Caut un operator liber. Ești pe poziția ' + (queuePosition || 1) + ' în așteptare...';
+            setState('');
+            stopIdleWatch();
+            hideNotice();
         } else {
             setHeaderDefault();
             stopIdleWatch();
             hideNotice();
             if (status === 'offline_message') setState('Suntem offline — îți răspundem pe email.');
-            else if (status === 'queued') setState('În așteptare' + (queuePosition ? ' · poziția ' + queuePosition : '') + '...');
             else if (status === 'resolved' || status === 'closed') setState('Conversație încheiată');
             else setState('');
         }
