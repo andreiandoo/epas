@@ -21,14 +21,19 @@ return [
     'transport' => env('CHAT_TRANSPORT', 'polling'),
 
     // Client polling cadence (ms) when the widget is open and transport=polling.
-    'poll_interval_ms' => (int) env('CHAT_POLL_INTERVAL_MS', 4000),
+    'poll_interval_ms' => (int) env('CHAT_POLL_INTERVAL_MS', 2500),
 
     'operator' => [
         // Default simultaneous conversations per operator (override per-operator
         // via chat_operator_statuses.max_concurrent_chats).
         'default_max_concurrent_chats' => (int) env('CHAT_MAX_CONCURRENT', 4),
-        // Presence heartbeat: an operator is treated offline after this idle gap.
+        // Presence heartbeat cache TTL (seconds).
         'presence_ttl_seconds' => (int) env('CHAT_PRESENCE_TTL', 60),
+        // An operator is only auto-marked offline after this many minutes with no
+        // heartbeat. Kept generous so brief tab-switches (Livewire's wire:poll
+        // pauses on hidden tabs) don't flip a working operator offline. Explicit
+        // "Offline"/logout still flips immediately.
+        'offline_after_minutes' => (int) env('CHAT_OFFLINE_AFTER_MINUTES', 30),
         // Assignment strategy: 'round_robin' | 'least_busy'.
         'assignment_strategy' => env('CHAT_ASSIGNMENT', 'least_busy'),
     ],

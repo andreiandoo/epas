@@ -1,164 +1,158 @@
 <x-filament-panels::page>
-    <div wire:poll.5s="heartbeat">
-        {{-- Presence bar --}}
-        <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+    @php
+        $presenceMeta = [
+            'online'  => ['Online', 'bg-green-500'],
+            'away'    => ['Away', 'bg-amber-500'],
+            'offline' => ['Offline', 'bg-gray-400'],
+        ];
+        [$presenceLabel, $presenceDot] = $presenceMeta[$presence] ?? $presenceMeta['offline'];
+
+        $statusMeta = [
+            'queued'          => ['În așteptare', 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'],
+            'active'          => ['Activ', 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'],
+            'offline_message' => ['Offline', 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'],
+            'resolved'        => ['Rezolvat', 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'],
+            'closed'          => ['Închis', 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'],
+        ];
+    @endphp
+
+    <div x-data="{ panel: null }" wire:poll.3s="heartbeat">
+        {{-- Top bar: presence + quick pills --}}
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
             <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Status operator:</span>
-                @php
-                    $presenceMeta = [
-                        'online'  => ['Online', 'bg-green-500'],
-                        'away'    => ['Away', 'bg-amber-500'],
-                        'offline' => ['Offline', 'bg-gray-400'],
-                    ];
-                    [$presenceLabel, $presenceDot] = $presenceMeta[$presence] ?? $presenceMeta['offline'];
-                @endphp
-                <span class="inline-flex items-center gap-1.5 text-sm">
+                <span class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
                     <span class="w-2.5 h-2.5 rounded-full {{ $presenceDot }}"></span>{{ $presenceLabel }}
                 </span>
+                <div class="flex items-center gap-1 ml-1">
+                    <button type="button" wire:click="goOnline" class="px-2.5 py-1 text-xs font-medium rounded-lg {{ $presence === 'online' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Online</button>
+                    <button type="button" wire:click="goAway" class="px-2.5 py-1 text-xs font-medium rounded-lg {{ $presence === 'away' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Away</button>
+                    <button type="button" wire:click="goOffline" class="px-2.5 py-1 text-xs font-medium rounded-lg {{ $presence === 'offline' ? 'bg-gray-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Offline</button>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button type="button" wire:click="goOnline"
-                    class="px-3 py-1.5 text-xs font-medium rounded-lg {{ $presence === 'online' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Online</button>
-                <button type="button" wire:click="goAway"
-                    class="px-3 py-1.5 text-xs font-medium rounded-lg {{ $presence === 'away' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Away</button>
-                <button type="button" wire:click="goOffline"
-                    class="px-3 py-1.5 text-xs font-medium rounded-lg {{ $presence === 'offline' ? 'bg-gray-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Offline</button>
+
+            @php
+                $pills = [
+                    ['key' => 'queue',   'label' => 'În așteptare', 'count' => $queue->count(),   'dot' => 'bg-blue-500'],
+                    ['key' => 'offline', 'label' => 'Offline',      'count' => $offline->count(), 'dot' => 'bg-amber-500'],
+                    ['key' => 'mine',    'label' => 'Ale mele',     'count' => $mine->count(),    'dot' => 'bg-green-500'],
+                    ['key' => 'all',     'label' => 'Toate',        'count' => $all->count(),     'dot' => 'bg-gray-400'],
+                ];
+            @endphp
+            <div class="flex items-center gap-2 flex-wrap">
+                @foreach($pills as $p)
+                    <button type="button" x-on:click="panel = (panel === '{{ $p['key'] }}' ? null : '{{ $p['key'] }}')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition"
+                        x-bind:class="panel === '{{ $p['key'] }}' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'">
+                        <span class="w-2 h-2 rounded-full {{ $p['dot'] }}"></span>
+                        {{ $p['label'] }}
+                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold"
+                            x-bind:class="panel === '{{ $p['key'] }}' ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">{{ $p['count'] }}</span>
+                    </button>
+                @endforeach
             </div>
         </div>
 
-        {{-- Stats strip --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                <div class="text-[11px] text-gray-400 uppercase tracking-wide">În așteptare</div>
-                <div class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ $stats['queued'] ?? 0 }}</div>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                <div class="text-[11px] text-gray-400 uppercase tracking-wide">Active</div>
-                <div class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ $stats['active'] ?? 0 }}</div>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                <div class="text-[11px] text-gray-400 uppercase tracking-wide">Ale mele</div>
-                <div class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ $stats['mine'] ?? 0 }}</div>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                <div class="text-[11px] text-gray-400 uppercase tracking-wide">Rating mediu</div>
-                <div class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ($stats['avg_rating'] ?? 0) ?: '—' }}</div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {{-- Left: lists --}}
-            <div class="lg:col-span-4 space-y-4">
-                {{-- Queue --}}
-                <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-semibold uppercase tracking-wide text-gray-500 flex items-center justify-between">
-                        <span>În așteptare</span>
-                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary-600 text-white text-[11px]">{{ $queue->count() }}</span>
-                    </div>
-                    <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
-                        @forelse($queue as $c)
-                            <div class="px-3 py-2 flex items-center justify-between gap-2 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
-                                        @if($c->isOrganizer())
-                                            <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORGANIZATOR</span>
-                                        @endif
-                                    </div>
-                                    <div class="text-[11px] text-gray-400 truncate">{{ $c->reference }} · {{ optional($c->queued_at)->diffForHumans() }}</div>
-                                </button>
-                                <button type="button" wire:click="claim('{{ $c->reference }}')"
-                                    class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-primary-600 text-white hover:bg-primary-700">Preia</button>
+        {{-- Dropdown pickers (absolute, one at a time; close after choosing) --}}
+        <div class="relative z-20">
+            {{-- Queue --}}
+            <div x-show="panel==='queue'" x-cloak x-transition @click.outside="panel=null"
+                class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                @forelse($queue as $c)
+                    <div class="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="text-left flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
+                                @if($c->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">ORG</span>@endif
                             </div>
-                        @empty
-                            <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație în așteptare.</div>
-                        @endforelse
+                            <div class="text-[11px] text-gray-400 truncate">{{ $c->reference }} · {{ optional($c->queued_at)->diffForHumans() }}</div>
+                        </button>
+                        <button type="button" wire:click="claim('{{ $c->reference }}')" x-on:click="panel=null" class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-primary-600 text-white">Preia</button>
                     </div>
-                </div>
-
-                {{-- Offline messages --}}
-                @if($offline->count())
-                    <div class="rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
-                        <div class="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-xs font-semibold uppercase tracking-wide text-amber-600 flex items-center justify-between">
-                            <span>Mesaje offline</span>
-                            <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px]">{{ $offline->count() }}</span>
-                        </div>
-                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-56 overflow-y-auto">
-                            @foreach($offline as $c)
-                                <div class="px-3 py-2 flex items-center justify-between gap-2 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                    <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
-                                            @if($c->isOrganizer())
-                                                <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORG</span>
-                                            @endif
-                                        </div>
-                                        <div class="text-[11px] text-gray-400 truncate">{{ $c->guest_email ?: $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</div>
-                                    </button>
-                                    <button type="button" wire:click="claim('{{ $c->reference }}')"
-                                        class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600">Preia</button>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
-                {{-- Mine --}}
-                <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-semibold uppercase tracking-wide text-gray-500">Conversațiile mele ({{ $mine->count() }})</div>
-                    <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
-                        @forelse($mine as $c)
-                            <button type="button" wire:click="select('{{ $c->reference }}')"
-                                class="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 {{ $activeReference === $c->reference ? 'bg-primary-50 dark:bg-primary-900/20' : '' }}">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
-                                    @if($c->isOrganizer())
-                                        <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORG</span>
-                                    @endif
-                                </div>
-                                <div class="text-[11px] text-gray-400 truncate">{{ $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</div>
-                            </button>
-                        @empty
-                            <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație activă.</div>
-                        @endforelse
-                    </div>
-                </div>
-
-                {{-- Others --}}
-                @if($others->count())
-                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-semibold uppercase tracking-wide text-gray-500">Alți operatori ({{ $others->count() }})</div>
-                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-40 overflow-y-auto">
-                            @foreach($others as $c)
-                                <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                    <span class="truncate text-sm text-gray-700 dark:text-gray-200">{{ $c->openerName() }}</span>
-                                    <span class="text-[11px] text-gray-400"> · {{ $c->assignee?->name ?? 'nealocat' }}</span>
-                                </button>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
+                @empty
+                    <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație în așteptare.</div>
+                @endforelse
             </div>
 
-            {{-- Center: thread --}}
-            <div class="lg:col-span-5">
-                <div class="rounded-xl border border-gray-200 dark:border-gray-700 h-[36rem] flex flex-col">
+            {{-- Offline --}}
+            <div x-show="panel==='offline'" x-cloak x-transition @click.outside="panel=null"
+                class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 shadow-xl">
+                @forelse($offline as $c)
+                    <div class="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="text-left flex-1 min-w-0">
+                            <span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
+                            <span class="block text-[11px] text-gray-400 truncate">{{ $c->guest_email ?: $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</span>
+                        </button>
+                        <button type="button" wire:click="claim('{{ $c->reference }}')" x-on:click="panel=null" class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-amber-500 text-white">Preia</button>
+                    </div>
+                @empty
+                    <div class="px-3 py-6 text-center text-xs text-gray-400">Niciun mesaj offline.</div>
+                @endforelse
+            </div>
+
+            {{-- Mine --}}
+            <div x-show="panel==='mine'" x-cloak x-transition @click.outside="panel=null"
+                class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                @forelse($mine as $c)
+                    <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <div class="flex items-center gap-1.5">
+                            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
+                            @if($c->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">ORG</span>@endif
+                        </div>
+                        <div class="text-[11px] text-gray-400 truncate">{{ $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</div>
+                    </button>
+                @empty
+                    <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație activă.</div>
+                @endforelse
+            </div>
+
+            {{-- All (with who claimed) --}}
+            <div x-show="panel==='all'" x-cloak x-transition @click.outside="panel=null"
+                class="absolute right-0 top-0 w-full sm:w-[30rem] max-h-96 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                @forelse($all as $c)
+                    @php [$slabel, $sclass] = $statusMeta[$c->status] ?? ['—', 'bg-gray-100 text-gray-600']; @endphp
+                    <button type="button" wire:click="select('{{ $c->reference }}')" x-on:click="panel=null" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
+                            <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $sclass }}">{{ $slabel }}</span>
+                        </div>
+                        <div class="text-[11px] text-gray-400 truncate">
+                            {{ $c->reference }} ·
+                            @if($c->assignee)
+                                <span class="text-gray-500 dark:text-gray-300">preluat de {{ $c->assignee->name }}</span>
+                            @else
+                                <span class="text-amber-500">nepreluat</span>
+                            @endif
+                        </div>
+                    </button>
+                @empty
+                    <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație.</div>
+                @endforelse
+            </div>
+        </div>
+
+        {{-- Main: thread (focus) + visitor context --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-1">
+            {{-- Thread --}}
+            <div class="lg:col-span-2">
+                <div class="rounded-xl border border-gray-200 dark:border-gray-700 h-[38rem] flex flex-col">
                     @if($active)
                         <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5">
                                     <span class="font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $active->openerName() }}</span>
-                                    @if($active->isOrganizer())
-                                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORGANIZATOR</span>
-                                    @endif
+                                    @if($active->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORGANIZATOR</span>@endif
+                                    @php [$aslabel, $asclass] = $statusMeta[$active->status] ?? ['—','bg-gray-100 text-gray-600']; @endphp
+                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $asclass }}">{{ $aslabel }}</span>
                                 </div>
-                                <div class="text-[11px] text-gray-400">{{ $active->reference }} · {{ ucfirst($active->status) }}</div>
+                                <div class="text-[11px] text-gray-400">
+                                    {{ $active->reference }}
+                                    @if($active->assignee) · preluat de {{ $active->assignee->name }} @endif
+                                </div>
                             </div>
                             @unless($active->isClosed())
                                 <div class="flex items-center gap-2 shrink-0">
                                     @if($operators->count())
-                                        <select
-                                            x-on:change="if($event.target.value){ $wire.transfer('{{ $active->reference }}', $event.target.value); $event.target.value=''; }"
+                                        <select x-on:change="if($event.target.value){ $wire.transfer('{{ $active->reference }}', $event.target.value); $event.target.value=''; }"
                                             class="text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 py-1.5">
                                             <option value="">Transferă…</option>
                                             @foreach($operators as $op)
@@ -166,13 +160,13 @@
                                             @endforeach
                                         </select>
                                     @endif
-                                    <button type="button" wire:click="resolve('{{ $active->reference }}')"
-                                        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700">Rezolvă</button>
+                                    <button type="button" wire:click="resolve('{{ $active->reference }}')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700">Rezolvă</button>
                                 </div>
                             @endunless
                         </div>
 
-                        <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div class="flex-1 overflow-y-auto p-4 space-y-3" x-data
+                            x-init="$el.scrollTop = $el.scrollHeight; new MutationObserver(() => { $el.scrollTop = $el.scrollHeight; }).observe($el, { childList: true, subtree: true });">
                             @foreach($messages as $m)
                                 @if($m->type === 'system')
                                     <div class="text-center text-[11px] text-gray-400">{{ $m->body }}</div>
@@ -195,40 +189,43 @@
                         </div>
 
                         @unless($active->isClosed())
-                            <div class="border-t border-gray-100 dark:border-gray-800 p-3">
+                            <div class="border-t border-gray-100 dark:border-gray-800 p-3" x-data="{ msg: '', internal: false }" wire:key="composer-{{ $active->reference }}">
                                 <div class="flex items-center gap-2 mb-2 flex-wrap">
                                     <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                                        <input type="checkbox" wire:model="internalNote" class="rounded border-gray-300 text-amber-500 focus:ring-amber-500">
+                                        <input type="checkbox" x-model="internal" class="rounded border-gray-300 text-amber-500 focus:ring-amber-500">
                                         Notă internă (invizibilă clientului)
                                     </label>
                                     @if($canned->count())
-                                        <select
-                                            x-on:change="if($event.target.value){ $wire.insertCanned(parseInt($event.target.value)); $event.target.value=''; }"
+                                        <select x-on:change="if($event.target.value){ msg = (msg ? msg + '\n' : '') + ($event.target.selectedOptions[0].dataset.body || ''); $event.target.value=''; }"
                                             class="ml-auto text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 py-1">
                                             <option value="">Răspuns predefinit…</option>
                                             @foreach($canned as $cr)
-                                                <option value="{{ $cr->id }}">{{ $cr->shortcut }} — {{ $cr->title }}</option>
+                                                <option value="{{ $cr->id }}" data-body="{{ str_replace(['{name}','{event}'], [$active->openerName(), $active->event_id ? '#'.$active->event_id : ''], $cr->body) }}">{{ $cr->shortcut }} — {{ $cr->title }}</option>
                                             @endforeach
                                         </select>
                                     @endif
                                 </div>
-                                <form wire:submit.prevent="send" class="flex items-end gap-2">
-                                    <textarea wire:model="reply" rows="2" placeholder="Scrie un răspuns..."
-                                        class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
-                                    <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">Trimite</button>
-                                </form>
+                                <div class="flex items-end gap-2">
+                                    <div wire:ignore class="flex-1">
+                                        <textarea x-model="msg" rows="2" placeholder="Scrie un răspuns..."
+                                            x-on:keydown.enter.prevent="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
+                                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
+                                    </div>
+                                    <button type="button" x-on:click="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
+                                        class="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">Trimite</button>
+                                </div>
                             </div>
                         @endunless
                     @else
-                        <div class="flex-1 flex items-center justify-center text-sm text-gray-400">
-                            Selectează o conversație din stânga.
+                        <div class="flex-1 flex items-center justify-center text-sm text-gray-400 p-8 text-center">
+                            Alege o conversație din butoanele de sus (În așteptare / Offline / Ale mele / Toate).
                         </div>
                     @endif
                 </div>
             </div>
 
-            {{-- Right: context --}}
-            <div class="lg:col-span-3">
+            {{-- Visitor context --}}
+            <div class="lg:col-span-1">
                 <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
                     <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Context vizitator</div>
                     @if($active)
@@ -253,6 +250,10 @@
                                     <dd class="text-gray-800 dark:text-gray-100">{{ $eventTitle ? $eventTitle . ' (#' . $active->event_id . ')' : '#' . $active->event_id }}</dd>
                                 </div>
                             @endif
+                            <div>
+                                <dt class="text-[11px] text-gray-400">Operator</dt>
+                                <dd class="text-gray-800 dark:text-gray-100">{{ $active->assignee?->name ?? 'nepreluat' }}</dd>
+                            </div>
                             @if(data_get($active->context, 'opened_url'))
                                 <div>
                                     <dt class="text-[11px] text-gray-400">Pagină</dt>
@@ -264,6 +265,13 @@
                         <p class="text-xs text-gray-400">Selectează o conversație pentru a vedea contextul.</p>
                     @endif
                 </div>
+
+                @if(($stats['avg_rating'] ?? 0) > 0)
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 mt-3">
+                        <div class="text-xs text-gray-400">Rating mediu</div>
+                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ $stats['avg_rating'] }} <span class="text-amber-400 text-lg">★</span></div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

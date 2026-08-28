@@ -132,6 +132,7 @@ class ChatController extends BaseController
             'status' => $conversation->status,
             'visitor_type' => $conversation->visitor_type,
             'queue_position' => $this->queuePosition($conversation),
+            'operator' => $this->operatorFirstName($conversation),
             'messages' => $this->serializeMessages($conversation),
         ], null, 201);
     }
@@ -150,7 +151,7 @@ class ChatController extends BaseController
             'reference' => $conversation->reference,
             'status' => $conversation->status,
             'queue_position' => $this->queuePosition($conversation),
-            'operator' => $conversation->assignee?->name,
+            'operator' => $this->operatorFirstName($conversation),
             'messages' => $this->serializeMessages($conversation, $after),
         ]);
     }
@@ -239,6 +240,18 @@ class ChatController extends BaseController
         }
 
         return $conversation;
+    }
+
+    /**
+     * The assigned operator's first name (for the "Conectat cu X" label).
+     */
+    private function operatorFirstName(ChatConversation $conversation): ?string
+    {
+        $name = $conversation->assignee?->name;
+        if (!$name) {
+            return null;
+        }
+        return trim(explode(' ', trim($name))[0]) ?: null;
     }
 
     private function queuePosition(ChatConversation $conversation): ?int

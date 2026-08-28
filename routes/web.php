@@ -483,6 +483,10 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->where('eventId', '[0-9]+')
         ->name('marketplace.events.edit-presence.leave');
 
+    // Live-chat sound notifier poll (unclaimed chats + incoming messages)
+    Route::get('/chat/poll', [\App\Http\Controllers\Marketplace\ChatPollController::class, 'poll'])
+        ->name('marketplace.chat.poll');
+
     Route::get('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'edit'])
         ->name('marketplace.ticket-customizer.edit');
     Route::put('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'update'])

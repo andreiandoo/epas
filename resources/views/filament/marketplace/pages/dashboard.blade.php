@@ -4,6 +4,14 @@
             <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
         </div>
     @else
+        {{-- Live chat stats — visible only when the live-chat microservice is
+             active for this marketplace. --}}
+        @if(\Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()?->marketplaceClient?->hasMicroservice('live-chat'))
+            <div class="mb-6">
+                @livewire(\App\Filament\Marketplace\Widgets\ChatStatsWidget::class)
+            </div>
+        @endif
+
         {{-- Sections that ALL marketplace admins should see (pending events
              to review + open support tickets) live above the super-admin
              gate. Everything else (today/month stats, charts, top tables,

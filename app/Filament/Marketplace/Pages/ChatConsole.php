@@ -33,8 +33,6 @@ class ChatConsole extends Page
 
     public string $presence = ChatOperatorStatus::PRESENCE_OFFLINE;
     public ?string $activeReference = null;
-    public string $reply = '';
-    public bool $internalNote = false;
 
     public function getTitle(): string
     {
@@ -139,9 +137,14 @@ class ChatConsole extends Page
         $this->activeReference = $reference;
     }
 
-    public function send(): void
+    /**
+     * Send an operator reply. The message text comes from the Alpine-managed
+     * (wire:ignore) composer as a parameter, so Livewire polling never clobbers
+     * the input focus while the operator is typing.
+     */
+    public function sendReply(string $text, bool $internal = false): void
     {
-        $body = trim($this->reply);
+        $body = trim($text);
         if ($body === '' || !$this->activeReference) {
             return;
         }
@@ -164,10 +167,8 @@ class ChatConsole extends Page
             (int) $admin->id,
             (string) $admin->name,
             $body,
-            $this->internalNote,
+            $internal,
         );
-
-        $this->reply = '';
     }
 
     public function resolve(string $reference): void
@@ -198,36 +199,6 @@ class ChatConsole extends Page
         );
     }
 
-    /**
-     * Insert a canned response into the reply box, expanding {name}/{event}.
-     */
-    public function insertCanned(int $id): void
-    {
-        $clientId = static::getMarketplaceClientId();
-        if (!$clientId) {
-            return;
-        }
-        $canned = ChatCannedResponse::query()
-            ->where('marketplace_client_id', $clientId)
-            ->where('id', $id)
-            ->first();
-        if (!$canned) {
-            return;
-        }
-
-        $body = $canned->body;
-        $conversation = $this->activeReference ? $this->findConversation($this->activeReference) : null;
-        if ($conversation) {
-            $body = str_replace(
-                ['{name}', '{event}'],
-                [$conversation->openerName(), $conversation->event_id ? ('#' . $conversation->event_id) : ''],
-                $body
-            );
-        }
-
-        $this->reply = trim($this->reply === '' ? $body : ($this->reply . "\n" . $body));
-    }
-
     // -------- View data --------
 
     /**
@@ -241,7 +212,7 @@ class ChatConsole extends Page
         if (!$clientId) {
             return [
                 'queue' => collect(), 'mine' => collect(), 'others' => collect(),
-                'offline' => collect(), 'active' => null, 'messages' => collect(),
+                'offline' => collect(), 'all' => collect(), 'active' => null, 'messages' => collect(),
                 'canned' => collect(), 'operators' => collect(), 'stats' => [], 'eventTitle' => null,
             ];
         }
@@ -293,9 +264,14 @@ class ChatConsole extends Page
             'avg_rating' => round((float) $base()->whereNotNull('rating')->avg('rating'), 1),
         ];
 
+        // All chats (recent) with who claimed them — the "Toate" overview.
+        $all = $base()->with('assignee:id,name')
+            ->orderByDesc('last_activity_at')
+            ->limit(100)->get();
+
         $eventTitle = $active && $active->event_id ? $this->safeEventTitle($active->event_id) : null;
 
-        return compact('queue', 'offline', 'mine', 'others', 'active', 'messages', 'canned', 'operators', 'stats', 'eventTitle');
+        return compact('queue', 'offline', 'mine', 'others', 'all', 'active', 'messages', 'canned', 'operators', 'stats', 'eventTitle');
     }
 
     /**

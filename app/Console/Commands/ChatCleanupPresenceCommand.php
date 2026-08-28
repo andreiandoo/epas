@@ -18,9 +18,11 @@ class ChatCleanupPresenceCommand extends Command
 
     public function handle(): int
     {
-        $ttl = (int) config('chat.operator.presence_ttl_seconds', 60);
-        // Grace factor: only flip after 2x the heartbeat window to avoid flapping.
-        $cutoff = now()->subSeconds($ttl * 2);
+        // Only flip after a generous idle window so brief tab-switches (which
+        // pause the console's wire:poll heartbeat) don't knock a working
+        // operator offline. Explicit Offline/logout flips immediately elsewhere.
+        $minutes = (int) config('chat.operator.offline_after_minutes', 30);
+        $cutoff = now()->subMinutes($minutes);
 
         $count = ChatOperatorStatus::withoutGlobalScopes()
             ->where('presence', '!=', ChatOperatorStatus::PRESENCE_OFFLINE)

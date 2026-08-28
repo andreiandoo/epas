@@ -246,6 +246,138 @@ class MarketplacePanelProvider extends PanelProvider
                 $isSuper = auth('marketplace_admin')->user()?->isSuperAdmin() ?? false;
                 return '<script>window.EP_MARKETPLACE_IS_SUPER_ADMIN = ' . ($isSuper ? 'true' : 'false') . ';</script>';
             })
+
+            // Live-chat sound notifier: plays a chime when a new unclaimed chat arrives
+            // (any operator) or a new incoming message lands on a chat this operator
+            // has claimed. Silent on the chat console page itself.
+            ->renderHook('panels::body.end', fn (): string => <<<'HTML'
+            <script>
+            (function () {
+                if (window.__epChatSoundInit) return;
+                window.__epChatSoundInit = true;
+
+                const POLL_URL = '/marketplace/chat/poll';
+                const POLL_MS = 10000;
+                const LS_LAST = 'ep_chat_last_incoming';
+                const LS_MY_LAST = 'ep_chat_last_my_incoming';
+
+                // --- WebAudio helper (two distinct synthesized tones, no audio files) ---
+                let audioCtx = null;
+                let audioUnlocked = false;
+
+                function ensureCtx() {
+                    if (!audioCtx) {
+                        const AC = window.AudioContext || window.webkitAudioContext;
+                        if (!AC) return null;
+                        audioCtx = new AC();
+                    }
+                    if (audioCtx.state === 'suspended') {
+                        audioCtx.resume().catch(function () {});
+                    }
+                    return audioCtx;
+                }
+
+                function playNote(freq, startOffset, duration) {
+                    const ctx = ensureCtx();
+                    if (!ctx) return;
+                    const now = ctx.currentTime + startOffset;
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0.0001, now);
+                    gain.gain.linearRampToValueAtTime(0.12, now + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + duration + 0.02);
+                }
+
+                // New unclaimed chat: two rising notes (attention chime)
+                function playNewChat() {
+                    if (!audioUnlocked) return;
+                    playNote(660, 0, 0.18);
+                    playNote(880, 0.09, 0.18);
+                }
+
+                // New message on a claimed chat: single soft note
+                function playNewMessage() {
+                    if (!audioUnlocked) return;
+                    playNote(520, 0, 0.14);
+                }
+
+                // Unlock audio on first user interaction (browsers block autoplay).
+                function unlockAudio() {
+                    const ctx = ensureCtx();
+                    if (ctx) audioUnlocked = true;
+                    document.removeEventListener('click', unlockAudio);
+                }
+                document.addEventListener('click', unlockAudio, { once: true });
+
+                function getCsrf() {
+                    const m = document.querySelector('meta[name="csrf-token"]');
+                    return m ? m.getAttribute('content') : '';
+                }
+
+                function readInt(key) {
+                    const v = parseInt(localStorage.getItem(key), 10);
+                    return isNaN(v) ? null : v;
+                }
+
+                async function tick() {
+                    // Never notify while sitting on the chat console itself.
+                    if (window.location.pathname.includes('chat-console')) return;
+                    try {
+                        const r = await fetch(POLL_URL, {
+                            method: 'GET',
+                            headers: { 'X-CSRF-TOKEN': getCsrf(), 'Accept': 'application/json' },
+                            credentials: 'same-origin',
+                        });
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        if (!data || data.ok !== true) return;
+
+                        const latest = parseInt(data.latest_incoming_id, 10) || 0;
+                        const myLatest = parseInt(data.my_latest_incoming_id, 10) || 0;
+
+                        const storedLast = readInt(LS_LAST);
+                        const storedMyLast = readInt(LS_MY_LAST);
+
+                        // First run: seed baselines without playing (avoid a burst on load).
+                        if (storedLast === null || storedMyLast === null) {
+                            localStorage.setItem(LS_LAST, String(latest));
+                            localStorage.setItem(LS_MY_LAST, String(myLatest));
+                            return;
+                        }
+
+                        if (latest > storedLast) {
+                            playNewChat();
+                            localStorage.setItem(LS_LAST, String(latest));
+                        }
+                        if (myLatest > storedMyLast) {
+                            playNewMessage();
+                            localStorage.setItem(LS_MY_LAST, String(myLatest));
+                        }
+                    } catch (e) { /* ignore (e.g. 401 / network blips) */ }
+                }
+
+                function setup() {
+                    if (window.__epChatSoundInterval) {
+                        clearInterval(window.__epChatSoundInterval);
+                    }
+                    window.__epChatSoundInterval = setInterval(tick, POLL_MS);
+                    setTimeout(tick, 1500);
+                }
+
+                document.addEventListener('DOMContentLoaded', setup);
+                document.addEventListener('livewire:navigated', setup);
+                // If DOM already parsed by the time this runs, kick off immediately.
+                if (document.readyState !== 'loading') setup();
+            })();
+            </script>
+            HTML)
+
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
             // Secondary Sidebar – Alpine store & DOM interception (multi-panel)
