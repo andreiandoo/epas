@@ -52,6 +52,22 @@ Schedule::command('activities:refresh-intent-aggregates')
     ->hourly()
     ->timezone('Europe/Bucharest');
 
+// Hourly quota_sold reconciliation. Same "safety net" pattern as the intent
+// aggregators above: application code (OrdersController, PosController,
+// InvitationsController, VenueOwnerOrdersController, TenantOrderController)
+// increments quota_sold at checkout, and observer-less paths (bulk generate,
+// legacy imports, manual DB fixes) can silently skew the counter. This run
+// fixes UNDER-count auto (SAFE — active tickets are real rows, raising
+// quota_sold to that count only prevents future oversell; can never cause
+// one). OVER-count is only REPORTED — RISKY imports are never touched.
+// Emails only when there is actually drift, so 24 clean hours a day stay
+// silent. Runs at :05 so it doesn't collide with the top-of-hour crons
+// above. withoutOverlapping guards against slow runs stacking.
+Schedule::command('tickets:audit-quota-sold --notify=nastase.ai@gmail.com')
+    ->hourlyAt(5)
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest');
+
 // Expire ticket type sale discounts when sales_end_at passes (every minute)
 Schedule::command('ticket-types:expire-sales')
     ->everyMinute()

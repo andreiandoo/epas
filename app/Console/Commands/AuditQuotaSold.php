@@ -35,7 +35,8 @@ class AuditQuotaSold extends Command
     protected $signature = 'tickets:audit-quota-sold
         {--dry-run : Report only, do not write}
         {--event= : Limit to a single event id}
-        {--fix-overcount : Also lower quota_sold where it exceeds active tickets (review first — risky for imports)}';
+        {--fix-overcount : Also lower quota_sold where it exceeds active tickets (review first — risky for imports)}
+        {--notify= : Email address to notify when drift is found. Silent when nothing to report — safe for scheduled runs.}';
 
     protected $description = 'Find/repair ticket types whose quota_sold drifted from the real active-ticket count';
 
@@ -123,6 +124,50 @@ class AuditQuotaSold extends Command
             $this->warn("Lowered {$overFixed} SAFE over-count type(s) to the real active count. {$overRisky->count()} RISKY (likely import) left untouched.");
         } elseif ($over->isNotEmpty()) {
             $this->comment('Over-count types NOT changed. Re-run with --fix-overcount to lower ONLY the SAFE (native) ones; RISKY/import types are never touched.');
+        }
+
+        // Optional notification for scheduled runs. Silent when there is
+        // nothing to report so an hourly cron doesn't spam 24 empty emails
+        // a day. Sends when we actually fixed under-counts OR when there are
+        // over-counts left untouched that a human should decide about.
+        if ($notifyEmail = $this->option('notify')) {
+            $shouldNotify = $under->isNotEmpty() || $over->isNotEmpty();
+            if ($shouldNotify) {
+                $host = gethostname() ?: 'unknown-host';
+                $subject = 'quota_sold drift on ' . $host . ': ' . $under->count() . ' under, ' . $over->count() . ' over';
+
+                $body = "Automated quota_sold audit report\n";
+                $body .= "Host: {$host}\n";
+                $body .= "Time: " . now()->toIso8601String() . "\n\n";
+                $body .= "UNDER-count (auto-fixed, was OVERSELL risk): {$under->count()}\n";
+                foreach ($under as $r) {
+                    $nm = $label($r->name);
+                    $body .= "  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_total={$r->quota_total} quota_sold={$r->quota_sold} -> active={$r->active}\n";
+                }
+                $body .= "\nOVER-count SAFE (fixable with --fix-overcount): {$overSafe->count()}\n";
+                foreach ($overSafe as $r) {
+                    $nm = $label($r->name);
+                    $body .= "  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_sold={$r->quota_sold} > active={$r->active} (total_tickets={$r->total})\n";
+                }
+                $body .= "\nOVER-count RISKY (import-suspected, NOT touched): {$overRisky->count()}\n";
+                foreach ($overRisky as $r) {
+                    $nm = $label($r->name);
+                    $body .= "  tt={$r->id} ev={$r->event_id} \"{$nm}\" quota_sold={$r->quota_sold} active={$r->active} total_tickets={$r->total}\n";
+                }
+                $body .= "\nRun manually to review or apply --fix-overcount:\n";
+                $body .= "  php artisan tickets:audit-quota-sold\n";
+
+                try {
+                    \Illuminate\Support\Facades\Mail::raw($body, function ($msg) use ($notifyEmail, $subject) {
+                        $msg->to($notifyEmail)->subject($subject);
+                    });
+                    $this->info("Notification sent to {$notifyEmail}.");
+                } catch (\Throwable $e) {
+                    // Don't fail the whole command if mail is misconfigured
+                    // — the fix already ran and the report is still in the log.
+                    $this->error("Notification failed: " . $e->getMessage());
+                }
+            }
         }
 
         return self::SUCCESS;
