@@ -421,6 +421,66 @@
                     @endif
                 </div>
 
+                @if($active && !empty($visitor['type']))
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 mt-3">
+                        @php $isCust = $visitor['type'] === 'customer'; @endphp
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                {{ $isCust ? 'Istoric client' : 'Istoric organizator' }}
+                            </div>
+                            <div class="text-[11px] text-gray-400">
+                                @if($isCust)
+                                    {{ $visitor['stats']['orders'] ?? 0 }} comenzi · {{ $visitor['stats']['tickets'] ?? 0 }} bilete@if(!empty($visitor['stats']['spent'])) · {{ $visitor['stats']['spent'] }}@endif
+                                @else
+                                    {{ $visitor['stats']['events'] ?? 0 }} evenimente · {{ $visitor['stats']['tickets_sold'] ?? 0 }} bilete vândute
+                                @endif
+                            </div>
+                        </div>
+
+                        @if(count($visitor['upcoming'] ?? []))
+                            <div class="text-[10px] font-semibold uppercase tracking-wide text-green-600 mb-1">Urmează</div>
+                            <div class="space-y-1.5 mb-3">
+                                @foreach($visitor['upcoming'] as $r)
+                                    <div class="rounded-lg border border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-900/15 px-2.5 py-1.5">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{{ $r['event_title'] }}</span>
+                                            @if($isCust)<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">{{ $r['tickets'] }} bilete</span>
+                                            @else<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">{{ $r['tickets_sold'] }} vândute</span>@endif
+                                        </div>
+                                        <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                            @if($r['event_date']){{ $r['event_date'] }}@endif
+                                            @if($isCust) · {{ $r['order_number'] }} ({{ $r['order_date'] }}) · {{ $r['payment'] }}@endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if(count($visitor['past'] ?? []))
+                            <div class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Trecute</div>
+                            <div class="space-y-1 max-h-56 overflow-y-auto">
+                                @foreach($visitor['past'] as $r)
+                                    <div class="px-2.5 py-1.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-xs text-gray-700 dark:text-gray-200 truncate">{{ $r['event_title'] }}</span>
+                                            @if($isCust)<span class="shrink-0 text-[10px] text-gray-500">{{ $r['tickets'] }} bilete</span>
+                                            @else<span class="shrink-0 text-[10px] text-gray-500">{{ $r['tickets_sold'] }} vândute</span>@endif
+                                        </div>
+                                        <div class="text-[11px] text-gray-400 truncate">
+                                            @if($r['event_date']){{ $r['event_date'] }}@endif
+                                            @if($isCust) · {{ $r['order_number'] }} · {{ $r['payment'] }}@endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if(!count($visitor['upcoming'] ?? []) && !count($visitor['past'] ?? []))
+                            <p class="text-xs text-gray-400">{{ $isCust ? 'Nicio comandă găsită.' : 'Niciun eveniment găsit.' }}</p>
+                        @endif
+                    </div>
+                @endif
+
                 @if(($stats['avg_rating'] ?? 0) > 0)
                     <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 mt-3">
                         <div class="text-xs text-gray-400">Rating mediu</div>

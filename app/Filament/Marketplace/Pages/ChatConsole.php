@@ -290,6 +290,7 @@ class ChatConsole extends Page
                 'queue' => collect(), 'mine' => collect(), 'others' => collect(),
                 'offline' => collect(), 'all' => collect(), 'active' => null, 'messages' => collect(),
                 'history' => collect(), 'canned' => collect(), 'operators' => collect(), 'stats' => [], 'eventTitle' => null,
+                'visitor' => ['type' => null, 'upcoming' => [], 'past' => [], 'stats' => []],
             ];
         }
 
@@ -373,7 +374,12 @@ class ChatConsole extends Page
 
         $eventTitle = $active && $active->event_id ? $this->safeEventTitle($active->event_id) : null;
 
-        return compact('queue', 'offline', 'mine', 'others', 'all', 'active', 'messages', 'history', 'canned', 'operators', 'stats', 'eventTitle');
+        // Authenticated visitor's purchase/event history (customer or organizer).
+        $visitor = $active
+            ? app(\App\Services\Chat\ChatVisitorContextService::class)->forConversation($active)
+            : ['type' => null, 'upcoming' => [], 'past' => [], 'stats' => []];
+
+        return compact('queue', 'offline', 'mine', 'others', 'all', 'active', 'messages', 'history', 'canned', 'operators', 'stats', 'eventTitle', 'visitor');
     }
 
     /**
