@@ -727,6 +727,26 @@ switch ($action) {
         $endpoint = '/chat/conversations/' . urlencode($ref) . '/close';
         break;
 
+    case 'chat.upload':
+        $ref = $_GET['ref'] ?? '';
+        if (!$ref) { http_response_code(400); echo json_encode(['error' => 'Missing ref']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $requiresAuth = true;
+        $endpoint = '/chat/conversations/' . urlencode($ref) . '/attachments';
+        break;
+
+    case 'chat.attachment':
+        $ref = $_GET['ref'] ?? '';
+        $atoken = $_GET['token'] ?? '';
+        if (!$ref || !$atoken) { http_response_code(400); echo json_encode(['error' => 'Missing ref/token']); exit; }
+        $params = [];
+        if (isset($_GET['session_token'])) $params['session_token'] = $_GET['session_token'];
+        $requiresAuth = true;
+        $rawResponse = true; // image bytes streamed through
+        $endpoint = '/chat/conversations/' . urlencode($ref) . '/attachments/' . urlencode($atoken) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
     case 'search':
         $query = $_GET['q'] ?? '';
         $limit = min((int)($_GET['limit'] ?? 10), 50);
@@ -4907,6 +4927,11 @@ if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $status
     } elseif (str_starts_with($response, "\x89PNG\r\n\x1a\n")) {
         header('Content-Type: image/png');
         header('Cache-Control: public, max-age=86400');
+        header('Content-Length: ' . strlen($response));
+    } elseif (str_starts_with($response, "\xFF\xD8\xFF")) {
+        // JPEG (chat image attachments are re-encoded to jpg/png server-side)
+        header('Content-Type: image/jpeg');
+        header('Cache-Control: private, max-age=3600');
         header('Content-Length: ' . strlen($response));
     } elseif (str_starts_with($response, "PK\x03\x04") || str_starts_with($response, "PK\x05\x06")) {
         // ZIP archive (local file header or empty-archive end-of-central-dir signature)

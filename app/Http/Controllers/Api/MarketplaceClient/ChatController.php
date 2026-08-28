@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Chat\ChatConversation;
 use App\Models\MarketplaceClient;
 use App\Services\Chat\ChatAntiAbuseService;
+use App\Services\Chat\ChatAttachmentService;
 use App\Services\Chat\ChatConversationService;
 use App\Services\Chat\ChatOpenerResolver;
 use App\Services\Chat\ChatRoutingService;
@@ -12,6 +13,7 @@ use App\Services\Chat\ChatScheduleService;
 use App\Services\Chat\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 
 /**
@@ -33,6 +35,7 @@ class ChatController extends BaseController
         private ChatAntiAbuseService $antiAbuse,
         private ChatOpenerResolver $openerResolver,
         private ChatRoutingService $routing,
+        private ChatAttachmentService $attachments,
     ) {
     }
 
@@ -197,6 +200,59 @@ class ChatController extends BaseController
             'message' => $this->serializeMessage($message),
             'status' => $conversation->refresh()->status,
         ], null, 201);
+    }
+
+    /**
+     * Upload an image attachment (client side). Re-encoded + stored privately
+     * by the service; posted as an opener message with the attachment.
+     */
+    public function upload(Request $request, string $reference): JsonResponse
+    {
+        $client = $this->requireActiveChat($request);
+        $conversation = $this->findOwned($request, $client, $reference);
+
+        if ($conversation->isClosed()) {
+            return $this->error('Conversația este închisă.', 422);
+        }
+        if ($reason = $this->antiAbuse->guardMessage($conversation->id)) {
+            return $this->error('Prea multe încărcări. Încearcă din nou în scurt timp.', 429, ['reason' => $reason]);
+        }
+
+        $validated = $request->validate([
+            'data' => ['required', 'string', 'max:6000000'], // base64 (~4MB image)
+            'name' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        try {
+            $descriptor = $this->attachments->storeBase64($conversation, $validated['data'], $validated['name'] ?? null);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
+
+        $message = $this->conversations->postOpenerMessage($conversation, '', [$descriptor]);
+
+        return $this->success(['message' => $this->serializeMessage($message)], null, 201);
+    }
+
+    /**
+     * Serve a stored image attachment to the owning visitor (via session token).
+     * Streams from the private disk; the proxy passes the image bytes through.
+     */
+    public function attachment(Request $request, string $reference, string $token): Response
+    {
+        $client = $this->requireActiveChat($request);
+        $conversation = $this->findOwned($request, $client, $reference);
+
+        $file = $this->attachments->read($conversation, $token);
+        if (!$file) {
+            abort(404);
+        }
+
+        return response($file[0], 200, [
+            'Content-Type' => $file[1],
+            'Content-Length' => (string) strlen($file[0]),
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 
     /**

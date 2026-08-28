@@ -486,6 +486,10 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
     // Live-chat sound notifier poll (unclaimed chats + incoming messages)
     Route::get('/chat/poll', [\App\Http\Controllers\Marketplace\ChatPollController::class, 'poll'])
         ->name('marketplace.chat.poll');
+    Route::get('/chat/attachment/{conversation}/{token}', [\App\Http\Controllers\Marketplace\ChatPollController::class, 'attachment'])
+        ->name('marketplace.chat.attachment');
+    Route::post('/chat/{conversation}/attach', [\App\Http\Controllers\Marketplace\ChatPollController::class, 'upload'])
+        ->name('marketplace.chat.attach');
 
     Route::get('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'edit'])
         ->name('marketplace.ticket-customizer.edit');

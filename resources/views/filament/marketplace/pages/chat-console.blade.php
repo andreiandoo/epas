@@ -235,14 +235,24 @@
                                     <div class="flex justify-start">
                                         <div class="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 bg-gray-100 dark:bg-gray-800">
                                             <div class="text-[10px] font-semibold text-gray-500 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
-                                            <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>
+                                            @if($m->body)<div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>@endif
+                                            @foreach($m->attachments ?? [] as $att)
+                                                @if(!empty($att['token']))
+                                                    <img src="{{ route('marketplace.chat.attachment', ['conversation' => $active->id, 'token' => $att['token']]) }}" onclick="window.open(this.src,'_blank')" class="mt-1 rounded-lg max-w-[220px] max-h-[220px] cursor-pointer border border-black/5" alt="imagine">
+                                                @endif
+                                            @endforeach
                                         </div>
                                     </div>
                                 @else
                                     {{-- Client (opener) → RIGHT --}}
                                     <div class="flex justify-end">
                                         <div class="max-w-[80%] rounded-2xl rounded-br-sm px-3 py-2 bg-primary-600 text-white">
-                                            <div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>
+                                            @if($m->body)<div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>@endif
+                                            @foreach($m->attachments ?? [] as $att)
+                                                @if(!empty($att['token']))
+                                                    <img src="{{ route('marketplace.chat.attachment', ['conversation' => $active->id, 'token' => $att['token']]) }}" onclick="window.open(this.src,'_blank')" class="mt-1 rounded-lg max-w-[220px] max-h-[220px] cursor-pointer border border-white/20" alt="imagine">
+                                                @endif
+                                            @endforeach
                                             <div class="text-[10px] text-white/70 mt-0.5 text-right">{{ optional($m->created_at)->format('H:i') }}</div>
                                         </div>
                                     </div>
@@ -279,7 +289,20 @@
                                  Alpine x-data (which would blank the textarea) or steal focus.
                                  wire:key rebuilds it only when the active conversation changes. --}}
                             <div wire:ignore wire:key="composer-{{ $active->reference }}"
-                                x-data="{ msg: '', internal: false, cmap: {{ \Illuminate\Support\Js::from($cannedMap) }} }"
+                                x-data="{ msg: '', internal: false, uploading: false, cmap: {{ \Illuminate\Support\Js::from($cannedMap) }}, attachUrl: '{{ route('marketplace.chat.attach', ['conversation' => $active->id]) }}',
+                                    uploadImg(e) {
+                                        var f = e.target.files && e.target.files[0]; e.target.value = '';
+                                        if (!f) return;
+                                        if (!/^image\/(png|jpe?g|webp)$/.test(f.type)) { alert('Doar imagini (JPG, PNG, WEBP).'); return; }
+                                        if (f.size > 3145728) { alert('Imagine prea mare (max 3MB).'); return; }
+                                        this.uploading = true; var self = this; var reader = new FileReader();
+                                        reader.onload = function () {
+                                            fetch(self.attachUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' }, body: JSON.stringify({ data: reader.result, name: f.name }) })
+                                                .then(function (r) { return r.json(); }).then(function (res) { self.uploading = false; if (!res || !res.ok) { alert((res && res.message) || 'Încărcarea a eșuat.'); } })
+                                                .catch(function () { self.uploading = false; alert('Eroare la încărcare.'); });
+                                        };
+                                        reader.readAsDataURL(f);
+                                    } }"
                                 class="border-t border-gray-100 dark:border-gray-800 p-3">
                                 <div class="flex items-center gap-2 mb-2 flex-wrap">
                                     <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
@@ -297,6 +320,11 @@
                                     @endif
                                 </div>
                                 <div class="flex items-end gap-2">
+                                    <input type="file" x-ref="opFile" accept="image/png,image/jpeg,image/webp" class="hidden" x-on:change="uploadImg($event)">
+                                    <button type="button" x-on:click="$refs.opFile.click()" x-bind:disabled="uploading"
+                                        title="Atașează o imagine" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 disabled:opacity-50">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                                    </button>
                                     <textarea x-ref="replyBox" x-model="msg" rows="2" placeholder="Scrie un răspuns... (poți folosi o scurtătură, ex: /refund)"
                                         x-on:focus="window.__epChatTyping = true"
                                         x-on:blur="window.__epChatTyping = false"

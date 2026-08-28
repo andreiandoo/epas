@@ -69,7 +69,9 @@ return [
     'attachments' => [
         'enabled' => (bool) env('CHAT_ATTACHMENTS', true),
         'max_size_kb' => (int) env('CHAT_ATTACH_MAX_KB', 3072),
-        'allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+        // IMAGES ONLY by security decision (no antivirus on the box). Uploads are
+        // re-encoded server-side (payload stripped) + stored on a private disk.
+        'allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
     ],
 
 ];

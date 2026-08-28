@@ -144,6 +144,12 @@
         + '.amb-msg.system{align-self:center;background:transparent;color:#94a3b8;font-size:12px;text-align:center}'
         + '.amb-msg-time{font-size:10px;opacity:.6;margin-top:3px;text-align:right}'
         + '.amb-op-name{font-size:11px;font-weight:600;color:#64748b;align-self:flex-start;margin:2px 0 -4px 4px}'
+        + '.amb-att-img{max-width:200px;max-height:220px;border-radius:10px;margin-top:6px;display:block;cursor:pointer;border:1px solid rgba(0,0,0,.08)}'
+        + '.amb-compose-row{display:flex;align-items:flex-end;gap:6px}'
+        + '.amb-attach-btn{flex:0 0 auto;background:#f1f5f9;border:none;border-radius:9px;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#475569}'
+        + '.amb-attach-btn:hover{background:#e2e8f0}'
+        + '.amb-attach-btn svg{width:20px;height:20px}'
+        + '.amb-attach-btn:disabled{opacity:.5;cursor:default}'
         + '.amb-chat-foot{border-top:1px solid #e5e7eb;padding:10px;background:#fff}'
         + '.amb-chat-foot textarea,.amb-chat-foot input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:9px;padding:9px 10px;font-size:14px;font-family:inherit;margin-bottom:6px}'
         + '.amb-chat-foot textarea{resize:none}'
@@ -272,6 +278,12 @@
         els.body.appendChild(d);
     }
 
+    function attachmentUrl(att) {
+        return PROXY + '?action=chat.attachment&ref=' + encodeURIComponent(ref) +
+            '&token=' + encodeURIComponent(att.token) +
+            '&session_token=' + encodeURIComponent(sessionToken || '');
+    }
+
     function renderMessage(m) {
         var cls = m.from === 'operator' ? 'operator' : (m.from === 'system' ? 'system' : 'me');
         var div = document.createElement('div');
@@ -279,9 +291,23 @@
         if (cls === 'system') {
             div.textContent = (m.body || '') + (m.created_at ? ' · ' + fmtTime(m.created_at) : '');
         } else {
-            var txt = document.createElement('div');
-            txt.textContent = m.body || '';
-            div.appendChild(txt);
+            if (m.body) {
+                var txt = document.createElement('div');
+                txt.textContent = m.body;
+                div.appendChild(txt);
+            }
+            if (m.attachments && m.attachments.length) {
+                for (var ai = 0; ai < m.attachments.length; ai++) {
+                    var att = m.attachments[ai];
+                    if (!att || !att.token) continue;
+                    var img = document.createElement('img');
+                    img.className = 'amb-att-img';
+                    img.alt = att.name || 'imagine';
+                    img.src = attachmentUrl(att);
+                    (function (url) { img.addEventListener('click', function () { window.open(url, '_blank'); }); })(img.src);
+                    div.appendChild(img);
+                }
+            }
             if (m.created_at) {
                 var t = document.createElement('div');
                 t.className = 'amb-msg-time';
@@ -549,17 +575,62 @@
         hp.setAttribute('tabindex', '-1'); hp.setAttribute('autocomplete', 'off'); hp.setAttribute('data-hp', '');
         foot.appendChild(hp);
 
+        var row = document.createElement('div');
+        row.className = 'amb-compose-row';
+        var attach = makeAttachButton(foot);
+        if (attach) row.appendChild(attach);
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'amb-btn amb-btn-primary';
+        btn.style.flex = '1';
         btn.textContent = 'Trimite';
         btn.addEventListener('click', function () { submit(foot, btn); });
-        foot.appendChild(btn);
+        row.appendChild(btn);
+        foot.appendChild(row);
 
         ta.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); submit(foot, btn); }
         });
         ta.focus();
+    }
+
+    // Paperclip attach button + hidden image input. Returns null when disabled.
+    function makeAttachButton(foot) {
+        if (!(cfg && cfg.attachments_enabled)) return null;
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png,image/jpeg,image/webp';
+        input.style.display = 'none';
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'amb-attach-btn';
+        b.title = 'Atașează o imagine';
+        b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+        b.addEventListener('click', function () { input.click(); });
+        input.addEventListener('change', function () {
+            if (input.files && input.files[0]) uploadImage(input.files[0], b);
+            input.value = '';
+        });
+        foot.appendChild(input);
+        return b;
+    }
+
+    function uploadImage(file, btn) {
+        if (!ref || !sessionToken) { alert('Trimite mai întâi un mesaj, apoi poți atașa imagini.'); return; }
+        if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) { alert('Doar imagini (JPG, PNG, WEBP).'); return; }
+        if (file.size > 3072 * 1024) { alert('Imaginea este prea mare (max 3MB).'); return; }
+        btn.disabled = true;
+        var reader = new FileReader();
+        reader.onload = function () {
+            api('chat.upload', { method: 'POST', params: { ref: ref }, body: { data: reader.result, name: file.name, session_token: sessionToken } })
+                .then(function (res) {
+                    btn.disabled = false;
+                    if (!res || !res.success) { alert((res && res.message) || 'Încărcarea a eșuat.'); return; }
+                    if (res.data && res.data.message) renderMessage(res.data.message);
+                })
+                .catch(function () { btn.disabled = false; alert('Eroare la încărcare.'); });
+        };
+        reader.readAsDataURL(file);
     }
 
     function submit(foot, btn) {
@@ -770,10 +841,15 @@
         var ta = document.createElement('textarea');
         ta.rows = 2; ta.placeholder = 'Scrie un mesaj...'; ta.setAttribute('data-input', '');
         foot.appendChild(ta);
+        var row = document.createElement('div');
+        row.className = 'amb-compose-row';
+        var attach = makeAttachButton(foot);
+        if (attach) row.appendChild(attach);
         var btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'amb-btn amb-btn-primary'; btn.textContent = 'Trimite';
+        btn.type = 'button'; btn.className = 'amb-btn amb-btn-primary'; btn.style.flex = '1'; btn.textContent = 'Trimite';
         btn.addEventListener('click', function () { submit(foot, btn); });
-        foot.appendChild(btn);
+        row.appendChild(btn);
+        foot.appendChild(row);
         ta.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); submit(foot, btn); }
         });

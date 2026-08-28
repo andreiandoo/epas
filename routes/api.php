@@ -4396,4 +4396,8 @@ Route::prefix('marketplace-client/chat')
             ->name('api.marketplace-client.chat.rating');
         Route::post('/conversations/{reference}/close', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'close'])
             ->name('api.marketplace-client.chat.close');
+        Route::post('/conversations/{reference}/attachments', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'upload'])
+            ->name('api.marketplace-client.chat.upload');
+        Route::get('/conversations/{reference}/attachments/{token}', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'attachment'])
+            ->name('api.marketplace-client.chat.attachment');
     });
