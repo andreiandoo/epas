@@ -37,6 +37,8 @@ class ChatConsole extends Page
     // Which list dropdown is open (queue/offline/mine/all). Kept as Livewire
     // state so the 3s poll re-render doesn't collapse an open picker.
     public ?string $openPanel = null;
+    // Search term for the active visitor's purchase history (event / order / ticket).
+    public string $historySearch = '';
 
     public function getTitle(): string
     {
@@ -126,6 +128,7 @@ class ChatConsole extends Page
     {
         $this->activeReference = $reference;
         $this->openPanel = null;
+        $this->historySearch = '';
         // Mark opener messages as read.
         $conversation = $this->findConversation($reference);
         if ($conversation) {
@@ -376,8 +379,8 @@ class ChatConsole extends Page
 
         // Authenticated visitor's purchase/event history (customer or organizer).
         $visitor = $active
-            ? app(\App\Services\Chat\ChatVisitorContextService::class)->forConversation($active)
-            : ['type' => null, 'upcoming' => [], 'past' => [], 'stats' => []];
+            ? app(\App\Services\Chat\ChatVisitorContextService::class)->forConversation($active, $this->historySearch)
+            : ['type' => null, 'upcoming' => [], 'past' => [], 'stats' => [], 'searching' => false];
 
         return compact('queue', 'offline', 'mine', 'others', 'all', 'active', 'messages', 'history', 'canned', 'operators', 'stats', 'eventTitle', 'visitor');
     }

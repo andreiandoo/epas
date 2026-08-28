@@ -22,11 +22,11 @@ class ChatVisitorContextService
     private const SUCCESS_STATUSES = ['paid', 'confirmed', 'completed', 'partially_refunded'];
 
     /**
-     * @return array{type:?string, name:?string, stats:array, upcoming:array, past:array}
+     * @return array{type:?string, name:?string, stats:array, upcoming:array, past:array, searching:bool}
      */
-    public function forConversation(ChatConversation $conversation): array
+    public function forConversation(ChatConversation $conversation, ?string $search = null): array
     {
-        $empty = ['type' => null, 'name' => null, 'stats' => [], 'upcoming' => [], 'past' => []];
+        $empty = ['type' => null, 'name' => null, 'stats' => [], 'upcoming' => [], 'past' => [], 'searching' => false];
 
         try {
             $type = $conversation->opener_type; // 'customer' | 'organizer' | ...
@@ -36,8 +36,13 @@ class ChatVisitorContextService
                 return $empty;
             }
 
+            $search = $search !== null ? trim($search) : null;
+            if ($search === '') {
+                $search = null;
+            }
+
             if ($type === 'customer') {
-                return $this->forCustomer($openerId, $clientId) ?: $empty;
+                return $this->forCustomer($openerId, $clientId, $search) ?: $empty;
             }
             if ($type === 'organizer') {
                 return $this->forOrganizer($openerId, $clientId) ?: $empty;
@@ -49,7 +54,7 @@ class ChatVisitorContextService
         }
     }
 
-    private function forCustomer(int $customerId, int $clientId): ?array
+    private function forCustomer(int $customerId, int $clientId, ?string $search = null): ?array
     {
         $customer = MarketplaceCustomer::query()
             ->where('id', $customerId)
@@ -59,53 +64,80 @@ class ChatVisitorContextService
             return null;
         }
 
+        $pg = DB::getDriverName() === 'pgsql';
+        $likeOp = $pg ? 'ilike' : 'like';
+        $titleExpr = $pg
+            ? "COALESCE(e.title->>'en', e.title->>'ro', '')"
+            : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), '')";
+
         // Tickets grouped by (order, resolved event). Resolve event via
         // ticket_type.event_id → ticket.event_id → ticket.marketplace_event_id.
         $eventExpr = 'COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)';
-        $groups = DB::table('tickets as t')
+        $q = DB::table('tickets as t')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->leftJoin('events as e', 'e.id', '=', DB::raw($eventExpr))
             ->where('o.marketplace_customer_id', $customerId)
-            ->where('o.marketplace_client_id', $clientId)
-            ->selectRaw('t.order_id, ' . $eventExpr . ' as event_id, count(*) as cnt')
+            ->where('o.marketplace_client_id', $clientId);
+
+        if ($search) {
+            $term = '%' . $search . '%';
+            $q->where(function ($w) use ($term, $likeOp, $titleExpr) {
+                $w->where('o.order_number', $likeOp, $term)
+                    ->orWhere('t.code', $likeOp, $term)
+                    ->orWhereRaw("$titleExpr $likeOp ?", [$term]);
+            });
+        }
+
+        $groups = $q->selectRaw('t.order_id, ' . $eventExpr . ' as event_id, count(*) as cnt')
             ->groupBy('t.order_id')
             ->groupByRaw($eventExpr)
-            ->limit(120)
+            ->limit(400)
             ->get();
 
         $orderIds = $groups->pluck('order_id')->filter()->unique()->all();
         $eventIds = $groups->pluck('event_id')->filter()->unique()->all();
-
         $orders = Order::query()->whereIn('id', $orderIds)->get()->keyBy('id');
         $events = Event::query()->whereIn('id', $eventIds)->get()->keyBy('id');
 
-        $upcoming = [];
-        $past = [];
+        // Group by event → { event, upcoming, total tickets, orders: [...] }.
+        $byEvent = [];
         foreach ($groups as $g) {
             $order = $orders->get($g->order_id);
             if (!$order) {
                 continue;
             }
             $event = $g->event_id ? $events->get($g->event_id) : null;
-            $isUpcoming = $event ? $this->isUpcoming($event) : false;
-            $row = [
-                'event_title' => $event ? $this->eventTitle($event) : 'Eveniment',
-                'event_date' => $event ? $this->eventDateLabel($event) : null,
-                'tickets' => (int) $g->cnt,
+            $key = $g->event_id ? ('e' . $g->event_id) : 'none';
+            if (!isset($byEvent[$key])) {
+                $byEvent[$key] = [
+                    'event_title' => $event ? $this->eventTitle($event) : 'Fără eveniment',
+                    'event_date' => $event ? $this->eventDateLabel($event) : null,
+                    'upcoming' => $event ? $this->isUpcoming($event) : false,
+                    'total' => 0,
+                    'orders' => [],
+                ];
+            }
+            $byEvent[$key]['total'] += (int) $g->cnt;
+            $byEvent[$key]['orders'][] = [
                 'order_number' => $order->order_number ?? ('#' . $order->id),
                 'order_date' => optional($order->created_at)->format('d.m.Y'),
                 'payment' => $this->paymentLabel($order),
-                'status' => $order->status,
+                'tickets' => (int) $g->cnt,
             ];
-            if ($isUpcoming) {
-                $upcoming[] = $row;
+        }
+
+        $upcoming = [];
+        $past = [];
+        foreach ($byEvent as $ev) {
+            usort($ev['orders'], fn ($a, $b) => strcmp($b['order_date'], $a['order_date']));
+            if ($ev['upcoming']) {
+                $upcoming[] = $ev;
             } else {
-                $past[] = $row;
+                $past[] = $ev;
             }
         }
 
-        // Upcoming first, chronological-ish (we don't have a clean sortable date
-        // per row, so keep insertion order which is grouped by order recency).
         $stats = [
             'orders' => count($orderIds),
             'tickets' => (int) $groups->sum('cnt'),
@@ -116,8 +148,9 @@ class ChatVisitorContextService
             'type' => 'customer',
             'name' => trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) ?: ($customer->email ?? 'Client'),
             'stats' => $stats,
-            'upcoming' => array_slice($upcoming, 0, 25),
-            'past' => array_slice($past, 0, 25),
+            'upcoming' => array_slice($upcoming, 0, 40),
+            'past' => array_slice($past, 0, 60),
+            'searching' => (bool) $search,
         ];
     }
 
@@ -174,6 +207,7 @@ class ChatVisitorContextService
             ],
             'upcoming' => array_slice($upcoming, 0, 30),
             'past' => array_slice($past, 0, 30),
+            'searching' => false,
         ];
     }
 
@@ -230,7 +264,7 @@ class ChatVisitorContextService
                 ->whereIn('status', self::SUCCESS_STATUSES)
                 ->selectRaw('COALESCE(SUM(COALESCE(NULLIF(total_cents,0), ROUND(total*100), 0)),0) as c')
                 ->value('c');
-            return number_format($cents / 100, 2) . ' lei';
+            return $cents > 0 ? number_format($cents / 100, 2) . ' lei' : null;
         } catch (\Throwable $e) {
             return null;
         }
