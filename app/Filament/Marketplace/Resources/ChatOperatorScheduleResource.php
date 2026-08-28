@@ -21,7 +21,7 @@ class ChatOperatorScheduleResource extends Resource
     protected static ?string $modelLabel = 'program';
     protected static ?string $pluralModelLabel = 'program operatori';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
-    protected static \UnitEnum|string|null $navigationGroup = 'Communications';
+    protected static \UnitEnum|string|null $navigationGroup = 'Chat';
     protected static ?int $navigationSort = 70;
 
     protected static array $days = [

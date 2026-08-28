@@ -165,6 +165,8 @@ class MarketplacePanelProvider extends PanelProvider
                 NavigationGroup::make('Shop'),
                 NavigationGroup::make('Content'),
                 NavigationGroup::make('Tools'),
+                NavigationGroup::make('Chat')
+                    ->icon('heroicon-o-chat-bubble-left-right'),
                 NavigationGroup::make('Settings')
                     ->collapsed(),
                 NavigationGroup::make('Help')

@@ -20,7 +20,7 @@ class ChatHolidayResource extends Resource
     protected static ?string $modelLabel = 'zi liberă';
     protected static ?string $pluralModelLabel = 'zile libere';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar-days';
-    protected static \UnitEnum|string|null $navigationGroup = 'Communications';
+    protected static \UnitEnum|string|null $navigationGroup = 'Chat';
     protected static ?int $navigationSort = 71;
 
     public static function shouldRegisterNavigation(): bool

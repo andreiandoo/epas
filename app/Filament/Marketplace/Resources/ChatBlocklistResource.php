@@ -20,7 +20,7 @@ class ChatBlocklistResource extends Resource
     protected static ?string $modelLabel = 'intrare blocklist';
     protected static ?string $pluralModelLabel = 'blocklist chat';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-no-symbol';
-    protected static \UnitEnum|string|null $navigationGroup = 'Communications';
+    protected static \UnitEnum|string|null $navigationGroup = 'Chat';
     protected static ?int $navigationSort = 73;
 
     public static function shouldRegisterNavigation(): bool

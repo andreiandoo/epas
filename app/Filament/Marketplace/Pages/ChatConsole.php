@@ -26,7 +26,7 @@ class ChatConsole extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationLabel = 'Chat live';
-    protected static UnitEnum|string|null $navigationGroup = 'Communications';
+    protected static UnitEnum|string|null $navigationGroup = 'Chat';
     protected static ?int $navigationSort = 5;
     protected static ?string $slug = 'chat-console';
     protected string $view = 'filament.marketplace.pages.chat-console';

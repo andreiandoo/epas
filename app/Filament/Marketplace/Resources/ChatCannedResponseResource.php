@@ -21,7 +21,7 @@ class ChatCannedResponseResource extends Resource
     protected static ?string $modelLabel = 'răspuns predefinit';
     protected static ?string $pluralModelLabel = 'răspunsuri predefinite';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-bottom-center-text';
-    protected static \UnitEnum|string|null $navigationGroup = 'Communications';
+    protected static \UnitEnum|string|null $navigationGroup = 'Chat';
     protected static ?int $navigationSort = 72;
 
     public static function shouldRegisterNavigation(): bool
