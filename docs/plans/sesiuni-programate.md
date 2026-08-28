@@ -27,7 +27,7 @@ bilet, ferestre de validitate pe bilet, și validare temporală la scanare.
 
 Auditul a mai scos la iveală două defecte care trebuie reparate înainte de orice
 funcționalitate nouă, pentru că sunt deja în producție (§12.1): capacitatea pe slot se
-afișează dar **nu se consumă niciodată** la vânzare, iar un organizator **nu se poate
+afișează dar **nu se consumă niciodată** la vânzare pe marketplace, iar un organizator **nu se poate
 înrola singur** cu o locație cu program — arhetipul nu există în fluxul self-service.
 
 **Ce lipsește azi, concret:**
@@ -44,7 +44,7 @@ afișează dar **nu se consumă niciodată** la vânzare, iar un organizator **n
 | Program tot anul / doar o perioadă | Da (`venue_config.seasons`), dar necalificat pe sesiuni |
 | Cinema: săli, filme paralele, hartă/proiecție | Nu — modelul există, dar API-ul de locuri ignoră proiecția |
 | Marketplace înrolează singur un astfel de organizator | **Nu** — arhetipul nu există în wizard; îl creează manual un admin în Filament |
-| Capacitatea pe slot chiar se consumă la vânzare | **Nu** — `SlotBookingService::reserve()` nu are niciun apelant |
+| Capacitatea pe slot chiar se consumă la vânzare | **Nu pe marketplace** — `SlotBookingService::reserve()` nu are niciun apelant (pe tenant, da) |
 
 ---
 
@@ -777,16 +777,27 @@ Auditul a scos la iveală două defecte care blochează exact asta.
 
 ### 12.1 Două defecte care trebuie reparate întâi
 
-**B-1 — Capacitatea pe slot nu se consumă niciodată.**
-`SlotBookingService::reserve()` **nu are niciun apelant** în tot repo-ul. Singura
-metodă folosită e `getBookingsMap()` (citire), din `DateAvailabilityController` și
-`LeisureAvailabilityController`. Adică: sloturile *afișează* „12 locuri rămase", dar
-contorul nu scade niciodată la vânzare. Un slot de muzeu poate fi suprarezervat la
-nesfârșit, azi, în producție.
+**B-1 — Pe marketplace, capacitatea pe slot nu se consumă niciodată.**
+`SlotBookingService::reserve()` și `::release()` **nu au niciun apelant** în tot
+repo-ul. Singura metodă folosită e `getBookingsMap()` (citire), din
+`DateAvailabilityController` și `LeisureAvailabilityController`. Adică: sloturile
+*afișează* „12 locuri rămase", dar contorul nu scade niciodată la vânzare. Un slot de
+muzeu vândut pe ambilet poate fi suprarezervat la nesfârșit, azi, în producție.
 
 Serviciul e scris corect (tranzacție, `lockForUpdate`, unique constraint) — pur și
 simplu nu e conectat la checkout și la POS. Comentariul din `LeisureSlotBooking`
 descrie flow-ul corect ca și cum ar exista.
+
+**Nuanța care contează:** pe partea de tenant, capacitatea *se* consumă — prin
+`CapacityAvailabilityService::reserve()`, apelat din `TenantClient\OperatorController`,
+`DemoCheckoutController` și `OrderObserver`, peste `Leisure\TicketTypeCapacity`.
+Deci cele două implementări paralele din §2.2–2.3 au divergit până acolo încât una
+aplică regula și cealaltă doar o afișează. Checkout-ul de marketplace nu atinge
+niciuna dintre ele.
+
+E cel mai bun argument pentru unificare din tot documentul: nu e o preferință de
+design, e o regulă de business care se pierde la granița dintre două implementări ale
+aceluiași lucru.
 
 > Consecință pentru plan: F3 nu e „adăugăm rezervarea", ci „conectăm rezervarea
 > pentru prima dată". Iar migrarea din §13 nu poate recupera contoare reale din
