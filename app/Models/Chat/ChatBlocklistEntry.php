@@ -2,9 +2,11 @@
 
 namespace App\Models\Chat;
 
+use App\Models\MarketplaceAdmin;
 use App\Traits\SecureMarketplaceScoping;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * An anti-abuse blocklist entry (IP or email). A non-expired match denies the
@@ -31,6 +33,11 @@ class ChatBlocklistEntry extends Model
     protected $casts = [
         'expires_at' => 'datetime',
     ];
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceAdmin::class, 'created_by_marketplace_admin_id');
+    }
 
     /**
      * Active (non-expired) entries only.

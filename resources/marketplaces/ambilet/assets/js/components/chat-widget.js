@@ -42,6 +42,7 @@
     var currentStatus = null;
     var currentOperator = null;
     var rated = false;
+    var unread = 0;   // operator messages received while the widget is minimized
 
     function token() {
         try { return (window.AmbiletAuth && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null; }
@@ -111,6 +112,11 @@
         + '.amb-chat-bubble-wrap{position:fixed;bottom:20px;right:20px;z-index:99998}'
         + '.amb-chat-bubble{width:56px;height:56px;border-radius:50%;background:#e11d48;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;transition:transform .15s}'
         + '.amb-chat-bubble:hover{transform:scale(1.05)}'
+        + '@keyframes ambAttn{0%,100%{transform:translateY(0)}25%{transform:translateY(-6px)}50%{transform:translateY(0)}75%{transform:translateY(-3px)}}'
+        + '.amb-chat-bubble.amb-attn{animation:ambAttn 1s ease-in-out infinite}'
+        + '.amb-chat-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#111;color:#fff;font-size:12px;font-weight:700;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff}'
+        + '.amb-chat-bubble-wrap.amb-has-unread .amb-chat-badge{display:flex}'
+        + '.amb-chat-bubble-wrap.amb-has-unread .amb-chat-tip{opacity:1;transform:translateY(-50%) translateX(0);background:#e11d48}'
         + '.amb-chat-tip{position:absolute;top:50%;right:68px;transform:translateY(-50%) translateX(8px);background:#0f172a;color:#fff;font-size:13px;font-weight:600;line-height:1;padding:9px 13px;border-radius:10px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .22s ease, transform .22s ease;box-shadow:0 6px 18px rgba(0,0,0,.28)}'
         + '.amb-chat-tip:after{content:"";position:absolute;top:50%;right:-5px;transform:translateY(-50%);border-left:6px solid #0f172a;border-top:5px solid transparent;border-bottom:5px solid transparent}'
         + '.amb-chat-bubble-wrap:hover .amb-chat-tip{opacity:1;transform:translateY(-50%) translateX(0)}'
@@ -175,11 +181,17 @@
         tip.className = 'amb-chat-tip';
         tip.textContent = 'Chat & suport AmBilet';
 
+        var badge = document.createElement('span');
+        badge.className = 'amb-chat-badge';
+
         bubbleWrap.appendChild(tip);
         bubbleWrap.appendChild(bubble);
+        bubbleWrap.appendChild(badge);
         document.body.appendChild(bubbleWrap);
         els.bubble = bubble;
         els.bubbleWrap = bubbleWrap;
+        els.tip = tip;
+        els.badge = badge;
 
         var panel = document.createElement('div');
         panel.className = 'amb-chat-panel';
@@ -598,13 +610,39 @@
         api('chat.show', { params: { ref: ref, session_token: sessionToken, after: lastMessageId } }).then(function (res) {
             if (!res || !res.success) return;
             var d = res.data;
-            (d.messages || []).forEach(renderMessage);
+            var msgs = d.messages || [];
+            msgs.forEach(renderMessage);
+            // Minimized + new operator messages → attention badge on the bubble.
+            if (!panelOpen) {
+                var opNew = 0;
+                for (var i = 0; i < msgs.length; i++) { if (msgs[i].from === 'operator') opNew++; }
+                if (opNew > 0) showUnread(opNew);
+            }
             applyStatus(d.status, d.queue_position, d.operator);
             if (d.status === 'resolved' || d.status === 'closed') {
-                stopPolling();
-                renderEnded(!!d.rated);
+                if (panelOpen) { stopPolling(); renderEnded(!!d.rated); }
+                // If minimized, keep the badge; the ended UI renders on open.
             }
         });
+    }
+
+    // ---------- Unread badge (minimized) ----------
+
+    function showUnread(n) {
+        unread += n;
+        if (!els.badge) return;
+        els.badge.textContent = unread > 9 ? '9+' : String(unread);
+        els.bubbleWrap.classList.add('amb-has-unread');
+        els.bubble.classList.add('amb-attn');
+        if (els.tip) els.tip.textContent = unread === 1 ? '1 mesaj nou' : (unread + ' mesaje noi');
+    }
+    function clearUnread() {
+        unread = 0;
+        if (!els.badge) return;
+        els.badge.textContent = '';
+        els.bubbleWrap.classList.remove('amb-has-unread');
+        els.bubble.classList.remove('amb-attn');
+        if (els.tip) els.tip.textContent = 'Chat & suport AmBilet';
     }
     function startPolling() {
         stopPolling();
@@ -621,16 +659,24 @@
         setState('Conversație încheiată');
         els.foot.innerHTML = '';
         if (!alreadyRated && !rated) {
+            // Rating first; the "new conversation" button appears only after the
+            // client rates (added in submitRating).
             buildRatingBox();
         } else {
             var done = document.createElement('div');
             done.className = 'amb-rating-thanks';
             done.textContent = 'Conversație încheiată. Mulțumim!';
             els.foot.appendChild(done);
+            appendNewChatButton();
         }
+    }
+
+    function appendNewChatButton() {
+        if (els.foot.querySelector('[data-newchat]')) return;
         var nb = document.createElement('button');
         nb.type = 'button';
-        nb.className = 'amb-btn amb-btn-ghost';
+        nb.setAttribute('data-newchat', '');
+        nb.className = 'amb-btn amb-btn-primary';
         nb.textContent = 'Începe o conversație nouă';
         nb.addEventListener('click', function () { clearConversation(); els.body.innerHTML = ''; entry(); });
         els.foot.appendChild(nb);
@@ -681,9 +727,11 @@
         api('chat.rating', { method: 'POST', params: { ref: ref }, body: { rating: score, session_token: sessionToken } })
             .then(function () {
                 wrap.innerHTML = '<div class="amb-rating-thanks">Mulțumim pentru feedback! ★ ' + score + '/5</div>';
+                appendNewChatButton();
             })
             .catch(function () {
                 wrap.innerHTML = '<div class="amb-rating-thanks">Mulțumim pentru feedback!</div>';
+                appendNewChatButton();
             });
     }
 
@@ -748,9 +796,16 @@
         els.panel.classList.toggle('open', panelOpen);
         if (panelOpen) {
             openedAt = Date.now();
+            clearUnread();
             resumeOrCompose();
         } else {
-            stopPolling();
+            // Keep polling in the background if there's a live conversation, so
+            // operator messages raise the unread badge while minimized.
+            if (ref && sessionToken) {
+                startPolling();
+            } else {
+                stopPolling();
+            }
             stopIdleWatch();
         }
     }

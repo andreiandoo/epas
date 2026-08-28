@@ -63,6 +63,11 @@ class ChatBlocklistResource extends Resource
                     ->label('Expiră la')
                     ->native(false)
                     ->helperText('Gol = blocare permanentă'),
+
+                Forms\Components\Placeholder::make('creator_name')
+                    ->label('Adăugat de')
+                    ->content(fn ($record) => $record?->creator?->name ?? '—')
+                    ->visibleOn('edit'),
             ])->columns(2),
         ]);
     }
@@ -74,6 +79,7 @@ class ChatBlocklistResource extends Resource
                 Tables\Columns\TextColumn::make('type')->label('Tip')->badge(),
                 Tables\Columns\TextColumn::make('value')->label('Valoare')->searchable()->copyable(),
                 Tables\Columns\TextColumn::make('reason')->label('Motiv')->limit(40),
+                Tables\Columns\TextColumn::make('creator.name')->label('Adăugat de')->placeholder('—'),
                 Tables\Columns\TextColumn::make('expires_at')->label('Expiră')->dateTime()->placeholder('Permanent'),
                 Tables\Columns\TextColumn::make('created_at')->label('Adăugat')->dateTime()->sortable(),
             ])

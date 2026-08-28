@@ -56,10 +56,14 @@
                     ['key' => 'all',     'label' => 'Toate',        'count' => $all->count(),     'dot' => 'bg-gray-400'],
                 ];
             @endphp
+            <style>
+                @keyframes epQueuePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.55); } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); } }
+                .ep-queue-pulse { animation: epQueuePulse 1.15s ease-out infinite; border-color: rgb(59,130,246) !important; }
+            </style>
             <div class="flex items-center gap-2 flex-wrap">
                 @foreach($pills as $p)
                     <button type="button" wire:click="togglePanel('{{ $p['key'] }}')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition {{ $openPanel === $p['key'] ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200' }}">
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition {{ $p['key'] === 'queue' && $p['count'] > 0 && $openPanel !== 'queue' ? 'ep-queue-pulse' : '' }} {{ $openPanel === $p['key'] ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200' }}">
                         <span class="w-2 h-2 rounded-full {{ $p['dot'] }}"></span>
                         {{ $p['label'] }}
                         <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold {{ $openPanel === $p['key'] ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">{{ $p['count'] }}</span>
@@ -203,6 +207,10 @@
                                             @endforeach
                                         </select>
                                     @endif
+                                    <button type="button"
+                                        x-on:click="var r = prompt('Motivul blocării acestui vizitator (IP + email):', ''); if (r !== null) { $wire.blockVisitor('{{ $active->reference }}', r); }"
+                                        title="Adaugă IP-ul și emailul în blocklist"
+                                        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700">Blochează</button>
                                     <button type="button" wire:click="resolve('{{ $active->reference }}')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700">Rezolvă</button>
                                 </div>
                             @endunless
@@ -215,53 +223,74 @@
                                 @if($m->type === 'system')
                                     <div class="text-center text-[11px] text-gray-400">{{ $m->body }} · {{ optional($m->created_at)->format('H:i') }}</div>
                                 @elseif($m->is_internal)
-                                    <div class="max-w-[85%] ml-auto rounded-lg px-3 py-2 bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-                                        <div class="text-[10px] font-semibold text-amber-600 mb-0.5">Notă internă · {{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
-                                        <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $m->body }}</div>
+                                    {{-- Internal note (operator-only) → LEFT, amber --}}
+                                    <div class="flex justify-start">
+                                        <div class="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+                                            <div class="text-[10px] font-semibold text-amber-600 mb-0.5">Notă internă · {{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
+                                            <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $m->body }}</div>
+                                        </div>
                                     </div>
                                 @elseif($m->isFromStaff())
                                     {{-- Operator (staff) → LEFT --}}
-                                    <div class="max-w-[85%] mr-auto rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800">
-                                        <div class="text-[10px] font-semibold text-gray-500 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
-                                        <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>
+                                    <div class="flex justify-start">
+                                        <div class="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 bg-gray-100 dark:bg-gray-800">
+                                            <div class="text-[10px] font-semibold text-gray-500 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
+                                            <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>
+                                        </div>
                                     </div>
                                 @else
                                     {{-- Client (opener) → RIGHT --}}
-                                    <div class="max-w-[85%] ml-auto rounded-lg px-3 py-2 bg-primary-600 text-white">
-                                        <div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>
-                                        <div class="text-[10px] text-white/70 mt-0.5 text-right">{{ optional($m->created_at)->format('H:i') }}</div>
+                                    <div class="flex justify-end">
+                                        <div class="max-w-[80%] rounded-2xl rounded-br-sm px-3 py-2 bg-primary-600 text-white">
+                                            <div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>
+                                            <div class="text-[10px] text-white/70 mt-0.5 text-right">{{ optional($m->created_at)->format('H:i') }}</div>
+                                        </div>
                                     </div>
                                 @endif
                             @endforeach
                         </div>
 
                         @unless($active->isClosed())
+                            @php
+                                // shortcut => expanded body ({name}/{event} substituted) for typed-shortcut expansion.
+                                $cannedMap = [];
+                                foreach ($canned as $cr) {
+                                    $cannedMap[$cr->shortcut] = str_replace(
+                                        ['{name}', '{event}'],
+                                        [$active->openerName(), $active->event_id ? '#'.$active->event_id : ''],
+                                        $cr->body
+                                    );
+                                }
+                            @endphp
                             {{-- wire:ignore on the WHOLE composer so the 3s poll never re-inits the
                                  Alpine x-data (which would blank the textarea) or steal focus.
                                  wire:key rebuilds it only when the active conversation changes. --}}
-                            <div wire:ignore wire:key="composer-{{ $active->reference }}" x-data="{ msg: '', internal: false }" class="border-t border-gray-100 dark:border-gray-800 p-3">
+                            <div wire:ignore wire:key="composer-{{ $active->reference }}"
+                                x-data="{ msg: '', internal: false, cmap: {{ \Illuminate\Support\Js::from($cannedMap) }} }"
+                                class="border-t border-gray-100 dark:border-gray-800 p-3">
                                 <div class="flex items-center gap-2 mb-2 flex-wrap">
                                     <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
                                         <input type="checkbox" x-model="internal" class="rounded border-gray-300 text-amber-500 focus:ring-amber-500">
                                         Notă internă (invizibilă clientului)
                                     </label>
                                     @if($canned->count())
-                                        <select x-on:change="if($event.target.value){ msg = (msg ? msg + '\n' : '') + ($event.target.selectedOptions[0].dataset.body || ''); $event.target.value=''; }"
+                                        <select x-on:change="if ($event.target.value) { msg = (msg ? msg + '\n' : '') + ($event.target.selectedOptions[0].dataset.body || ''); $event.target.value = ''; window.__epChatTyping = true; $refs.replyBox.focus(); }"
                                             class="ml-auto text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 py-1">
                                             <option value="">Răspuns predefinit…</option>
                                             @foreach($canned as $cr)
-                                                <option value="{{ $cr->id }}" data-body="{{ str_replace(['{name}','{event}'], [$active->openerName(), $active->event_id ? '#'.$active->event_id : ''], $cr->body) }}">{{ $cr->shortcut }} — {{ $cr->title }}</option>
+                                                <option value="{{ $cr->id }}" data-body="{{ $cannedMap[$cr->shortcut] ?? $cr->body }}">{{ $cr->shortcut }} — {{ $cr->title }}</option>
                                             @endforeach
                                         </select>
                                     @endif
                                 </div>
                                 <div class="flex items-end gap-2">
-                                    <textarea x-model="msg" rows="2" placeholder="Scrie un răspuns..."
+                                    <textarea x-ref="replyBox" x-model="msg" rows="2" placeholder="Scrie un răspuns... (poți folosi o scurtătură, ex: /refund)"
                                         x-on:focus="window.__epChatTyping = true"
                                         x-on:blur="window.__epChatTyping = false"
+                                        x-on:input="if (cmap[msg.trim()] !== undefined) { msg = cmap[msg.trim()]; }"
                                         x-on:keydown.enter.prevent="if(msg.trim()){ window.__epChatTyping = false; $wire.sendReply(msg, internal); msg=''; }"
                                         class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
-                                    <button type="button" x-on:click="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
+                                    <button type="button" x-on:click="if(msg.trim()){ window.__epChatTyping = false; $wire.sendReply(msg, internal); msg=''; }"
                                         class="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">Trimite</button>
                                 </div>
                             </div>

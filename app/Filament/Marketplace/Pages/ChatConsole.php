@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Pages;
 
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\Chat\ChatBlocklistEntry;
 use App\Models\Chat\ChatCannedResponse;
 use App\Models\Chat\ChatConversation;
 use App\Models\Chat\ChatOperatorStatus;
@@ -186,9 +187,51 @@ class ChatConsole extends Page
         if (!$conversation) {
             return;
         }
+
+        // Post a friendly closing note to the client BEFORE resolving, so the
+        // conversation never just ends silently.
+        $admin = Auth::guard('marketplace_admin')->user();
+        $first = $admin?->name ? trim(explode(' ', trim($admin->name))[0]) : 'operator';
+        app(ChatConversationService::class)->postSystemMessage(
+            $conversation,
+            'Conversația a fost marcată ca rezolvată de ' . $first . '. Îți mulțumim că ne-ai scris! '
+            . 'Dacă mai ai nevoie de ceva, deschide oricând o conversație nouă. O zi frumoasă! 🙌'
+        );
+
         app(ChatConversationService::class)->resolve($conversation);
         if ($this->activeReference === $reference) {
             $this->activeReference = null;
+        }
+    }
+
+    /**
+     * Block the visitor of a conversation — adds their IP and email to the chat
+     * blocklist (with the operator as author + an optional reason).
+     */
+    public function blockVisitor(string $reference, ?string $reason = null): void
+    {
+        $conversation = $this->findConversation($reference);
+        if (!$conversation) {
+            return;
+        }
+
+        $clientId = static::getMarketplaceClientId();
+        $adminId = (int) Auth::guard('marketplace_admin')->id();
+        $reason = $reason !== null ? trim($reason) : null;
+
+        $targets = [
+            ['ip', data_get($conversation->context, 'ip')],
+            ['email', $conversation->guest_email],
+        ];
+
+        foreach ($targets as [$type, $value]) {
+            if (!$value) {
+                continue;
+            }
+            ChatBlocklistEntry::firstOrCreate(
+                ['marketplace_client_id' => $clientId, 'type' => $type, 'value' => $value],
+                ['reason' => $reason, 'created_by_marketplace_admin_id' => $adminId]
+            );
         }
     }
 
