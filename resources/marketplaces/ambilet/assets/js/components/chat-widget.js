@@ -45,10 +45,12 @@
     var unread = 0;   // operator messages received while the widget is minimized
 
     // AmbiletAuth is a top-level `const` (lexical global), NOT a window property —
-    // so `window.AmbiletAuth` is undefined. Resolve it safely by bare name.
+    // so `window.AmbiletAuth` is undefined. Resolve it by bare name first, then
+    // fall back to window just in case a build exposes it there.
     function AUTH() {
-        try { return (typeof AmbiletAuth !== 'undefined' && AmbiletAuth) ? AmbiletAuth : null; }
-        catch (e) { return null; }
+        try { if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth) return AmbiletAuth; } catch (e) {}
+        try { if (window.AmbiletAuth) return window.AmbiletAuth; } catch (e) {}
+        return null;
     }
     function token() {
         try { var a = AUTH(); return (a && a.getToken) ? a.getToken() : null; }
@@ -482,7 +484,13 @@
             if (!EMAIL_RE.test(e)) { email.classList.add('amb-invalid'); err.textContent = 'Email invalid.'; err.style.display = 'block'; return; }
             if (!p) { pass.classList.add('amb-invalid'); err.textContent = 'Introdu parola.'; err.style.display = 'block'; return; }
             var fn = loginFn();
-            if (!fn) { err.textContent = 'Autentificarea nu e disponibilă aici.'; err.style.display = 'block'; return; }
+            if (!fn) {
+                // Inline login unavailable → fall back to the full login page,
+                // returning here afterwards.
+                var url = isOrg ? '/organizator/login' : '/autentificare';
+                window.location.href = url + '?redirect=' + encodeURIComponent(location.pathname + location.search);
+                return;
+            }
             go.disabled = true; go.textContent = 'Se conectează...';
             Promise.resolve(fn(e, p)).then(function (res) {
                 go.disabled = false; go.textContent = 'Autentifică-te';
