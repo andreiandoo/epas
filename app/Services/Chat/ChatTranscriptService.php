@@ -14,6 +14,46 @@ use Illuminate\Support\Facades\Log;
  */
 class ChatTranscriptService
 {
+    /**
+     * Immediate acknowledgement email when a visitor leaves a message while no
+     * operator is available (offline conversation). Best-effort, non-fatal.
+     */
+    public function sendOfflineAck(ChatConversation $conversation): void
+    {
+        try {
+            $email = $conversation->guest_email;
+            if (!$email) {
+                return;
+            }
+            $client = MarketplaceClient::find($conversation->marketplace_client_id);
+            if (!$client) {
+                return;
+            }
+
+            $brand = $client->name ?? 'AmBilet';
+            $html = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto">'
+                . '<h2 style="color:#e11d48">Am primit mesajul tău</h2>'
+                . '<p style="color:#475569;font-size:14px">Bună ' . e($conversation->openerName()) . ',</p>'
+                . '<p style="color:#475569;font-size:14px">Îți mulțumim că ne-ai scris. Momentan nu suntem online, dar un operator îți va răspunde cât de curând, aici pe email sau în chat.</p>'
+                . '<p style="color:#94a3b8;font-size:12px;margin-top:24px">Referință conversație: ' . e($conversation->reference) . ' · ' . e($brand) . '</p>'
+                . '</div>';
+
+            BaseController::sendViaMarketplace(
+                $client,
+                $email,
+                $conversation->openerName(),
+                'Am primit mesajul tău — ' . $brand,
+                $html,
+                ['template_slug' => 'chat_offline_ack', 'reference' => $conversation->reference]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Chat offline-ack email failed', [
+                'conversation_id' => $conversation->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function sendTranscript(ChatConversation $conversation): void
     {
         try {

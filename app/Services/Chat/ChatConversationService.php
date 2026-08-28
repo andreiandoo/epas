@@ -66,6 +66,11 @@ class ChatConversationService
                 $this->routing->assign($conversation);
             }
 
+            // Immediate email acknowledgement for messages left while offline.
+            if ($conversation->status === ChatConversation::STATUS_OFFLINE_MESSAGE) {
+                $this->transcripts->sendOfflineAck($conversation);
+            }
+
             return $conversation->refresh();
         });
     }

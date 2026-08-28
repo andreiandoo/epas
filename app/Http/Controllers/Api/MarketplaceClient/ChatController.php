@@ -107,9 +107,13 @@ class ChatController extends BaseController
         }
 
         $sessionToken = Str::random(40);
+        [$browser, $os, $device] = $this->deviceInfo((string) $request->userAgent());
         $context = array_merge($validated['context'] ?? [], [
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
+            'browser' => $browser,
+            'os' => $os,
+            'device' => $device,
             'session_token' => $sessionToken,
             'opened_url' => $request->input('context.url'),
         ]);
@@ -133,6 +137,7 @@ class ChatController extends BaseController
             'visitor_type' => $conversation->visitor_type,
             'queue_position' => $this->queuePosition($conversation),
             'operator' => $this->operatorFirstName($conversation),
+            'started_at' => optional($conversation->created_at)->toIso8601String(),
             'messages' => $this->serializeMessages($conversation),
         ], null, 201);
     }
@@ -152,6 +157,8 @@ class ChatController extends BaseController
             'status' => $conversation->status,
             'queue_position' => $this->queuePosition($conversation),
             'operator' => $this->operatorFirstName($conversation),
+            'rated' => $conversation->rating !== null,
+            'started_at' => optional($conversation->created_at)->toIso8601String(),
             'messages' => $this->serializeMessages($conversation, $after),
         ]);
     }
@@ -258,6 +265,35 @@ class ChatController extends BaseController
         }
 
         return $conversation;
+    }
+
+    /**
+     * Lightweight User-Agent parse → [browser, os, device]. Mirrors the manual
+     * parsing used elsewhere (Customer/AuthController) — no extra dependency.
+     *
+     * @return array{0:string,1:string,2:string}
+     */
+    private function deviceInfo(string $ua): array
+    {
+        $browser = 'Necunoscut';
+        if (str_contains($ua, 'Edg/')) $browser = 'Edge';
+        elseif (str_contains($ua, 'OPR/') || str_contains($ua, 'Opera')) $browser = 'Opera';
+        elseif (str_contains($ua, 'Chrome/') && !str_contains($ua, 'Edg/')) $browser = 'Chrome';
+        elseif (str_contains($ua, 'Firefox/')) $browser = 'Firefox';
+        elseif (str_contains($ua, 'Safari/') && !str_contains($ua, 'Chrome/')) $browser = 'Safari';
+
+        $os = 'Necunoscut';
+        if (str_contains($ua, 'Windows')) $os = 'Windows';
+        elseif (str_contains($ua, 'iPhone') || str_contains($ua, 'iPad') || str_contains($ua, 'iOS')) $os = 'iOS';
+        elseif (str_contains($ua, 'Mac OS')) $os = 'macOS';
+        elseif (str_contains($ua, 'Android')) $os = 'Android';
+        elseif (str_contains($ua, 'Linux')) $os = 'Linux';
+
+        $device = 'Desktop';
+        if (str_contains($ua, 'iPad') || (str_contains($ua, 'Tablet'))) $device = 'Tabletă';
+        elseif (str_contains($ua, 'Mobile') || str_contains($ua, 'iPhone') || str_contains($ua, 'Android')) $device = 'Telefon';
+
+        return [$browser, $os, $device];
     }
 
     /**

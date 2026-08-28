@@ -173,29 +173,34 @@
 
                         <div class="flex-1 overflow-y-auto p-4 space-y-3" x-data
                             x-init="$el.scrollTop = $el.scrollHeight; new MutationObserver(() => { $el.scrollTop = $el.scrollHeight; }).observe($el, { childList: true, subtree: true });">
+                            <div class="text-center text-[11px] text-gray-400">Conversație începută {{ optional($active->created_at)->format('d.m.Y H:i') }}</div>
                             @foreach($messages as $m)
                                 @if($m->type === 'system')
-                                    <div class="text-center text-[11px] text-gray-400">{{ $m->body }}</div>
+                                    <div class="text-center text-[11px] text-gray-400">{{ $m->body }} · {{ optional($m->created_at)->format('H:i') }}</div>
                                 @elseif($m->is_internal)
                                     <div class="max-w-[85%] ml-auto rounded-lg px-3 py-2 bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-                                        <div class="text-[10px] font-semibold text-amber-600 mb-0.5">Notă internă · {{ $m->author_label }}</div>
+                                        <div class="text-[10px] font-semibold text-amber-600 mb-0.5">Notă internă · {{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
                                         <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $m->body }}</div>
                                     </div>
                                 @elseif($m->isFromStaff())
                                     <div class="max-w-[85%] ml-auto rounded-lg px-3 py-2 bg-primary-600 text-white">
-                                        <div class="text-[10px] opacity-80 mb-0.5">{{ $m->author_label }}</div>
+                                        <div class="text-[10px] opacity-80 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
                                         <div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>
                                     </div>
                                 @else
                                     <div class="max-w-[85%] rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800">
                                         <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>
+                                        <div class="text-[10px] text-gray-400 mt-0.5">{{ optional($m->created_at)->format('H:i') }}</div>
                                     </div>
                                 @endif
                             @endforeach
                         </div>
 
                         @unless($active->isClosed())
-                            <div class="border-t border-gray-100 dark:border-gray-800 p-3" x-data="{ msg: '', internal: false }" wire:key="composer-{{ $active->reference }}">
+                            {{-- wire:ignore on the WHOLE composer so the 3s poll never re-inits the
+                                 Alpine x-data (which would blank the textarea) or steal focus.
+                                 wire:key rebuilds it only when the active conversation changes. --}}
+                            <div wire:ignore wire:key="composer-{{ $active->reference }}" x-data="{ msg: '', internal: false }" class="border-t border-gray-100 dark:border-gray-800 p-3">
                                 <div class="flex items-center gap-2 mb-2 flex-wrap">
                                     <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
                                         <input type="checkbox" x-model="internal" class="rounded border-gray-300 text-amber-500 focus:ring-amber-500">
@@ -212,11 +217,9 @@
                                     @endif
                                 </div>
                                 <div class="flex items-end gap-2">
-                                    <div wire:ignore class="flex-1">
-                                        <textarea x-model="msg" rows="2" placeholder="Scrie un răspuns..."
-                                            x-on:keydown.enter.prevent="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
-                                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
-                                    </div>
+                                    <textarea x-model="msg" rows="2" placeholder="Scrie un răspuns..."
+                                        x-on:keydown.enter.prevent="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
+                                        class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
                                     <button type="button" x-on:click="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
                                         class="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">Trimite</button>
                                 </div>
@@ -266,7 +269,42 @@
                                     <dd class="text-gray-600 dark:text-gray-300 text-xs break-all">{{ data_get($active->context, 'opened_url') }}</dd>
                                 </div>
                             @endif
+                            @php $ctx = $active->context ?? []; @endphp
+                            <div class="grid grid-cols-2 gap-2 pt-1">
+                                <div>
+                                    <dt class="text-[11px] text-gray-400">IP</dt>
+                                    <dd class="text-gray-700 dark:text-gray-200 text-xs">{{ data_get($ctx, 'ip') ?: '—' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-[11px] text-gray-400">Dispozitiv</dt>
+                                    <dd class="text-gray-700 dark:text-gray-200 text-xs">{{ data_get($ctx, 'device') ?: '—' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-[11px] text-gray-400">Browser</dt>
+                                    <dd class="text-gray-700 dark:text-gray-200 text-xs">{{ data_get($ctx, 'browser') ?: '—' }}{{ data_get($ctx, 'os') ? ' · '.data_get($ctx, 'os') : '' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-[11px] text-gray-400">Rezoluție</dt>
+                                    <dd class="text-gray-700 dark:text-gray-200 text-xs">{{ data_get($ctx, 'screen') ?: '—' }}</dd>
+                                </div>
+                            </div>
                         </dl>
+
+                        @if($history->count())
+                            <div class="pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Istoric conversații ({{ $history->count() }})</div>
+                                <div class="space-y-1 max-h-40 overflow-y-auto">
+                                    @foreach($history as $h)
+                                        @php [$hlabel, $hclass] = $statusMeta[$h->status] ?? ['—','bg-gray-100 text-gray-600']; @endphp
+                                        <button type="button" wire:click="select('{{ $h->reference }}')"
+                                            class="w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                                            <span class="text-xs text-gray-600 dark:text-gray-300">{{ optional($h->created_at)->format('d.m.Y H:i') }}</span>
+                                            <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $hclass }}">{{ $hlabel }}</span>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     @else
                         <p class="text-xs text-gray-400">Selectează o conversație pentru a vedea contextul.</p>
                     @endif

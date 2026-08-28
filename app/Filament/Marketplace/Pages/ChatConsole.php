@@ -213,7 +213,7 @@ class ChatConsole extends Page
             return [
                 'queue' => collect(), 'mine' => collect(), 'others' => collect(),
                 'offline' => collect(), 'all' => collect(), 'active' => null, 'messages' => collect(),
-                'canned' => collect(), 'operators' => collect(), 'stats' => [], 'eventTitle' => null,
+                'history' => collect(), 'canned' => collect(), 'operators' => collect(), 'stats' => [], 'eventTitle' => null,
             ];
         }
 
@@ -241,6 +241,23 @@ class ChatConsole extends Page
         $messages = $active
             ? $active->messages()->get() // operator sees internal notes too
             : collect();
+
+        // Past conversations of the same visitor (by email, else by opener).
+        $history = collect();
+        if ($active) {
+            $historyQuery = ChatConversation::query()
+                ->where('marketplace_client_id', $clientId)
+                ->where('id', '!=', $active->id);
+            if ($active->guest_email) {
+                $historyQuery->where('guest_email', $active->guest_email);
+            } elseif ($active->opener_type && $active->opener_id) {
+                $historyQuery->where('opener_type', $active->opener_type)
+                    ->where('opener_id', $active->opener_id);
+            } else {
+                $historyQuery->whereRaw('1 = 0');
+            }
+            $history = $historyQuery->orderByDesc('created_at')->limit(15)->get();
+        }
 
         $canned = ChatCannedResponse::query()
             ->where('marketplace_client_id', $clientId)
@@ -280,7 +297,7 @@ class ChatConsole extends Page
 
         $eventTitle = $active && $active->event_id ? $this->safeEventTitle($active->event_id) : null;
 
-        return compact('queue', 'offline', 'mine', 'others', 'all', 'active', 'messages', 'canned', 'operators', 'stats', 'eventTitle');
+        return compact('queue', 'offline', 'mine', 'others', 'all', 'active', 'messages', 'history', 'canned', 'operators', 'stats', 'eventTitle');
     }
 
     /**

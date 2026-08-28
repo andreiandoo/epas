@@ -77,6 +77,7 @@
 
     function pageContext() {
         var ctx = { url: location.href, title: document.title };
+        try { ctx.screen = (window.screen && screen.width) ? (screen.width + 'x' + screen.height) : null; } catch (e) {}
         var m = document.querySelector('meta[name="ambilet:event-id"]') ||
                 document.querySelector('[data-event-id]');
         if (m) {
@@ -84,6 +85,22 @@
             if (eid && /^\d+$/.test(eid)) ctx.event_id = parseInt(eid, 10);
         }
         return ctx;
+    }
+
+    function fmtTime(iso) {
+        if (!iso) return '';
+        try {
+            var d = new Date(iso);
+            var h = ('0' + d.getHours()).slice(-2), m = ('0' + d.getMinutes()).slice(-2);
+            return h + ':' + m;
+        } catch (e) { return ''; }
+    }
+    function fmtDate(iso) {
+        if (!iso) return '';
+        try {
+            var d = new Date(iso);
+            return ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear() + ' ' + fmtTime(iso);
+        } catch (e) { return ''; }
     }
 
     // ---------- Styles ----------
@@ -108,7 +125,8 @@
         + '.amb-msg{max-width:82%;padding:8px 11px;border-radius:12px;font-size:14px;line-height:1.35;white-space:pre-wrap;word-break:break-word}'
         + '.amb-msg.me{align-self:flex-end;background:#e11d48;color:#fff;border-bottom-right-radius:4px}'
         + '.amb-msg.operator{align-self:flex-start;background:#fff;border:1px solid #e5e7eb;color:#111;border-bottom-left-radius:4px}'
-        + '.amb-msg.system{align-self:center;background:transparent;color:#94a3b8;font-size:12px}'
+        + '.amb-msg.system{align-self:center;background:transparent;color:#94a3b8;font-size:12px;text-align:center}'
+        + '.amb-msg-time{font-size:10px;opacity:.6;margin-top:3px;text-align:right}'
         + '.amb-chat-foot{border-top:1px solid #e5e7eb;padding:10px;background:#fff}'
         + '.amb-chat-foot textarea,.amb-chat-foot input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:9px;padding:9px 10px;font-size:14px;font-family:inherit;margin-bottom:6px}'
         + '.amb-chat-foot textarea{resize:none}'
@@ -201,11 +219,31 @@
 
     // ---------- Messages ----------
 
+    function renderStartDivider(iso) {
+        if (!iso) return;
+        var d = document.createElement('div');
+        d.className = 'amb-msg system';
+        d.textContent = 'Conversație începută ' + fmtDate(iso);
+        els.body.appendChild(d);
+    }
+
     function renderMessage(m) {
-        var div = document.createElement('div');
         var cls = m.from === 'operator' ? 'operator' : (m.from === 'system' ? 'system' : 'me');
+        var div = document.createElement('div');
         div.className = 'amb-msg ' + cls;
-        div.textContent = m.body || '';
+        if (cls === 'system') {
+            div.textContent = (m.body || '') + (m.created_at ? ' · ' + fmtTime(m.created_at) : '');
+        } else {
+            var txt = document.createElement('div');
+            txt.textContent = m.body || '';
+            div.appendChild(txt);
+            if (m.created_at) {
+                var t = document.createElement('div');
+                t.className = 'amb-msg-time';
+                t.textContent = fmtTime(m.created_at);
+                div.appendChild(t);
+            }
+        }
         els.body.appendChild(div);
         if (m.id && m.id > lastMessageId) lastMessageId = m.id;
         els.body.scrollTop = els.body.scrollHeight;
@@ -280,10 +318,11 @@
         els.body.appendChild(intro);
 
         els.foot.innerHTML = '';
-        var loginBtn = document.createElement('a');
+        var loginBtn = document.createElement('button');
+        loginBtn.type = 'button';
         loginBtn.className = 'amb-btn amb-btn-primary';
         loginBtn.textContent = 'Autentifică-te';
-        loginBtn.href = LOGIN_URL + '?redirect=' + encodeURIComponent(location.pathname + location.search);
+        loginBtn.addEventListener('click', renderLogin);
         els.foot.appendChild(loginBtn);
 
         var guestBtn = document.createElement('button');
@@ -292,6 +331,64 @@
         guestBtn.textContent = 'Continuă fără cont';
         guestBtn.addEventListener('click', renderPrechat);
         els.foot.appendChild(guestBtn);
+    }
+
+    // Screen 1b (anonymous): inline login — stays on the page, so after logging
+    // in we drop straight back into the chat instead of navigating away.
+    function renderLogin() {
+        els.body.innerHTML = '';
+        var intro = document.createElement('div');
+        intro.className = 'amb-intro';
+        intro.textContent = 'Autentifică-te ca să continuăm cu contul tău.';
+        els.body.appendChild(intro);
+
+        els.foot.innerHTML = '';
+        var email = document.createElement('input');
+        email.type = 'email'; email.placeholder = 'Email'; email.setAttribute('data-email', '');
+        var pass = document.createElement('input');
+        pass.type = 'password'; pass.placeholder = 'Parolă'; pass.setAttribute('data-pass', '');
+        var err = document.createElement('div');
+        err.className = 'amb-field-err'; err.style.display = 'none';
+
+        var go = document.createElement('button');
+        go.type = 'button';
+        go.className = 'amb-btn amb-btn-primary';
+        go.textContent = 'Autentifică-te';
+
+        function doLogin() {
+            var e = (email.value || '').trim();
+            var p = pass.value || '';
+            email.classList.remove('amb-invalid'); pass.classList.remove('amb-invalid'); err.style.display = 'none';
+            if (!EMAIL_RE.test(e)) { email.classList.add('amb-invalid'); err.textContent = 'Email invalid.'; err.style.display = 'block'; return; }
+            if (!p) { pass.classList.add('amb-invalid'); err.textContent = 'Introdu parola.'; err.style.display = 'block'; return; }
+            if (!(window.AmbiletAuth && AmbiletAuth.login)) { err.textContent = 'Autentificarea nu e disponibilă aici.'; err.style.display = 'block'; return; }
+            go.disabled = true; go.textContent = 'Se conectează...';
+            Promise.resolve(AmbiletAuth.login(e, p, false)).then(function (res) {
+                go.disabled = false; go.textContent = 'Autentifică-te';
+                if (res && res.success) {
+                    renderCompose(); // now isLogged() is true → identified chat, no page change
+                } else {
+                    err.textContent = (res && res.message) || 'Email sau parolă incorecte.'; err.style.display = 'block';
+                }
+            }).catch(function () {
+                go.disabled = false; go.textContent = 'Autentifică-te';
+                err.textContent = 'Eroare la conectare.'; err.style.display = 'block';
+            });
+        }
+        go.addEventListener('click', doLogin);
+        pass.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); doLogin(); } });
+
+        var back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'amb-btn amb-btn-ghost';
+        back.textContent = 'Înapoi';
+        back.addEventListener('click', renderChoice);
+
+        els.foot.appendChild(email);
+        els.foot.appendChild(pass);
+        els.foot.appendChild(err);
+        els.foot.appendChild(go);
+        els.foot.appendChild(back);
     }
 
     // Screen 2 (anonymous): capture + validate name & email, then the message box.
@@ -396,7 +493,9 @@
                 var d = res.data;
                 ref = d.reference; sessionToken = d.session_token;
                 try { localStorage.setItem(LS_REF, ref); localStorage.setItem(LS_TOKEN, sessionToken); } catch (e) {}
+                if (ta) ta.value = ''; // clear the just-sent first message from the box
                 els.body.innerHTML = '';
+                renderStartDivider(d.started_at);
                 (d.messages || []).forEach(renderMessage);
                 applyStatus(d.status, d.queue_position, d.operator);
                 startPolling();
@@ -427,7 +526,7 @@
             applyStatus(d.status, d.queue_position, d.operator);
             if (d.status === 'resolved' || d.status === 'closed') {
                 stopPolling();
-                offerRating();
+                renderEnded(!!d.rated);
             }
         });
     }
@@ -440,11 +539,28 @@
 
     var RATING_HINTS = ['', 'Foarte slab', 'Slab', 'Ok', 'Bun', 'Excelent'];
 
-    function offerRating() {
+    function renderEnded(alreadyRated) {
         stopIdleWatch();
         hideNotice();
-        if (rated || els.foot.querySelector('[data-rating]')) return;
+        setState('Conversație încheiată');
+        els.foot.innerHTML = '';
+        if (!alreadyRated && !rated) {
+            buildRatingBox();
+        } else {
+            var done = document.createElement('div');
+            done.className = 'amb-rating-thanks';
+            done.textContent = 'Conversație încheiată. Mulțumim!';
+            els.foot.appendChild(done);
+        }
+        var nb = document.createElement('button');
+        nb.type = 'button';
+        nb.className = 'amb-btn amb-btn-ghost';
+        nb.textContent = 'Începe o conversație nouă';
+        nb.addEventListener('click', function () { clearConversation(); els.body.innerHTML = ''; entry(); });
+        els.foot.appendChild(nb);
+    }
 
+    function buildRatingBox() {
         var opTxt = currentOperator ? (' cu ' + currentOperator) : '';
         var wrap = document.createElement('div');
         wrap.className = 'amb-rating';
@@ -454,7 +570,6 @@
           + '<div class="amb-rating-sub">Apasă pe stele pentru a evalua' + (currentOperator ? ' operatorul' : '') + '.</div>'
           + '<div class="amb-stars" data-stars></div>'
           + '<div class="amb-rating-hint" data-hint>&nbsp;</div>';
-        els.foot.innerHTML = '';
         els.foot.appendChild(wrap);
 
         var starsEl = wrap.querySelector('[data-stars]');
@@ -506,9 +621,10 @@
             api('chat.show', { params: { ref: ref, session_token: sessionToken, after: 0 } }).then(function (res) {
                 if (!res || !res.success) { clearConversation(); entry(); return; }
                 var d = res.data;
+                renderStartDivider(d.started_at);
                 (d.messages || []).forEach(renderMessage);
                 applyStatus(d.status, d.queue_position, d.operator);
-                if (d.status === 'resolved' || d.status === 'closed') { offerRating(); }
+                if (d.status === 'resolved' || d.status === 'closed') { renderEnded(!!d.rated); }
                 else { renderComposeExisting(); startPolling(); }
             });
         } else {
