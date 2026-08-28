@@ -119,6 +119,9 @@
             || (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'contact.php');
         if ($epChatOnContact):
     ?>
+    <!-- TEMPORARY (testing): hide back-to-top on /contact so it doesn't overlap
+         the chat bubble. Remove together with the rollout gate. -->
+    <style>.back-to-top{display:none !important;}</style>
     <!-- Live Chat widget (live-chat microservice; self-hides if inactive) -->
     <script defer src="<?= asset('assets/js/components/chat-widget.js') ?>"></script>
     <?php endif; ?>
