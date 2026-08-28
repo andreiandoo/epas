@@ -68,7 +68,6 @@ class LiveChatMicroserviceSeeder extends Seeder
                     ],
                 ],
                 'category' => 'communication',
-                'status' => 'active',
                 'is_active' => true,
                 'metadata' => [
                     'config_key' => 'live-chat',
