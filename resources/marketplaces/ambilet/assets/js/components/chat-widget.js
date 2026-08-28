@@ -35,8 +35,8 @@
 
     // Idle auto-close: after IDLE_WARN_MS of no messages on an active chat, show a
     // visible countdown; when it reaches zero the conversation is closed.
-    var IDLE_WARN_MS = 120000;   // 2 min quiet → start warning
-    var AUTO_CLOSE_MS = 60000;   // then 60s countdown
+    var IDLE_WARN_MS = 180000;   // 3 min quiet → start warning
+    var AUTO_CLOSE_MS = 60000;   // then 60s countdown (4 min total inactivity)
     var lastActivityTs = 0;
     var idleTimer = null;
     var currentStatus = null;
@@ -127,6 +127,7 @@
         + '.amb-msg.operator{align-self:flex-start;background:#fff;border:1px solid #e5e7eb;color:#111;border-bottom-left-radius:4px}'
         + '.amb-msg.system{align-self:center;background:transparent;color:#94a3b8;font-size:12px;text-align:center}'
         + '.amb-msg-time{font-size:10px;opacity:.6;margin-top:3px;text-align:right}'
+        + '.amb-op-name{font-size:11px;font-weight:600;color:#64748b;align-self:flex-start;margin:2px 0 -4px 4px}'
         + '.amb-chat-foot{border-top:1px solid #e5e7eb;padding:10px;background:#fff}'
         + '.amb-chat-foot textarea,.amb-chat-foot input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:9px;padding:9px 10px;font-size:14px;font-family:inherit;margin-bottom:6px}'
         + '.amb-chat-foot textarea{resize:none}'
@@ -254,6 +255,12 @@
                 t.textContent = fmtTime(m.created_at);
                 div.appendChild(t);
             }
+        }
+        if (cls === 'operator' && m.author) {
+            var nm = document.createElement('div');
+            nm.className = 'amb-op-name';
+            nm.textContent = m.author;
+            els.body.appendChild(nm);
         }
         els.body.appendChild(div);
         if (m.id && m.id > lastMessageId) lastMessageId = m.id;
@@ -407,7 +414,7 @@
         els.body.innerHTML = '';
         var intro = document.createElement('div');
         intro.className = 'amb-intro';
-        intro.textContent = 'Lasă-ne câteva date ca să putem continua conversația și pe email dacă e nevoie.';
+        intro.textContent = 'Lasă-ne câteva date ca să putem continua conversația pe email dacă e nevoie și să-ți trimitem transcriptul conversației.';
         els.body.appendChild(intro);
 
         els.foot.innerHTML = '';
@@ -668,6 +675,10 @@
 
     function entry() {
         if (isLogged()) {
+            renderCompose();
+        } else if (guestName && EMAIL_RE.test(guestEmail || '')) {
+            // Already gave name+email earlier this session → skip the choice and
+            // drop straight into a fresh chat with the details reused.
             renderCompose();
         } else {
             renderChoice();

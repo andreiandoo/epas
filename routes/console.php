@@ -213,7 +213,7 @@ Schedule::command('changelog:generate-md')
 // and purge old transcripts (GDPR retention). All no-ops when no chat rows
 // exist, so they are safe on marketplaces without the microservice.
 Schedule::command('chat:close-inactive')
-    ->everyFiveMinutes()
+    ->everyMinute()
     ->withoutOverlapping();
 Schedule::command('chat:cleanup-presence')
     ->everyMinute()

@@ -43,8 +43,12 @@ return [
     ],
 
     'conversation' => [
-        // Auto-close an inactive conversation after this many minutes.
-        'inactivity_timeout_minutes' => (int) env('CHAT_INACTIVITY_MINUTES', 30),
+        // Auto-close an ACTIVE conversation after this many minutes with no new
+        // message from either side (both widget countdown and server backstop).
+        'inactivity_timeout_minutes' => (int) env('CHAT_INACTIVITY_MINUTES', 4),
+        // Queued/offline conversations wait much longer before being swept, so a
+        // visitor isn't dropped just because no operator picked up in 4 minutes.
+        'queue_timeout_minutes' => (int) env('CHAT_QUEUE_TIMEOUT_MINUTES', 60),
         // Default transcript retention (days) before purge; per-marketplace
         // override lives in the microservice settings.
         'transcript_retention_days' => (int) env('CHAT_RETENTION_DAYS', 365),

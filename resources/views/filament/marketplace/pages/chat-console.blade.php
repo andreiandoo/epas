@@ -73,9 +73,9 @@
             {{-- Queue --}}
             @if($openPanel === 'queue')
                 <div
-                class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                class="absolute right-0 top-0 w-72 sm:w-80 max-h-96 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($queue as $c)
-                    <div class="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <div class="px-3 py-1.5 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
                             <div class="flex items-center gap-1.5">
                                 <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
@@ -94,9 +94,9 @@
             {{-- Offline --}}
             @if($openPanel === 'offline')
                 <div
-                class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 shadow-xl">
+                class="absolute right-0 top-0 w-72 sm:w-80 max-h-96 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($offline as $c)
-                    <div class="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <div class="px-3 py-1.5 flex items-center justify-between gap-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
                             <span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                             <span class="block text-[11px] text-gray-400 truncate">{{ $c->guest_email ?: $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</span>
@@ -112,9 +112,9 @@
             {{-- Mine --}}
             @if($openPanel === 'mine')
                 <div
-                class="absolute right-0 top-0 w-full sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                class="absolute right-0 top-0 w-72 sm:w-80 max-h-96 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($mine as $c)
-                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-1.5 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <div class="flex items-center gap-1.5">
                             <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                             @if($c->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">ORG</span>@endif
@@ -130,10 +130,10 @@
             {{-- All (with who claimed) --}}
             @if($openPanel === 'all')
                 <div
-                class="absolute right-0 top-0 w-full sm:w-[30rem] max-h-96 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                class="absolute right-0 top-0 w-80 sm:w-96 max-h-[28rem] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($all as $c)
                     @php [$slabel, $sclass] = $statusMeta[$c->status] ?? ['—', 'bg-gray-100 text-gray-600']; @endphp
-                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-2 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-1.5 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <div class="flex items-center justify-between gap-2">
                             <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
                             <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $sclass }}">{{ $slabel }}</span>
@@ -167,6 +167,18 @@
                                     @if($active->isOrganizer())<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORGANIZATOR</span>@endif
                                     @php [$aslabel, $asclass] = $statusMeta[$active->status] ?? ['—','bg-gray-100 text-gray-600']; @endphp
                                     <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $asclass }}">{{ $aslabel }}</span>
+                                    @if($active->status === 'active' && $active->last_activity_at)
+                                        {{-- Inactivity countdown: resets whenever a new message bumps last_activity_at (re-runs on poll). --}}
+                                        <span wire:key="cd-{{ $active->reference }}-{{ $active->last_activity_at->timestamp }}"
+                                            x-data="{ label: '' }" x-init="
+                                                if (window.__epChatCountdown) clearInterval(window.__epChatCountdown);
+                                                const end = {{ $active->last_activity_at->timestamp }} * 1000 + {{ (int) config('chat.conversation.inactivity_timeout_minutes', 4) }} * 60000;
+                                                const tick = () => { const r = Math.max(0, Math.floor((end - Date.now())/1000)); const m = Math.floor(r/60), s = r % 60; label = m + ':' + (s < 10 ? '0' : '') + s; };
+                                                tick(); window.__epChatCountdown = setInterval(tick, 1000);
+                                            "
+                                            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                                            title="Se închide automat la inactivitate">⏱ <span x-text="label"></span></span>
+                                    @endif
                                 </div>
                                 <div class="text-[11px] text-gray-400">
                                     {{ $active->reference }}
@@ -201,14 +213,16 @@
                                         <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $m->body }}</div>
                                     </div>
                                 @elseif($m->isFromStaff())
-                                    <div class="max-w-[85%] ml-auto rounded-lg px-3 py-2 bg-primary-600 text-white">
-                                        <div class="text-[10px] opacity-80 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
-                                        <div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>
+                                    {{-- Operator (staff) → LEFT --}}
+                                    <div class="max-w-[85%] mr-auto rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800">
+                                        <div class="text-[10px] font-semibold text-gray-500 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
+                                        <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>
                                     </div>
                                 @else
-                                    <div class="max-w-[85%] rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800">
-                                        <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>
-                                        <div class="text-[10px] text-gray-400 mt-0.5">{{ optional($m->created_at)->format('H:i') }}</div>
+                                    {{-- Client (opener) → RIGHT --}}
+                                    <div class="max-w-[85%] ml-auto rounded-lg px-3 py-2 bg-primary-600 text-white">
+                                        <div class="text-sm whitespace-pre-wrap">{{ $m->body }}</div>
+                                        <div class="text-[10px] text-white/70 mt-0.5 text-right">{{ optional($m->created_at)->format('H:i') }}</div>
                                     </div>
                                 @endif
                             @endforeach

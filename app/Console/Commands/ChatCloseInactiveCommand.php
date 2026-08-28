@@ -19,13 +19,24 @@ class ChatCloseInactiveCommand extends Command
 
     public function handle(ChatConversationService $conversations): int
     {
-        $minutes = (int) ($this->option('minutes') ?: config('chat.conversation.inactivity_timeout_minutes', 30));
-        $cutoff = now()->subMinutes($minutes);
+        $activeMinutes = (int) ($this->option('minutes') ?: config('chat.conversation.inactivity_timeout_minutes', 4));
+        $queueMinutes = (int) config('chat.conversation.queue_timeout_minutes', 60);
+        $activeCutoff = now()->subMinutes($activeMinutes);
+        $queueCutoff = now()->subMinutes($queueMinutes);
 
+        // Active chats close quickly on inactivity; queued/offline chats wait much
+        // longer so a visitor isn't dropped before an operator picks up.
         // withoutGlobalScopes so the CLI (no marketplace request context) sees all.
         $stale = ChatConversation::withoutGlobalScopes()
-            ->whereIn('status', [ChatConversation::STATUS_QUEUED, ChatConversation::STATUS_ACTIVE])
-            ->where('last_activity_at', '<', $cutoff)
+            ->where(function ($q) use ($activeCutoff, $queueCutoff) {
+                $q->where(function ($a) use ($activeCutoff) {
+                    $a->where('status', ChatConversation::STATUS_ACTIVE)
+                        ->where('last_activity_at', '<', $activeCutoff);
+                })->orWhere(function ($b) use ($queueCutoff) {
+                    $b->whereIn('status', [ChatConversation::STATUS_QUEUED, ChatConversation::STATUS_OFFLINE_MESSAGE])
+                        ->where('last_activity_at', '<', $queueCutoff);
+                });
+            })
             ->limit(500)
             ->get();
 
