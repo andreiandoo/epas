@@ -265,7 +265,10 @@ class ChatController extends BaseController
         $conversation = $this->findOwned($request, $client, $reference);
 
         if (!$conversation->isClosed()) {
-            $this->conversations->resolve($conversation);
+            // This is the idle countdown expiring — mark it CLOSED (inactivity),
+            // not RESOLVED (which means an operator resolved it).
+            $this->conversations->postSystemMessage($conversation, 'Conversație închisă automat din inactivitate.');
+            $this->conversations->resolve($conversation, ChatConversation::STATUS_CLOSED);
         }
 
         return $this->success(['status' => $conversation->refresh()->status]);

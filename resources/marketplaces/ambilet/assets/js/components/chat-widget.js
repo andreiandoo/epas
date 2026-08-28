@@ -35,8 +35,8 @@
 
     // Idle auto-close: after IDLE_WARN_MS of no messages on an active chat, show a
     // visible countdown; when it reaches zero the conversation is closed.
-    var IDLE_WARN_MS = 180000;   // 3 min quiet → start warning
-    var AUTO_CLOSE_MS = 60000;   // then 60s countdown (4 min total inactivity)
+    var IDLE_WARN_MS = 840000;   // 14 min quiet → start warning
+    var AUTO_CLOSE_MS = 60000;   // then 60s countdown (15 min total inactivity)
     var lastActivityTs = 0;
     var idleTimer = null;
     var currentStatus = null;

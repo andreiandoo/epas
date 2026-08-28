@@ -428,14 +428,25 @@
                             <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                                 {{ $isCust ? 'Istoric client' : 'Istoric organizator' }}
                             </div>
-                            <div class="text-[11px] text-gray-400">
-                                @if($isCust)
-                                    {{ ($visitor['stats']['orders'] ?? 0) }} comenzi · {{ ($visitor['stats']['tickets'] ?? 0) }} bilete{{ !empty($visitor['stats']['spent']) ? ' · '.$visitor['stats']['spent'] : '' }}
-                                @else
+                            @unless($isCust)
+                                <div class="text-[11px] text-gray-400">
                                     {{ $visitor['stats']['events'] ?? 0 }} evenimente · {{ $visitor['stats']['tickets_sold'] ?? 0 }} bilete vândute
+                                </div>
+                            @endunless
+                        </div>
+
+                        @if($isCust)
+                            <div class="mb-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                                <span>{{ $visitor['stats']['orders'] ?? 0 }} comenzi</span>
+                                <span>{{ $visitor['stats']['tickets'] ?? 0 }} bilete</span>
+                                @if(!empty($visitor['stats']['ltv']))
+                                    <span>LTV: <strong class="text-gray-700 dark:text-gray-200">{{ $visitor['stats']['ltv'] }}</strong></span>
+                                @endif
+                                @if(!empty($visitor['stats']['since']))
+                                    <span>Client din {{ $visitor['stats']['since'] }} · {{ $visitor['stats']['since_days'] }} zile</span>
                                 @endif
                             </div>
-                        </div>
+                        @endif
 
                         @if($isCust)
                             <div class="relative mb-2">
@@ -470,13 +481,6 @@
                         @if(!count($visitor['upcoming'] ?? []) && !count($visitor['past'] ?? []))
                             <p class="text-xs text-gray-400">{{ ($visitor['searching'] ?? false) ? 'Niciun rezultat pentru căutare.' : ($isCust ? 'Nicio comandă găsită.' : 'Niciun eveniment găsit.') }}</p>
                         @endif
-                    </div>
-                @endif
-
-                @if(($stats['avg_rating'] ?? 0) > 0)
-                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 mt-3">
-                        <div class="text-xs text-gray-400">Rating mediu</div>
-                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ $stats['avg_rating'] }} <span class="text-amber-400 text-lg">★</span></div>
                     </div>
                 @endif
             </div>

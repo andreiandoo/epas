@@ -118,12 +118,15 @@ class ChatVisitorContextService
                     'orders' => [],
                 ];
             }
+            $byEvent[$key]['event_id'] = $g->event_id ? (int) $g->event_id : null;
             $byEvent[$key]['total'] += (int) $g->cnt;
             $byEvent[$key]['orders'][] = [
+                'order_id' => (int) $order->id,
                 'order_number' => $order->order_number ?? ('#' . $order->id),
                 'order_date' => optional($order->created_at)->format('d.m.Y'),
                 'payment' => $this->paymentLabel($order),
                 'tickets' => (int) $g->cnt,
+                'status' => (string) $order->status,
             ];
         }
 
@@ -138,10 +141,14 @@ class ChatVisitorContextService
             }
         }
 
+        $since = $customer->created_at;
         $stats = [
             'orders' => count($orderIds),
             'tickets' => (int) $groups->sum('cnt'),
             'spent' => $this->totalSpent($customerId, $clientId),
+            'ltv' => $this->totalSpent($customerId, $clientId),
+            'since' => $since ? $since->format('d.m.Y') : null,
+            'since_days' => $since ? (int) $since->diffInDays(now()) : null,
         ];
 
         return [
@@ -273,7 +280,17 @@ class ChatVisitorContextService
     private function paymentLabel(Order $order): string
     {
         $processor = strtolower((string) ($order->payment_processor ?? ''));
+        $source = strtolower((string) ($order->source ?? ''));
         $meta = is_array($order->meta ?? null) ? $order->meta : [];
+        $method = $meta['payment_method'] ?? $meta['method'] ?? null;
+
+        // POS sales (pos_app / pos_test / pos_*) → mark with (POS).
+        if (str_starts_with($source, 'pos')) {
+            $base = is_string($method) && $method !== ''
+                ? ucfirst($method)
+                : (($processor === 'cash' || $source === 'pos_app') ? 'Numerar' : 'Card');
+            return $base . ' (POS)';
+        }
 
         $map = [
             'netopia' => 'Card (Netopia)', 'payment-netopia' => 'Card (Netopia)',
@@ -285,9 +302,8 @@ class ChatVisitorContextService
         if (isset($map[$processor])) {
             return $map[$processor];
         }
-        $m = $meta['payment_method'] ?? $meta['method'] ?? null;
-        if (is_string($m) && $m !== '') {
-            return ucfirst($m);
+        if (is_string($method) && $method !== '') {
+            return ucfirst($method);
         }
         return $processor !== '' ? ucfirst($processor) : '—';
     }

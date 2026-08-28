@@ -45,7 +45,7 @@ return [
     'conversation' => [
         // Auto-close an ACTIVE conversation after this many minutes with no new
         // message from either side (both widget countdown and server backstop).
-        'inactivity_timeout_minutes' => (int) env('CHAT_INACTIVITY_MINUTES', 4),
+        'inactivity_timeout_minutes' => (int) env('CHAT_INACTIVITY_MINUTES', 15),
         // Queued/offline conversations wait much longer before being swept, so a
         // visitor isn't dropped just because no operator picked up in 4 minutes.
         'queue_timeout_minutes' => (int) env('CHAT_QUEUE_TIMEOUT_MINUTES', 60),
