@@ -430,7 +430,7 @@
                             </div>
                             <div class="text-[11px] text-gray-400">
                                 @if($isCust)
-                                    {{ $visitor['stats']['orders'] ?? 0 }} comenzi · {{ $visitor['stats']['tickets'] ?? 0 }} bilete@if(!empty($visitor['stats']['spent'])) · {{ $visitor['stats']['spent'] }}@endif
+                                    {{ ($visitor['stats']['orders'] ?? 0) }} comenzi · {{ ($visitor['stats']['tickets'] ?? 0) }} bilete{{ !empty($visitor['stats']['spent']) ? ' · '.$visitor['stats']['spent'] : '' }}
                                 @else
                                     {{ $visitor['stats']['events'] ?? 0 }} evenimente · {{ $visitor['stats']['tickets_sold'] ?? 0 }} bilete vândute
                                 @endif
