@@ -110,6 +110,19 @@
     <script defer src="<?= asset('assets/js/components/featured-carousel.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/profile-completion-modal.js') ?>"></script>
 
+    <?php
+        // TEMPORARY rollout gate: load the live-chat widget ONLY on /contact
+        // while it is being tested, before enabling it site-wide. To go
+        // site-wide later, delete this if/endif wrapper and keep the <script>.
+        $epChatPath = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/');
+        $epChatOnContact = ($epChatPath === '/contact')
+            || (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'contact.php');
+        if ($epChatOnContact):
+    ?>
+    <!-- Live Chat widget (live-chat microservice; self-hides if inactive) -->
+    <script defer src="<?= asset('assets/js/components/chat-widget.js') ?>"></script>
+    <?php endif; ?>
+
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>
 

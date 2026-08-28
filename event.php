@@ -248,6 +248,11 @@ if (!empty($ev)) {
 // the global stylesheet, so its .btn-primary override still wins.
 $headExtra = ($headExtra ?? '') . '<link rel="stylesheet" href="' . asset('assets/css/event.css') . '">';
 
+// Live-chat widget reads this to attach event context to a conversation.
+if (!empty($ev['id'])) {
+    $headExtra .= '<meta name="ambilet:event-id" content="' . (int) $ev['id'] . '">';
+}
+
 require_once __DIR__ . '/includes/head.php';
 ?>
 
