@@ -133,20 +133,27 @@
                 class="absolute right-0 top-0 w-80 sm:w-96 max-h-[28rem] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                 @forelse($all as $c)
                     @php [$slabel, $sclass] = $statusMeta[$c->status] ?? ['—', 'bg-gray-100 text-gray-600']; @endphp
-                    <button type="button" wire:click="select('{{ $c->reference }}')" class="w-full text-left px-3 py-1.5 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
-                            <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $sclass }}">{{ $slabel }}</span>
-                        </div>
-                        <div class="text-[11px] text-gray-400 truncate">
-                            {{ $c->reference }} ·
-                            @if($c->assignee)
-                                <span class="text-gray-500 dark:text-gray-300">preluat de {{ $c->assignee->name }}</span>
-                            @else
-                                <span class="text-amber-500">nepreluat</span>
-                            @endif
-                        </div>
-                    </button>
+                    <div class="flex items-center gap-1 px-3 py-1.5 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <button type="button" wire:click="select('{{ $c->reference }}')" class="flex-1 min-w-0 text-left">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
+                                <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $sclass }}">{{ $slabel }}</span>
+                            </div>
+                            <div class="text-[11px] text-gray-400 truncate">
+                                {{ $c->reference }} ·
+                                @if($c->assignee)
+                                    <span class="text-gray-500 dark:text-gray-300">preluat de {{ $c->assignee->name }}</span>
+                                @else
+                                    <span class="text-amber-500">nepreluat</span>
+                                @endif
+                            </div>
+                        </button>
+                        <button type="button" title="Șterge conversația"
+                            x-on:click="if (confirm('Sigur ștergi această conversație?') && confirm('Confirmă din nou: ștergerea este permanentă și nu poate fi anulată.')) { $wire.deleteConversation('{{ $c->reference }}'); }"
+                            class="shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
                 @empty
                     <div class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație.</div>
                 @endforelse

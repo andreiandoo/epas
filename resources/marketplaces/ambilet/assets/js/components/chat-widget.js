@@ -108,8 +108,12 @@
     function injectStyles() {
         if (document.getElementById('amb-chat-styles')) return;
         var css = ''
-        + '.amb-chat-bubble{position:fixed;bottom:20px;right:20px;z-index:99998;width:56px;height:56px;border-radius:50%;background:#e11d48;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;transition:transform .15s}'
+        + '.amb-chat-bubble-wrap{position:fixed;bottom:20px;right:20px;z-index:99998}'
+        + '.amb-chat-bubble{width:56px;height:56px;border-radius:50%;background:#e11d48;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;transition:transform .15s}'
         + '.amb-chat-bubble:hover{transform:scale(1.05)}'
+        + '.amb-chat-tip{position:absolute;top:50%;right:68px;transform:translateY(-50%) translateX(8px);background:#0f172a;color:#fff;font-size:13px;font-weight:600;line-height:1;padding:9px 13px;border-radius:10px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .22s ease, transform .22s ease;box-shadow:0 6px 18px rgba(0,0,0,.28)}'
+        + '.amb-chat-tip:after{content:"";position:absolute;top:50%;right:-5px;transform:translateY(-50%);border-left:6px solid #0f172a;border-top:5px solid transparent;border-bottom:5px solid transparent}'
+        + '.amb-chat-bubble-wrap:hover .amb-chat-tip{opacity:1;transform:translateY(-50%) translateX(0)}'
         + '.amb-chat-bubble svg{width:26px;height:26px}'
         + '.amb-chat-panel{position:fixed;bottom:20px;right:20px;z-index:99999;width:370px;max-width:calc(100vw - 32px);height:540px;max-height:calc(100vh - 40px);background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:none;flex-direction:column;overflow:hidden;font-family:inherit}'
         + '.amb-chat-panel.open{display:flex}'
@@ -158,13 +162,24 @@
     // ---------- UI shell ----------
 
     function buildUI() {
+        var bubbleWrap = document.createElement('div');
+        bubbleWrap.className = 'amb-chat-bubble-wrap';
+
         var bubble = document.createElement('button');
         bubble.className = 'amb-chat-bubble';
         bubble.setAttribute('aria-label', 'Deschide chat');
         bubble.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
         bubble.addEventListener('click', togglePanel);
-        document.body.appendChild(bubble);
+
+        var tip = document.createElement('div');
+        tip.className = 'amb-chat-tip';
+        tip.textContent = 'Chat & suport AmBilet';
+
+        bubbleWrap.appendChild(tip);
+        bubbleWrap.appendChild(bubble);
+        document.body.appendChild(bubbleWrap);
         els.bubble = bubble;
+        els.bubbleWrap = bubbleWrap;
 
         var panel = document.createElement('div');
         panel.className = 'amb-chat-panel';
@@ -330,17 +345,19 @@
         els.body.innerHTML = '';
         var intro = document.createElement('div');
         intro.className = 'amb-intro';
-        intro.innerHTML = greetingText()
-            + '<div class="amb-benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>'
-            + '<span>Autentifică-te ca să vedem rapid comenzile, biletele și istoricul tău.</span></div>';
+        intro.innerHTML =
+            '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px">Bună! 👋 Ce bine că ești aici.</div>'
+          + '<div>Spune-ne cu ce te putem ajuta — o comandă, un bilet, o plată sau orice altă întrebare. Suntem alături de tine și rezolvăm împreună, rapid.</div>'
+          + '<div class="amb-benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>'
+          + '<span>Autentifică-te și îți vedem pe loc comenzile, biletele și istoricul — ca să te ajutăm și mai repede.</span></div>';
         els.body.appendChild(intro);
 
         els.foot.innerHTML = '';
         var loginBtn = document.createElement('button');
         loginBtn.type = 'button';
         loginBtn.className = 'amb-btn amb-btn-primary';
-        loginBtn.textContent = 'Autentifică-te';
-        loginBtn.addEventListener('click', renderLogin);
+        loginBtn.textContent = 'Autentifică-te în cont';
+        loginBtn.addEventListener('click', renderLoginTypeChoice);
         els.foot.appendChild(loginBtn);
 
         var guestBtn = document.createElement('button');
@@ -351,13 +368,47 @@
         els.foot.appendChild(guestBtn);
     }
 
-    // Screen 1b (anonymous): inline login — stays on the page, so after logging
-    // in we drop straight back into the chat instead of navigating away.
-    function renderLogin() {
+    // Screen 1a (anonymous): choose account type before the login form.
+    function renderLoginTypeChoice() {
         els.body.innerHTML = '';
         var intro = document.createElement('div');
         intro.className = 'amb-intro';
-        intro.textContent = 'Autentifică-te ca să continuăm cu contul tău.';
+        intro.textContent = 'Ce fel de cont ai?';
+        els.body.appendChild(intro);
+
+        els.foot.innerHTML = '';
+        var clientBtn = document.createElement('button');
+        clientBtn.type = 'button';
+        clientBtn.className = 'amb-btn amb-btn-primary';
+        clientBtn.textContent = 'Sunt client';
+        clientBtn.addEventListener('click', function () { renderLogin('customer'); });
+        els.foot.appendChild(clientBtn);
+
+        var orgBtn = document.createElement('button');
+        orgBtn.type = 'button';
+        orgBtn.className = 'amb-btn amb-btn-ghost';
+        orgBtn.textContent = 'Sunt organizator';
+        orgBtn.addEventListener('click', function () { renderLogin('organizer'); });
+        els.foot.appendChild(orgBtn);
+
+        var back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'amb-btn amb-btn-ghost';
+        back.textContent = 'Înapoi';
+        back.addEventListener('click', renderChoice);
+        els.foot.appendChild(back);
+    }
+
+    // Screen 1b (anonymous): inline login — stays on the page, so after logging
+    // in we drop straight back into the chat instead of navigating away.
+    function renderLogin(type) {
+        var isOrg = type === 'organizer';
+        els.body.innerHTML = '';
+        var intro = document.createElement('div');
+        intro.className = 'amb-intro';
+        intro.textContent = isOrg
+            ? 'Autentifică-te cu contul de organizator.'
+            : 'Autentifică-te cu contul tău de client.';
         els.body.appendChild(intro);
 
         els.foot.innerHTML = '';
@@ -373,15 +424,22 @@
         go.className = 'amb-btn amb-btn-primary';
         go.textContent = 'Autentifică-te';
 
+        function loginFn() {
+            if (isOrg) return (window.AmbiletAuth && AmbiletAuth.loginOrganizer) ? AmbiletAuth.loginOrganizer.bind(AmbiletAuth) : null;
+            return (window.AmbiletAuth && AmbiletAuth.loginCustomer) ? AmbiletAuth.loginCustomer.bind(AmbiletAuth)
+                : ((window.AmbiletAuth && AmbiletAuth.login) ? AmbiletAuth.login.bind(AmbiletAuth) : null);
+        }
+
         function doLogin() {
             var e = (email.value || '').trim();
             var p = pass.value || '';
             email.classList.remove('amb-invalid'); pass.classList.remove('amb-invalid'); err.style.display = 'none';
             if (!EMAIL_RE.test(e)) { email.classList.add('amb-invalid'); err.textContent = 'Email invalid.'; err.style.display = 'block'; return; }
             if (!p) { pass.classList.add('amb-invalid'); err.textContent = 'Introdu parola.'; err.style.display = 'block'; return; }
-            if (!(window.AmbiletAuth && AmbiletAuth.login)) { err.textContent = 'Autentificarea nu e disponibilă aici.'; err.style.display = 'block'; return; }
+            var fn = loginFn();
+            if (!fn) { err.textContent = 'Autentificarea nu e disponibilă aici.'; err.style.display = 'block'; return; }
             go.disabled = true; go.textContent = 'Se conectează...';
-            Promise.resolve(AmbiletAuth.login(e, p, false)).then(function (res) {
+            Promise.resolve(fn(e, p)).then(function (res) {
                 go.disabled = false; go.textContent = 'Autentifică-te';
                 if (res && res.success) {
                     renderCompose(); // now isLogged() is true → identified chat, no page change
@@ -400,7 +458,7 @@
         back.type = 'button';
         back.className = 'amb-btn amb-btn-ghost';
         back.textContent = 'Înapoi';
-        back.addEventListener('click', renderChoice);
+        back.addEventListener('click', renderLoginTypeChoice);
 
         els.foot.appendChild(email);
         els.foot.appendChild(pass);

@@ -193,6 +193,30 @@ class ChatConsole extends Page
     }
 
     /**
+     * Permanently delete a conversation and its messages (from the "Toate" list).
+     * Double-confirmed client-side before this is called.
+     */
+    public function deleteConversation(string $reference): void
+    {
+        $conversation = $this->findConversation($reference);
+        if (!$conversation) {
+            return;
+        }
+
+        // Free the operator slot if it was still live.
+        if ($conversation->status === ChatConversation::STATUS_ACTIVE && $conversation->assigned_to_marketplace_admin_id) {
+            app(ChatRoutingService::class)->release($conversation);
+        }
+
+        $conversation->messages()->delete();
+        $conversation->forceDelete();
+
+        if ($this->activeReference === $reference) {
+            $this->activeReference = null;
+        }
+    }
+
+    /**
      * Transfer the active conversation to another operator.
      */
     public function transfer(string $reference, int $adminId): void
