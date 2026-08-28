@@ -59,7 +59,7 @@ class ChatConsole extends Page
         }
         $count = ChatConversation::query()
             ->where('marketplace_client_id', $clientId)
-            ->where('status', ChatConversation::STATUS_QUEUED)
+            ->whereIn('status', [ChatConversation::STATUS_QUEUED, ChatConversation::STATUS_OFFLINE_MESSAGE])
             ->count();
         return $count > 0 ? (string) $count : null;
     }
@@ -241,8 +241,8 @@ class ChatConsole extends Page
         if (!$clientId) {
             return [
                 'queue' => collect(), 'mine' => collect(), 'others' => collect(),
-                'active' => null, 'messages' => collect(), 'canned' => collect(),
-                'operators' => collect(), 'stats' => [], 'eventTitle' => null,
+                'offline' => collect(), 'active' => null, 'messages' => collect(),
+                'canned' => collect(), 'operators' => collect(), 'stats' => [], 'eventTitle' => null,
             ];
         }
 
@@ -250,6 +250,10 @@ class ChatConsole extends Page
 
         $queue = $base()->where('status', ChatConversation::STATUS_QUEUED)
             ->orderBy('queued_at')->limit(50)->get();
+
+        // Messages left while no operator was available (out of hours / offline).
+        $offline = $base()->where('status', ChatConversation::STATUS_OFFLINE_MESSAGE)
+            ->orderByDesc('last_activity_at')->limit(50)->get();
 
         $mine = $base()->where('status', ChatConversation::STATUS_ACTIVE)
             ->where('assigned_to_marketplace_admin_id', $adminId)
@@ -291,7 +295,7 @@ class ChatConsole extends Page
 
         $eventTitle = $active && $active->event_id ? $this->safeEventTitle($active->event_id) : null;
 
-        return compact('queue', 'mine', 'others', 'active', 'messages', 'canned', 'operators', 'stats', 'eventTitle');
+        return compact('queue', 'offline', 'mine', 'others', 'active', 'messages', 'canned', 'operators', 'stats', 'eventTitle');
     }
 
     /**

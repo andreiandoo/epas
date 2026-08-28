@@ -59,18 +59,13 @@ class ChatScheduleService
      */
     public function hasAvailableOperator(int $marketplaceClientId): bool
     {
+        $default = (int) config('chat.operator.default_max_concurrent_chats', 4);
+
         return ChatOperatorStatus::query()
             ->where('marketplace_client_id', $marketplaceClientId)
             ->where('presence', ChatOperatorStatus::PRESENCE_ONLINE)
-            ->whereColumn('active_chats_count', '<', 'max_concurrent_chats')
-            ->exists()
-            // Also honour operators using the config default (NULL override):
-            || ChatOperatorStatus::query()
-                ->where('marketplace_client_id', $marketplaceClientId)
-                ->where('presence', ChatOperatorStatus::PRESENCE_ONLINE)
-                ->whereNull('max_concurrent_chats')
-                ->where('active_chats_count', '<', (int) config('chat.operator.default_max_concurrent_chats', 4))
-                ->exists();
+            ->whereRaw('active_chats_count < COALESCE(max_concurrent_chats, ?)', [$default])
+            ->exists();
     }
 
     /**

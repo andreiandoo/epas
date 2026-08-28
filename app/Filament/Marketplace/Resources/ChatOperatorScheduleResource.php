@@ -67,10 +67,23 @@ class ChatOperatorScheduleResource extends Resource
                     ->searchable()
                     ->required(),
 
+                // Create: pick several days at once → one row per day.
+                Forms\Components\CheckboxList::make('days')
+                    ->label('Zile')
+                    ->options(static::$days)
+                    ->columns(3)
+                    ->gridDirection('row')
+                    ->helperText('Bifează una sau mai multe zile — se creează câte un program pentru fiecare.')
+                    ->dehydrated(false)
+                    ->visibleOn('create')
+                    ->required(fn (string $operation) => $operation === 'create'),
+
+                // Edit: a single existing row keeps its day.
                 Forms\Components\Select::make('day_of_week')
                     ->label('Zi')
                     ->options(static::$days)
-                    ->required(),
+                    ->visibleOn('edit')
+                    ->required(fn (string $operation) => $operation === 'edit'),
 
                 Forms\Components\TimePicker::make('start_time')
                     ->label('Ora început')

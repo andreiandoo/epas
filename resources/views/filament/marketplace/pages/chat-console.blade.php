@@ -76,6 +76,33 @@
                     </div>
                 </div>
 
+                {{-- Offline messages --}}
+                @if($offline->count())
+                    <div class="rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
+                        <div class="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-xs font-semibold uppercase tracking-wide text-amber-600 flex items-center justify-between">
+                            <span>Mesaje offline</span>
+                            <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px]">{{ $offline->count() }}</span>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-56 overflow-y-auto">
+                            @foreach($offline as $c)
+                                <div class="px-3 py-2 flex items-center justify-between gap-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <button type="button" wire:click="select('{{ $c->reference }}')" class="text-left flex-1 min-w-0">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</span>
+                                            @if($c->isOrganizer())
+                                                <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">ORG</span>
+                                            @endif
+                                        </div>
+                                        <div class="text-[11px] text-gray-400 truncate">{{ $c->guest_email ?: $c->reference }} · {{ optional($c->last_activity_at)->diffForHumans() }}</div>
+                                    </button>
+                                    <button type="button" wire:click="claim('{{ $c->reference }}')"
+                                        class="shrink-0 px-2 py-1 text-[11px] font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600">Preia</button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Mine --}}
                 <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-semibold uppercase tracking-wide text-gray-500">Conversațiile mele ({{ $mine->count() }})</div>
