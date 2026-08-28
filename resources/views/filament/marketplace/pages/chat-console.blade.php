@@ -16,7 +16,19 @@
         ];
     @endphp
 
-    <div wire:poll.3s="heartbeat">
+    <div>
+        {{-- Polling is driven by a JS interval (not wire:poll) so it can be
+             PAUSED while the operator is typing a reply. A Livewire re-render
+             while typing would blank the textarea + steal focus; pausing avoids
+             it entirely. The interval lives in a wire:ignore node so it is
+             created once and never touched by morphs. --}}
+        <div wire:ignore x-data x-init="
+            if (window.__epChatPoll) clearInterval(window.__epChatPoll);
+            window.__epChatPoll = setInterval(() => {
+                if (!window.__epChatTyping) { try { @this.heartbeat(); } catch (e) {} }
+            }, 3000);
+        "></div>
+
         {{-- Top bar: presence + quick pills --}}
         <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
             <div class="flex items-center gap-2">
@@ -224,7 +236,9 @@
                                 </div>
                                 <div class="flex items-end gap-2">
                                     <textarea x-model="msg" rows="2" placeholder="Scrie un răspuns..."
-                                        x-on:keydown.enter.prevent="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
+                                        x-on:focus="window.__epChatTyping = true"
+                                        x-on:blur="window.__epChatTyping = false"
+                                        x-on:keydown.enter.prevent="if(msg.trim()){ window.__epChatTyping = false; $wire.sendReply(msg, internal); msg=''; }"
                                         class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
                                     <button type="button" x-on:click="if(msg.trim()){ $wire.sendReply(msg, internal); msg=''; }"
                                         class="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">Trimite</button>
