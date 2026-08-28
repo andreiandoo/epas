@@ -178,8 +178,10 @@ class ChatController extends BaseController
 
         $message = $this->conversations->postOpenerMessage($conversation, $validated['message']);
 
-        // If it was queued and operators are live now, try to assign.
-        if ($conversation->status === ChatConversation::STATUS_QUEUED
+        // Optional auto-assign on a follow-up message (off by default — the chat
+        // stays queued until an operator claims it manually).
+        if (config('chat.operator.auto_assign', false)
+            && $conversation->status === ChatConversation::STATUS_QUEUED
             && $this->schedule->availabilityState($client->id) === 'online') {
             $this->routing->assign($conversation->refresh());
         }

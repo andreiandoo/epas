@@ -36,6 +36,10 @@ return [
         'offline_after_minutes' => (int) env('CHAT_OFFLINE_AFTER_MINUTES', 30),
         // Assignment strategy: 'round_robin' | 'least_busy'.
         'assignment_strategy' => env('CHAT_ASSIGNMENT', 'least_busy'),
+        // When false (default), new chats stay in the queue until an operator
+        // manually claims ("Preia"). When true, an incoming chat is auto-assigned
+        // to the least-busy online operator on open.
+        'auto_assign' => (bool) env('CHAT_AUTO_ASSIGN', false),
     ],
 
     'conversation' => [

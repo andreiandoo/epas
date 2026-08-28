@@ -60,8 +60,9 @@ class ChatConversationService
                 $this->postOpenerMessage($conversation, $firstMessage);
             }
 
-            // Try to route immediately when operators are live.
-            if ($state === 'online') {
+            // Optional auto-routing when operators are live. Off by default —
+            // new chats wait in the queue for an operator to claim manually.
+            if ($state === 'online' && config('chat.operator.auto_assign', false)) {
                 $this->routing->assign($conversation);
             }
 
