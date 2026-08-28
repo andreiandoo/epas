@@ -32,8 +32,8 @@ if not exist "%SOURCE_DIR%" (
 :: Get commit message from argument or use default
 set "COMMIT_MSG=%~1"
 if "%COMMIT_MSG%"=="" (
-    for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "datetime=%%I"
-    set "COMMIT_MSG=Deploy ambilet !datetime:~0,4!-!datetime:~4,2!-!datetime:~6,2! !datetime:~8,2!:!datetime:~10,2!"
+    :: %DATE%/%TIME% are always available; wmic is deprecated/removed on newer Windows.
+    set "COMMIT_MSG=Deploy ambilet %DATE% %TIME%"
 )
 
 echo [1/7] Creating temporary directory...
@@ -75,10 +75,10 @@ call :rebuild_tailwind
 cd /d "%TEMP_DIR%"
 call :minify_assets
 
-:: Write deploy timestamp so there's always a change to push (triggers server webhook)
+:: Write deploy timestamp so there's always a change to push (triggers server webhook).
+:: Uses cmd built-ins %DATE%/%TIME% (always present) instead of the deprecated wmic.
 cd /d "%TEMP_DIR%"
-for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "now=%%I"
-echo !now:~0,4!-!now:~4,2!-!now:~6,2! !now:~8,2!:!now:~10,2!:!now:~12,2! > .deploy-timestamp
+echo %DATE% %TIME% > .deploy-timestamp
 
 echo [5/7] Staging changes...
 git add -A
