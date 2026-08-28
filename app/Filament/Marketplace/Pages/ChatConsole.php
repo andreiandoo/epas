@@ -257,11 +257,20 @@ class ChatConsole extends Page
             ->get()
             ->filter(fn ($s) => $s->operator !== null);
 
+        // Personal rating: average of ratings on conversations this operator
+        // handled (attributed via the assignee). This is the operator's own score.
+        $myRatingQuery = $base()
+            ->whereNotNull('rating')
+            ->where('assigned_to_marketplace_admin_id', $adminId);
+        $myRatingCount = (clone $myRatingQuery)->count();
+
         $stats = [
             'queued' => $queue->count(),
             'active' => $base()->where('status', ChatConversation::STATUS_ACTIVE)->count(),
             'mine' => $mine->count(),
             'avg_rating' => round((float) $base()->whereNotNull('rating')->avg('rating'), 1),
+            'my_avg' => $myRatingCount ? round((float) $myRatingQuery->avg('rating'), 1) : 0,
+            'my_ratings' => $myRatingCount,
         ];
 
         // All chats (recent) with who claimed them — the "Toate" overview.

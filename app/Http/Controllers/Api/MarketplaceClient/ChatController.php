@@ -191,6 +191,22 @@ class ChatController extends BaseController
     }
 
     /**
+     * Visitor-initiated close (e.g. the idle countdown expired). Resolves the
+     * conversation so the operator slot is freed and the rating flow can start.
+     */
+    public function close(Request $request, string $reference): JsonResponse
+    {
+        $client = $this->requireActiveChat($request);
+        $conversation = $this->findOwned($request, $client, $reference);
+
+        if (!$conversation->isClosed()) {
+            $this->conversations->resolve($conversation);
+        }
+
+        return $this->success(['status' => $conversation->refresh()->status]);
+    }
+
+    /**
      * Post-chat rating.
      */
     public function rating(Request $request, string $reference): JsonResponse

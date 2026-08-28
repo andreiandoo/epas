@@ -718,6 +718,15 @@ switch ($action) {
         $endpoint = '/chat/conversations/' . urlencode($ref) . '/rating';
         break;
 
+    case 'chat.close':
+        $ref = $_GET['ref'] ?? '';
+        if (!$ref) { http_response_code(400); echo json_encode(['error' => 'Missing ref']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $requiresAuth = true;
+        $endpoint = '/chat/conversations/' . urlencode($ref) . '/close';
+        break;
+
     case 'search':
         $query = $_GET['q'] ?? '';
         $limit = min((int)($_GET['limit'] ?? 10), 50);

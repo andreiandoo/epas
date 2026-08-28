@@ -4394,4 +4394,6 @@ Route::prefix('marketplace-client/chat')
             ->name('api.marketplace-client.chat.message');
         Route::post('/conversations/{reference}/rating', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'rating'])
             ->name('api.marketplace-client.chat.rating');
+        Route::post('/conversations/{reference}/close', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'close'])
+            ->name('api.marketplace-client.chat.close');
     });

@@ -28,6 +28,12 @@
                     <button type="button" wire:click="goAway" class="px-2.5 py-1 text-xs font-medium rounded-lg {{ $presence === 'away' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Away</button>
                     <button type="button" wire:click="goOffline" class="px-2.5 py-1 text-xs font-medium rounded-lg {{ $presence === 'offline' ? 'bg-gray-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' }}">Offline</button>
                 </div>
+                @if(($stats['my_ratings'] ?? 0) > 0)
+                    <span class="ml-2 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300" title="Rating-ul tău mediu din {{ $stats['my_ratings'] }} evaluări">
+                        <span class="text-amber-400">★</span>{{ $stats['my_avg'] }}
+                        <span class="text-gray-400">({{ $stats['my_ratings'] }})</span>
+                    </span>
+                @endif
             </div>
 
             @php

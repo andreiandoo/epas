@@ -33,6 +33,16 @@
 
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    // Idle auto-close: after IDLE_WARN_MS of no messages on an active chat, show a
+    // visible countdown; when it reaches zero the conversation is closed.
+    var IDLE_WARN_MS = 120000;   // 2 min quiet → start warning
+    var AUTO_CLOSE_MS = 60000;   // then 60s countdown
+    var lastActivityTs = 0;
+    var idleTimer = null;
+    var currentStatus = null;
+    var currentOperator = null;
+    var rated = false;
+
     function token() {
         try { return (window.AmbiletAuth && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null; }
         catch (e) { return null; }
@@ -109,7 +119,17 @@
         + '.amb-btn:disabled{opacity:.5;cursor:default}'
         + '.amb-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0}'
         + '.amb-org-badge{display:inline-block;font-size:9px;font-weight:700;background:rgba(255,255,255,.25);padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle}'
-        + '.amb-field-err{font-size:11px;color:#fca5a5;margin:-2px 0 6px}';
+        + '.amb-field-err{font-size:11px;color:#fca5a5;margin:-2px 0 6px}'
+        + '.amb-chat-notice{padding:8px 12px;background:#fff7ed;border-top:1px solid #fed7aa;color:#9a3412;font-size:12px;text-align:center}'
+        + '.amb-rating{text-align:center;padding:4px}'
+        + '.amb-rating-q{font-size:14px;font-weight:600;color:#0f172a;margin-bottom:2px}'
+        + '.amb-rating-sub{font-size:12px;color:#64748b;margin-bottom:8px}'
+        + '.amb-stars{display:flex;justify-content:center;gap:4px;margin-bottom:8px}'
+        + '.amb-star{font-size:30px;line-height:1;cursor:pointer;color:#d1d5db;transition:color .1s,transform .1s;background:none;border:none;padding:0}'
+        + '.amb-star:hover{transform:scale(1.12)}'
+        + '.amb-star.on{color:#f59e0b}'
+        + '.amb-rating-hint{font-size:11px;color:#94a3b8;min-height:14px}'
+        + '.amb-rating-thanks{font-size:14px;color:#16a34a;font-weight:600;padding:10px}';
         var s = document.createElement('style');
         s.id = 'amb-chat-styles';
         s.textContent = css;
@@ -138,6 +158,7 @@
           + '  <button class="amb-x" aria-label="Închide">&times;</button>'
           + '</div>'
           + '<div class="amb-chat-body" data-body></div>'
+          + '<div class="amb-chat-notice" data-notice style="display:none"></div>'
           + '<div class="amb-chat-foot" data-foot></div>';
         document.body.appendChild(panel);
         panel.querySelector('.amb-x').addEventListener('click', togglePanel);
@@ -145,6 +166,7 @@
         els.title = panel.querySelector('[data-title]');
         els.state = panel.querySelector('[data-state]');
         els.body = panel.querySelector('[data-body]');
+        els.notice = panel.querySelector('[data-notice]');
         els.foot = panel.querySelector('[data-foot]');
         setHeaderDefault();
     }
@@ -159,11 +181,17 @@
     function setState(text) { if (els.state) els.state.textContent = text || ''; }
 
     function applyStatus(status, queuePosition, operator) {
+        currentStatus = status;
+        if (operator) currentOperator = operator;
         if (status === 'active') {
-            setHeaderConnected(operator);
+            setHeaderConnected(currentOperator);
             setState('');
+            if (!lastActivityTs) lastActivityTs = Date.now();
+            startIdleWatch();
         } else {
             setHeaderDefault();
+            stopIdleWatch();
+            hideNotice();
             if (status === 'offline_message') setState('Suntem offline — îți răspundem pe email.');
             else if (status === 'queued') setState('În așteptare' + (queuePosition ? ' · poziția ' + queuePosition : '') + '...');
             else if (status === 'resolved' || status === 'closed') setState('Conversație încheiată');
@@ -181,6 +209,45 @@
         els.body.appendChild(div);
         if (m.id && m.id > lastMessageId) lastMessageId = m.id;
         els.body.scrollTop = els.body.scrollHeight;
+        bumpActivity();
+    }
+
+    // ---------- Idle auto-close ----------
+
+    function bumpActivity() {
+        lastActivityTs = Date.now();
+        hideNotice();
+    }
+    function hideNotice() {
+        if (els.notice) { els.notice.style.display = 'none'; els.notice.textContent = ''; }
+    }
+    function showNotice(text) {
+        if (els.notice) { els.notice.textContent = text; els.notice.style.display = 'block'; }
+    }
+    function startIdleWatch() {
+        stopIdleWatch();
+        idleTimer = setInterval(function () {
+            if (currentStatus !== 'active' || !ref) { hideNotice(); return; }
+            var idle = Date.now() - lastActivityTs;
+            if (idle < IDLE_WARN_MS) { hideNotice(); return; }
+            var remaining = Math.ceil((AUTO_CLOSE_MS - (idle - IDLE_WARN_MS)) / 1000);
+            if (remaining <= 0) {
+                hideNotice();
+                closeConversation();
+                return;
+            }
+            var mm = Math.floor(remaining / 60), ss = remaining % 60;
+            var t = (mm > 0 ? (mm + ':' + (ss < 10 ? '0' : '') + ss) : (ss + 's'));
+            showNotice('Conversația se va închide automat în ' + t + ' dacă nu mai scrii nimic.');
+        }, 1000);
+    }
+    function stopIdleWatch() { if (idleTimer) { clearInterval(idleTimer); idleTimer = null; } }
+
+    function closeConversation() {
+        stopIdleWatch();
+        if (!ref) return;
+        api('chat.close', { method: 'POST', params: { ref: ref }, body: { session_token: sessionToken } })
+            .then(function () { poll(); });
     }
 
     // ---------- Entry screens ----------
@@ -371,26 +438,62 @@
     }
     function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
+    var RATING_HINTS = ['', 'Foarte slab', 'Slab', 'Ok', 'Bun', 'Excelent'];
+
     function offerRating() {
-        if (els.foot.querySelector('[data-rating]')) return;
+        stopIdleWatch();
+        hideNotice();
+        if (rated || els.foot.querySelector('[data-rating]')) return;
+
+        var opTxt = currentOperator ? (' cu ' + currentOperator) : '';
         var wrap = document.createElement('div');
+        wrap.className = 'amb-rating';
         wrap.setAttribute('data-rating', '');
-        wrap.style.textAlign = 'center';
-        wrap.innerHTML = '<div style="font-size:13px;color:#475569;margin-bottom:6px">Cum a fost conversația?</div>';
+        wrap.innerHTML =
+            '<div class="amb-rating-q">Cum a fost conversația' + opTxt + '?</div>'
+          + '<div class="amb-rating-sub">Apasă pe stele pentru a evalua' + (currentOperator ? ' operatorul' : '') + '.</div>'
+          + '<div class="amb-stars" data-stars></div>'
+          + '<div class="amb-rating-hint" data-hint>&nbsp;</div>';
+        els.foot.innerHTML = '';
+        els.foot.appendChild(wrap);
+
+        var starsEl = wrap.querySelector('[data-stars]');
+        var hintEl = wrap.querySelector('[data-hint]');
+        var selected = 0;
+        var stars = [];
+
+        function paint(upto) {
+            for (var k = 0; k < 5; k++) stars[k].classList.toggle('on', k < upto);
+        }
         for (var i = 1; i <= 5; i++) {
             (function (score) {
                 var star = document.createElement('button');
+                star.type = 'button';
+                star.className = 'amb-star';
                 star.textContent = '★';
-                star.style.cssText = 'background:none;border:none;font-size:22px;color:#f59e0b;cursor:pointer';
+                star.setAttribute('aria-label', score + ' stele');
+                star.addEventListener('mouseenter', function () { paint(score); hintEl.textContent = RATING_HINTS[score]; });
                 star.addEventListener('click', function () {
-                    api('chat.rating', { method: 'POST', params: { ref: ref }, body: { rating: score, session_token: sessionToken } })
-                        .then(function () { wrap.innerHTML = '<div style="font-size:13px;color:#16a34a">Mulțumim pentru feedback!</div>'; });
+                    selected = score;
+                    paint(score);
+                    submitRating(score, wrap);
                 });
-                wrap.appendChild(star);
+                stars.push(star);
+                starsEl.appendChild(star);
             })(i);
         }
-        els.foot.innerHTML = '';
-        els.foot.appendChild(wrap);
+        starsEl.addEventListener('mouseleave', function () { paint(selected); hintEl.textContent = selected ? RATING_HINTS[selected] : ' '; });
+    }
+
+    function submitRating(score, wrap) {
+        rated = true;
+        api('chat.rating', { method: 'POST', params: { ref: ref }, body: { rating: score, session_token: sessionToken } })
+            .then(function () {
+                wrap.innerHTML = '<div class="amb-rating-thanks">Mulțumim pentru feedback! ★ ' + score + '/5</div>';
+            })
+            .catch(function () {
+                wrap.innerHTML = '<div class="amb-rating-thanks">Mulțumim pentru feedback!</div>';
+            });
     }
 
     // ---------- Resume / open ----------
@@ -431,6 +534,8 @@
 
     function clearConversation() {
         ref = null; sessionToken = null; lastMessageId = 0;
+        lastActivityTs = 0; rated = false; currentStatus = null; currentOperator = null;
+        stopIdleWatch(); hideNotice();
         try { localStorage.removeItem(LS_REF); localStorage.removeItem(LS_TOKEN); } catch (e) {}
     }
 
@@ -450,6 +555,7 @@
             resumeOrCompose();
         } else {
             stopPolling();
+            stopIdleWatch();
         }
     }
 
