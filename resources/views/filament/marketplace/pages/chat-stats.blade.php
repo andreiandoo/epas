@@ -1,4 +1,8 @@
 <x-filament-panels::page>
+    <style id="ep-stats-style">
+        .ep-stats-row:hover { background: rgba(0,0,0,.05); }
+        :is(.dark) .ep-stats-row:hover { background: rgba(255,255,255,.06); }
+    </style>
     @php
         $statusMeta = [
             'queued'          => ['În așteptare', 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'],
@@ -70,7 +74,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @forelse($operators as $op)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                            <tr class="ep-stats-row">
                                 <td class="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{{ $op['name'] }}</td>
                                 <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-200">{{ $op['claimed'] }}</td>
                                 <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-200">{{ $op['resolved'] }}</td>
@@ -123,7 +127,7 @@
                                     : null;
                                 $endedAt = $c->resolved_at ?? $c->closed_at;
                             @endphp
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                            <tr class="ep-stats-row">
                                 <td class="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{{ $c->openerName() }}</td>
                                 <td class="px-3 py-2">
                                     <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $sclass }}">{{ $slabel }}</span>

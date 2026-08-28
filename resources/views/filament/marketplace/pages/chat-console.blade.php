@@ -250,6 +250,19 @@
                             @endforeach
                         </div>
 
+                        @if($active->isClosed())
+                            @php
+                                $closedReason = $active->status === 'resolved'
+                                    ? 'Marcată ca rezolvată de operator.'
+                                    : 'Închisă automat din inactivitate.';
+                                $closedAt = $active->closed_at ?? $active->resolved_at;
+                            @endphp
+                            <div class="border-t border-gray-100 dark:border-gray-800 p-3 text-center">
+                                <div class="text-xs font-semibold text-gray-600 dark:text-gray-300">Conversație încheiată</div>
+                                <div class="text-[11px] text-gray-400 mt-0.5">{{ $closedReason }}@if($closedAt) · {{ $closedAt->format('d.m.Y H:i') }}@endif</div>
+                            </div>
+                        @endif
+
                         @unless($active->isClosed())
                             @php
                                 // shortcut => expanded body ({name}/{event} substituted) for typed-shortcut expansion.
@@ -289,7 +302,7 @@
                                         x-on:blur="window.__epChatTyping = false"
                                         x-on:input="if (cmap[msg.trim()] !== undefined) { msg = cmap[msg.trim()]; }"
                                         x-on:keydown.enter.prevent="if(msg.trim()){ window.__epChatTyping = false; $wire.sendReply(msg, internal); msg=''; }"
-                                        class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-primary-500 focus:border-primary-500"></textarea>
+                                        class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm px-3 py-2 leading-relaxed focus:ring-primary-500 focus:border-primary-500"></textarea>
                                     <button type="button" x-on:click="if(msg.trim()){ window.__epChatTyping = false; $wire.sendReply(msg, internal); msg=''; }"
                                         class="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">Trimite</button>
                                 </div>

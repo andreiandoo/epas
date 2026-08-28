@@ -44,16 +44,22 @@
     var rated = false;
     var unread = 0;   // operator messages received while the widget is minimized
 
+    // AmbiletAuth is a top-level `const` (lexical global), NOT a window property —
+    // so `window.AmbiletAuth` is undefined. Resolve it safely by bare name.
+    function AUTH() {
+        try { return (typeof AmbiletAuth !== 'undefined' && AmbiletAuth) ? AmbiletAuth : null; }
+        catch (e) { return null; }
+    }
     function token() {
-        try { return (window.AmbiletAuth && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null; }
+        try { var a = AUTH(); return (a && a.getToken) ? a.getToken() : null; }
         catch (e) { return null; }
     }
     function isLogged() {
-        try { return !!(window.AmbiletAuth && AmbiletAuth.isLoggedIn && AmbiletAuth.isLoggedIn()); }
+        try { var a = AUTH(); return !!(a && a.isLoggedIn && a.isLoggedIn()); }
         catch (e) { return false; }
     }
     function isOrganizer() {
-        try { return !!(window.AmbiletAuth && AmbiletAuth.isOrganizer && AmbiletAuth.isOrganizer()); }
+        try { var a = AUTH(); return !!(a && a.isOrganizer && a.isOrganizer()); }
         catch (e) { return false; }
     }
 
@@ -437,9 +443,10 @@
         go.textContent = 'Autentifică-te';
 
         function loginFn() {
-            if (isOrg) return (window.AmbiletAuth && AmbiletAuth.loginOrganizer) ? AmbiletAuth.loginOrganizer.bind(AmbiletAuth) : null;
-            return (window.AmbiletAuth && AmbiletAuth.loginCustomer) ? AmbiletAuth.loginCustomer.bind(AmbiletAuth)
-                : ((window.AmbiletAuth && AmbiletAuth.login) ? AmbiletAuth.login.bind(AmbiletAuth) : null);
+            var a = AUTH();
+            if (!a) return null;
+            if (isOrg) return a.loginOrganizer ? a.loginOrganizer.bind(a) : null;
+            return a.loginCustomer ? a.loginCustomer.bind(a) : (a.login ? a.login.bind(a) : null);
         }
 
         function doLogin() {
