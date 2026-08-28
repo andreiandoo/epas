@@ -44,6 +44,12 @@ deploy-ambilet.bat
 ```
 (Include `assets/js/components/chat-widget.js`, `api/proxy.php`, `includes/scripts.php`.)
 
+**ROLLOUT GRADUAL (activ acum):** widget-ul e limitat TEMPORAR doar la pagina
+`https://ambilet.ro/contact` printr-un gate în `includes/scripts.php`
+(`$epChatOnContact`). Pe restul site-ului scriptul nici nu se încarcă.
+Pentru rollout pe tot site-ul: șterge wrapper-ul `if ($epChatOnContact): … endif;`
+din `scripts.php` (păstrează tag-ul `<script>`), apoi `deploy-ambilet.bat`.
+
 ## 5. Teste automate (pe mediu cu vendor/)
 
 ```bash
