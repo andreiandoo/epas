@@ -1364,13 +1364,26 @@ const EventPage = {
         // We need TWO copies: one before #ticket-types (desktop sidebar)
         // and one before #drawerTicketTypes (mobile drawer). Both are
         // present on the same page; CSS hides whichever isn't active.
+        // Right-hand label. Suppress the exact number when it's low (<= 10)
+        // because ticket_types have their own per-type stock — if the ticket
+        // types add up to more than remaining_displayed, showing "1 locuri
+        // rămase" clashes with the customer being able to add 2-3 tickets to
+        // the cart. "Puține locuri rămase" preserves the FOMO signal without
+        // creating the contradiction. For counts > 10 the plural is safe.
+        var remainingLabel;
+        var remainingCount = parseInt(fomo.remaining_displayed, 10);
+        if (isNaN(remainingCount) || remainingCount <= 10) {
+            remainingLabel = 'Puține locuri rămase';
+        } else {
+            remainingLabel = remainingCount + ' locuri rămase';
+        }
         var scarcityHtml =
             '<div class="flex items-center justify-between gap-3">' +
                 '<div class="flex items-center gap-2 text-sm font-bold text-amber-900">' +
                     '<span>🔥</span><span>Cerere ridicată</span>' +
                 '</div>' +
                 '<span class="text-xs font-semibold text-amber-700">' +
-                    this.escapeHtml(fomo.remaining_displayed) + ' locuri rămase' +
+                    this.escapeHtml(remainingLabel) +
                 '</span>' +
             '</div>' +
             '<div class="h-2 mt-3 overflow-hidden rounded-full bg-amber-100">' +
