@@ -55,7 +55,7 @@ class ChatOpenerResolver
                     'visitor_type' => ChatConversation::VISITOR_ORGANIZER,
                     'opener_type' => $organizer->getMorphClass(),
                     'opener_id' => $organizer->getKey(),
-                    'name' => $model->name ?? $organizer->name ?? null,
+                    'name' => $this->displayName($model) ?? $this->displayName($organizer),
                     'email' => $model->email ?? $organizer->email ?? null,
                 ];
             }
@@ -90,8 +90,24 @@ class ChatOpenerResolver
             'visitor_type' => $visitorType,
             'opener_type' => $morphClass,
             'opener_id' => $model->getKey(),
-            'name' => $model->name ?? null,
+            'name' => $this->displayName($model),
             'email' => $model->email ?? null,
         ];
+    }
+
+    /**
+     * Best display name across the account models: some expose a real `name`
+     * column (organizer, team member), others compose `full_name` from
+     * first_name/last_name (customer, artist account).
+     */
+    private function displayName(object $model): ?string
+    {
+        foreach (['name', 'full_name'] as $attr) {
+            $value = $model->{$attr} ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return $value;
+            }
+        }
+        return null;
     }
 }

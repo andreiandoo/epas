@@ -38,7 +38,7 @@ class ChatTranscriptService
                 $client,
                 $email,
                 $conversation->openerName(),
-                'Transcriptul conversației tale — ' . ($client->public_name ?? $client->name ?? 'AmBilet'),
+                'Transcriptul conversației tale — ' . ($client->name ?? 'AmBilet'),
                 $html,
                 ['template_slug' => 'chat_transcript', 'reference' => $conversation->reference]
             );
@@ -54,7 +54,7 @@ class ChatTranscriptService
     {
         $rows = '';
         foreach ($messages as $m) {
-            $who = $m->isFromStaff() ? ($client->public_name ?? 'Operator') : ($m->isSystem() ? 'Sistem' : $conversation->openerName());
+            $who = $m->isFromStaff() ? ($client->name ?? 'Operator') : ($m->isSystem() ? 'Sistem' : $conversation->openerName());
             $align = $m->isFromStaff() ? 'left' : 'right';
             $bg = $m->isFromStaff() ? '#f1f5f9' : '#fde8ee';
             $body = nl2br(e($m->body ?? ''));
@@ -72,7 +72,7 @@ class ChatTranscriptService
             . '<h2 style="color:#e11d48">' . $title . '</h2>'
             . '<p style="color:#475569;font-size:14px">Îți mulțumim că ne-ai scris. Mai jos găsești transcriptul conversației.</p>'
             . '<table style="width:100%;border-collapse:collapse">' . $rows . '</table>'
-            . '<p style="color:#94a3b8;font-size:12px;margin-top:24px">Acest email a fost trimis automat de ' . e($client->public_name ?? $client->name ?? '') . '.</p>'
+            . '<p style="color:#94a3b8;font-size:12px;margin-top:24px">Acest email a fost trimis automat de ' . e($client->name ?? '') . '.</p>'
             . '</div>';
     }
 }
