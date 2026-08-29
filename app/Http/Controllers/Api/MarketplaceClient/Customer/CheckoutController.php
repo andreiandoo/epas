@@ -2182,6 +2182,15 @@ class CheckoutController extends BaseController
                 continue;
             }
 
+            // Event-level Sold Out blocks every ticket type, including seating
+            // events whose per-type is_sold_out was not cascaded yet (older data
+            // toggled before the cascade shipped). Server-side backstop to the
+            // frontend seat-map gate.
+            if ($ticketType->event->is_sold_out && !$isTestOrder) {
+                $errors[$key] = "Event is sold out";
+                continue;
+            }
+
             $ownAvailable = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
                 ? PHP_INT_MAX
                 : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));

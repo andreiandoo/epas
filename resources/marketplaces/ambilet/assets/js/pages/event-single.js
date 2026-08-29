@@ -1634,6 +1634,24 @@ const EventPage = {
                 titleEl.insertAdjacentHTML('beforebegin', alertHtml);
             }
         }
+
+        // Mobile sticky purchase button: when the event is not purchasable,
+        // relabel it to the reason and neutralize its click so seating events
+        // can't be entered via the drawer / seat map from mobile. The seat-map
+        // opener is already hard-gated (purchaseBlockedLabel), this is the UX.
+        const blockedLabel = this.purchaseBlockedLabel();
+        const mobileBar = document.getElementById('mobileTicketBtn');
+        if (mobileBar && blockedLabel) {
+            const innerBtn = mobileBar.querySelector('button');
+            mobileBar.classList.remove('bg-primary');
+            mobileBar.style.background = '#4b5563'; // gray-600
+            if (innerBtn) {
+                innerBtn.onclick = null;
+                innerBtn.setAttribute('aria-disabled', 'true');
+                innerBtn.style.cursor = 'not-allowed';
+                innerBtn.innerHTML = '<span class="text-lg font-bold text-white">' + blockedLabel + '</span>';
+            }
+        }
     },
 
     /**
@@ -3038,6 +3056,16 @@ const EventPage = {
      */
     handleCheckout() {
         var self = this;
+
+        // Hard gate: block checkout entirely on a non-purchasable event.
+        var blocked = this.purchaseBlockedLabel();
+        if (blocked) {
+            this.flashNotice(blocked === 'Sold Out'
+                ? 'Toate biletele au fost vândute (Sold Out).'
+                : 'Biletele nu mai sunt disponibile pentru acest eveniment.');
+            return;
+        }
+
         var needingSelection = this.getSeatingTicketsNeedingSelection();
 
         if (needingSelection.length > 0) {
@@ -3675,9 +3703,62 @@ const EventPage = {
     /**
      * Open seat selection modal - shows ALL available seats
      */
+    /**
+     * Central gate: returns a short label if the event is NOT purchasable
+     * (cancelled / postponed / ended / sold out), else null. Every purchase
+     * entry point (ticket cards, mobile sticky bar, seat-map opener, checkout)
+     * consults this so no channel can start a sale on a blocked event — the
+     * seat map in particular must not open on a Sold Out seating event.
+     */
+    purchaseBlockedLabel() {
+        var e = this.event || {};
+        if (e.is_cancelled) return 'Anulat';
+        if (e.is_postponed) return 'Amânat';
+        if (this.eventEnded) return 'Încheiat';
+        if (e.is_sold_out) return 'Sold Out';
+        return null;
+    },
+
+    /**
+     * Small transient toast (top-center), used when a blocked action is
+     * attempted. Non-destructive: auto-dismisses, no layout impact.
+     */
+    flashNotice(message) {
+        var el = document.getElementById('ep-flash-notice');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'ep-flash-notice';
+            el.style.cssText = 'position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:2000;' +
+                'background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;' +
+                'font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:90%;text-align:center;' +
+                'opacity:0;transition:opacity .2s ease;';
+            document.body.appendChild(el);
+        }
+        el.textContent = message;
+        el.style.display = 'block';
+        requestAnimationFrame(function () { el.style.opacity = '1'; });
+        clearTimeout(el._t);
+        el._t = setTimeout(function () {
+            el.style.opacity = '0';
+            setTimeout(function () { el.style.display = 'none'; }, 250);
+        }, 3200);
+    },
+
     async openSeatSelection(ticketTypeId) {
         var self = this;
         if (!this.seatingLayout) return;
+
+        // Hard gate: never open the seat map for a non-purchasable event.
+        // This is the authoritative block — it covers every entry point
+        // (mobile sticky bar, ticket cards, checkout button) regardless of
+        // how the per-ticket availability was computed.
+        var blocked = this.purchaseBlockedLabel();
+        if (blocked) {
+            this.flashNotice(blocked === 'Sold Out'
+                ? 'Toate biletele au fost vândute (Sold Out).'
+                : 'Biletele nu mai sunt disponibile pentru acest eveniment.');
+            return;
+        }
 
         // Pull fresh seat statuses before rendering so holds made by
         // other tabs/sessions after the page loaded are reflected.
