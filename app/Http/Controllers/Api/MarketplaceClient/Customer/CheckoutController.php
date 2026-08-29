@@ -1283,6 +1283,21 @@ class CheckoutController extends BaseController
                     $minPerGroup = max(1, (int) ($tt->min_per_order ?? 1));
                     $bonusCount = ((int) $item['quantity']) >= $minPerGroup ? 1 : 0;
                     $guideLabel = trim((string) ($tt->meta['group_guide_label'] ?? '')) ?: 'Ghid grup';
+                    if ($bonusCount > 0) {
+                        // Guide bonus tickets are real rows in the tickets table
+                        // in active state (valid/pending) — same as the paid ones —
+                        // so quota_sold has to count them or it drifts by 1 per
+                        // group order. The atomic reservation loop above only
+                        // incremented by $quantity (paid), not by $quantity+bonus.
+                        // Increment separately here so the fix stays local to the
+                        // bonus branch — no impact on the reservation cap check
+                        // (paid quantity is what customers can select against the
+                        // cap; the +1 guide is a business decision that CAN push
+                        // effective attendance above quota_total, which is the
+                        // organizer's setup responsibility). Idempotency: this
+                        // runs once per order-item, so double-fire is impossible.
+                        TicketType::where('id', $tt->id)->increment('quota_sold', $bonusCount);
+                    }
                     for ($g = 0; $g < $bonusCount; $g++) {
                         Ticket::create([
                             'marketplace_client_id' => $client->id,
@@ -2532,6 +2547,18 @@ class CheckoutController extends BaseController
                     ], fn ($v) => $v !== null),
                 ]);
             }
+
+            // Package components each occupy a real slot on their own
+            // ticket_type — a package sale for 2 people that includes 3
+            // activities inserts 6 component tickets. The umbrella's atomic
+            // reservation earlier only covered the package TT itself, so
+            // without this the component TTs' quota_sold stays flat while
+            // real active tickets accumulate — every package sale under-
+            // counts each component's quota_sold by $compQty. Not gated by
+            // component.quota_total: if organizer left components as
+            // unlimited (-1), the increment is harmless bookkeeping;
+            // if they set a real cap, this keeps availability honest.
+            TicketType::where('id', $compTt->id)->increment('quota_sold', $compQty);
         }
     }
 }
