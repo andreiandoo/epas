@@ -234,6 +234,7 @@ class SubscriptionController extends Controller
 
                 // Emite biletele (valabile) pentru locurile abonatului
                 $labels = $sub->seat_labels ?? [];
+                $qtyByType = [];
                 foreach ($seatUids as $i => $uid) {
                     $seatRow = $layout ? EventSeat::where('event_seating_id', $layout->id)->where('seat_uid', $uid)->first() : null;
                     $priceCents = $seatRow?->price_cents_override ?? 0;
@@ -255,6 +256,19 @@ class SubscriptionController extends Controller
                             'customer_id'      => $customer->id,
                         ], fn ($v) => $v !== null),
                     ]);
+                    if ($ttId) {
+                        $qtyByType[$ttId] = ($qtyByType[$ttId] ?? 0) + 1;
+                    }
+                }
+
+                // Sync quota_sold per ticket_type. Subscription redemption
+                // issues real 'valid' tickets on the target event's TTs,
+                // but never went through the checkout increment path — so
+                // every redemption used to under-count quota_sold by the
+                // seat count. Grouped so a multi-seat subscription is a
+                // single UPDATE per TT.
+                foreach ($qtyByType as $ttId => $qty) {
+                    TicketType::where('id', $ttId)->increment('quota_sold', $qty);
                 }
 
                 // Consum

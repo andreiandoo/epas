@@ -382,6 +382,21 @@ class OperatorController extends Controller
                     ]);
                 }
 
+                // Sync quota_sold once per ticket_type. Counter sales don't
+                // go through the atomic reservation loop that online checkout
+                // uses (they go through per-day CapacityAvailabilityService
+                // instead), so quota_sold would drift down under real active
+                // tickets on every counter sale. Grouped so a POS sale of
+                // multiple tickets on the same TT is a single UPDATE.
+                $qtyByType = [];
+                foreach ($rows as $row) {
+                    $ttId = $row['tt']->id;
+                    $qtyByType[$ttId] = ($qtyByType[$ttId] ?? 0) + 1;
+                }
+                foreach ($qtyByType as $ttId => $qty) {
+                    \App\Models\TicketType::where('id', $ttId)->increment('quota_sold', $qty);
+                }
+
                 return $order;
             });
         } catch (\Throwable $e) {
