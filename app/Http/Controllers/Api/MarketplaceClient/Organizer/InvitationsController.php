@@ -567,8 +567,28 @@ class InvitationsController extends BaseController
                     if ($released > 0) $seatsReleased++;
                 }
 
-                // Drop the paired Ticket (carries the same invite_code)
-                Ticket::where('code', $invite->invite_code)->delete();
+                // Drop the paired Ticket (carries the same invite_code).
+                // Before deleting, capture ticket_type_id + status so we can
+                // decrement quota_sold when the ticket was in an active state
+                // (valid/used/pending) — the invite create path at line ~905
+                // increments quota_sold by 1 per invite, so without this the
+                // Invitatie ticket_type's counter stays inflated forever
+                // whenever an operator deletes invites (leak documented in
+                // audit as #7). Grouped so N invites deleted at once produce
+                // a single UPDATE per ticket_type instead of N.
+                $deletedTickets = Ticket::where('code', $invite->invite_code)
+                    ->get(['id', 'ticket_type_id', 'status']);
+                $activeByType = $deletedTickets
+                    ->filter(fn ($t) => in_array($t->status, ['valid', 'used', 'pending']))
+                    ->groupBy('ticket_type_id')
+                    ->map(fn ($grp) => $grp->count());
+                Ticket::whereIn('id', $deletedTickets->pluck('id'))->delete();
+                foreach ($activeByType as $ttId => $count) {
+                    if (!$ttId || $count < 1) continue;
+                    TicketType::where('id', $ttId)
+                        ->where('quota_sold', '>=', $count)
+                        ->decrement('quota_sold', $count);
+                }
 
                 // Remove the PDF on disk if rendered
                 $pdfPath = $invite->getPdfUrl();
