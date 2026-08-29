@@ -364,13 +364,25 @@ class PaymentRefundService
             ]);
 
             if ($isFullRefund) {
+                // Full refund: the Order::saved observer for status='refunded'
+                // invokes releaseSeatsAndRestoreStock() which decrements
+                // quota_sold for every order item AND stamps
+                // meta.stock_released_at so a repeat can't double-decrement.
+                // Calling releaseStockForTickets() here too would drop the
+                // counter twice for the same tickets (no guard on that path),
+                // producing OVER-count drift that inflates apparent
+                // availability and can enable oversell later.
                 $order->update(['status' => 'refunded']);
             } else {
+                // Partial refund: the Order::saved observer branch for
+                // status='partially_refunded' is intentionally a no-op
+                // because only SOME tickets in the order are being
+                // refunded — we can't drop stock for the whole order.
+                // releaseStockForTickets() decrements only the ticket
+                // types of the specific $tickets being refunded (once).
                 $order->update(['status' => 'partially_refunded']);
+                $order->releaseStockForTickets($tickets);
             }
-
-            // Restore stock for affected tickets
-            $order->releaseStockForTickets($tickets);
 
             DB::commit();
 
