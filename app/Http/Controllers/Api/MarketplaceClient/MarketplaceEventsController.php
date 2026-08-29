@@ -1122,7 +1122,9 @@ class MarketplaceEventsController extends BaseController
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'multiplier' => $tt->multiplier ?? 1,
                     'status' => $tt->status,
-                    'is_sold_out' => $available <= 0,
+                    // Respect the manual Sold Out flag too (mobile used to look at
+                    // availability only, so a flagged-but-in-stock type still sold).
+                    'is_sold_out' => ($available <= 0) || (bool) ($tt->is_sold_out ?? false),
                     'has_seating' => !empty($seatingSections),
                     'seating_sections' => $seatingSections,
                     'seating_rows' => $seatingRows,
@@ -1292,7 +1294,7 @@ class MarketplaceEventsController extends BaseController
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'multiplier' => $tt->multiplier ?? 1,
-                    'status' => $available <= 0 ? 'sold_out' : 'available',
+                    'status' => (($available <= 0) || (bool) ($tt->is_sold_out ?? false)) ? 'sold_out' : 'available',
                     'commission' => $ticketCommission,
                 ];
             });
