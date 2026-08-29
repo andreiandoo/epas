@@ -25,10 +25,15 @@ rezervări de locuri — la rangul de entitate universală de sesiune, și adaug
 lui ce lipsește: un generator de recurență, o matrice de capacitate sesiune × tip de
 bilet, ferestre de validitate pe bilet, și validare temporală la scanare.
 
-Auditul a mai scos la iveală două defecte care trebuie reparate înainte de orice
-funcționalitate nouă, pentru că sunt deja în producție (§12.1): capacitatea pe slot se
-afișează dar **nu se consumă niciodată** la vânzare pe marketplace, iar un organizator **nu se poate
-înrola singur** cu o locație cu program — arhetipul nu există în fluxul self-service.
+Auditul a mai scos la iveală un defect care trebuie reparat înainte de orice
+funcționalitate nouă, pentru că e deja în producție (§12.1): pe marketplace, capacitatea
+pe slot se afișează dar **nu se consumă niciodată** la vânzare.
+
+Onboardingul unui muzeu sau cinema **rămâne deliberat în mâna marketplace-ului** — nu e
+self-service. Ce lipsește nu e un wizard pentru organizator, ci un flux de creare
+decent pentru admin, în afara formularului de 6297 de linii (§12.2). După creare,
+organizatorul își operează singur programul — precedentul există deja și funcționează
+(`updateVenueConfig`).
 
 **Ce lipsește azi, concret:**
 
@@ -43,7 +48,7 @@ afișează dar **nu se consumă niciodată** la vânzare pe marketplace, iar un 
 | Capacitate pe tip de bilet, în cadrul slotului | Nu |
 | Program tot anul / doar o perioadă | Da (`venue_config.seasons`), dar necalificat pe sesiuni |
 | Cinema: săli, filme paralele, hartă/proiecție | Nu — modelul există, dar API-ul de locuri ignoră proiecția |
-| Marketplace înrolează singur un astfel de organizator | **Nu** — arhetipul nu există în wizard; îl creează manual un admin în Filament |
+| Un admin de marketplace poate crea rezonabil o astfel de locație | **Cu greu** — doar prin formularul de 6297 de linii, bifând manual câmpuri ascunse |
 | Capacitatea pe slot chiar se consumă la vânzare | **Nu pe marketplace** — `SlotBookingService::reserve()` nu are niciun apelant (pe tenant, da) |
 
 ---
@@ -732,6 +737,10 @@ Costul real al cinema-ului, odată ce §4–§9 există, e mic: e același siste
 douăzeci de câmpuri condiționale l-ar face nementenabil. Doar un `Select`
 (`scheduling_mode`) și un link, exact ca tiparul de la linia 2148.
 
+Adminul capătă două ecrane noi, distincte ca rol: **crearea** unei locații cu program
+(§12.2 — un wizard, folosit o dată per organizator) și **întreținerea** programului ei
+(§11.1 — folosit constant).
+
 ### 11.1 Pagină nouă: `EventResource/Pages/Sessions.php`
 
 Patru sub-taburi:
@@ -763,19 +772,29 @@ locuri implicită, turnaround, exclusivitate.
 ### 11.3 Panoul organizatorului
 
 Organizatorul nu are Filament — are panoul de la `/organizator`. Primește un ecran
-**Program** cu aceleași capabilități, simplificat, peste
-`Organizer\SessionsController` (aceleași servicii, altă prezentare). Fără asta,
-fiecare schimbare de program trece prin echipa de suport.
+**Program** cu capabilitățile operaționale din §12.3, peste
+`Organizer\SessionsController` (aceleași servicii ca adminul, altă prezentare).
+
+Nu e o funcționalitate nouă ca principiu: `LeisureController::updateVenueConfig()`
+lasă deja organizatorul să-și editeze `seasons` și `closed_dates` fără să treacă prin
+Filament sau prin aprobare. Ecranul de Program continuă exact acel precedent, peste
+noul model. Fără el, fiecare zi închisă ajunge la echipa de suport.
 
 ---
 
 ## 12. Modelul de marketplace — onboardingul unui organizator
 
 Cerința nu e doar tehnică. Un marketplace trebuie să poată **înrola** un organizator
-care vinde astfel de sesiuni, fără ca cineva din echipa lui să intre în Filament.
-Auditul a scos la iveală două defecte care blochează exact asta.
+care vinde astfel de sesiuni și să-l poată deconta ca pe oricare altul.
 
-### 12.1 Două defecte care trebuie reparate întâi
+Două decizii de produs delimitează capitolul:
+
+- **Onboardingul e asistat, nu self-service.** Un muzeu sau un cinema e creat de
+  marketplace, nu de organizator. Operarea de zi cu zi rămâne a organizatorului.
+- **Deconturile funcționează exact ca la leisure azi.** Nicio bază de calcul nouă,
+  niciun câmp nou, niciun comportament nou (§12.6).
+
+### 12.1 Un defect de reparat întâi, și o constatare
 
 **B-1 — Pe marketplace, capacitatea pe slot nu se consumă niciodată.**
 `SlotBookingService::reserve()` și `::release()` **nu au niciun apelant** în tot
@@ -804,69 +823,81 @@ aceluiași lucru.
 > `leisure_slot_bookings` — tabelul e, foarte probabil, gol sau nereprezentativ.
 > Migrarea recalculează `sold` din bilete, nu din el.
 
-**B-2 — Un organizator nu poate crea singur o locație cu program.**
+**C-1 — Crearea trece obligatoriu printr-un admin, și e neplăcută.**
 `Organizer\EventsController::store()` acceptă `duration_mode` doar în
 `single_day, range, multi_day`, nu setează niciodată `display_template` sau
-`venue_config`, și nu are cum să creeze sezoane sau sloturi.
-`Leisure\LeisureController` se activează **doar** pentru evenimente care sunt deja
-`display_template === 'leisure_venue'` (linia 58) — configurează, nu creează.
+`venue_config`. `Leisure\LeisureController` se activează **doar** pentru evenimente
+deja marcate `leisure_venue` (linia 58) — configurează, nu creează.
 
-Adică astăzi drumul e: organizatorul sună marketplace-ul → un admin intră în
-`EventResource.php` (6297 de linii) → bifează manual `leisure_venue` → completează
-`venue_config` → abia apoi organizatorul își vede panoul. **Nu e onboarding, e
-serviciu manual.**
+**Asta nu e un defect: e modelul dorit.** Un muzeu sau un cinema nu se înrolează
+singur; marketplace-ul îl creează, cu contract, comision și verificare de identitate
+în spate. Constatarea reală e alta — drumul actual al adminului trece prin
+`EventResource.php` (6297 de linii), bifând manual câmpuri ascunse în spatele a zeci
+de condiții `display_template === 'leisure_venue'`. Funcționează, dar nu e un flux de
+onboarding; e arheologie.
 
-### 12.2 Al treilea arhetip în wizardul de creare
+Ce lipsește e un ecran de creare dedicat pentru admin (§12.2), nu un wizard pentru
+organizator.
 
-Fluxul self-service capătă o a treia opțiune, lângă „Eveniment cu dată fixă" și
-„Eveniment pe interval":
+### 12.2 Crearea: un ecran de admin, nu un wizard de organizator
 
-**„Locație cu program"** — muzeu, grădină zoologică, aquapark, tur ghidat.
-**„Cinema"** — variantă a aceleiași, cu săli și locuri.
+Marketplace-ul creează locația. Fluxul e asistat, ca la orice organizator care intră
+cu contract negociat — dar trebuie să fie un flux, nu o vânătoare prin 6297 de linii.
 
-Pașii wizardului (`POST /organizator/events` extins, nu un endpoint nou):
+**Ecran dedicat în Filament: „Locație nouă cu program".** Un wizard cu pași, separat
+de `EventResource`, care produce la final un `Event` complet configurat plus regulile
+lui. Pașii:
 
-1. **Identitate** — nume, descriere, categorie, oraș, imagini. Identic cu azi.
-2. **Locația** — `venue_id` existent sau `suggested_venue_name` pentru validare de
-   către admin. La cinema, aici se declară și sălile.
-3. **Programul** — perioada (tot anul / interval), zilele săptămânii, orele de
-   deschidere, dacă se vinde pe intervale orare și la ce interval, capacitatea pe
-   slot. Devine direct un `performance_rule`.
-4. **Biletele** — tipurile, prețurile, cotele opționale per slot.
-5. **Previzualizare** — câte sesiuni se generează, primele 20, prima lună de calendar
-   așa cum o va vedea clientul. Nimeni nu trimite spre aprobare 3000 de sesiuni pe
+1. **Organizatorul** — se alege dintre cei existenți, sau se creează pe loc.
+2. **Identitate** — nume, descriere, categorie, oraș, imagini.
+3. **Locația** — `venue_id`. La cinema, aici se declară și sălile (`venue_halls`).
+4. **Programul** — perioada (tot anul / interval), zilele săptămânii, orele, dacă se
+   vinde pe intervale orare și la ce pas, capacitatea pe slot. Devine un
+   `performance_rule`.
+5. **Biletele** — tipurile, prețurile, cotele opționale per slot, societatea emitentă
+   (`issuing_company`) — contează direct la decont (§12.6).
+6. **Comisionul** — rata și modul, ca la orice eveniment de marketplace.
+7. **Previzualizare** — câte sesiuni se generează, primele 20, și prima lună de
+   calendar așa cum o va vedea clientul. Nimeni nu publică 3000 de sesiuni pe
    încredere.
-6. **Trimite spre aprobare** — porțile existente rămân neschimbate: cont aprobat
-   (`isActive()`), contract semnat electronic (`isContractSignatureRequired()`).
 
-Validarea `duration_mode` se extinde cu `sessions`; `scheduling_mode` se setează din
-arhetip. Regulile, excepțiile și tipurile de bilet se creează în aceeași tranzacție.
+Fiind creat de admin, evenimentul se poate publica direct — nu trece prin
+`submitted_at` / aprobare. Porțile de organizator (cont activ, contract semnat) rămân
+verificate, dar ca precondiții afișate în wizard, nu ca blocaje asincrone.
 
-### 12.3 Aprobarea: ce se revizuiește și ce nu
+**Cinema:** același ecran, cu `sessions-seated` activ. Un film nou într-un cinematograf
+deja configurat nu reia wizardul — e „Adaugă film" peste sălile existente, cu grila de
+proiecții.
 
-Aici e decizia care face sau strică produsul.
+### 12.3 Operarea: organizatorul își conduce singur programul
 
-Azi, orice modificare pe un eveniment **publicat** intră în `pending_changes` și
-așteaptă un admin (`Organizer\EventsController:353`). Pentru un eveniment cu o
-singură dată, e corect. Pentru un muzeu deschis tot anul care își schimbă programul
-săptămânal, e blocant: fiecare zi închisă de Crăciun ar aștepta aprobare.
+Onboardingul e asistat; **operarea nu are cum să fie**. Un muzeu care trebuie să sune
+marketplace-ul ca să închidă ziua de Crăciun nu e un produs.
 
-**Decizia D-9 — două suprafețe de aprobare distincte.**
+Precedentul există deja și funcționează:
+`Leisure\LeisureController::updateVenueConfig()` (linia 362) lasă organizatorul să
+editeze `seasons`, `closed_dates` și `pricing_rules` direct, printr-un endpoint
+dedicat, **fără să treacă prin `pending_changes`**. Comentariul din cod o spune
+explicit: „Organizatorul rezervației poate modifica fără să intre în Filament admin".
 
-| Se revizuiește (intră în `pending_changes`) | Nu se revizuiește (operațional, live) |
+**Decizia D-9 — două suprafețe, formalizarea unui precedent.**
+
+Nu inventăm o excepție nouă; extindem regula care e deja în producție.
+
+| Se revizuiește (`pending_changes`) | Operațional — organizatorul, live |
 |---|---|
 | Nume, descriere, imagini, categorie | Zile închise și excepții de program |
 | Locație și săli | Capacitatea unei sesiuni sau a unui slot |
 | Tipurile de bilet și **prețurile** | Anularea unei sesiuni individuale |
-| Termenii biletului | Extinderea orizontului de generare |
-| Trecerea de la un arhetip la altul | Deschiderea/închiderea vânzărilor pe o sesiune |
+| Comisionul și societatea emitentă | Extinderea orizontului de generare |
+| Termenii biletului | Deschiderea/închiderea vânzărilor pe o sesiune |
 
-Regula: **ce e comercial se aprobă, ce e operațional nu.** Prețul rămâne pe partea
-comercială, inclusiv un `price_cents` de sesiune — altfel un organizator ar putea
-ocoli aprobarea de preț prin suprascrieri de sesiune.
+Regula: **ce e comercial se aprobă, ce e operațional nu.** Prețul rămâne comercial,
+inclusiv un `price_cents` de sesiune — altfel aprobarea de preț s-ar putea ocoli prin
+suprascrieri.
 
-Se implementează ca o listă albă explicită de câmpuri operaționale în serviciul de
-`pending_changes`, nu ca o excepție împrăștiată prin controlere.
+Se implementează ca o listă albă explicită de câmpuri operaționale, în același loc cu
+`updateVenueConfig`, nu ca excepții împrăștiate prin controlere.
 
 ### 12.4 Activarea funcționalității (microservicii)
 
@@ -880,8 +911,9 @@ Se adaugă două:
 - **`sessions-scheduling`** — calendar, sloturi, reguli, capacitate. Muzee, tururi.
 - **`sessions-seated`** — săli, hărți per sesiune, cinema. Depinde de prima.
 
-Gating în trei locuri, toate obligatorii: arhetipul apare în wizardul organizatorului;
-paginile de admin sunt vizibile; API-ul public răspunde. Un gate doar în UI nu e gate.
+Gating în trei locuri, toate obligatorii: ecranul de creare acceptă arhetipul; paginile
+de program (admin și organizator) sunt vizibile; API-ul public răspunde. Un gate doar
+în UI nu e gate.
 
 **Un gol de acoperit:** gating-ul e azi **per marketplace client**, nu per organizator.
 Un marketplace care vrea să dea sesiuni doar unor organizatori are nevoie de un pivot
@@ -890,42 +922,52 @@ altfel activarea e totul-sau-nimic pe tot marketplace-ul.
 
 ### 12.5 Comisionul
 
-`Event::getEffectiveCommissionMode()` / `getEffectiveCommissionRate()` cascadează
-eveniment → organizator → tenant, iar `TicketType` are propriile suprascrieri
-(`commission_type`, `commission_rate`, `commission_fixed`, `commission_mode`).
+`SalesBreakdownService` — sursa de adevăr pentru bani — citește **prețul efectiv
+plătit per bilet** (`tickets.price`), nu prețul din catalogul tipului de bilet.
+Comentariul din serviciu o spune explicit: reducerile de perioadă se reflectă pentru
+că se citește ce s-a plătit, nu ce scria în catalog.
 
-Sesiunile introduc un al treilea nivel de preț: `performance_ticket_type_quotas.price_cents`.
-**Comisionul trebuie calculat pe prețul efectiv încasat**, nu pe prețul de bază al
-tipului de bilet. Riscul e concret: un muzeu cu suprataxă de weekend (+20%) ar plăti
-comision pe prețul de zi lucrătoare.
+Cascada de comision e deja completă:
+`event.commission_rate → organizer → tenant → marketplace client`, cu modul
+`event.commission_mode → organizer.default_commission_mode → client`, plus pragul
+opțional al organizatorului (`commission_use_floor` + `fixed_commission_default`).
 
-Aceeași problemă există deja azi prin `venue_config.pricing_rules` — se rezolvă o
-singură dată, pentru ambele, în F3: cascada de preț devine
-`quota override → pricing rules → preț de bază`, cu un singur punct de rezolvare
-(`SessionPriceResolver`), iar comisionul citește de acolo.
+**Deci sesiunile nu cer nicio schimbare aici** — cu o singură condiție, care devine
+cerință de acceptanță în F3/F4:
 
-### 12.6 Deconturile: pe ce dată se plătește organizatorul
+> Prețul efectiv al sesiunii (suprascrierea din `performance_ticket_type_quotas`,
+> peste `pricing_rules`, peste prețul de bază) trebuie să ajungă în `tickets.price`
+> la emitere. Dacă ajunge acolo, comisionul, breakdown-ul de vânzări și decontul sunt
+> corecte prin construcție.
 
-`LeisureSocietyDecontService` grupează pe `paid_at` — data încasării. Corect pentru un
-concert vândut cu două săptămâni înainte. **Nu la fel de evident pentru un muzeu**,
-unde un bilet cumpărat în decembrie e pentru o vizită în iulie.
+Un singur punct de rezolvare a prețului — `SessionPriceResolver`, cu cascada
+`suprascriere de sesiune → pricing rules → preț de bază` — folosit identic de coș,
+checkout și POS. Nu trei implementări care pot devia.
 
-Două baze legitime:
+### 12.6 Deconturile: identice cu leisure, fără excepții
 
-- **La încasare** (`paid_at`) — cea de azi. Organizatorul primește banii când intră.
-- **La prestare** (`visit_date`) — organizatorul primește banii după ce serviciul a
-  fost livrat.
+**Decizia D-10.** Decontul unei locații cu sesiuni funcționează **exact** ca decontul
+unui leisure venue azi. Nicio bază de calcul nouă, niciun câmp nou, niciun
+comportament nou. Concret, pipeline-ul care rămâne neatins:
 
-**Recomandare:** păstrăm `paid_at` ca implicit — zero schimbare pentru organizatorii
-existenți — și adăugăm `marketplace_organizers.payout_basis` (`paid` | `delivered`),
-opt-in, pentru locațiile cu vânzare în avans mare. Rapoartele expun **ambele** cifre
-indiferent de bază, ca discuția cu organizatorul să se poată purta pe date.
+| Element | Comportament, neschimbat |
+|---|---|
+| Sursa cifrelor | `SalesBreakdownService::build()` — preț real plătit per bilet |
+| Data de grupare | `paid_at` — data încasării, nu data vizitei |
+| Vânzările POS | Excluse (`excludePos: true`), facturate separat |
+| Împărțirea pe societăți | Pe `issuing_company` de pe tipul de bilet (`primary` / `secondary`) |
+| Idempotența | Cel mult un decont activ per (eveniment, societate, `period_start`) |
+| Rambursările | **Nu** se scad automat; operatorul le leagă ulterior pe pagina decontului |
+| Rezultatul | `MarketplacePayout` cu status `approved`, serie auto, PDF din `MarketplaceTaxTemplate` (`decont_inclus` / `decont_ontop`) |
 
-> **De decis de proprietarul marketplace-ului, nu de noi.** E politică de bani, nu
-> alegere tehnică. Cu implicație de risc: dacă un muzeu e plătit în decembrie pentru
-> bilete de iulie și apoi se închide, marketplace-ul datorează rambursări pe care nu
-> le mai poate recupera. Un procent reținut (rolling reserve) pe vânzările în avans e
-> mecanismul standard — merită pus pe masă chiar dacă nu se implementează acum.
+**Ce trebuie construit pentru decont: nimic.** Condiția e cea din §12.5 — biletul să
+poarte prețul efectiv. `LeisureSocietyDecontService` filtrează pe
+`isLeisureVenue()`; se extinde condiția ca să prindă și `scheduling_mode === 'sessions'`,
+și atât. O linie, nu un flux nou.
+
+> Expunerea la vânzarea în avans (bani încasați în decembrie pentru o vizită în
+> iulie) rămâne **exact cum e azi** pentru orice leisure venue. Nu se schimbă în
+> niciun sens prin această lucrare.
 
 ### 12.7 Rambursările trebuie să elibereze capacitatea
 
@@ -1111,13 +1153,16 @@ poartă.
 afișat; suprascrierea funcționează și se jurnalizează; testele offline din
 `offline.test.ts` acoperă ceasul nesigur.
 
-### F6 — Onboarding + admin
-Al treilea arhetip în wizardul organizatorului (§12.2), pagina `Sessions` în Filament
-(§11), sălile pe `VenueResource`, separarea suprafețelor de aprobare (§12.3),
-permisiunea `schedule.manage` (§12.8).
-**Gata când:** un organizator nou creează singur, fără intervenția unui admin, o
-locație cu program de vară și de iarnă, o trimite spre aprobare, și după aprobare își
-poate închide o zi fără să reintre în revizuire.
+### F6 — Creare (admin) + operare (organizator)
+Ecranul dedicat de creare în Filament (§12.2), pagina `Sessions` (§11), sălile pe
+`VenueResource`, ecranul de program din panoul organizatorului peste precedentul
+`updateVenueConfig`, separarea suprafețelor de aprobare (§12.3), permisiunea
+`schedule.manage` (§12.8). Condiția `isLeisureVenue()` din
+`LeisureSocietyDecontService` extinsă la `scheduling_mode === 'sessions'` (§12.6).
+**Gata când:** un admin creează o locație cu program de vară și de iarnă dintr-un
+singur ecran, cu previzualizare înainte de publicare; iar organizatorul își închide
+apoi o zi din panoul lui, fără ca acțiunea să intre în `pending_changes`. Un decont
+generat pe locația nouă produce aceleași cifre ca pe un leisure venue echivalent.
 
 ### F7 — Interfața publică
 Zi → slot → bilete, hold cu numărătoare inversă, deep-link, cardurile și SEO pentru
@@ -1131,10 +1176,9 @@ program, cutoff.
 **Gata când:** două filme rulează în paralel în două săli, fiecare cu propria hartă,
 iar locul 12 din Sala 1 la 19:00 rămâne liber pentru proiecția de la 21:30.
 
-### F9 — Migrare, deconturi și curățare
+### F9 — Migrare și curățare
 `sessions:migrate-leisure`, ramura `sessions` în `MarketplaceTaxTemplate` (§12.12),
-`payout_basis` dacă proprietarul marketplace-ului îl cere (§12.6), retragerea
-`SlotBookingService` și a `meta.slots_config`.
+retragerea `SlotBookingService` și a `meta.slots_config`.
 **Gata când:** niciun organizator nu mai citește din calea veche și codul mort e
 șters.
 
@@ -1157,8 +1201,11 @@ va fi cerută dezactivată de personalul de la poartă.
 **Aprobarea care blochează operarea.** Dacă separarea din §12.3 nu se face corect, un
 muzeu va aștepta un admin ca să-și închidă ziua de Crăciun. Se testează explicit în F6.
 
-**Plata în avans fără prestare (§12.6).** Risc financiar pentru marketplace, nu
-tehnic. Decizia aparține proprietarului; planul o expune, nu o ia.
+**Prețul care nu ajunge pe bilet.** Dacă suprascrierea de preț a sesiunii nu aterizează
+în `tickets.price`, comisionul și decontul ies greșite — tăcut, pentru că
+`SalesBreakdownService` va citi liniștit o valoare plauzibilă dar veche. E singura cale
+prin care sesiunile pot strica banii; de aceea e cerință de acceptanță în F3, nu doar
+un test.
 
 **Regenerarea peste sesiuni vândute.** `is_manually_edited` + refuzul ștergerii când
 `capacity_sold > 0`. Regenerarea *nu* șterge; marchează ca `orphaned` sesiunile pe
@@ -1185,9 +1232,11 @@ redenumirii (20+ fișiere, patru chei străine, frontend) nu se justifică.
   hold + expirare + hold; rambursare în timpul unui checkout.
 - **Integrare:** flux complet zi → slot → bilete → plată → bilet cu fereastră →
   scanare validă → scanare duplicat → scanare în afara ferestrei.
-- **Onboarding:** un organizator creează o locație cu program, o trimite spre
-  aprobare, îi este aprobată, apoi închide o zi — fără ca ultima acțiune să reintre în
+- **Onboarding:** un admin creează o locație cu program din ecranul dedicat; apoi
+  organizatorul închide o zi din panoul lui, fără ca acțiunea să intre în
   `pending_changes`.
+- **Bani:** un bilet cumpărat cu preț de sesiune suprascris produce, în
+  `SalesBreakdownService` și în decont, exact suma încasată — nu prețul de catalog.
 - **Fus orar:** emitere și scanare peste ziua schimbării orei.
 - **Offline:** `offline.test.ts` extins cu ferestre și ceas nesigur.
 
