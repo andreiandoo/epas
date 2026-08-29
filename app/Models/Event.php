@@ -371,18 +371,10 @@ class Event extends Model
             }
         });
 
-        // When an event is marked Sold Out, cascade the flag to EVERY ticket
-        // type so no channel can still sell (checkout enforces
-        // ticket_types.is_sold_out, and this also covers mobile/POS which
-        // otherwise compute availability purely from quota). Propagates only the
-        // TRUE transition — un-marking the event leaves per-type flags to the
-        // operator. Bulk update on purpose: it must not re-fire the event's own
-        // save hooks.
-        static::saved(function ($event) {
-            if ($event->wasChanged('is_sold_out') && $event->is_sold_out) {
-                $event->ticketTypes()->update(['is_sold_out' => true]);
-            }
-        });
+        // NOTE: the event-level "Sold Out" → ticket types cascade runs in
+        // EditEvent::afterSave (marketplace panel), because the ticket-type
+        // repeater is persisted there AFTER the event save and would otherwise
+        // overwrite a model-level cascade. See EditEvent::afterSave.
 
         // Defensive: events.slug is NOT NULL, but historical rows may have null slug
         // and the Filament form lets users blank the field. Derive from title or id.

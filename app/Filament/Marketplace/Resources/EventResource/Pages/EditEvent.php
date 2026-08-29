@@ -40,6 +40,9 @@ class EditEvent extends EditRecord
      */
     public bool $loadTickets = false;
 
+    /** Event's is_sold_out before the current save (for the ticket-type cascade in afterSave). */
+    protected ?bool $soldOutBefore = null;
+
     /**
      * Allow editing child events even though they're filtered from the list query.
      */
@@ -2086,6 +2089,37 @@ class EditEvent extends EditRecord
         if (($record->is_general_featured || $record->is_category_featured) && !$record->featured_image && $record->hero_image_url) {
             $record->updateQuietly(['featured_image' => $record->hero_image_url]);
         }
+
+        // Event-level "Sold Out" → ticket types cascade. Runs LAST, after the
+        // ticket-type repeater has been persisted above, so it is authoritative
+        // (a model-level hook would be overwritten by that persist).
+        //   ON  : mark every not-yet-sold-out type as sold out, tagging those we
+        //         turned on (sold_out_by_event=true). Types already sold out
+        //         individually keep the tag false.
+        //   OFF : clear only the cascade-tagged types; individually sold-out
+        //         types stay sold out.
+        if ($this->soldOutBefore !== null) {
+            $now = (bool) $record->is_sold_out;
+            if ($now !== $this->soldOutBefore) {
+                if ($now) {
+                    $record->ticketTypes()
+                        ->where('is_sold_out', false)
+                        ->update(['is_sold_out' => true, 'sold_out_by_event' => true]);
+                } else {
+                    $record->ticketTypes()
+                        ->where('sold_out_by_event', true)
+                        ->update(['is_sold_out' => false, 'sold_out_by_event' => false]);
+                }
+            }
+        }
+    }
+
+    /** Captures the event's Sold Out state before the save, for the cascade in afterSave(). */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $this->soldOutBefore = (bool) ($this->record->is_sold_out ?? false);
+
+        return $data;
     }
 
     // ========================================================================

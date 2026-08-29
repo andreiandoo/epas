@@ -59,6 +59,9 @@ class TicketType extends Model
         'is_subscription',
         // Manual "sold out" flag (interface + checkout gating only; stock untouched)
         'is_sold_out',
+        // Whether is_sold_out was set by the event-level Sold Out cascade (vs. set
+        // individually). Un-marking the event only clears the cascade-set ones.
+        'sold_out_by_event',
         // Multiplier for quantity increment/decrement step
         'multiplier',
         // Series fields for ticket numbering
@@ -122,6 +125,7 @@ class TicketType extends Model
         'is_declarable' => 'boolean',
         'is_subscription' => 'boolean',
         'is_sold_out' => 'boolean',
+        'sold_out_by_event' => 'boolean',
         'is_parking' => 'boolean',
         'requires_vehicle_info' => 'boolean',
         'is_independent_stock' => 'boolean',
