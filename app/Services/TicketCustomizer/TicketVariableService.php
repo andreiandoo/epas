@@ -1078,17 +1078,27 @@ class TicketVariableService
             ],
             'barcode' => $ticket->barcode ?? $ticket->code ?? '',
             'qrcode' => $ticket->code ?? $ticket->barcode ?? '',
-            'organizer' => [
-                'name' => $organizer?->name ?? '',
-                'company_name' => $organizer?->company_name ?? '',
-                'tax_id' => $organizer?->company_tax_id ?? '',
-                'company_address' => $organizer?->company_address ?? '',
-                'city' => $organizer?->company_city ?? '',
-                'website' => $organizer?->website ?? '',
-                'phone' => $organizer?->phone ?? '',
-                'email' => $organizer?->email ?? '',
-                'ticket_terms' => $organizer?->ticket_terms ?? '',
-            ],
+            // Resolve the legal identity through getIssuerData() so that a
+            // "persoana fizica" organizer (person_type='pf') renders its
+            // individual_* data (full name / CNP / personal address / city)
+            // instead of the empty company_* columns. For a company organizer
+            // this returns the same company_name / company_tax_id / … as before,
+            // so existing templates are unchanged.
+            'organizer' => (function () use ($organizer) {
+                $issuer = $organizer ? $organizer->getIssuerData() : [];
+
+                return [
+                    'name' => $organizer?->name ?? ($issuer['name'] ?? ''),
+                    'company_name' => $issuer['name'] ?? ($organizer?->company_name ?? ''),
+                    'tax_id' => $issuer['tax_id'] ?? ($organizer?->company_tax_id ?? ''),
+                    'company_address' => $issuer['address'] ?? ($organizer?->company_address ?? ''),
+                    'city' => $issuer['city'] ?? ($organizer?->company_city ?? ''),
+                    'website' => $organizer?->website ?? '',
+                    'phone' => $organizer?->phone ?? '',
+                    'email' => $organizer?->email ?? '',
+                    'ticket_terms' => $organizer?->ticket_terms ?? '',
+                ];
+            })(),
             'legal' => [
                 'terms' => $organizer?->ticket_terms
                     ?? ($event ? ($this->localizedAttr($event, 'ticket_terms', $effectiveLocale) ?? '') : ''),
