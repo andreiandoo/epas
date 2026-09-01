@@ -1191,17 +1191,30 @@ class InvitationsController extends BaseController
                 $phone = $orgGet($organizer, 'phone');
                 $email = $orgGet($organizer, 'email', 'billing_email');
                 $taxId = $isPf ? '' : ($issuer['tax_id'] ?? $orgGet($organizer, 'company_tax_id', 'tax_id', 'cui'));
+                $address = $issuer['address'] ?? $orgGet($organizer, 'company_address', 'address');
+                $city = $issuer['city'] ?? $orgGet($organizer, 'company_city', 'city');
                 $contact = implode(' · ', array_values(array_filter([$phone, $email])));
                 $taxLine = (!$isPf && $taxId !== '') ? ('CUI: ' . $taxId) : '';
+
+                if ($isPf) {
+                    $identity = $contact;
+                } else {
+                    $addressCity = implode(', ', array_values(array_filter([$address, $city])));
+                    $identity = implode(' / ', array_values(array_filter([
+                        $taxId !== '' ? 'CUI: ' . $taxId : '',
+                        $addressCity !== '' ? 'sediu: ' . $addressCity : '',
+                    ])));
+                }
 
                 return [
                     'name' => $organizer?->name ?? ($issuer['name'] ?? ''),
                     'company_name' => $issuer['name'] ?? $orgGet($organizer, 'company_name'),
                     'tax_id' => $taxId,
                     'tax_line' => $taxLine,
+                    'identity' => $identity,
                     'contact' => $contact,
-                    'company_address' => $issuer['address'] ?? $orgGet($organizer, 'company_address', 'address'),
-                    'city' => $issuer['city'] ?? $orgGet($organizer, 'company_city', 'city'),
+                    'company_address' => $address,
+                    'city' => $city,
                     'website' => $orgGet($organizer, 'website'),
                     'phone' => $phone,
                     'email' => $email,

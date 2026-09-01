@@ -515,6 +515,13 @@ class TicketVariableService
                         'example' => 'RO12345678',
                     ],
                     [
+                        'path' => 'organizer.identity',
+                        'label' => 'Bloc identificare (adaptiv complet)',
+                        'description' => 'O SINGURĂ variabilă cu tot blocul auto-etichetat: PJ → "CUI: … / sediu: adresă, oraș"; PF → contact (telefon · email), fără CNP și fără adresă. Pune-o singură în casetă, fără text "CUI"/"sediu" adăugat manual.',
+                        'type' => 'string',
+                        'example' => 'CUI: RO12345678 / sediu: Strada Victoriei 25, București',
+                    ],
+                    [
                         'path' => 'organizer.tax_line',
                         'label' => 'Linie CUI (doar PJ)',
                         'description' => 'Linie auto-etichetată "CUI: …" pentru persoană juridică; GOALĂ pentru persoană fizică (fără CNP). Pune-o FĂRĂ un text "CUI" manual în față — pentru PF dispare complet.',
@@ -699,6 +706,7 @@ class TicketVariableService
                 'company_name' => 'Live Nation Entertainment SRL',
                 'tax_id' => 'RO12345678',
                 'tax_line' => 'CUI: RO12345678',
+                'identity' => 'CUI: RO12345678 / sediu: Strada Victoriei 25, Sector 1, București',
                 'contact' => '+40 123 456 789 · contact@eventpilot.ro',
                 'company_address' => 'Strada Victoriei 25, Sector 1',
                 'city' => 'București',
@@ -1117,20 +1125,38 @@ class TicketVariableService
                 // renders "CUI: … / phone · email" for PJ and just
                 // "phone · email" for PF.
                 $taxId = $isPf ? '' : ($issuer['tax_id'] ?? ($organizer?->company_tax_id ?? ''));
+                $address = $issuer['address'] ?? ($organizer?->company_address ?? '');
+                $city = $issuer['city'] ?? ($organizer?->company_city ?? '');
                 $contact = implode(' · ', array_values(array_filter([$phone, $email])));
                 $taxLine = (!$isPf && $taxId !== '') ? ('CUI: ' . $taxId) : '';
+
+                // Fully composed, self-labeled identity block — the ONE variable
+                // to drop into a text box so the whole line adapts by type:
+                //   - PJ: "CUI: RO12345678 / sediu: Str. Victoriei 25, București"
+                //   - PF: "0722 123 456 · contact@org.ro"  (no CNP, no address)
+                // Empty parts are skipped so no dangling labels/commas remain.
+                if ($isPf) {
+                    $identity = $contact;
+                } else {
+                    $addressCity = implode(', ', array_values(array_filter([$address, $city])));
+                    $identityParts = array_values(array_filter([
+                        $taxId !== '' ? 'CUI: ' . $taxId : '',
+                        $addressCity !== '' ? 'sediu: ' . $addressCity : '',
+                    ]));
+                    $identity = implode(' / ', $identityParts);
+                }
 
                 return [
                     'name' => $organizer?->name ?? ($issuer['name'] ?? ''),
                     'company_name' => $issuer['name'] ?? ($organizer?->company_name ?? ''),
                     'tax_id' => $taxId,
-                    // Self-labeled identity line — drop-in replacement for a
-                    // hardcoded "CUI: {{organizer.tax_id}}" line (use WITHOUT a
-                    // literal "CUI" prefix). Empty tax_id/contact => empty line.
+                    // Self-labeled fiscal line — "CUI: …" for PJ, EMPTY for PF.
                     'tax_line' => $taxLine,
+                    // Full adaptive identity line (CUI + sediu for PJ, contact for PF).
+                    'identity' => $identity,
                     'contact' => $contact,
-                    'company_address' => $issuer['address'] ?? ($organizer?->company_address ?? ''),
-                    'city' => $issuer['city'] ?? ($organizer?->company_city ?? ''),
+                    'company_address' => $address,
+                    'city' => $city,
                     'website' => $organizer?->website ?? '',
                     'phone' => $phone,
                     'email' => $email,
