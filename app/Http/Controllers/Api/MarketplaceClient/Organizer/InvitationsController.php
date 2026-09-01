@@ -1180,17 +1180,34 @@ class InvitationsController extends BaseController
             ],
             'barcode' => $invite->invite_code,
             'qrcode' => $ctx['qrData'] ?? url('/verify/' . $invite->invite_code),
-            'organizer' => [
-                'name' => $organizer?->name ?? '',
-                'company_name' => $orgGet($organizer, 'company_name'),
-                'tax_id' => $orgGet($organizer, 'company_tax_id', 'tax_id', 'cui'),
-                'company_address' => $orgGet($organizer, 'company_address', 'address'),
-                'city' => $orgGet($organizer, 'company_city', 'city'),
-                'website' => $orgGet($organizer, 'website'),
-                'phone' => $orgGet($organizer, 'phone'),
-                'email' => $orgGet($organizer, 'email', 'billing_email'),
-                'ticket_terms' => $orgGet($organizer, 'ticket_terms'),
-            ],
+            // Resolve organizer identity through getIssuerData() so a persoana
+            // fizica organizer renders its individual_* data — and NEVER its CNP
+            // (tax_id blanked for PF; tax_line carries contact instead). Mirrors
+            // TicketVariableService::resolveTicketData so invitations and real
+            // tickets stay consistent.
+            'organizer' => (function () use ($organizer, $orgGet) {
+                $issuer = $organizer ? $organizer->getIssuerData() : [];
+                $isPf = ($organizer?->person_type ?? null) === 'pf';
+                $phone = $orgGet($organizer, 'phone');
+                $email = $orgGet($organizer, 'email', 'billing_email');
+                $taxId = $isPf ? '' : ($issuer['tax_id'] ?? $orgGet($organizer, 'company_tax_id', 'tax_id', 'cui'));
+                $contact = implode(' · ', array_values(array_filter([$phone, $email])));
+                $taxLine = $isPf ? $contact : ($taxId !== '' ? ('CUI: ' . $taxId) : '');
+
+                return [
+                    'name' => $organizer?->name ?? ($issuer['name'] ?? ''),
+                    'company_name' => $issuer['name'] ?? $orgGet($organizer, 'company_name'),
+                    'tax_id' => $taxId,
+                    'tax_line' => $taxLine,
+                    'contact' => $contact,
+                    'company_address' => $issuer['address'] ?? $orgGet($organizer, 'company_address', 'address'),
+                    'city' => $issuer['city'] ?? $orgGet($organizer, 'company_city', 'city'),
+                    'website' => $orgGet($organizer, 'website'),
+                    'phone' => $phone,
+                    'email' => $email,
+                    'ticket_terms' => $orgGet($organizer, 'ticket_terms'),
+                ];
+            })(),
             'legal' => [
                 'terms' => $orgGet($organizer, 'ticket_terms')
                     ?: (is_array($event->ticket_terms ?? null)

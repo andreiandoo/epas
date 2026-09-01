@@ -510,9 +510,23 @@ class TicketVariableService
                     [
                         'path' => 'organizer.tax_id',
                         'label' => 'CUI / Tax ID',
-                        'description' => 'Company fiscal identification number (CUI)',
+                        'description' => 'Company fiscal code (CUI). Empty for a persoana fizica organizer — the CNP is never printed on tickets.',
                         'type' => 'string',
                         'example' => 'RO12345678',
+                    ],
+                    [
+                        'path' => 'organizer.tax_line',
+                        'label' => 'Linie identificare (adaptivă)',
+                        'description' => 'Linie auto-etichetată: "CUI: …" pentru PJ, telefon/email pentru persoană fizică (fără CNP). Folosește-o FĂRĂ un text "CUI" pus manual în față.',
+                        'type' => 'string',
+                        'example' => 'CUI: RO12345678',
+                    ],
+                    [
+                        'path' => 'organizer.contact',
+                        'label' => 'Contact (telefon · email)',
+                        'description' => 'Telefon și/sau email al organizatorului, separate prin " · ".',
+                        'type' => 'string',
+                        'example' => '0722 123 456 · contact@org.ro',
                     ],
                     [
                         'path' => 'organizer.company_address',
@@ -684,6 +698,8 @@ class TicketVariableService
                 'name' => 'Live Nation Romania',
                 'company_name' => 'Live Nation Entertainment SRL',
                 'tax_id' => 'RO12345678',
+                'tax_line' => 'CUI: RO12345678',
+                'contact' => '+40 123 456 789 · contact@eventpilot.ro',
                 'company_address' => 'Strada Victoriei 25, Sector 1',
                 'city' => 'București',
                 'website' => 'https://eventpilot.ro',
@@ -1086,16 +1102,36 @@ class TicketVariableService
             // so existing templates are unchanged.
             'organizer' => (function () use ($organizer) {
                 $issuer = $organizer ? $organizer->getIssuerData() : [];
+                $isPf = ($organizer?->person_type ?? null) === 'pf';
+                $phone = $organizer?->phone ?? '';
+                $email = $organizer?->email ?? '';
+
+                // A "persoana fizica" organizer must NEVER print its CNP on a
+                // ticket (sensitive personal data / GDPR). tax_id is blanked
+                // for PF; the adaptive tax_line carries contact info instead of
+                // a fiscal code, so a single template layout works for both:
+                //   - PJ (company): "CUI: RO12345678"
+                //   - PF (individual): "0722 123 456 · contact@org.ro"
+                $taxId = $isPf ? '' : ($issuer['tax_id'] ?? ($organizer?->company_tax_id ?? ''));
+                $contact = implode(' · ', array_values(array_filter([$phone, $email])));
+                $taxLine = $isPf
+                    ? $contact
+                    : ($taxId !== '' ? ('CUI: ' . $taxId) : '');
 
                 return [
                     'name' => $organizer?->name ?? ($issuer['name'] ?? ''),
                     'company_name' => $issuer['name'] ?? ($organizer?->company_name ?? ''),
-                    'tax_id' => $issuer['tax_id'] ?? ($organizer?->company_tax_id ?? ''),
+                    'tax_id' => $taxId,
+                    // Self-labeled identity line — drop-in replacement for a
+                    // hardcoded "CUI: {{organizer.tax_id}}" line (use WITHOUT a
+                    // literal "CUI" prefix). Empty tax_id/contact => empty line.
+                    'tax_line' => $taxLine,
+                    'contact' => $contact,
                     'company_address' => $issuer['address'] ?? ($organizer?->company_address ?? ''),
                     'city' => $issuer['city'] ?? ($organizer?->company_city ?? ''),
                     'website' => $organizer?->website ?? '',
-                    'phone' => $organizer?->phone ?? '',
-                    'email' => $organizer?->email ?? '',
+                    'phone' => $phone,
+                    'email' => $email,
                     'ticket_terms' => $organizer?->ticket_terms ?? '',
                 ];
             })(),
