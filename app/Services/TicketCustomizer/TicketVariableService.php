@@ -516,15 +516,15 @@ class TicketVariableService
                     ],
                     [
                         'path' => 'organizer.tax_line',
-                        'label' => 'Linie identificare (adaptivă)',
-                        'description' => 'Linie auto-etichetată: "CUI: …" pentru PJ, telefon/email pentru persoană fizică (fără CNP). Folosește-o FĂRĂ un text "CUI" pus manual în față.',
+                        'label' => 'Linie CUI (doar PJ)',
+                        'description' => 'Linie auto-etichetată "CUI: …" pentru persoană juridică; GOALĂ pentru persoană fizică (fără CNP). Pune-o FĂRĂ un text "CUI" manual în față — pentru PF dispare complet.',
                         'type' => 'string',
                         'example' => 'CUI: RO12345678',
                     ],
                     [
                         'path' => 'organizer.contact',
                         'label' => 'Contact (telefon · email)',
-                        'description' => 'Telefon și/sau email al organizatorului, separate prin " · ".',
+                        'description' => 'Telefon și/sau email al organizatorului, separate prin " · ". Identic pentru PJ și PF — o singură variabilă pentru ambele.',
                         'type' => 'string',
                         'example' => '0722 123 456 · contact@org.ro',
                     ],
@@ -1107,16 +1107,18 @@ class TicketVariableService
                 $email = $organizer?->email ?? '';
 
                 // A "persoana fizica" organizer must NEVER print its CNP on a
-                // ticket (sensitive personal data / GDPR). tax_id is blanked
-                // for PF; the adaptive tax_line carries contact info instead of
-                // a fiscal code, so a single template layout works for both:
-                //   - PJ (company): "CUI: RO12345678"
-                //   - PF (individual): "0722 123 456 · contact@org.ro"
+                // ticket (sensitive personal data / GDPR). Design for a single
+                // template that serves both organizer types:
+                //   - tax_id  : fiscal code for PJ, EMPTY for PF (no CNP).
+                //   - tax_line: self-labeled fiscal line — "CUI: RO12345678"
+                //               for PJ, EMPTY for PF (collapses, no leftover).
+                //   - contact : phone · email, IDENTICAL for both types.
+                // So a layout of {{organizer.tax_line}} + {{organizer.contact}}
+                // renders "CUI: … / phone · email" for PJ and just
+                // "phone · email" for PF.
                 $taxId = $isPf ? '' : ($issuer['tax_id'] ?? ($organizer?->company_tax_id ?? ''));
                 $contact = implode(' · ', array_values(array_filter([$phone, $email])));
-                $taxLine = $isPf
-                    ? $contact
-                    : ($taxId !== '' ? ('CUI: ' . $taxId) : '');
+                $taxLine = (!$isPf && $taxId !== '') ? ('CUI: ' . $taxId) : '';
 
                 return [
                     'name' => $organizer?->name ?? ($issuer['name'] ?? ''),

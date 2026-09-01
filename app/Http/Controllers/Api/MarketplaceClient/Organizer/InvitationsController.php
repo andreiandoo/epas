@@ -1192,7 +1192,7 @@ class InvitationsController extends BaseController
                 $email = $orgGet($organizer, 'email', 'billing_email');
                 $taxId = $isPf ? '' : ($issuer['tax_id'] ?? $orgGet($organizer, 'company_tax_id', 'tax_id', 'cui'));
                 $contact = implode(' · ', array_values(array_filter([$phone, $email])));
-                $taxLine = $isPf ? $contact : ($taxId !== '' ? ('CUI: ' . $taxId) : '');
+                $taxLine = (!$isPf && $taxId !== '') ? ('CUI: ' . $taxId) : '';
 
                 return [
                     'name' => $organizer?->name ?? ($issuer['name'] ?? ''),
