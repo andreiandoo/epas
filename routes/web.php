@@ -106,6 +106,14 @@ Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
         'loginAs',
     ])->name('marketplace.organizers.login-as');
 
+    // Login-as-artist: 30-min Sanctum token + redirect to the marketplace's
+    // artist portal with ?_admin_artist_token=… (head.php inline handler picks
+    // it up). Used by the ArtistAccountResource "Login As" action.
+    Route::get('/marketplace/artist-accounts/{artistAccountId}/login-as', [
+        \App\Http\Controllers\Marketplace\ArtistImpersonationController::class,
+        'loginAs',
+    ])->name('marketplace.artist-accounts.login-as');
+
     // Print invitations as tiled PDF (N per page) with configurable paper
     // size + bleed. GET without ?paper=... shows the config form; GET with
     // params generates + downloads the PDF. Auth scope enforced against

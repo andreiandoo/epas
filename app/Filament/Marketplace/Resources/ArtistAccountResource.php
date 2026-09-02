@@ -447,7 +447,7 @@ class ArtistAccountResource extends Resource
                                 }),
                         ]),
                 ]),
-            ]),
+            ])->columns(1),
         ]);
     }
 
@@ -792,6 +792,16 @@ class ArtistAccountResource extends Resource
                         ->success()
                         ->send();
                 }),
+
+            // Login As: mint a 30-min Sanctum token for this artist account and
+            // open the marketplace's artist portal as them (new tab). Mirrors the
+            // organizer "Login as Organizer" flow.
+            Action::make('loginAs')
+                ->label('Login As')
+                ->icon('heroicon-o-arrow-right-end-on-rectangle')
+                ->color('info')
+                ->url(fn (MarketplaceArtistAccount $record) => url('/marketplace/artist-accounts/' . $record->id . '/login-as'))
+                ->openUrlInNewTab(),
 
             // Opens the PUBLIC artist page the claim was made on, in a new tab.
             // Replaces the old ViewAction which (on the View page header) just
