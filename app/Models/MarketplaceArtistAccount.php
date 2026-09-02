@@ -191,6 +191,29 @@ class MarketplaceArtistAccount extends Authenticatable
         ]);
     }
 
+    /**
+     * Admin override: mark the email as verified without the applicant
+     * clicking the link. Used when the verification email can't reach them
+     * (e.g. soft bounce / mailbox full) but the admin has confirmed identity
+     * another way. Records who/when in `settings` for audit and clears any
+     * pending token so the old link can't be reused.
+     */
+    public function markEmailVerifiedByAdmin(AuthenticatableContract $admin): void
+    {
+        $settings = $this->settings ?? [];
+        $settings['email_verified_by_admin'] = [
+            'admin_id' => $admin->getAuthIdentifier(),
+            'at' => now()->toIso8601String(),
+        ];
+
+        $this->update([
+            'email_verified_at' => now(),
+            'email_verification_token' => null,
+            'email_verification_expires_at' => null,
+            'settings' => $settings,
+        ]);
+    }
+
     public function markSuspended(): void
     {
         $this->update(['status' => 'suspended']);

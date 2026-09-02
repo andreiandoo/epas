@@ -504,6 +504,25 @@ class ArtistAccountResource extends Resource
     protected static function buildRecordActions(): array
     {
         return [
+            Action::make('verifyEmail')
+                ->label('Confirmă email manual')
+                ->icon('heroicon-o-envelope')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Confirmă emailul manual')
+                ->modalDescription('Marchează emailul ca verificat fără ca aplicantul să dea click pe link. Folosește doar când emailul de verificare nu poate ajunge (ex. căsuță plină / soft bounce) și ai confirmat identitatea altfel. Acțiunea e înregistrată pe cont.')
+                ->visible(fn (MarketplaceArtistAccount $record) => !$record->isEmailVerified())
+                ->action(function (MarketplaceArtistAccount $record) {
+                    $admin = Auth::guard('marketplace_admin')->user() ?? Auth::user();
+                    app(ArtistAccountApprovalService::class)->markEmailVerifiedByAdmin($record, $admin);
+
+                    Notification::make()
+                        ->title('Email confirmat manual')
+                        ->body('Emailul a fost marcat ca verificat. Acum poți aproba contul.')
+                        ->success()
+                        ->send();
+                }),
+
             Action::make('approve')
                 ->label('Aprobă')
                 ->icon('heroicon-o-check')

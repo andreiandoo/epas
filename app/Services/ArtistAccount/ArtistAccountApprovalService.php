@@ -55,6 +55,21 @@ class ArtistAccountApprovalService
     }
 
     /**
+     * Admin override for email verification. Lets an admin unblock approval
+     * when the verification email can't reach the applicant (e.g. mailbox
+     * full / soft bounce). Records the acting admin on the account for audit.
+     */
+    public function markEmailVerifiedByAdmin(MarketplaceArtistAccount $account, Authenticatable $admin): void
+    {
+        $account->markEmailVerifiedByAdmin($admin);
+
+        Log::channel('marketplace')->info('Artist account email manually verified by admin', [
+            'artist_account_id' => $account->id,
+            'admin_id' => $admin->getAuthIdentifier(),
+        ]);
+    }
+
+    /**
      * Reject a pending account with a required human-readable reason.
      */
     public function reject(MarketplaceArtistAccount $account, string $reason): void
