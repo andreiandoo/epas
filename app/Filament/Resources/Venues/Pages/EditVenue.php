@@ -29,7 +29,18 @@ class EditVenue extends EditRecord
                 ->icon('heroicon-o-eye')
                 ->url(fn () => static::getResource()::getUrl('view', ['record' => $this->record])),
 
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->before(function (Actions\DeleteAction $action) {
+                    if ($this->record->seatingLayouts()->exists()) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('Ștergere blocată')
+                            ->body('Această locație are o hartă de locuri atașată. Mută mai întâi harta pe altă locație (sau șterge harta explicit), apoi poți șterge locația.')
+                            ->danger()
+                            ->persistent()
+                            ->send();
+                        $action->halt();
+                    }
+                }),
         ];
     }
 }

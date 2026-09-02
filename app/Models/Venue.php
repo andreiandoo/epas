@@ -516,6 +516,22 @@ class Venue extends Model
         });
 
         // nu schimbăm slug-ul la update automat (ca să nu rupem URL-urile).
+
+        // Safety net against accidental data loss: a venue with a seating map
+        // attached can NEVER be deleted (from any channel — admin, tinker,
+        // API). Seating maps are expensive to build and were previously
+        // cascade-deleted with the venue. The map must first be moved to
+        // another venue (or deleted explicitly). The DB foreign key is also
+        // `on delete set null`, so even a forced delete orphans the map
+        // instead of destroying it.
+        static::deleting(function (self $venue) {
+            if ($venue->seatingLayouts()->exists()) {
+                throw new \RuntimeException(
+                    'Nu poți șterge locația „' . $venue->getTranslation('name', 'ro')
+                    . '": are o hartă de locuri atașată. Mută mai întâi harta pe altă locație (sau șterge harta explicit), apoi șterge locația.'
+                );
+            }
+        });
     }
 
     protected static function uniqueSlug(string $base): string

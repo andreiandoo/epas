@@ -454,7 +454,19 @@ class VenueResource extends Resource
             ->bulkActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function (DeleteBulkAction $action, \Illuminate\Support\Collection $records) {
+                            $blocked = $records->filter(fn ($record) => $record->seatingLayouts()->exists());
+                            if ($blocked->isNotEmpty()) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Ștergere blocată')
+                                    ->body($blocked->count() . ' locație(i) au o hartă de locuri atașată și nu pot fi șterse. Mută mai întâi hărțile pe altă locație. Nicio locație nu a fost ștearsă.')
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+                                $action->halt();
+                            }
+                        }),
                 ]),
             ]);
     }
