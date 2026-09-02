@@ -13,7 +13,6 @@ use App\Support\SearchHelper;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -111,6 +110,46 @@ class ArtistAccountResource extends Resource
                                 ->content(fn (?MarketplaceArtistAccount $record) => $record?->isEmailVerified()
                                     ? new \Illuminate\Support\HtmlString('<span style="color:#16a34a;font-weight:600">Da, ' . $record->email_verified_at->translatedFormat('d M Y, H:i') . '</span>')
                                     : new \Illuminate\Support\HtmlString('<span style="color:#dc2626;font-weight:600">Nu</span>')),
+                            Forms\Components\Placeholder::make('verification_email_status')
+                                ->label('Email de verificare trimis')
+                                ->content(function (?MarketplaceArtistAccount $record) {
+                                    if (!$record) {
+                                        return '—';
+                                    }
+                                    $log = DB::table('marketplace_email_logs')
+                                        ->where('marketplace_client_id', $record->marketplace_client_id)
+                                        ->where('to_email', $record->email)
+                                        ->where('template_slug', 'artist_email_verification')
+                                        ->orderByDesc('id')
+                                        ->first();
+                                    if (!$log) {
+                                        return new \Illuminate\Support\HtmlString('<span style="color:#94a3b8">Niciun email de verificare găsit în loguri</span>');
+                                    }
+                                    [$bg, $lbl] = match ($log->status) {
+                                        'sent' => ['#3b82f6', 'Trimis'],
+                                        'delivered' => ['#16a34a', 'Livrat'],
+                                        'opened' => ['#16a34a', 'Deschis'],
+                                        'clicked' => ['#16a34a', 'Click'],
+                                        'bounced' => ['#dc2626', 'Bounced'],
+                                        'failed' => ['#dc2626', 'Eșuat'],
+                                        'pending' => ['#f59e0b', 'În așteptare'],
+                                        default => ['#6b7280', $log->status ?? '—'],
+                                    };
+                                    $when = $log->sent_at ?? $log->created_at;
+                                    $whenStr = $when ? \Illuminate\Support\Carbon::parse($when)->translatedFormat('d M Y, H:i') : '';
+                                    $url = EmailLogResource::getUrl('view', ['record' => $log->id]);
+                                    $err = !empty($log->error_message)
+                                        ? '<div style="margin-top:4px;color:#dc2626;font-size:12px">' . htmlspecialchars($log->error_message) . '</div>'
+                                        : '';
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener noreferrer" style="text-decoration:none">'
+                                        . '<span style="display:inline-block;padding:3px 10px;background:' . $bg . ';color:white;border-radius:9999px;font-size:13px;font-weight:600">' . htmlspecialchars($lbl) . '</span>'
+                                        . '</a>'
+                                        . ($whenStr ? ' <span style="color:#94a3b8;font-size:13px">' . $whenStr . '</span>' : '')
+                                        . ' <span style="color:#0ea5e9;font-size:12px">(#' . $log->id . ' — vezi logul)</span>'
+                                        . $err
+                                    );
+                                }),
                         ])->columns(2),
 
                     SC\Section::make('Profil revendicat')
@@ -360,6 +399,53 @@ class ArtistAccountResource extends Resource
                                 ->label('Ultima conectare')
                                 ->content(fn (?MarketplaceArtistAccount $record) => $record?->last_login_at?->translatedFormat('d M Y, H:i') ?? '—'),
                         ]),
+
+                    SC\Section::make('Detalii tehnice (claim)')
+                        ->icon('heroicon-o-computer-desktop')
+                        ->schema([
+                            Forms\Components\Placeholder::make('claim_context')
+                                ->hiddenLabel()
+                                ->content(function (?MarketplaceArtistAccount $record) {
+                                    $ctx = is_array($record?->settings) ? ($record->settings['claim_context'] ?? null) : null;
+                                    if (empty($ctx)) {
+                                        return new \Illuminate\Support\HtmlString('<span style="color:#94a3b8;font-size:13px">Nu s-au capturat detalii tehnice (cont creat înainte de această funcție).</span>');
+                                    }
+                                    $ua = $ctx['user_agent'] ?? '';
+                                    $device = ($ua && preg_match('/mobile|android|iphone|ipad/i', $ua)) ? 'Mobil / Tabletă' : 'Desktop';
+                                    $browser = 'necunoscut';
+                                    foreach (['Edg' => 'Edge', 'OPR' => 'Opera', 'Chrome' => 'Chrome', 'Firefox' => 'Firefox', 'Safari' => 'Safari'] as $needle => $name) {
+                                        if ($ua && stripos($ua, $needle) !== false) {
+                                            $browser = $name;
+                                            break;
+                                        }
+                                    }
+                                    $os = 'necunoscut';
+                                    foreach (['Windows' => 'Windows', 'Android' => 'Android', 'iPhone' => 'iOS', 'iPad' => 'iPadOS', 'Mac OS' => 'macOS', 'Linux' => 'Linux'] as $needle => $name) {
+                                        if ($ua && stripos($ua, $needle) !== false) {
+                                            $os = $name;
+                                            break;
+                                        }
+                                    }
+                                    $ip = $ctx['ip'] ?? '—';
+                                    $rows = [
+                                        'IP' => is_string($ip) && $ip !== '—'
+                                            ? '<a href="https://ipinfo.io/' . htmlspecialchars($ip) . '" target="_blank" rel="noopener noreferrer" style="color:#0ea5e9;text-decoration:underline">' . htmlspecialchars($ip) . '</a> <span style="color:#94a3b8;font-size:12px">(vezi localizare)</span>'
+                                            : '—',
+                                        'Dispozitiv' => htmlspecialchars($device),
+                                        'Sistem' => htmlspecialchars($os),
+                                        'Browser' => htmlspecialchars($browser),
+                                        'Limbă browser' => htmlspecialchars((string) ($ctx['accept_language'] ?? '—')),
+                                        'Sursă (referrer)' => htmlspecialchars((string) ($ctx['referrer'] ?? '—')),
+                                        'User agent' => '<span style="word-break:break-all">' . htmlspecialchars((string) ($ua ?: '—')) . '</span>',
+                                    ];
+                                    $html = '<div style="font-size:13px;line-height:1.8">';
+                                    foreach ($rows as $k => $v) {
+                                        $html .= '<div><span style="color:#94a3b8">' . $k . ':</span> <span style="color:#334155">' . $v . '</span></div>';
+                                    }
+                                    $html .= '</div>';
+                                    return new \Illuminate\Support\HtmlString($html);
+                                }),
+                        ]),
                 ]),
             ]),
         ]);
@@ -449,6 +535,7 @@ class ArtistAccountResource extends Resource
                         false: fn (Builder $q) => $q->whereNull('artist_id'),
                     ),
             ])
+            ->recordUrl(fn (MarketplaceArtistAccount $record) => Pages\ViewArtistAccount::getUrl(['record' => $record]))
             ->recordActions(static::buildRecordActions())
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -706,7 +793,24 @@ class ArtistAccountResource extends Resource
                         ->send();
                 }),
 
-            ViewAction::make(),
+            // Opens the PUBLIC artist page the claim was made on, in a new tab.
+            // Replaces the old ViewAction which (on the View page header) just
+            // reopened the same account-detail page.
+            Action::make('viewArtistPage')
+                ->label('Vezi pagina artistului')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('gray')
+                ->visible(fn (MarketplaceArtistAccount $record) => (bool) ($record->artist?->slug))
+                ->url(function (MarketplaceArtistAccount $record) {
+                    $domain = rtrim((string) ($record->marketplaceClient?->domain ?? ''), '/');
+                    if ($domain && !str_starts_with($domain, 'http')) {
+                        $domain = 'https://' . $domain;
+                    }
+                    return ($domain && $record->artist?->slug)
+                        ? $domain . '/artist/' . $record->artist->slug
+                        : null;
+                })
+                ->openUrlInNewTab(),
         ];
     }
 

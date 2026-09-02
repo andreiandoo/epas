@@ -86,6 +86,18 @@ class AuthController extends BaseController
             'claim_message' => $validated['claim_message'] ?? null,
             'claim_proof' => null,
             'claim_submitted_at' => now(),
+            // Capture the claim request context for the admin review UI
+            // (device / IP / referrer / language). Best-effort — used only for
+            // audit/anti-fraud, never for auth.
+            'settings' => [
+                'claim_context' => [
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'referrer' => $request->headers->get('referer'),
+                    'accept_language' => $request->headers->get('accept-language'),
+                    'at' => now()->toIso8601String(),
+                ],
+            ],
         ]);
 
         // Send verification email via marketplace transport (best-effort).
