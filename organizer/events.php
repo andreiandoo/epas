@@ -2749,7 +2749,12 @@ async function saveAndSubmitEvent() {
         toggleAccordion(3);
         return;
     }
-    if (!data.ticket_types || data.ticket_types.length === 0) {
+    // Skip the "at least one ticket type" check for an already-published
+    // event: its ticket types exist but are rendered as locked rows (no
+    // editable inputs), so collectTicketTypes() intentionally returns none.
+    // The backend live-edit path never restructures ticket types anyway.
+    const isPublishedNow = !!(currentEventStatus && currentEventStatus.is_published);
+    if (!isPublishedNow && (!data.ticket_types || data.ticket_types.length === 0)) {
         AmbiletNotifications.error('Adaugă cel puțin un tip de bilet pentru a trimite spre aprobare.');
         toggleAccordion(6);
         return;
