@@ -888,6 +888,13 @@ function smartEpk() {
                 // Wire WYSIWYG editors după ce DOM-ul are noile valori
                 this.$nextTick(() => this.wireRichEditors());
             } catch (e) {
+                // No active subscription/trial → redirect to the Extended Artist
+                // landing instead of showing a raw alert (the async access gate
+                // may not have redirected yet on first paint).
+                if (/subscription required|Extended Artist/i.test(e.message || '')) {
+                    window.location.href = '/artist/cont/extended-artist';
+                    return;
+                }
                 alert('Eroare la încărcare: ' + e.message);
             } finally {
                 this.loading = false;
