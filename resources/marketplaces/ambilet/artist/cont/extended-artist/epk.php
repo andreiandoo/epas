@@ -727,6 +727,18 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <style>[x-cloak]{display:none!important}</style>
 
 <script>
+// Extended Artist access gate — redirect to the landing page when the
+// subscription/trial is not active (mirrors booking.php / tour.php), so the
+// EPK page never falls through to a raw "subscription required" alert.
+(function() {
+    const token = localStorage.getItem('ambilet_artist_token');
+    if (!token) { window.location.href = '/artist/login'; return; }
+    fetch('/api/proxy.php?action=artist.extended-artist.status', { headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token } })
+        .then(r => r.json())
+        .then(payload => { if (payload?.data?.enabled !== true) window.location.href = '/artist/cont/extended-artist'; })
+        .catch(() => { window.location.href = '/artist/cont/extended-artist'; });
+})();
+
 function smartEpk() {
     return {
         // ========== UI state ==========

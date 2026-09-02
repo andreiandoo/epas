@@ -447,7 +447,7 @@ class ArtistAccountResource extends Resource
                                 }),
                         ]),
                 ]),
-            ])->columns(1),
+            ]),
         ]);
     }
 

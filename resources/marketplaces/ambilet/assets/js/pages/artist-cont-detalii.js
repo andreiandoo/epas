@@ -84,6 +84,16 @@ function wireTabNav() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tabTarget));
     });
+    // Honor a #tab-<key> hash (e.g. /detalii#tab-social from the dashboard
+    // "Configurare conturi sociale" link) so the correct tab opens focused.
+    const applyHash = () => {
+        const m = (window.location.hash || '').match(/^#tab-([a-z0-9_-]+)$/i);
+        if (m && document.querySelector('.tab-section[data-tab="' + m[1] + '"]')) {
+            switchTab(m[1]);
+        }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
 }
 
 function switchTab(key) {

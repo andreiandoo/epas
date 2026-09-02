@@ -381,9 +381,19 @@ class DashboardController extends BaseController
             'venue_name' => $venueName,
             'city' => $city,
             'organizer_name' => $organizer?->name,
-            'tickets_sold' => method_exists($event, 'getTotalTicketsSoldAttribute')
-                ? (int) $event->total_tickets_sold
-                : null,
+            // Sold count: prefer the Ticket-row based stat. Legacy-imported
+            // events (e.g. old Ambilet events) have no Ticket rows but do carry
+            // quota_sold on their ticket types, so fall back to that when the
+            // ticket-based count is 0 — otherwise past imported events show 0.
+            'tickets_sold' => (function () use ($event) {
+                $sold = method_exists($event, 'getTotalTicketsSoldAttribute')
+                    ? (int) $event->total_tickets_sold
+                    : 0;
+                if ($sold === 0) {
+                    $sold = (int) $event->ticketTypes()->sum('quota_sold');
+                }
+                return $sold;
+            })(),
             'tickets_total' => method_exists($event, 'getTotalCapacityAttribute')
                 ? (int) $event->total_capacity
                 : (int) ($event->capacity ?? 0),

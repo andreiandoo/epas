@@ -515,6 +515,17 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <style>[x-cloak]{display:none!important}</style>
 
 <script>
+// Extended Artist access gate — redirect to the landing page when the
+// subscription/trial is not active (mirrors booking.php / tour.php).
+(function() {
+    const token = localStorage.getItem('ambilet_artist_token');
+    if (!token) { window.location.href = '/artist/login'; return; }
+    fetch('/api/proxy.php?action=artist.extended-artist.status', { headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token } })
+        .then(r => r.json())
+        .then(payload => { if (payload?.data?.enabled !== true) window.location.href = '/artist/cont/extended-artist'; })
+        .catch(() => { window.location.href = '/artist/cont/extended-artist'; });
+})();
+
 function fanCrm() {
     return {
         loading: true,
@@ -742,7 +753,7 @@ function fanCrm() {
                 const el = document.getElementById('fanMap');
                 if (!el) return;
                 this.map = L.map('fanMap').setView([this.mapData.center?.lat || 45.94, this.mapData.center?.lng || 24.97], this.mapData.zoom || 6);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CARTO' }).addTo(this.map);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(this.map);
             }
             // Curăță layere vechi
             if (this.heatLayer) this.map.removeLayer(this.heatLayer);
