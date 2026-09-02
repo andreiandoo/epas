@@ -445,6 +445,21 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
         history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():'')+location.hash);
         return;
     }
+    var at=p.get('_admin_artist_token');
+    if(at){
+        try{
+            localStorage.setItem('ambilet_artist_token',at);
+            localStorage.setItem('ambilet_user_type','artist');
+            localStorage.removeItem('ambilet_customer_token');
+            localStorage.removeItem('ambilet_customer_data');
+            localStorage.removeItem('ambilet_organizer_token');
+            localStorage.removeItem('ambilet_organizer_data');
+            localStorage.removeItem('ambilet_artist_data');
+        }catch(e){}
+        p.delete('_admin_artist_token');
+        history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():'')+location.hash);
+        return;
+    }
     if(!t)return;
     try{
         localStorage.setItem('ambilet_organizer_token',t);
