@@ -448,7 +448,7 @@ class ArtistAccountResource extends Resource
                         ]),
                 ]),
             ]),
-        ]);
+        ])->columns(1);
     }
 
     public static function table(Table $table): Table

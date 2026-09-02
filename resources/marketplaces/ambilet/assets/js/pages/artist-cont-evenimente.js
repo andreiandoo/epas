@@ -214,7 +214,19 @@ function eventCardHtml(event) {
     const pctColor = pct >= 90 ? 'bg-success' : (pct >= 50 ? 'bg-accent' : 'bg-primary');
     const pctLabelColor = pct >= 90 ? 'text-success' : (pct >= 50 ? 'text-accent' : 'text-muted');
 
-    const ticketBlock = hasTickets
+    // Un-migrated legacy import shells (no orders/tickets, inactive/zero-price
+    // types) send sales_data_available=false — show a neutral note instead of a
+    // misleading "0 / X (0%)" progress bar.
+    const salesUnavailable = event.sales_data_available === false;
+
+    const ticketBlock = salesUnavailable
+        ? '<div class="flex-1 min-w-0 sm:max-w-md">'
+            + '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-muted">'
+            + '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            + 'Fără vânzări înregistrate'
+            + '</span>'
+            + '</div>'
+        : hasTickets
         ? '<div class="flex-1 min-w-0 sm:max-w-md">'
             + '<div class="mb-1.5 flex items-baseline justify-between gap-2">'
             + '<span class="text-xs font-semibold uppercase tracking-wider text-muted">Bilete vândute</span>'

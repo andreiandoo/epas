@@ -367,6 +367,28 @@ class DashboardController extends BaseController
             }
         }
 
+        // Sold count: prefer the Ticket-row based stat. Legacy-imported events
+        // (old Ambilet events) have no Ticket rows but may carry quota_sold on
+        // their ticket types, so fall back to that when the ticket count is 0.
+        $ticketsSold = method_exists($event, 'getTotalTicketsSoldAttribute')
+            ? (int) $event->total_tickets_sold
+            : 0;
+
+        // One query: quota_sold sum + how many ticket types look "real" (active
+        // with a price). Un-migrated import shells have only inactive/zero-price
+        // types and no sales anywhere → we suppress the misleading "0 / X" bar.
+        $typeStats = $event->ticketTypes()
+            ->selectRaw('COALESCE(SUM(quota_sold),0) AS sold_sum, SUM(CASE WHEN is_active = true AND COALESCE(price_max, price, 0) > 0 THEN 1 ELSE 0 END) AS real_cnt')
+            ->first();
+
+        if ($ticketsSold === 0) {
+            $ticketsSold = (int) ($typeStats->sold_sum ?? 0);
+        }
+        $hasRealTypes = (int) ($typeStats->real_cnt ?? 0) > 0;
+        // Sales data is "available" if anything sold, or the event has genuine
+        // sellable ticket types (a real event awaiting sales still shows 0/X).
+        $salesDataAvailable = $ticketsSold > 0 || $hasRealTypes;
+
         return [
             'id' => $event->id,
             'title' => $this->translatableToString($event->title),
@@ -381,22 +403,13 @@ class DashboardController extends BaseController
             'venue_name' => $venueName,
             'city' => $city,
             'organizer_name' => $organizer?->name,
-            // Sold count: prefer the Ticket-row based stat. Legacy-imported
-            // events (e.g. old Ambilet events) have no Ticket rows but do carry
-            // quota_sold on their ticket types, so fall back to that when the
-            // ticket-based count is 0 — otherwise past imported events show 0.
-            'tickets_sold' => (function () use ($event) {
-                $sold = method_exists($event, 'getTotalTicketsSoldAttribute')
-                    ? (int) $event->total_tickets_sold
-                    : 0;
-                if ($sold === 0) {
-                    $sold = (int) $event->ticketTypes()->sum('quota_sold');
-                }
-                return $sold;
-            })(),
+            'tickets_sold' => $ticketsSold,
             'tickets_total' => method_exists($event, 'getTotalCapacityAttribute')
                 ? (int) $event->total_capacity
                 : (int) ($event->capacity ?? 0),
+            // False for un-migrated legacy import shells → frontend shows
+            // "Fără vânzări înregistrate" instead of a misleading "0 / X".
+            'sales_data_available' => $salesDataAvailable,
             'is_upcoming' => $event->event_date && $event->event_date->isFuture(),
         ];
     }
