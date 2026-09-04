@@ -24,6 +24,11 @@ class ListTickets extends ListRecords
         }
     }
 
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     public function getHeading(): string|Htmlable
     {
         $count = number_format(static::getResource()::getEloquentQuery()->count());

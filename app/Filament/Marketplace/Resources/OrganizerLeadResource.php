@@ -53,7 +53,14 @@ class OrganizerLeadResource extends Resource
     // Hidden from Administrator / Moderator — Super Administrator only.
     public static function canAccess(): bool
     {
+        if ((int) (static::getMarketplaceClientId() ?? 0) === 1) return false;
         return (bool) auth('marketplace_admin')->user()?->isSuperAdmin();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        if ((int) (static::getMarketplaceClientId() ?? 0) === 1) return false;
+        return parent::shouldRegisterNavigation();
     }
     protected static ?int $navigationSort = 20;
 

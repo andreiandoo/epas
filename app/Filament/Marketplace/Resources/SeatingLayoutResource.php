@@ -36,6 +36,17 @@ class SeatingLayoutResource extends Resource
     protected static ?string $modelLabel = 'Seating Layout';
     protected static ?string $pluralModelLabel = 'Hărți';
 
+    public static function getNavigationBadge(): ?string
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) return null;
+        try {
+            return (string) static::getEloquentQuery()->count();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();

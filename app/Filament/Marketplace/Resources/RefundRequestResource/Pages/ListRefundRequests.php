@@ -14,6 +14,11 @@ class ListRefundRequests extends ListRecords
 {
     protected static string $resource = RefundRequestResource::class;
 
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     public function getHeading(): string|Htmlable
     {
         $count = number_format(static::getResource()::getEloquentQuery()->count());

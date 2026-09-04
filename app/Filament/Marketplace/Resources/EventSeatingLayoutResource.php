@@ -33,9 +33,10 @@ class EventSeatingLayoutResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 5;
-    protected static ?string $navigationLabel = 'Event Seating';
-    protected static ?string $modelLabel = 'Event Seating Layout';
-    protected static ?string $pluralModelLabel = 'Event Seating Layouts';
+    protected static ?string $navigationLabel = 'Hărți evenimente';
+    protected static ?string $navigationParentItem = 'Hărți';
+    protected static ?string $modelLabel = 'Hartă eveniment';
+    protected static ?string $pluralModelLabel = 'Hărți evenimente';
 
     public static function getEloquentQuery(): Builder
     {
