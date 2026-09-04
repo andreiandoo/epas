@@ -435,6 +435,33 @@ Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
 });
 
+// Super-admin "Login as tenant" — impersonates the tenant's owner user
+// via the shared web guard, then redirects to /tenant. Requires the
+// current session user to satisfy User::isSuperAdmin(). The super admin
+// session is REPLACED (not stacked) — after using the tenant panel,
+// the super admin has to logout and log back in to their own account.
+// Route lives in the ['web','auth'] admin group so an unauthenticated
+// hit gets bounced to /login instead of a 403 wall.
+Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
+    Route::get('/tenants/{tenantId}/login-as', function (int $tenantId) {
+        $user = auth('web')->user();
+        if (!$user || !method_exists($user, 'isSuperAdmin') || !$user->isSuperAdmin()) {
+            abort(403, 'Only super admins can impersonate tenants.');
+        }
+        $tenant = \App\Models\Tenant::findOrFail($tenantId);
+        $owner = $tenant->owner;
+        if (!$owner) {
+            abort(404, 'Tenant has no owner user configured. Set the tenant owner in Edit before using Login as.');
+        }
+        session([
+            'impersonated_from_user_id' => $user->id,
+            'impersonated_tenant_id'    => $tenant->id,
+        ]);
+        \Illuminate\Support\Facades\Auth::guard('web')->login($owner);
+        return redirect('/tenant');
+    })->name('admin.tenant.login-as');
+});
+
 // Admin Package Management Routes
 Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
     Route::get('/tenants/{tenant}/domains/{domain}/package/download', [PackageController::class, 'download'])

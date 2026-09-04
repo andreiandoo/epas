@@ -1431,7 +1431,21 @@ class TenantResource extends Resource
                     ->label('Tenant Type')
                     ->options(\App\Enums\TenantType::class),
             ])
-            ->actions([])
+            ->actions([
+                \Filament\Actions\Action::make('login_as')
+                    ->label('Login as')
+                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                    ->color('success')
+                    // Super-admin only + must have an owner user linked.
+                    // Owner-less tenants can't be impersonated (no user
+                    // to log in as); tell the operator to set one in Edit.
+                    ->visible(fn (Tenant $record) => auth()->user()?->isSuperAdmin() && $record->owner_id)
+                    ->tooltip(fn (Tenant $record) => $record->owner_id
+                        ? 'Log in as this tenant\'s owner (opens /tenant in a new tab)'
+                        : 'Set an owner user in Edit before using Login as')
+                    ->url(fn (Tenant $record) => route('admin.tenant.login-as', ['tenantId' => $record->id]))
+                    ->openUrlInNewTab(),
+            ])
             ->defaultSort('name');
     }
 
