@@ -2403,7 +2403,7 @@ class LeisureController extends BaseController
         // depasi timeout Cloudflare (100s). Cache 30 min pt request-uri repetate +
         // memory/time limit local. Cache key = event+range; invalidat automat cand
         // se schimba data.
-        $cacheKey = "leisure_raport_v2_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
+        $cacheKey = "leisure_raport_v3_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
         $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
         if ($cached !== null) {
             return $this->success($cached);
@@ -2503,9 +2503,10 @@ class LeisureController extends BaseController
             $rev = 0.0;
             foreach ($o->tickets as $t) {
                 if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
-                $rev += method_exists($t, 'getEffectivePrice')
-                    ? (float) $t->getEffectivePrice()
-                    : (float) ($t->price ?? 0);
+                $tMetaRev = is_array($t->meta ?? null) ? $t->meta : [];
+                $tPriceRev = (float) ($t->price ?? 0);
+                $tDiscRev = isset($tMetaRev['discount_amount']) ? (float) $tMetaRev['discount_amount'] : 0.0;
+                $rev += max(0, $tPriceRev - $tDiscRev);
             }
             $rev = round($rev, 2);
             $totalRevenue += $rev;
@@ -2530,9 +2531,10 @@ class LeisureController extends BaseController
                     if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
                     // Comisionul se calculeaza pe SUMA REALA INCASATA (post-discount).
                     // Bilete cu effective_price=0 (bonus, componente pachet, sau full-discount) → fara comision.
-                    $tp = method_exists($t, 'getEffectivePrice')
-                        ? (float) $t->getEffectivePrice()
-                        : (float) ($t->price ?? 0);
+                    $tpMetaLocal = is_array($t->meta ?? null) ? $t->meta : [];
+                    $tpPrice = (float) ($t->price ?? 0);
+                    $tpDisc = isset($tpMetaLocal['discount_amount']) ? (float) $tpMetaLocal['discount_amount'] : 0.0;
+                    $tp = max(0, $tpPrice - $tpDisc);
                     if ($tp <= 0) continue;
                     $pct = round($tp * $orgRate / 100, 2);
                     $orderCommission += $orgFloor > 0 ? max($pct, $orgFloor) : $pct;
@@ -2632,7 +2634,9 @@ class LeisureController extends BaseController
                 //      cu discount 100% — TREBUIE contorizat ca tranzactie (in tickets++)
                 //      dar cu revenue=0. Verificam pe ticket.price sa fim consecvenți.
                 $tp = (float) ($t->price ?? 0);
-                $effectivePrice = method_exists($t, 'getEffectivePrice') ? $t->getEffectivePrice() : $tp;
+                $tMetaTicket = is_array($t->meta ?? null) ? $t->meta : [];
+                $tDiscTicket = isset($tMetaTicket['discount_amount']) ? (float) $tMetaTicket['discount_amount'] : 0.0;
+                $effectivePrice = max(0, $tp - $tDiscTicket);
                 if (!$isFromPackage && $tp > 0) {
                     $totalTickets++;
                     $issuer = $ttModel?->issuing_company ?? 'primary';

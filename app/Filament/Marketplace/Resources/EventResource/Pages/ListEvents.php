@@ -93,18 +93,23 @@ class ListEvents extends ListRecords
             ]);
     }
 
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     protected function getHeaderActions(): array
     {
         return [
+            Actions\CreateAction::make()
+                ->extraAttributes([
+                    'id' => 'create-event-btn',
+                ]),
             Actions\Action::make('import')
                 ->label('Import Events')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('import')),
-            Actions\CreateAction::make()
-                ->extraAttributes([
-                    'id' => 'create-event-btn',
-                ]),
         ];
     }
 
