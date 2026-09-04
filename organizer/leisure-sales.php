@@ -360,6 +360,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
+    // Toggle loading state pe cardurile care se schimba la fiecare loadTimeline.
+    // Aplic opacity + pointer-events blocat + spinner label peste chart si peste
+    // fiecare din cele 3 tab-uri (categorii / metoda plata / tip bilet). Nu blocam
+    // butoanele de sus (Aplica / range / groupby) - user poate schimba din nou
+    // in timp ce se incarca.
+    const LOADING_TARGETS = ['lv-chart', 'lv-categories', 'lv-payment-methods', 'lv-ticket-types'];
+    function setLoading(on) {
+        LOADING_TARGETS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const parent = el.closest('.bg-white') || el.parentElement;
+            if (!parent) return;
+            if (on) {
+                parent.style.position = parent.style.position || 'relative';
+                parent.classList.add('lv-is-loading');
+                if (!parent.querySelector('.lv-loading-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'lv-loading-overlay absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-2xl z-10';
+                    overlay.innerHTML = '<div class="flex items-center gap-2 text-sm text-primary"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"></path></svg><span>Se încarcă…</span></div>';
+                    parent.appendChild(overlay);
+                }
+            } else {
+                parent.classList.remove('lv-is-loading');
+                const overlay = parent.querySelector('.lv-loading-overlay');
+                if (overlay) overlay.remove();
+            }
+        });
+        // Cards de sus (Total / Comision / Net etc) — opacity subtila
+        document.querySelectorAll('[id^="lv-stat-"]').forEach(el => {
+            el.style.opacity = on ? '0.4' : '';
+            el.style.transition = 'opacity 0.15s';
+        });
+    }
+
     async function loadTimeline() {
         $('lv-error').classList.add('hidden');
         if (!currentEventId) {
@@ -367,6 +401,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-error').classList.remove('hidden');
             return;
         }
+        setLoading(true);
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/sales-timeline`, {
                 from: currentFrom,
@@ -382,6 +417,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             console.error('[leisure-sales] load failed', e);
             $('lv-error').textContent = 'Eroare la încărcarea datelor: ' + (e?.message || 'necunoscut');
             $('lv-error').classList.remove('hidden');
+        } finally {
+            setLoading(false);
         }
         // Load summary in paralel (cifre pentru toate cardurile)
         loadSummary();
