@@ -116,15 +116,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Cash / Card POS (brut) + sesiuni operatori POS -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <!-- Cash POS / Card POS / Online (brut) + sesiuni operatori POS -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
             <div class="p-4 bg-white border rounded-2xl border-border">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💵 Cash POS (brut)</p>
                 <p class="text-xl font-bold text-secondary"><span id="lv-stat-cash">0</span> <span class="text-xs text-muted">RON</span></p>
+                <p class="mt-1 text-[11px] text-muted"><span id="lv-stat-cash-pct" class="font-semibold text-emerald-700">0%</span> din total încasări</p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💳 Card POS (brut)</p>
                 <p class="text-xl font-bold text-secondary"><span id="lv-stat-card">0</span> <span class="text-xs text-muted">RON</span></p>
+                <p class="mt-1 text-[11px] text-muted"><span id="lv-stat-card-pct" class="font-semibold text-emerald-700">0%</span> din total încasări</p>
+            </div>
+            <div class="p-4 bg-white border rounded-2xl border-border">
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🌐 Online (brut)</p>
+                <p class="text-xl font-bold text-secondary"><span id="lv-stat-online">0</span> <span class="text-xs text-muted">RON</span></p>
+                <p class="mt-1 text-[11px] text-muted"><span id="lv-stat-online-pct" class="font-semibold text-emerald-700">0%</span> din total încasări</p>
             </div>
             <a href="/organizator/leisure-sessions" class="p-4 bg-white border rounded-2xl border-border hover:bg-slate-50 hover:border-primary transition-colors block">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">👤 Sesiuni casă POS</p>
@@ -139,24 +146,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <h2 class="font-bold text-secondary mb-3">Vânzări în timp</h2>
                 <div class="h-64"><canvas id="lv-chart"></canvas></div>
             </div>
-            <div class="bg-white border rounded-2xl border-border p-5 space-y-5">
-                <div>
-                    <h2 class="font-bold text-secondary mb-3">Pe categorii</h2>
-                    <div id="lv-categories" class="space-y-2 text-sm">
-                        <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-border">
-                    <h2 class="font-bold text-secondary mb-3">Pe metodă plată</h2>
-                    <div id="lv-payment-methods" class="space-y-2 text-sm">
-                        <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-border">
-                    <h2 class="font-bold text-secondary mb-3">Pe tip bilet</h2>
-                    <div id="lv-ticket-types" class="space-y-2 text-sm max-h-96 overflow-y-auto pr-1">
-                        <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
-                    </div>
+            <div class="bg-white border rounded-2xl border-border p-5">
+                <h2 class="font-bold text-secondary mb-3">Per tip de bilet</h2>
+                <div id="lv-ticket-types" class="space-y-2 text-sm max-h-[560px] overflow-y-auto pr-1">
+                    <p class="text-muted text-center py-4">Selectează o perioadă pentru raport.</p>
                 </div>
             </div>
         </div>
@@ -179,12 +172,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function categoryLabel(c) {
-        const m = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închirieri', 'activity': 'Activități', 'extra': 'Extra' };
+        const m = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închirieri', 'activity': 'Activități', 'extra': 'Extra', 'package': 'Pachete' };
         return m[c] || c;
     }
 
     function categoryColor(c) {
-        const m = { 'access': '#3B82F6', 'parking': '#8B5CF6', 'rental': '#F59E0B', 'activity': '#10B981', 'extra': '#64748B' };
+        const m = { 'access': '#3B82F6', 'parking': '#8B5CF6', 'rental': '#F59E0B', 'activity': '#10B981', 'extra': '#64748B', 'package': '#DB2777' };
         return m[c] || '#94A3B8';
     }
 
@@ -205,35 +198,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
     }
 
-    // Breakdown per metoda plata (cash / card / online)
-    const PM_META = {
-        cash:   { label: '💵 Cash',        color: '#F59E0B' }, // amber
-        card:   { label: '💳 Card',        color: '#6366F1' }, // indigo
-        online: { label: '🌐 Online',      color: '#10B981' }, // emerald
-    };
-    function renderPaymentMethods(rows) {
-        const wrap = $('lv-payment-methods');
-        if (!rows || !rows.length) {
-            wrap.innerHTML = '<p class="text-muted text-center py-4">Nicio vânzare în această perioadă.</p>';
-            return;
-        }
-        const totalRev = rows.reduce((s, r) => s + Number(r.revenue || 0), 0);
-        const orderByRev = [...rows].sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0));
-        wrap.innerHTML = orderByRev.map(r => {
-            const meta = PM_META[r.method] || { label: r.method, color: '#94A3B8' };
-            const rev = Number(r.revenue || 0);
-            const pct = totalRev > 0 ? Math.round((rev / totalRev) * 100) : 0;
-            return `
-            <div>
-                <div class="flex justify-between text-xs mb-1 gap-2">
-                    <span class="font-medium" style="color:${meta.color}">${meta.label}</span>
-                    <span class="text-muted whitespace-nowrap">${r.orders} comenzi · ${r.tickets} bilete · <strong>${fmtMoney(rev)} RON</strong> · ${pct}%</span>
-                </div>
-                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full" style="width:${pct}%;background:${meta.color}"></div>
-                </div>
-            </div>`;
-        }).join('');
+    // Cache pentru breakdown metoda plata (folosit sa populeze cardurile Cash/Card/Online
+    // cu revenue + procent). Nu mai afisam bara distincta - sectiunea dreapta a fost stearsa.
+    let lastPaymentMethods = [];
+    function applyPaymentMethodsToCards(rows) {
+        lastPaymentMethods = rows || [];
+        const byMethod = { cash: 0, card: 0, online: 0 };
+        (rows || []).forEach(r => {
+            const k = (r.method || '').toLowerCase();
+            if (byMethod.hasOwnProperty(k)) byMethod[k] = Number(r.revenue || 0);
+        });
+        const total = byMethod.cash + byMethod.card + byMethod.online;
+        const pct = v => total > 0 ? Math.round((v / total) * 100) : 0;
+        $('lv-stat-cash').textContent = fmtMoney(byMethod.cash);
+        $('lv-stat-card').textContent = fmtMoney(byMethod.card);
+        $('lv-stat-online').textContent = fmtMoney(byMethod.online);
+        $('lv-stat-cash-pct').textContent = pct(byMethod.cash) + '%';
+        $('lv-stat-card-pct').textContent = pct(byMethod.card) + '%';
+        $('lv-stat-online-pct').textContent = pct(byMethod.online) + '%';
     }
 
     // Breakdown per tip bilet (nume + count + venit + procent din total)
@@ -262,29 +244,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
     }
 
-    function renderCategories(byCat) {
-        const wrap = $('lv-categories');
-        const entries = Object.entries(byCat || {});
+    // Populeaza cardul "Pe categorie" din top-row cu by_category din timeline
+    // (include categoria 'package' ca entitate distincta - mai clar decat suma
+    // componentelor emise de summary). Include procent din total in dreptul fiecarei
+    // categorii. Actualizat la fiecare loadTimeline.
+    function renderCategoryBreakdown(byCat) {
+        const wrap = $('lv-cat-breakdown');
+        const entries = Object.entries(byCat || {}).filter(([, n]) => Number(n) > 0);
         if (!entries.length) {
-            wrap.innerHTML = '<p class="text-muted text-center py-4">Nicio vânzare în această perioadă.</p>';
+            wrap.innerHTML = '<p class="text-muted">—</p>';
             return;
         }
         const total = entries.reduce((s, [, n]) => s + Number(n), 0);
         wrap.innerHTML = entries
             .sort((a, b) => b[1] - a[1])
-            .map(([cat, n]) => {
+            .map(([c, n]) => {
                 const pct = total > 0 ? Math.round((n / total) * 100) : 0;
-                const color = categoryColor(cat);
-                return `
-                <div>
-                    <div class="flex justify-between text-xs mb-1">
-                        <span class="font-medium" style="color:${color}">${categoryLabel(cat)}</span>
-                        <span class="text-muted">${n} bilete · ${pct}%</span>
-                    </div>
-                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full rounded-full" style="width:${pct}%;background:${color}"></div>
-                    </div>
-                </div>`;
+                return `<div class="flex justify-between"><span style="color:${categoryColor(c)}">${categoryLabel(c)}</span><span class="tabular-nums font-semibold">${n} · <span class="text-muted font-normal">${pct}%</span></span></div>`;
             })
             .join('');
     }
@@ -365,10 +341,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     //  2. Skeleton gri animat in locul valorilor din cardurile de sus (nu doar opacity)
     // setLoading(false) e apelat DUPA ce AMBELE (loadTimeline + loadSummary) termina,
     // altfel cifrele revin la valorile vechi inainte de update -> flicker perceput.
-    const LOADING_TARGETS = ['lv-chart', 'lv-categories', 'lv-payment-methods', 'lv-ticket-types'];
+    const LOADING_TARGETS = ['lv-chart', 'lv-ticket-types'];
     const STAT_TARGETS = ['lv-stat-total', 'lv-rev-online', 'lv-rev-pos', 'lv-stat-comm', 'lv-comm-online', 'lv-comm-pos',
         'lv-stat-net', 'lv-net-online', 'lv-net-pos', 'lv-stat-orders', 'lv-stat-avg',
-        'lv-stat-tickets-physical', 'lv-stat-tickets-transactions', 'lv-stat-cash', 'lv-stat-card', 'lv-sessions-count'];
+        'lv-stat-tickets-physical', 'lv-stat-tickets-transactions', 'lv-stat-cash', 'lv-stat-card',
+        'lv-stat-online', 'lv-stat-cash-pct', 'lv-stat-card-pct', 'lv-stat-online-pct', 'lv-sessions-count'];
     const _skeletonBackup = new Map();
     function setLoading(on) {
         LOADING_TARGETS.forEach(id => {
@@ -427,8 +404,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 });
                 const data = res.data || {};
                 renderChart(data.rows || [], data.group_by || 'day');
-                renderCategories(data.by_category || {});
-                renderPaymentMethods(data.by_payment_method || []);
+                renderCategoryBreakdown(data.by_category || {});
+                applyPaymentMethodsToCards(data.by_payment_method || []);
                 renderTicketTypes(data.by_ticket_type || []);
             } catch (e) {
                 console.error('[leisure-sales] load failed', e);
@@ -448,7 +425,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/sales/summary`, {
                 from: currentFrom, to: currentTo,
             });
-            const d = res.data || {}; const t = d.totals || {}; const pos = d.pos || {};
+            const d = res.data || {}; const t = d.totals || {};
             // Row 1: Total vandut / Comision / Net (cu split online + POS)
             $('lv-stat-total').textContent = fmtMoney(t.revenue_total);
             $('lv-rev-online').textContent = fmtMoney(t.revenue_online) + ' RON';
@@ -464,19 +441,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-stat-avg').textContent = fmtMoney(t.avg_order);
             $('lv-stat-tickets-physical').textContent = t.tickets_physical || 0;
             $('lv-stat-tickets-transactions').textContent = t.tickets_transactions || 0;
-            const cat = t.tickets_by_category || {};
-            const catWrap = $('lv-cat-breakdown');
-            if (Object.keys(cat).length === 0) {
-                catWrap.innerHTML = '<p class="text-muted">—</p>';
-            } else {
-                catWrap.innerHTML = Object.entries(cat)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([c, n]) => `<div class="flex justify-between"><span style="color:${categoryColor(c)}">${categoryLabel(c)}</span><span class="tabular-nums font-semibold">${n}</span></div>`)
-                    .join('');
-            }
-            // Row 3: Cash / Card / Sesiuni POS
-            $('lv-stat-cash').textContent = fmtMoney(pos.cash_gross);
-            $('lv-stat-card').textContent = fmtMoney(pos.card_gross);
+            // NOTE: lv-cat-breakdown si lv-stat-cash / lv-stat-card / lv-stat-online
+            // sunt populate de loadTimeline (renderCategoryBreakdown / applyPaymentMethodsToCards)
+            // - datele agregate din SQL sunt mai clare (categoria 'package' distincta,
+            // procente calculate corect). Nu le mai suprascriu aici.
             const sessions = Array.isArray(d.sessions) ? d.sessions : [];
             $('lv-sessions-count').textContent = sessions.length;
             // Detaliile sesiunilor: pagina dedicata /organizator/leisure-sessions
