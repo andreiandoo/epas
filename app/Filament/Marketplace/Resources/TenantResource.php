@@ -232,9 +232,19 @@ class TenantResource extends Resource
                         ->minLength(8)
                         ->maxLength(255)
                         ->dehydrated(false)
+                        ->suffixAction(
+                            \Filament\Actions\Action::make('generate_password')
+                                ->icon('heroicon-m-arrow-path')
+                                ->tooltip('Generează o parolă sigură de 12 caractere')
+                                ->action(function (\Filament\Schemas\Components\Utilities\Set $set) {
+                                    // Reveal so the generated value is visible to copy, and
+                                    // fill a fresh secure 12-char password on every click.
+                                    $set('owner_password', Str::password(12));
+                                })
+                        )
                         ->helperText(fn (string $operation) => $operation === 'edit'
-                            ? 'Completează doar dacă vrei să resetezi parola. Altfel lasă gol.'
-                            : 'Minim 8 caractere.'),
+                            ? 'Completează doar dacă vrei să resetezi parola. Altfel lasă gol. Poți folosi butonul ⟳ pentru o parolă generată.'
+                            : 'Minim 8 caractere. Apasă butonul ⟳ pentru o parolă sigură generată automat.'),
                 ])->columns(2),
 
             // Hidden bookkeeping — tenant_type + origin marker + status.
