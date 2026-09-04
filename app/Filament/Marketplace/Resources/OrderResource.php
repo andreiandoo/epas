@@ -1000,6 +1000,7 @@ class OrderResource extends Resource
                     <div style='text-align: center; padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; border: 1px solid #334155;'>
                         <div style='font-size: 24px; font-weight: 700; color: #10B981;'>{$paymentMethod}</div>
                         <div style='font-size: 11px; color: #64748B; text-transform: uppercase;'>Plată</div>
+                        " . (($record->meta['payment_method'] ?? null) === 'card_cultural' ? "<div style='margin-top:6px;display:inline-block;padding:3px 8px;border-radius:12px;background:rgba(167,139,250,0.15);color:#A78BFA;font-size:10px;font-weight:600;'>💳 Card Cultural</div>" : "") . "
                     </div>
                     <div style='text-align: center; padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; border: 1px solid #334155;' class='flex flex-col items-center justify-center'>
                         <div style='font-size: 14px; font-weight: 700; color: white;'>{$updatedAt}</div>
@@ -1561,6 +1562,14 @@ class OrderResource extends Resource
             }
         }
 
+        // === CULTURAL CARD SURCHARGE (netopia adauga 4% la card cultural, revine AmBilet) ===
+        $culturalSurcharge = (float) ($record->meta['cultural_card_surcharge'] ?? 0);
+        if ($culturalSurcharge > 0) {
+            $html .= "<div style='{$headStyle}'>Card Cultural Național</div>";
+            $html .= "<div style='{$rowStyle}' title='Surcharge Netopia pentru plata cu card cultural — revine AmBilet, transferat mai departe către furnizorul de plată card cultural'><span style='{$labelStyle}'>Surcharge card cultural (4%)</span><span style='font-size:12px;font-weight:600;color:#A78BFA;'>" . number_format($culturalSurcharge, 2) . " {$currency}</span></div>";
+            $html .= "<div style='{$subStyle}'>💳 Suma revine AmBilet (transferat furnizorului plată card cultural)</div>";
+        }
+
         // === TOTAL ===
         $html .= "<div style='display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:6px;border-top:2px solid rgba(51,65,85,0.5);'>
             <span style='font-size:13px;font-weight:600;color:white;'>Total plătit</span>
@@ -2037,9 +2046,15 @@ class OrderResource extends Resource
         };
 
         // Payment method (Card, Bank transfer, etc.) - from meta or derived from processor
-        $paymentMethod = $record->meta['payment_method'] ?? $record->meta['method'] ?? null;
+        $paymentMethodRaw = $record->meta['payment_method'] ?? $record->meta['method'] ?? null;
+        $paymentMethod = match($paymentMethodRaw) {
+            'card_cultural' => '💳 Card Cultural Național',
+            'card' => 'Card bancar',
+            'cash' => 'Numerar',
+            'transfer', 'bank_transfer' => 'Transfer bancar',
+            default => $paymentMethodRaw,
+        };
         if (!$paymentMethod && $processorRaw) {
-            // Derive method from processor if not explicitly set
             $paymentMethod = match($processorRaw) {
                 'netopia', 'payment-netopia', 'stripe', 'payment-stripe' => 'Card bancar',
                 'paypal' => 'PayPal',
@@ -2048,6 +2063,10 @@ class OrderResource extends Resource
                 default => null,
             };
         }
+        // Fee-uri third-party (nu ale organizatorului) - cultural card surcharge (revine AmBilet)
+        // + asigurare bilete (revine asiguratorului). Le afisam distinct in cardul plata.
+        $culturalSurcharge = (float) ($record->meta['cultural_card_surcharge'] ?? 0);
+        $insuranceAmount = (float) ($record->meta['insurance_amount'] ?? 0);
 
         $transactionId = $record->payment_reference ?? $record->meta['payment_intent_id'] ?? $record->meta['transaction_id'] ?? '';
         $cardLast4 = $record->meta['card_last4'] ?? $record->meta['card_last_four'] ?? '';
@@ -2102,10 +2121,34 @@ class OrderResource extends Resource
             ";
         }
 
+        // Cultural card surcharge (revine AmBilet - furnizor plata card cultural, NU organizatorului)
+        if ($culturalSurcharge > 0) {
+            $curr = $record->currency ?? 'RON';
+            $sVal = number_format($culturalSurcharge, 2);
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);' title='Surcharge Netopia pentru plata card cultural - revine AmBilet, transferat mai departe catre furnizorul de plata card cultural'>
+                    <span style='font-size: 13px; color: #94A3B8;'>Surcharge card cultural</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #A78BFA;'>{$sVal} {$curr}</span>
+                </div>
+            ";
+        }
+
+        // Asigurare bilete (revine asiguratorului, NU organizatorului)
+        if ($insuranceAmount > 0) {
+            $curr = $record->currency ?? 'RON';
+            $iVal = number_format($insuranceAmount, 2);
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);' title='Asigurare bilete cumparata de client - suma revine asiguratorului, nu organizatorului'>
+                    <span style='font-size: 13px; color: #94A3B8;'>🛡️ Asigurare bilete</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #FBBF24;'>{$iVal} {$curr}</span>
+                </div>
+            ";
+        }
+
         // Payment Date
         if ($paidAt) {
             $paidAtFormatted = MarketplaceTz::fmt($paidAt, 'd M Y, H:i', $record->marketplaceClient ?? null);
-            
+
             $html .= "
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                     <span style='font-size: 13px; color: #94A3B8;'>Data plății</span>
