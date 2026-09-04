@@ -278,7 +278,7 @@ class CheckInController extends Controller
         if (! $dayId && $purchase->checked_in_at) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ticket already checked in at ' . $purchase->checked_in_at->format('Y-m-d H:i:s'),
+                'message' => 'Ticket already checked in at ' . $purchase->checked_in_at->toIso8601String(),
                 'ticket'  => $this->formatPurchase($purchase),
             ], 400);
         }
@@ -323,7 +323,7 @@ class CheckInController extends Controller
         if (! $dayId && $ticket->checked_in_at) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
+                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->toIso8601String(),
                 'ticket'  => $this->formatExternal($ticket),
             ], 400);
         }
