@@ -140,6 +140,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </a>
         </div>
 
+        <!-- Facturi persoane juridice (B2B) -->
+        <div class="mb-6">
+            <a href="/organizator/leisure-invoices" class="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl hover:from-blue-100 hover:to-indigo-100 transition-colors">
+                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-blue-200 text-lg">📄</div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-blue-900">Facturi emise (persoane juridice)</p>
+                    <p class="text-xs text-blue-700/80">Comenzile POS cu factură B2B — filtrează perioada + vezi detalii firmă și comandă</p>
+                </div>
+                <span class="text-xs font-semibold text-blue-700">→</span>
+            </a>
+        </div>
+
         <!-- Chart + breakdown grid -->
         <div class="grid lg:grid-cols-3 gap-6 mb-6">
             <div class="lg:col-span-2 bg-white border rounded-2xl border-border p-5">

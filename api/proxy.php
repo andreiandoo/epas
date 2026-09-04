@@ -2078,6 +2078,16 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.invoices.index':
+        // GET /organizer/events/{id}/leisure/invoices?from=&to=&search=
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $q = [];
+        foreach (['from','to','search','page','per_page'] as $k) if (isset($_GET[$k])) $q[$k] = $_GET[$k];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/invoices' . ($q ? '?' . http_build_query($q) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.scans':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
