@@ -287,10 +287,49 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         loadReport();
     }
 
+    // Skeleton loader: pentru schimbari de perioada arata bare gri animate in loc
+    // de cifrele vechi + overlay spinner pe fiecare card breakdown. Consistent cu
+    // leisure-sales.
+    const R_STAT_TARGETS = ['r-total-revenue', 'r-total-tickets', 'r-total-orders', 'r-avg', 'r-total-commission', 'r-net-revenue',
+        'r-issuer-primary-revenue', 'r-issuer-primary-net', 'r-issuer-primary-tickets', 'r-issuer-primary-commission', 'r-issuer-primary-vat',
+        'r-issuer-secondary-revenue', 'r-issuer-secondary-net', 'r-issuer-secondary-tickets', 'r-issuer-secondary-commission', 'r-issuer-secondary-vat'];
+    const R_LOADING_TARGETS = ['r-payment-rows', 'r-source-rows', 'r-cashier-rows', 'r-tt-rows'];
+    function rSetLoading(on) {
+        R_STAT_TARGETS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (on) {
+                el.dataset.origHtml = el.innerHTML;
+                el.innerHTML = '<span class="inline-block h-4 w-14 rounded bg-slate-200 animate-pulse align-middle"></span>';
+            } else {
+                delete el.dataset.origHtml;
+            }
+        });
+        R_LOADING_TARGETS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const parent = el.closest('.bg-white') || el.parentElement;
+            if (!parent) return;
+            if (on) {
+                parent.style.position = parent.style.position || 'relative';
+                if (!parent.querySelector('.r-loading-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'r-loading-overlay';
+                    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;border-radius:1rem;z-index:10;';
+                    overlay.innerHTML = '<div class="flex items-center gap-2 text-sm font-semibold text-primary"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"></path></svg><span>Se încarcă…</span></div>';
+                    parent.appendChild(overlay);
+                }
+            } else {
+                const overlay = parent.querySelector('.r-loading-overlay');
+                if (overlay) overlay.remove();
+            }
+        });
+    }
+
     async function loadReport() {
         if (!currentEventId) return;
         $('r-error').classList.add('hidden');
-        $('r-loading').classList.remove('hidden');
+        rSetLoading(true);
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/raport`, {
                 from: $('r-from').value, to: $('r-to').value
@@ -316,7 +355,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('r-error').textContent = 'Eroare: ' + (e?.message || '');
             $('r-error').classList.remove('hidden');
         } finally {
-            $('r-loading').classList.add('hidden');
+            rSetLoading(false);
         }
     }
 
