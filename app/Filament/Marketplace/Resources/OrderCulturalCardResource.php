@@ -16,7 +16,10 @@ class OrderCulturalCardResource extends OrderResource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->whereRaw("(meta->>'payment_method') = 'card_cultural' OR (meta->>'cultural_card_surcharge' IS NOT NULL AND (meta->>'cultural_card_surcharge')::numeric > 0)");
+            ->where(function ($q) {
+                $q->whereRaw("(meta->>'payment_method') = 'card_cultural'")
+                  ->orWhereRaw("(meta->>'cultural_card_surcharge' IS NOT NULL AND (meta->>'cultural_card_surcharge')::numeric > 0)");
+            });
     }
 
     public static function getPages(): array

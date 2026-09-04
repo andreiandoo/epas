@@ -16,7 +16,10 @@ class OrderInsuranceResource extends OrderResource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->whereRaw("(meta->>'insurance_amount' IS NOT NULL AND (meta->>'insurance_amount')::numeric > 0) OR (meta->>'ticket_insurance')::boolean = true");
+            ->where(function ($q) {
+                $q->whereRaw("(meta->>'insurance_amount' IS NOT NULL AND (meta->>'insurance_amount')::numeric > 0)")
+                  ->orWhereRaw("(meta->>'ticket_insurance')::boolean = true");
+            });
     }
 
     public static function getPages(): array

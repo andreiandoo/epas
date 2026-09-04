@@ -322,12 +322,18 @@ class OrderResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('Nr. Comandă')
-                    ->formatStateUsing(fn ($state, $record) =>
-                        '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
-                        ($record->order_number ? " ({$record->order_number})" : '') .
-                        ($record->source === 'test_order' ? ' ⚗️ TEST' : '') .
-                        ($record->source === 'external_import' ? ' 🌐 ' . ($record->meta['external_platform'] ?? $record->meta['imported_from'] ?? 'Extern') : '')
-                    )
+                    ->html()
+                    ->formatStateUsing(function ($state, $record) {
+                        $primary = '#' . str_pad($state, 6, '0', STR_PAD_LEFT);
+                        $secondary = trim(($record->order_number ?? '')
+                            . ($record->source === 'test_order' ? ' ⚗️ TEST' : '')
+                            . ($record->source === 'external_import' ? ' 🌐 ' . ($record->meta['external_platform'] ?? $record->meta['imported_from'] ?? 'Extern') : ''));
+                        $html = '<div class="font-semibold">' . e($primary) . '</div>';
+                        if ($secondary !== '') {
+                            $html .= '<div class="text-xs text-gray-500 dark:text-gray-400">' . e($secondary) . '</div>';
+                        }
+                        return $html;
+                    })
                     ->searchable(query: function ($query, $search) {
                         $query->where(function ($q) use ($search) {
                             $q->where('id', 'like', "%{$search}%")
@@ -336,14 +342,28 @@ class OrderResource extends Resource
                     })
                     ->sortable()
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('customer_email')
-                    ->label('Client')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
                 Tables\Columns\TextColumn::make('customer_name')
-                    ->label('Nume')
-                    ->searchable()
+                    ->label('Client')
+                    ->html()
+                    ->getStateUsing(function ($record) {
+                        $name = trim((string) ($record->customer_name ?? ''));
+                        $email = trim((string) ($record->customer_email ?? ''));
+                        $html = '';
+                        if ($name !== '') {
+                            $html .= '<div class="font-semibold">' . e($name) . '</div>';
+                        }
+                        if ($email !== '') {
+                            $html .= '<div class="text-xs text-gray-500 dark:text-gray-400">' . e($email) . '</div>';
+                        }
+                        return $html !== '' ? $html : '-';
+                    })
+                    ->searchable(query: function ($query, $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('customer_name', 'ilike', "%{$search}%")
+                              ->orWhere('customer_email', 'ilike', "%{$search}%");
+                        });
+                    })
+                    ->sortable('customer_name')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('event_names')
                     ->label('Eveniment')
@@ -398,7 +418,8 @@ class OrderResource extends Resource
                         return $events ?: '-';
                     })
                     ->wrap()
-                    ->limit(40)
+                    ->limit(80)
+                    ->extraAttributes(['style' => 'min-width: 260px;'])
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('tickets_count')
                     ->label('Bilete')
@@ -492,14 +513,14 @@ class OrderResource extends Resource
                             ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
                     ]),
             ])
+            ->recordUrl(fn ($record) => static::getUrl('view', ['record' => $record]))
             ->actions([
-                \Filament\Actions\ViewAction::make()->iconButton(),
                 \Filament\Actions\Action::make('quick_refund')
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('danger')
                     ->iconButton()
                     ->tooltip('Rambursează comanda')
-                    ->visible(fn ($record) => in_array($record->status, ['completed', 'paid', 'confirmed']) && !in_array($record->status, ['refunded', 'partially_refunded']) && $record->source !== 'external_import')
+                    ->visible(fn ($record) => false)
                     ->requiresConfirmation()
                     ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
                     ->modalDescription(function ($record) {
