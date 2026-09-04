@@ -250,6 +250,38 @@ const ArtistPage = {
             };
         });
 
+        // Dynamic stats card: instead of hardcoded Spotify-centric metrics
+        // (which show a demoralizing "0" for artists not on Spotify — e.g.
+        // stand-up comedians), pick the artist's strongest available numbers so
+        // the card always reads positively. Zero-valued metrics are dropped;
+        // we keep the first 4 from a curated priority order.
+        var s = api.stats || {};
+        var ytViews = s.youtube_total_views || 0;
+        var statCandidates = [
+            { label: 'Ascultători lunari', value: s.spotify_listeners || 0 },
+            { label: 'Total Followers', value: totalFollowers },
+            { label: 'Vizualizări YouTube', value: ytViews },
+            { label: 'Followers Instagram', value: s.instagram_followers || 0 },
+            { label: 'Followers TikTok', value: s.tiktok_followers || 0 },
+            { label: 'Followers Facebook', value: s.facebook_followers || 0 },
+            // Prefer YouTube views over subscribers — don't show both.
+            { label: 'Abonați YouTube', value: ytViews > 0 ? 0 : (s.youtube_subscribers || 0) },
+            { label: 'Spotify Popularity', value: s.spotify_popularity || 0 },
+        ];
+        var upcomingCount = s.upcoming_events || events.length;
+        var dynamicStats = statCandidates
+            .filter(function(c) { return c.value > 0; })
+            .slice(0, 4)
+            .map(function(c) { return { label: c.label, value: self.formatNumber(c.value) }; });
+        // Fallbacks so the card never renders empty: fill remaining slots (or a
+        // lone stat) with the upcoming-events count when available.
+        if (dynamicStats.length < 4 && upcomingCount > 0) {
+            dynamicStats.push({ label: 'Concerte viitoare', value: String(upcomingCount) });
+        }
+        if (dynamicStats.length === 0) {
+            dynamicStats.push({ label: 'Pe AmBilet', value: 'Nou' });
+        }
+
         return {
             name: api.name,
             slug: api.slug,
@@ -263,7 +295,8 @@ const ArtistPage = {
                 spotifyPopularity: api.stats?.spotify_popularity || 0,
                 youtubeViews: this.formatNumber(api.stats?.youtube_total_views || 0),
                 upcomingEvents: api.stats?.upcoming_events || events.length,
-                spotifyListenersRaw: api.stats?.spotify_listeners || 0  
+                spotifyListenersRaw: api.stats?.spotify_listeners || 0,
+                dynamic: dynamicStats
             },
             about: api.biography ? [api.biography] : ['Informații despre acest artist vor fi adăugate în curând.'],
             aboutTranslations: api.biography_translations || {},
@@ -435,23 +468,25 @@ const ArtistPage = {
 
         var divider = '<div class="hidden w-px h-12 bg-gray-200 lg:block"></div>';
 
-        container.innerHTML =
-            '<div class="text-center flex-1 min-w-[100px]">' +
-                '<div class="text-[28px] font-extrabold text-gray-900">' + stats.spotifyListeners + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Ascultători lunari</div>' +
-            '</div>' + divider +
-            '<div class="text-center flex-1 min-w-[100px]">' +
-                '<div class="text-[28px] font-extrabold text-gray-900">' + stats.totalFollowers + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Total Followers</div>' +
-            '</div>' + divider +
-            '<div class="text-center flex-1 min-w-[100px]">' +
-                '<div class="text-[28px] font-extrabold text-gray-900">' + stats.spotifyPopularity + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Spotify Popularity</div>' +
-            '</div>' + divider +
-            '<div class="text-center flex-1 min-w-[100px]">' +
-                '<div class="text-[28px] font-extrabold text-gray-900">' + stats.youtubeViews + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">YouTube Views</div>' +
-            '</div>';
+        // Render the dynamically-selected top metrics (always positive — no
+        // "0 Spotify" for non-Spotify artists). Falls back to the legacy fixed
+        // four only if the dynamic list is somehow missing.
+        var items = (stats.dynamic && stats.dynamic.length)
+            ? stats.dynamic
+            : [
+                { label: 'Ascultători lunari', value: stats.spotifyListeners },
+                { label: 'Total Followers', value: stats.totalFollowers },
+                { label: 'Spotify Popularity', value: stats.spotifyPopularity },
+                { label: 'YouTube Views', value: stats.youtubeViews },
+            ];
+
+        container.innerHTML = items.map(function(item, i) {
+            return (i > 0 ? divider : '') +
+                '<div class="text-center flex-1 min-w-[100px]">' +
+                    '<div class="text-[28px] font-extrabold text-gray-900">' + item.value + '</div>' +
+                    '<div class="text-[13px] text-gray-500 mt-1">' + item.label + '</div>' +
+                '</div>';
+        }).join('');
     },
 
     /**
