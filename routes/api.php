@@ -2122,6 +2122,9 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')
             ->whereNumber('orderId')
             ->name('api.marketplace-client.organizer.leisure.orders.destroy');
+        Route::get('/events/{event}/leisure/invoices', [OrganizerLeisureController::class, 'invoicesIndex'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.invoices.index');
         // Scanari — chart per zi + detalii pe zi
         Route::get('/events/{event}/leisure/scans', [OrganizerLeisureController::class, 'scansOverview'])
             ->whereNumber('event')

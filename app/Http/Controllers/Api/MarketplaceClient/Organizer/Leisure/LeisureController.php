@@ -3335,6 +3335,129 @@ class LeisureController extends BaseController
     }
 
     /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/invoices
+     *     ?from=&to=&search=&per_page=&page=
+     *
+     * Lista comenzi cu factura emisa pentru persoana juridica (B2B).
+     * Filtrare pe meta.company_billing populat SAU meta.invoice_requested=true
+     * SAU meta.invoice_number NOT NULL. Toate 3 sunt indicatori ca s-a cerut
+     * factura din POS + s-au introdus date de firma.
+     */
+    public function invoicesIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'search' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:200',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $tz = 'Europe/Bucharest';
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'], $tz)->startOfDay()
+            : Carbon::now($tz)->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'], $tz)->endOfDay()
+            : Carbon::now($tz)->endOfDay();
+        $perPage = (int) ($validated['per_page'] ?? 30);
+
+        $q = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed', 'confirmed'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->where(function ($q) {
+                $q->whereRaw("(meta->>'invoice_requested')::boolean = true")
+                  ->orWhereRaw("meta->>'invoice_number' IS NOT NULL")
+                  ->orWhereRaw("meta->'company_billing' IS NOT NULL");
+            });
+
+        if (!empty($validated['search'])) {
+            $s = $validated['search'];
+            $q->where(function ($sq) use ($s) {
+                $sq->where('order_number', 'ilike', "%{$s}%")
+                    ->orWhere('customer_name', 'ilike', "%{$s}%")
+                    ->orWhere('customer_email', 'ilike', "%{$s}%")
+                    ->orWhereRaw("meta->>'invoice_number' ILIKE ?", ["%{$s}%"])
+                    ->orWhereRaw("meta->'company_billing'->>'name' ILIKE ?", ["%{$s}%"])
+                    ->orWhereRaw("meta->'company_billing'->>'cui' ILIKE ?", ["%{$s}%"]);
+            });
+        }
+
+        $paginator = $q->orderByDesc('paid_at')
+            ->withCount(['tickets as tickets_count' => function ($tq) {
+                $tq->whereNotIn('status', ['cancelled', 'refunded']);
+            }])
+            ->paginate($perPage, ['id', 'order_number', 'source', 'status', 'total', 'currency', 'paid_at', 'created_at', 'customer_name', 'customer_email', 'customer_phone', 'meta']);
+
+        // Preload team members pt operator_name
+        $tmIds = [];
+        foreach ($paginator->items() as $o) {
+            $tmId = $o->meta['cashier_team_member_id'] ?? null;
+            if ($tmId) $tmIds[(int) $tmId] = true;
+        }
+        $tmNames = [];
+        if (!empty($tmIds)) {
+            \App\Models\MarketplaceOrganizerTeamMember::query()
+                ->whereIn('id', array_keys($tmIds))
+                ->get(['id', 'name'])
+                ->each(function ($tm) use (&$tmNames) { $tmNames[$tm->id] = $tm->name; });
+        }
+
+        $rows = collect($paginator->items())->map(function ($o) use ($tmNames) {
+            $meta = is_array($o->meta ?? null) ? $o->meta : [];
+            $cb = is_array($meta['company_billing'] ?? null) ? $meta['company_billing'] : [];
+            $tmId = $meta['cashier_team_member_id'] ?? null;
+            $operator = $tmId ? ($tmNames[(int) $tmId] ?? ('Angajat #' . $tmId)) : ($o->source === 'pos' ? 'InfoPoint' : null);
+            return [
+                'id' => $o->id,
+                'order_number' => $o->order_number,
+                'source' => $o->source,
+                'status' => $o->status,
+                'total' => (float) $o->total,
+                'currency' => $o->currency,
+                'paid_at' => optional($o->paid_at)->toIso8601String(),
+                'created_at' => optional($o->created_at)->toIso8601String(),
+                'customer_name' => $o->customer_name,
+                'customer_email' => $o->customer_email,
+                'customer_phone' => $o->customer_phone,
+                'payment_method' => $meta['payment_method'] ?? null,
+                'operator_name' => $operator,
+                'tickets_count' => (int) ($o->tickets_count ?? 0),
+                'invoice_number' => $meta['invoice_number'] ?? null,
+                'invoice_requested' => (bool) ($meta['invoice_requested'] ?? false),
+                'company_name' => $cb['name'] ?? null,
+                'company_cui' => $cb['cui'] ?? null,
+                'company_reg_no' => $cb['reg_no'] ?? null,
+                'company_address' => $cb['address'] ?? null,
+                'company_iban' => $cb['iban'] ?? null,
+                'company_contact_person' => $cb['contact_person'] ?? null,
+            ];
+        });
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'orders' => $rows->values(),
+            'pagination' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
      * Helper: reconstruieste closing_snapshot pentru o sesiune de casa dupa
      * modificari (delete order). Mirror 1:1 al logicii din cashierClose().
      */
