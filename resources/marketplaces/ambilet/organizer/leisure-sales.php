@@ -360,12 +360,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
-    // Toggle loading state pe cardurile care se schimba la fiecare loadTimeline.
-    // Aplic opacity + pointer-events blocat + spinner label peste chart si peste
-    // fiecare din cele 3 tab-uri (categorii / metoda plata / tip bilet). Nu blocam
-    // butoanele de sus (Aplica / range / groupby) - user poate schimba din nou
-    // in timp ce se incarca.
+    // Skeleton state pt schimbari de perioada. Aplic:
+    //  1. Overlay spinner peste chart + 3 carduri breakdown
+    //  2. Skeleton gri animat in locul valorilor din cardurile de sus (nu doar opacity)
+    // setLoading(false) e apelat DUPA ce AMBELE (loadTimeline + loadSummary) termina,
+    // altfel cifrele revin la valorile vechi inainte de update -> flicker perceput.
     const LOADING_TARGETS = ['lv-chart', 'lv-categories', 'lv-payment-methods', 'lv-ticket-types'];
+    const STAT_TARGETS = ['lv-stat-total', 'lv-rev-online', 'lv-rev-pos', 'lv-stat-comm', 'lv-comm-online', 'lv-comm-pos',
+        'lv-stat-net', 'lv-net-online', 'lv-net-pos', 'lv-stat-orders', 'lv-stat-avg',
+        'lv-stat-tickets-physical', 'lv-stat-tickets-transactions', 'lv-stat-cash', 'lv-stat-card', 'lv-sessions-count'];
+    const _skeletonBackup = new Map();
     function setLoading(on) {
         LOADING_TARGETS.forEach(id => {
             const el = document.getElementById(id);
@@ -377,8 +381,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 parent.classList.add('lv-is-loading');
                 if (!parent.querySelector('.lv-loading-overlay')) {
                     const overlay = document.createElement('div');
-                    overlay.className = 'lv-loading-overlay absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-2xl z-10';
-                    overlay.innerHTML = '<div class="flex items-center gap-2 text-sm text-primary"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"></path></svg><span>Se încarcă…</span></div>';
+                    overlay.className = 'lv-loading-overlay absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-2xl z-10';
+                    overlay.innerHTML = '<div class="flex items-center gap-2 text-sm text-primary font-semibold"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"></path></svg><span>Se încarcă…</span></div>';
                     parent.appendChild(overlay);
                 }
             } else {
@@ -387,10 +391,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (overlay) overlay.remove();
             }
         });
-        // Cards de sus (Total / Comision / Net etc) — opacity subtila
-        document.querySelectorAll('[id^="lv-stat-"]').forEach(el => {
-            el.style.opacity = on ? '0.4' : '';
-            el.style.transition = 'opacity 0.15s';
+        // Skeleton bare gri animate in loc de valori numerice (mai clar decat opacity)
+        STAT_TARGETS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (on) {
+                if (!_skeletonBackup.has(id)) _skeletonBackup.set(id, el.innerHTML);
+                el.innerHTML = '<span class="inline-block h-4 w-16 rounded bg-slate-200 animate-pulse align-middle"></span>';
+            } else {
+                // NU restauram din backup - noile valori sunt scrise de loadSummary()
+                // dupa ce setLoading(false) e apelat, iar backup-ul e sters ca sa nu
+                // ramana asociat cu next cycle.
+                _skeletonBackup.delete(id);
+            }
         });
     }
 
@@ -402,26 +415,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
         setLoading(true);
-        try {
-            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/sales-timeline`, {
-                from: currentFrom,
-                to: currentTo,
-                group_by: currentGroupBy,
-            });
-            const data = res.data || {};
-            renderChart(data.rows || [], data.group_by || 'day');
-            renderCategories(data.by_category || {});
-            renderPaymentMethods(data.by_payment_method || []);
-            renderTicketTypes(data.by_ticket_type || []);
-        } catch (e) {
-            console.error('[leisure-sales] load failed', e);
-            $('lv-error').textContent = 'Eroare la încărcarea datelor: ' + (e?.message || 'necunoscut');
-            $('lv-error').classList.remove('hidden');
-        } finally {
-            setLoading(false);
-        }
-        // Load summary in paralel (cifre pentru toate cardurile)
-        loadSummary();
+        // Paralel: timeline + summary. setLoading(false) doar dupa ce ambele termina,
+        // altfel cifrele stat (lv-stat-*) revin la valorile vechi inainte ca loadSummary
+        // sa apuce sa scrie cele noi -> user percepe reset la valorile vechi + flicker.
+        const p1 = (async () => {
+            try {
+                const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/sales-timeline`, {
+                    from: currentFrom,
+                    to: currentTo,
+                    group_by: currentGroupBy,
+                });
+                const data = res.data || {};
+                renderChart(data.rows || [], data.group_by || 'day');
+                renderCategories(data.by_category || {});
+                renderPaymentMethods(data.by_payment_method || []);
+                renderTicketTypes(data.by_ticket_type || []);
+            } catch (e) {
+                console.error('[leisure-sales] load failed', e);
+                $('lv-error').textContent = 'Eroare la încărcarea datelor: ' + (e?.message || 'necunoscut');
+                $('lv-error').classList.remove('hidden');
+            }
+        })();
+        const p2 = loadSummary();
+        try { await Promise.all([p1, p2]); } finally { setLoading(false); }
     }
 
     // Populare carduri Total/Comision/Net (cu split online-POS) + comenzi/cos/bilete
