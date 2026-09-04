@@ -46,11 +46,9 @@ function syncDrawerContent() {
             el.id = 'drawer-' + el.id;
         });
 
-        // Fix group collapse buttons to target drawer IDs
-        drawerContent.querySelectorAll('button[onclick*="ticket-group-"]').forEach(btn => {
-            var onclick = btn.getAttribute('onclick');
-            btn.setAttribute('onclick', onclick.replace(/ticket-group-/g, 'drawer-ticket-group-'));
-        });
+        // Re-wire the ticket-group accordion — innerHTML cloning drops the
+        // listeners the desktop render bound, so the drawer headers were dead.
+        wireDrawerTicketGroups(drawerContent);
 
         // Update onclick handlers to work in drawer context
         drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
@@ -74,6 +72,45 @@ function syncDrawerContent() {
     syncDrawerSummary();
 }
 
+/**
+ * Re-wire the exclusive-open ticket-group accordion inside the mobile drawer.
+ * The desktop render binds click listeners in event-single.js, but the drawer
+ * is built by cloning innerHTML (which drops listeners) and the content divs
+ * were renamed ticket-group-X -> drawer-ticket-group-X. This:
+ *   1. rewrites each button's data-group-id to the drawer id, and
+ *   2. binds a click handler SCOPED to the drawer (the desktop version used
+ *      document.getElementById, which would toggle the page behind the drawer).
+ */
+function wireDrawerTicketGroups(drawerContent) {
+    if (!drawerContent) return;
+
+    drawerContent.querySelectorAll('[data-ticket-group-btn]').forEach(function(btn) {
+        var gid = btn.getAttribute('data-group-id') || '';
+        if (gid && gid.indexOf('drawer-') !== 0) {
+            btn.setAttribute('data-group-id', 'drawer-' + gid);
+        }
+
+        btn.addEventListener('click', function() {
+            var target = drawerContent.querySelector('#' + btn.dataset.groupId);
+            if (!target) return;
+            var wasHidden = target.classList.contains('hidden');
+
+            drawerContent.querySelectorAll('.ticket-group-content').forEach(function(el) {
+                el.classList.add('hidden');
+            });
+            drawerContent.querySelectorAll('[data-ticket-group-btn] .chevron-icon').forEach(function(icon) {
+                icon.classList.remove('rotate-180');
+            });
+
+            if (wasHidden) {
+                target.classList.remove('hidden');
+                var chevron = btn.querySelector('.chevron-icon');
+                if (chevron) chevron.classList.add('rotate-180');
+            }
+        });
+    });
+}
+
 function syncDrawerSummary() {
     setTimeout(() => {
         // Re-clone ticket cards from desktop (which has already re-rendered with +/- buttons)
@@ -86,10 +123,9 @@ function syncDrawerSummary() {
             drawerContent.querySelectorAll('[id^="ticket-group-"]').forEach(el => {
                 el.id = 'drawer-' + el.id;
             });
-            drawerContent.querySelectorAll('button[onclick*="ticket-group-"]').forEach(btn => {
-                var onclick = btn.getAttribute('onclick');
-                btn.setAttribute('onclick', onclick.replace(/ticket-group-/g, 'drawer-ticket-group-'));
-            });
+
+            // Re-wire the group accordion after every re-clone.
+            wireDrawerTicketGroups(drawerContent);
 
             drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
                 const originalOnclick = btn.getAttribute('onclick');
