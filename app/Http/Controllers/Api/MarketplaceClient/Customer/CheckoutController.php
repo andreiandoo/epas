@@ -217,6 +217,16 @@ class CheckoutController extends BaseController
 
         // Validate cart items are still available
         $validationErrors = $this->validateCartItemsForCheckout($cartItems, $isTestOrder);
+
+        // Seat-level check for seated items (seats grabbed by someone else while
+        // the customer was deciding). Merged so the customer sees the exact
+        // reason per item, seats included.
+        $seatErrors = $this->validateSeatAvailabilityForCheckout($cartItems);
+        foreach ($seatErrors as $seatKey => $seatMsg) {
+            // Prefer the more specific seat message over a generic quota one.
+            $validationErrors[$seatKey] = $seatMsg;
+        }
+
         if (!empty($validationErrors)) {
             // info, not warning — this is a normal business event (sold-out
             // race / expired hold), not an application error. Customer sees
@@ -226,8 +236,20 @@ class CheckoutController extends BaseController
                 'cart_items' => $cartItems,
                 'errors' => $validationErrors,
             ]);
-            return $this->error('Some items are no longer available', 400, [
-                'errors' => $validationErrors,
+
+            // Build a customer-facing message that carries the actual reason(s):
+            // a single specific reason reads best on its own; multiple reasons
+            // are listed. The frontend surfaces `message` directly, so the
+            // customer sees WHY (sold out / only N left / general capacity
+            // reached / seats taken meanwhile) instead of a vague notice.
+            $reasons = array_values($validationErrors);
+            $message = count($reasons) === 1
+                ? $reasons[0]
+                : 'Unele produse din coș nu mai sunt disponibile: ' . implode(' • ', $reasons);
+
+            return $this->error($message, 400, [
+                'items' => $validationErrors,
+                'reasons' => $reasons,
             ]);
         }
 
@@ -1514,7 +1536,7 @@ class CheckoutController extends BaseController
                 'cart_items' => $cartItems,
                 'errors' => $validationErrors,
             ]);
-            return $this->error('Some activity slots are no longer available', 400, [
+            return $this->error('Unele intervale orare pentru activități nu mai sunt disponibile.', 400, [
                 'errors' => $validationErrors,
             ]);
         }
@@ -2131,10 +2153,11 @@ class CheckoutController extends BaseController
         foreach ($items as $key => $item) {
             $ticketTypeId = $item['ticket_type_id'] ?? null;
             $itemEventId = $item['event_id'] ?? null;
+            $quantity = (int) ($item['quantity'] ?? 1);
 
             if (!$ticketTypeId) {
                 Log::channel('marketplace')->debug('Validation: missing ticket_type_id', ['item' => $item]);
-                $errors[$key] = 'Invalid item: missing ticket type';
+                $errors[$key] = 'Produs invalid: lipsește tipul de bilet.';
                 continue;
             }
 
@@ -2150,12 +2173,13 @@ class CheckoutController extends BaseController
             }
 
             if ($mktTicketType) {
+                $ttName = $this->ticketTypeDisplayName($mktTicketType);
                 if ($mktTicketType->status === 'sold_out') {
-                    $errors[$key] = 'Ticket type is sold out';
+                    $errors[$key] = "Biletul „{$ttName}” s-a epuizat.";
                     continue;
                 }
                 if ($mktTicketType->status !== 'on_sale' && $mktTicketType->status !== 'active') {
-                    $errors[$key] = "Ticket type is not available (status: {$mktTicketType->status})";
+                    $errors[$key] = "Biletul „{$ttName}” nu mai este disponibil momentan.";
                     continue;
                 }
 
@@ -2163,9 +2187,10 @@ class CheckoutController extends BaseController
                     ? PHP_INT_MAX
                     : max(0, $mktTicketType->quantity - ($mktTicketType->quantity_sold ?? 0) - ($mktTicketType->quantity_reserved ?? 0));
 
-                $quantity = $item['quantity'] ?? 1;
                 if ($quantity > $available) {
-                    $errors[$key] = "Only {$available} tickets available";
+                    $errors[$key] = $available <= 0
+                        ? "Biletul „{$ttName}” s-a epuizat."
+                        : "Au mai rămas doar {$available} bilete la „{$ttName}” (ai cerut {$quantity}).";
                 }
                 continue;
             }
@@ -2178,22 +2203,24 @@ class CheckoutController extends BaseController
 
             if (!$ticketType) {
                 Log::channel('marketplace')->debug('Validation: ticket type not found', ['ticket_type_id' => $ticketTypeId]);
-                $errors[$key] = 'Ticket type no longer exists';
+                $errors[$key] = 'Acest tip de bilet nu mai există.';
                 continue;
             }
 
+            $ttName = $this->ticketTypeDisplayName($ticketType);
+
             if ($ticketType->status !== 'active') {
-                $errors[$key] = "Ticket type is not available (status: {$ticketType->status})";
+                $errors[$key] = "Biletul „{$ttName}” nu mai este disponibil momentan.";
                 continue;
             }
 
             if ($ticketType->is_sold_out) {
-                $errors[$key] = "Ticket type is sold out";
+                $errors[$key] = "Biletul „{$ttName}” s-a epuizat.";
                 continue;
             }
 
             if (!$ticketType->event || (!$ticketType->event->is_published && !$isTestOrder)) {
-                $errors[$key] = "Event is no longer available";
+                $errors[$key] = 'Evenimentul nu mai este disponibil.';
                 continue;
             }
 
@@ -2202,7 +2229,7 @@ class CheckoutController extends BaseController
             // toggled before the cascade shipped). Server-side backstop to the
             // frontend seat-map gate.
             if ($ticketType->event->is_sold_out && !$isTestOrder) {
-                $errors[$key] = "Event is sold out";
+                $errors[$key] = 'Evenimentul este epuizat (Sold Out).';
                 continue;
             }
 
@@ -2210,20 +2237,97 @@ class CheckoutController extends BaseController
                 ? PHP_INT_MAX
                 : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
 
+            // Track whether the shared event pool (general_quota) is the limiting
+            // factor — this is the case where a ticket type still looks available
+            // on its own quota, but the event's total capacity (sales + issued
+            // invitations, all counted in quota_sold) has been reached.
             $available = $ownAvailable;
+            $poolIsLimiter = false;
             $event = $ticketType->event;
             if ($event && $event->general_quota !== null && !$ticketType->is_independent_stock) {
                 $soldNonIndep = $event->ticketTypes()
                     ->where('is_independent_stock', false)
                     ->sum('quota_sold');
                 $poolRemaining = max(0, $event->general_quota - (int) $soldNonIndep);
+                if ($poolRemaining < $ownAvailable) {
+                    $poolIsLimiter = true;
+                }
                 $available = min($ownAvailable, $poolRemaining);
             }
 
-            $quantity = $item['quantity'] ?? 1;
             if ($quantity > $available) {
-                $errors[$key] = "Only {$available} tickets available";
+                if ($poolIsLimiter) {
+                    $errors[$key] = $available <= 0
+                        ? 'Capacitatea totală a evenimentului a fost atinsă (bilete vândute + invitații emise). Nu mai sunt locuri disponibile.'
+                        : "Au mai rămas doar {$available} locuri în total la eveniment (capacitatea generală aproape atinsă), deși biletul apare disponibil. Ai cerut {$quantity}.";
+                } else {
+                    $errors[$key] = $available <= 0
+                        ? "Biletul „{$ttName}” s-a epuizat."
+                        : "Au mai rămas doar {$available} bilete la „{$ttName}” (ai cerut {$quantity}).";
+                }
             }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Flatten a (possibly translatable) ticket-type name to a plain string.
+     */
+    protected function ticketTypeDisplayName($ticketType): string
+    {
+        $name = $ticketType->name ?? null;
+        if (is_array($name)) {
+            $name = $name['ro'] ?? $name['en'] ?? (reset($name) ?: '');
+        }
+        $name = trim((string) $name);
+
+        return $name !== '' ? $name : 'bilet';
+    }
+
+    /**
+     * For seated items, verify the requested seats are still free right before
+     * the order is created. If someone else bought them in the meantime (seat
+     * now status='sold'), return a Romanian message naming the seats and the
+     * time they were taken.
+     */
+    protected function validateSeatAvailabilityForCheckout(array $items): array
+    {
+        $errors = [];
+
+        foreach ($items as $key => $item) {
+            $eventSeatingId = $item['event_seating_id'] ?? null;
+            $seatUids = $item['seat_uids'] ?? [];
+
+            if (empty($eventSeatingId) || empty($seatUids)) {
+                continue;
+            }
+
+            $taken = \App\Models\Seating\EventSeat::query()
+                ->where('event_seating_id', $eventSeatingId)
+                ->whereIn('seat_uid', $seatUids)
+                ->whereIn('status', ['sold', 'blocked', 'disabled'])
+                ->get(['seat_uid', 'seat_label', 'row_label', 'section_name', 'status', 'last_change_at']);
+
+            if ($taken->isEmpty()) {
+                continue;
+            }
+
+            $labels = $taken->map(function ($s) {
+                $parts = array_filter([
+                    $s->section_name ? (string) $s->section_name : null,
+                    $s->row_label ? 'rând ' . $s->row_label : null,
+                    $s->seat_label ? 'loc ' . $s->seat_label : null,
+                ]);
+                return $parts ? implode(' ', $parts) : $s->seat_uid;
+            })->implode(', ');
+
+            $soldAt = optional($taken->max('last_change_at'));
+            $timeStr = $soldAt ? \Illuminate\Support\Carbon::parse($soldAt)->timezone(config('app.timezone'))->format('H:i') : null;
+
+            $errors[$key] = $timeStr
+                ? "Locurile alese ({$labels}) au fost achiziționate între timp de altă persoană (la ora {$timeStr}). Te rugăm să alegi alte locuri."
+                : "Locurile alese ({$labels}) nu mai sunt disponibile — au fost ocupate între timp. Te rugăm să alegi alte locuri.";
         }
 
         return $errors;

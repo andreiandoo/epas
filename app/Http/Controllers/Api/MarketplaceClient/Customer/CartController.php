@@ -227,7 +227,7 @@ class CartController extends BaseController
                     );
                 }
 
-                return $this->error('Some seats are no longer available', 409, [
+                return $this->error('O parte dintre locurile alese nu mai sunt disponibile — au fost ocupate între timp. Te rugăm să alegi alte locuri.', 409, [
                     'unavailable_seats' => $failedUids,
                     'reasons' => $reasons,
                 ]);
