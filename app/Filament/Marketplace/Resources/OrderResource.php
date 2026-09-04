@@ -513,7 +513,7 @@ class OrderResource extends Resource
                             ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
                     ]),
             ])
-            ->recordUrl(fn ($record) => static::getUrl('view', ['record' => $record]))
+            ->recordUrl(fn ($record) => url("/marketplace/orders/{$record->id}"))
             ->actions([
                 \Filament\Actions\Action::make('quick_refund')
                     ->icon('heroicon-o-arrow-uturn-left')
