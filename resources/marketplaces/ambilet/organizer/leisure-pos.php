@@ -1348,7 +1348,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 'Fără această bifă, factura NU se generează și nu poate fi emisă mai târziu (numărul serial se rezervă doar la finalizare).\n\n' +
                 'OPȚIUNI:\n' +
                 '  • Dacă vrei factură pentru firmă → bifează „Generează factură fiscală" și apasă din nou Finalizează.\n' +
-                '  • Dacă NU vrei factură → șterge câmpurile Denumire firmă + CUI (Alt+click pe câmp pentru a-l goli).';
+                '  • Dacă NU vrei factură → șterge câmpurile Denumire firmă + CUI (Alt+click pe câmp pentru a-l goli).');
             // Focus pe checkbox ca sa fie usor de bifat
             try { $('lv-co-invoice').focus(); } catch (e) {}
             return;
