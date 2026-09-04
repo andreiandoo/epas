@@ -92,9 +92,12 @@ const ArtistPage = {
                 this.artistTypes = response.data.types || [];
                 this.render(this.transformApiData(response.data));
 
-                // Apply type-specific layout overrides
+                // Apply type-specific layout overrides (theater takes
+                // precedence, then comedy; otherwise the default dynamic card).
                 if (typeof TheaterLayout !== 'undefined' && TheaterLayout.isTheater(this.artistTypes)) {
                     TheaterLayout.apply(this.transformApiData(response.data), response.data);
+                } else if (typeof ComedyLayout !== 'undefined' && ComedyLayout.isComedy(this.artistTypes)) {
+                    ComedyLayout.apply(this.transformApiData(response.data), response.data);
                 }
             } else {
                 console.error('Artist not found');

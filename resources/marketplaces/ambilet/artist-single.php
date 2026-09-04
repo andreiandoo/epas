@@ -573,6 +573,7 @@ echo '</script>';
 
 // Load external artist page controller + claim CTA renderer
 $scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single-theater.js') . '"></script>
+<script src="' . asset('assets/js/pages/artist-single-comedy.js') . '"></script>
 <script src="' . asset('assets/js/pages/artist-single.js') . '"></script>
 <script src="' . asset('assets/js/pages/artist-claim.js') . '"></script>
 <script src="' . asset('assets/js/pages/artist-booking-modal.js') . '"></script>
