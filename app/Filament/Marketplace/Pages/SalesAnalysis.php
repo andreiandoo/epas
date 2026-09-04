@@ -15,7 +15,7 @@ class SalesAnalysis extends Page
     use HasMarketplaceContext;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
-    protected static ?string $navigationLabel = 'Sales Analysis';
+    protected static ?string $navigationLabel = 'Analiză vânzări';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.marketplace.pages.sales-analysis';

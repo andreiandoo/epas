@@ -27,7 +27,7 @@ class EventCategoryResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationLabel = 'Event Categories';
+    protected static ?string $navigationLabel = 'Categorii evenimente';
 
     protected static ?string $navigationParentItem = 'Evenimente';
 
@@ -35,7 +35,7 @@ class EventCategoryResource extends Resource
 
     protected static ?string $modelLabel = 'Event Category';
 
-    protected static ?string $pluralModelLabel = 'Event Categories';
+    protected static ?string $pluralModelLabel = 'Categorii evenimente';
 
     protected static ?string $slug = 'event-categories';
 

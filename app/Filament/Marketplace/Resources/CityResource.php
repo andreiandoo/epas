@@ -28,7 +28,7 @@ class CityResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-library';
 
-    protected static ?string $navigationLabel = 'Cities';
+    protected static ?string $navigationLabel = 'Orașe';
 
     protected static ?string $navigationParentItem = 'Locații';
 
@@ -36,7 +36,7 @@ class CityResource extends Resource
 
     protected static ?string $modelLabel = 'City';
 
-    protected static ?string $pluralModelLabel = 'Cities';
+    protected static ?string $pluralModelLabel = 'Orașe';
 
     protected static ?string $slug = 'cities';
 

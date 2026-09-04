@@ -27,7 +27,7 @@ class CountyResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-map';
 
-    protected static ?string $navigationLabel = 'Counties';
+    protected static ?string $navigationLabel = 'Județe';
 
     protected static ?string $navigationParentItem = 'Locații';
 
@@ -35,7 +35,7 @@ class CountyResource extends Resource
 
     protected static ?string $modelLabel = 'County';
 
-    protected static ?string $pluralModelLabel = 'Counties';
+    protected static ?string $pluralModelLabel = 'Județe';
 
     protected static ?string $slug = 'counties';
 
@@ -193,7 +193,7 @@ class CountyResource extends Resource
                 // the persisted column gets stale whenever cities are
                 // added/removed outside the seed scripts.
                 Tables\Columns\TextColumn::make('city_count')
-                    ->label('Cities')
+                    ->label('Orașe')
                     ->getStateUsing(fn ($record) => \App\Models\MarketplaceCity::query()
                         ->where('county_id', $record->id)
                         ->count())

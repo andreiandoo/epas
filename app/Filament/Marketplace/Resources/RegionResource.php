@@ -26,7 +26,7 @@ class RegionResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-map';
 
-    protected static ?string $navigationLabel = 'Regions';
+    protected static ?string $navigationLabel = 'Regiuni';
 
     protected static ?string $navigationParentItem = 'Locații';
 
@@ -34,7 +34,7 @@ class RegionResource extends Resource
 
     protected static ?string $modelLabel = 'Region';
 
-    protected static ?string $pluralModelLabel = 'Regions';
+    protected static ?string $pluralModelLabel = 'Regiuni';
 
     protected static ?string $slug = 'regions';
 
@@ -181,7 +181,7 @@ class RegionResource extends Resource
                 // only runs when the seed scripts touch it. Cheap join
                 // (~8 regions × one count query each).
                 Tables\Columns\TextColumn::make('city_count')
-                    ->label('Cities')
+                    ->label('Orașe')
                     ->getStateUsing(fn ($record) => \App\Models\MarketplaceCity::query()
                         ->where('region_id', $record->id)
                         ->count())

@@ -5720,16 +5720,19 @@ class EventResource extends Resource
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_published')
                     ->label('Publicat'),
-                Tables\Filters\TernaryFilter::make('is_cancelled'),
-                Tables\Filters\TernaryFilter::make('is_sold_out'),
+                Tables\Filters\TernaryFilter::make('is_cancelled')
+                    ->label('Anulat'),
+                Tables\Filters\TernaryFilter::make('is_sold_out')
+                    ->label('Sold out'),
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
-                    ->label('Organizer')
+                    ->label('Organizator')
                     ->relationship('marketplaceOrganizer', 'name'),
                 Tables\Filters\Filter::make('has_pending_changes')
                     ->label('Modificări în așteptare')
                     ->query(fn ($query) => $query->where('pending_changes_status', 'pending'))
                     ->toggle(),
-            ])
+            ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
+            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label('Filtre')->icon('heroicon-o-funnel')->button())
             ->actions([
                 // Organizer live edits that landed as pending (organizer without
                 // allow_live_edits). Approving applies them to the live event;
