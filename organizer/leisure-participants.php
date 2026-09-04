@@ -401,6 +401,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (currentFrom) params.from = currentFrom;
             if (currentTo) params.to = currentTo;
             if (f.status) params.status = f.status;
+            if (f.checkin) params.checkin = f.checkin;
             if (f.ticket_type_id) params.ticket_type_id = f.ticket_type_id;
             if (f.visit_from) params.visit_from = f.visit_from;
             if (f.visit_to) params.visit_to = f.visit_to;
