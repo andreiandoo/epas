@@ -763,6 +763,49 @@ class EventsController extends BaseController
     }
 
     /**
+     * Mark a SINGLE ticket type as sold out — organizer-triggered and
+     * IRREVERSIBLE. Behaves exactly like the admin panel's per-ticket-type
+     * "Sold Out" toggle: it sets ticket_types.is_sold_out = true, which the
+     * storefront (event page) and checkout both enforce, so the type can no
+     * longer be bought on any channel. There is intentionally NO un-set path
+     * from the organizer side — once declared sold out, a ticket type cannot be
+     * put back on sale here (only an AmBilet operator could, from core admin).
+     */
+    public function markTicketTypeSoldOut(Request $request, int $eventId, int $ticketTypeId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $ticketType = $event->ticketTypes()->where('id', $ticketTypeId)->first();
+        if (!$ticketType) {
+            return $this->error('Ticket type not found', 404);
+        }
+
+        if (!$ticketType->is_sold_out) {
+            $ticketType->update(['is_sold_out' => true]);
+
+            Log::channel('marketplace')->info('Organizer declared ticket type sold out', [
+                'organizer_id' => $organizer->id,
+                'event_id' => $event->id,
+                'ticket_type_id' => $ticketType->id,
+            ]);
+        }
+
+        return $this->success([
+            'ticket_type_id' => $ticketType->id,
+            'is_sold_out' => true,
+        ], 'Tipul de bilet a fost declarat sold-out.');
+    }
+
+    /**
      * Upload images for an event (poster and/or cover)
      */
     public function uploadImages(Request $request, int $eventId): JsonResponse
@@ -1509,9 +1552,12 @@ class EventsController extends BaseController
         if ($ticket->checked_in_at) {
             $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'duplicate', 'already_checked_in');
             $duplicate = $this->buildTicketScanPayload($ticket, $isInvitation);
+            // Timestamp: ALWAYS send ISO 8601 with offset so the mobile
+            // app can convert to Europe/Bucharest safely. The old naked
+            // "Y-m-d H:i:s" caused a 3h discrepancy — server runs UTC.
             return response()->json(array_merge([
                 'success' => false,
-                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
+                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->toIso8601String(),
                 'venue_notes' => $venueNotes,
             ], $duplicate), 400);
         }
@@ -1630,15 +1676,20 @@ class EventsController extends BaseController
 
         $customerName = null;
         $customerEmail = null;
+        $customerPhone = null;
         if (!$isInvitation && $ticket->order) {
             $marketplaceCustomer = $ticket->order->marketplaceCustomer;
             $customerName = $marketplaceCustomer
                 ? trim(($marketplaceCustomer->first_name ?? '') . ' ' . ($marketplaceCustomer->last_name ?? ''))
                 : $ticket->order->customer_name;
             $customerEmail = $marketplaceCustomer?->email ?? $ticket->order->customer_email;
+            // Prefer the CRM record's phone, fall back to what was captured
+            // on the order at checkout time — the two can drift.
+            $customerPhone = $marketplaceCustomer?->phone ?? $ticket->order->customer_phone;
         } else {
             $customerName = $beneficiary['name'] ?? $ticket->attendee_name ?? null;
             $customerEmail = $beneficiary['email'] ?? null;
+            $customerPhone = $beneficiary['phone'] ?? null;
         }
 
         return [
@@ -1659,13 +1710,16 @@ class EventsController extends BaseController
             'customer' => [
                 'name' => $customerName,
                 'email' => $customerEmail,
+                'phone' => $customerPhone,
             ],
             'order' => $ticket->order ? [
                 'source' => $ticket->order->source ?? 'online',
                 'customer_name' => $ticket->order->customer_name,
+                'customer_phone' => $ticket->order->customer_phone,
             ] : [
                 'source' => 'invitation',
                 'customer_name' => $beneficiary['name'] ?? null,
+                'customer_phone' => $beneficiary['phone'] ?? null,
             ],
         ];
     }
@@ -4680,6 +4734,7 @@ class EventsController extends BaseController
                     'has_seats' => $hasSeats,
                     'color' => $tt->color ?? null,
                     'checked_in' => $checkedIn,
+                    'is_sold_out' => (bool) ($tt->is_sold_out ?? false),
                 ];
                 });
             })(),

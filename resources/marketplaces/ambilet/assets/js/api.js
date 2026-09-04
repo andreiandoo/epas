@@ -455,6 +455,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/submit$/)) return 'organizer.event.submit';
         if (endpoint.match(/\/organizer\/events\/\d+\/cancel$/)) return 'organizer.event.cancel';
         if (endpoint.match(/\/organizer\/events\/\d+\/status$/)) return 'organizer.event.status';
+        if (endpoint.match(/\/organizer\/events\/\d+\/ticket-types\/\d+\/sold-out$/)) return 'organizer.event.ticket-type.sold-out';
         if (endpoint.match(/\/organizer\/events\/\d+\/seating-map$/)) return 'organizer.event.seating-map';
         if (endpoint.match(/\/organizer\/events\/\d+$/)) return 'organizer.event';
         if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
@@ -825,6 +826,11 @@ const AmbiletAPI = {
         const organizerEventImagesMatch = endpoint.match(/\/organizer\/events\/(\d+)\/images$/);
         if (organizerEventImagesMatch) {
             return `event_id=${encodeURIComponent(organizerEventImagesMatch[1])}`;
+        }
+
+        const organizerTicketSoldOutMatch = endpoint.match(/\/organizer\/events\/(\d+)\/ticket-types\/(\d+)\/sold-out$/);
+        if (organizerTicketSoldOutMatch) {
+            return `event_id=${encodeURIComponent(organizerTicketSoldOutMatch[1])}&ticket_type_id=${encodeURIComponent(organizerTicketSoldOutMatch[2])}`;
         }
 
         const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel|status)$/);

@@ -1655,6 +1655,17 @@ async function loadEventForEdit(eventId) {
                                     <p class="text-sm font-medium text-secondary">${maxLabel}</p>
                                 </div>
                             </div>
+                            <div class="pt-3 mt-3 border-t border-gray-200" data-soldout-slot="${tt.id || ''}">
+                                ${tt.is_sold_out ? `
+                                <div class="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold border rounded-lg text-red-700 bg-red-50 border-red-200">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    Declarat SOLD OUT — nu mai poate fi cumpărat
+                                </div>` : `
+                                <button type="button" onclick="declareTicketSoldOut(${event.id}, ${tt.id}, this)" class="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors border rounded-lg text-red-600 border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    Declară sold-out acest tip de bilet
+                                </button>`}
+                            </div>
                         </div>
                     `;
                 } else {
@@ -2925,6 +2936,80 @@ async function toggleSoldOut() {
     } catch (error) {
         AmbiletNotifications.error('Eroare la actualizare');
     }
+}
+
+// Per-ticket-type Sold Out (organizer, IRREVERSIBLE). Shows a confirmation
+// modal with an explicit acknowledgment checkbox before firing. On success the
+// button is swapped for a permanent "Declarat SOLD OUT" badge. Backend sets
+// ticket_types.is_sold_out = true (same as the admin per-type toggle).
+function declareTicketSoldOut(eventId, ticketTypeId, btnEl) {
+    var existing = document.getElementById('soldout-confirm-modal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'soldout-confirm-modal';
+    modal.className = 'fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/50';
+    modal.innerHTML =
+        '<div class="w-full max-w-md p-6 bg-white shadow-xl rounded-2xl">' +
+            '<div class="flex items-start gap-3 mb-4">' +
+                '<div class="grid w-10 h-10 text-red-600 bg-red-100 rounded-full place-items-center shrink-0">' +
+                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"/></svg>' +
+                '</div>' +
+                '<div>' +
+                    '<h3 class="text-lg font-bold text-secondary">Declară sold-out acest tip de bilet</h3>' +
+                    '<p class="mt-1 text-sm text-muted">Această acțiune este <strong>ireversibilă</strong>. Tipul de bilet va fi marcat ca Sold Out și <strong>nu va mai putea fi cumpărat</strong>, chiar dacă mai există stoc. Nu îl vei putea repune în vânzare.</p>' +
+                '</div>' +
+            '</div>' +
+            '<label class="flex items-start gap-2 p-3 mb-4 text-sm border rounded-lg cursor-pointer bg-gray-50 border-gray-200 text-secondary">' +
+                '<input type="checkbox" id="soldout-ack" class="mt-0.5">' +
+                '<span>Am înțeles că această acțiune este ireversibilă și că acest tip de bilet nu va mai putea fi pus în vânzare.</span>' +
+            '</label>' +
+            '<div class="flex justify-end gap-2">' +
+                '<button type="button" id="soldout-cancel" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Anulează</button>' +
+                '<button type="button" id="soldout-confirm" class="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg opacity-50 cursor-not-allowed" disabled>Confirmă Sold Out</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(modal);
+
+    var ack = modal.querySelector('#soldout-ack');
+    var confirmBtn = modal.querySelector('#soldout-confirm');
+    var cancelBtn = modal.querySelector('#soldout-cancel');
+    var closeModal = function() { modal.remove(); };
+
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    ack.addEventListener('change', function() {
+        confirmBtn.disabled = !ack.checked;
+        confirmBtn.classList.toggle('opacity-50', !ack.checked);
+        confirmBtn.classList.toggle('cursor-not-allowed', !ack.checked);
+    });
+
+    confirmBtn.addEventListener('click', async function() {
+        if (!ack.checked) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Se procesează...';
+        try {
+            const response = await AmbiletAPI.post('/organizer/events/' + eventId + '/ticket-types/' + ticketTypeId + '/sold-out', {});
+            if (response && response.success) {
+                const slot = document.querySelector('[data-soldout-slot="' + ticketTypeId + '"]');
+                if (slot) {
+                    slot.innerHTML = '<div class="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold border rounded-lg text-red-700 bg-red-50 border-red-200">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>' +
+                        'Declarat SOLD OUT — nu mai poate fi cumpărat</div>';
+                }
+                AmbiletNotifications.success('Tipul de bilet a fost declarat Sold Out.');
+                closeModal();
+            } else {
+                AmbiletNotifications.error((response && response.message) || 'Eroare la declararea Sold Out.');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Confirmă Sold Out';
+            }
+        } catch (e) {
+            AmbiletNotifications.error('Eroare la declararea Sold Out.');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirmă Sold Out';
+        }
+    });
 }
 
 async function toggleDoorSales() {
