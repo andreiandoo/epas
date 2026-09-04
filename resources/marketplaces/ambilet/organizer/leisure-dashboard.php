@@ -398,6 +398,14 @@ const LeisureDash = {
             const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
             const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/sales-timeline`, { from: fmt(from), to: fmt(to), group_by: 'day' });
+            // Fix chart care nu apare la prima incarcare: Chart.js poate fi inca
+            // in curs de load (defer script), sau canvas-ul nu are inca dimensiuni
+            // finale. Asteapta pana ambele sunt disponibile inainte de render.
+            let retries = 0;
+            while ((typeof Chart === 'undefined' || !document.getElementById('ld-sales-chart')?.offsetParent) && retries < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
             this.renderSales((res.data || {}).rows || []);
         } catch (e) { console.warn('sales', e); }
     },

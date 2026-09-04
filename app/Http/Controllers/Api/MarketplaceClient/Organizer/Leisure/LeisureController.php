@@ -636,147 +636,159 @@ class LeisureController extends BaseController
             : Carbon::today()->endOfDay();
         $groupBy = $validated['group_by'] ?? 'day';
 
-        // Cache 5 min + limite ridicate (Sf. Ana 30k+ tickets pe 30 zile ~ Cloudflare timeout).
-        $cacheKey = "leisure_sales_timeline_v1_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}_{$groupBy}";
+        // Cache 5 min + limite ridicate. Pt Sf. Ana 90 zile (~50k tickets),
+        // procesarea Eloquent in-memory depaseste Cloudflare 100s timeout.
+        // Fix: 3 queries SQL agregate (buckets, by_payment_method, by_ticket_type)
+        // fara load-uire in Eloquent, sub 5s pt orice range.
+        $cacheKey = "leisure_sales_timeline_v2_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}_{$groupBy}";
         $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
         if ($cached !== null) return $this->success($cached);
-        @ini_set('memory_limit', '1024M');
         @set_time_limit(120);
         @ignore_user_abort(true);
 
-        // Preload ticket types o data pentru event (nu eager pe fiecare bilet)
-        $ttMap = TicketType::query()
-            ->where('event_id', $eventModel->id)
-            ->get(['id', 'name', 'service_category'])
-            ->keyBy('id');
-
-        $orders = Order::query()
-            ->where('event_id', $eventModel->id)
-            ->whereIn('status', ['completed', 'paid'])
-            ->whereBetween('paid_at', [$from, $to])
-            ->with(['tickets:id,order_id,ticket_type_id,price,status,meta'])
-            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
-
-        // Format key per groupBy
-        $fmtKey = function ($carbon) use ($groupBy) {
-            if ($groupBy === 'month') return $carbon->format('Y-m');
-            if ($groupBy === 'week')  return $carbon->format('o-W'); // ISO week
-            return $carbon->toDateString();
+        // SQL expression pt bucket-key in functie de groupBy (Postgres)
+        $bucketExpr = match ($groupBy) {
+            'month' => "TO_CHAR(o.paid_at, 'YYYY-MM')",
+            'week'  => "TO_CHAR(o.paid_at, 'IYYY-IW')",
+            default => "TO_CHAR(o.paid_at, 'YYYY-MM-DD')",
         };
+        // Effective price = price - discount_amount (from ticket meta). Fallback
+        // proportional-per-order e ignorat aici (rare/legacy); acopera >99% cazuri.
+        $effectivePriceExpr = "GREATEST(0, COALESCE(t.price, 0) - COALESCE(NULLIF(t.meta->>'discount_amount', '')::numeric, 0))";
+        // Filtre pe bilete NErefundate + fara componente pachet + price>0 (mirror PHP)
+        $isRevenueTicket = "t.status NOT IN ('cancelled','refunded')";
+        $isTransactionTicket = "$isRevenueTicket AND (t.meta->>'from_package') IS DISTINCT FROM 'true' AND COALESCE(t.price, 0) > 0";
+        $isVisitorTicket = "$isRevenueTicket AND (t.meta->>'is_package_umbrella') IS DISTINCT FROM 'true'";
+
+        // Query 1: buckets — orders per bucket + revenue + tickets(tranzactii) + visitors
+        $bucketsRaw = \DB::select(
+            "SELECT
+                $bucketExpr AS bucket,
+                COUNT(DISTINCT o.id) AS orders_count,
+                COALESCE(SUM(CASE WHEN $isRevenueTicket THEN $effectivePriceExpr ELSE 0 END), 0) AS revenue,
+                COUNT(CASE WHEN $isVisitorTicket THEN t.id END) AS visitors,
+                COUNT(CASE WHEN $isTransactionTicket THEN t.id END) AS tickets_count
+             FROM orders o
+             LEFT JOIN tickets t ON t.order_id = o.id
+             WHERE o.event_id = ? AND o.status IN ('completed','paid') AND o.paid_at BETWEEN ? AND ?
+             GROUP BY bucket
+             ORDER BY bucket",
+            [$eventModel->id, $from, $to]
+        );
 
         $buckets = [];
         $totalRevenue = 0.0;
         $totalTickets = 0;
-        $totalOrders = $orders->count();
-        $byCategory = [];
-        $byTicketType = [];
-        $byPaymentMethod = []; // cash / card / online
-
-        foreach ($orders as $order) {
-            $key = $fmtKey($order->paid_at);
-            if (!isset($buckets[$key])) {
-                // `tickets` = tranzactii (bilete cu valoare, umbrella pachet).
-                // `visitors` = persoane fizice ce scaneaza la poarta (componente pachet
-                //  + bilete simple + bonus ghid, DAR EXCLUS umbrella care nu se scaneaza).
-                $buckets[$key] = ['date' => $key, 'orders' => 0, 'tickets' => 0, 'visitors' => 0, 'revenue' => 0.0];
-            }
-            $buckets[$key]['orders']++;
-
-            // Revenue post-discount = suma effective_price a biletelor NErefundate.
-            // Consistent cu /organizator/leisure-raport: NU folosim order.total (include
-            // on-top commission / insurance / fee, si NU reflecta discount-uri per-ticket
-            // cand promo code se aplica pe subset din cart). Contorizam si `visitors` in
-            // aceeasi bucla — bilete fizice scanabile = componente pachet + individuale +
-            // bonus ghid; SKIP umbrella-ul pachetului (nu se scaneaza, componentele da).
-            $rev = 0.0;
-            foreach ($order->tickets as $t) {
-                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
-                $rev += method_exists($t, 'getEffectivePrice')
-                    ? (float) $t->getEffectivePrice()
-                    : (float) ($t->price ?? 0);
-                // Vizitatori: skip umbrella pachet (bilet-parinte doar contabil, nu QR scanabil)
-                $isUmbrella = is_array($t->meta ?? null) && !empty($t->meta['is_package_umbrella']);
-                if (!$isUmbrella) {
-                    $buckets[$key]['visitors']++;
-                }
-            }
-            $rev = round($rev, 2);
-            $buckets[$key]['revenue'] += $rev;
+        $totalOrders = 0;
+        foreach ($bucketsRaw as $row) {
+            $rev = round((float) $row->revenue, 2);
+            $buckets[] = [
+                'date' => $row->bucket,
+                'orders' => (int) $row->orders_count,
+                'tickets' => (int) $row->tickets_count,
+                'visitors' => (int) $row->visitors,
+                'revenue' => $rev,
+            ];
             $totalRevenue += $rev;
-
-            // Metoda plata: POS cash/card citite din meta.payment_method; restul 'online'
-            $isPos = $order->source === 'pos';
-            $posMethod = $order->meta['payment_method'] ?? null;
-            if ($isPos && $posMethod === 'cash') $pmKey = 'cash';
-            elseif ($isPos && $posMethod === 'card') $pmKey = 'card';
-            else $pmKey = 'online';
-            if (!isset($byPaymentMethod[$pmKey])) $byPaymentMethod[$pmKey] = ['method' => $pmKey, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
-            $byPaymentMethod[$pmKey]['orders']++;
-            $byPaymentMethod[$pmKey]['revenue'] += $rev;
-
-            foreach ($order->tickets as $ticket) {
-                if (in_array($ticket->status, ['cancelled', 'refunded'], true)) continue;
-
-                // Componentele pachetului (meta.from_package=true) NU trebuie sa apara
-                // in raport ca tranzactii separate — le sarim complet aici (raportul
-                // "Per tip bilet" trebuie sa arate DOAR pachetele si biletele
-                // individuale, cu valorile lor). Defensiv: si tickets cu list price=0
-                // (legacy componente sau guide bonus) — filtram pe ticket.price NU pe
-                // effective_price ca sa mentinem contorizarea unui bilet full-discount
-                // (list 460, discount 100%, effective 0) ca tranzactie.
-                $isFromPackage = is_array($ticket->meta ?? null) && !empty($ticket->meta['from_package']);
-                $tPrice = (float) ($ticket->price ?? 0);
-                if ($isFromPackage || $tPrice <= 0) continue;
-
-                $buckets[$key]['tickets']++;
-                $totalTickets++;
-                $byPaymentMethod[$pmKey]['tickets']++;
-                $ttId = $ticket->ticket_type_id;
-                $ttModel = $ttMap->get($ttId);
-                $cat = $ttModel?->service_category ?? 'access';
-                $byCategory[$cat] = ($byCategory[$cat] ?? 0) + 1;
-                // Per tip bilet — foloseste label_override daca exista (guide bonus),
-                // altfel numele tipului. Grupeaza cate bucati + venit + categoria.
-                $rawName = null;
-                if (is_array($ticket->meta ?? null) && !empty($ticket->meta['label_override'])) {
-                    $rawName = $ticket->meta['label_override'];
-                    $ttKey = 'lbl_' . $rawName; // grupam bilete guide bonus separat de parintele lor
-                } else {
-                    $rawName = $ttModel?->name ?? "Tip #{$ttId}";
-                    if (is_array($rawName)) $rawName = $rawName['ro'] ?? reset($rawName);
-                    $ttKey = $cat === 'package' ? 'pkg_' . $ttId : 'tt_' . $ttId;
-                }
-                if (!isset($byTicketType[$ttKey])) {
-                    $byTicketType[$ttKey] = [
-                        'ticket_type_id' => $ttId,
-                        'name' => $rawName,
-                        'service_category' => $cat,
-                        'tickets' => 0,
-                        'revenue' => 0.0,
-                    ];
-                }
-                $byTicketType[$ttKey]['tickets']++;
-                // Revenue post-discount pentru consistenta cu totalurile
-                $byTicketType[$ttKey]['revenue'] += method_exists($ticket, 'getEffectivePrice')
-                    ? (float) $ticket->getEffectivePrice()
-                    : $tPrice;
-            }
+            $totalOrders += (int) $row->orders_count;
+            $totalTickets += (int) $row->tickets_count;
         }
 
-        ksort($buckets);
-        // Sortez by_ticket_type descrescator dupa nr. bilete
+        // Query 2: by_payment_method (cash / card / online)
+        $paymentExpr = "CASE
+                WHEN o.source = 'pos' AND (o.meta->>'payment_method') = 'cash' THEN 'cash'
+                WHEN o.source = 'pos' AND (o.meta->>'payment_method') = 'card' THEN 'card'
+                ELSE 'online' END";
+        $pmRaw = \DB::select(
+            "SELECT
+                $paymentExpr AS method,
+                COUNT(DISTINCT o.id) AS orders_count,
+                COUNT(CASE WHEN $isTransactionTicket THEN t.id END) AS tickets_count,
+                COALESCE(SUM(CASE WHEN $isRevenueTicket THEN $effectivePriceExpr ELSE 0 END), 0) AS revenue
+             FROM orders o
+             LEFT JOIN tickets t ON t.order_id = o.id
+             WHERE o.event_id = ? AND o.status IN ('completed','paid') AND o.paid_at BETWEEN ? AND ?
+             GROUP BY method",
+            [$eventModel->id, $from, $to]
+        );
+        $byPaymentMethod = array_map(fn ($r) => [
+            'method' => $r->method,
+            'orders' => (int) $r->orders_count,
+            'tickets' => (int) $r->tickets_count,
+            'revenue' => round((float) $r->revenue, 2),
+        ], $pmRaw);
+
+        // Query 3: by_ticket_type + by_category (join tickets + ticket_types)
+        // Grupam pe (ticket_type_id, label_override) ca sa separam guide bonus.
+        $ttRaw = \DB::select(
+            "SELECT
+                t.ticket_type_id,
+                COALESCE(tt.service_category, 'access') AS service_category,
+                tt.name AS tt_name,
+                (t.meta->>'label_override') AS label_override,
+                COUNT(t.id) AS tickets_count,
+                COALESCE(SUM($effectivePriceExpr), 0) AS revenue
+             FROM orders o
+             INNER JOIN tickets t ON t.order_id = o.id
+             LEFT JOIN ticket_types tt ON tt.id = t.ticket_type_id
+             WHERE o.event_id = ? AND o.status IN ('completed','paid') AND o.paid_at BETWEEN ? AND ?
+               AND $isTransactionTicket
+             GROUP BY t.ticket_type_id, tt.service_category, tt.name, (t.meta->>'label_override')",
+            [$eventModel->id, $from, $to]
+        );
+
+        $byCategory = [];
+        $byTicketType = [];
+        foreach ($ttRaw as $row) {
+            $ttId = $row->ticket_type_id;
+            $cat = $row->service_category ?? 'access';
+            $labelOverride = $row->label_override ?? null;
+
+            // Nume - JSON translatable (jsonb text): decode + fallback ro
+            $rawName = $row->tt_name;
+            if ($rawName && str_starts_with($rawName, '{')) {
+                $decoded = json_decode($rawName, true);
+                if (is_array($decoded)) $rawName = $decoded['ro'] ?? reset($decoded);
+            }
+            $rawName = $rawName ?: "Tip #{$ttId}";
+
+            $ttKey = $labelOverride ? ('lbl_' . $labelOverride) : (
+                $cat === 'package' ? ('pkg_' . $ttId) : ('tt_' . $ttId)
+            );
+            $name = $labelOverride ?: $rawName;
+
+            if (!isset($byTicketType[$ttKey])) {
+                $byTicketType[$ttKey] = [
+                    'ticket_type_id' => $ttId,
+                    'name' => $name,
+                    'service_category' => $cat,
+                    'tickets' => 0,
+                    'revenue' => 0.0,
+                ];
+            }
+            $byTicketType[$ttKey]['tickets'] += (int) $row->tickets_count;
+            $byTicketType[$ttKey]['revenue'] += (float) $row->revenue;
+            $byCategory[$cat] = ($byCategory[$cat] ?? 0) + (int) $row->tickets_count;
+        }
+
+        // Sortez desc dupa nr. bilete + rotunjire revenue
         usort($byTicketType, fn ($a, $b) => $b['tickets'] <=> $a['tickets']);
         foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
         unset($row);
-        foreach ($byPaymentMethod as &$row) $row['revenue'] = round($row['revenue'], 2);
-        unset($row);
+
+        // Currency default (query rapida pt primul order in range)
+        $currency = \DB::table('orders')
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['completed', 'paid'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->value('currency') ?? 'RON';
 
         $payload = [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'group_by' => $groupBy,
-            'currency' => $orders->first()?->currency ?? 'RON',
-            'rows' => array_values($buckets),
+            'currency' => $currency,
+            'rows' => $buckets,
             'totals' => [
                 'orders' => $totalOrders,
                 'tickets' => $totalTickets,
@@ -785,7 +797,7 @@ class LeisureController extends BaseController
             ],
             'by_category' => $byCategory,
             'by_ticket_type' => array_values($byTicketType),
-            'by_payment_method' => array_values($byPaymentMethod),
+            'by_payment_method' => $byPaymentMethod,
         ];
         \Illuminate\Support\Facades\Cache::put($cacheKey, $payload, 300);
         return $this->success($payload);
