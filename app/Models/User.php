@@ -75,6 +75,23 @@ class User extends Authenticatable implements FilamentUser
             if (session()->has('demo_tenant_id') && in_array($this->role, ['super-admin', 'admin'])) {
                 return true;
             }
+            // Super-admin impersonation via /admin/tenants Login-as: the
+            // session is stamped with impersonated_from_user_id +
+            // impersonated_tenant_id when a super admin logs in as a
+            // tenant's owner. Older tenants have owner users whose role
+            // isn't 'tenant' (some are 'admin', some legacy), so without
+            // this branch every Login-as bounces to /tenant/login even
+            // though Auth::login just succeeded. Only trust the flag when
+            // BOTH keys are present (route sets them together) AND the
+            // currently authenticated user is the impersonated tenant's
+            // owner — a stray session key alone can't unlock the panel.
+            if (session()->has('impersonated_from_user_id') && session()->has('impersonated_tenant_id')) {
+                $tenantId = (int) session('impersonated_tenant_id');
+                $tenant = \App\Models\Tenant::find($tenantId);
+                if ($tenant && (int) $tenant->owner_id === (int) $this->id) {
+                    return true;
+                }
+            }
             return $this->role === 'tenant';
         }
 
