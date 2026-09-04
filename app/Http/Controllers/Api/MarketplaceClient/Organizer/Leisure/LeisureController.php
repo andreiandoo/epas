@@ -3376,9 +3376,14 @@ class LeisureController extends BaseController
             ->whereIn('status', ['paid', 'completed', 'confirmed'])
             ->whereBetween('paid_at', [$from, $to])
             ->where(function ($q) {
+                // Filtru strict: doar comenzi unde factura a fost CERUTA sau EMISA.
+                // NU includem comenzile cu doar company_billing populat - unii operatori
+                // introduc datele firmei pe POS fara sa bifeze "Genereaza factura fiscala"
+                // (uneori scriu numele clientului in campul denumire; alteori uita bifa).
+                // Fara acest filtru strict, listeaza si comenzi cu company_billing dar
+                // fara invoice_number/invoice_requested = noise pentru admin.
                 $q->whereRaw("(meta->>'invoice_requested')::boolean = true")
-                  ->orWhereRaw("meta->>'invoice_number' IS NOT NULL")
-                  ->orWhereRaw("meta->'company_billing' IS NOT NULL");
+                  ->orWhereRaw("meta->>'invoice_number' IS NOT NULL");
             });
 
         if (!empty($validated['search'])) {
