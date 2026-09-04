@@ -169,20 +169,17 @@ class CreateTenant extends CreateRecord
             $domain = 'https://' . $domain;
         }
         $setUrl = $domain . '/proprietar/seteaza-parola?token=' . $token . '&email=' . urlencode($email);
-        $loginUrl = $domain . '/organizator/login';
+        $appUrl = $domain . '/android';
         $siteName = $client->name ?? 'AmBilet';
         $firstName = trim(explode(' ', $fullName)[0] ?? '') ?: 'Bună';
 
+        // Capabilities of a venue-owner account inside the AmBilet mobile app.
         $capabilities = [
-            'Administrezi locațiile tale și configurația lor (produse, prețuri, tipuri de bilete)',
-            'Vinzi bilete online și la fața locului prin aplicația POS',
-            'Vezi comenzile și istoricul complet al vânzărilor',
-            'Faci check-in participanților la intrare',
-            'Deschizi și închizi sesiuni de casă (cashier) cu rapoarte de vânzări',
-            'Generezi și consulți facturile',
-            'Gestionezi închirieri (bărci / echipament), acolo unde e cazul',
-            'Urmărești deconturile și plățile',
-            'Adaugi și administrezi echipa / operatorii tăi',
+            'Scanezi biletele și faci check-in participanților la intrare',
+            'Vinzi bilete pe loc prin POS (casă de marcat în aplicație)',
+            'Urmărești rapoarte de vânzări și încasări',
+            'Gestionezi porțile / punctele de acces',
+            'Asignezi și administrezi personalul de scanare',
         ];
         $capsHtml = '<ul style="margin:0;padding-left:20px;color:#475569;font-size:14px;line-height:1.9">'
             . implode('', array_map(fn ($c) => '<li>' . htmlspecialchars($c) . '</li>', $capabilities))
@@ -197,16 +194,20 @@ class CreateTenant extends CreateRecord
             . '<div style="padding:32px">'
             . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut, ' . htmlspecialchars($firstName) . '!</p>'
             . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Ți-a fost creat un cont de administrare pentru <strong>' . htmlspecialchars($publicName) . '</strong> pe ' . htmlspecialchars($siteName) . '. Emailul tău de autentificare este <strong>' . htmlspecialchars($email) . '</strong>.</p>'
-            . '<p style="font-size:15px;color:#475569;margin:0 0 20px">Pentru a începe, setează-ți parola:</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 20px">Pas 1 — setează-ți parola:</p>'
             . '<div style="text-align:center;margin:24px 0">'
             . '<a href="' . htmlspecialchars($setUrl) . '" style="display:inline-block;background:#4f46e5;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Setează-ți parola</a>'
             . '</div>'
             . '<p style="font-size:13px;color:#94a3b8;margin:0 0 24px;text-align:center">Linkul este valabil 48 de ore și poate fi folosit o singură dată.</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 12px">Pas 2 — descarcă aplicația <strong>AmBilet</strong> și autentifică-te cu emailul și parola ta:</p>'
+            . '<div style="text-align:center;margin:16px 0 24px">'
+            . '<a href="' . htmlspecialchars($appUrl) . '" style="display:inline-block;background:#0f172a;color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px">Descarcă aplicația AmBilet</a>'
+            . '</div>'
             . '<div style="border-top:1px solid #e2e8f0;padding-top:20px">'
-            . '<p style="font-size:15px;color:#1e293b;font-weight:600;margin:0 0 10px">Ce poți face cu acest cont:</p>'
+            . '<p style="font-size:15px;color:#1e293b;font-weight:600;margin:0 0 10px">Ce poți face din aplicație:</p>'
             . $capsHtml
             . '</div>'
-            . '<p style="font-size:14px;color:#475569;margin:20px 0 0">După ce ți-ai setat parola, te autentifici oricând de la <a href="' . htmlspecialchars($loginUrl) . '" style="color:#4f46e5">' . htmlspecialchars($loginUrl) . '</a>.</p>'
+            . '<p style="font-size:14px;color:#475569;margin:20px 0 0">Aplicația AmBilet o găsești oricând la <a href="' . htmlspecialchars($appUrl) . '" style="color:#4f46e5">' . htmlspecialchars($appUrl) . '</a>.</p>'
             . '</div>'
             . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
             . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
