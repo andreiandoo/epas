@@ -75,17 +75,8 @@ class ListEvents extends ListRecords
                     if (!toolbar) return;
                     const nav = \$el.querySelector('.fi-tabs');
                     if (!nav) return;
-                    // Move create button into toolbar, before tabs
-                    const createBtn = document.getElementById('create-event-btn');
-                    if (createBtn) {
-                        toolbar.prepend(nav);
-                        toolbar.prepend(createBtn);
-                        createBtn.style.order = '-2';
-                        nav.style.order = '-1';
-                    } else {
-                        toolbar.prepend(nav);
-                        nav.style.order = '-1';
-                    }
+                    toolbar.prepend(nav);
+                    nav.style.order = '-1';
                     const style = document.createElement('style');
                     style.textContent = '.fi-ta-header-toolbar .fi-ta-bulk-actions { order: -3; }';
                     document.head.appendChild(style);
