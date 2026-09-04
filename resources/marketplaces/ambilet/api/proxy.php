@@ -2135,6 +2135,7 @@ switch ($action) {
         if (isset($_GET['to'])) $params['to'] = $_GET['to'];
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['checkin'])) $params['checkin'] = $_GET['checkin'];
         if (isset($_GET['ticket_type_id'])) $params['ticket_type_id'] = $_GET['ticket_type_id'];
         if (isset($_GET['visit_from'])) $params['visit_from'] = $_GET['visit_from'];
         if (isset($_GET['visit_to'])) $params['visit_to'] = $_GET['visit_to'];
