@@ -2969,6 +2969,8 @@ Route::get('/marketplace-client/venue-owner/events/{event}/export/download', [Ve
 Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     Route::post('/login', [VenueOwnerAuthController::class, 'login'])
         ->name('api.marketplace-client.venue-owner.login');
+    Route::post('/set-password', [VenueOwnerAuthController::class, 'setPassword'])
+        ->name('api.marketplace-client.venue-owner.set-password');
 
     Route::middleware(['auth:sanctum', 'venue.owner'])->group(function () {
         Route::post('/logout', [VenueOwnerAuthController::class, 'logout'])

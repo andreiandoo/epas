@@ -2411,6 +2411,12 @@ switch ($action) {
         $endpoint = '/organizer/reset-password';
         break;
 
+    case 'venue-owner.set-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/venue-owner/set-password';
+        break;
+
     case 'organizer.validate-invite':
         $method = 'GET';
         $params = [];

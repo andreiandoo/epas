@@ -343,6 +343,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/password') return 'organizer.password';
         if (endpoint === '/organizer/forgot-password') return 'organizer.forgot-password';
         if (endpoint === '/organizer/reset-password') return 'organizer.reset-password';
+        if (endpoint === '/venue-owner/set-password') return 'venue-owner.set-password';
         if (endpoint === '/organizer/verify-email') return 'organizer.verify-email';
         if (endpoint === '/organizer/resend-verification') return 'organizer.resend-verification';
         if (endpoint === '/organizer/payout-details') return 'organizer.payout-details';

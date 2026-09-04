@@ -81,7 +81,7 @@ class CreateTenant extends CreateRecord
         $fullName = trim($firstName . ' ' . $lastName);
         $publicName = trim((string) ($data['public_name'] ?? '')) ?: ($fullName ?: 'Venue Owner');
 
-        return DB::transaction(function () use ($data, $mcId, $email, $password, $fullName, $publicName, $venueIds) {
+        $tenant = DB::transaction(function () use ($data, $mcId, $email, $password, $fullName, $publicName, $venueIds) {
             // 1) Tenant. tenant_type + origin marker are re-stamped
             //    server-side even if the hidden fields were tampered
             //    with. Slug is unique-suffixed against existing rows.
@@ -126,13 +126,108 @@ class CreateTenant extends CreateRecord
 
             return $tenant;
         });
+
+        // Best-effort welcome email with a 48h one-time set-password link.
+        // Failure here must never block account creation (the tenant + owner
+        // already committed above), so it is wrapped defensively.
+        try {
+            $this->sendVenueOwnerWelcomeEmail($mcId, $email, $fullName, $publicName);
+        } catch (\Throwable $e) {
+            \Log::channel('marketplace')->warning('Failed to send venue-owner welcome email', [
+                'tenant_id' => $tenant->id,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $tenant;
+    }
+
+    /**
+     * Send the venue owner a welcome email containing a one-time, 48h link to
+     * set their own password (no plaintext password is ever emailed) plus a
+     * summary of what the account can do. Sent via the marketplace's own mail
+     * transport so the From address matches the marketplace.
+     */
+    protected function sendVenueOwnerWelcomeEmail(int $mcId, string $email, string $fullName, string $publicName): void
+    {
+        $client = \App\Models\MarketplaceClient::find($mcId);
+        if (!$client) {
+            return;
+        }
+
+        // One-time token stored hashed in password_reset_tokens (validated with
+        // a 48h window by VenueOwnerAuthController::setPassword).
+        $token = Str::random(64);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            ['token' => Hash::make($token), 'created_at' => now()]
+        );
+
+        $domain = rtrim((string) ($client->domain ?? ''), '/');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+        $setUrl = $domain . '/proprietar/seteaza-parola?token=' . $token . '&email=' . urlencode($email);
+        $loginUrl = $domain . '/organizator/login';
+        $siteName = $client->name ?? 'AmBilet';
+        $firstName = trim(explode(' ', $fullName)[0] ?? '') ?: 'Bună';
+
+        $capabilities = [
+            'Administrezi locațiile tale și configurația lor (produse, prețuri, tipuri de bilete)',
+            'Vinzi bilete online și la fața locului prin aplicația POS',
+            'Vezi comenzile și istoricul complet al vânzărilor',
+            'Faci check-in participanților la intrare',
+            'Deschizi și închizi sesiuni de casă (cashier) cu rapoarte de vânzări',
+            'Generezi și consulți facturile',
+            'Gestionezi închirieri (bărci / echipament), acolo unde e cazul',
+            'Urmărești deconturile și plățile',
+            'Adaugi și administrezi echipa / operatorii tăi',
+        ];
+        $capsHtml = '<ul style="margin:0;padding-left:20px;color:#475569;font-size:14px;line-height:1.9">'
+            . implode('', array_map(fn ($c) => '<li>' . htmlspecialchars($c) . '</li>', $capabilities))
+            . '</ul>';
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Contul tău de administrare locație</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut, ' . htmlspecialchars($firstName) . '!</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Ți-a fost creat un cont de administrare pentru <strong>' . htmlspecialchars($publicName) . '</strong> pe ' . htmlspecialchars($siteName) . '. Emailul tău de autentificare este <strong>' . htmlspecialchars($email) . '</strong>.</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 20px">Pentru a începe, setează-ți parola:</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($setUrl) . '" style="display:inline-block;background:#4f46e5;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Setează-ți parola</a>'
+            . '</div>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0 0 24px;text-align:center">Linkul este valabil 48 de ore și poate fi folosit o singură dată.</p>'
+            . '<div style="border-top:1px solid #e2e8f0;padding-top:20px">'
+            . '<p style="font-size:15px;color:#1e293b;font-weight:600;margin:0 0 10px">Ce poți face cu acest cont:</p>'
+            . $capsHtml
+            . '</div>'
+            . '<p style="font-size:14px;color:#475569;margin:20px 0 0">După ce ți-ai setat parola, te autentifici oricând de la <a href="' . htmlspecialchars($loginUrl) . '" style="color:#4f46e5">' . htmlspecialchars($loginUrl) . '</a>.</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
+            $client,
+            $email,
+            $fullName !== '' ? $fullName : $email,
+            'Contul tău de administrare locație — setează-ți parola',
+            $html,
+            ['template_slug' => 'venue_owner_welcome']
+        );
     }
 
     protected function getCreatedNotification(): ?Notification
     {
         return Notification::make()
             ->title('Venue owner creat')
-            ->body('Cont creat + locațiile linked. Ownerul se poate autentifica cu emailul + parola configurate.')
+            ->body('Cont creat + locațiile linked. I s-a trimis un email cu link de setare a parolei (valabil 48h) și lista a ce poate face.')
             ->success();
     }
 }

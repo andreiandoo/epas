@@ -8,10 +8,49 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends BaseController
 {
+    /**
+     * Set the venue-owner's password from the one-time link emailed at account
+     * creation. Validates the token against password_reset_tokens (SHA-safe
+     * bcrypt hash), enforces a 48h expiry, sets the User password and burns the
+     * token. Public (no auth) — the token IS the credential.
+     */
+    public function setPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $email = mb_strtolower(trim($validated['email']));
+
+        $row = DB::table('password_reset_tokens')->where('email', $email)->first();
+        if (!$row || !Hash::check($validated['token'], $row->token)) {
+            return $this->error('Link invalid sau deja folosit. Cere un link nou administratorului.', 400);
+        }
+
+        // 48h expiry (independent of the global auth.passwords config).
+        if (\Illuminate\Support\Carbon::parse($row->created_at)->addHours(48)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            return $this->error('Link expirat (valabil 48 de ore). Cere un link nou administratorului.', 400);
+        }
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return $this->error('Cont inexistent.', 404);
+        }
+
+        $user->update(['password' => Hash::make($validated['password'])]);
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+        return $this->success([], 'Parola a fost setată. Te poți autentifica acum.');
+    }
+
     /**
      * Login a venue-owner user (Tixello tenant account whose tenant operates
      * a venue partnered with the current marketplace). Returns a Sanctum token.
