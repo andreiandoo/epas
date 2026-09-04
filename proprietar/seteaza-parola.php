@@ -25,7 +25,7 @@ require_once __DIR__ . '/../includes/head.php';
 
             <div>
                 <h1 class="mb-4 text-4xl font-bold">Bine ai venit!</h1>
-                <p class="mb-8 text-lg text-white/80">Setează-ți parola și vei putea administra locațiile, vânzările, POS-ul, rapoartele și echipa ta.</p>
+                <p class="mb-8 text-lg text-white/80">Setează-ți parola, apoi descarcă aplicația AmBilet: scanezi bilete, vinzi pe loc prin POS și urmărești vânzările locației tale.</p>
 
                 <div class="p-5 bg-white/10 backdrop-blur rounded-xl">
                     <p class="mb-3 font-medium">Sfaturi pentru o parolă sigură:</p>
@@ -120,7 +120,7 @@ require_once __DIR__ . '/../includes/head.php';
                     </form>
 
                     <p class="mt-6 text-sm text-center text-muted">
-                        <a href="/organizator/login" class="font-semibold text-primary">Înapoi la autentificare</a>
+                        Contul se folosește din aplicația AmBilet — <a href="/android" class="font-semibold text-primary">descarc-o aici</a>
                     </p>
                 </div>
 
@@ -133,15 +133,11 @@ require_once __DIR__ . '/../includes/head.php';
                     </div>
 
                     <h2 class="mb-2 text-2xl font-bold text-secondary">Parolă setată!</h2>
-                    <p class="mb-8 text-muted">Parola ta a fost salvată cu succes. Te poți autentifica acum în contul de administrare locație.</p>
+                    <p class="mb-8 text-muted">Parola ta a fost salvată cu succes. Descarcă aplicația AmBilet și autentifică-te cu emailul și parola ta.</p>
 
-                    <a href="/organizator/login" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
-                        Mergi la autentificare
+                    <a href="/android" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
+                        Descarcă aplicația AmBilet
                     </a>
-
-                    <p class="mt-6 text-sm text-muted">
-                        Vei fi redirecționat automat în <span id="countdown" class="font-bold text-primary">5</span> secunde
-                    </p>
                 </div>
 
                 <!-- Expired Link State -->
@@ -153,8 +149,8 @@ require_once __DIR__ . '/../includes/head.php';
                     <h2 class="mb-2 text-2xl font-bold text-secondary">Link invalid sau expirat</h2>
                     <p class="mb-8 text-muted">Link-ul de setare a parolei este invalid, a expirat (valabil 48 de ore) sau a fost deja folosit. Contactează administratorul AmBilet pentru un link nou.</p>
 
-                    <a href="/organizator/login" class="btn-primary bg-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center">
-                        Înapoi la autentificare
+                    <a href="/android" class="btn-primary bg-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center">
+                        Descarcă aplicația AmBilet
                     </a>
                 </div>
             </div>
@@ -282,13 +278,6 @@ const SetPasswordPage = {
             if (response.success !== false) {
                 document.getElementById('resetForm').classList.add('hidden');
                 document.getElementById('successState').classList.remove('hidden');
-                let countdown = 5;
-                const countdownEl = document.getElementById('countdown');
-                const timer = setInterval(() => {
-                    countdown--;
-                    countdownEl.textContent = countdown;
-                    if (countdown <= 0) { clearInterval(timer); window.location.href = '/organizator/login'; }
-                }, 1000);
             } else {
                 var msg = (response.message || '').toLowerCase();
                 if (msg.includes('link') || msg.includes('token') || msg.includes('expir')) {
