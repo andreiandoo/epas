@@ -1336,6 +1336,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             alert('Casa este închisă. Apasă „🔓 Deschidere casă" înainte de vânzare.');
             return;
         }
+        // VALIDARE date firma: daca operatorul a introdus CUI sau Denumire dar
+        // NU a bifat "Genereaza factura fiscala", blocam finalizarea. Cauza: fara
+        // bifa, comanda salveaza company_billing dar NU rezerva invoice_number ->
+        // apare pe /organizator/leisure-invoices ca "cerută" (invoice_requested false)
+        // dar organizatorul nu poate emite factura post-facto (nr serial nealocat).
+        const _hasCompany = !!($('lv-co-cui').value.trim() || $('lv-co-name').value.trim());
+        const _wantsInvoice = $('lv-co-invoice').checked;
+        if (_hasCompany && !_wantsInvoice) {
+            alert('Ai introdus date de firmă (denumire sau CUI) dar nu ai bifat „📄 Generează factură fiscală după finalizare".\n\n' +
+                'Fără această bifă, factura NU se generează și nu poate fi emisă mai târziu (numărul serial se rezervă doar la finalizare).\n\n' +
+                'OPȚIUNI:\n' +
+                '  • Dacă vrei factură pentru firmă → bifează „Generează factură fiscală" și apasă din nou Finalizează.\n' +
+                '  • Dacă NU vrei factură → șterge câmpurile Denumire firmă + CUI (Alt+click pe câmp pentru a-l goli).';
+            // Focus pe checkbox ca sa fie usor de bifat
+            try { $('lv-co-invoice').focus(); } catch (e) {}
+            return;
+        }
         $('lv-checkout').disabled = true;
         $('lv-checkout').textContent = 'Procesează...';
         $('lv-error').classList.add('hidden');
