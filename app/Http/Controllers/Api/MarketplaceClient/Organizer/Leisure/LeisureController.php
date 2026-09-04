@@ -1049,6 +1049,16 @@ class LeisureController extends BaseController
             'payment_method' => 'required|in:cash,card,invoice',
         ]);
 
+        // Defense-in-depth: daca operatorul a introdus date de firma (denumire sau CUI)
+        // dar NU a bifat generate_invoice, refuzam finalizarea. Frontend blocheaza deja
+        // in leisure-pos, dar validam si aici in caz de request bypass (POS extern / dev
+        // tools). Fara aceasta bifa nu se rezerva invoice_number si comanda apare in
+        // leisure-invoices ca "cerută" nefinalizabila.
+        $hasCompanyData = !empty($validated['company']['name'] ?? null) || !empty($validated['company']['cui'] ?? null);
+        if ($hasCompanyData && empty($validated['generate_invoice'])) {
+            return $this->error('Ai introdus date de firmă (denumire/CUI) dar nu ai bifat „Generează factură fiscală". Bifează opțiunea sau șterge datele firmei înainte de finalizare.', 422);
+        }
+
         // Captura locale efectiv (whitelist din config) — zero risc de injectie.
         $availableLocales = config('locales.available', []);
         $posLocale = null;
