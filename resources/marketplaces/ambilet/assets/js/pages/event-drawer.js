@@ -90,6 +90,12 @@ function wireDrawerTicketGroups(drawerContent) {
             btn.setAttribute('data-group-id', 'drawer-' + gid);
         }
 
+        // The drawer container already uses space-y-2, so drop the group
+        // wrapper's mb-4 (otherwise the gaps stack and look uneven).
+        if (btn.parentElement) {
+            btn.parentElement.classList.remove('mb-4');
+        }
+
         btn.addEventListener('click', function() {
             var target = drawerContent.querySelector('#' + btn.dataset.groupId);
             if (!target) return;
@@ -101,11 +107,18 @@ function wireDrawerTicketGroups(drawerContent) {
             drawerContent.querySelectorAll('[data-ticket-group-btn] .chevron-icon').forEach(function(icon) {
                 icon.classList.remove('rotate-180');
             });
+            // All groups closed now → fully-rounded headers.
+            drawerContent.querySelectorAll('[data-ticket-group-btn]').forEach(function(b) {
+                b.classList.remove('rounded-t-2xl');
+                b.classList.add('rounded-2xl');
+            });
 
             if (wasHidden) {
                 target.classList.remove('hidden');
                 var chevron = btn.querySelector('.chevron-icon');
                 if (chevron) chevron.classList.add('rotate-180');
+                btn.classList.remove('rounded-2xl');
+                btn.classList.add('rounded-t-2xl');
             }
         });
     });

@@ -2759,13 +2759,16 @@ const EventPage = {
                 var isFirst = gIdx === 0;
                 var hiddenClass = isFirst ? '' : ' hidden';
                 var chevronRotated = isFirst ? ' rotate-180' : '';
+                // Button corners: fully rounded when the group is closed, only
+                // the top rounded when open (content sits flush below it).
+                var roundedClass = isFirst ? 'rounded-t-2xl' : 'rounded-2xl';
                 var scrollStyle = (isFirst && groupCards.length > 5)
                     ? ' style="max-height:350px;overflow-y:auto;overflow-x:hidden;"'
                     : '';
 
                 ticketCardsHtml += '<div class="mb-4 border rounded-2xl border-border">' +
                     '<button type="button" data-ticket-group-btn data-group-id="' + groupId + '" ' +
-                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-primary hover:bg-primary/80 rounded-t-2xl">' +
+                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-primary hover:bg-primary/80 ' + roundedClass + '">' +
                         '<span class="text-sm font-bold text-white">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-white/80">(' + groupCards.length + ')</span></span>' +
                         '<svg class="w-5 h-5 transition-transform chevron-icon' + chevronRotated + ' text-white/80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
                     '</button>' +
@@ -2825,10 +2828,17 @@ const EventPage = {
                 container.querySelectorAll('[data-ticket-group-btn] .chevron-icon').forEach(function(icon) {
                     icon.classList.remove('rotate-180');
                 });
+                // Reset every header to fully-rounded (all groups now closed).
+                container.querySelectorAll('[data-ticket-group-btn]').forEach(function(b) {
+                    b.classList.remove('rounded-t-2xl');
+                    b.classList.add('rounded-2xl');
+                });
                 if (wasHidden) {
                     target.classList.remove('hidden');
                     var chevron = btn.querySelector('.chevron-icon');
                     if (chevron) chevron.classList.add('rotate-180');
+                    btn.classList.remove('rounded-2xl');
+                    btn.classList.add('rounded-t-2xl');
                 }
             });
         });
