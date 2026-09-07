@@ -1322,6 +1322,16 @@ switch ($action) {
         $endpoint = '/customer/login';
         break;
 
+    // Unified multi-realm login — same email/password tried against
+    // customer + organizer + venue-owner realms in one request. Backend
+    // returns every role that matched so the /autentificare page can
+    // show a role picker when the account holds multiple identities.
+    case 'auth.multi-login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/auth/multi-login';
+        break;
+
     case 'customer.logout':
         $method = 'POST';
         $endpoint = '/customer/logout';

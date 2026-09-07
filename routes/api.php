@@ -2419,6 +2419,18 @@ use App\Http\Controllers\Api\MarketplaceClient\Customer\RewardsController as Cus
 use App\Http\Controllers\Api\MarketplaceClient\Customer\NotificationsController as CustomerNotificationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\ReferralsController as CustomerReferralsController;
 
+// Unified multi-realm detection used by ambilet.ro /autentificare —
+// same email + password tried against customer, organizer, and venue-
+// owner realms in one request. Returns every role that authenticated
+// so the frontend can show a switcher when the same person holds
+// multiple accounts on this marketplace. The three per-realm login
+// endpoints below stay untouched so existing consumers (organizer
+// PHP portal, mobile app) keep working exactly as before.
+Route::prefix('marketplace-client/auth')->middleware(['throttle:60,1', 'marketplace.auth'])->group(function () {
+    Route::post('/multi-login', [\App\Http\Controllers\Api\MarketplaceClient\MultiAuthController::class, 'login'])
+        ->name('api.marketplace-client.auth.multi-login');
+});
+
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)
     Route::post('/register', [CustomerAuthController::class, 'register'])

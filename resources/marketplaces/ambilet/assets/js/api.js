@@ -129,6 +129,9 @@ const AmbiletAPI = {
      * Convert endpoint to proxy action
      */
     getProxyAction(endpoint) {
+        // Unified multi-realm login (customer/organizer/venue-owner detection)
+        if (endpoint === '/auth/multi-login') return 'auth.multi-login';
+
         // Customer auth endpoints
         if (endpoint === '/customer/register') return 'customer.register';
         if (endpoint === '/customer/login') return 'customer.login';
@@ -2359,3 +2362,95 @@ class APIError extends Error {
 
 // Make APIError available globally
 window.APIError = APIError;
+
+/**
+ * Unified multi-realm auth. Attempts one email/password against all
+ * three realms (customer, organizer, venue-owner) in a single HTTP
+ * round trip and returns every role that authenticated.
+ *
+ * Used by /autentificare to show a role picker when a person holds
+ * multiple accounts on Ambilet with the same email. Does not touch
+ * the per-realm AmbiletAuth / AmbiletOrganizerAuth flows — those keep
+ * working exactly as before for pages that log in a specific role.
+ *
+ * Response shape (from MultiAuthController):
+ *   {
+ *     success: true,
+ *     data: {
+ *       roles: [
+ *         { type: 'customer' | 'organizer' | 'venue-owner',
+ *           token: string | null,
+ *           requires_2fa: bool,
+ *           challenge: string | null,
+ *           display_name: string }
+ *       ],
+ *       primary: 'organizer' | 'venue-owner' | 'customer'
+ *     }
+ *   }
+ */
+const AmbiletMultiAuth = {
+    async login(email, password) {
+        return AmbiletAPI.post('/auth/multi-login', { email, password });
+    },
+
+    /**
+     * After the user picks a role in the picker, activate it: persist
+     * the corresponding token under the canonical cookie name for that
+     * realm so all subsequent AmbiletAPI calls authenticate correctly.
+     *
+     * Cookie keys match the existing AmbiletAuth conventions so any
+     * page that already reads `ambilet_token` / `ambilet_organizer_token`
+     * / `ambilet_venue_token` (Faza 3) continues to work.
+     */
+    activateRole(role) {
+        if (!role || !role.token) return false;
+        const maxAge = 60 * 60 * 24 * 30; // 30 days
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        const common = `; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+
+        // Persist per-realm tokens so a user with multiple roles can
+        // switch without re-entering credentials — Faza 3 shell picks
+        // these up.
+        if (role.type === 'customer') {
+            document.cookie = `ambilet_token=${role.token}${common}`;
+        } else if (role.type === 'organizer') {
+            document.cookie = `ambilet_organizer_token=${role.token}${common}`;
+        } else if (role.type === 'venue-owner') {
+            document.cookie = `ambilet_venue_token=${role.token}${common}`;
+        }
+        // Remember which one is active — used by header switcher (Faza 3).
+        document.cookie = `ambilet_active_role=${role.type}${common}`;
+        return true;
+    },
+
+    /**
+     * Save every token from a multi-role login response at once, so a
+     * later "switch role" click doesn't need a fresh login. Auto-picks
+     * the primary role for immediate activation.
+     */
+    persistAllRoles(roles, primary) {
+        if (!Array.isArray(roles)) return null;
+        let active = null;
+        for (const role of roles) {
+            if (role.requires_2fa || !role.token) continue;
+            this.activateRole(role);
+            if (role.type === primary) active = role;
+        }
+        // Fallback if primary role had no token (e.g. requires_2fa).
+        if (!active) {
+            active = roles.find(r => r.token && !r.requires_2fa) || null;
+        }
+        return active;
+    },
+
+    redirectFor(roleType) {
+        switch (roleType) {
+            case 'organizer':   return '/organizator/panou';
+            case 'venue-owner': return '/venue/panou';
+            case 'customer':
+            default:            return '/cont';
+        }
+    },
+};
+
+window.AmbiletMultiAuth = AmbiletMultiAuth;
