@@ -2518,6 +2518,10 @@ const AmbiletVenueAPI = {
 
     // Usage
     usage(filters) { return this._request('venue-owner.usage', filters || null); },
+
+    // Venues + events
+    venues() { return this._request('venue-owner.venues'); },
+    events(filters) { return this._request('venue-owner.events', filters || null); },
 };
 
 window.AmbiletVenueAPI = AmbiletVenueAPI;

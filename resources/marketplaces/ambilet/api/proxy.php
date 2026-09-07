@@ -2475,6 +2475,21 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'venue-owner.venues':
+        $method = 'GET';
+        $endpoint = '/venue-owner/venues';
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.events':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['scope'])) $params['scope'] = $_GET['scope'];
+        if (isset($_GET['venue_id'])) $params['venue_id'] = $_GET['venue_id'];
+        $endpoint = '/venue-owner/events' . (empty($params) ? '' : '?' . http_build_query($params));
+        $requiresAuth = true;
+        break;
+
     case 'organizer.validate-invite':
         $method = 'GET';
         $params = [];

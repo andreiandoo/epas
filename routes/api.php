@@ -3121,6 +3121,11 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         // reload doesn't lose state.
         Route::get('/usage', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\UsageController::class, 'index'])
             ->name('api.marketplace-client.venue-owner.usage.index');
+
+        // Venues list with per-venue quick stats. Feeds the /venue/locatii
+        // page's card grid and the venue picker across the shell.
+        Route::get('/venues', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\VenuesController::class, 'index'])
+            ->name('api.marketplace-client.venue-owner.venues.index');
     });
 });
 
