@@ -3060,6 +3060,55 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         Route::delete('/notes/{note}', [VenueOwnerNotesController::class, 'destroy'])
             ->whereNumber('note')
             ->name('api.marketplace-client.venue-owner.notes.destroy');
+
+        // Analytics API for the /venue/analiza web shell on ambilet.ro.
+        // One endpoint per Filament tab (overview/financial/audience/
+        // artists/scheduling/opportunities/promotion/upcoming/actions)
+        // so the shell fetches per-tab as the user clicks around, plus
+        // four interactive endpoints (simulator, suggestions, creative
+        // calendar, event comparison) ported from Filament's Livewire
+        // $wire.call methods. All actions consume
+        // App\Services\VenueOwner\VenueOwnerAnalyticsService, which is
+        // the same VenueAnalyticsMethods trait the tenant Filament page
+        // already uses in production — so the numbers match exactly.
+        Route::prefix('analytics')->group(function () {
+            Route::get('/overview', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'overview'])
+                ->name('api.marketplace-client.venue-owner.analytics.overview');
+            Route::get('/financial', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'financial'])
+                ->name('api.marketplace-client.venue-owner.analytics.financial');
+            Route::get('/audience', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'audience'])
+                ->name('api.marketplace-client.venue-owner.analytics.audience');
+            Route::get('/artists', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'artists'])
+                ->name('api.marketplace-client.venue-owner.analytics.artists');
+            Route::get('/scheduling', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'scheduling'])
+                ->name('api.marketplace-client.venue-owner.analytics.scheduling');
+            Route::get('/opportunities', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'opportunities'])
+                ->name('api.marketplace-client.venue-owner.analytics.opportunities');
+            Route::get('/promotion', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'promotion'])
+                ->name('api.marketplace-client.venue-owner.analytics.promotion');
+            Route::get('/upcoming', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'upcoming'])
+                ->name('api.marketplace-client.venue-owner.analytics.upcoming');
+            Route::get('/actions', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'actions'])
+                ->name('api.marketplace-client.venue-owner.analytics.actions');
+
+            Route::post('/simulate', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'simulate'])
+                ->name('api.marketplace-client.venue-owner.analytics.simulate');
+            Route::get('/suggestions', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'suggestions'])
+                ->name('api.marketplace-client.venue-owner.analytics.suggestions');
+            Route::get('/creative-calendar/{event}', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'creativeCalendar'])
+                ->whereNumber('event')
+                ->name('api.marketplace-client.venue-owner.analytics.creative-calendar');
+            Route::post('/compare', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'compare'])
+                ->name('api.marketplace-client.venue-owner.analytics.compare');
+        });
+
+        // Venue Usage — mirrors the Filament tenant /tenant/venue-usage
+        // page. Feeds the /venue/utilizare web shell page. Single
+        // endpoint (no tabs) because the source page is a flat KPI +
+        // event-list layout. Filters land as query params so a page
+        // reload doesn't lose state.
+        Route::get('/usage', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\UsageController::class, 'index'])
+            ->name('api.marketplace-client.venue-owner.usage.index');
     });
 });
 
