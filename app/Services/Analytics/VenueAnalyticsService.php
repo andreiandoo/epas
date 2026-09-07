@@ -3,51 +3,246 @@
 namespace App\Services\Analytics;
 
 use App\Models\Venue;
+use App\Support\PiiMask;
 use App\Support\VenueAnalyticsMethods;
+use Illuminate\Support\Facades\Cache;
 
 /**
- * Thin service wrapper around the VenueAnalyticsMethods trait so the same
- * 28 builder methods that power the Filament tenant-panel Venue Analytics
- * page (app/Filament/Tenant/Pages/VenueAnalytics.php) can be consumed from
- * plain controllers — specifically the venue-owner API surface at
- * /api/marketplace-client/venue-owner/analytics/* that feeds the new
- * ambilet.ro /venue/analiza web shell.
+ * Public API surface for venue analytics. Wraps the same
+ * VenueAnalyticsMethods trait that powers the internal admin page
+ * (VenueAnalyticsPage), so the metrics stay identical across UI + API,
+ * with two adaptations:
  *
- * The trait's methods only reach for two pieces of state on the host —
- * $this->venueIds (array) and $this->venue (nullable model) — plus
- * internal build* helpers. No auth, no session, no Filament coupling.
- * Wrapping it here in a plain PHP class means both consumers (Filament
- * page + web API controllers) end up calling the exact same code paths;
- * changing a metric in one place changes it everywhere.
+ *   1. PII masking on the superfans / customer-level rows before
+ *      they leave the platform.
+ *   2. Public endpoints only expose read-only aggregates. The simulator
+ *      is safe to expose (it doesn't touch PII); customer export lives
+ *      on a separate, more heavily scoped route (not built here).
  *
- * Constructing the service DOES NOT touch the DB — the trait's private
- * cache methods (venueEventIds, venueOrderIds) run lazily when a builder
- * is called. Safe to instantiate per-request and discard.
+ * Each public method returns primitives ready for JSON serialization
+ * and caches for 5 minutes — same window as the admin UI.
  */
 class VenueAnalyticsService
 {
     use VenueAnalyticsMethods;
 
-    /**
-     * Venue ids the caller is authorized to see. In the Filament path this
-     * is populated from $tenant->venues()->pluck('id'); in the web API path
-     * the VenueOwner controller resolves it the same way (partnered venues
-     * of the current marketplace client) before instantiating this service.
-     */
-    public array $venueIds;
+    private const CACHE_TTL = 300;
 
     /**
-     * Optional single-venue focus. When a user drills into one location the
-     * trait's builders that show "this venue" specifics (e.g. capacity in
-     * the KPI strip, health-score sub-scores) read from it. Leave null for
-     * cross-venue aggregates. Trait methods that don't need it never touch
-     * this property.
+     * The trait's queries read $this->venueIds + $this->venue, so we
+     * seed those from the passed Venue on every call. The service is
+     * still stateless from the caller's perspective — no prior
+     * "attach venue" step needed.
      */
-    public ?Venue $venue;
+    public Venue $venue;
+    public array $venueIds = [];
+    public ?int $selectedVenueId = null;
 
-    public function __construct(array $venueIds, ?Venue $venue = null)
+    private function bind(Venue $venue): void
     {
-        $this->venueIds = array_values(array_filter(array_map('intval', $venueIds)));
         $this->venue = $venue;
+        $this->venueIds = [$venue->id];
+        $this->selectedVenueId = $venue->id;
+    }
+
+    /**
+     * Overview: KPIs + venue health score + monthly momentum + 12-month
+     * time series. Everything shown at the top of the admin analytics
+     * page, in one payload.
+     */
+    public function overview(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:overview", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+            $orderIds = $this->venueOrderIds($eventIds);
+
+            [$months, $events, $tickets, $revenue, $occupancy] = $this->buildVenueYearlySeries($eventIds);
+
+            return [
+                'venue_id' => $venue->id,
+                // Venue name is a translatable field — $venue->name returns
+                // an array (['ro'=>'Quantic','en'=>'Quantic']) whereas the
+                // trait's decodeJsonName expects a string, so we resolve
+                // via the translation helper instead. Matches how the
+                // admin analytics page reads the name.
+                'venue_name' => $venue->getTranslation('name', 'en')
+                    ?: $venue->getTranslation('name', 'ro')
+                    ?: '',
+                'city' => $venue->city,
+                'kpis' => $this->computeVenueKpis($eventIds, $orderIds),
+                'health_score' => $this->buildVenueHealthScore($eventIds, $orderIds),
+                'monthly_momentum' => $this->buildMonthlyMomentum($eventIds, $orderIds),
+                'monthly' => [
+                    'months' => $months,
+                    'events' => $events,
+                    'tickets' => $tickets,
+                    'revenue' => $revenue,
+                    'avg_occupancy_pct' => $occupancy,
+                ],
+            ];
+        });
+    }
+
+    /**
+     * Event-level slice: recent past performance table + upcoming
+     * events with sell-through forecasts.
+     */
+    public function events(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:events", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+
+            return [
+                'venue_id' => $venue->id,
+                'events' => $this->buildEventPerformanceTable($eventIds),
+                'upcoming' => $this->buildUpcomingVenueEvents($eventIds),
+            ];
+        });
+    }
+
+    /**
+     * Financial slice: revenue breakdown (genre / channel / day type),
+     * pricing intelligence with sweet-spot detection, refund analysis,
+     * revenue-per-seat, and revenue forecast.
+     */
+    public function revenue(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:revenue", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+            $orderIds = $this->venueOrderIds($eventIds);
+
+            return [
+                'venue_id' => $venue->id,
+                'breakdown' => $this->buildRevenueBreakdown($eventIds, $orderIds),
+                'pricing' => $this->buildPricingIntelligence($eventIds),
+                'refunds' => $this->buildRefundAnalysis($eventIds),
+                'revenue_per_seat' => $this->buildRevenuePerSeat($eventIds),
+                'forecast' => $this->buildRevenueForecast($eventIds),
+            ];
+        });
+    }
+
+    /**
+     * Audience slice: personas, customer loyalty, geographic origin,
+     * check-in arrival times. Superfans are masked to buyer_hash /
+     * city / event count only.
+     */
+    public function audience(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:audience", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+            $orderIds = $this->venueOrderIds($eventIds);
+
+            $loyalty = $this->buildVenueCustomerLoyalty($eventIds, $orderIds);
+
+            // Superfans on the loyalty payload carry customer name/email
+            // in the admin UI — strip and hash for the API surface.
+            if (isset($loyalty['superfan_details']) && is_array($loyalty['superfan_details'])) {
+                $loyalty['superfan_details'] = array_map(function ($s) {
+                    return [
+                        'buyer_hash' => PiiMask::buyerHash($s['email'] ?? $s['name'] ?? ''),
+                        'city' => $s['city'] ?? null,
+                        'events' => (int) ($s['events'] ?? 0),
+                        'orders' => (int) ($s['orders'] ?? 0),
+                        'total_spent' => (float) ($s['total_spent'] ?? 0),
+                    ];
+                }, $loyalty['superfan_details']);
+            }
+
+            return [
+                'venue_id' => $venue->id,
+                'personas' => $this->buildVenueAudiencePersonas($orderIds),
+                'loyalty' => $loyalty,
+                'geographic_origin' => $this->buildGeographicOrigin($orderIds),
+                'checkin_analysis' => $this->buildCheckinTimeAnalysis($eventIds),
+                'genre_loyalty' => $this->buildGenreLoyalty($eventIds, $orderIds),
+            ];
+        });
+    }
+
+    /**
+     * Programming slice: artist performance at venue, genre performance,
+     * booking suggestions (never-played artists), scheduling heatmap,
+     * day-of-week analysis, seasonality, idle days.
+     */
+    public function programming(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:programming", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+
+            return [
+                'venue_id' => $venue->id,
+                'artist_performance' => $this->buildArtistPerformanceAtVenue($eventIds),
+                'genre_performance' => $this->buildGenrePerformance($eventIds),
+                'never_played_artists' => $this->buildNeverPlayedArtists($eventIds),
+                'scheduling_heatmap' => $this->buildSchedulingHeatmap($eventIds),
+                'day_of_week' => $this->buildDayOfWeekAnalysis($eventIds),
+                'seasonality' => $this->buildSeasonalityAnalysis($eventIds),
+                'idle_days' => $this->buildIdleDaysAnalysis($eventIds),
+            ];
+        });
+    }
+
+    /**
+     * Actionable slice: churn risk alerts + prioritized action list
+     * + opportunities engine recommendations.
+     */
+    public function actions(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:actions", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+            $orderIds = $this->venueOrderIds($eventIds);
+
+            return [
+                'venue_id' => $venue->id,
+                'churn_alerts' => $this->buildChurnRiskAlerts($eventIds, $orderIds),
+                'opportunities' => $this->buildOpportunities($eventIds, $orderIds),
+                'action_priority' => $this->buildActionPriority($eventIds, $orderIds),
+            ];
+        });
+    }
+
+    /**
+     * Forecast slice: revenue forecast + event suggestions
+     * (recommended future bookings) + promotion planner.
+     */
+    public function forecast(Venue $venue): array
+    {
+        return Cache::remember("api:analytics:venue:{$venue->id}:forecast", self::CACHE_TTL, function () use ($venue) {
+            $this->bind($venue);
+            $eventIds = $this->venueEventIds();
+            $orderIds = $this->venueOrderIds($eventIds);
+
+            return [
+                'venue_id' => $venue->id,
+                'revenue_forecast' => $this->buildRevenueForecast($eventIds),
+                'event_suggestions' => $this->buildEventSuggestions($eventIds, $orderIds),
+                'promotion_planner' => $this->buildPromotionPlanner($eventIds, $orderIds),
+            ];
+        });
+    }
+
+    /**
+     * Event simulator: given a hypothetical (genre, day of week, ticket
+     * price), predict sell-through and revenue based on historical
+     * patterns at this venue. Not cached because it's parametric on
+     * caller input.
+     */
+    public function simulate(Venue $venue, string $genre, string $dayOfWeek, float $ticketPrice): array
+    {
+        $this->bind($venue);
+        $eventIds = $this->venueEventIds();
+        $orderIds = $this->venueOrderIds($eventIds);
+
+        return array_merge(
+            ['venue_id' => $venue->id],
+            $this->simulateEvent($eventIds, $orderIds, $genre, $dayOfWeek, $ticketPrice)
+        );
     }
 }

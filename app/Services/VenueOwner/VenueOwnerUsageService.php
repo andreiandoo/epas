@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Analytics;
+namespace App\Services\VenueOwner;
 
 use App\Models\Event;
 use Carbon\Carbon;
@@ -10,15 +10,15 @@ use Carbon\Carbon;
  *
  * The Filament page is deliberately left untouched during the Faza 0
  * rollout so the tenant panel behavior stays byte-identical while the
- * new ambilet.ro /venue/* web shell comes online. Both consumers can
- * be unified onto this service after the web shell is stable
+ * new ambilet.ro /venue/utilizare web shell comes online. Both consumers
+ * can be unified onto this service after the web shell is stable
  * (short-term duplication accepted for zero live impact).
  *
- * Everything the controller needs is derived from a venue-id list and
+ * Everything the controller needs is derived from a venue-id list plus
  * two filter strings — no auth/session coupling — so instantiation is
  * safe from any controller or job.
  */
-class VenueUsageService
+class VenueOwnerUsageService
 {
     /**
      * Build the venue-usage payload (events + aggregate stats).
@@ -42,7 +42,7 @@ class VenueUsageService
             : $venueIds;
 
         // Only allow the filter through if it's actually a venue the caller
-        // owns — otherwise the string 'all' path already covered the safe case.
+        // owns — otherwise the 'all' path already covered the safe case.
         $filteredVenueIds = array_values(array_intersect($filteredVenueIds, $venueIds));
         if (empty($filteredVenueIds)) {
             return [
