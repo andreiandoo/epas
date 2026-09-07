@@ -336,6 +336,36 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou-nou/?$ organizer/panou-nou.php [L]
 
+# ── Venue Owner shell (/venue/*) ───────────────────────────────
+# New in Faza 3 of the venue-owner web shell rollout. Each page has
+# its own explicit rewrite because Ambilet doesn't ship a global
+# URL→PHP fallback (per project memory). Order intentionally mirrors
+# the sidebar layout so it's easy to keep them in sync when adding a
+# new venue page.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/panou/?$ venue/panou.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/locatii/?$ venue/locatii.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/evenimente/?$ venue/evenimente.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/utilizare/?$ venue/utilizare.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/analiza/?$ venue/analiza.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/setari/?$ venue/setari.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure/?$ organizer/leisure.php [L]

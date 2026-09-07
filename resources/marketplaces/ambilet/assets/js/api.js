@@ -2454,3 +2454,70 @@ const AmbiletMultiAuth = {
 };
 
 window.AmbiletMultiAuth = AmbiletMultiAuth;
+
+/**
+ * Venue-owner web shell API surface. Thin wrappers over AmbiletAPI
+ * that automatically send the venue token (from ambilet_venue_token
+ * cookie) instead of the customer token, so venue pages never
+ * accidentally authenticate as a customer when a user is dual-role.
+ */
+const AmbiletVenueAPI = {
+    _cookie(name) {
+        const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : null;
+    },
+    _token() {
+        return this._cookie('ambilet_venue_token');
+    },
+    async _request(action, params, method = 'GET', body = null) {
+        const baseUrl = AmbiletAPI.getApiUrl();
+        const qs = params ? '&' + new URLSearchParams(params).toString() : '';
+        const url = `${baseUrl}?action=${action}${qs}`;
+        const headers = { 'Accept': 'application/json' };
+        const token = this._token();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        if (body) headers['Content-Type'] = 'application/json';
+
+        const res = await fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+        });
+
+        if (res.status === 401) {
+            // Session lost — kick back to /autentificare.
+            const dest = encodeURIComponent(window.location.pathname);
+            window.location.href = '/autentificare?redirect=' + dest;
+            return null;
+        }
+        return res.json();
+    },
+
+    // Identity
+    me() { return this._request('venue-owner.me'); },
+
+    // Analytics — one call per tab.
+    analytics(tab, venueId) {
+        const p = venueId ? { venue_id: venueId } : null;
+        return this._request(`venue-owner.analytics.${tab}`, p);
+    },
+    simulate(genre, dayOfWeek, ticketPrice) {
+        return this._request('venue-owner.analytics.simulate', null, 'POST', {
+            genre, day_of_week: dayOfWeek, ticket_price: ticketPrice,
+        });
+    },
+    suggestions() { return this._request('venue-owner.analytics.suggestions'); },
+    creativeCalendar(eventId) {
+        return this._request(`venue-owner.analytics.creative-calendar.${eventId}`);
+    },
+    compare(eventA, eventB) {
+        return this._request('venue-owner.analytics.compare', null, 'POST', {
+            event_a: eventA, event_b: eventB,
+        });
+    },
+
+    // Usage
+    usage(filters) { return this._request('venue-owner.usage', filters || null); },
+};
+
+window.AmbiletVenueAPI = AmbiletVenueAPI;

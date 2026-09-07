@@ -2427,6 +2427,54 @@ switch ($action) {
         $endpoint = '/venue-owner/set-password';
         break;
 
+    // Venue-owner web shell (/venue/*) — session actions.
+    case 'venue-owner.me':
+        $method = 'GET';
+        $endpoint = '/venue-owner/me';
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.logout':
+        $method = 'POST';
+        $endpoint = '/venue-owner/logout';
+        $requiresAuth = true;
+        break;
+
+    // Venue-owner web shell — analytics (Faza 4/5 pages consume these).
+    case 'venue-owner.analytics.overview':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['venue_id'])) $params['venue_id'] = $_GET['venue_id'];
+        $endpoint = '/venue-owner/analytics/overview' . (empty($params) ? '' : '?' . http_build_query($params));
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.analytics.financial':
+    case 'venue-owner.analytics.audience':
+    case 'venue-owner.analytics.artists':
+    case 'venue-owner.analytics.scheduling':
+    case 'venue-owner.analytics.opportunities':
+    case 'venue-owner.analytics.promotion':
+    case 'venue-owner.analytics.upcoming':
+    case 'venue-owner.analytics.actions':
+        $method = 'GET';
+        $slice = substr($action, strlen('venue-owner.analytics.'));
+        $params = [];
+        if (isset($_GET['venue_id'])) $params['venue_id'] = $_GET['venue_id'];
+        $endpoint = '/venue-owner/analytics/' . $slice . (empty($params) ? '' : '?' . http_build_query($params));
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.usage':
+        $method = 'GET';
+        $params = [];
+        foreach (['venue_filter', 'status_filter', 'venue_id'] as $p) {
+            if (isset($_GET[$p])) $params[$p] = $_GET[$p];
+        }
+        $endpoint = '/venue-owner/usage' . (empty($params) ? '' : '?' . http_build_query($params));
+        $requiresAuth = true;
+        break;
+
     case 'organizer.validate-invite':
         $method = 'GET';
         $params = [];
