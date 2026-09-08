@@ -1063,15 +1063,37 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Event Simulator
+        // Event Simulator — dropdowns populate din istoric (backend
+        // face match case-insensitive pe numele exact al genului și
+        // pe day_name în engleză din TO_CHAR(...,'Day')).
+        const simGenres = (d.genrePerformance || []).map(g => g.genre).filter(Boolean);
+        const simDows = (d.dayOfWeek || []).map(x => x.day).filter(Boolean);
+        // Fallback: dacă istoricul zilelor e gol, listăm săptămâna completă.
+        const dowFallback = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        const dowList = simDows.length ? simDows : dowFallback;
+        const DOW_RO = { Monday: 'Luni', Tuesday: 'Marți', Wednesday: 'Miercuri', Thursday: 'Joi', Friday: 'Vineri', Saturday: 'Sâmbătă', Sunday: 'Duminică' };
+        const selStyle = 'padding:.45rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;background:#fff;';
         html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">🧪</span>Simulator eveniment</div>
-            <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Verifică ce numere ai avea pentru un eveniment ipotetic.</p>
+            <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Alege gen, zi și un preț ipotetic — sistemul îți spune câte bilete și cât venit ai putea avea, pe baza istoricului locației.</p>
             <div class="a-g3">
-                <input id="sim-genre" placeholder="Gen (ex: rock)" style="padding:.4rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
-                <input id="sim-dow" placeholder="Zi (ex: Vineri)" style="padding:.4rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
-                <input id="sim-price" type="number" placeholder="Preț bilet (RON)" style="padding:.4rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+                <div>
+                    <label style="display:block;font-size:.7rem;color:var(--v-muted);font-weight:600;margin-bottom:.25rem;">Gen muzical</label>
+                    ${simGenres.length ? `<select id="sim-genre" style="${selStyle}width:100%;">
+                        ${simGenres.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('')}
+                    </select>` : `<select id="sim-genre" disabled style="${selStyle}width:100%;opacity:.55;"><option>— fără istoric —</option></select>`}
+                </div>
+                <div>
+                    <label style="display:block;font-size:.7rem;color:var(--v-muted);font-weight:600;margin-bottom:.25rem;">Zi a săptămânii</label>
+                    <select id="sim-dow" style="${selStyle}width:100%;">
+                        ${dowList.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(DOW_RO[d] || d)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:.7rem;color:var(--v-muted);font-weight:600;margin-bottom:.25rem;">Preț bilet (RON)</label>
+                    <input id="sim-price" type="number" min="1" step="1" value="100" style="${selStyle}width:100%;">
+                </div>
             </div>
-            <button id="sim-run" style="margin-top:.625rem;padding:.5rem 1rem;background:var(--v-primary);color:#fff;border:none;border-radius:.375rem;font-size:.8125rem;font-weight:600;cursor:pointer;">Simulează</button>
+            <button id="sim-run" ${simGenres.length ? '' : 'disabled'} style="margin-top:.75rem;padding:.55rem 1.1rem;background:${simGenres.length ? 'var(--v-primary)' : 'var(--v-muted)'};color:#fff;border:none;border-radius:.375rem;font-size:.8125rem;font-weight:600;cursor:${simGenres.length ? 'pointer' : 'not-allowed'};">Simulează</button>
             <div id="sim-result" style="margin-top:.75rem;"></div>
         </div>`;
 
@@ -1352,17 +1374,55 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 const res = await AmbiletVenueAPI.simulate(genre, dow, price);
                 if (res && res.success && res.data) {
                     const r = res.data;
-                    result.innerHTML = `<div class="a-g3">
-                        <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;text-align:center;"><div style="font-size:1.25rem;font-weight:700;">${fmtInt(r.estimated_tickets || 0)}</div><div style="font-size:.7rem;color:var(--v-muted);">Bilete estimate</div></div>
-                        <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;text-align:center;"><div style="font-size:1.25rem;font-weight:700;color:var(--v-warn);">${fmtMoney(r.estimated_revenue || 0)} RON</div><div style="font-size:.7rem;color:var(--v-muted);">Venit estimat</div></div>
-                        <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;text-align:center;"><div style="font-size:1.25rem;font-weight:700;color:var(--v-success);">${r.estimated_occupancy || 0}%</div><div style="font-size:.7rem;color:var(--v-muted);">Ocupare estimată</div></div>
-                    </div>${r.summary ? `<p style="margin-top:.5rem;font-size:.75rem;color:var(--v-muted);">${escapeHtml(r.summary)}</p>` : ''}`;
+                    if (r.error) {
+                        result.innerHTML = `<p style="font-size:.75rem;color:var(--v-danger);">${escapeHtml(r.error)}</p>`;
+                        return;
+                    }
+                    const DEMAND_RO = { Hot: 'Cerere ridicată', Strong: 'Cerere solidă', Moderate: 'Cerere moderată', Low: 'Cerere scăzută' };
+                    const DEMAND_COL = { Hot: 'var(--v-danger)', Strong: 'var(--v-success)', Moderate: 'var(--v-warn)', Low: 'var(--v-muted)' };
+                    const dl = r.demand_label || 'Moderate';
+                    const cap = r.venue_capacity || 0;
+                    const st  = r.predicted_sell_through || 0;
+                    const tk  = r.predicted_tickets || 0;
+                    const rv  = r.predicted_revenue || 0;
+                    const dowMod = r.dow_modifier || 1;
+                    const priceMod = r.price_modifier || 1;
+
+                    let out = `<div class="a-g3" style="margin-bottom:.75rem;">
+                        <div style="padding:.85rem;background:linear-gradient(135deg,#f8fafc,#fff);border:1px solid var(--v-ring);border-radius:.5rem;text-align:center;">
+                            <div style="font-size:1.5rem;font-weight:800;">${fmtInt(tk)}</div>
+                            <div style="font-size:.65rem;color:var(--v-muted);margin-top:.15rem;">bilete estimate din ${fmtInt(cap)}</div>
+                        </div>
+                        <div style="padding:.85rem;background:linear-gradient(135deg,#fef3c7,#fff);border:1px solid var(--v-ring);border-radius:.5rem;text-align:center;">
+                            <div style="font-size:1.5rem;font-weight:800;color:var(--v-warn);">${fmtMoney(rv)} RON</div>
+                            <div style="font-size:.65rem;color:var(--v-muted);margin-top:.15rem;">venit estimat</div>
+                        </div>
+                        <div style="padding:.85rem;background:linear-gradient(135deg,#dcfce7,#fff);border:1px solid var(--v-ring);border-radius:.5rem;text-align:center;">
+                            <div style="font-size:1.5rem;font-weight:800;color:var(--v-success);">${st}%</div>
+                            <div style="font-size:.65rem;color:var(--v-muted);margin-top:.15rem;">ocupare estimată</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
+                        <span style="padding:.25rem .625rem;background:${DEMAND_COL[dl]};color:#fff;font-size:.7rem;font-weight:700;border-radius:.375rem;">${escapeHtml(DEMAND_RO[dl] || dl)}</span>
+                        <span style="padding:.25rem .625rem;background:#f1f5f9;color:var(--v-text);font-size:.7rem;border-radius:.375rem;">Zi: ${dowMod > 1 ? '↑' : dowMod < 1 ? '↓' : '='} ${(dowMod * 100).toFixed(0)}%</span>
+                        <span style="padding:.25rem .625rem;background:#f1f5f9;color:var(--v-text);font-size:.7rem;border-radius:.375rem;">Preț: ${priceMod > 1 ? '↑' : priceMod < 1 ? '↓' : '='} ${(priceMod * 100).toFixed(0)}%</span>
+                    </div>`;
+                    if (r.comparables && r.comparables.length) {
+                        out += `<div style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.35rem;">Evenimente comparabile</div>
+                            <table class="a-tbl"><thead><tr><th>Titlu</th><th>Data</th><th style="text-align:right">Vândute / Capacitate</th><th style="text-align:right">Ocupare</th></tr></thead>
+                            <tbody>${r.comparables.map(c => `<tr><td>${escapeHtml(c.title || '')}</td><td style="color:var(--v-muted);">${escapeHtml(c.date || '')}</td><td style="text-align:right;">${fmtInt(c.sold)} / ${fmtInt(c.capacity)}</td><td style="text-align:right;font-weight:600;">${c.sell_through !== null ? c.sell_through + '%' : '—'}</td></tr>`).join('')}</tbody></table>`;
+                    }
+                    if (r.suggested_artists && r.suggested_artists.length) {
+                        out += `<div style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin:.75rem 0 .35rem;">Artiști sugerați</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:.35rem;">${r.suggested_artists.slice(0, 8).map(a => `<span style="padding:.2rem .5rem;background:rgba(59,130,246,0.08);color:var(--v-primary);font-size:.7rem;border-radius:.25rem;">${escapeHtml(a.name || a.artist || a)}</span>`).join('')}</div>`;
+                    }
+                    result.innerHTML = out;
                 } else {
                     result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Simulare eșuată.</p>';
                 }
             } catch (e) {
                 console.error(e);
-                result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Eroare.</p>';
+                result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Eroare la simulare.</p>';
             }
         });
     }
