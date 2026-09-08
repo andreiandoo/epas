@@ -30,6 +30,7 @@ class PayoutsReconcileCommand extends Command
 {
     protected $signature = 'payouts:reconcile
         {--event= : Restrict to a single event id}
+        {--since= : Only events whose event_date is on/after this date (YYYY-MM-DD) — cuts old/imported events}
         {--threshold=1 : Absolute RON difference below which an event is considered OK}
         {--all : List every event, not just the discrepant ones}
         {--csv= : Write the full result to this CSV path instead of a table}';
@@ -40,12 +41,24 @@ class PayoutsReconcileCommand extends Command
     {
         $threshold = (float) $this->option('threshold');
         $onlyEvent = $this->option('event');
+        $since = $this->option('since');
 
         // Statuses that represent a live claim on the event's revenue.
         $claimStatuses = ['completed', 'approved', 'processing', 'pending'];
 
+        // Optional date floor on the event date — the simplest way to drop the
+        // old/imported back-catalog (those events sit in 2022-2024). Imported
+        // ORDERS are already excluded from the net by SalesBreakdownService.
+        $recentEventIds = null;
+        if ($since) {
+            $recentEventIds = Event::whereNotNull('event_date')
+                ->where('event_date', '>=', $since)
+                ->pluck('id');
+        }
+
         $eventIds = MarketplacePayout::query()
             ->when($onlyEvent, fn ($q) => $q->where('event_id', (int) $onlyEvent))
+            ->when($recentEventIds !== null, fn ($q) => $q->whereIn('event_id', $recentEventIds))
             ->whereNotNull('event_id')
             ->whereIn('status', $claimStatuses)
             ->distinct()
@@ -107,6 +120,7 @@ class PayoutsReconcileCommand extends Command
 
             $rows[] = [
                 $eventId,
+                optional($event->event_date)->format('Y-m-d') ?? '-',
                 $this->title($event),
                 number_format($net, 2),
                 number_format($claims, 2),
@@ -115,7 +129,7 @@ class PayoutsReconcileCommand extends Command
             ];
         }
 
-        $headers = ['Event', 'Titlu', 'Net real', 'Platit', 'Diferenta', 'Status'];
+        $headers = ['Event', 'Data', 'Titlu', 'Net real', 'Platit', 'Diferenta', 'Status'];
 
         if ($csv = $this->option('csv')) {
             $fh = fopen($csv, 'w');
