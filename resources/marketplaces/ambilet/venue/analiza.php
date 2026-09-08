@@ -58,10 +58,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 <?php endforeach; ?>
             </div>
 
-            <!-- KPI + Health strip shown above all tabs (like blade page header) -->
-            <div id="analiza-header" class="hidden mb-4"></div>
-
-            <!-- Tab panels -->
+            <!-- Tab panels (header sits inside Overview only) -->
             <?php foreach ($tabs as $t): ?>
                 <div id="tab-<?= $t['id'] ?>" class="analiza-tab-panel hidden space-y-4"></div>
             <?php endforeach; ?>
@@ -114,6 +111,45 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         try { return new Date(d).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: '2-digit' }); }
         catch (e) { return d; }
     };
+    // Normalize a city name — strip diacritics, trim, lowercase — so
+    // "Constanta", "CONSTANTA" and "Constanța" all collapse into the
+    // same bucket in the Geographic Origin table. Uses NFD decomposition
+    // to remove combining marks (works for all Romanian diacritics).
+    const normalizeCity = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+    // Prettify the collapsed city bucket key for display (Title Case).
+    const prettyCity = key => key.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    // ── Translation dicts (blade labels are in English) ─────────
+    const T_DAY = {
+        'Monday': 'Luni', 'Tuesday': 'Marți', 'Wednesday': 'Miercuri',
+        'Thursday': 'Joi', 'Friday': 'Vineri', 'Saturday': 'Sâmbătă', 'Sunday': 'Duminică',
+        'Mon': 'Luni', 'Tue': 'Mar', 'Wed': 'Mie', 'Thu': 'Joi', 'Fri': 'Vin', 'Sat': 'Sâm', 'Sun': 'Dum',
+    };
+    const T_MONTH = {
+        'Jan': 'Ian', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Apr', 'May': 'Mai', 'Jun': 'Iun',
+        'Jul': 'Iul', 'Aug': 'Aug', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Noi', 'Dec': 'Dec',
+        'January': 'Ianuarie', 'February': 'Februarie', 'March': 'Martie', 'April': 'Aprilie',
+        'June': 'Iunie', 'July': 'Iulie', 'August': 'August', 'September': 'Septembrie',
+        'October': 'Octombrie', 'November': 'Noiembrie', 'December': 'Decembrie',
+    };
+    const T_GENDER = { 'male': 'Masculin', 'female': 'Feminin', 'other': 'Altul' };
+    const T_HEALTH_LABEL = {
+        'Excellent': 'Excelent', 'Good': 'Bun', 'Average': 'Mediu',
+        'Below Average': 'Sub medie', 'Critical': 'Critic', 'No Data': 'Fără date',
+    };
+    const T_HEALTH_COMP = { 'Occupancy': 'Ocupare', 'Revenue Growth': 'Creștere venit', 'Customer Loyalty': 'Loialitate', 'Activity': 'Activitate' };
+    const T_MOMENTUM = { 'Events': 'Evenimente', 'Tickets Sold': 'Bilete vândute', 'Revenue': 'Venit', 'Avg Occupancy': 'Ocupare medie' };
+    const T_DAYTYPE = { 'Weekend': 'Weekend', 'Weekday': 'Zi lucrătoare', 'Fri': 'Vineri', 'Sat': 'Sâmbătă', 'Sun': 'Duminică' };
+    // Translate a token by looking it up in a dict; fall back to the
+    // original text so English strings we haven't mapped still render.
+    const tr = (dict, key) => (dict[key] !== undefined ? dict[key] : key);
+    // "May 25" (Carbon 'M y' format) → "Mai 25". Regex handles both
+    // 3-letter month prefixes and full month names.
+    const translateMonthLabel = (label) => {
+        if (!label) return label;
+        const parts = String(label).split(' ');
+        parts[0] = tr(T_MONTH, parts[0]);
+        return parts.join(' ');
+    };
 
     // ── State ───────────────────────────────────────────────────
     const state = {
@@ -148,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     async function loadAll() {
         const loading = document.getElementById('analiza-loading');
         loading.classList.remove('hidden');
-        document.getElementById('analiza-header').classList.add('hidden');
         document.querySelectorAll('.analiza-tab-panel').forEach(p => p.classList.add('hidden'));
 
         try {
@@ -156,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const res = await AmbiletVenueAPI.analyticsAll(venueId);
             if (res && res.success && res.data) {
                 state.data = res.data;
-                renderHeader();
                 renderAllTabs();
                 loading.classList.add('hidden');
                 switchTab('overview');
@@ -173,87 +207,6 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         document.querySelectorAll('.analiza-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
         document.querySelectorAll('.analiza-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + id));
         if (id === 'overview') renderOverviewCharts();
-    }
-
-    // ── Header (KPI + Health + Momentum) ────────────────────────
-    function renderHeader() {
-        const d = state.data;
-        const k = d.kpis || {};
-        const h = d.venueHealthScore || {};
-        const m = d.monthlyMomentum || {};
-
-        const kpiCards = [
-            { label: 'Evenimente',       value: fmtInt(k.total_events), color: 'var(--v-primary)' },
-            { label: 'Bilete vândute',   value: fmtInt(k.total_tickets), color: 'var(--v-accent)' },
-            { label: 'Venit total',      value: fmtMoney(k.total_revenue) + ' RON', color: 'var(--v-warn)' },
-            { label: 'Cumpărători',      value: fmtInt(k.unique_buyers), color: 'var(--v-primary)' },
-            { label: 'Ocupare medie',    value: (Number(k.avg_sell_through || 0)) + '%', color: stColor(k.avg_sell_through || 0) },
-            { label: 'Preț mediu',       value: fmtMoney(k.avg_ticket_price) + ' RON', color: 'var(--v-warn)' },
-        ];
-
-        const healthColor = (h.score || 0) >= 75 ? 'var(--v-success)' : (h.score || 0) >= 50 ? 'var(--v-warn)' : 'var(--v-danger)';
-
-        const kpiHtml = `
-            <div class="a-card">
-                <div class="a-card-h">Indicatori cheie</div>
-                <div class="a-g3">
-                    ${kpiCards.map(c => `
-                        <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
-                            <div style="font-size:1.5rem;font-weight:700;color:${c.color}">${c.value}</div>
-                            <div style="font-size:.7rem;color:var(--v-muted);text-transform:uppercase;margin-top:.25rem;">${c.label}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-
-        const healthHtml = h.score !== undefined ? `
-            <div class="a-card">
-                <div class="a-card-h">Scor sănătate locație</div>
-                <div style="display:flex;gap:1rem;align-items:center;">
-                    <div style="position:relative;width:6rem;height:6rem;flex-shrink:0;">
-                        <svg viewBox="0 0 36 36" style="width:100%;height:100%;">
-                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#e2e8f0" stroke-width="3"/>
-                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="${healthColor}" stroke-width="3" stroke-dasharray="${h.score || 0}, 100"/>
-                        </svg>
-                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:${healthColor}">${Math.round(h.score || 0)}</div>
-                    </div>
-                    <div style="flex:1;">
-                        <p style="font-size:.875rem;font-weight:600;color:var(--v-text);">${escapeHtml(h.status || '')}</p>
-                        ${h.components ? '<div style="margin-top:.5rem;font-size:.75rem;color:var(--v-muted);">' + Object.entries(h.components).map(([k, v]) => `${escapeHtml(k)}: <strong>${v}</strong>`).join(' · ') + '</div>' : ''}
-                    </div>
-                </div>
-            </div>
-        ` : '';
-
-        let momentumHtml = '';
-        if (m && (m.events_delta !== undefined || m.metrics)) {
-            const items = m.metrics || [
-                { label: 'Evenimente',      value: m.events_current, direction: (m.events_delta || 0) >= 0 ? 'up' : 'down' },
-                { label: 'Bilete',          value: m.tickets_current, direction: (m.tickets_delta || 0) >= 0 ? 'up' : 'down' },
-                { label: 'Venit',           value: fmtMoney(m.revenue_current) + ' RON', direction: (m.revenue_delta || 0) >= 0 ? 'up' : 'down' },
-                { label: 'Ocupare',         value: (m.st_current || 0) + '%', direction: (m.st_delta || 0) >= 0 ? 'up' : 'down' },
-            ];
-            momentumHtml = `
-                <div class="a-card">
-                    <div class="a-card-h">Impuls lunar</div>
-                    <div class="a-g3">
-                        ${items.map(x => {
-                            const arrow = x.direction === 'up' ? '↑' : x.direction === 'down' ? '↓' : '→';
-                            const color = x.direction === 'up' ? 'var(--v-success)' : x.direction === 'down' ? 'var(--v-danger)' : 'var(--v-muted)';
-                            return `<div style="text-align:center;padding:.5rem;background:#f8fafc;border-radius:.5rem;">
-                                <div style="font-size:1.25rem;font-weight:700;">${x.value ?? '—'} <span style="color:${color};font-size:.875rem;">${arrow}</span></div>
-                                <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(x.label || '')}</div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        const header = document.getElementById('analiza-header');
-        header.innerHTML = `<div class="space-y-4">${kpiHtml}${healthHtml}${momentumHtml}</div>`;
-        header.classList.remove('hidden');
     }
 
     // ── Render all tabs (skeleton, charts drawn lazily) ─────────
@@ -273,7 +226,85 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     // ── OVERVIEW ────────────────────────────────────────────────
     function renderOverview() {
         const d = state.data;
+        const k = d.kpis || {};
+        const h = d.venueHealthScore || {};
+        const m = d.monthlyMomentum || {};
+        const loyalty = d.customerLoyalty || {};
         let html = '';
+
+        // KPI strip. Backend returns total_events/total_tickets/total_revenue/
+        // avg_occupancy/avg_ticket_price. "Cumpărători unici" is derived from
+        // customerLoyalty.total (buildVenueCustomerLoyalty counts distinct
+        // paying customers) — the KPI builder itself doesn't expose it.
+        const uniqueBuyers = loyalty.total || 0;
+        const kpiCards = [
+            { label: 'Evenimente',        value: fmtInt(k.total_events), color: 'var(--v-primary)' },
+            { label: 'Bilete vândute',    value: fmtInt(k.total_tickets), color: 'var(--v-accent)' },
+            { label: 'Venit total',       value: fmtMoney(k.total_revenue) + ' RON', color: 'var(--v-warn)' },
+            { label: 'Cumpărători unici', value: fmtInt(uniqueBuyers), color: 'var(--v-primary)' },
+            { label: 'Ocupare medie',     value: (Number(k.avg_occupancy || 0)).toFixed(1) + '%', color: stColor(k.avg_occupancy || 0) },
+            { label: 'Preț mediu',        value: fmtMoney(k.avg_ticket_price) + ' RON', color: 'var(--v-warn)' },
+        ];
+        html += `<div class="a-card"><div class="a-card-h">Indicatori cheie</div>
+            <div class="a-g3">${kpiCards.map(c => `
+                <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                    <div style="font-size:1.5rem;font-weight:700;color:${c.color}">${c.value}</div>
+                    <div style="font-size:.7rem;color:var(--v-muted);text-transform:uppercase;margin-top:.25rem;">${c.label}</div>
+                </div>
+            `).join('')}</div>
+        </div>`;
+
+        // Health Score. components is an array [{name, score, max, detail}, ...],
+        // NOT a plain object — the previous renderer stringified {} → "[object
+        // Object]". Iterate and show each component's translated name + score/max
+        // + detail row (blade's "detail" text is what actually explains the
+        // computation).
+        if (h.score !== undefined) {
+            const healthColor = h.color || ((h.score || 0) >= 75 ? 'var(--v-success)' : (h.score || 0) >= 50 ? 'var(--v-warn)' : 'var(--v-danger)');
+            const components = Array.isArray(h.components) ? h.components : [];
+            html += `<div class="a-card"><div class="a-card-h">Scor sănătate locație</div>
+                <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                    <div style="position:relative;width:6rem;height:6rem;flex-shrink:0;">
+                        <svg viewBox="0 0 36 36" style="width:100%;height:100%;">
+                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#e2e8f0" stroke-width="3"/>
+                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="${healthColor}" stroke-width="3" stroke-dasharray="${h.score || 0}, 100"/>
+                        </svg>
+                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:${healthColor}">${Math.round(h.score || 0)}</div>
+                    </div>
+                    <div style="flex:1;min-width:220px;">
+                        <p style="font-size:.875rem;font-weight:700;color:${healthColor}">${escapeHtml(tr(T_HEALTH_LABEL, h.label || ''))}</p>
+                        <div style="margin-top:.5rem;font-size:.75rem;color:var(--v-muted);display:flex;gap:.75rem;flex-wrap:wrap;">
+                            ${components.map(c => `<div><strong style="color:var(--v-text);">${escapeHtml(tr(T_HEALTH_COMP, c.name || ''))}</strong>: ${c.score}/${c.max} <span style="color:var(--v-muted);">— ${escapeHtml(c.detail || '')}</span></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // Monthly Momentum. Backend returns { current_label, previous_label,
+        // metrics: [{name, current, previous, trend: {direction, pct}, format}] }.
+        // The old renderer read events_delta / tickets_current etc. which never
+        // existed → empty cards.
+        if (m && Array.isArray(m.metrics) && m.metrics.length) {
+            html += `<div class="a-card">
+                <div class="a-card-h">Impuls lunar <span style="font-size:.7rem;font-weight:400;color:var(--v-muted);margin-left:.5rem;">${escapeHtml(m.current_label || '')} vs ${escapeHtml(m.previous_label || '')}</span></div>
+                <div class="a-g3">${m.metrics.map(x => {
+                    const dir = (x.trend && x.trend.direction) || 'flat';
+                    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
+                    const color = dir === 'up' ? 'var(--v-success)' : dir === 'down' ? 'var(--v-danger)' : 'var(--v-muted)';
+                    let curr = x.current;
+                    if (x.format === 'currency') curr = fmtMoney(curr) + ' RON';
+                    else if (x.format === 'pct') curr = curr + '%';
+                    else curr = fmtInt(curr);
+                    const pct = x.trend && x.trend.pct !== undefined ? x.trend.pct : null;
+                    return `<div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--v-text);">${curr}</div>
+                        <div style="font-size:.75rem;color:${color};margin-top:.25rem;font-weight:600;">${arrow} ${pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : ''}</div>
+                        <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(tr(T_MOMENTUM, x.name || ''))}</div>
+                    </div>`;
+                }).join('')}</div>
+            </div>`;
+        }
 
         // Charts
         if (d.months && d.months.length) {
@@ -329,11 +360,11 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         if (dayType.length || (yoy.last_12 || 0) > 0) {
             html += `<div class="a-g2">
                 ${dayType.length ? `
-                    <div class="a-card"><div class="a-card-h">Weekend vs Weekday</div>
+                    <div class="a-card"><div class="a-card-h">Weekend vs zi lucrătoare</div>
                         ${dayType.map(dt => `
                             <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px dashed var(--v-ring);">
-                                <span style="font-weight:600;">${escapeHtml(dt.day_type || '')}</span>
-                                <span style="color:var(--v-muted);font-size:.8125rem;">${fmtInt(dt.events)} ev · ${dt.avg_st}% ST · ${fmtMoney(dt.avg_revenue)} avg</span>
+                                <span style="font-weight:600;">${escapeHtml(tr(T_DAYTYPE, dt.day_type || ''))}</span>
+                                <span style="color:var(--v-muted);font-size:.8125rem;">${fmtInt(dt.events)} ev. · ocupare medie ${dt.avg_st}% · venit mediu ${fmtMoney(dt.avg_revenue)} RON</span>
                             </div>
                         `).join('')}
                     </div>
@@ -364,12 +395,16 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                         </div>
                         ${bench.competitors && bench.competitors.length ? `
                             <div style="font-size:.75rem;font-weight:600;color:var(--v-muted);margin-bottom:.25rem;">Alte locații în oraș</div>
-                            ${bench.competitors.slice(0, 5).map(c => `
-                                <div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem;border-bottom:1px dashed var(--v-ring);">
-                                    <span>${escapeHtml(c.name)} <span style="color:var(--v-muted);">(${fmtInt(c.capacity)} loc)</span></span>
-                                    <span>${c.events} ev · <span style="font-weight:600;color:${c.avg_st > bench.my.avg_st ? 'var(--v-danger)' : 'var(--v-success)'}">${c.avg_st}%</span> · ${c.avg_price} RON</span>
-                                </div>
-                            `).join('')}
+                            <table class="a-tbl" style="margin-top:.25rem;"><thead><tr><th>Locație</th><th style="text-align:right">Capacitate</th><th style="text-align:right">Ev.</th><th style="text-align:right">Ocupare medie</th><th style="text-align:right">Preț mediu</th></tr></thead>
+                            <tbody>${bench.competitors.slice(0, 5).map(c => `
+                                <tr>
+                                    <td style="font-weight:600;">${escapeHtml(c.name)}</td>
+                                    <td style="text-align:right;color:var(--v-muted);">${fmtInt(c.capacity)}</td>
+                                    <td style="text-align:right;">${c.events}</td>
+                                    <td style="text-align:right;font-weight:600;color:${c.avg_st > bench.my.avg_st ? 'var(--v-danger)' : 'var(--v-success)'};">${c.avg_st}%</td>
+                                    <td style="text-align:right;color:var(--v-warn);font-family:monospace;">${c.avg_price} RON</td>
+                                </tr>
+                            `).join('')}</tbody></table>
                         ` : ''}
                     </div>
                 ` : ''}
@@ -385,6 +420,32 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
+        // Event Comparison Tool
+        const evPerf = d.eventPerformance || [];
+        if (evPerf.length >= 2) {
+            html += `<div class="a-card"><div class="a-card-h">Comparație evenimente</div>
+                <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Selectează 2 evenimente pentru comparație.</p>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
+                    <div style="flex:1;min-width:200px;">
+                        <label style="font-size:.7rem;color:var(--v-muted);display:block;margin-bottom:.25rem;">Eveniment A</label>
+                        <select id="cmp-a" style="width:100%;padding:.4rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+                            <option value="">Selectează…</option>
+                            ${evPerf.slice(0, 30).map(e => `<option value="${e.id}">${escapeHtml(truncate(e.title, 40))} (${fmtDate(e.date)})</option>`).join('')}
+                        </select>
+                    </div>
+                    <div style="flex:1;min-width:200px;">
+                        <label style="font-size:.7rem;color:var(--v-muted);display:block;margin-bottom:.25rem;">Eveniment B</label>
+                        <select id="cmp-b" style="width:100%;padding:.4rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+                            <option value="">Selectează…</option>
+                            ${evPerf.slice(0, 30).map(e => `<option value="${e.id}">${escapeHtml(truncate(e.title, 40))} (${fmtDate(e.date)})</option>`).join('')}
+                        </select>
+                    </div>
+                    <button id="cmp-run" style="align-self:flex-end;padding:.4rem 1rem;background:var(--v-primary);color:#fff;border:none;border-radius:.375rem;font-size:.8125rem;font-weight:600;cursor:pointer;">Compară</button>
+                </div>
+                <div id="cmp-result"></div>
+            </div>`;
+        }
+
         return html || '<div class="a-card"><p class="text-sm text-slate-500">Nu există date suficiente pentru vederea generală.</p></div>';
     }
 
@@ -396,12 +457,13 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         Object.values(state.charts).forEach(c => c && c.destroy && c.destroy());
         state.charts = {};
 
+        const monthLabels = d.months.map(translateMonthLabel);
         const evTx = document.getElementById('chart-yearly-evtx');
         if (evTx) {
             state.charts.evTx = new Chart(evTx, {
                 type: 'bar',
                 data: {
-                    labels: d.months,
+                    labels: monthLabels,
                     datasets: [
                         { label: 'Evenimente', data: d.eventsSeries, backgroundColor: 'rgba(59,130,246,.7)', yAxisID: 'y1' },
                         { label: 'Bilete', data: d.ticketsSeries, type: 'line', borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,.2)', yAxisID: 'y2', tension: 0.3 },
@@ -415,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             state.charts.revOcc = new Chart(revOcc, {
                 type: 'line',
                 data: {
-                    labels: d.months,
+                    labels: monthLabels,
                     datasets: [
                         { label: 'Venit (RON)', data: d.revenueSeries, borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.15)', yAxisID: 'y1', tension: 0.3, fill: true },
                         { label: 'Ocupare (%)', data: d.occupancySeries, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.15)', yAxisID: 'y2', tension: 0.3 },
@@ -484,12 +546,12 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 </div>
                 <div class="space-y-3">
                     ${pi.underpriced && pi.underpriced.length ? `
-                        <div class="a-card"><div class="a-card-h" style="color:var(--v-warn);">Under-priced (>90% ST)</div>
+                        <div class="a-card"><div class="a-card-h" style="color:var(--v-warn);">Sub-preț (peste 90% ocupare)</div>
                             ${pi.underpriced.map(u => `<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem;"><span>${escapeHtml(truncate(u.title, 30))}</span><span style="color:var(--v-success);font-weight:600;">${u.sell_through}% · ${u.avg_price} RON</span></div>`).join('')}
                         </div>
                     ` : ''}
                     ${pi.overpriced && pi.overpriced.length ? `
-                        <div class="a-card"><div class="a-card-h" style="color:var(--v-danger);">Over-priced (<30% ST)</div>
+                        <div class="a-card"><div class="a-card-h" style="color:var(--v-danger);">Supra-preț (sub 30% ocupare)</div>
                             ${pi.overpriced.map(o => `<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem;"><span>${escapeHtml(truncate(o.title, 30))}</span><span style="color:var(--v-danger);font-weight:600;">${o.sell_through}% · ${o.avg_price} RON</span></div>`).join('')}
                         </div>
                     ` : ''}
@@ -546,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 <div class="a-g3">${personas.map(p => `
                     <div style="padding:.875rem;border-radius:.5rem;background:rgba(59,130,246,.04);border:1px solid var(--v-ring);">
                         <div style="font-size:.7rem;font-weight:600;color:var(--v-accent);text-transform:uppercase;margin-bottom:.4rem;">${escapeHtml(p.label || '')}</div>
-                        <div style="font-size:1rem;font-weight:700;">${escapeHtml(p.age_group || '')} / ${escapeHtml(p.gender || '')}</div>
+                        <div style="font-size:1rem;font-weight:700;">${escapeHtml(p.age_group || '')} / ${escapeHtml(tr(T_GENDER, (p.gender || '').toLowerCase()) || p.gender || '')}</div>
                         <div style="color:var(--v-muted);font-size:.75rem;margin-top:.25rem;">${fmtInt(p.count)} (${p.percentage}%)</div>
                         <div style="color:var(--v-muted);font-size:.75rem;">Cheltuială medie: ${fmtMoney(p.avg_spend)} RON</div>
                         ${p.top_cities && Object.keys(p.top_cities).length ? `<div style="color:var(--v-muted);font-size:.7rem;margin-top:.25rem;">Orașe: ${escapeHtml(Object.keys(p.top_cities).join(', '))}</div>` : ''}
@@ -581,8 +643,9 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                         <div style="display:flex;gap:1rem;align-items:center;justify-content:center;padding:.5rem 0;flex-wrap:wrap;">
                             ${Object.entries(genderDist).map(([g, c]) => {
                                 const pct = Math.round(c / totalGender * 1000) / 10;
-                                const color = g.toLowerCase() === 'male' ? 'var(--v-primary)' : g.toLowerCase() === 'female' ? '#c084fc' : 'var(--v-muted)';
-                                const label = g === 'male' ? 'Masculin' : g === 'female' ? 'Feminin' : g;
+                                const gLower = g.toLowerCase();
+                                const color = gLower === 'male' ? 'var(--v-primary)' : gLower === 'female' ? '#c084fc' : 'var(--v-muted)';
+                                const label = tr(T_GENDER, gLower) || g;
                                 return `<div style="text-align:center;"><div style="font-size:2rem;font-weight:700;color:${color};">${pct}%</div><div style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(label)}</div><div style="font-size:.7rem;color:var(--v-muted);">${fmtInt(c)}</div></div>`;
                             }).join('')}
                         </div>
@@ -610,15 +673,33 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     <div style="text-align:center;margin-top:.625rem;font-size:.8125rem;"><span style="color:var(--v-success);font-weight:700;">${loyalty.repeat_rate}%</span> <span style="color:var(--v-muted);">rată repetare</span></div>
                 </div>
             ` : ''}
-            ${geo.cities && geo.cities.length ? `
-                <div class="a-card"><div class="a-card-h">De unde vin cumpărătorii <span style="color:var(--v-accent);font-size:.7rem;margin-left:.5rem;">${geo.out_of_town_ratio}% din alt oraș</span></div>
+            ${geo.cities && geo.cities.length ? (() => {
+                // Merge "Constanta", "CONSTANTA" and "Constanța" into one
+                // row — backend keeps whatever the buyer typed at checkout,
+                // so we normalize on display before summing.
+                const bucketed = new Map();
+                geo.cities.forEach(c => {
+                    const key = normalizeCity(c.city);
+                    if (!key) return;
+                    if (!bucketed.has(key)) {
+                        bucketed.set(key, { display: c.city, customer_count: 0, total_revenue: 0 });
+                    }
+                    const row = bucketed.get(key);
+                    row.customer_count += Number(c.customer_count || 0);
+                    row.total_revenue += Number(c.total_revenue || 0);
+                });
+                const merged = Array.from(bucketed.values())
+                    .map(r => ({ ...r, display: prettyCity(normalizeCity(r.display)), avg_spend: r.customer_count > 0 ? r.total_revenue / r.customer_count : 0 }))
+                    .sort((a, b) => b.customer_count - a.customer_count)
+                    .slice(0, 15);
+                return `<div class="a-card"><div class="a-card-h">De unde vin cumpărătorii <span style="color:var(--v-accent);font-size:.7rem;margin-left:.5rem;">${geo.out_of_town_ratio}% din alt oraș</span></div>
                     <div style="max-height:18rem;overflow-y:auto;">
                     <table class="a-tbl"><thead><tr><th>Oraș</th><th style="text-align:right">Cumpărători</th><th style="text-align:right">Venit</th><th style="text-align:right">Chelt. medie</th></tr></thead>
-                    <tbody>${geo.cities.slice(0, 15).map(c => `
-                        <tr><td style="font-weight:600;">${escapeHtml(c.city)}</td><td style="text-align:right;">${fmtInt(c.customer_count)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(c.total_revenue)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${fmtMoney(c.avg_spend)}</td></tr>
+                    <tbody>${merged.map(c => `
+                        <tr><td style="font-weight:600;">${escapeHtml(c.display)}</td><td style="text-align:right;">${fmtInt(c.customer_count)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(c.total_revenue)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${fmtMoney(c.avg_spend)}</td></tr>
                     `).join('')}</tbody></table></div>
-                </div>
-            ` : ''}
+                </div>`;
+            })() : ''}
         </div>`;
 
         // Superfans
@@ -696,9 +777,9 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         if (heatmap.matrix) {
             html += `<div class="a-card"><div class="a-card-h">Heatmap performanță (zi × lună)</div>
                 <div style="overflow-x:auto;"><table style="width:100%;font-size:.75rem;border-collapse:collapse;">
-                    <thead><tr><th style="padding:.4rem;"></th>${(heatmap.months || []).map(m => `<th style="padding:.4rem;color:var(--v-muted);text-align:center;font-weight:600;">${escapeHtml(m)}</th>`).join('')}</tr></thead>
+                    <thead><tr><th style="padding:.4rem;"></th>${(heatmap.months || []).map(m => `<th style="padding:.4rem;color:var(--v-muted);text-align:center;font-weight:600;">${escapeHtml(tr(T_MONTH, m) || m)}</th>`).join('')}</tr></thead>
                     <tbody>${(heatmap.days || []).map((dayName, di) => `
-                        <tr><td style="padding:.4rem;font-weight:600;color:var(--v-muted);">${escapeHtml(dayName)}</td>${Array.from({length: 12}, (_, mi) => {
+                        <tr><td style="padding:.4rem;font-weight:600;color:var(--v-muted);">${escapeHtml(tr(T_DAY, dayName || ''))}</td>${Array.from({length: 12}, (_, mi) => {
                             const cell = heatmap.matrix[di] && heatmap.matrix[di][mi];
                             const st = cell ? cell.st : null;
                             const bg = st === null ? 'transparent' : st >= 75 ? 'rgba(5,150,105,.3)' : st >= 50 ? 'rgba(217,119,6,.2)' : st > 0 ? 'rgba(220,38,38,.15)' : 'transparent';
@@ -715,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 <div class="a-card"><div class="a-card-h">Zi a săptămânii</div>
                     <table class="a-tbl"><thead><tr><th>Zi</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th></tr></thead>
                     <tbody>${dow.map(x => `
-                        <tr><td style="font-weight:600;">${escapeHtml(x.day)}</td><td style="text-align:right;">${x.events}</td><td style="text-align:right;font-weight:700;color:${x.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${x.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(x.avg_revenue)}</td></tr>
+                        <tr><td style="font-weight:600;">${escapeHtml(tr(T_DAY, x.day || ''))}</td><td style="text-align:right;">${x.events}</td><td style="text-align:right;font-weight:700;color:${x.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${x.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(x.avg_revenue)}</td></tr>
                     `).join('')}</tbody></table>
                 </div>
             ` : ''}
@@ -723,7 +804,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 <div class="a-card"><div class="a-card-h">Sezonalitate</div>
                     <table class="a-tbl"><thead><tr><th>Lună</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th><th style="text-align:right">Idle</th></tr></thead>
                     <tbody>${season.map(s => `
-                        <tr><td style="font-weight:600;">${escapeHtml(s.month)}</td><td style="text-align:right;">${s.events}</td><td style="text-align:right;font-weight:700;color:${s.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${s.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(s.avg_revenue)}</td><td style="text-align:right;color:${s.idle_days > 20 ? 'var(--v-danger)' : 'var(--v-muted)'};">${s.idle_days}</td></tr>
+                        <tr><td style="font-weight:600;">${escapeHtml(translateMonthLabel(s.month || ''))}</td><td style="text-align:right;">${s.events}</td><td style="text-align:right;font-weight:700;color:${s.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${s.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(s.avg_revenue)}</td><td style="text-align:right;color:${s.idle_days > 20 ? 'var(--v-danger)' : 'var(--v-muted)'};">${s.idle_days}</td></tr>
                     `).join('')}</tbody></table>
                 </div>
             ` : ''}
@@ -845,41 +926,80 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     function renderPromotion() {
         const d = state.data;
         const pp = d.promotionPlanner || {};
+        const aw = pp.announcement_window || {};
+        const ab = pp.ad_budget || {};
+        const ps = pp.platform_strategy || [];
+        const topGenres = pp.top_genres || [];
         let html = '';
 
-        html += `<div class="a-card"><div class="a-card-h">Fereastră optimă de anunț</div>
-            <p style="font-size:.875rem;">Cel mai bun moment pentru anunț: <strong>${escapeHtml(pp.optimal_window || pp.recommended_window || '—')}</strong></p>
-            ${pp.window_summary || pp.summary ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.5rem;">${escapeHtml(pp.window_summary || pp.summary)}</p>` : ''}
-        </div>`;
+        // Announcement window
+        if (aw.optimal_announce_days !== undefined) {
+            html += `<div class="a-card"><div class="a-card-h">Fereastră optimă de anunț</div>
+                <div class="a-g3" style="margin-bottom:.75rem;">
+                    <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--v-primary);">${aw.optimal_announce_days} zile</div>
+                        <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">Anunț optim înainte</div>
+                    </div>
+                    <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--v-warn);">${aw.p90_days} zile</div>
+                        <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">P90 (90% cumpără cu)</div>
+                    </div>
+                    <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--v-accent);">${aw.median_days} zile</div>
+                        <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">Median lead time</div>
+                    </div>
+                </div>
+                <p style="font-size:.75rem;color:var(--v-muted);">Bazat pe timpii de cumpărare istoric — publică cu ${aw.optimal_announce_days} zile înainte pentru captura maximă.</p>
+            </div>`;
+        }
 
-        if (pp.recommended_budget) {
+        // Ad budget with phases
+        if (ab.recommended_budget !== undefined) {
             html += `<div class="a-card"><div class="a-card-h">Buget recomandat reclame</div>
-                <p style="font-size:.875rem;">Buget total sugerat: <strong>${fmtMoney(pp.recommended_budget)} RON</strong></p>
-                ${pp.budget_summary ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.5rem;">${escapeHtml(pp.budget_summary)}</p>` : ''}
+                <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
+                    <div><div style="color:var(--v-muted);font-size:.7rem;">Venit estimat / eveniment</div><div style="font-size:1.375rem;font-weight:700;">${fmtMoney(ab.estimated_revenue)} RON</div></div>
+                    <div><div style="color:var(--v-muted);font-size:.7rem;">Buget recomandat (12%)</div><div style="font-size:1.375rem;font-weight:700;color:var(--v-warn);">${fmtMoney(ab.recommended_budget)} RON</div></div>
+                </div>
+                ${ab.budget_phases && ab.budget_phases.length ? `
+                    <div style="font-size:.75rem;font-weight:600;color:var(--v-muted);margin-bottom:.4rem;">Distribuție pe faze</div>
+                    <table class="a-tbl"><thead><tr><th>Faza</th><th>Interval</th><th style="text-align:right">Pondere</th><th style="text-align:right">Sumă</th></tr></thead>
+                    <tbody>${ab.budget_phases.map(p => {
+                        const T_PHASE = { 'Announce': 'Anunț', 'Peak': 'Maxim', 'Urgency': 'Urgență', 'Last Call': 'Ultimul apel' };
+                        return `<tr><td style="font-weight:600;">${escapeHtml(tr(T_PHASE, p.phase) || p.phase)}</td><td style="color:var(--v-muted);">${escapeHtml(p.days_range)}</td><td style="text-align:right;">${p.pct}%</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(p.amount)} RON</td></tr>`;
+                    }).join('')}</tbody></table>
+                ` : ''}
             </div>`;
         }
 
-        if (pp.budget_split && pp.budget_split.length) {
-            html += `<div class="a-card"><div class="a-card-h">Distribuție pe platforme</div>
-                <table class="a-tbl"><thead><tr><th>Platformă</th><th style="text-align:right">Buget</th><th style="text-align:right">Pondere</th></tr></thead>
-                <tbody>${pp.budget_split.map(b => `
-                    <tr><td style="font-weight:600;">${escapeHtml(b.platform)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(b.amount)} RON</td><td style="text-align:right;">${b.share}%</td></tr>
-                `).join('')}</tbody></table>
-            </div>`;
-        }
-
-        if (pp.platform_recommendations && Object.keys(pp.platform_recommendations).length) {
-            html += `<div class="a-card"><div class="a-card-h">Recomandări per platformă</div>
-                ${Object.entries(pp.platform_recommendations).map(([platform, rec]) => `
+        // Platform strategy
+        if (ps.length) {
+            html += `<div class="a-card"><div class="a-card-h">Strategie pe platforme</div>
+                ${ps.map(p => `
                     <div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;background:#f8fafc;margin-bottom:.5rem;">
-                        <p style="font-size:.8125rem;font-weight:600;">${escapeHtml(platform)}</p>
-                        <p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(typeof rec === 'string' ? rec : JSON.stringify(rec))}</p>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+                            <p style="font-size:.875rem;font-weight:700;">${escapeHtml(p.platform || '')}</p>
+                            ${p.recommended_budget_share !== undefined ? `<span style="font-size:.75rem;color:var(--v-warn);font-weight:600;">${p.recommended_budget_share}% buget</span>` : ''}
+                        </div>
+                        ${p.rationale ? `<p style="font-size:.75rem;color:var(--v-muted);">${escapeHtml(p.rationale)}</p>` : ''}
+                        ${p.targeting ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;"><strong>Targeting:</strong> ${escapeHtml(p.targeting)}</p>` : ''}
                     </div>
                 `).join('')}
             </div>`;
         }
 
-        return html;
+        // Top genres for targeting
+        if (topGenres.length) {
+            html += `<div class="a-card"><div class="a-card-h">Genuri principale pentru targetare</div>
+                <div class="a-g3">${topGenres.map(g => `
+                    <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                        <div style="font-size:.875rem;font-weight:700;">${escapeHtml(g.genre || g.name || '')}</div>
+                        <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">${g.events || 0} evenimente · ocupare medie ${g.avg_sell_through || g.avg_st || 0}%</div>
+                    </div>
+                `).join('')}</div>
+            </div>`;
+        }
+
+        return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date de promovare.</p></div>';
     }
 
     // ── UPCOMING ────────────────────────────────────────────────
@@ -923,6 +1043,43 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     }
 
     function wireInteractive() {
+        // Event comparison
+        const cmpRun = document.getElementById('cmp-run');
+        if (cmpRun) {
+            cmpRun.addEventListener('click', async () => {
+                const a = parseInt(document.getElementById('cmp-a').value, 10);
+                const b = parseInt(document.getElementById('cmp-b').value, 10);
+                const result = document.getElementById('cmp-result');
+                if (!a || !b) { result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Selectează ambele evenimente.</p>'; return; }
+                if (a === b) { result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Alege 2 evenimente diferite.</p>'; return; }
+                result.innerHTML = '<p style="font-size:.75rem;color:var(--v-muted);">Se compară…</p>';
+                try {
+                    const res = await AmbiletVenueAPI.compare(a, b);
+                    if (res && res.success && res.data) {
+                        const r = res.data;
+                        const evA = r.event_a || {}, evB = r.event_b || {};
+                        result.innerHTML = `
+                            <table class="a-tbl"><thead><tr><th>Metrică</th><th style="text-align:right">${escapeHtml(truncate(evA.title || 'A', 30))}</th><th style="text-align:right">${escapeHtml(truncate(evB.title || 'B', 30))}</th></tr></thead>
+                            <tbody>
+                                <tr><td style="font-weight:600;">Data</td><td style="text-align:right;">${fmtDate(evA.date)}</td><td style="text-align:right;">${fmtDate(evB.date)}</td></tr>
+                                <tr><td style="font-weight:600;">Artiști</td><td style="text-align:right;color:var(--v-muted);font-size:.75rem;">${escapeHtml(evA.artists || '')}</td><td style="text-align:right;color:var(--v-muted);font-size:.75rem;">${escapeHtml(evB.artists || '')}</td></tr>
+                                <tr><td style="font-weight:600;">Vândute / Capacitate</td><td style="text-align:right;font-family:monospace;">${fmtInt(evA.sold)} / ${fmtInt(evA.capacity)}</td><td style="text-align:right;font-family:monospace;">${fmtInt(evB.sold)} / ${fmtInt(evB.capacity)}</td></tr>
+                                <tr><td style="font-weight:600;">Ocupare</td><td style="text-align:right;font-weight:700;color:${stColor(evA.sell_through||0)};">${evA.sell_through !== null ? evA.sell_through + '%' : '—'}</td><td style="text-align:right;font-weight:700;color:${stColor(evB.sell_through||0)};">${evB.sell_through !== null ? evB.sell_through + '%' : '—'}</td></tr>
+                                <tr><td style="font-weight:600;">Venit</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(evA.revenue)} RON</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(evB.revenue)} RON</td></tr>
+                                <tr><td style="font-weight:600;">Preț mediu</td><td style="text-align:right;font-family:monospace;">${evA.avg_price || 0} RON</td><td style="text-align:right;font-family:monospace;">${evB.avg_price || 0} RON</td></tr>
+                                <tr><td style="font-weight:600;">Timp mediu cumpărare</td><td style="text-align:right;">${evA.avg_lead_days || 0}z</td><td style="text-align:right;">${evB.avg_lead_days || 0}z</td></tr>
+                                <tr><td style="font-weight:600;">Rata check-in</td><td style="text-align:right;">${evA.checkin_rate !== null ? evA.checkin_rate + '%' : '—'}</td><td style="text-align:right;">${evB.checkin_rate !== null ? evB.checkin_rate + '%' : '—'}</td></tr>
+                            </tbody></table>`;
+                    } else {
+                        result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Comparație eșuată.</p>';
+                    }
+                } catch (e) {
+                    console.error(e);
+                    result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Eroare.</p>';
+                }
+            });
+        }
+
         const runBtn = document.getElementById('sim-run');
         if (!runBtn) return;
         runBtn.addEventListener('click', async () => {
