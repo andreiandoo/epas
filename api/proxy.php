@@ -2479,6 +2479,36 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Interactive analytics tools — Event Comparison & Event Simulator
+    // both POST a JSON body; Suggestions & Creative Calendar are GETs.
+    case 'venue-owner.analytics.compare':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/venue-owner/analytics/compare';
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.analytics.simulate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/venue-owner/analytics/simulate';
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.analytics.suggestions':
+        $method = 'GET';
+        $endpoint = '/venue-owner/analytics/suggestions';
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.analytics.creative-calendar':
+        $method = 'GET';
+        $eventId = (int) ($_GET['event_id'] ?? 0);
+        if ($eventId <= 0) { http_response_code(400); echo json_encode(['success' => false, 'message' => 'Invalid event id']); exit; }
+        $endpoint = '/venue-owner/analytics/creative-calendar/' . $eventId;
+        $requiresAuth = true;
+        break;
+
     case 'venue-owner.usage':
         $method = 'GET';
         $params = [];
