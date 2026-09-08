@@ -32,6 +32,8 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 <button data-filter="all" class="venue-filter-chip active px-4 py-2 text-sm font-semibold rounded-full transition-colors">Toate</button>
                 <button data-filter="upcoming" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Viitoare</button>
                 <button data-filter="past" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Trecute</button>
+                <button data-filter="cancelled" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Anulate</button>
+                <button data-filter="postponed" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Amânate</button>
             </div>
 
             <!-- Events list -->
@@ -114,10 +116,19 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     }
 
     function render() {
-        const filtered = allEvents.filter(ev => {
+        // Always sort newest → oldest so the freshest event lands on top.
+        const sortedEvents = allEvents.slice().sort((a, b) => {
+            const da = eventDate(a) || '';
+            const db = eventDate(b) || '';
+            return db.localeCompare(da);
+        });
+
+        const filtered = sortedEvents.filter(ev => {
             const st = statusOf(ev);
-            if (activeFilter === 'upcoming') return st === 'upcoming';
-            if (activeFilter === 'past')     return st === 'ended';
+            if (activeFilter === 'upcoming')  return st === 'upcoming';
+            if (activeFilter === 'past')      return st === 'ended';
+            if (activeFilter === 'cancelled') return st === 'cancelled';
+            if (activeFilter === 'postponed') return st === 'postponed';
             return true;
         });
 
@@ -130,7 +141,15 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const title = ev.title || ev.name || '—';
             const st = statusOf(ev);
             const dm = dayMonth(eventDate(ev));
-            const posterUrl = ev.poster_url || ev.image || ev.featured_image || null;
+            // Backend may return relative paths (events/xxx.jpg) or null.
+            // Prepend the Ambilet host when the value isn't already
+            // absolute so the browser resolves the poster off the same
+            // origin — otherwise the img 404s and the onerror handler
+            // falls back to the date tile anyway.
+            let posterUrl = ev.poster_url || ev.image || ev.featured_image || ev.homepage_featured_image || null;
+            if (posterUrl && !/^https?:\/\//i.test(posterUrl)) {
+                posterUrl = 'https://ambilet.ro/' + posterUrl.replace(/^\/+/, '');
+            }
             const organizerName = (ev.marketplace_organizer && ev.marketplace_organizer.name)
                 || (ev.tenant && (ev.tenant.public_name || ev.tenant.name))
                 || '—';

@@ -2447,6 +2447,12 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'venue-owner.link-organizer':
+        $method = 'GET';
+        $endpoint = '/venue-owner/link-organizer';
+        $requiresAuth = true;
+        break;
+
     // Venue-owner web shell — analytics (Faza 4/5 pages consume these).
     case 'venue-owner.analytics.overview':
         $method = 'GET';

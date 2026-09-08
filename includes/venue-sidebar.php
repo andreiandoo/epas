@@ -17,8 +17,9 @@ $currentPage = $currentPage ?? getCurrentPage();
 <!-- Sidebar Overlay (Mobile) -->
 <div id="sidebarOverlay" class="fixed inset-0 z-40 sidebar-overlay bg-slate-900/50 lg:hidden" onclick="toggleSidebar()"></div>
 
-<!-- Sidebar -->
-<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex flex-col w-64 transform -translate-x-full border-r bg-gradient-to-b from-slate-900 to-slate-800 sidebar lg:static border-slate-700 lg:translate-x-0">
+<!-- Sidebar. lg:sticky + lg:top-0 + lg:h-screen locks the panel to
+     the viewport on desktop so long content pages don't stretch it. -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex flex-col w-64 transform -translate-x-full border-r bg-gradient-to-b from-slate-900 to-slate-800 sidebar lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 border-slate-700">
     <!-- Logo -->
     <div class="px-5 py-3 border-b border-slate-700">
         <a href="/" class="flex items-center gap-2.5">
