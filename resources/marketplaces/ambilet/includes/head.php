@@ -430,6 +430,28 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     var p=new URLSearchParams(window.location.search);
     var t=p.get('_admin_token');
     var ct=p.get('_admin_customer_token');
+    // Venue owner impersonation (super-admin / marketplace admin
+    // logging in as a venue-owner via /marketplace/tenants). Same
+    // cookie mechanism the /venue/* shell reads at every request, so
+    // after this handler runs the current page is fully authenticated
+    // as that venue owner without any further round-trip.
+    var vt=p.get('_admin_venue_token');
+    if(vt){
+        try{
+            var maxAge=60*60*24*30; // 30 days
+            var secureFlag=window.location.protocol==='https:'?'; Secure':'';
+            document.cookie='ambilet_venue_token='+encodeURIComponent(vt)+'; Path=/; Max-Age='+maxAge+'; SameSite=Lax'+secureFlag;
+            document.cookie='ambilet_active_role=venue-owner; Path=/; Max-Age='+maxAge+'; SameSite=Lax'+secureFlag;
+            // Wipe the "other role" markers so the switcher doesn't
+            // confuse the admin into thinking the impersonated account
+            // holds multi-role state.
+            document.cookie='ambilet_token=; Path=/; Max-Age=-1';
+            document.cookie='ambilet_organizer_token=; Path=/; Max-Age=-1';
+        }catch(e){}
+        p.delete('_admin_venue_token');
+        history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():'')+location.hash);
+        return;
+    }
     if(ct){
         try{
             localStorage.setItem('ambilet_customer_token',ct);

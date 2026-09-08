@@ -306,6 +306,25 @@ class TenantResource extends Resource
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
+            ->recordActions([
+                // "Login as" — mirrors the organizer + customer login-as
+                // shortcuts elsewhere in the marketplace panel. Opens the
+                // tenant's marketplace /venue/panou in a new tab with a
+                // short-lived Sanctum token attached via _admin_venue_token;
+                // the ambilet head.php handler drops it into the
+                // ambilet_venue_token cookie and clears the URL so the
+                // admin lands fully authenticated as that venue owner.
+                \Filament\Actions\Action::make('login_as_venue_owner')
+                    ->label('Login as')
+                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                    ->color('success')
+                    ->visible(fn (Tenant $record) => static::currentAdminIsSuperAdmin() && $record->owner_id)
+                    ->tooltip(fn (Tenant $record) => $record->owner_id
+                        ? 'Autentifică-te ca proprietarul acestei locații (deschide /venue/panou)'
+                        : 'Setează un owner user în Edit înainte de Login as')
+                    ->url(fn (Tenant $record) => route('filament.marketplace.tenant.login-as', ['id' => $record->id]))
+                    ->openUrlInNewTab(),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 

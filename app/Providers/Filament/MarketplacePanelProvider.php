@@ -155,6 +155,52 @@ class MarketplacePanelProvider extends PanelProvider
                     $url = 'https://' . $domain . '/cont/dashboard?_admin_customer_token=' . urlencode($token);
                     return redirect($url);
                 })->name('filament.marketplace.customer.login-as');
+
+                // Venue owner (Tenant.owner_id → User with role=tenant) login-as.
+                // Mirrors the organizer + customer flows: revoke old
+                // impersonation tokens, mint a fresh Sanctum token labeled
+                // 'admin-impersonation-venue-{id}', and redirect the admin
+                // to the tenant's marketplace (Ambilet) /venue/panou with
+                // the token as _admin_venue_token so the front-end can pop
+                // it into the ambilet_venue_token cookie via the head.php
+                // handler.
+                Route::get('/tenants/{id}/login-as', function (int $id) {
+                    $tenant = \App\Models\Tenant::findOrFail($id);
+                    $owner  = $tenant->owner;
+                    if (!$owner) {
+                        abort(404, 'Tenant has no owner user configured');
+                    }
+
+                    // Marketplace: use the marketplace_client that created
+                    // this tenant (venue-owner tenants live under a specific
+                    // marketplace), or fall back to the tenant's first
+                    // venue's marketplace-partnered client if the created-by
+                    // link is missing on legacy rows.
+                    $marketplace = null;
+                    if ($tenant->created_by_marketplace_client_id) {
+                        $marketplace = \App\Models\MarketplaceClient::find($tenant->created_by_marketplace_client_id);
+                    }
+                    if (!$marketplace) {
+                        // Best-effort fallback: any partnered marketplace via
+                        // the tenant's venues. Won't happen for tenants
+                        // created via the Marketplace TenantResource — that
+                        // path stamps created_by_marketplace_client_id.
+                        $venue = $tenant->venues()->first();
+                        $marketplaceId = $venue?->marketplace_client_id;
+                        if ($marketplaceId) {
+                            $marketplace = \App\Models\MarketplaceClient::find($marketplaceId);
+                        }
+                    }
+                    if (!$marketplace || !$marketplace->domain) {
+                        abort(404, 'Marketplace domain not configured');
+                    }
+
+                    $owner->tokens()->where('name', 'admin-impersonation-venue')->delete();
+                    $token = $owner->createToken('admin-impersonation-venue')->plainTextToken;
+                    $domain = preg_replace('#^https?://#', '', rtrim($marketplace->domain, '/'));
+                    $url = 'https://' . $domain . '/venue/panou?_admin_venue_token=' . urlencode($token);
+                    return redirect($url);
+                })->name('filament.marketplace.tenant.login-as');
             })
 
             // Define navigation group order
