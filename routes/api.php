@@ -2989,6 +2989,8 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
             ->name('api.marketplace-client.venue-owner.logout');
         Route::get('/me', [VenueOwnerAuthController::class, 'me'])
             ->name('api.marketplace-client.venue-owner.me');
+        Route::post('/change-password', [VenueOwnerAuthController::class, 'changePassword'])
+            ->name('api.marketplace-client.venue-owner.change-password');
 
         Route::get('/events', [VenueOwnerEventsController::class, 'index'])
             ->name('api.marketplace-client.venue-owner.events');

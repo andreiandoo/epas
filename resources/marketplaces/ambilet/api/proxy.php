@@ -2440,6 +2440,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'venue-owner.change-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/venue-owner/change-password';
+        $requiresAuth = true;
+        break;
+
     // Venue-owner web shell — analytics (Faza 4/5 pages consume these).
     case 'venue-owner.analytics.overview':
         $method = 'GET';

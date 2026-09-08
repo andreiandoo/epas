@@ -67,29 +67,57 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
     function fmtInt(n) { return Number(n || 0).toLocaleString('ro-RO'); }
 
+    function eventDate(ev) {
+        // Backend returns start_date (not event_date) as an ISO Y-m-d string.
+        return ev.start_date || null;
+    }
+
     function statusOf(ev) {
-        if (ev.computed_status) return ev.computed_status;
+        // Backend returns a lifecycle status (published / draft / postponed /
+        // cancelled) via derivedStatus. We layer time on top: an event that
+        // is `published` and past its start_date is "ended", otherwise
+        // "upcoming". Cancelled/postponed win over the time bucket so the
+        // badges match what the customer sees.
         if (ev.is_cancelled) return 'cancelled';
-        if (!ev.event_date) return 'unknown';
-        return ev.event_date >= new Date().toISOString().slice(0, 10) ? 'live' : 'ended';
+        if (ev.is_postponed) return 'postponed';
+        const d = eventDate(ev);
+        if (!d) return 'unknown';
+        return d >= new Date().toISOString().slice(0, 10) ? 'upcoming' : 'ended';
     }
 
     function statusBadge(status) {
         const map = {
-            'live':      { text: 'Viitor', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-            'ended':     { text: 'Trecut', class: 'bg-slate-50 text-slate-500 border-slate-200' },
-            'cancelled': { text: 'Anulat', class: 'bg-red-50 text-red-600 border-red-200' },
+            'upcoming':  { text: 'Viitor',    class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            'ended':     { text: 'Trecut',    class: 'bg-slate-50 text-slate-500 border-slate-200' },
+            'cancelled': { text: 'Anulat',    class: 'bg-red-50 text-red-600 border-red-200' },
+            'postponed': { text: 'Amânat',    class: 'bg-amber-50 text-amber-700 border-amber-200' },
             'unknown':   { text: 'Necunoscut', class: 'bg-slate-50 text-slate-500 border-slate-200' },
         };
         const m = map[status] || map.unknown;
         return `<span class="px-2 py-1 text-xs font-semibold border rounded-full ${m.class}">${m.text}</span>`;
     }
 
+    // Extract day + short month from an ISO Y-m-d string. Manual instead of
+    // relying on fmtDate.split(' ') because ro-RO locales can insert commas
+    // or reorder tokens, which broke the "?" placeholder in day slot.
+    function dayMonth(d) {
+        if (!d) return { day: '?', month: '' };
+        try {
+            const dt = new Date(d);
+            return {
+                day: dt.getDate(),
+                month: dt.toLocaleDateString('ro-RO', { month: 'short' }),
+            };
+        } catch (e) {
+            return { day: '?', month: '' };
+        }
+    }
+
     function render() {
-        const now = new Date().toISOString().slice(0, 10);
         const filtered = allEvents.filter(ev => {
-            if (activeFilter === 'upcoming') return statusOf(ev) === 'live';
-            if (activeFilter === 'past')     return statusOf(ev) === 'ended';
+            const st = statusOf(ev);
+            if (activeFilter === 'upcoming') return st === 'upcoming';
+            if (activeFilter === 'past')     return st === 'ended';
             return true;
         });
 
@@ -99,27 +127,37 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }
 
         list.innerHTML = filtered.map(ev => {
-            const title = (ev.title && (ev.title.ro || ev.title.en)) || ev.name || '—';
+            const title = ev.title || ev.name || '—';
             const st = statusOf(ev);
+            const dm = dayMonth(eventDate(ev));
+            const posterUrl = ev.poster_url || ev.image || ev.featured_image || null;
+            const organizerName = (ev.marketplace_organizer && ev.marketplace_organizer.name)
+                || (ev.tenant && (ev.tenant.public_name || ev.tenant.name))
+                || '—';
+            const venueLabel = [ev.venue_name, ev.venue_city].filter(Boolean).join(' · ');
+            const stats = ev.stats || {};
+            const sold = stats.tickets_sold ?? ev.tickets_sold ?? 0;
+            const cap  = stats.stock_total ?? ev.capacity ?? 0;
+
+            const posterHtml = posterUrl
+                ? `<img src="${posterUrl}" alt="" class="w-16 h-16 md:w-20 md:h-20 rounded-lg object-cover flex-shrink-0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                   <div class="flex flex-col items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-lg text-white flex-shrink-0" style="display:none;background:linear-gradient(135deg, #3b82f6, #1e40af);"><span class="text-xs uppercase">${dm.month}</span><span class="text-lg font-bold leading-none">${dm.day}</span></div>`
+                : `<div class="flex flex-col items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-lg text-white flex-shrink-0" style="background:linear-gradient(135deg, #3b82f6, #1e40af);"><span class="text-xs uppercase">${dm.month}</span><span class="text-lg font-bold leading-none">${dm.day}</span></div>`;
+
             return `
                 <div class="flex flex-col gap-4 p-4 bg-white border rounded-xl border-slate-200 md:flex-row md:items-center">
-                    <div class="flex flex-col items-center justify-center w-14 h-14 rounded-lg text-white flex-shrink-0" style="background:linear-gradient(135deg, #3b82f6, #1e40af);">
-                        <span class="text-xs font-medium uppercase">${fmtDate(ev.event_date).split(' ')[1] || ''}</span>
-                        <span class="text-lg font-bold leading-none">${fmtDate(ev.event_date).split(' ')[0] || '?'}</span>
-                    </div>
+                    ${posterHtml}
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <h3 class="font-semibold text-slate-900 truncate">${title}</h3>
                             ${statusBadge(st)}
                         </div>
-                        <p class="text-xs text-slate-500 mt-1">${ev.venue_name || ''} ${ev.city ? '· ' + ev.city : ''}</p>
-                        <p class="text-xs text-slate-500 mt-0.5">Organizator: <span class="font-medium">${ev.organizer_name || '—'}</span></p>
+                        <p class="text-xs text-slate-500 mt-1">📅 ${fmtDate(eventDate(ev))}${venueLabel ? ' · 📍 ' + venueLabel : ''}</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Organizator: <span class="font-medium">${organizerName}</span></p>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-1 gap-2 text-right">
-                        <div>
-                            <p class="text-lg font-bold text-slate-900">${fmtInt(ev.tickets_sold)}<span class="text-xs text-slate-500 font-normal">/${fmtInt(ev.capacity)}</span></p>
-                            <p class="text-xs text-slate-500">bilete emise</p>
-                        </div>
+                    <div class="text-right md:w-32">
+                        <p class="text-lg font-bold text-slate-900">${fmtInt(sold)}${cap > 0 ? `<span class="text-xs text-slate-500 font-normal">/${fmtInt(cap)}</span>` : ''}</p>
+                        <p class="text-xs text-slate-500">bilete emise</p>
                     </div>
                 </div>
             `;

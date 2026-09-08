@@ -113,6 +113,40 @@ class AuthController extends BaseController
         return $this->success(null, 'Logged out successfully');
     }
 
+    /**
+     * Let a venue owner change their own password from the /venue/setari
+     * page. Requires the current password so a stolen session token can't
+     * silently lock the real user out. Rotates all outstanding Sanctum
+     * tokens on success so any other device that was signed in has to
+     * re-authenticate with the new password.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:8|confirmed',
+        ]);
+
+        if (!\Illuminate\Support\Facades\Hash::check($validated['current_password'], $user->password)) {
+            return $this->error('Parola curentă este incorectă.', 422);
+        }
+
+        $user->password = \Illuminate\Support\Facades\Hash::make($validated['new_password']);
+        $user->save();
+
+        // Rotate tokens: keep the caller signed in on the current session
+        // (mint a fresh replacement), invalidate every other session.
+        $currentTokenId = $user->currentAccessToken()?->id;
+        $user->tokens()->where('id', '!=', $currentTokenId)->delete();
+
+        return $this->success(null, 'Parola a fost actualizată.');
+    }
+
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();

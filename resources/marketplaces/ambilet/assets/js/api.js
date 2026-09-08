@@ -2495,6 +2495,13 @@ const AmbiletVenueAPI = {
 
     // Identity
     me() { return this._request('venue-owner.me'); },
+    changePassword(currentPassword, newPassword, newPasswordConfirmation) {
+        return this._request('venue-owner.change-password', null, 'POST', {
+            current_password: currentPassword,
+            new_password: newPassword,
+            new_password_confirmation: newPasswordConfirmation,
+        });
+    },
 
     // Analytics — one call per tab.
     analytics(tab, venueId) {
