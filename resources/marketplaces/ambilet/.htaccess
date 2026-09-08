@@ -374,6 +374,13 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^venue/eveniment/([0-9]+)/?$ venue/eveniment.php?id=$1 [L,QSA]
 
+# Query-string fallback: /venue/eveniment?id={id} works even if the
+# path-segment rewrite above isn't picked up (cached server config,
+# CDN, etc.). Handy as a safety net during deploys.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/eveniment/?$ venue/eveniment.php [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure/?$ organizer/leisure.php [L]

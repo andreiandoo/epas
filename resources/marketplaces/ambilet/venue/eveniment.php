@@ -5,7 +5,16 @@
  */
 require_once dirname(__DIR__) . '/includes/config.php';
 
+// The .htaccess rewrite maps /venue/eveniment/{id} → this file with
+// ?id={id}. If the rewrite hasn't propagated yet OR the request came
+// straight to this file, fall back to parsing the id out of the
+// current request URI so the page still loads.
 $eventId = (int) ($_GET['id'] ?? 0);
+if ($eventId <= 0) {
+    if (preg_match('#/venue/eveniment/(\d+)#', $_SERVER['REQUEST_URI'] ?? '', $m)) {
+        $eventId = (int) $m[1];
+    }
+}
 if ($eventId <= 0) {
     header('Location: /venue/evenimente');
     exit;
@@ -57,8 +66,15 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
 document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
+    // Same defensive read as the PHP header: try ?id= first, then
+    // parse from the path so /venue/eveniment/{id} works even before
+    // the browser JS sees the query-param version of the URL.
     const params = new URLSearchParams(window.location.search);
-    const eventId = parseInt(params.get('id'), 10);
+    let eventId = parseInt(params.get('id'), 10);
+    if (!eventId) {
+        const m = window.location.pathname.match(/\/venue\/eveniment\/(\d+)/);
+        if (m) eventId = parseInt(m[1], 10);
+    }
     if (!eventId) { window.location.href = '/venue/evenimente'; return; }
 
     const fmtInt = n => Number(n || 0).toLocaleString('ro-RO');

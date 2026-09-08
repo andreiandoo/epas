@@ -155,7 +155,24 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     /* Cards with subtle shadow + hover lift */
     .a-card { background:#fff; border:1px solid var(--v-ring); border-radius:1rem; padding:1.25rem; box-shadow: 0 1px 2px rgba(15,23,42,0.04); transition: box-shadow .2s, transform .2s; }
     .a-card:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.06); }
-    .a-card-h { font-size:.875rem; font-weight:700; color: var(--v-text); margin-bottom:1rem; display:flex; align-items:center; letter-spacing:-0.01em; }
+    .a-card-h { font-size:.9375rem; font-weight:700; color: var(--v-text); margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; letter-spacing:-0.01em; padding-bottom:.75rem; border-bottom: 1px solid #f1f5f9; }
+    .a-card-h .a-icon { display:inline-flex; align-items:center; justify-content:center; width:1.75rem; height:1.75rem; border-radius:.5rem; font-size:.875rem; }
+    .a-card-sub { font-size:.75rem; font-weight:400; color:var(--v-muted); margin-left:auto; }
+
+    /* Premium data highlights: soft-tinted mini-panels for KPIs */
+    .a-metric { padding:.875rem 1rem; background:linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%); border:1px solid #f1f5f9; border-radius:.75rem; }
+    .a-metric__label { font-size:.65rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--v-muted); margin-bottom:.375rem; }
+    .a-metric__value { font-size:1.375rem; font-weight:800; color:var(--v-text); line-height:1; letter-spacing:-0.02em; }
+    .a-metric__sub { font-size:.7rem; color:var(--v-muted); margin-top:.25rem; }
+
+    /* Row with progress bar — used in top-lists (revenue, tickets) */
+    .a-row { display:flex; align-items:center; padding:.625rem .75rem; border-radius:.5rem; transition: background .15s; }
+    .a-row:hover { background: #fafbfc; }
+    .a-row + .a-row { border-top: 1px solid #f1f5f9; }
+    .a-row__label { flex:1; font-size:.8125rem; font-weight:600; color:var(--v-text); min-width:0; }
+    .a-row__label small { color:var(--v-muted); font-weight:400; font-size:.7rem; }
+    .a-row__bar { flex:1; margin:0 .75rem; }
+    .a-row__value { font-size:.8125rem; font-weight:700; color:var(--v-text); font-family: ui-monospace, monospace; text-align:right; min-width:100px; }
     .a-g2 { display:grid; gap:1rem; grid-template-columns: 1fr; }
     @media (min-width: 1024px) { .a-g2 { grid-template-columns: 1fr 1fr; } }
     .a-g3 { display:grid; gap:.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
