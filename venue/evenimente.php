@@ -184,68 +184,64 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const ciPct = sold > 0 ? Math.round(ci / sold * 100) : 0;
             const fillColor = pct >= 75 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
 
+            // Compact poster: 18×18 (72px), just the image or a
+            // date tile. Smaller than the previous 28-32 sizes and
+            // without the gradient overlay, so the whole row stays
+            // short even on desktop.
             const posterHtml = posterUrl
-                ? `<div class="relative overflow-hidden rounded-xl w-28 h-28 md:w-32 md:h-32 flex-shrink-0 group-hover:scale-105 transition-transform">
-                       <img src="${posterUrl}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center text-white\\' style=\\'background:linear-gradient(135deg, #7c3aed, #ec4899);\\'><span class=\\'text-[10px] font-medium uppercase\\'>' + '${dm.month}' + '</span><span class=\\'text-2xl font-black leading-none\\'>' + '${dm.day}' + '</span><span class=\\'text-[10px] mt-0.5\\'>' + '${dm.year || ''}' + '</span></div>';">
-                       <div class="absolute inset-0 pointer-events-none" style="background:linear-gradient(to top, rgba(0,0,0,0.4), transparent 40%);"></div>
-                       <div class="absolute bottom-0 left-0 right-0 p-2 text-white pointer-events-none">
-                           <p class="text-[9px] uppercase font-medium leading-none opacity-90">${dm.weekday || ''}</p>
-                           <p class="text-lg font-black leading-tight">${dm.day} <span class="text-xs font-semibold">${dm.month}</span></p>
-                       </div>
+                ? `<div class="w-18 h-18 rounded-lg overflow-hidden flex-shrink-0" style="width:72px;height:72px;">
+                       <img src="${posterUrl}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center text-white\\' style=\\'background:linear-gradient(135deg, #7c3aed, #ec4899);\\'><span class=\\'text-[9px] uppercase\\'>' + '${dm.month}' + '</span><span class=\\'text-xl font-black leading-none\\'>' + '${dm.day}' + '</span></div>';">
                    </div>`
-                : `<div class="w-28 h-28 md:w-32 md:h-32 flex-shrink-0 rounded-xl flex flex-col items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform" style="background:linear-gradient(135deg, #7c3aed, #ec4899);">
-                       <p class="text-[10px] uppercase font-medium opacity-90">${dm.weekday || ''}</p>
-                       <p class="text-3xl font-black leading-none">${dm.day}</p>
-                       <p class="text-[10px] uppercase font-semibold mt-1">${dm.month}</p>
+                : `<div class="flex-shrink-0 rounded-lg flex flex-col items-center justify-center text-white" style="width:72px;height:72px;background:linear-gradient(135deg, #7c3aed, #ec4899);">
+                       <p class="text-[9px] uppercase leading-none opacity-90">${dm.weekday || ''}</p>
+                       <p class="text-xl font-black leading-none mt-0.5">${dm.day}</p>
+                       <p class="text-[9px] uppercase font-semibold mt-0.5">${dm.month}</p>
                    </div>`;
 
             return `
-                <a href="/venue/eveniment/${ev.id}" class="group block p-4 md:p-5 bg-white border rounded-2xl border-slate-200 shadow-sm hover:shadow-lg hover:border-purple-200 transition-all hover:-translate-y-0.5">
-                    <div class="flex gap-4 md:gap-5 items-start">
+                <a href="/venue/eveniment/${ev.id}" class="group block px-4 py-3 bg-white border rounded-xl border-slate-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all">
+                    <div class="flex items-center gap-3 md:gap-4">
                         ${posterHtml}
+
+                        <!-- Main info: title + venue + organizer -->
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-start justify-between gap-3 flex-wrap mb-2">
-                                <div class="min-w-0">
-                                    <h3 class="text-base md:text-lg font-bold text-slate-900 truncate group-hover:text-purple-700 transition-colors">${title}</h3>
-                                    <div class="flex items-center gap-2 mt-1 flex-wrap">
-                                        ${statusBadge(st)}
-                                    </div>
-                                </div>
+                            <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+                                <h3 class="text-sm md:text-base font-bold text-slate-900 truncate group-hover:text-purple-700 transition-colors">${title}</h3>
+                                ${statusBadge(st)}
                             </div>
-                            <div class="space-y-1 text-xs text-slate-500">
-                                <p class="flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                    ${venueLabel || '—'}
-                                </p>
-                                <p class="flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                    ${organizerName}
-                                </p>
+                            <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                <span class="flex items-center gap-1 whitespace-nowrap">
+                                    <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    ${fmtDate(eventDate(ev))}
+                                </span>
+                                <span class="flex items-center gap-1 truncate">
+                                    <svg class="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span class="truncate">${venueLabel || '—'}</span>
+                                </span>
+                                <span class="flex items-center gap-1 truncate hidden md:flex">
+                                    <svg class="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    <span class="truncate">${organizerName}</span>
+                                </span>
                             </div>
-                            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-6 flex-wrap">
-                                <div class="min-w-[100px]">
-                                    <div class="flex items-baseline gap-1">
-                                        <span class="text-lg font-black text-slate-900">${fmtInt(sold)}</span>
-                                        ${cap > 0 ? `<span class="text-xs text-slate-400 font-mono">/${fmtInt(cap)}</span>` : ''}
-                                    </div>
-                                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Bilete</p>
-                                    ${cap > 0 ? `
-                                        <div class="mt-1.5 h-1 bg-slate-100 rounded-full overflow-hidden w-24">
-                                            <div class="h-full rounded-full transition-all" style="width:${pct}%; background:${fillColor};"></div>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                ${ci > 0 ? `
-                                    <div>
-                                        <p class="text-lg font-black text-slate-900">${fmtInt(ci)} <span class="text-xs text-slate-400 font-normal">(${ciPct}%)</span></p>
-                                        <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Check-in</p>
-                                    </div>
-                                ` : ''}
-                                <div class="ml-auto flex items-center gap-1 text-xs font-semibold text-purple-600 group-hover:gap-2 transition-all">
-                                    Vezi analiză
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                </div>
+                        </div>
+
+                        <!-- Bilete: numărul + bar de fill -->
+                        <div class="hidden sm:block flex-shrink-0 text-right" style="min-width:120px;">
+                            <div class="flex items-baseline justify-end gap-1">
+                                <span class="text-lg font-black text-slate-900">${fmtInt(sold)}</span>
+                                ${cap > 0 ? `<span class="text-[11px] text-slate-400 font-mono">/${fmtInt(cap)}</span>` : ''}
                             </div>
+                            <p class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Bilete${ciPct > 0 ? ` · ${ciPct}% CI` : ''}</p>
+                            ${cap > 0 ? `
+                                <div class="mt-1 h-1 bg-slate-100 rounded-full overflow-hidden ml-auto" style="width:100px;">
+                                    <div class="h-full rounded-full transition-all" style="width:${pct}%; background:${fillColor};"></div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- Chevron CTA -->
+                        <div class="flex-shrink-0 flex items-center justify-center text-purple-600 group-hover:translate-x-0.5 transition-transform">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </div>
                     </div>
                 </a>
