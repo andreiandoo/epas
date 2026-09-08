@@ -2536,6 +2536,9 @@ const AmbiletVenueAPI = {
     // Venues + events
     venues() { return this._request('venue-owner.venues'); },
     events(filters) { return this._request('venue-owner.events', filters || null); },
+    event(id) { return this._request('venue-owner.event.show', { id }); },
+    eventAttendees(id) { return this._request('venue-owner.event.attendees', { id }); },
+    eventSalesBreakdown(id) { return this._request('venue-owner.event.sales-breakdown', { id }); },
 };
 
 window.AmbiletVenueAPI = AmbiletVenueAPI;

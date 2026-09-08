@@ -1,15 +1,13 @@
 <?php
 /**
  * Venue Owner — /venue/evenimente
- * Events happening at the tenant's partnered venues (own + hosted).
- * Uses /venue-owner/events which already exists and is the same
- * endpoint the AmBilet mobile app consumes for its VenueEventsScreen.
+ * Premium list of hosted events. Posters, stats, hover-lift.
  */
 require_once dirname(__DIR__) . '/includes/config.php';
 
 $pageTitle       = 'Evenimente găzduite';
 $venuePageTitle  = 'Evenimente găzduite';
-$bodyClass       = 'min-h-screen flex bg-slate-100';
+$bodyClass       = 'min-h-screen flex bg-slate-50';
 $currentPage     = 'venue_evenimente';
 $cssBundle       = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
@@ -19,36 +17,63 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/venue-topbar.php'; ?>
 
-        <main class="flex-1 p-4 lg:p-8">
-            <div class="flex items-start justify-between mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900">Evenimente găzduite</h2>
-                    <p class="mt-1 text-sm text-slate-500">Toate evenimentele care se desfășoară la locațiile tale.</p>
+        <main class="flex-1 p-4 lg:p-8 space-y-6">
+            <!-- Hero -->
+            <section class="relative overflow-hidden rounded-3xl shadow-xl" style="background:linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);">
+                <div class="absolute top-0 right-0 w-96 h-96 rounded-full opacity-20" style="background:radial-gradient(circle, #f9a8d4 0%, transparent 70%); transform:translate(30%, -30%);"></div>
+                <div class="relative p-8 flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                        <h2 class="text-2xl lg:text-3xl font-black text-white">Evenimente găzduite</h2>
+                        <p class="mt-1 text-sm text-white/70">Toate evenimentele care se desfășoară la locațiile tale</p>
+                    </div>
+                    <div id="hero-stats" class="flex items-center gap-6 text-white">
+                        <div class="text-right">
+                            <p id="hero-total" class="text-4xl font-black">—</p>
+                            <p class="text-xs uppercase tracking-wider text-white/60">Total</p>
+                        </div>
+                        <div class="w-px h-12 bg-white/20"></div>
+                        <div class="text-right">
+                            <p id="hero-upcoming" class="text-4xl font-black">—</p>
+                            <p class="text-xs uppercase tracking-wider text-white/60">Viitoare</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
             <!-- Filter chips -->
-            <div class="flex flex-wrap gap-2 mb-4">
-                <button data-filter="all" class="venue-filter-chip active px-4 py-2 text-sm font-semibold rounded-full transition-colors">Toate</button>
-                <button data-filter="upcoming" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Viitoare</button>
-                <button data-filter="past" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Trecute</button>
-                <button data-filter="cancelled" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Anulate</button>
-                <button data-filter="postponed" class="venue-filter-chip px-4 py-2 text-sm font-semibold rounded-full transition-colors">Amânate</button>
+            <div class="flex flex-wrap gap-2">
+                <button data-filter="all" class="venue-filter-chip active">Toate</button>
+                <button data-filter="upcoming" class="venue-filter-chip">Viitoare</button>
+                <button data-filter="past" class="venue-filter-chip">Trecute</button>
+                <button data-filter="cancelled" class="venue-filter-chip">Anulate</button>
+                <button data-filter="postponed" class="venue-filter-chip">Amânate</button>
             </div>
 
             <!-- Events list -->
-            <div id="events-list" class="space-y-3">
-                <div class="p-6 text-center text-sm text-slate-400 bg-white border rounded-2xl border-slate-200">
-                    Se încarcă evenimentele…
+            <div id="events-list" class="space-y-4">
+                <!-- Skeleton loader -->
+                <?php for ($i = 0; $i < 3; $i++): ?>
+                <div class="flex gap-4 p-4 bg-white border rounded-2xl border-slate-200 animate-pulse">
+                    <div class="w-24 h-24 rounded-xl bg-slate-200 flex-shrink-0"></div>
+                    <div class="flex-1 space-y-3">
+                        <div class="h-4 w-3/4 bg-slate-200 rounded"></div>
+                        <div class="h-3 w-1/2 bg-slate-100 rounded"></div>
+                        <div class="h-3 w-1/3 bg-slate-100 rounded"></div>
+                    </div>
+                    <div class="hidden md:block w-24 space-y-2">
+                        <div class="h-6 bg-slate-200 rounded"></div>
+                        <div class="h-2 bg-slate-100 rounded"></div>
+                    </div>
                 </div>
+                <?php endfor; ?>
             </div>
         </main>
     </div>
 
 <style>
-    .venue-filter-chip { background:#fff; border:1px solid #e2e8f0; color:#475569; }
+    .venue-filter-chip { background:#fff; border:1px solid #e2e8f0; color:#475569; padding:.5rem 1rem; font-size:.875rem; font-weight:600; border-radius:9999px; transition:all .15s; cursor:pointer; }
     .venue-filter-chip:hover { background:#f1f5f9; }
-    .venue-filter-chip.active { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+    .venue-filter-chip.active { background:linear-gradient(135deg, #7c3aed, #ec4899); border-color:transparent; color:#fff; box-shadow:0 4px 12px rgba(124,58,237,0.3); }
 </style>
 
 <script>
@@ -69,17 +94,9 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
     function fmtInt(n) { return Number(n || 0).toLocaleString('ro-RO'); }
 
-    function eventDate(ev) {
-        // Backend returns start_date (not event_date) as an ISO Y-m-d string.
-        return ev.start_date || null;
-    }
+    function eventDate(ev) { return ev.start_date || null; }
 
     function statusOf(ev) {
-        // Backend returns a lifecycle status (published / draft / postponed /
-        // cancelled) via derivedStatus. We layer time on top: an event that
-        // is `published` and past its start_date is "ended", otherwise
-        // "upcoming". Cancelled/postponed win over the time bucket so the
-        // badges match what the customer sees.
         if (ev.is_cancelled) return 'cancelled';
         if (ev.is_postponed) return 'postponed';
         const d = eventDate(ev);
@@ -89,34 +106,40 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
     function statusBadge(status) {
         const map = {
-            'upcoming':  { text: 'Viitor',    class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-            'ended':     { text: 'Trecut',    class: 'bg-slate-50 text-slate-500 border-slate-200' },
-            'cancelled': { text: 'Anulat',    class: 'bg-red-50 text-red-600 border-red-200' },
-            'postponed': { text: 'Amânat',    class: 'bg-amber-50 text-amber-700 border-amber-200' },
-            'unknown':   { text: 'Necunoscut', class: 'bg-slate-50 text-slate-500 border-slate-200' },
+            upcoming:  { text: 'Viitor',   class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            ended:     { text: 'Trecut',   class: 'bg-slate-100 text-slate-500 border-slate-200' },
+            cancelled: { text: 'Anulat',   class: 'bg-red-50 text-red-600 border-red-200' },
+            postponed: { text: 'Amânat',   class: 'bg-amber-50 text-amber-700 border-amber-200' },
+            unknown:   { text: 'Necunoscut', class: 'bg-slate-50 text-slate-500 border-slate-200' },
         };
         const m = map[status] || map.unknown;
-        return `<span class="px-2 py-1 text-xs font-semibold border rounded-full ${m.class}">${m.text}</span>`;
+        return `<span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border rounded-full ${m.class}">${m.text}</span>`;
     }
 
-    // Extract day + short month from an ISO Y-m-d string. Manual instead of
-    // relying on fmtDate.split(' ') because ro-RO locales can insert commas
-    // or reorder tokens, which broke the "?" placeholder in day slot.
     function dayMonth(d) {
-        if (!d) return { day: '?', month: '' };
+        if (!d) return { day: '?', month: '', year: '' };
         try {
             const dt = new Date(d);
             return {
                 day: dt.getDate(),
                 month: dt.toLocaleDateString('ro-RO', { month: 'short' }),
+                year: dt.getFullYear(),
+                weekday: dt.toLocaleDateString('ro-RO', { weekday: 'short' }),
             };
-        } catch (e) {
-            return { day: '?', month: '' };
-        }
+        } catch (e) { return { day: '?', month: '', year: '' }; }
+    }
+
+    function resolvePoster(ev) {
+        let url = ev.poster_url || ev.image || ev.featured_image || ev.homepage_featured_image || null;
+        if (!url) return null;
+        if (/^https?:\/\//i.test(url)) return url;
+        const trimmed = url.replace(/^\/+/, '');
+        return trimmed.startsWith('storage/')
+            ? 'https://core.tixello.com/' + trimmed
+            : 'https://core.tixello.com/storage/' + trimmed;
     }
 
     function render() {
-        // Always sort newest → oldest so the freshest event lands on top.
         const sortedEvents = allEvents.slice().sort((a, b) => {
             const da = eventDate(a) || '';
             const db = eventDate(b) || '';
@@ -133,7 +156,14 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         });
 
         if (filtered.length === 0) {
-            list.innerHTML = '<div class="p-12 text-center text-sm text-slate-400 bg-white border rounded-2xl border-slate-200">Niciun eveniment pentru acest filtru.</div>';
+            list.innerHTML = `
+                <div class="p-16 text-center bg-white border rounded-2xl border-slate-200 shadow-sm">
+                    <div class="inline-flex items-center justify-center w-20 h-20 mb-4 rounded-3xl" style="background:linear-gradient(135deg, rgba(124,58,237,0.1), rgba(236,72,153,0.1)); color:#7c3aed;">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <p class="text-slate-500 text-lg font-semibold">Niciun eveniment pentru acest filtru</p>
+                </div>
+            `;
             return;
         }
 
@@ -141,46 +171,84 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const title = ev.title || ev.name || '—';
             const st = statusOf(ev);
             const dm = dayMonth(eventDate(ev));
-            // Posters live on core.tixello.com/storage/, not on ambilet.ro.
-            // Backend returns either the bare filename ("events/posters/
-            // xxx.webp") or an absolute URL. Resolve the same way the
-            // organizer analytics page already does.
-            let posterUrl = ev.poster_url || ev.image || ev.featured_image || ev.homepage_featured_image || null;
-            if (posterUrl && !/^https?:\/\//i.test(posterUrl)) {
-                const trimmed = posterUrl.replace(/^\/+/, '');
-                posterUrl = trimmed.startsWith('storage/')
-                    ? 'https://core.tixello.com/' + trimmed
-                    : 'https://core.tixello.com/storage/' + trimmed;
-            }
+            const posterUrl = resolvePoster(ev);
             const organizerName = (ev.marketplace_organizer && ev.marketplace_organizer.name)
                 || (ev.tenant && (ev.tenant.public_name || ev.tenant.name))
                 || '—';
             const venueLabel = [ev.venue_name, ev.venue_city].filter(Boolean).join(' · ');
             const stats = ev.stats || {};
             const sold = stats.tickets_sold ?? ev.tickets_sold ?? 0;
-            const cap  = stats.stock_total ?? ev.capacity ?? 0;
+            const cap = stats.stock_total ?? ev.capacity ?? 0;
+            const pct = cap > 0 ? Math.min(100, Math.round(sold / cap * 100)) : 0;
+            const ci = stats.checked_in_count ?? 0;
+            const ciPct = sold > 0 ? Math.round(ci / sold * 100) : 0;
+            const fillColor = pct >= 75 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
 
             const posterHtml = posterUrl
-                ? `<img src="${posterUrl}" alt="" class="w-16 h-16 md:w-20 md:h-20 rounded-lg object-cover flex-shrink-0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                   <div class="flex flex-col items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-lg text-white flex-shrink-0" style="display:none;background:linear-gradient(135deg, #3b82f6, #1e40af);"><span class="text-xs uppercase">${dm.month}</span><span class="text-lg font-bold leading-none">${dm.day}</span></div>`
-                : `<div class="flex flex-col items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-lg text-white flex-shrink-0" style="background:linear-gradient(135deg, #3b82f6, #1e40af);"><span class="text-xs uppercase">${dm.month}</span><span class="text-lg font-bold leading-none">${dm.day}</span></div>`;
+                ? `<div class="relative overflow-hidden rounded-xl w-28 h-28 md:w-32 md:h-32 flex-shrink-0 group-hover:scale-105 transition-transform">
+                       <img src="${posterUrl}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center text-white\\' style=\\'background:linear-gradient(135deg, #7c3aed, #ec4899);\\'><span class=\\'text-[10px] font-medium uppercase\\'>' + '${dm.month}' + '</span><span class=\\'text-2xl font-black leading-none\\'>' + '${dm.day}' + '</span><span class=\\'text-[10px] mt-0.5\\'>' + '${dm.year || ''}' + '</span></div>';">
+                       <div class="absolute inset-0 pointer-events-none" style="background:linear-gradient(to top, rgba(0,0,0,0.4), transparent 40%);"></div>
+                       <div class="absolute bottom-0 left-0 right-0 p-2 text-white pointer-events-none">
+                           <p class="text-[9px] uppercase font-medium leading-none opacity-90">${dm.weekday || ''}</p>
+                           <p class="text-lg font-black leading-tight">${dm.day} <span class="text-xs font-semibold">${dm.month}</span></p>
+                       </div>
+                   </div>`
+                : `<div class="w-28 h-28 md:w-32 md:h-32 flex-shrink-0 rounded-xl flex flex-col items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform" style="background:linear-gradient(135deg, #7c3aed, #ec4899);">
+                       <p class="text-[10px] uppercase font-medium opacity-90">${dm.weekday || ''}</p>
+                       <p class="text-3xl font-black leading-none">${dm.day}</p>
+                       <p class="text-[10px] uppercase font-semibold mt-1">${dm.month}</p>
+                   </div>`;
 
             return `
-                <div class="flex flex-col gap-4 p-4 bg-white border rounded-xl border-slate-200 md:flex-row md:items-center">
-                    ${posterHtml}
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="font-semibold text-slate-900 truncate">${title}</h3>
-                            ${statusBadge(st)}
+                <a href="/venue/eveniment/${ev.id}" class="group block p-4 md:p-5 bg-white border rounded-2xl border-slate-200 shadow-sm hover:shadow-lg hover:border-purple-200 transition-all hover:-translate-y-0.5">
+                    <div class="flex gap-4 md:gap-5 items-start">
+                        ${posterHtml}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-3 flex-wrap mb-2">
+                                <div class="min-w-0">
+                                    <h3 class="text-base md:text-lg font-bold text-slate-900 truncate group-hover:text-purple-700 transition-colors">${title}</h3>
+                                    <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                        ${statusBadge(st)}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-1 text-xs text-slate-500">
+                                <p class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    ${venueLabel || '—'}
+                                </p>
+                                <p class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    ${organizerName}
+                                </p>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-6 flex-wrap">
+                                <div class="min-w-[100px]">
+                                    <div class="flex items-baseline gap-1">
+                                        <span class="text-lg font-black text-slate-900">${fmtInt(sold)}</span>
+                                        ${cap > 0 ? `<span class="text-xs text-slate-400 font-mono">/${fmtInt(cap)}</span>` : ''}
+                                    </div>
+                                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Bilete</p>
+                                    ${cap > 0 ? `
+                                        <div class="mt-1.5 h-1 bg-slate-100 rounded-full overflow-hidden w-24">
+                                            <div class="h-full rounded-full transition-all" style="width:${pct}%; background:${fillColor};"></div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                ${ci > 0 ? `
+                                    <div>
+                                        <p class="text-lg font-black text-slate-900">${fmtInt(ci)} <span class="text-xs text-slate-400 font-normal">(${ciPct}%)</span></p>
+                                        <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Check-in</p>
+                                    </div>
+                                ` : ''}
+                                <div class="ml-auto flex items-center gap-1 text-xs font-semibold text-purple-600 group-hover:gap-2 transition-all">
+                                    Vezi analiză
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-xs text-slate-500 mt-1">📅 ${fmtDate(eventDate(ev))}${venueLabel ? ' · 📍 ' + venueLabel : ''}</p>
-                        <p class="text-xs text-slate-500 mt-0.5">Organizator: <span class="font-medium">${organizerName}</span></p>
                     </div>
-                    <div class="text-right md:w-32">
-                        <p class="text-lg font-bold text-slate-900">${fmtInt(sold)}${cap > 0 ? `<span class="text-xs text-slate-500 font-normal">/${fmtInt(cap)}</span>` : ''}</p>
-                        <p class="text-xs text-slate-500">bilete emise</p>
-                    </div>
-                </div>
+                </a>
             `;
         }).join('');
     }
@@ -197,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
     // Load
     try {
-        // Optional ?venue_id= from URL to pre-scope.
         const params = new URLSearchParams(window.location.search);
         const venueId = params.get('venue_id');
         const filters = venueId ? { venue_id: venueId } : { scope: 'all' };
@@ -210,6 +277,11 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         } else {
             allEvents = [];
         }
+
+        const upcomingCount = allEvents.filter(e => statusOf(e) === 'upcoming').length;
+        document.getElementById('hero-total').textContent = fmtInt(allEvents.length);
+        document.getElementById('hero-upcoming').textContent = fmtInt(upcomingCount);
+
         render();
     } catch (e) {
         console.error('events load failed', e);

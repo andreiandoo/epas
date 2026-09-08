@@ -2504,6 +2504,31 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Single-event detail (feeds the /venue/eveniment/{id} page).
+    case 'venue-owner.event.show':
+        $method = 'GET';
+        $eventId = (int) ($_GET['id'] ?? 0);
+        if ($eventId <= 0) { http_response_code(400); echo json_encode(['success' => false, 'message' => 'Invalid event id']); exit; }
+        $endpoint = '/venue-owner/events/' . $eventId;
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.event.attendees':
+        $method = 'GET';
+        $eventId = (int) ($_GET['id'] ?? 0);
+        if ($eventId <= 0) { http_response_code(400); echo json_encode(['success' => false, 'message' => 'Invalid event id']); exit; }
+        $endpoint = '/venue-owner/events/' . $eventId . '/attendees';
+        $requiresAuth = true;
+        break;
+
+    case 'venue-owner.event.sales-breakdown':
+        $method = 'GET';
+        $eventId = (int) ($_GET['id'] ?? 0);
+        if ($eventId <= 0) { http_response_code(400); echo json_encode(['success' => false, 'message' => 'Invalid event id']); exit; }
+        $endpoint = '/venue-owner/events/' . $eventId . '/sales-breakdown';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.validate-invite':
         $method = 'GET';
         $params = [];

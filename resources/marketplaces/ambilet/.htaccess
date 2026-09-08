@@ -366,6 +366,14 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^venue/setari/?$ venue/setari.php [L]
 
+# Single-event analytics page (deep-link from evenimente + utilizare
+# lists). The captured numeric id becomes the ?id= query param the
+# venue/eveniment.php page reads and passes to
+# AmbiletVenueAPI.event(id).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/eveniment/([0-9]+)/?$ venue/eveniment.php?id=$1 [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure/?$ organizer/leisure.php [L]

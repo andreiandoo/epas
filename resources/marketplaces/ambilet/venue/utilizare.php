@@ -151,9 +151,13 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 const fill = stats.fill_rate || 0;
                 const barColor = fill >= 80 ? '#10b981' : fill >= 40 ? '#f59e0b' : '#94a3b8';
                 return `
-                    <tr class="hover:bg-slate-50/60">
+                    <tr class="hover:bg-slate-50/60 cursor-pointer transition-colors group" onclick="window.location.href='/venue/eveniment/${ev.id}'">
                         <td class="px-4 py-3 text-sm text-slate-900 whitespace-nowrap">${fmtDate(ev.event_date)}</td>
-                        <td class="px-4 py-3 text-sm font-medium text-slate-900">${title}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-slate-900 group-hover:text-blue-700 transition-colors">
+                            <span class="inline-flex items-center gap-1.5">${title}
+                                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </span>
+                        </td>
                         <td class="px-4 py-3 text-sm text-slate-500">${venueName}${city ? ' · ' + city : ''}</td>
                         <td class="px-4 py-3 text-sm text-right">
                             <p class="font-semibold text-slate-900">${fmtInt(stats.sold)}<span class="text-slate-500 font-normal">/${fmtInt(stats.capacity)}</span></p>
