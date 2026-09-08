@@ -2522,7 +2522,7 @@ const AmbiletVenueAPI = {
     },
     suggestions() { return this._request('venue-owner.analytics.suggestions'); },
     creativeCalendar(eventId) {
-        return this._request(`venue-owner.analytics.creative-calendar.${eventId}`);
+        return this._request('venue-owner.analytics.creative-calendar', { event_id: eventId });
     },
     compare(eventA, eventB) {
         return this._request('venue-owner.analytics.compare', null, 'POST', {
