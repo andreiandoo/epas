@@ -84,9 +84,56 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 <div id="tab-<?= $t['id'] ?>" class="analiza-tab-panel hidden space-y-4"></div>
             <?php endforeach; ?>
 
-            <div id="analiza-loading" class="p-12 text-center bg-white border rounded-2xl border-slate-200">
-                <div class="inline-block w-8 h-8 border-4 rounded-full animate-spin border-blue-200 border-t-blue-500"></div>
-                <p class="mt-3 text-sm text-slate-500">Se încarcă…</p>
+            <!-- Skeleton loader — shown during first analyticsAll fetch,
+                 hidden once loadAll() unwraps the response. Uses tailwind
+                 animate-pulse on grey blocks the same shape/size as the
+                 real content so the user sees the page structure land
+                 before the numbers themselves. -->
+            <div id="analiza-loading" class="space-y-4">
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div class="p-5 bg-white border rounded-2xl border-slate-200 md:col-span-2 animate-pulse">
+                        <div class="h-4 w-32 bg-slate-200 rounded mb-4"></div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="space-y-2"><div class="h-8 bg-slate-200 rounded"></div><div class="h-3 w-16 bg-slate-100 rounded"></div></div>
+                            <div class="space-y-2"><div class="h-8 bg-slate-200 rounded"></div><div class="h-3 w-16 bg-slate-100 rounded"></div></div>
+                            <div class="space-y-2"><div class="h-8 bg-slate-200 rounded"></div><div class="h-3 w-16 bg-slate-100 rounded"></div></div>
+                            <div class="space-y-2"><div class="h-8 bg-slate-200 rounded"></div><div class="h-3 w-16 bg-slate-100 rounded"></div></div>
+                            <div class="space-y-2"><div class="h-8 bg-slate-200 rounded"></div><div class="h-3 w-16 bg-slate-100 rounded"></div></div>
+                            <div class="space-y-2"><div class="h-8 bg-slate-200 rounded"></div><div class="h-3 w-16 bg-slate-100 rounded"></div></div>
+                        </div>
+                    </div>
+                    <div class="p-5 bg-white border rounded-2xl border-slate-200 animate-pulse">
+                        <div class="h-4 w-32 bg-slate-200 rounded mb-4"></div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-24 h-24 bg-slate-200 rounded-full"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 w-24 bg-slate-200 rounded"></div>
+                                <div class="h-3 w-full bg-slate-100 rounded"></div>
+                                <div class="h-3 w-3/4 bg-slate-100 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="p-5 bg-white border rounded-2xl border-slate-200 animate-pulse">
+                        <div class="h-4 w-32 bg-slate-200 rounded mb-4"></div>
+                        <div class="h-52 bg-slate-100 rounded"></div>
+                    </div>
+                    <div class="p-5 bg-white border rounded-2xl border-slate-200 animate-pulse">
+                        <div class="h-4 w-32 bg-slate-200 rounded mb-4"></div>
+                        <div class="h-52 bg-slate-100 rounded"></div>
+                    </div>
+                </div>
+                <div class="p-5 bg-white border rounded-2xl border-slate-200 animate-pulse">
+                    <div class="h-4 w-40 bg-slate-200 rounded mb-4"></div>
+                    <div class="space-y-2">
+                        <div class="h-6 bg-slate-100 rounded"></div>
+                        <div class="h-6 bg-slate-100 rounded"></div>
+                        <div class="h-6 bg-slate-100 rounded"></div>
+                        <div class="h-6 bg-slate-100 rounded"></div>
+                        <div class="h-6 bg-slate-100 rounded"></div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -104,17 +151,59 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     }
     .analiza-tab-btn.active { color: var(--v-primary); border-color: var(--v-primary); }
     .analiza-tab-btn:hover:not(.active) { color: #1e293b; }
-    .a-card { background:#fff; border:1px solid var(--v-ring); border-radius:.75rem; padding:1rem; }
-    .a-card-h { font-size:.875rem; font-weight:700; color: var(--v-text); margin-bottom:.75rem; display:flex; align-items:center; }
+
+    /* Cards with subtle shadow + hover lift */
+    .a-card { background:#fff; border:1px solid var(--v-ring); border-radius:1rem; padding:1.25rem; box-shadow: 0 1px 2px rgba(15,23,42,0.04); transition: box-shadow .2s, transform .2s; }
+    .a-card:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.06); }
+    .a-card-h { font-size:.875rem; font-weight:700; color: var(--v-text); margin-bottom:1rem; display:flex; align-items:center; letter-spacing:-0.01em; }
     .a-g2 { display:grid; gap:1rem; grid-template-columns: 1fr; }
     @media (min-width: 1024px) { .a-g2 { grid-template-columns: 1fr 1fr; } }
     .a-g3 { display:grid; gap:.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+    /* Combined hero: KPI grid + Health Score gauge */
+    .a-hero { display:grid; gap:1rem; grid-template-columns: 1fr; }
+    @media (min-width: 1200px) { .a-hero { grid-template-columns: 2fr 1fr; } }
+    .a-hero-kpi { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:#fff; border-radius:1.25rem; padding:1.5rem; position:relative; overflow:hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.15); }
+    .a-hero-kpi::before { content:''; position:absolute; top:-40%; right:-20%; width:60%; height:180%; background: radial-gradient(circle, rgba(59,130,246,.18) 0%, transparent 60%); pointer-events:none; }
+    .a-hero-h { margin-bottom:1.25rem; position:relative; }
+    .a-hero-h__title { display:block; font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color: rgba(255,255,255,.5); }
+    .a-hero-h__sub { display:block; margin-top:.25rem; font-size:1rem; font-weight:600; color:#fff; }
+    .a-hero-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:.75rem; position:relative; }
+    @media (min-width:640px) { .a-hero-grid { grid-template-columns: repeat(3, 1fr); } }
+    .a-hero-kpi-card { padding:.875rem; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:.75rem; transition: background .2s, transform .2s; }
+    .a-hero-kpi-card:hover { background: rgba(255,255,255,.08); transform: translateY(-2px); }
+    .a-hero-kpi-card__row { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+    .a-hero-kpi-card__icon { font-size:1rem; }
+    .a-hero-kpi-card__label { font-size:.65rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color: rgba(255,255,255,.5); }
+    .a-hero-kpi-card__value { font-size:1.5rem; font-weight:800; color:#fff; line-height:1; letter-spacing:-0.02em; }
+    /* Health Score panel */
+    .a-hero-health { background:#fff; border:1px solid var(--v-ring); border-radius:1.25rem; padding:1.5rem; box-shadow: 0 4px 12px rgba(15,23,42,0.05); }
+    .a-hero-health__topline { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:.75rem; border-bottom: 1px solid var(--v-ring); }
+    .a-hero-health__title { font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color: var(--v-muted); }
+    .a-hero-health__label { font-size:.8125rem; font-weight:700; }
+    .a-hero-health__body { display:flex; gap:1rem; align-items:flex-start; }
+    .a-hero-health__gauge { position:relative; width:6.5rem; height:6.5rem; flex-shrink:0; }
+    .a-hero-health__gauge svg { width:100%; height:100%; transform: rotate(0deg); }
+    .a-hero-health__gauge-inner { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; }
+    .a-hero-health__gauge-value { font-size:2rem; font-weight:900; letter-spacing:-0.03em; }
+    .a-hero-health__gauge-max { font-size:.65rem; color:var(--v-muted); font-weight:600; }
+    .a-hero-health__components { flex:1; display:grid; gap:.625rem; }
+    .a-hero-health__comp-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.25rem; }
+    .a-hero-health__comp-name { font-size:.75rem; font-weight:600; color:var(--v-text); }
+    .a-hero-health__comp-score { font-size:.65rem; font-weight:700; color:var(--v-muted); font-family: ui-monospace, monospace; }
+    .a-hero-health__comp-bar { height:.375rem; background: #f1f5f9; border-radius:9999px; overflow:hidden; margin-bottom:.25rem; }
+    .a-hero-health__comp-fill { height:100%; border-radius:9999px; transition: width .4s ease-out; }
+    .a-hero-health__comp-detail { font-size:.65rem; color:var(--v-muted); }
+
     .a-tbl { width:100%; font-size:.8125rem; border-collapse:collapse; }
-    .a-tbl th { padding:.4rem .5rem; text-align:left; font-size:.7rem; font-weight:600; text-transform:uppercase; color:var(--v-muted); background:#f8fafc; }
-    .a-tbl td { padding:.4rem .5rem; border-top:1px solid #f1f5f9; color: var(--v-text); }
-    .a-tbl tr:hover td { background:#f8fafc; }
+    .a-tbl th { padding:.5rem .625rem; text-align:left; font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--v-muted); background:#f8fafc; }
+    .a-tbl td { padding:.5rem .625rem; border-top:1px solid #f1f5f9; color: var(--v-text); }
+    .a-tbl tr:hover td { background:#fafbfc; }
     .a-progress { background: #f1f5f9; border-radius:9999px; height:.5rem; overflow:hidden; }
     .a-progress-fill { height:100%; border-radius:9999px; }
+    /* Space-y helper — not all Tailwind loaded on this shell. */
+    .space-y-3 > * + * { margin-top:.75rem; }
+    .space-y-4 > * + * { margin-top:1rem; }
 </style>
 
 <script>
@@ -255,54 +344,80 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const loyalty = d.customerLoyalty || {};
         let html = '';
 
-        // KPI strip. Backend returns total_events/total_tickets/total_revenue/
-        // avg_occupancy/avg_ticket_price. "Cumpărători unici" is derived from
-        // customerLoyalty.total (buildVenueCustomerLoyalty counts distinct
-        // paying customers) — the KPI builder itself doesn't expose it.
+        // ── Combined hero: KPI strip + Health Score in one panel ─
+        // Compact 2/3 (KPI grid) + 1/3 (Health Score gauge with
+        // component breakdown) so the whole "at-a-glance" state fits
+        // in one horizontal strip instead of stacking two full cards.
         const uniqueBuyers = loyalty.total || 0;
+        const healthScore = Math.round(h.score || 0);
+        const healthColor = h.color || (healthScore >= 75 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444');
         const kpiCards = [
-            { label: 'Evenimente',        value: fmtInt(k.total_events), color: 'var(--v-primary)' },
-            { label: 'Bilete vândute',    value: fmtInt(k.total_tickets), color: 'var(--v-accent)' },
-            { label: 'Venit total',       value: fmtMoney(k.total_revenue) + ' RON', color: 'var(--v-warn)' },
-            { label: 'Cumpărători unici', value: fmtInt(uniqueBuyers), color: 'var(--v-primary)' },
-            { label: 'Ocupare medie',     value: (Number(k.avg_occupancy || 0)).toFixed(1) + '%', color: stColor(k.avg_occupancy || 0) },
-            { label: 'Preț mediu',        value: fmtMoney(k.avg_ticket_price) + ' RON', color: 'var(--v-warn)' },
+            { label: 'Evenimente',     value: fmtInt(k.total_events),                  icon: '🎪', tint: '#3b82f6' },
+            { label: 'Bilete',         value: fmtInt(k.total_tickets),                 icon: '🎫', tint: '#06b6d4' },
+            { label: 'Venit',          value: fmtMoney(k.total_revenue) + ' RON',      icon: '💰', tint: '#d97706' },
+            { label: 'Cumpărători',    value: fmtInt(uniqueBuyers),                    icon: '👥', tint: '#8b5cf6' },
+            { label: 'Ocupare medie',  value: (Number(k.avg_occupancy || 0)).toFixed(1) + '%', icon: '📊', tint: stColor(k.avg_occupancy || 0) },
+            { label: 'Preț mediu',     value: fmtMoney(k.avg_ticket_price) + ' RON',   icon: '🏷️', tint: '#059669' },
         ];
-        html += `<div class="a-card"><div class="a-card-h">Indicatori cheie</div>
-            <div class="a-g3">${kpiCards.map(c => `
-                <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
-                    <div style="font-size:1.5rem;font-weight:700;color:${c.color}">${c.value}</div>
-                    <div style="font-size:.7rem;color:var(--v-muted);text-transform:uppercase;margin-top:.25rem;">${c.label}</div>
-                </div>
-            `).join('')}</div>
-        </div>`;
 
-        // Health Score. components is an array [{name, score, max, detail}, ...],
-        // NOT a plain object — the previous renderer stringified {} → "[object
-        // Object]". Iterate and show each component's translated name + score/max
-        // + detail row (blade's "detail" text is what actually explains the
-        // computation).
-        if (h.score !== undefined) {
-            const healthColor = h.color || ((h.score || 0) >= 75 ? 'var(--v-success)' : (h.score || 0) >= 50 ? 'var(--v-warn)' : 'var(--v-danger)');
-            const components = Array.isArray(h.components) ? h.components : [];
-            html += `<div class="a-card"><div class="a-card-h">Scor sănătate locație</div>
-                <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-                    <div style="position:relative;width:6rem;height:6rem;flex-shrink:0;">
-                        <svg viewBox="0 0 36 36" style="width:100%;height:100%;">
-                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#e2e8f0" stroke-width="3"/>
-                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="${healthColor}" stroke-width="3" stroke-dasharray="${h.score || 0}, 100"/>
-                        </svg>
-                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:${healthColor}">${Math.round(h.score || 0)}</div>
+        const components = Array.isArray(h.components) ? h.components : [];
+
+        html += `<div class="a-hero">
+            <div class="a-hero-kpi">
+                <div class="a-hero-h">
+                    <span class="a-hero-h__title">Vedere generală</span>
+                    <span class="a-hero-h__sub">Sumar rapid al performanței locației</span>
+                </div>
+                <div class="a-hero-grid">
+                    ${kpiCards.map(c => `
+                        <div class="a-hero-kpi-card" style="--tint:${c.tint};">
+                            <div class="a-hero-kpi-card__row">
+                                <span class="a-hero-kpi-card__icon">${c.icon}</span>
+                                <span class="a-hero-kpi-card__label">${c.label}</span>
+                            </div>
+                            <div class="a-hero-kpi-card__value">${c.value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            ${h.score !== undefined ? `
+                <div class="a-hero-health">
+                    <div class="a-hero-health__topline">
+                        <span class="a-hero-health__title">Sănătate locație</span>
+                        <span class="a-hero-health__label" style="color:${healthColor};">${escapeHtml(tr(T_HEALTH_LABEL, h.label || ''))}</span>
                     </div>
-                    <div style="flex:1;min-width:220px;">
-                        <p style="font-size:.875rem;font-weight:700;color:${healthColor}">${escapeHtml(tr(T_HEALTH_LABEL, h.label || ''))}</p>
-                        <div style="margin-top:.5rem;font-size:.75rem;color:var(--v-muted);display:flex;gap:.75rem;flex-wrap:wrap;">
-                            ${components.map(c => `<div><strong style="color:var(--v-text);">${escapeHtml(tr(T_HEALTH_COMP, c.name || ''))}</strong>: ${c.score}/${c.max} <span style="color:var(--v-muted);">— ${escapeHtml(c.detail || '')}</span></div>`).join('')}
+                    <div class="a-hero-health__body">
+                        <div class="a-hero-health__gauge">
+                            <svg viewBox="0 0 36 36">
+                                <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#e2e8f0" stroke-width="3.5"/>
+                                <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="${healthColor}" stroke-width="3.5" stroke-dasharray="${healthScore}, 100" stroke-linecap="round"/>
+                            </svg>
+                            <div class="a-hero-health__gauge-inner">
+                                <span class="a-hero-health__gauge-value" style="color:${healthColor};">${healthScore}</span>
+                                <span class="a-hero-health__gauge-max">/100</span>
+                            </div>
+                        </div>
+                        <div class="a-hero-health__components">
+                            ${components.map(c => {
+                                const pct = c.max > 0 ? Math.round(c.score / c.max * 100) : 0;
+                                const barColor = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+                                return `<div class="a-hero-health__comp">
+                                    <div class="a-hero-health__comp-row">
+                                        <span class="a-hero-health__comp-name">${escapeHtml(tr(T_HEALTH_COMP, c.name || ''))}</span>
+                                        <span class="a-hero-health__comp-score">${c.score}/${c.max}</span>
+                                    </div>
+                                    <div class="a-hero-health__comp-bar">
+                                        <div class="a-hero-health__comp-fill" style="width:${pct}%; background:${barColor};"></div>
+                                    </div>
+                                    <div class="a-hero-health__comp-detail">${escapeHtml(c.detail || '')}</div>
+                                </div>`;
+                            }).join('')}
                         </div>
                     </div>
                 </div>
-            </div>`;
-        }
+            ` : ''}
+        </div>`;
 
         // Monthly Momentum. Backend returns { current_label, previous_label,
         // metrics: [{name, current, previous, trend: {direction, pct}, format}] }.
