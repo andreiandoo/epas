@@ -200,7 +200,13 @@ class MarketplacePanelProvider extends PanelProvider
                     $domain = preg_replace('#^https?://#', '', rtrim($marketplace->domain, '/'));
                     $url = 'https://' . $domain . '/venue/panou?_admin_venue_token=' . urlencode($token);
                     return redirect($url);
-                })->name('filament.marketplace.tenant.login-as');
+                    // Filament auto-prefixes every ->routes() route with
+                    // 'filament.{panelId}.' — passing the full
+                    // 'filament.marketplace.tenant.login-as' produced
+                    // 'filament.marketplace.filament.marketplace.tenant.login-as'
+                    // in the compiled route list (verified on prod).
+                    // Give only the tail; Filament assembles the full name.
+                })->name('tenant.login-as');
             })
 
             // Define navigation group order
