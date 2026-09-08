@@ -125,9 +125,15 @@ class EventsController extends BaseController
             ->get()
             ->keyBy('event_id');
 
-        // quota_total = -1 means unlimited — exclude from stock_total
+        // quota_total = -1 means unlimited — exclude from stock_total.
+        // Revenue is quota_sold × price_cents summed over all ticket types
+        // on the event, matching how the tenant /tenant/venue-usage page
+        // (via VenueOwnerUsageService) computes it — so numbers match
+        // one-to-one across the shell's usage and single-event pages.
         $stockStats = TicketType::whereIn('event_id', $eventIds)
-            ->selectRaw('event_id, SUM(CASE WHEN quota_total >= 0 THEN quota_total ELSE 0 END) as stock_total')
+            ->selectRaw('event_id,
+                SUM(CASE WHEN quota_total >= 0 THEN quota_total ELSE 0 END) as stock_total,
+                SUM(quota_sold * price_cents / 100.0) as revenue')
             ->groupBy('event_id')
             ->get()
             ->keyBy('event_id');
@@ -139,6 +145,7 @@ class EventsController extends BaseController
                 'tickets_sold' => $t ? (int) $t->tickets_sold : 0,
                 'checked_in_count' => $t ? (int) $t->checked_in_count : 0,
                 'stock_total' => $s ? (int) $s->stock_total : 0,
+                'revenue' => $s ? round((float) $s->revenue, 2) : 0.0,
             ]];
         });
     }
@@ -146,7 +153,7 @@ class EventsController extends BaseController
     protected function formatEvent(Event $event, Collection $stats, bool $includeTickets = false): array
     {
         $s = $stats->get($event->id) ?: (object) [
-            'tickets_sold' => 0, 'checked_in_count' => 0, 'stock_total' => 0,
+            'tickets_sold' => 0, 'checked_in_count' => 0, 'stock_total' => 0, 'revenue' => 0.0,
         ];
 
         $startDate = $event->start_date; // accessor (handles duration modes)
@@ -178,7 +185,7 @@ class EventsController extends BaseController
             'image' => $event->poster_url,
             'status' => $this->derivedStatus($event),
             'tickets_sold' => $s->tickets_sold,
-            'revenue' => 0.0, // Computed differently in the organizer endpoint; leave 0 for venue owner UI.
+            'revenue' => $s->revenue ?? 0.0,
             'capacity' => $s->stock_total,
             // Original venue-owner-shape fields (kept for VenueEventsScreen).
             'title' => $event->getTranslation('title'),
@@ -221,6 +228,7 @@ class EventsController extends BaseController
                 'tickets_sold' => $s->tickets_sold,
                 'checked_in_count' => $s->checked_in_count,
                 'stock_total' => $s->stock_total,
+                'revenue' => $s->revenue ?? 0.0,
             ],
         ];
 
