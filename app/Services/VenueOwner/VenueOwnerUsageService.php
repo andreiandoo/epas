@@ -68,14 +68,11 @@ class VenueOwnerUsageService
             ? $allEvents->where('computed_status', $statusFilter)
             : $allEvents;
 
-        // Sort: upcoming first (closest date), then past (most recent first),
-        // unknown last. String-encoded so a single sortBy handles it.
-        $events = $events->sortBy(function ($event) {
-            $date = $event->event_date;
-            if (!$date) return '2_9999-12-31';
-            $now = now()->toDateString();
-            if ($date >= $now) return '0_' . $date;
-            return '1_' . (9999 - (int) substr($date, 0, 4)) . substr($date, 4);
+        // Sort strictly newest → oldest by event_date; unknown dates last.
+        // Matches how the user reviews activity — most recent shows on top,
+        // scroll back to see history.
+        $events = $events->sortByDesc(function ($event) {
+            return $event->event_date ?: '0000-00-00';
         })->values();
 
         $stats = [

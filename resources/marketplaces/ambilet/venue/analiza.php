@@ -36,26 +36,47 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <div class="flex gap-2 mb-4 overflow-x-auto border-b border-slate-200">
-                <?php
-                $tabs = [
-                    ['id' => 'overview',      'label' => 'Vedere generală'],
-                    ['id' => 'financial',     'label' => 'Financiar'],
-                    ['id' => 'audience',      'label' => 'Public'],
-                    ['id' => 'artists',       'label' => 'Artiști'],
-                    ['id' => 'scheduling',    'label' => 'Programare'],
-                    ['id' => 'opportunities', 'label' => 'Oportunități'],
-                    ['id' => 'promotion',     'label' => 'Promovare'],
-                    ['id' => 'upcoming',      'label' => 'Următoare'],
-                    ['id' => 'actions',       'label' => 'Acțiuni'],
-                ];
-                foreach ($tabs as $t): ?>
-                    <button type="button" data-tab="<?= $t['id'] ?>"
-                            class="analiza-tab-btn px-4 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent whitespace-nowrap transition-colors">
-                        <?= $t['label'] ?>
-                    </button>
-                <?php endforeach; ?>
+            <!-- Tabs + Help button -->
+            <div class="flex items-center gap-2 mb-4 border-b border-slate-200">
+                <div class="flex gap-2 overflow-x-auto flex-1">
+                    <?php
+                    $tabs = [
+                        ['id' => 'overview',      'label' => 'Vedere generală'],
+                        ['id' => 'financial',     'label' => 'Financiar'],
+                        ['id' => 'audience',      'label' => 'Public'],
+                        ['id' => 'artists',       'label' => 'Artiști'],
+                        ['id' => 'scheduling',    'label' => 'Programare'],
+                        ['id' => 'opportunities', 'label' => 'Oportunități'],
+                        ['id' => 'promotion',     'label' => 'Promovare'],
+                        ['id' => 'upcoming',      'label' => 'Următoare'],
+                        ['id' => 'actions',       'label' => 'Acțiuni'],
+                    ];
+                    foreach ($tabs as $t): ?>
+                        <button type="button" data-tab="<?= $t['id'] ?>"
+                                class="analiza-tab-btn px-4 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent whitespace-nowrap transition-colors">
+                            <?= $t['label'] ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+                <button type="button" id="help-btn"
+                        class="flex items-center gap-2 px-3 py-2 mb-2 text-sm font-semibold rounded-lg border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        style="color:#3b82f6;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="hidden sm:inline">Ce înseamnă</span>
+                </button>
+            </div>
+
+            <!-- Help modal -->
+            <div id="help-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);">
+                <div class="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-100">
+                        <h3 id="help-title" class="text-lg font-bold text-slate-900">Ghid</h3>
+                        <button type="button" id="help-close" class="p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div id="help-content" class="p-6 space-y-4"></div>
+                </div>
             </div>
 
             <!-- Tab panels (header sits inside Overview only) -->
@@ -156,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         venueId: 'all',
         data: null,     // full analytics payload
         charts: {},     // { yearlyEv, yearlyRev }
+        activeTab: 'overview',
     };
 
     // ── Venue picker ────────────────────────────────────────────
@@ -204,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     }
 
     function switchTab(id) {
+        state.activeTab = id;
         document.querySelectorAll('.analiza-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
         document.querySelectorAll('.analiza-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + id));
         if (id === 'overview') renderOverviewCharts();
@@ -972,19 +995,61 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Platform strategy
+        // Platform Strategy — backend returns [{platform, budget_pct,
+        // recommended, audience: {age, location, interests, keywords,
+        // custom, segments}, formats: [], phases: [], tips: '...'}].
         if (ps.length) {
+            const T_PHASE_IN = { 'Announce': 'Anunț', 'Peak': 'Maxim', 'Urgency': 'Urgență', 'Last Call': 'Ultimul apel' };
             html += `<div class="a-card"><div class="a-card-h">Strategie pe platforme</div>
-                ${ps.map(p => `
-                    <div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;background:#f8fafc;margin-bottom:.5rem;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-                            <p style="font-size:.875rem;font-weight:700;">${escapeHtml(p.platform || '')}</p>
-                            ${p.recommended_budget_share !== undefined ? `<span style="font-size:.75rem;color:var(--v-warn);font-weight:600;">${p.recommended_budget_share}% buget</span>` : ''}
+                <div class="space-y-3">${ps.map(p => `
+                    <div style="padding:1rem;border:1px solid var(--v-ring);border-radius:.75rem;background:${p.recommended ? 'rgba(59,130,246,0.03)' : '#f8fafc'};">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.75rem;">
+                            <div>
+                                <p style="font-size:.9375rem;font-weight:700;color:var(--v-text);">${escapeHtml(p.platform || '')}</p>
+                                ${p.recommended ? '<span style="display:inline-block;margin-top:.25rem;padding:.15rem .5rem;background:var(--v-success);color:#fff;font-size:.625rem;font-weight:700;border-radius:.25rem;text-transform:uppercase;">RECOMANDAT</span>' : '<span style="display:inline-block;margin-top:.25rem;padding:.15rem .5rem;background:var(--v-muted);color:#fff;font-size:.625rem;font-weight:700;border-radius:.25rem;text-transform:uppercase;">SECUNDAR</span>'}
+                            </div>
+                            <div style="text-align:right;">
+                                <p style="font-size:1.5rem;font-weight:900;color:var(--v-warn);line-height:1;">${p.budget_pct}%</p>
+                                <p style="font-size:.65rem;color:var(--v-muted);text-transform:uppercase;">din buget</p>
+                            </div>
                         </div>
-                        ${p.rationale ? `<p style="font-size:.75rem;color:var(--v-muted);">${escapeHtml(p.rationale)}</p>` : ''}
-                        ${p.targeting ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;"><strong>Targeting:</strong> ${escapeHtml(p.targeting)}</p>` : ''}
+
+                        ${p.audience && Object.keys(p.audience).length ? `
+                            <div style="padding:.625rem;background:#fff;border-radius:.5rem;margin-bottom:.5rem;">
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">🎯 Public țintă</p>
+                                ${Object.entries(p.audience).map(([k, v]) => {
+                                    const label = { age: 'Vârstă', location: 'Locație', interests: 'Interese', keywords: 'Cuvinte cheie', custom: 'Custom', segments: 'Segmente' }[k] || k;
+                                    return v ? `<p style="font-size:.75rem;color:var(--v-text);margin-top:.2rem;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(v)}</p>` : '';
+                                }).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${p.formats && p.formats.length ? `
+                            <div style="padding:.625rem;background:#fff;border-radius:.5rem;margin-bottom:.5rem;">
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">📱 Formate</p>
+                                <div style="display:flex;flex-wrap:wrap;gap:.25rem;">
+                                    ${p.formats.map(f => `<span style="padding:.125rem .4rem;font-size:.7rem;background:rgba(59,130,246,0.08);color:var(--v-primary);border-radius:.25rem;">${escapeHtml(f)}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${p.phases && p.phases.length ? `
+                            <div style="padding:.625rem;background:#fff;border-radius:.5rem;margin-bottom:.5rem;">
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">⏱ Faze active</p>
+                                <div style="display:flex;flex-wrap:wrap;gap:.25rem;">
+                                    ${p.phases.map(ph => `<span style="padding:.125rem .4rem;font-size:.7rem;background:rgba(16,185,129,0.08);color:var(--v-success);border-radius:.25rem;">${escapeHtml(tr(T_PHASE_IN, ph) || ph)}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${p.tips ? `
+                            <div style="padding:.625rem;background:rgba(217,119,6,0.05);border-left:3px solid var(--v-warn);border-radius:.375rem;">
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-warn);text-transform:uppercase;margin-bottom:.25rem;">💡 Sfat</p>
+                                <p style="font-size:.75rem;color:var(--v-text);">${escapeHtml(p.tips)}</p>
+                            </div>
+                        ` : ''}
                     </div>
-                `).join('')}
+                `).join('')}</div>
             </div>`;
         }
 
@@ -1023,21 +1088,79 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     function renderActions() {
         const d = state.data;
         const ap = d.actionPriority || {};
-        const items = ap.actions || (Array.isArray(ap) ? ap : []);
+        // Backend returns a plain array [{priority, urgency, category,
+        // title, action, impact}, ...], NOT a wrapped object.
+        const items = Array.isArray(ap) ? ap : (ap.actions || []);
         if (!items.length) return '<div class="a-card"><p class="text-sm text-slate-500">Nici o acțiune prioritară detectată.</p></div>';
 
-        return `<div class="a-card"><div class="a-card-h">Priorități acțiune</div>
-            <div class="space-y-2">${items.slice(0, 15).map(a => {
-                const p = a.priority || 'medium';
-                const c = p === 'high' ? 'var(--v-danger)' : p === 'medium' ? 'var(--v-warn)' : 'var(--v-primary)';
-                return `<div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;">
+        // English → Romanian for the backend-produced labels.
+        const T_URGENCY = { 'critical': 'CRITIC', 'high': 'ÎNALT', 'medium': 'MEDIU', 'low': 'SCĂZUT' };
+        const T_CATEGORY = {
+            'Event at Risk': 'Eveniment la risc', 'Revenue Opportunity': 'Oportunitate venit',
+            'Loyalty': 'Loialitate', 'Pricing': 'Prețuri', 'Competitive': 'Competiție',
+            'Refunds': 'Rambursări',
+        };
+        // Translate the machine-generated English sentences the backend
+        // emits inside title/action/impact strings. Simple regex swaps
+        // — enough to cover every phrase buildActionPriority produces.
+        const translatePhrases = (text) => {
+            if (!text) return '';
+            return String(text)
+                .replace(/idle weekend days \(last 12m\)/gi, 'zile weekend libere (ultimele 12 luni)')
+                .replace(/idle weekend days/gi, 'zile weekend libere')
+                .replace(/one-time buyers/gi, 'cumpărători o singură dată')
+                .replace(/Repeat rate only/gi, 'Rată repetare doar de')
+                .replace(/Refund rate at/gi, 'Rată rambursare la')
+                .replace(/refunds\)/gi, 'rambursări)')
+                .replace(/events sold out too fast \(>90% ST\)/gi, 'evenimente vândute prea rapid (peste 90% ocupare)')
+                .replace(/Sell-through /gi, 'Ocupare medie ')
+                .replace(/below city average/gi, 'sub media orașului')
+                .replace(/left/gi, 'rămase')
+                .replace(/d left/gi, 'zile rămase')
+                .replace(/Fill (\d+) seats/gi, 'Umple $1 locuri')
+                .replace(/Book events for empty Fri\/Sat\/Sun slots\. Start with top-performing genres\./g, 'Rezervă evenimente pentru sloturile libere Vin/Sâm/Dum. Începe cu genurile cu performanță mare.')
+                .replace(/Launch email remarketing campaign\. Offer 10% loyalty discount for 2nd event\./g, 'Lansează campanie remarketing pe email. Oferă discount 10% loialitate pentru al 2-lea eveniment.')
+                .replace(/Raise base price by 15-20% for similar future events\. Add VIP tier\./g, 'Ridică prețul de bază cu 15-20% pentru evenimente viitoare similare. Adaugă categorie VIP.')
+                .replace(/Analyze top competitor pricing and genres\. Consider adjusting event mix\./g, 'Analizează prețurile și genurile competitorilor. Ajustează mix-ul de evenimente.')
+                .replace(/Investigate top-refunded events\. Review event descriptions and expectations\./g, 'Investighează evenimentele cel mai des rambursate. Revizuiește descrierile și așteptările.')
+                .replace(/Review event performance/gi, 'Revizuiește performanța evenimentului')
+                .replace(/Higher revenue per event without reducing demand/gi, 'Venit mai mare per eveniment fără a reduce cererea')
+                .replace(/If (\d+)% return = \+(\d+) customers/gi, 'Dacă $1% revin = +$2 cumpărători')
+                .replace(/Closing gap could increase revenue by/gi, 'Închiderea decalajului poate crește venitul cu')
+                .replace(/Reducing refunds by 50% saves/gi, 'Reducerea rambursărilor cu 50% economisește')
+                .replace(/Potential:/g, 'Potențial:');
+        };
+
+        // Sort by priority (1 = most urgent) → shown at top.
+        const sorted = items.slice().sort((a, b) => (a.priority || 99) - (b.priority || 99));
+
+        return `<div class="a-card"><div class="a-card-h">Priorități acțiune (${sorted.length})</div>
+            <div class="space-y-3">${sorted.slice(0, 15).map(a => {
+                const urg = a.urgency || 'medium';
+                const urgColors = { critical: 'var(--v-danger)', high: 'var(--v-danger)', medium: 'var(--v-warn)', low: 'var(--v-primary)' };
+                const urgBg = { critical: 'rgba(220,38,38,0.08)', high: 'rgba(220,38,38,0.05)', medium: 'rgba(217,119,6,0.05)', low: 'rgba(59,130,246,0.04)' };
+                return `<div style="padding:1rem;border:1px solid var(--v-ring);border-radius:.75rem;background:${urgBg[urg] || urgBg.medium};">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.75rem;">
                         <div style="flex:1;">
-                            <p style="font-size:.8125rem;font-weight:600;">${escapeHtml(a.title || a.action || '')}</p>
-                            ${a.description ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(a.description)}</p>` : ''}
+                            <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;letter-spacing:.05em;">${escapeHtml(tr(T_CATEGORY, a.category) || a.category || '')}</p>
+                            <p style="font-size:.9375rem;font-weight:700;color:var(--v-text);margin-top:.25rem;">${escapeHtml(translatePhrases(a.title || ''))}</p>
                         </div>
-                        <span style="padding:.15rem .5rem;font-size:.65rem;font-weight:700;border-radius:.25rem;text-transform:uppercase;background:${c};color:#fff;">${escapeHtml(a.priority_label || p)}</span>
+                        <span style="padding:.25rem .625rem;font-size:.65rem;font-weight:700;border-radius:.375rem;background:${urgColors[urg] || urgColors.medium};color:#fff;flex-shrink:0;">${escapeHtml(tr(T_URGENCY, urg))}</span>
                     </div>
+                    ${a.action ? `<div style="display:flex;gap:.5rem;padding:.5rem;background:#fff;border-radius:.375rem;margin-bottom:.5rem;">
+                        <svg style="width:1rem;height:1rem;flex-shrink:0;color:var(--v-success);margin-top:.125rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <div>
+                            <p style="font-size:.7rem;font-weight:600;color:var(--v-muted);text-transform:uppercase;">Ce să faci</p>
+                            <p style="font-size:.8125rem;color:var(--v-text);margin-top:.125rem;">${escapeHtml(translatePhrases(a.action))}</p>
+                        </div>
+                    </div>` : ''}
+                    ${a.impact ? `<div style="display:flex;gap:.5rem;padding:.5rem;background:#fff;border-radius:.375rem;">
+                        <svg style="width:1rem;height:1rem;flex-shrink:0;color:var(--v-warn);margin-top:.125rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>
+                            <p style="font-size:.7rem;font-weight:600;color:var(--v-muted);text-transform:uppercase;">Impact estimat</p>
+                            <p style="font-size:.8125rem;color:var(--v-text);margin-top:.125rem;">${escapeHtml(translatePhrases(a.impact))}</p>
+                        </div>
+                    </div>` : ''}
                 </div>`;
             }).join('')}</div>
         </div>`;
@@ -1111,6 +1234,128 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             }
         });
     }
+
+    // ── Help modal ──────────────────────────────────────────────
+    const HELP_CONTENT = {
+        overview: {
+            title: 'Vedere generală',
+            sections: [
+                { h: 'Indicatori cheie', p: 'Sumar rapid al activității locației: câte evenimente ai avut, câte bilete s-au vândut, venit total, cumpărători unici, ocupare medie (procent din capacitate vândut) și preț mediu bilet.' },
+                { h: 'Scor sănătate locație (0-100)', p: 'Combinație a 4 componente: <strong>Ocupare</strong> (25p — cât de plin e locul), <strong>Creștere venit</strong> (25p — trend 6 luni vs 6 luni anterioare), <strong>Loialitate</strong> (25p — % cumpărători care revin), <strong>Activitate</strong> (25p — câte evenimente pe lună). Peste 80 = Excelent.' },
+                { h: 'Impuls lunar', p: 'Compară performanța ultimei luni cu penultima lună. Săgeata verde (↑) înseamnă îmbunătățire, roșie (↓) înseamnă declin.' },
+                { h: 'Evenimente & Bilete / lună', p: 'Grafic 12 luni: câte evenimente ai găzduit (bare) și câte bilete s-au vândut per lună (linie).' },
+                { h: 'Venit & Ocupare / lună', p: 'Evoluția venitului (RON) și a ocupării medii (%) pe ultimele 12 luni.' },
+                { h: 'Performanță evenimente', p: 'Cele mai recente 25 de evenimente cu detalii: dată, artiști, câte bilete au vândut, capacitate, ocupare (verde ≥75%, galben 50-75%, roșu <50%), venit și rata check-in-urilor.' },
+                { h: 'Weekend vs zi lucrătoare', p: 'Statistici separate pentru evenimente din weekend (Vin/Sâm/Dum) vs restul săptămânii — util pentru a decide când să programezi.' },
+                { h: 'An vs an', p: 'Venit generat în ultimele 12 luni vs anterioarele 12. Verde = creștere, roșu = declin.' },
+                { h: 'Comparație oraș', p: 'Cum se compară locația ta cu alte venue-uri din același oraș. Vezi ocuparea ta vs media orașului și lista competitorilor cu detaliile lor.' },
+                { h: 'Venit / loc', p: 'Cât venit generează în medie fiecare loc din capacitate pe eveniment. Metric util pentru comparație între venue-uri de dimensiuni diferite.' },
+                { h: 'Comparație evenimente', p: 'Selectează 2 evenimente și le vezi lângă-lângă: date, artiști, bilete vândute, ocupare, venit, preț mediu, timp mediu până la cumpărare, rata check-in.' },
+            ],
+        },
+        financial: {
+            title: 'Financiar',
+            sections: [
+                { h: 'Top artiști după venit', p: 'Artiștii care au generat cel mai mult venit la locația ta, cu numărul de evenimente și ocuparea medie.' },
+                { h: 'Venit pe gen muzical / canal', p: 'Cât venit produce fiecare gen (rock, pop, jazz...) și fiecare canal de vânzare (online, POS, invitație...).' },
+                { h: 'Sensibilitate preț', p: 'Cum se corelează prețul cu ocuparea. Bare mari la un interval de preț = acel preț se vinde bine. „Sweet spot" e prețul optim.' },
+                { h: 'Sub-preț', p: 'Evenimente cu ocupare peste 90% — probabil ai putea încasa mai mult ridicând prețul.' },
+                { h: 'Supra-preț', p: 'Evenimente cu ocupare sub 30% — poate prea scump pentru piață.' },
+                { h: 'Prognoză venituri', p: '3 scenarii pe 6 luni: pesimist (dacă lucrurile merg prost), realist (curbă istorică) și optimist (best case).' },
+                { h: 'Rambursări', p: 'Rata rambursărilor. Peste 5% = alarm. Vezi ce evenimente sunt cele mai rambursate.' },
+            ],
+        },
+        audience: {
+            title: 'Public',
+            sections: [
+                { h: 'Persoane public', p: 'Grupuri de cumpărători dominante — de exemplu „25-34 Masculin din București". Îți spune cine îți este publicul principal pentru a targeta reclamele corect.' },
+                { h: 'Distribuție vârste / gen', p: 'Câți cumpărători ai per interval de vârstă și per gen.' },
+                { h: 'Loialitate cumpărători', p: '<strong>O dată</strong> = au cumpărat 1 eveniment. <strong>Repeat</strong> = 2-3. <strong>Regulari</strong> = 4-9. <strong>Superfani</strong> = 10+. Rată repetare = % din total care au venit din nou.' },
+                { h: 'De unde vin cumpărătorii', p: 'Orașele de proveniență. „Din alt oraș" = câți fac deplasare pentru evenimentele tale.' },
+                { h: 'Top superfani', p: 'Lista cumpărătorilor tăi cei mai loiali cu contact + istoric.' },
+                { h: 'Loialitate pe gen', p: 'Ce genuri creează cumpărători recurenți. Rate peste 20% = gen care „prinde".' },
+            ],
+        },
+        artists: {
+            title: 'Artiști',
+            sections: [
+                { h: 'Performanță artiști', p: 'Cei mai buni artiști care au cântat la locația ta: câte evenimente, câte bilete au vândut, ocuparea medie și cea mai bună.' },
+                { h: 'Performanță pe gen', p: 'Cum se comportă fiecare gen la venue-ul tău — util pentru mixul de programare.' },
+                { h: 'Artiști de considerat pentru bookings', p: 'Artiști care au avut ocupare mare în evenimente în orașul tău dar nu au cântat încă la tine. Public estimat = prognoza pentru evenimentul tău.' },
+            ],
+        },
+        scheduling: {
+            title: 'Programare',
+            sections: [
+                { h: 'Heatmap performanță', p: 'Ocuparea medie combinată pe zi a săptămânii × lună. Verde = performanță excelentă (>75%), galben = OK (50-75%), roșu = slab. Găsește sloturile tale de aur.' },
+                { h: 'Zi a săptămânii', p: 'Care zile ale săptămânii aduc cei mai mulți bilete și cel mai mare venit.' },
+                { h: 'Sezonalitate', p: 'Performanță lună cu lună + câte zile ai lăsat goale în fiecare lună.' },
+                { h: 'Zile weekend libere', p: 'Vin/Sâm/Dum pe care nu ai avut evenimente. Fiecare zi liberă = venit potențial ratat.' },
+                { h: 'Frecvență optimă', p: 'Sub ce interval (săptămâni fără eveniment) ai avut cea mai bună ocupare.' },
+                { h: 'Timing achiziții', p: 'Când cumpără publicul biletele: cu 90+ zile înainte, în ultima săptămână etc. Ajută să știi când să investești în reclame.' },
+                { h: 'Viteză vânzări', p: 'Ultimele 5 evenimente: cât de repede s-au vândut biletele. Fiecare bară = un procent de bilete vândute cu X zile înainte.' },
+            ],
+        },
+        opportunities: {
+            title: 'Oportunități',
+            sections: [
+                { h: 'Oportunități', p: 'Sugestii concrete detectate automat: evenimente sub-priced, timing anunț mai bun, genuri sub-explorate etc.' },
+                { h: 'Alerte churn', p: 'Cumpărători care obișnuiau să vină des dar nu au mai apărut de mult. Risc mare = probabil pierduți. Rulează campanie remarketing.' },
+                { h: 'Simulator eveniment', p: 'Introdu un gen, o zi și un preț ipotetic — sistemul îți spune câte bilete și cât venit ai putea avea, pe baza istoricului.' },
+            ],
+        },
+        promotion: {
+            title: 'Promovare',
+            sections: [
+                { h: 'Fereastră optimă de anunț', p: 'Zilele înainte de eveniment când să-l publici. „Optim" = ai timp să prinzi 90% din cumpărători. „P90" = până la câte zile înainte cumpără 90% din public.' },
+                { h: 'Buget recomandat', p: 'Sumă recomandată pentru reclame pe eveniment (~12% din venitul estimat) + cum s-o împarți pe faze (anunț, maxim, urgență, ultimul apel).' },
+                { h: 'Strategie pe platforme', p: 'Ce platformă (Facebook, Google, TikTok, Email/SMS) merită ce % din buget, ce audiențe să targhetezi, ce formate să folosești și când.' },
+                { h: 'Genuri principale pentru targetare', p: 'Genurile cele mai puternice pentru publicul tău — folosește-le ca criterii de targetare în reclame.' },
+            ],
+        },
+        upcoming: {
+            title: 'Următoare',
+            sections: [
+                { h: 'Evenimente ce urmează', p: 'Toate evenimentele viitoare la locațiile tale, ordonate cronologic. Vezi câte bilete s-au vândut până acum vs capacitate.' },
+            ],
+        },
+        actions: {
+            title: 'Acțiuni',
+            sections: [
+                { h: 'Priorități acțiune', p: 'Lista celor mai importante acțiuni de făcut ACUM, ordonate după urgență. Fiecare are 3 părți:' },
+                { h: 'CATEGORIE (badge sus-stânga)', p: 'În ce zonă e acțiunea: Eveniment la risc / Rambursări / Loialitate / Prețuri / Competiție / Oportunitate venit.' },
+                { h: 'CE SĂ FACI (fulger verde)', p: 'Recomandarea concretă pentru rezolvare.' },
+                { h: 'IMPACT ESTIMAT (semn dolar galben)', p: 'Ce câștig sau economisire poți obține dacă acționezi.' },
+                { h: 'URGENȚĂ (badge sus-dreapta)', p: 'CRITIC / ÎNALT / MEDIU / SCĂZUT.' },
+            ],
+        },
+    };
+
+    const helpModal = document.getElementById('help-modal');
+    const helpBtn = document.getElementById('help-btn');
+    const helpClose = document.getElementById('help-close');
+    const helpTitle = document.getElementById('help-title');
+    const helpContent = document.getElementById('help-content');
+    function showHelp() {
+        const cfg = HELP_CONTENT[state.activeTab] || HELP_CONTENT.overview;
+        helpTitle.textContent = 'Ghid: ' + cfg.title;
+        helpContent.innerHTML = cfg.sections.map(s => `
+            <div class="pb-3 border-b border-slate-100 last:border-b-0">
+                <h4 class="text-sm font-bold text-slate-900 mb-1.5">${s.h}</h4>
+                <p class="text-sm text-slate-600 leading-relaxed">${s.p}</p>
+            </div>
+        `).join('');
+        helpModal.classList.remove('hidden');
+        helpModal.classList.add('flex');
+    }
+    function hideHelp() {
+        helpModal.classList.add('hidden');
+        helpModal.classList.remove('flex');
+    }
+    helpBtn.addEventListener('click', showHelp);
+    helpClose.addEventListener('click', hideHelp);
+    helpModal.addEventListener('click', (e) => { if (e.target === helpModal) hideHelp(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideHelp(); });
 
     // ── Boot ────────────────────────────────────────────────────
     document.querySelectorAll('.analiza-tab-btn').forEach(b => {

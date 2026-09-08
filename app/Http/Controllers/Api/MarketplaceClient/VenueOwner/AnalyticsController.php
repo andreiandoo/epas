@@ -63,6 +63,16 @@ class AnalyticsController extends Controller
             }
         }
 
+        // Some trait builders (competitor benchmark, revenue per seat)
+        // dereference $this->venue->city / capacity without a null-check,
+        // so a request without ?venue_id and only ONE partnered venue
+        // used to crash with "attempt to read on null". Auto-promote:
+        // when the caller has a single venue, treat it as the focus even
+        // if no query param was passed.
+        if (!$focusedVenue && count($venueIds) === 1) {
+            $focusedVenue = Venue::find($venueIds[0]);
+        }
+
         return new VenueOwnerAnalyticsService($venueIds, $focusedVenue);
     }
 
