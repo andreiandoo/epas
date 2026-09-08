@@ -96,7 +96,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
 </style>
 
 <script>
-(async function () {
+document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
     // ── Helpers ─────────────────────────────────────────────────
@@ -674,7 +674,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
 
     await initVenuePicker();
     switchTab('overview');
-})();
+})());
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>

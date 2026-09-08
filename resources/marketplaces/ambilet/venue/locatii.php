@@ -33,7 +33,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     </div>
 
 <script>
-(async function () {
+document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
     const grid = document.getElementById('venues-grid');
@@ -100,7 +100,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
         console.error('venues load failed', e);
         grid.innerHTML = `<div class="p-6 text-center text-sm text-red-400 bg-white border rounded-2xl border-slate-200 md:col-span-2 lg:col-span-3">Eroare la încărcarea locațiilor.</div>`;
     }
-})();
+})());
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
