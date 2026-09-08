@@ -212,6 +212,92 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     .a-hero-health__comp-fill { height:100%; border-radius:9999px; transition: width .4s ease-out; }
     .a-hero-health__comp-detail { font-size:.65rem; color:var(--v-muted); }
 
+    /* ── Monthly Momentum premium ─────────────────────────────── */
+    .a-mm-grid { display:grid; gap:.75rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .a-mm { position:relative; padding:1rem; border-radius:.75rem; border:1px solid #f1f5f9; background:linear-gradient(135deg,#fafbfc 0%, #ffffff 100%); overflow:hidden; }
+    .a-mm::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+    .a-mm.up::before { background:linear-gradient(180deg,#10b981,#059669); }
+    .a-mm.down::before { background:linear-gradient(180deg,#ef4444,#dc2626); }
+    .a-mm.flat::before { background:#cbd5e1; }
+    .a-mm__label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--v-muted); margin-bottom:.5rem; }
+    .a-mm__value { font-size:1.5rem; font-weight:800; color:var(--v-text); line-height:1; letter-spacing:-0.02em; }
+    .a-mm__delta { margin-top:.5rem; display:inline-flex; align-items:center; gap:.35rem; font-size:.75rem; font-weight:700; padding:.2rem .5rem; border-radius:.375rem; }
+    .a-mm.up .a-mm__delta { color:#059669; background:rgba(16,185,129,.1); }
+    .a-mm.down .a-mm__delta { color:#dc2626; background:rgba(239,68,68,.1); }
+    .a-mm.flat .a-mm__delta { color:var(--v-muted); background:#f1f5f9; }
+    .a-mm__arrow { font-size:.7rem; }
+
+    /* ── Event performance table premium ──────────────────────── */
+    .a-tbl-wrap { overflow-x:auto; margin: -.25rem; padding:.25rem; }
+    .a-tbl--premium { font-size:.8125rem; }
+    .a-tbl--premium thead th { position:sticky; top:0; background:#f8fafc; z-index:1; padding:.65rem .75rem; }
+    .a-tbl--premium td { padding:.65rem .75rem; }
+    .a-tbl--premium tr:hover td { background:#f8fafc; }
+    .a-tbl--premium tr.past { opacity:.6; }
+    .a-tbl--premium .ev-title { font-weight:600; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .a-tbl--premium .ev-sold { font-weight:700; }
+    .a-tbl--premium .mono { font-family: ui-monospace, monospace; }
+    .a-tbl--premium .muted { color:var(--v-muted); }
+    .a-tbl--premium .small { font-size:.7rem; }
+    .a-tbl--premium .ellips { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .st-chip { display:inline-flex; align-items:center; padding:.15rem .5rem; border-radius:.375rem; font-size:.7rem; font-weight:700; letter-spacing:.02em; }
+
+    /* ── Weekend vs Weekday ───────────────────────────────────── */
+    .a-daytype { display:flex; flex-direction:column; gap:.9rem; }
+    .a-daytype__row { padding:.75rem; background:#fafbfc; border:1px solid #f1f5f9; border-radius:.625rem; }
+    .a-daytype__head { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+    .a-daytype__ico { font-size:1rem; }
+    .a-daytype__name { font-weight:700; font-size:.85rem; flex:1; }
+    .a-daytype__pct { font-weight:800; font-size:1rem; }
+    .a-daytype__bar { height:.375rem; background:#f1f5f9; border-radius:9999px; overflow:hidden; margin-bottom:.4rem; }
+    .a-daytype__bar div { height:100%; border-radius:9999px; transition: width .4s; }
+    .a-daytype__meta { font-size:.7rem; color:var(--v-muted); }
+
+    /* ── YoY comparison ───────────────────────────────────────── */
+    .a-yoy-chip { margin-left:auto; padding:.15rem .55rem; border-radius:.375rem; font-size:.7rem; font-weight:700; }
+    .a-yoy { display:flex; flex-direction:column; gap:.9rem; }
+    .a-yoy__row { display:grid; grid-template-columns: 130px 130px 1fr; align-items:center; gap:.6rem; }
+    .a-yoy__lbl { font-size:.7rem; color:var(--v-muted); font-weight:600; }
+    .a-yoy__val { font-size:1.1rem; font-weight:800; letter-spacing:-0.02em; }
+    .a-yoy__val.muted { color:var(--v-muted); font-weight:700; }
+    .a-yoy__bar { height:.5rem; background:#f1f5f9; border-radius:9999px; overflow:hidden; }
+    .a-yoy__bar div { height:100%; border-radius:9999px; transition: width .4s; }
+
+    /* ── City comparison ──────────────────────────────────────── */
+    .a-cmp { display:flex; flex-direction:column; gap:.85rem; margin-bottom:1rem; }
+    .a-cmp__row { display:grid; grid-template-columns: 110px 60px 1fr; align-items:center; gap:.6rem; }
+    .a-cmp__lbl { font-size:.75rem; font-weight:700; }
+    .a-cmp__lbl.muted { color:var(--v-muted); }
+    .a-cmp__val { font-size:.95rem; font-weight:800; letter-spacing:-0.02em; }
+    .a-cmp__val.muted { color:var(--v-muted); font-weight:700; }
+    .a-cmp__bar { height:.5rem; background:#f1f5f9; border-radius:9999px; overflow:hidden; }
+    .a-cmp__bar div { height:100%; border-radius:9999px; transition: width .4s; }
+    .a-cmp__list-h { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--v-muted); margin-top:.5rem; margin-bottom:.4rem; padding-top:.75rem; border-top:1px solid #f1f5f9; }
+    .a-cmp__list { display:flex; flex-direction:column; gap:.35rem; }
+    .a-cmp__item { display:grid; grid-template-columns: 1fr auto auto auto; gap:.75rem; padding:.5rem .625rem; background:#fafbfc; border-radius:.5rem; align-items:center; font-size:.75rem; }
+    .a-cmp__item-name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .a-cmp__item-meta { font-size:.65rem; }
+    .a-cmp__item-st { font-weight:800; font-size:.85rem; min-width:48px; text-align:right; }
+    .a-cmp__item-price { color:var(--v-warn); font-weight:700; font-family: ui-monospace, monospace; min-width:60px; text-align:right; }
+
+    /* ── Revenue per seat ─────────────────────────────────────── */
+    .a-rps__hero { padding:1.25rem; background:linear-gradient(135deg,#fef3c7 0%, #fff 100%); border:1px solid #fed7aa; border-radius:.75rem; text-align:center; margin-bottom:.85rem; }
+    .a-rps__value { font-size:2.5rem; font-weight:900; color:var(--v-warn); letter-spacing:-0.03em; line-height:1; }
+    .a-rps__unit { font-size:1rem; font-weight:700; }
+    .a-rps__sub { margin-top:.5rem; font-size:.75rem; color:var(--v-muted); font-weight:600; }
+    .a-rps__best { padding:.85rem; background:linear-gradient(135deg,#dcfce7 0%, #fff 100%); border:1px solid #bbf7d0; border-radius:.625rem; }
+    .a-rps__best-lbl { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#059669; margin-bottom:.35rem; }
+    .a-rps__best-title { font-size:.85rem; font-weight:700; color:var(--v-text); margin-bottom:.2rem; }
+    .a-rps__best-stats { font-size:.75rem; color:var(--v-text); }
+
+    /* ── Event comparison form ────────────────────────────────── */
+    .a-cmp-form { display:grid; grid-template-columns: 1fr 1fr auto; gap:.75rem; align-items:end; margin-bottom:1rem; padding:1rem; background:#fafbfc; border:1px solid #f1f5f9; border-radius:.75rem; }
+    @media (max-width:640px) { .a-cmp-form { grid-template-columns: 1fr; } }
+    .a-cmp-form__col { display:flex; flex-direction:column; }
+    .a-cmp-form__lbl { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--v-muted); margin-bottom:.35rem; }
+    .a-cmp-form__btn { padding:.6rem 1.25rem; background:linear-gradient(135deg,var(--v-primary),#0ea5e9); color:#fff; border:none; border-radius:.5rem; font-size:.8125rem; font-weight:700; cursor:pointer; letter-spacing:.02em; transition: transform .15s, box-shadow .15s; }
+    .a-cmp-form__btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,.3); }
+
     .a-tbl { width:100%; font-size:.8125rem; border-collapse:collapse; }
     .a-tbl th { padding:.5rem .625rem; text-align:left; font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--v-muted); background:#f8fafc; }
     .a-tbl td { padding:.5rem .625rem; border-top:1px solid #f1f5f9; color: var(--v-text); }
@@ -436,167 +522,207 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             ` : ''}
         </div>`;
 
-        // Monthly Momentum. Backend returns { current_label, previous_label,
-        // metrics: [{name, current, previous, trend: {direction, pct}, format}] }.
-        // The old renderer read events_delta / tickets_current etc. which never
-        // existed → empty cards.
+        // ── Impuls lunar ── premium cards cu gradient subtil per direction
         if (m && Array.isArray(m.metrics) && m.metrics.length) {
             html += `<div class="a-card">
-                <div class="a-card-h">Impuls lunar <span style="font-size:.7rem;font-weight:400;color:var(--v-muted);margin-left:.5rem;">${escapeHtml(m.current_label || '')} vs ${escapeHtml(m.previous_label || '')}</span></div>
-                <div class="a-g3">${m.metrics.map(x => {
+                <div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">📈</span>Impuls lunar
+                    <span class="a-card-sub">${escapeHtml(m.current_label || '')} vs ${escapeHtml(m.previous_label || '')}</span>
+                </div>
+                <div class="a-mm-grid">${m.metrics.map(x => {
                     const dir = (x.trend && x.trend.direction) || 'flat';
-                    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
-                    const color = dir === 'up' ? 'var(--v-success)' : dir === 'down' ? 'var(--v-danger)' : 'var(--v-muted)';
+                    const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '▬';
+                    const cls = dir === 'up' ? 'up' : dir === 'down' ? 'down' : 'flat';
                     let curr = x.current;
                     if (x.format === 'currency') curr = fmtMoney(curr) + ' RON';
                     else if (x.format === 'pct') curr = curr + '%';
                     else curr = fmtInt(curr);
                     const pct = x.trend && x.trend.pct !== undefined ? x.trend.pct : null;
-                    return `<div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
-                        <div style="font-size:1.25rem;font-weight:700;color:var(--v-text);">${curr}</div>
-                        <div style="font-size:.75rem;color:${color};margin-top:.25rem;font-weight:600;">${arrow} ${pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : ''}</div>
-                        <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(tr(T_MOMENTUM, x.name || ''))}</div>
+                    return `<div class="a-mm ${cls}">
+                        <div class="a-mm__label">${escapeHtml(tr(T_MOMENTUM, x.name || ''))}</div>
+                        <div class="a-mm__value">${curr}</div>
+                        <div class="a-mm__delta"><span class="a-mm__arrow">${arrow}</span>${pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : '—'}</div>
                     </div>`;
                 }).join('')}</div>
             </div>`;
         }
 
-        // Charts
+        // ── Grafice: Evenimente & Bilete + Venit & Ocupare ── ambele într-un card 2‑cols
         if (d.months && d.months.length) {
-            html += `
-                <div class="a-g2">
-                    <div class="a-card"><div class="a-card-h">Evenimente & Bilete / lună</div>
-                        <div style="height:220px;position:relative;"><canvas id="chart-yearly-evtx"></canvas></div>
-                    </div>
-                    <div class="a-card"><div class="a-card-h">Venit & Ocupare / lună</div>
-                        <div style="height:220px;position:relative;"><canvas id="chart-yearly-revocc"></canvas></div>
-                    </div>
+            html += `<div class="a-g2">
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📊</span>Evenimente & Bilete<span class="a-card-sub">Ultimele 12 luni</span></div>
+                    <div style="height:230px;position:relative;"><canvas id="chart-yearly-evtx"></canvas></div>
                 </div>
-            `;
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💰</span>Venit & Ocupare<span class="a-card-sub">Ultimele 12 luni</span></div>
+                    <div style="height:230px;position:relative;"><canvas id="chart-yearly-revocc"></canvas></div>
+                </div>
+            </div>`;
         }
 
-        // Event Performance
+        // ── Performanță evenimente ── tabel premium cu chip-uri ocupare + sold-bar mini
         const evPerf = d.eventPerformance || [];
         if (evPerf.length) {
-            html += `
-                <div class="a-card">
-                    <div class="a-card-h">Performanță evenimente (${evPerf.length})</div>
-                    <div style="overflow-x:auto;">
-                        <table class="a-tbl">
-                            <thead><tr>
-                                <th>Data</th><th>Eveniment</th><th>Artiști</th>
-                                <th style="text-align:right">Sold</th><th style="text-align:right">Cap.</th>
-                                <th style="text-align:right">ST</th><th style="text-align:right">Venit</th><th style="text-align:right">Check-in</th>
-                            </tr></thead>
-                            <tbody>
-                                ${evPerf.slice(0, 25).map(ev => `
-                                    <tr style="${ev.is_past ? 'opacity:.65' : ''}">
-                                        <td style="white-space:nowrap;">${fmtDate(ev.date)}</td>
-                                        <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(truncate(ev.title, 40))}</td>
-                                        <td style="color:var(--v-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(truncate(ev.artists || '', 35))}</td>
-                                        <td style="text-align:right;font-family:monospace;">${fmtInt(ev.sold)}</td>
-                                        <td style="text-align:right;color:var(--v-muted);font-family:monospace;">${ev.capacity || '—'}</td>
-                                        <td style="text-align:right;font-weight:700;color:${stColor(ev.sell_through || 0)}">${ev.sell_through !== null ? ev.sell_through + '%' : '—'}</td>
-                                        <td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(ev.revenue)}</td>
-                                        <td style="text-align:right;color:var(--v-muted);">${ev.checkin_rate !== null ? ev.checkin_rate + '%' : '—'}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+            html += `<div class="a-card">
+                <div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🎪</span>Performanță evenimente<span class="a-card-sub">${evPerf.length} evenimente</span></div>
+                <div class="a-tbl-wrap">
+                    <table class="a-tbl a-tbl--premium">
+                        <thead><tr>
+                            <th>Data</th><th>Eveniment</th><th>Artiști</th>
+                            <th style="text-align:right;width:110px;">Vânzare</th>
+                            <th style="text-align:right;width:70px;">Ocupare</th>
+                            <th style="text-align:right;width:100px;">Venit</th>
+                            <th style="text-align:right;width:80px;">Prezență</th>
+                        </tr></thead>
+                        <tbody>
+                            ${evPerf.slice(0, 25).map(ev => {
+                                const st = ev.sell_through;
+                                const stColHex = stColor(st || 0);
+                                const pctBar = Math.min(100, st || 0);
+                                return `<tr${ev.is_past ? ' class="past"' : ''}>
+                                    <td class="mono muted" style="white-space:nowrap;">${fmtDate(ev.date)}</td>
+                                    <td class="ev-title">${escapeHtml(truncate(ev.title, 42))}</td>
+                                    <td class="muted small ellips">${escapeHtml(truncate(ev.artists || '—', 32))}</td>
+                                    <td class="mono" style="text-align:right;"><span class="ev-sold">${fmtInt(ev.sold)}</span><span class="muted small"> / ${ev.capacity || '—'}</span></td>
+                                    <td style="text-align:right;">
+                                        ${st !== null ? `<span class="st-chip" style="background:${stColHex}18;color:${stColHex};">${st}%</span>` : '<span class="muted">—</span>'}
+                                    </td>
+                                    <td class="mono" style="text-align:right;color:var(--v-warn);font-weight:600;">${fmtMoney(ev.revenue)}</td>
+                                    <td class="mono muted" style="text-align:right;">${ev.checkin_rate !== null ? ev.checkin_rate + '%' : '—'}</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
                 </div>
-            `;
+            </div>`;
         }
 
-        // Weekend vs Weekday + YoY
+        // ── Weekend vs zi lucrătoare  +  An vs an ── redesign visual
         const rb = d.revenueBreakdown || {};
         const dayType = rb.revenue_by_day_type || [];
         const yoy = rb.yoy || {};
         if (dayType.length || (yoy.last_12 || 0) > 0) {
             html += `<div class="a-g2">
                 ${dayType.length ? `
-                    <div class="a-card"><div class="a-card-h">Weekend vs zi lucrătoare</div>
-                        ${dayType.map(dt => `
-                            <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px dashed var(--v-ring);">
-                                <span style="font-weight:600;">${escapeHtml(tr(T_DAYTYPE, dt.day_type || ''))}</span>
-                                <span style="color:var(--v-muted);font-size:.8125rem;">${fmtInt(dt.events)} ev. · ocupare medie ${dt.avg_st}% · venit mediu ${fmtMoney(dt.avg_revenue)} RON</span>
-                            </div>
-                        `).join('')}
+                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">📅</span>Weekend vs zi lucrătoare</div>
+                        <div class="a-daytype">${dayType.map(dt => {
+                            const st = dt.avg_st || 0;
+                            const barCol = stColor(st);
+                            const isWknd = /weekend|weeken|Wknd/i.test(dt.day_type || '');
+                            return `<div class="a-daytype__row">
+                                <div class="a-daytype__head">
+                                    <span class="a-daytype__ico">${isWknd ? '🎉' : '💼'}</span>
+                                    <span class="a-daytype__name">${escapeHtml(tr(T_DAYTYPE, dt.day_type || ''))}</span>
+                                    <span class="a-daytype__pct" style="color:${barCol};">${st}%</span>
+                                </div>
+                                <div class="a-daytype__bar"><div style="width:${Math.min(100,st)}%;background:${barCol};"></div></div>
+                                <div class="a-daytype__meta">${fmtInt(dt.events)} evenimente · venit mediu <strong>${fmtMoney(dt.avg_revenue)} RON</strong></div>
+                            </div>`;
+                        }).join('')}</div>
                     </div>
                 ` : ''}
-                ${(yoy.last_12 || 0) > 0 ? `
-                    <div class="a-card"><div class="a-card-h">An vs an</div>
-                        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-                            <div><div style="color:var(--v-muted);font-size:.7rem;">Ultimele 12 luni</div><div style="font-size:1.375rem;font-weight:700;color:var(--v-warn);">${fmtMoney(yoy.last_12)} RON</div></div>
-                            <div><div style="color:var(--v-muted);font-size:.7rem;">Anterioarele 12</div><div style="font-size:1.375rem;font-weight:700;color:var(--v-muted);">${fmtMoney(yoy.prev_12)} RON</div></div>
-                            ${yoy.change_pct !== null ? `<div style="font-size:1.125rem;font-weight:700;color:${yoy.change_pct >= 0 ? 'var(--v-success)' : 'var(--v-danger)'}">${yoy.change_pct >= 0 ? '+' : ''}${yoy.change_pct}%</div>` : ''}
+                ${(yoy.last_12 || 0) > 0 ? (() => {
+                    const chg = yoy.change_pct;
+                    const isUp = chg !== null && chg >= 0;
+                    const chgCol = isUp ? 'var(--v-success)' : 'var(--v-danger)';
+                    const max = Math.max(yoy.last_12 || 0, yoy.prev_12 || 0) || 1;
+                    const wCurr = ((yoy.last_12 || 0) / max) * 100;
+                    const wPrev = ((yoy.prev_12 || 0) / max) * 100;
+                    return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">📆</span>An vs an
+                        ${chg !== null ? `<span class="a-yoy-chip" style="background:${chgCol}18;color:${chgCol};">${isUp ? '↑' : '↓'} ${isUp ? '+' : ''}${chg}%</span>` : ''}
+                    </div>
+                    <div class="a-yoy">
+                        <div class="a-yoy__row">
+                            <div class="a-yoy__lbl">Ultimele 12 luni</div>
+                            <div class="a-yoy__val" style="color:var(--v-warn);">${fmtMoney(yoy.last_12)} RON</div>
+                            <div class="a-yoy__bar"><div style="width:${wCurr}%;background:linear-gradient(90deg,#d97706,#f59e0b);"></div></div>
+                        </div>
+                        <div class="a-yoy__row">
+                            <div class="a-yoy__lbl">Anterioarele 12</div>
+                            <div class="a-yoy__val muted">${fmtMoney(yoy.prev_12)} RON</div>
+                            <div class="a-yoy__bar"><div style="width:${wPrev}%;background:#cbd5e1;"></div></div>
                         </div>
                     </div>
-                ` : ''}
+                    </div>`;
+                })() : ''}
             </div>`;
         }
 
-        // Competitor benchmark + Revenue per Seat
+        // ── Comparație oraș + Venit / loc ── premium
         const bench = d.competitorBenchmark || {};
         const rps = d.revenuePerSeat || {};
         if ((bench.city_avg && bench.my) || (rps.avg_rev_per_seat || 0) > 0) {
             html += `<div class="a-g2">
-                ${bench.city_avg ? `
-                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">🏙️</span>Comparație oraș</div>
-                        <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
-                            <div style="text-align:center;"><div style="color:var(--v-muted);font-size:.7rem;">Al tău</div><div style="font-size:1.5rem;font-weight:700;color:var(--v-accent);">${bench.my.avg_st}%</div></div>
-                            <div style="text-align:center;"><div style="color:var(--v-muted);font-size:.7rem;">Oraș</div><div style="font-size:1.5rem;font-weight:700;color:var(--v-muted);">${bench.city_avg.avg_st}%</div></div>
-                            ${bench.vs_city !== null ? `<div style="text-align:center;"><div style="color:var(--v-muted);font-size:.7rem;">Diferență</div><div style="font-size:1.5rem;font-weight:700;color:${bench.vs_city >= 0 ? 'var(--v-success)' : 'var(--v-danger)'}">${bench.vs_city >= 0 ? '+' : ''}${bench.vs_city}%</div></div>` : ''}
-                        </div>
-                        ${bench.competitors && bench.competitors.length ? `
-                            <div style="font-size:.75rem;font-weight:600;color:var(--v-muted);margin-bottom:.25rem;">Alte locații în oraș</div>
-                            <table class="a-tbl" style="margin-top:.25rem;"><thead><tr><th>Locație</th><th style="text-align:right">Capacitate</th><th style="text-align:right">Ev.</th><th style="text-align:right">Ocupare medie</th><th style="text-align:right">Preț mediu</th></tr></thead>
-                            <tbody>${bench.competitors.slice(0, 5).map(c => `
-                                <tr>
-                                    <td style="font-weight:600;">${escapeHtml(c.name)}</td>
-                                    <td style="text-align:right;color:var(--v-muted);">${fmtInt(c.capacity)}</td>
-                                    <td style="text-align:right;">${c.events}</td>
-                                    <td style="text-align:right;font-weight:600;color:${c.avg_st > bench.my.avg_st ? 'var(--v-danger)' : 'var(--v-success)'};">${c.avg_st}%</td>
-                                    <td style="text-align:right;color:var(--v-warn);font-family:monospace;">${c.avg_price} RON</td>
-                                </tr>
-                            `).join('')}</tbody></table>
-                        ` : ''}
+                ${bench.city_avg ? (() => {
+                    const my = bench.my.avg_st || 0;
+                    const city = bench.city_avg.avg_st || 0;
+                    const vs = bench.vs_city;
+                    const vsCol = vs === null ? 'var(--v-muted)' : (vs >= 0 ? 'var(--v-success)' : 'var(--v-danger)');
+                    const wMy = Math.min(100, my);
+                    const wCity = Math.min(100, city);
+                    return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">🏙️</span>Comparație oraș
+                        ${vs !== null ? `<span class="a-yoy-chip" style="background:${vsCol}18;color:${vsCol};">${vs >= 0 ? '+' : ''}${vs}%</span>` : ''}
                     </div>
-                ` : ''}
-                ${(rps.avg_rev_per_seat || 0) > 0 ? `
-                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💺</span>Venit / loc</div>
-                        <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
-                            <div><div style="color:var(--v-muted);font-size:.7rem;">Mediu / loc / eveniment</div><div style="font-size:1.5rem;font-weight:700;color:var(--v-warn);">${fmtMoney(rps.avg_rev_per_seat)} RON</div></div>
-                            <div><div style="color:var(--v-muted);font-size:.7rem;">Capacitate</div><div style="font-size:1.5rem;font-weight:700;">${fmtInt(rps.capacity)}</div></div>
+                    <div class="a-cmp">
+                        <div class="a-cmp__row">
+                            <div class="a-cmp__lbl">Locația ta</div>
+                            <div class="a-cmp__val">${my}%</div>
+                            <div class="a-cmp__bar"><div style="width:${wMy}%;background:linear-gradient(90deg,#06b6d4,#0891b2);"></div></div>
                         </div>
-                        ${rps.best_event ? `<div style="padding:.5rem .75rem;background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.15);border-radius:.5rem;font-size:.75rem;">Cel mai bun: <strong>${escapeHtml(rps.best_event.title)}</strong> — ${fmtMoney(rps.best_event.rev_per_seat)} RON/loc (${fmtMoney(rps.best_event.revenue)} total)</div>` : ''}
+                        <div class="a-cmp__row">
+                            <div class="a-cmp__lbl muted">Media oraș</div>
+                            <div class="a-cmp__val muted">${city}%</div>
+                            <div class="a-cmp__bar"><div style="width:${wCity}%;background:#cbd5e1;"></div></div>
+                        </div>
+                    </div>
+                    ${bench.competitors && bench.competitors.length ? `
+                        <div class="a-cmp__list-h">Alte locații în oraș</div>
+                        <div class="a-cmp__list">${bench.competitors.slice(0, 5).map(c => {
+                            const worseThanMe = c.avg_st > my;
+                            return `<div class="a-cmp__item">
+                                <div class="a-cmp__item-name">${escapeHtml(c.name)}</div>
+                                <div class="a-cmp__item-meta muted">${fmtInt(c.capacity)} locuri · ${c.events} ev.</div>
+                                <div class="a-cmp__item-st" style="color:${worseThanMe ? 'var(--v-danger)' : 'var(--v-success)'};">${c.avg_st}%</div>
+                                <div class="a-cmp__item-price">${c.avg_price} RON</div>
+                            </div>`;
+                        }).join('')}</div>
+                    ` : ''}
+                    </div>`;
+                })() : ''}
+                ${(rps.avg_rev_per_seat || 0) > 0 ? `
+                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💺</span>Venit pe loc<span class="a-card-sub">${fmtInt(rps.capacity)} locuri capacitate</span></div>
+                        <div class="a-rps__hero">
+                            <div class="a-rps__value">${fmtMoney(rps.avg_rev_per_seat)}<span class="a-rps__unit"> RON</span></div>
+                            <div class="a-rps__sub">venit mediu / loc / eveniment</div>
+                        </div>
+                        ${rps.best_event ? `<div class="a-rps__best">
+                            <div class="a-rps__best-lbl">🏆 Cel mai bun eveniment</div>
+                            <div class="a-rps__best-title">${escapeHtml(rps.best_event.title)}</div>
+                            <div class="a-rps__best-stats"><strong>${fmtMoney(rps.best_event.rev_per_seat)} RON/loc</strong> · total <strong>${fmtMoney(rps.best_event.revenue)} RON</strong></div>
+                        </div>` : ''}
                     </div>
                 ` : ''}
             </div>`;
         }
 
-        // Event Comparison Tool (reuse the evPerf array from the
-        // event-performance table above; declaring it again would
-        // trip a "already declared" SyntaxError and blank the page).
+        // ── Comparație evenimente ── selects premium
         if (evPerf.length >= 2) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">⚖️</span>Comparație evenimente</div>
-                <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Selectează 2 evenimente pentru comparație.</p>
-                <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
-                    <div style="flex:1;min-width:200px;">
-                        <label style="font-size:.7rem;color:var(--v-muted);display:block;margin-bottom:.25rem;">Eveniment A</label>
-                        <select id="cmp-a" style="width:100%;padding:.4rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+            const cmpSelStyle = 'width:100%;padding:.55rem .7rem;border:1px solid var(--v-ring);border-radius:.5rem;font-size:.8125rem;background:#fff;font-weight:500;';
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">⚖️</span>Comparație evenimente<span class="a-card-sub">Selectează 2 evenimente pentru analiză lângă‑lângă</span></div>
+                <div class="a-cmp-form">
+                    <div class="a-cmp-form__col">
+                        <label class="a-cmp-form__lbl">Eveniment A</label>
+                        <select id="cmp-a" style="${cmpSelStyle}">
                             <option value="">Selectează…</option>
                             ${evPerf.slice(0, 30).map(e => `<option value="${e.id}">${escapeHtml(truncate(e.title, 40))} (${fmtDate(e.date)})</option>`).join('')}
                         </select>
                     </div>
-                    <div style="flex:1;min-width:200px;">
-                        <label style="font-size:.7rem;color:var(--v-muted);display:block;margin-bottom:.25rem;">Eveniment B</label>
-                        <select id="cmp-b" style="width:100%;padding:.4rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+                    <div class="a-cmp-form__col">
+                        <label class="a-cmp-form__lbl">Eveniment B</label>
+                        <select id="cmp-b" style="${cmpSelStyle}">
                             <option value="">Selectează…</option>
                             ${evPerf.slice(0, 30).map(e => `<option value="${e.id}">${escapeHtml(truncate(e.title, 40))} (${fmtDate(e.date)})</option>`).join('')}
                         </select>
                     </div>
-                    <button id="cmp-run" style="align-self:flex-end;padding:.4rem 1rem;background:var(--v-primary);color:#fff;border:none;border-radius:.375rem;font-size:.8125rem;font-weight:600;cursor:pointer;">Compară</button>
+                    <button id="cmp-run" class="a-cmp-form__btn">Compară</button>
                 </div>
                 <div id="cmp-result"></div>
             </div>`;
