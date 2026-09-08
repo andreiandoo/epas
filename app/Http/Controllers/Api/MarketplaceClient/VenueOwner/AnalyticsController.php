@@ -159,6 +159,20 @@ class AnalyticsController extends Controller
         return $this->respond(fn () => $service->actionsTab());
     }
 
+    /**
+     * One-shot payload matching every key the tenant Filament page reads.
+     * The /venue/analiza web shell prefers this over per-tab endpoints
+     * so cross-tab data (e.g. Overview reads revenueBreakdown.yoy which
+     * "belongs" to Financial in the tab metaphor) renders on the first
+     * paint. Response size ~50 KB for a typical venue.
+     */
+    public function all(Request $request): JsonResponse
+    {
+        $service = $this->makeService($request);
+        if (!$service) return $this->empty();
+        return $this->respond(fn () => $service->everything());
+    }
+
     // ─── Interactive endpoints ──────────────────────────────────────
 
     /**

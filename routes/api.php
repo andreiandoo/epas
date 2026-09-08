@@ -3104,6 +3104,8 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
                 ->name('api.marketplace-client.venue-owner.analytics.upcoming');
             Route::get('/actions', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'actions'])
                 ->name('api.marketplace-client.venue-owner.analytics.actions');
+            Route::get('/all', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'all'])
+                ->name('api.marketplace-client.venue-owner.analytics.all');
 
             Route::post('/simulate', [\App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AnalyticsController::class, 'simulate'])
                 ->name('api.marketplace-client.venue-owner.analytics.simulate');

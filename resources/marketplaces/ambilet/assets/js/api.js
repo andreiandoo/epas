@@ -2508,6 +2508,12 @@ const AmbiletVenueAPI = {
         const p = venueId ? { venue_id: venueId } : null;
         return this._request(`venue-owner.analytics.${tab}`, p);
     },
+    // One-shot payload for /venue/analiza — same shape the tenant Filament
+    // page mounts, so rendering is 1:1 without cross-tab fetches.
+    analyticsAll(venueId) {
+        const p = venueId ? { venue_id: venueId } : null;
+        return this._request('venue-owner.analytics.all', p);
+    },
     simulate(genre, dayOfWeek, ticketPrice) {
         return this._request('venue-owner.analytics.simulate', null, 'POST', {
             genre, day_of_week: dayOfWeek, ticket_price: ticketPrice,

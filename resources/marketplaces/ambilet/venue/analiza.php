@@ -2,14 +2,11 @@
 /**
  * Venue Owner — /venue/analiza
  *
- * Ports the 9-tab Filament VenueAnalytics page. Each tab loads on
- * demand from /api/marketplace-client/venue-owner/analytics/{tab} via
- * AmbiletVenueAPI, so a user visiting the page and staying on the
- * Overview tab pays for one API call rather than 28.
- *
- * Chart.js is loaded from cdnjs (same source used across Ambilet).
- * All tab switching is plain click handlers — no Alpine dep so
- * this page keeps its own footprint minimal.
+ * Full 1:1 port of the tenant Filament page
+ * (resources/views/filament/tenant/pages/venue-analytics.blade.php).
+ * Single fetch to /venue-owner/analytics/all returns every key the
+ * blade reads; the 9 render functions below mirror the section order
+ * and content of the source page.
  */
 require_once dirname(__DIR__) . '/includes/config.php';
 
@@ -27,7 +24,6 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
         <?php require_once dirname(__DIR__) . '/includes/venue-topbar.php'; ?>
 
         <main class="flex-1 p-4 lg:p-8">
-            <!-- Venue picker -->
             <div class="flex flex-wrap items-center gap-3 mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-900">Analiză</h2>
@@ -62,37 +58,45 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 <?php endforeach; ?>
             </div>
 
+            <!-- KPI + Health strip shown above all tabs (like blade page header) -->
+            <div id="analiza-header" class="hidden mb-4"></div>
+
             <!-- Tab panels -->
             <?php foreach ($tabs as $t): ?>
-                <div id="tab-<?= $t['id'] ?>" class="analiza-tab-panel hidden">
-                    <div class="analiza-loading p-12 text-center bg-white border rounded-2xl border-slate-200">
-                        <div class="inline-block w-8 h-8 border-4 rounded-full animate-spin border-blue-200 border-t-blue-500"></div>
-                        <p class="mt-3 text-sm text-slate-500">Se încarcă…</p>
-                    </div>
-                    <div class="analiza-content hidden space-y-6"></div>
-                </div>
+                <div id="tab-<?= $t['id'] ?>" class="analiza-tab-panel hidden space-y-4"></div>
             <?php endforeach; ?>
+
+            <div id="analiza-loading" class="p-12 text-center bg-white border rounded-2xl border-slate-200">
+                <div class="inline-block w-8 h-8 border-4 rounded-full animate-spin border-blue-200 border-t-blue-500"></div>
+                <p class="mt-3 text-sm text-slate-500">Se încarcă…</p>
+            </div>
         </main>
     </div>
 
 <style>
-    .analiza-tab-btn.active { color:#3b82f6; border-color:#3b82f6; }
-    .analiza-tab-btn:hover:not(.active) { color:#1e293b; }
-    .analiza-section { padding:1.5rem; background:#fff; border:1px solid #e2e8f0; border-radius:1rem; }
-    .analiza-section h3 { font-size:1rem; font-weight:700; color:#0f172a; margin-bottom:1rem; }
-    .analiza-kpi-grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
-    .analiza-kpi { padding:1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; }
-    .analiza-kpi__value { font-size:1.5rem; font-weight:700; color:#0f172a; }
-    .analiza-kpi__label { font-size:.75rem; color:#64748b; margin-top:.25rem; text-transform:uppercase; letter-spacing:.05em; }
-    .analiza-table { width:100%; border-collapse:collapse; font-size:.875rem; }
-    .analiza-table th { padding:.5rem .75rem; text-align:left; font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#64748b; background:#f8fafc; }
-    .analiza-table td { padding:.5rem .75rem; border-top:1px solid #f1f5f9; color:#0f172a; }
-    .analiza-table tr:hover td { background:#f8fafc; }
-    .analiza-tag { display:inline-block; padding:.15rem .5rem; font-size:.7rem; font-weight:600; border-radius:.25rem; }
-    .analiza-tag--info    { background:rgba(59,130,246,.1); color:#3b82f6; }
-    .analiza-tag--success { background:rgba(16,185,129,.1); color:#059669; }
-    .analiza-tag--warn    { background:rgba(245,158,11,.1); color:#f59e0b; }
-    .analiza-tag--danger  { background:rgba(239,68,68,.1); color:#dc2626; }
+    :root {
+        --v-warn: #d97706;
+        --v-danger: #dc2626;
+        --v-success: #059669;
+        --v-primary: #3b82f6;
+        --v-accent: #06b6d4;
+        --v-muted: #64748b;
+        --v-text: #0f172a;
+        --v-ring: #e2e8f0;
+    }
+    .analiza-tab-btn.active { color: var(--v-primary); border-color: var(--v-primary); }
+    .analiza-tab-btn:hover:not(.active) { color: #1e293b; }
+    .a-card { background:#fff; border:1px solid var(--v-ring); border-radius:.75rem; padding:1rem; }
+    .a-card-h { font-size:.875rem; font-weight:700; color: var(--v-text); margin-bottom:.75rem; display:flex; align-items:center; }
+    .a-g2 { display:grid; gap:1rem; grid-template-columns: 1fr; }
+    @media (min-width: 1024px) { .a-g2 { grid-template-columns: 1fr 1fr; } }
+    .a-g3 { display:grid; gap:.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .a-tbl { width:100%; font-size:.8125rem; border-collapse:collapse; }
+    .a-tbl th { padding:.4rem .5rem; text-align:left; font-size:.7rem; font-weight:600; text-transform:uppercase; color:var(--v-muted); background:#f8fafc; }
+    .a-tbl td { padding:.4rem .5rem; border-top:1px solid #f1f5f9; color: var(--v-text); }
+    .a-tbl tr:hover td { background:#f8fafc; }
+    .a-progress { background: #f1f5f9; border-radius:9999px; height:.5rem; overflow:hidden; }
+    .a-progress-fill { height:100%; border-radius:9999px; }
 </style>
 
 <script>
@@ -102,15 +106,20 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     // ── Helpers ─────────────────────────────────────────────────
     const fmtInt = n => Number(n || 0).toLocaleString('ro-RO');
     const fmtMoney = n => Number(n || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    const fmtPct = n => (Number(n || 0)).toFixed(1) + '%';
     const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-    const titleOf = e => (e && e.title && (e.title.ro || e.title.en)) || (e && e.name) || '—';
+    const truncate = (s, n) => { const str = String(s ?? ''); return str.length > n ? str.slice(0, n - 1) + '…' : str; };
+    const stColor = pct => pct >= 75 ? 'var(--v-success)' : pct >= 50 ? 'var(--v-warn)' : 'var(--v-danger)';
+    const fmtDate = d => {
+        if (!d) return '—';
+        try { return new Date(d).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: '2-digit' }); }
+        catch (e) { return d; }
+    };
 
     // ── State ───────────────────────────────────────────────────
     const state = {
         venueId: 'all',
-        loaded: {}, // { overview: true, ... } so we don't re-fetch on tab switch
-        activeTab: 'overview',
+        data: null,     // full analytics payload
+        charts: {},     // { yearlyEv, yearlyRev }
     };
 
     // ── Venue picker ────────────────────────────────────────────
@@ -125,549 +134,824 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     opt.textContent = v.name + (v.city ? ' (' + v.city + ')' : '');
                     sel.appendChild(opt);
                 });
-                // Pre-select from URL if present
                 const urlVenueId = new URLSearchParams(window.location.search).get('venue_id');
-                if (urlVenueId) {
-                    sel.value = urlVenueId;
-                    state.venueId = urlVenueId;
-                }
-                sel.addEventListener('change', () => {
+                if (urlVenueId) { sel.value = urlVenueId; state.venueId = urlVenueId; }
+                sel.addEventListener('change', async () => {
                     state.venueId = sel.value;
-                    state.loaded = {}; // invalidate cache
-                    Object.keys(state.loaded).forEach(k => state.loaded[k] = false);
-                    loadTab(state.activeTab, true);
+                    await loadAll();
                 });
             }
         } catch (e) { console.error(e); }
     }
 
-    // ── Tab switching ───────────────────────────────────────────
-    function switchTab(id) {
-        state.activeTab = id;
-        document.querySelectorAll('.analiza-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
-        document.querySelectorAll('.analiza-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + id));
-        if (!state.loaded[id]) loadTab(id);
-    }
-
-    async function loadTab(id, force) {
-        const panel = document.getElementById('tab-' + id);
-        const loading = panel.querySelector('.analiza-loading');
-        const content = panel.querySelector('.analiza-content');
+    // ── Load ────────────────────────────────────────────────────
+    async function loadAll() {
+        const loading = document.getElementById('analiza-loading');
         loading.classList.remove('hidden');
-        content.classList.add('hidden');
-        content.innerHTML = '';
+        document.getElementById('analiza-header').classList.add('hidden');
+        document.querySelectorAll('.analiza-tab-panel').forEach(p => p.classList.add('hidden'));
 
         try {
             const venueId = state.venueId !== 'all' ? state.venueId : null;
-            const res = await AmbiletVenueAPI.analytics(id, venueId);
+            const res = await AmbiletVenueAPI.analyticsAll(venueId);
             if (res && res.success && res.data) {
-                renderTab(id, res.data, content);
-                state.loaded[id] = true;
+                state.data = res.data;
+                renderHeader();
+                renderAllTabs();
+                loading.classList.add('hidden');
+                switchTab('overview');
             } else {
-                content.innerHTML = '<div class="analiza-section"><p class="text-sm text-slate-500">Nu există date pentru acest tab.</p></div>';
+                loading.innerHTML = '<p class="text-sm text-slate-500">Nu există date pentru această locație.</p>';
             }
         } catch (e) {
-            console.error('tab load failed', id, e);
-            content.innerHTML = '<div class="analiza-section"><p class="text-sm text-red-500">Eroare la încărcare.</p></div>';
-        }
-
-        loading.classList.add('hidden');
-        content.classList.remove('hidden');
-    }
-
-    // ── Renderers per tab ───────────────────────────────────────
-
-    function renderTab(id, data, root) {
-        switch (id) {
-            case 'overview':      return renderOverview(data, root);
-            case 'financial':     return renderFinancial(data, root);
-            case 'audience':      return renderAudience(data, root);
-            case 'artists':       return renderArtists(data, root);
-            case 'scheduling':    return renderScheduling(data, root);
-            case 'opportunities': return renderOpportunities(data, root);
-            case 'promotion':     return renderPromotion(data, root);
-            case 'upcoming':      return renderUpcoming(data, root);
-            case 'actions':       return renderActions(data, root);
+            console.error('analytics load failed', e);
+            loading.innerHTML = '<p class="text-sm text-red-500">Eroare la încărcarea datelor.</p>';
         }
     }
 
-    // ── Overview ────────────────────────────────────────────────
-    function renderOverview(d, root) {
-        const kpis = d.kpis || {};
-        const health = d.health_score || {};
-        const momentum = d.monthly_momentum || {};
-        const ys = d.yearly_series || {};
-
-        // KPI strip
-        const kpiSection = section('Indicatori cheie', `
-            <div class="analiza-kpi-grid">
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(kpis.total_events)}</div><div class="analiza-kpi__label">Evenimente</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(kpis.total_tickets)}</div><div class="analiza-kpi__label">Bilete vândute</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtMoney(kpis.total_revenue)} RON</div><div class="analiza-kpi__label">Venit total</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(kpis.unique_buyers)}</div><div class="analiza-kpi__label">Cumpărători unici</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtPct(kpis.avg_occupancy)}</div><div class="analiza-kpi__label">Ocupare medie</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtMoney(kpis.avg_ticket_price)} RON</div><div class="analiza-kpi__label">Preț mediu</div></div>
-            </div>
-        `);
-
-        // Health score
-        const healthColor = (health.score || 0) >= 80 ? '#10b981' : (health.score || 0) >= 60 ? '#f59e0b' : '#ef4444';
-        const healthSection = section('Scor sănătate locație', `
-            <div class="flex items-center gap-6">
-                <div class="relative w-24 h-24">
-                    <svg viewBox="0 0 36 36" class="w-full h-full">
-                        <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#e2e8f0" stroke-width="3"/>
-                        <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="${healthColor}" stroke-width="3" stroke-dasharray="${(health.score || 0)}, 100"/>
-                    </svg>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="text-2xl font-bold" style="color:${healthColor};">${Math.round(health.score || 0)}</span>
-                    </div>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-semibold text-slate-900">${escapeHtml(health.status || '')}</p>
-                    <p class="text-xs text-slate-500 mt-1">${escapeHtml(health.summary || '')}</p>
-                </div>
-            </div>
-        `);
-
-        // Monthly Momentum
-        let momentumHtml = '';
-        if (momentum.metrics && momentum.metrics.length) {
-            momentumHtml = section('Impuls lunar', `
-                <div class="analiza-kpi-grid">
-                    ${momentum.metrics.map(m => {
-                        const dir = m.direction === 'up' ? '↑' : m.direction === 'down' ? '↓' : '→';
-                        const color = m.direction === 'up' ? '#10b981' : m.direction === 'down' ? '#ef4444' : '#94a3b8';
-                        return `<div class="analiza-kpi">
-                            <div class="analiza-kpi__value">${escapeHtml(m.value || '')} <span style="color:${color}; font-size:1rem;">${dir}</span></div>
-                            <div class="analiza-kpi__label">${escapeHtml(m.label || '')}</div>
-                        </div>`;
-                    }).join('')}
-                </div>
-            `);
-        }
-
-        // Yearly chart. Wrap in a fixed-height container because Chart.js
-        // with maintainAspectRatio:false grows to fill its parent forever
-        // when the parent has no set height (turns into an infinite
-        // vertical scroll bug).
-        const chartId = 'chart-overview-yearly';
-        const yearlyHtml = section('Evoluție 12 luni', `<div style="height:320px; position:relative;"><canvas id="${chartId}"></canvas></div>`);
-
-        // Event Performance
-        const perf = Array.isArray(d.event_performance) ? d.event_performance : [];
-        const perfHtml = section('Performanță evenimente recente', renderTable(
-            ['Eveniment', 'Data', 'Sold', 'Ocupare', 'Venit'],
-            perf.slice(0, 15).map(e => [
-                escapeHtml(titleOf(e)),
-                escapeHtml(e.event_date || ''),
-                fmtInt(e.tickets_sold),
-                fmtPct(e.occupancy),
-                fmtMoney(e.revenue) + ' RON',
-            ]),
-            'Nu există evenimente'
-        ));
-
-        // Competitor Benchmark
-        const cb = d.competitor_benchmark || {};
-        const cbHtml = section('Comparație oraș', `
-            <p class="text-sm text-slate-600">Poziție ocupare: <strong>${escapeHtml(cb.position || '—')}</strong></p>
-            <p class="text-sm text-slate-500 mt-2">${escapeHtml(cb.summary || '')}</p>
-        `);
-
-        root.innerHTML = kpiSection + healthSection + momentumHtml + yearlyHtml + perfHtml + cbHtml;
-
-        // Init chart
-        if (ys.months && ys.months.length) {
-            const ctx = document.getElementById(chartId);
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ys.months,
-                    datasets: [
-                        { label: 'Bilete', data: ys.tickets, backgroundColor: 'rgba(59,130,246,0.7)', yAxisID: 'y1' },
-                        { label: 'Venit (RON)', data: ys.revenue, type: 'line', borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.2)', yAxisID: 'y2', tension: 0.3 },
-                    ],
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        y1: { position: 'left', beginAtZero: true, title: { display: true, text: 'Bilete' } },
-                        y2: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'RON' } },
-                    },
-                },
-            });
-        }
+    function switchTab(id) {
+        document.querySelectorAll('.analiza-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+        document.querySelectorAll('.analiza-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + id));
+        if (id === 'overview') renderOverviewCharts();
     }
 
-    // ── Financial ───────────────────────────────────────────────
-    function renderFinancial(d, root) {
-        const rb = d.revenue_breakdown || {};
-        const pricing = d.pricing_intelligence || {};
-        const refunds = d.refund_analysis || {};
-        const forecast = d.revenue_forecast || {};
-        const perSeat = d.revenue_per_seat || {};
+    // ── Header (KPI + Health + Momentum) ────────────────────────
+    function renderHeader() {
+        const d = state.data;
+        const k = d.kpis || {};
+        const h = d.venueHealthScore || {};
+        const m = d.monthlyMomentum || {};
 
-        let html = '';
+        const kpiCards = [
+            { label: 'Evenimente',       value: fmtInt(k.total_events), color: 'var(--v-primary)' },
+            { label: 'Bilete vândute',   value: fmtInt(k.total_tickets), color: 'var(--v-accent)' },
+            { label: 'Venit total',      value: fmtMoney(k.total_revenue) + ' RON', color: 'var(--v-warn)' },
+            { label: 'Cumpărători',      value: fmtInt(k.unique_buyers), color: 'var(--v-primary)' },
+            { label: 'Ocupare medie',    value: (Number(k.avg_sell_through || 0)) + '%', color: stColor(k.avg_sell_through || 0) },
+            { label: 'Preț mediu',       value: fmtMoney(k.avg_ticket_price) + ' RON', color: 'var(--v-warn)' },
+        ];
 
-        html += section('Distribuție venituri', renderTable(
-            ['Categorie', 'Bilete', 'Venit', 'Pondere'],
-            (rb.by_category || rb.categories || []).slice(0, 20).map(r => [
-                escapeHtml(r.label || r.name || ''),
-                fmtInt(r.tickets),
-                fmtMoney(r.revenue) + ' RON',
-                fmtPct(r.share || r.percentage),
-            ]),
-            'Fără date'
-        ));
+        const healthColor = (h.score || 0) >= 75 ? 'var(--v-success)' : (h.score || 0) >= 50 ? 'var(--v-warn)' : 'var(--v-danger)';
 
-        html += section('Preț optim', `
-            <p class="text-sm text-slate-600">Preț sweet-spot estimat: <strong>${fmtMoney(pricing.sweet_spot)} RON</strong></p>
-            <p class="text-xs text-slate-500 mt-2">${escapeHtml(pricing.summary || '')}</p>
-        `);
-
-        html += section('Rambursări', `
-            <div class="analiza-kpi-grid">
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtPct(refunds.refund_rate)}</div><div class="analiza-kpi__label">Rată rambursare</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(refunds.total_refunded)}</div><div class="analiza-kpi__label">Bilete rambursate</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtMoney(refunds.refunded_value)} RON</div><div class="analiza-kpi__label">Valoare rambursată</div></div>
-            </div>
-        `);
-
-        html += section('Prognoză venituri (6 luni)', renderTable(
-            ['Lună', 'Estimare (RON)'],
-            (forecast.months || []).map((m, i) => [
-                escapeHtml(m),
-                fmtMoney((forecast.values || [])[i]) + ' RON',
-            ]),
-            'Fără prognoză'
-        ));
-
-        html += section('Venit / loc', `
-            <p class="text-sm text-slate-600">Venit mediu pe loc: <strong>${fmtMoney(perSeat.avg_per_seat)} RON</strong></p>
-            <p class="text-xs text-slate-500 mt-2">${escapeHtml(perSeat.summary || '')}</p>
-        `);
-
-        root.innerHTML = html;
-    }
-
-    // ── Audience ────────────────────────────────────────────────
-    function renderAudience(d, root) {
-        const p = d.audience_personas || {};
-        const loyalty = d.customer_loyalty || {};
-        const geo = d.geographic_origin || [];
-        const genreLoyalty = d.genre_loyalty || [];
-        const checkin = d.checkin_analysis || {};
-
-        let html = '';
-
-        html += section('Loialitate cumpărători', `
-            <div class="analiza-kpi-grid">
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(loyalty.one_time)}</div><div class="analiza-kpi__label">Prima cumpărare</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(loyalty.repeat)}</div><div class="analiza-kpi__label">Cumpărători repeat</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(loyalty.regulars)}</div><div class="analiza-kpi__label">Regulari</div></div>
-                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(loyalty.superfans)}</div><div class="analiza-kpi__label">Superfani</div></div>
-            </div>
-        `);
-
-        if (Array.isArray(p.age_buckets) && p.age_buckets.length) {
-            html += section('Distribuție vârste', renderTable(
-                ['Grupă', 'Cumpărători', 'Pondere'],
-                p.age_buckets.map(b => [escapeHtml(b.label), fmtInt(b.count), fmtPct(b.share)]),
-                'Fără date'
-            ));
-        }
-
-        html += section('Origine geografică', renderTable(
-            ['Oraș', 'Cumpărători', 'Pondere'],
-            (geo.cities || geo).slice(0, 15).map(g => [
-                escapeHtml(g.city || g.label || ''),
-                fmtInt(g.buyers || g.count),
-                fmtPct(g.share || g.percentage),
-            ]),
-            'Fără date geografice'
-        ));
-
-        if (Array.isArray(loyalty.superfan_details) && loyalty.superfan_details.length) {
-            html += section('Top superfani', renderTable(
-                ['Nume', 'Email', 'Evenimente', 'Cheltuit'],
-                loyalty.superfan_details.slice(0, 15).map(s => [
-                    escapeHtml(s.name || '—'),
-                    escapeHtml(s.email || ''),
-                    fmtInt(s.events),
-                    fmtMoney(s.total_spent) + ' RON',
-                ]),
-                'Nici un superfan detectat'
-            ));
-        }
-
-        if (Array.isArray(genreLoyalty) && genreLoyalty.length) {
-            html += section('Loialitate pe gen muzical', renderTable(
-                ['Gen', 'Cumpărători recurenți', 'Pondere'],
-                genreLoyalty.slice(0, 15).map(g => [
-                    escapeHtml(g.genre || ''),
-                    fmtInt(g.repeat_buyers),
-                    fmtPct(g.retention_rate),
-                ]),
-                ''
-            ));
-        }
-
-        if (checkin.avg_arrival_time) {
-            html += section('Timp mediu de sosire', `
-                <p class="text-sm text-slate-600">Cumpărătorii sosesc în medie: <strong>${escapeHtml(checkin.avg_arrival_time)}</strong> înainte de eveniment.</p>
-                <p class="text-xs text-slate-500 mt-2">${escapeHtml(checkin.summary || '')}</p>
-            `);
-        }
-
-        root.innerHTML = html;
-    }
-
-    // ── Artists ─────────────────────────────────────────────────
-    function renderArtists(d, root) {
-        let html = '';
-
-        html += section('Artiști la locație', renderTable(
-            ['Artist', 'Concerte', 'Bilete vândute', 'Venit'],
-            (d.artist_performance || []).slice(0, 20).map(a => [
-                escapeHtml(a.name || a.artist_name || ''),
-                fmtInt(a.events),
-                fmtInt(a.tickets_sold),
-                fmtMoney(a.revenue) + ' RON',
-            ]),
-            'Fără date'
-        ));
-
-        html += section('Performanță pe gen', renderTable(
-            ['Gen', 'Evenimente', 'Ocupare medie', 'Venit mediu'],
-            (d.genre_performance || []).slice(0, 15).map(g => [
-                escapeHtml(g.genre || ''),
-                fmtInt(g.events),
-                fmtPct(g.avg_occupancy),
-                fmtMoney(g.avg_revenue) + ' RON',
-            ]),
-            'Fără date'
-        ));
-
-        html += section('Artiști recomandați pentru bookings', renderTable(
-            ['Artist', 'Motivare'],
-            (d.never_played_artists || []).slice(0, 15).map(a => [
-                escapeHtml(a.name || a.artist_name || ''),
-                escapeHtml(a.reason || a.rationale || ''),
-            ]),
-            'Nici o recomandare disponibilă'
-        ));
-
-        root.innerHTML = html;
-    }
-
-    // ── Scheduling ──────────────────────────────────────────────
-    function renderScheduling(d, root) {
-        const heat = d.scheduling_heatmap || {};
-        const dow = d.day_of_week || {};
-        const seas = d.seasonality || {};
-        const idle = d.idle_days || {};
-        const sales = d.sales_intelligence || {};
-
-        let html = '';
-
-        if (Array.isArray(dow.days) && dow.days.length) {
-            html += section('Performanță pe zi a săptămânii', renderTable(
-                ['Zi', 'Evenimente', 'Ocupare medie'],
-                dow.days.map(day => [escapeHtml(day.name), fmtInt(day.events), fmtPct(day.occupancy)]),
-                ''
-            ));
-        }
-
-        if (Array.isArray(seas.months) && seas.months.length) {
-            html += section('Sezonalitate', renderTable(
-                ['Lună', 'Evenimente', 'Bilete'],
-                seas.months.map(m => [escapeHtml(m.month), fmtInt(m.events), fmtInt(m.tickets)]),
-                ''
-            ));
-        }
-
-        html += section('Zile libere / potențial pierdut', `
-            <p class="text-sm text-slate-600">Zile libere pe weekend: <strong>${fmtInt(idle.idle_weekend_days)}</strong></p>
-            <p class="text-sm text-slate-600 mt-1">Venit estimat pierdut: <strong>${fmtMoney(idle.estimated_lost_revenue)} RON</strong></p>
-            <p class="text-xs text-slate-500 mt-3">${escapeHtml(idle.summary || '')}</p>
-        `);
-
-        if (sales.velocity) {
-            html += section('Viteză vânzări', renderTable(
-                ['Eveniment', 'Bilete / zi', 'Zile până la eveniment'],
-                (sales.velocity || []).slice(0, 10).map(v => [
-                    escapeHtml(titleOf(v)),
-                    fmtInt(v.velocity),
-                    fmtInt(v.days_until),
-                ]),
-                ''
-            ));
-        }
-
-        root.innerHTML = html;
-    }
-
-    // ── Opportunities ───────────────────────────────────────────
-    function renderOpportunities(d, root) {
-        let html = '';
-
-        const opps = d.opportunities || {};
-        html += section('Oportunități', `
-            <div class="space-y-3">
-                ${(opps.findings || opps || []).slice(0, 12).map(o => `
-                    <div class="p-3 border rounded-lg border-slate-100 bg-slate-50/40">
-                        <p class="text-sm font-semibold text-slate-900">${escapeHtml(o.title || o.name || '')}</p>
-                        <p class="text-xs text-slate-500 mt-1">${escapeHtml(o.description || o.detail || '')}</p>
-                    </div>
-                `).join('') || '<p class="text-sm text-slate-500">Nici o oportunitate detectată încă.</p>'}
-            </div>
-        `);
-
-        html += section('Alerte churn', renderTable(
-            ['Cumpărător', 'Ultima achiziție', 'Zile de la ultimul eveniment', 'Risc'],
-            (d.churn_alerts || []).slice(0, 15).map(c => [
-                escapeHtml(c.name || c.email || ''),
-                escapeHtml(c.last_purchase || ''),
-                fmtInt(c.days_since),
-                `<span class="analiza-tag analiza-tag--${(c.risk || 'warn')}">${escapeHtml(c.risk_label || c.risk || '')}</span>`,
-            ]),
-            'Fără alerte de risc'
-        ));
-
-        // Event simulator
-        html += section('Simulator eveniment', `
-            <p class="text-sm text-slate-500 mb-4">Verifică ce numere ai avea pentru un eveniment ipotetic la locația ta.</p>
-            <div class="grid gap-3 md:grid-cols-3">
-                <input id="sim-genre" placeholder="Gen (ex: rock)" class="px-3 py-2 text-sm border rounded-lg border-slate-200" />
-                <input id="sim-dow" placeholder="Zi (ex: Vineri)" class="px-3 py-2 text-sm border rounded-lg border-slate-200" />
-                <input id="sim-price" type="number" placeholder="Preț bilet (RON)" class="px-3 py-2 text-sm border rounded-lg border-slate-200" />
-            </div>
-            <button id="sim-run" class="px-4 py-2 mt-3 text-sm font-semibold text-white rounded-lg" style="background:#3b82f6;">Simulează</button>
-            <div id="sim-result" class="mt-4"></div>
-        `);
-
-        root.innerHTML = html;
-
-        // Wire simulator
-        const runBtn = document.getElementById('sim-run');
-        if (runBtn) {
-            runBtn.addEventListener('click', async () => {
-                const genre = document.getElementById('sim-genre').value.trim();
-                const dow   = document.getElementById('sim-dow').value.trim();
-                const price = parseFloat(document.getElementById('sim-price').value);
-                if (!genre || !dow || !price) {
-                    document.getElementById('sim-result').innerHTML = '<p class="text-sm text-red-500">Completează toate câmpurile.</p>';
-                    return;
-                }
-                document.getElementById('sim-result').innerHTML = '<p class="text-sm text-slate-500">Se simulează…</p>';
-                try {
-                    const res = await AmbiletVenueAPI.simulate(genre, dow, price);
-                    if (res && res.success && res.data) {
-                        const r = res.data;
-                        document.getElementById('sim-result').innerHTML = `
-                            <div class="analiza-kpi-grid mt-2">
-                                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtInt(r.estimated_tickets)}</div><div class="analiza-kpi__label">Bilete estimate</div></div>
-                                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtMoney(r.estimated_revenue)} RON</div><div class="analiza-kpi__label">Venit estimat</div></div>
-                                <div class="analiza-kpi"><div class="analiza-kpi__value">${fmtPct(r.estimated_occupancy)}</div><div class="analiza-kpi__label">Ocupare estimată</div></div>
-                            </div>
-                            <p class="mt-3 text-xs text-slate-500">${escapeHtml(r.summary || '')}</p>
-                        `;
-                    } else {
-                        document.getElementById('sim-result').innerHTML = '<p class="text-sm text-red-500">Simulare eșuată.</p>';
-                    }
-                } catch (e) {
-                    console.error(e);
-                    document.getElementById('sim-result').innerHTML = '<p class="text-sm text-red-500">Eroare.</p>';
-                }
-            });
-        }
-    }
-
-    // ── Promotion ───────────────────────────────────────────────
-    function renderPromotion(d, root) {
-        const pp = d.promotion_planner || {};
-        let html = '';
-
-        html += section('Fereastră optimă de anunț', `
-            <p class="text-sm text-slate-600">Cel mai bun moment pentru anunț: <strong>${escapeHtml(pp.optimal_window || '—')}</strong></p>
-            <p class="text-xs text-slate-500 mt-2">${escapeHtml(pp.window_summary || '')}</p>
-        `);
-
-        if (pp.recommended_budget) {
-            html += section('Buget recomandat reclame', `
-                <p class="text-sm text-slate-600">Buget total sugerat: <strong>${fmtMoney(pp.recommended_budget)} RON</strong></p>
-                <p class="text-xs text-slate-500 mt-2">${escapeHtml(pp.budget_summary || '')}</p>
-            `);
-        }
-
-        if (Array.isArray(pp.budget_split) && pp.budget_split.length) {
-            html += section('Distribuție pe platforme', renderTable(
-                ['Platformă', 'Buget (RON)', 'Pondere'],
-                pp.budget_split.map(b => [escapeHtml(b.platform), fmtMoney(b.amount) + ' RON', fmtPct(b.share)]),
-                ''
-            ));
-        }
-
-        root.innerHTML = html;
-    }
-
-    // ── Upcoming ────────────────────────────────────────────────
-    function renderUpcoming(d, root) {
-        const upcoming = d.upcoming || [];
-        root.innerHTML = section('Evenimente ce urmează', renderTable(
-            ['Data', 'Eveniment', 'Locație', 'Vândute'],
-            upcoming.slice(0, 30).map(e => [
-                escapeHtml(e.event_date || ''),
-                escapeHtml(titleOf(e)),
-                escapeHtml(e.venue_name || ''),
-                `${fmtInt(e.tickets_sold)}/${fmtInt(e.capacity)}`,
-            ]),
-            'Niciun eveniment programat'
-        ));
-    }
-
-    // ── Actions ─────────────────────────────────────────────────
-    function renderActions(d, root) {
-        const priorities = d.action_priority || {};
-        const items = priorities.actions || priorities || [];
-        root.innerHTML = section('Priorități acțiune', `
-            <div class="space-y-3">
-                ${(Array.isArray(items) ? items : []).slice(0, 12).map(a => {
-                    const priorityClass = a.priority === 'high' ? 'danger' : a.priority === 'medium' ? 'warn' : 'info';
-                    return `
-                        <div class="p-4 border rounded-lg border-slate-100">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-slate-900">${escapeHtml(a.title || a.action || '')}</p>
-                                    <p class="text-xs text-slate-500 mt-1">${escapeHtml(a.description || '')}</p>
-                                </div>
-                                <span class="analiza-tag analiza-tag--${priorityClass}">${escapeHtml(a.priority_label || a.priority || '')}</span>
-                            </div>
+        const kpiHtml = `
+            <div class="a-card">
+                <div class="a-card-h">Indicatori cheie</div>
+                <div class="a-g3">
+                    ${kpiCards.map(c => `
+                        <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
+                            <div style="font-size:1.5rem;font-weight:700;color:${c.color}">${c.value}</div>
+                            <div style="font-size:.7rem;color:var(--v-muted);text-transform:uppercase;margin-top:.25rem;">${c.label}</div>
                         </div>
-                    `;
-                }).join('') || '<p class="text-sm text-slate-500">Nici o acțiune prioritară detectată.</p>'}
-            </div>
-        `);
-    }
-
-    // ── Section + table helpers ─────────────────────────────────
-    function section(title, body) {
-        return `<div class="analiza-section"><h3>${title}</h3>${body}</div>`;
-    }
-
-    function renderTable(headers, rows, emptyMsg) {
-        if (!rows || !rows.length) {
-            return `<p class="text-sm text-slate-500 py-4 text-center">${emptyMsg || 'Fără date'}</p>`;
-        }
-        return `
-            <div class="overflow-x-auto -mx-2">
-                <table class="analiza-table">
-                    <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-                    <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>
-                </table>
+                    `).join('')}
+                </div>
             </div>
         `;
+
+        const healthHtml = h.score !== undefined ? `
+            <div class="a-card">
+                <div class="a-card-h">Scor sănătate locație</div>
+                <div style="display:flex;gap:1rem;align-items:center;">
+                    <div style="position:relative;width:6rem;height:6rem;flex-shrink:0;">
+                        <svg viewBox="0 0 36 36" style="width:100%;height:100%;">
+                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#e2e8f0" stroke-width="3"/>
+                            <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="${healthColor}" stroke-width="3" stroke-dasharray="${h.score || 0}, 100"/>
+                        </svg>
+                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:${healthColor}">${Math.round(h.score || 0)}</div>
+                    </div>
+                    <div style="flex:1;">
+                        <p style="font-size:.875rem;font-weight:600;color:var(--v-text);">${escapeHtml(h.status || '')}</p>
+                        ${h.components ? '<div style="margin-top:.5rem;font-size:.75rem;color:var(--v-muted);">' + Object.entries(h.components).map(([k, v]) => `${escapeHtml(k)}: <strong>${v}</strong>`).join(' · ') + '</div>' : ''}
+                    </div>
+                </div>
+            </div>
+        ` : '';
+
+        let momentumHtml = '';
+        if (m && (m.events_delta !== undefined || m.metrics)) {
+            const items = m.metrics || [
+                { label: 'Evenimente',      value: m.events_current, direction: (m.events_delta || 0) >= 0 ? 'up' : 'down' },
+                { label: 'Bilete',          value: m.tickets_current, direction: (m.tickets_delta || 0) >= 0 ? 'up' : 'down' },
+                { label: 'Venit',           value: fmtMoney(m.revenue_current) + ' RON', direction: (m.revenue_delta || 0) >= 0 ? 'up' : 'down' },
+                { label: 'Ocupare',         value: (m.st_current || 0) + '%', direction: (m.st_delta || 0) >= 0 ? 'up' : 'down' },
+            ];
+            momentumHtml = `
+                <div class="a-card">
+                    <div class="a-card-h">Impuls lunar</div>
+                    <div class="a-g3">
+                        ${items.map(x => {
+                            const arrow = x.direction === 'up' ? '↑' : x.direction === 'down' ? '↓' : '→';
+                            const color = x.direction === 'up' ? 'var(--v-success)' : x.direction === 'down' ? 'var(--v-danger)' : 'var(--v-muted)';
+                            return `<div style="text-align:center;padding:.5rem;background:#f8fafc;border-radius:.5rem;">
+                                <div style="font-size:1.25rem;font-weight:700;">${x.value ?? '—'} <span style="color:${color};font-size:.875rem;">${arrow}</span></div>
+                                <div style="font-size:.7rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(x.label || '')}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        const header = document.getElementById('analiza-header');
+        header.innerHTML = `<div class="space-y-4">${kpiHtml}${healthHtml}${momentumHtml}</div>`;
+        header.classList.remove('hidden');
+    }
+
+    // ── Render all tabs (skeleton, charts drawn lazily) ─────────
+    function renderAllTabs() {
+        document.getElementById('tab-overview').innerHTML     = renderOverview();
+        document.getElementById('tab-financial').innerHTML    = renderFinancial();
+        document.getElementById('tab-audience').innerHTML     = renderAudience();
+        document.getElementById('tab-artists').innerHTML      = renderArtists();
+        document.getElementById('tab-scheduling').innerHTML   = renderScheduling();
+        document.getElementById('tab-opportunities').innerHTML = renderOpportunities();
+        document.getElementById('tab-promotion').innerHTML    = renderPromotion();
+        document.getElementById('tab-upcoming').innerHTML     = renderUpcoming();
+        document.getElementById('tab-actions').innerHTML      = renderActions();
+        wireInteractive();
+    }
+
+    // ── OVERVIEW ────────────────────────────────────────────────
+    function renderOverview() {
+        const d = state.data;
+        let html = '';
+
+        // Charts
+        if (d.months && d.months.length) {
+            html += `
+                <div class="a-g2">
+                    <div class="a-card"><div class="a-card-h">Evenimente & Bilete / lună</div>
+                        <div style="height:220px;position:relative;"><canvas id="chart-yearly-evtx"></canvas></div>
+                    </div>
+                    <div class="a-card"><div class="a-card-h">Venit & Ocupare / lună</div>
+                        <div style="height:220px;position:relative;"><canvas id="chart-yearly-revocc"></canvas></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event Performance
+        const evPerf = d.eventPerformance || [];
+        if (evPerf.length) {
+            html += `
+                <div class="a-card">
+                    <div class="a-card-h">Performanță evenimente (${evPerf.length})</div>
+                    <div style="overflow-x:auto;">
+                        <table class="a-tbl">
+                            <thead><tr>
+                                <th>Data</th><th>Eveniment</th><th>Artiști</th>
+                                <th style="text-align:right">Sold</th><th style="text-align:right">Cap.</th>
+                                <th style="text-align:right">ST</th><th style="text-align:right">Venit</th><th style="text-align:right">Check-in</th>
+                            </tr></thead>
+                            <tbody>
+                                ${evPerf.slice(0, 25).map(ev => `
+                                    <tr style="${ev.is_past ? 'opacity:.65' : ''}">
+                                        <td style="white-space:nowrap;">${fmtDate(ev.date)}</td>
+                                        <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(truncate(ev.title, 40))}</td>
+                                        <td style="color:var(--v-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(truncate(ev.artists || '', 35))}</td>
+                                        <td style="text-align:right;font-family:monospace;">${fmtInt(ev.sold)}</td>
+                                        <td style="text-align:right;color:var(--v-muted);font-family:monospace;">${ev.capacity || '—'}</td>
+                                        <td style="text-align:right;font-weight:700;color:${stColor(ev.sell_through || 0)}">${ev.sell_through !== null ? ev.sell_through + '%' : '—'}</td>
+                                        <td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(ev.revenue)}</td>
+                                        <td style="text-align:right;color:var(--v-muted);">${ev.checkin_rate !== null ? ev.checkin_rate + '%' : '—'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Weekend vs Weekday + YoY
+        const rb = d.revenueBreakdown || {};
+        const dayType = rb.revenue_by_day_type || [];
+        const yoy = rb.yoy || {};
+        if (dayType.length || (yoy.last_12 || 0) > 0) {
+            html += `<div class="a-g2">
+                ${dayType.length ? `
+                    <div class="a-card"><div class="a-card-h">Weekend vs Weekday</div>
+                        ${dayType.map(dt => `
+                            <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px dashed var(--v-ring);">
+                                <span style="font-weight:600;">${escapeHtml(dt.day_type || '')}</span>
+                                <span style="color:var(--v-muted);font-size:.8125rem;">${fmtInt(dt.events)} ev · ${dt.avg_st}% ST · ${fmtMoney(dt.avg_revenue)} avg</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                ${(yoy.last_12 || 0) > 0 ? `
+                    <div class="a-card"><div class="a-card-h">An vs an</div>
+                        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                            <div><div style="color:var(--v-muted);font-size:.7rem;">Ultimele 12 luni</div><div style="font-size:1.375rem;font-weight:700;color:var(--v-warn);">${fmtMoney(yoy.last_12)} RON</div></div>
+                            <div><div style="color:var(--v-muted);font-size:.7rem;">Anterioarele 12</div><div style="font-size:1.375rem;font-weight:700;color:var(--v-muted);">${fmtMoney(yoy.prev_12)} RON</div></div>
+                            ${yoy.change_pct !== null ? `<div style="font-size:1.125rem;font-weight:700;color:${yoy.change_pct >= 0 ? 'var(--v-success)' : 'var(--v-danger)'}">${yoy.change_pct >= 0 ? '+' : ''}${yoy.change_pct}%</div>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>`;
+        }
+
+        // Competitor benchmark + Revenue per Seat
+        const bench = d.competitorBenchmark || {};
+        const rps = d.revenuePerSeat || {};
+        if ((bench.city_avg && bench.my) || (rps.avg_rev_per_seat || 0) > 0) {
+            html += `<div class="a-g2">
+                ${bench.city_avg ? `
+                    <div class="a-card"><div class="a-card-h">Comparație oraș</div>
+                        <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
+                            <div style="text-align:center;"><div style="color:var(--v-muted);font-size:.7rem;">Al tău</div><div style="font-size:1.5rem;font-weight:700;color:var(--v-accent);">${bench.my.avg_st}%</div></div>
+                            <div style="text-align:center;"><div style="color:var(--v-muted);font-size:.7rem;">Oraș</div><div style="font-size:1.5rem;font-weight:700;color:var(--v-muted);">${bench.city_avg.avg_st}%</div></div>
+                            ${bench.vs_city !== null ? `<div style="text-align:center;"><div style="color:var(--v-muted);font-size:.7rem;">Diferență</div><div style="font-size:1.5rem;font-weight:700;color:${bench.vs_city >= 0 ? 'var(--v-success)' : 'var(--v-danger)'}">${bench.vs_city >= 0 ? '+' : ''}${bench.vs_city}%</div></div>` : ''}
+                        </div>
+                        ${bench.competitors && bench.competitors.length ? `
+                            <div style="font-size:.75rem;font-weight:600;color:var(--v-muted);margin-bottom:.25rem;">Alte locații în oraș</div>
+                            ${bench.competitors.slice(0, 5).map(c => `
+                                <div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem;border-bottom:1px dashed var(--v-ring);">
+                                    <span>${escapeHtml(c.name)} <span style="color:var(--v-muted);">(${fmtInt(c.capacity)} loc)</span></span>
+                                    <span>${c.events} ev · <span style="font-weight:600;color:${c.avg_st > bench.my.avg_st ? 'var(--v-danger)' : 'var(--v-success)'}">${c.avg_st}%</span> · ${c.avg_price} RON</span>
+                                </div>
+                            `).join('')}
+                        ` : ''}
+                    </div>
+                ` : ''}
+                ${(rps.avg_rev_per_seat || 0) > 0 ? `
+                    <div class="a-card"><div class="a-card-h">Venit / loc</div>
+                        <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
+                            <div><div style="color:var(--v-muted);font-size:.7rem;">Mediu / loc / eveniment</div><div style="font-size:1.5rem;font-weight:700;color:var(--v-warn);">${fmtMoney(rps.avg_rev_per_seat)} RON</div></div>
+                            <div><div style="color:var(--v-muted);font-size:.7rem;">Capacitate</div><div style="font-size:1.5rem;font-weight:700;">${fmtInt(rps.capacity)}</div></div>
+                        </div>
+                        ${rps.best_event ? `<div style="padding:.5rem .75rem;background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.15);border-radius:.5rem;font-size:.75rem;">Cel mai bun: <strong>${escapeHtml(rps.best_event.title)}</strong> — ${fmtMoney(rps.best_event.rev_per_seat)} RON/loc (${fmtMoney(rps.best_event.revenue)} total)</div>` : ''}
+                    </div>
+                ` : ''}
+            </div>`;
+        }
+
+        return html || '<div class="a-card"><p class="text-sm text-slate-500">Nu există date suficiente pentru vederea generală.</p></div>';
+    }
+
+    function renderOverviewCharts() {
+        const d = state.data;
+        if (!d.months || !d.months.length) return;
+
+        // Kill any old charts before recreating (venue picker change).
+        Object.values(state.charts).forEach(c => c && c.destroy && c.destroy());
+        state.charts = {};
+
+        const evTx = document.getElementById('chart-yearly-evtx');
+        if (evTx) {
+            state.charts.evTx = new Chart(evTx, {
+                type: 'bar',
+                data: {
+                    labels: d.months,
+                    datasets: [
+                        { label: 'Evenimente', data: d.eventsSeries, backgroundColor: 'rgba(59,130,246,.7)', yAxisID: 'y1' },
+                        { label: 'Bilete', data: d.ticketsSeries, type: 'line', borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,.2)', yAxisID: 'y2', tension: 0.3 },
+                    ],
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y1: { position: 'left', beginAtZero: true }, y2: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } } },
+            });
+        }
+        const revOcc = document.getElementById('chart-yearly-revocc');
+        if (revOcc) {
+            state.charts.revOcc = new Chart(revOcc, {
+                type: 'line',
+                data: {
+                    labels: d.months,
+                    datasets: [
+                        { label: 'Venit (RON)', data: d.revenueSeries, borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.15)', yAxisID: 'y1', tension: 0.3, fill: true },
+                        { label: 'Ocupare (%)', data: d.occupancySeries, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.15)', yAxisID: 'y2', tension: 0.3 },
+                    ],
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y1: { position: 'left', beginAtZero: true }, y2: { position: 'right', beginAtZero: true, max: 100, grid: { drawOnChartArea: false } } } },
+            });
+        }
+    }
+
+    // ── FINANCIAL ───────────────────────────────────────────────
+    function renderFinancial() {
+        const d = state.data;
+        const rb = d.revenueBreakdown || {};
+        const pi = d.pricingIntelligence || {};
+        const rf = d.revenueForecast || {};
+        const refunds = d.refundAnalysis || {};
+        let html = '';
+
+        // Top Artists by Revenue
+        if (rb.top_artists_by_revenue && rb.top_artists_by_revenue.length) {
+            html += `<div class="a-card"><div class="a-card-h">Top artiști după venit</div>
+                <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev.</th><th style="text-align:right">Venit</th><th style="text-align:right">ST med</th></tr></thead>
+                <tbody>${rb.top_artists_by_revenue.map(a => `
+                    <tr><td style="font-weight:600;">${escapeHtml(a.name)}</td><td style="text-align:right;">${fmtInt(a.events)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(a.total_revenue)}</td><td style="text-align:right;">${a.avg_st}%</td></tr>
+                `).join('')}</tbody></table></div>`;
+        }
+
+        // Genre + Channel
+        html += `<div class="a-g2">
+            ${rb.revenue_by_genre && rb.revenue_by_genre.length ? `
+                <div class="a-card"><div class="a-card-h">Venit pe gen muzical</div>
+                    ${rb.revenue_by_genre.map(g => `
+                        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px dashed var(--v-ring);font-size:.8125rem;">
+                            <span>${escapeHtml(g.genre)} <span style="color:var(--v-muted);font-size:.7rem;">(${g.events} ev)</span></span>
+                            <span style="color:var(--v-warn);font-family:monospace;font-weight:600;">${fmtMoney(g.revenue)} RON</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            ${rb.revenue_by_channel && rb.revenue_by_channel.length ? `
+                <div class="a-card"><div class="a-card-h">Venit pe canal</div>
+                    ${rb.revenue_by_channel.map(c => `
+                        <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px dashed var(--v-ring);font-size:.8125rem;">
+                            <span>${escapeHtml(c.source || 'unknown')} <span style="color:var(--v-muted);font-size:.7rem;">(${c.orders || 0} comenzi)</span></span>
+                            <span style="color:var(--v-warn);font-family:monospace;font-weight:600;">${fmtMoney(c.revenue || 0)} RON</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>`;
+
+        // Pricing Intelligence
+        if (pi.price_buckets && pi.price_buckets.length) {
+            html += `<div class="a-g2">
+                <div class="a-card"><div class="a-card-h">Sensibilitate preț ${pi.sweet_spot ? `<span style="color:var(--v-success);font-size:.7rem;margin-left:.5rem;">Sweet spot: ${pi.sweet_spot} RON</span>` : ''}</div>
+                    ${pi.price_buckets.map(pb => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;">
+                            <span style="font-size:.8125rem;">${escapeHtml(pb.range)} RON</span>
+                            <div style="display:flex;align-items:center;gap:.5rem;">
+                                <div class="a-progress" style="width:6.25rem;"><div class="a-progress-fill" style="width:${Math.min(pb.sell_through, 100)}%;background:var(--v-success);"></div></div>
+                                <span style="font-family:monospace;color:var(--v-muted);width:2.5rem;text-align:right;font-size:.75rem;">${pb.sell_through}%</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="space-y-3">
+                    ${pi.underpriced && pi.underpriced.length ? `
+                        <div class="a-card"><div class="a-card-h" style="color:var(--v-warn);">Under-priced (>90% ST)</div>
+                            ${pi.underpriced.map(u => `<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem;"><span>${escapeHtml(truncate(u.title, 30))}</span><span style="color:var(--v-success);font-weight:600;">${u.sell_through}% · ${u.avg_price} RON</span></div>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${pi.overpriced && pi.overpriced.length ? `
+                        <div class="a-card"><div class="a-card-h" style="color:var(--v-danger);">Over-priced (<30% ST)</div>
+                            ${pi.overpriced.map(o => `<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem;"><span>${escapeHtml(truncate(o.title, 30))}</span><span style="color:var(--v-danger);font-weight:600;">${o.sell_through}% · ${o.avg_price} RON</span></div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>`;
+        }
+
+        // Revenue Forecast
+        if (rf.forecast && rf.forecast.length) {
+            html += `<div class="a-card"><div class="a-card-h">Prognoză venituri (6 luni) ${rf.yoy_change_pct !== null ? `<span style="color:${rf.yoy_change_pct >= 0 ? 'var(--v-success)' : 'var(--v-danger)'};font-size:.7rem;margin-left:.5rem;">YoY: ${rf.yoy_change_pct >= 0 ? '+' : ''}${rf.yoy_change_pct}%</span>` : ''}</div>
+                <table class="a-tbl"><thead><tr><th>Lună</th><th style="text-align:right">Pesimist</th><th style="text-align:right">Realist</th><th style="text-align:right">Optimist</th></tr></thead>
+                <tbody>${rf.forecast.map(f => `
+                    <tr><td>${escapeHtml(f.month)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${fmtMoney(f.pessimistic)}</td><td style="text-align:right;font-weight:600;color:var(--v-warn);font-family:monospace;">${fmtMoney(f.realistic)}</td><td style="text-align:right;color:var(--v-success);font-family:monospace;">${fmtMoney(f.optimistic)}</td></tr>
+                `).join('')}</tbody></table>
+            </div>`;
+        }
+
+        // Refunds
+        if ((refunds.total_refunds || 0) > 0) {
+            const refColor = refunds.refund_rate > 5 ? 'var(--v-danger)' : refunds.refund_rate > 2 ? 'var(--v-warn)' : 'var(--v-success)';
+            html += `<div class="a-card"><div class="a-card-h">Rambursări & anulări</div>
+                <div class="a-g3" style="margin-bottom:.75rem;">
+                    <div><div style="color:var(--v-muted);font-size:.7rem;">Total comenzi</div><div style="font-size:1.25rem;font-weight:700;">${fmtInt(refunds.total_orders)}</div></div>
+                    <div><div style="color:var(--v-muted);font-size:.7rem;">Rambursări</div><div style="font-size:1.25rem;font-weight:700;color:var(--v-danger);">${fmtInt(refunds.total_refunds)}</div></div>
+                    <div><div style="color:var(--v-muted);font-size:.7rem;">Rată</div><div style="font-size:1.25rem;font-weight:700;color:${refColor};">${refunds.refund_rate}%</div></div>
+                    <div><div style="color:var(--v-muted);font-size:.7rem;">Venit pierdut</div><div style="font-size:1.25rem;font-weight:700;color:var(--v-danger);">${fmtMoney(refunds.refund_revenue_lost)} RON</div></div>
+                </div>
+                ${refunds.by_event && refunds.by_event.length ? `
+                    <div style="font-size:.75rem;font-weight:600;color:var(--v-muted);margin-bottom:.4rem;">Top evenimente rambursate</div>
+                    <table class="a-tbl"><thead><tr><th>Eveniment</th><th style="text-align:right">Com.</th><th style="text-align:right">Ramb.</th><th style="text-align:right">Rată</th><th style="text-align:right">Venit pierdut</th></tr></thead>
+                    <tbody>${refunds.by_event.slice(0, 8).map(re => `
+                        <tr><td style="font-weight:600;">${escapeHtml(truncate(re.title, 35))} <span style="color:var(--v-muted);font-size:.7rem;">${fmtDate(re.date)}</span></td><td style="text-align:right;">${re.total_orders}</td><td style="text-align:right;color:var(--v-danger);">${re.refunds}</td><td style="text-align:right;font-weight:700;color:${re.refund_rate > 10 ? 'var(--v-danger)' : 'var(--v-muted)'}">${re.refund_rate}%</td><td style="text-align:right;font-family:monospace;color:var(--v-danger);">${fmtMoney(re.lost_revenue)}</td></tr>
+                    `).join('')}</tbody></table>
+                ` : ''}
+            </div>`;
+        }
+
+        return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date financiare.</p></div>';
+    }
+
+    // ── AUDIENCE ────────────────────────────────────────────────
+    function renderAudience() {
+        const d = state.data;
+        const personas = (d.audiencePersonas && d.audiencePersonas.personas) || [];
+        const totals = (d.audiencePersonas && d.audiencePersonas.totals) || {};
+        const loyalty = d.customerLoyalty || {};
+        const geo = d.geographicOrigin || {};
+        const gLoyalty = d.genreLoyalty || [];
+        let html = '';
+
+        // Personas
+        if (personas.length) {
+            html += `<div class="a-card"><div class="a-card-h">Persoane public (${totals.total_customers || 0} cumpărători)</div>
+                <div class="a-g3">${personas.map(p => `
+                    <div style="padding:.875rem;border-radius:.5rem;background:rgba(59,130,246,.04);border:1px solid var(--v-ring);">
+                        <div style="font-size:.7rem;font-weight:600;color:var(--v-accent);text-transform:uppercase;margin-bottom:.4rem;">${escapeHtml(p.label || '')}</div>
+                        <div style="font-size:1rem;font-weight:700;">${escapeHtml(p.age_group || '')} / ${escapeHtml(p.gender || '')}</div>
+                        <div style="color:var(--v-muted);font-size:.75rem;margin-top:.25rem;">${fmtInt(p.count)} (${p.percentage}%)</div>
+                        <div style="color:var(--v-muted);font-size:.75rem;">Cheltuială medie: ${fmtMoney(p.avg_spend)} RON</div>
+                        ${p.top_cities && Object.keys(p.top_cities).length ? `<div style="color:var(--v-muted);font-size:.7rem;margin-top:.25rem;">Orașe: ${escapeHtml(Object.keys(p.top_cities).join(', '))}</div>` : ''}
+                    </div>
+                `).join('')}</div>
+            </div>`;
+        }
+
+        // Age + Gender
+        const ageDist = totals.age_distribution || {};
+        const genderDist = totals.gender_overall || {};
+        if (Object.keys(ageDist).length || Object.keys(genderDist).length) {
+            const maxAge = Math.max(1, ...Object.values(ageDist).map(v => Number(v) || 0));
+            const totalGender = Math.max(1, Object.values(genderDist).reduce((a, b) => a + Number(b || 0), 0));
+            html += `<div class="a-g2">
+                ${Object.keys(ageDist).length ? `
+                    <div class="a-card"><div class="a-card-h">Distribuție vârste</div>
+                        ${Object.entries(ageDist).map(([ag, c]) => `
+                            <div style="display:flex;align-items:center;gap:.5rem;padding:.25rem 0;">
+                                <span style="width:3rem;font-size:.75rem;font-weight:600;">${escapeHtml(ag)}</span>
+                                <div class="a-progress" style="flex:1;height:1.125rem;border-radius:.375rem;">
+                                    <div class="a-progress-fill" style="width:${Math.round(c / maxAge * 100)}%;background:linear-gradient(90deg,rgba(99,102,241,.7),rgba(6,182,212,.7));border-radius:.375rem;display:flex;align-items:center;padding-left:.4rem;">
+                                        <span style="font-size:.65rem;font-weight:600;color:white;">${fmtInt(c)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                ${Object.keys(genderDist).length ? `
+                    <div class="a-card"><div class="a-card-h">Distribuție gen</div>
+                        <div style="display:flex;gap:1rem;align-items:center;justify-content:center;padding:.5rem 0;flex-wrap:wrap;">
+                            ${Object.entries(genderDist).map(([g, c]) => {
+                                const pct = Math.round(c / totalGender * 1000) / 10;
+                                const color = g.toLowerCase() === 'male' ? 'var(--v-primary)' : g.toLowerCase() === 'female' ? '#c084fc' : 'var(--v-muted)';
+                                const label = g === 'male' ? 'Masculin' : g === 'female' ? 'Feminin' : g;
+                                return `<div style="text-align:center;"><div style="font-size:2rem;font-weight:700;color:${color};">${pct}%</div><div style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(label)}</div><div style="font-size:.7rem;color:var(--v-muted);">${fmtInt(c)}</div></div>`;
+                            }).join('')}
+                        </div>
+                        <div style="display:flex;height:.75rem;border-radius:.375rem;overflow:hidden;margin-top:.5rem;">
+                            ${Object.entries(genderDist).map(([g, c]) => {
+                                const pct = Math.round(c / totalGender * 1000) / 10;
+                                const color = g.toLowerCase() === 'male' ? 'var(--v-primary)' : g.toLowerCase() === 'female' ? '#c084fc' : 'var(--v-muted)';
+                                return `<div style="width:${pct}%;background:${color};"></div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>`;
+        }
+
+        // Loyalty + Geographic
+        html += `<div class="a-g2">
+            ${(loyalty.total || 0) > 0 ? `
+                <div class="a-card"><div class="a-card-h">Loialitate cumpărători</div>
+                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;text-align:center;">
+                        ${[['total','Total','var(--v-text)'],['one_time','O dată','var(--v-muted)'],['repeat','Repeat','var(--v-primary)'],['regulars','Regulari','var(--v-accent)'],['superfan','Superfani','var(--v-warn)']].map(([k, l, c]) => `
+                            <div><div style="font-size:1.25rem;font-weight:700;color:${c};">${fmtInt(loyalty[k])}</div><div style="font-size:.625rem;color:var(--v-muted);">${l}</div></div>
+                        `).join('')}
+                    </div>
+                    <div style="text-align:center;margin-top:.625rem;font-size:.8125rem;"><span style="color:var(--v-success);font-weight:700;">${loyalty.repeat_rate}%</span> <span style="color:var(--v-muted);">rată repetare</span></div>
+                </div>
+            ` : ''}
+            ${geo.cities && geo.cities.length ? `
+                <div class="a-card"><div class="a-card-h">De unde vin cumpărătorii <span style="color:var(--v-accent);font-size:.7rem;margin-left:.5rem;">${geo.out_of_town_ratio}% din alt oraș</span></div>
+                    <div style="max-height:18rem;overflow-y:auto;">
+                    <table class="a-tbl"><thead><tr><th>Oraș</th><th style="text-align:right">Cumpărători</th><th style="text-align:right">Venit</th><th style="text-align:right">Chelt. medie</th></tr></thead>
+                    <tbody>${geo.cities.slice(0, 15).map(c => `
+                        <tr><td style="font-weight:600;">${escapeHtml(c.city)}</td><td style="text-align:right;">${fmtInt(c.customer_count)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(c.total_revenue)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${fmtMoney(c.avg_spend)}</td></tr>
+                    `).join('')}</tbody></table></div>
+                </div>
+            ` : ''}
+        </div>`;
+
+        // Superfans
+        if (loyalty.superfan_details && loyalty.superfan_details.length) {
+            html += `<div class="a-card"><div class="a-card-h">Top superfani</div>
+                <table class="a-tbl"><thead><tr><th>Nume</th><th>Email</th><th>Oraș</th><th style="text-align:right">Evenimente</th><th style="text-align:right">Total cheltuit</th></tr></thead>
+                <tbody>${loyalty.superfan_details.slice(0, 15).map(sf => `
+                    <tr><td style="font-weight:600;">${escapeHtml(sf.name)}</td><td style="color:var(--v-muted);">${escapeHtml(sf.email)}</td><td>${escapeHtml(sf.city || '')}</td><td style="text-align:right;">${fmtInt(sf.events)}</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(sf.total_spent)}</td></tr>
+                `).join('')}</tbody></table></div>`;
+        }
+
+        // Genre Loyalty
+        if (gLoyalty.length) {
+            html += `<div class="a-card"><div class="a-card-h">Cumpărători recurenți pe gen — Ce genuri construiesc loialitate?</div>
+                <table class="a-tbl"><thead><tr><th>Gen</th><th style="text-align:right">Total</th><th style="text-align:right">Recurenți</th><th style="text-align:right">Rată</th><th style="text-align:right">Ev./cumpărător</th></tr></thead>
+                <tbody>${gLoyalty.map(g => `
+                    <tr><td style="font-weight:600;">${escapeHtml(g.genre)}</td><td style="text-align:right;">${fmtInt(g.total_buyers)}</td><td style="text-align:right;color:var(--v-accent);">${fmtInt(g.repeat_buyers)}</td><td style="text-align:right;font-weight:700;color:${g.repeat_rate >= 20 ? 'var(--v-success)' : g.repeat_rate >= 10 ? 'var(--v-warn)' : 'var(--v-muted)'};">${g.repeat_rate}%</td><td style="text-align:right;font-family:monospace;">${g.avg_events_per_buyer}</td></tr>
+                `).join('')}</tbody></table></div>`;
+        }
+
+        return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date despre public.</p></div>';
+    }
+
+    // ── ARTISTS ─────────────────────────────────────────────────
+    function renderArtists() {
+        const d = state.data;
+        const ap = d.artistPerformance || [];
+        const gp = d.genrePerformance || [];
+        const np = d.neverPlayed || [];
+        let html = '';
+
+        if (ap.length) {
+            html += `<div class="a-card"><div class="a-card-h">Performanță artiști la locație (${ap.length})</div>
+                <div style="overflow-x:auto;">
+                <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev.</th><th style="text-align:right">Bilete</th><th style="text-align:right">ST med</th><th style="text-align:right">Best ST</th><th style="text-align:right">Venit med</th></tr></thead>
+                <tbody>${ap.slice(0, 20).map(a => `
+                    <tr><td style="font-weight:600;">${escapeHtml(a.artist_name)}</td><td style="text-align:right;">${a.events_count}</td><td style="text-align:right;font-family:monospace;">${fmtInt(a.total_tickets)}</td><td style="text-align:right;font-weight:700;color:${stColor(a.avg_sell_through)};">${a.avg_sell_through}%</td><td style="text-align:right;color:var(--v-muted);">${a.best_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(a.avg_revenue)}</td></tr>
+                `).join('')}</tbody></table></div>
+            </div>`;
+        }
+
+        if (gp.length) {
+            html += `<div class="a-card"><div class="a-card-h">Performanță pe gen</div>
+                <table class="a-tbl"><thead><tr><th>Gen</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th><th style="text-align:right">Preț med</th><th style="text-align:right">Bilete</th></tr></thead>
+                <tbody>${gp.map(g => `
+                    <tr><td style="font-weight:600;">${escapeHtml(g.genre)}</td><td style="text-align:right;">${g.events_count}</td><td style="text-align:right;font-weight:700;color:${g.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${g.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(g.avg_revenue)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${g.avg_ticket_price}</td><td style="text-align:right;font-family:monospace;">${fmtInt(g.total_tickets)}</td></tr>
+                `).join('')}</tbody></table></div>`;
+        }
+
+        if (np.length) {
+            html += `<div class="a-card"><div class="a-card-h">Artiști de considerat pentru bookings</div>
+                <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev. în oraș</th><th style="text-align:right">ST med</th><th style="text-align:right">Public estimat</th></tr></thead>
+                <tbody>${np.slice(0, 15).map(n => `
+                    <tr><td style="font-weight:600;">${escapeHtml(n.artist_name)}</td><td style="text-align:right;">${n.city_events}</td><td style="text-align:right;font-weight:700;color:var(--v-success);">${n.avg_sell_through}%</td><td style="text-align:right;font-family:monospace;">${fmtInt(n.estimated_draw)}</td></tr>
+                `).join('')}</tbody></table></div>`;
+        }
+
+        return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date artiști.</p></div>';
+    }
+
+    // ── SCHEDULING ──────────────────────────────────────────────
+    function renderScheduling() {
+        const d = state.data;
+        const heatmap = d.schedulingHeatmap || {};
+        const dow = d.dayOfWeek || [];
+        const season = d.seasonality || [];
+        const idle = d.idleDays || {};
+        const si = d.salesIntelligence || {};
+        const optFreq = si.optimal_frequency || [];
+        const timing = si.purchase_timing || {};
+        const velCurves = si.velocity_curves || [];
+        let html = '';
+
+        // Heatmap
+        if (heatmap.matrix) {
+            html += `<div class="a-card"><div class="a-card-h">Heatmap performanță (zi × lună)</div>
+                <div style="overflow-x:auto;"><table style="width:100%;font-size:.75rem;border-collapse:collapse;">
+                    <thead><tr><th style="padding:.4rem;"></th>${(heatmap.months || []).map(m => `<th style="padding:.4rem;color:var(--v-muted);text-align:center;font-weight:600;">${escapeHtml(m)}</th>`).join('')}</tr></thead>
+                    <tbody>${(heatmap.days || []).map((dayName, di) => `
+                        <tr><td style="padding:.4rem;font-weight:600;color:var(--v-muted);">${escapeHtml(dayName)}</td>${Array.from({length: 12}, (_, mi) => {
+                            const cell = heatmap.matrix[di] && heatmap.matrix[di][mi];
+                            const st = cell ? cell.st : null;
+                            const bg = st === null ? 'transparent' : st >= 75 ? 'rgba(5,150,105,.3)' : st >= 50 ? 'rgba(217,119,6,.2)' : st > 0 ? 'rgba(220,38,38,.15)' : 'transparent';
+                            return `<td style="padding:.4rem;text-align:center;background:${bg};border-radius:.25rem;color:${st !== null ? 'var(--v-text)' : 'var(--v-muted)'};font-weight:${st !== null ? '600' : '400'};">${st !== null ? st + '%' : '·'}</td>`;
+                        }).join('')}</tr>
+                    `).join('')}</tbody>
+                </table></div>
+            </div>`;
+        }
+
+        // Day of Week + Seasonality
+        html += `<div class="a-g2">
+            ${dow.length ? `
+                <div class="a-card"><div class="a-card-h">Zi a săptămânii</div>
+                    <table class="a-tbl"><thead><tr><th>Zi</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th></tr></thead>
+                    <tbody>${dow.map(x => `
+                        <tr><td style="font-weight:600;">${escapeHtml(x.day)}</td><td style="text-align:right;">${x.events}</td><td style="text-align:right;font-weight:700;color:${x.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${x.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(x.avg_revenue)}</td></tr>
+                    `).join('')}</tbody></table>
+                </div>
+            ` : ''}
+            ${season.length ? `
+                <div class="a-card"><div class="a-card-h">Sezonalitate</div>
+                    <table class="a-tbl"><thead><tr><th>Lună</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th><th style="text-align:right">Idle</th></tr></thead>
+                    <tbody>${season.map(s => `
+                        <tr><td style="font-weight:600;">${escapeHtml(s.month)}</td><td style="text-align:right;">${s.events}</td><td style="text-align:right;font-weight:700;color:${s.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${s.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(s.avg_revenue)}</td><td style="text-align:right;color:${s.idle_days > 20 ? 'var(--v-danger)' : 'var(--v-muted)'};">${s.idle_days}</td></tr>
+                    `).join('')}</tbody></table>
+                </div>
+            ` : ''}
+        </div>`;
+
+        // Idle + Frequency
+        html += `<div class="a-g2">
+            ${(idle.total_idle_weekend_days || 0) > 0 ? `
+                <div class="a-card"><div class="a-card-h">Zile weekend libere (ultimele 12 luni)</div>
+                    <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                        <div><div style="color:var(--v-muted);font-size:.7rem;">Vin/Sâm/Dum libere</div><div style="font-size:1.75rem;font-weight:700;color:var(--v-danger);">${idle.total_idle_weekend_days}</div></div>
+                        <div><div style="color:var(--v-muted);font-size:.7rem;">Venit mediu / ev.</div><div style="font-size:1.125rem;font-weight:700;color:var(--v-warn);">${fmtMoney(idle.avg_revenue_per_event)} RON</div></div>
+                        <div><div style="color:var(--v-muted);font-size:.7rem;">Venit pierdut est.</div><div style="font-size:1.125rem;font-weight:700;color:var(--v-danger);">${fmtMoney(idle.estimated_lost_revenue)} RON</div></div>
+                    </div>
+                </div>
+            ` : ''}
+            ${optFreq.length ? `
+                <div class="a-card"><div class="a-card-h">Frecvență optimă</div>
+                    <table class="a-tbl"><thead><tr><th>Frecvență</th><th style="text-align:right">Săpt.</th><th style="text-align:right">ST med</th></tr></thead>
+                    <tbody>${optFreq.map(o => `
+                        <tr><td style="font-weight:600;">${escapeHtml(o.frequency)}</td><td style="text-align:right;">${o.weeks}</td><td style="text-align:right;font-weight:700;color:${o.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${o.avg_sell_through}%</td></tr>
+                    `).join('')}</tbody></table>
+                </div>
+            ` : ''}
+        </div>`;
+
+        // Purchase Timing + Sales Velocity
+        html += `<div class="a-g2">
+            ${Object.keys(timing).length ? `
+                <div class="a-card"><div class="a-card-h">Timing achiziții <span style="color:var(--v-muted);font-size:.7rem;margin-left:.5rem;">(medie ${si.avg_lead_days || 0}z înainte)</span></div>
+                    ${(() => {
+                        const labels = { super_early: '90+ zile', early_bird: '31-90 zile', last_month: '8-30 zile', last_week: '2-7 zile', last_minute: 'În ultima zi' };
+                        return Object.entries(labels).filter(([k]) => timing[k] > 0).map(([k, l]) => `
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;">
+                                <span style="font-size:.8125rem;">${escapeHtml(l)}</span>
+                                <div style="display:flex;align-items:center;gap:.5rem;">
+                                    <div class="a-progress" style="width:6.25rem;"><div class="a-progress-fill" style="width:${Math.min(timing[k], 100)}%;background:var(--v-primary);"></div></div>
+                                    <span style="font-family:monospace;color:var(--v-muted);width:2.5rem;text-align:right;font-size:.75rem;">${timing[k]}%</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    })()}
+                </div>
+            ` : ''}
+            ${velCurves.length ? `
+                <div class="a-card"><div class="a-card-h">Viteză vânzări (ultimele 5 evenimente)</div>
+                    <div style="font-size:.75rem;">${velCurves.map((vc, i) => `
+                        <div style="margin-bottom:.875rem;padding-bottom:.875rem;${i < velCurves.length - 1 ? 'border-bottom:1px dashed var(--v-ring);' : ''}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+                                <strong>${escapeHtml(truncate(vc.event_name || '', 35))}</strong>
+                                <span style="color:var(--v-muted);font-size:.7rem;">${vc.total_tickets} bilete</span>
+                            </div>
+                            <div style="display:flex;align-items:flex-end;gap:.2rem;height:2.5rem;">
+                                ${(vc.points || []).map(pt => {
+                                    const h = Math.max(4, Math.round((pt.pct || 0) * 0.4));
+                                    const opacity = 0.3 + ((pt.pct || 0) / 100 * 0.7);
+                                    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.125rem;">
+                                        <span style="font-size:.55rem;color:var(--v-muted);">${pt.pct}%</span>
+                                        <div style="width:100%;height:${h}px;background:var(--v-primary);border-radius:.2rem;opacity:${opacity};"></div>
+                                        <span style="font-size:.55rem;color:var(--v-muted);">${pt.days}z</span>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `).join('')}</div>
+                </div>
+            ` : ''}
+        </div>`;
+
+        return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date de programare.</p></div>';
+    }
+
+    // ── OPPORTUNITIES ───────────────────────────────────────────
+    function renderOpportunities() {
+        const d = state.data;
+        const opps = d.opportunities || {};
+        const churn = d.churnAlerts || [];
+        let html = '';
+
+        // Opportunities list
+        const findings = opps.findings || opps || [];
+        html += `<div class="a-card"><div class="a-card-h">Oportunități</div>
+            <div class="space-y-2">${(Array.isArray(findings) ? findings : []).slice(0, 12).map(o => `
+                <div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;background:#f8fafc;">
+                    <p style="font-size:.8125rem;font-weight:600;color:var(--v-text);">${escapeHtml(o.title || o.name || '')}</p>
+                    ${o.description || o.detail ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(o.description || o.detail)}</p>` : ''}
+                </div>
+            `).join('') || '<p class="text-sm text-slate-500">Nici o oportunitate detectată încă.</p>'}</div>
+        </div>`;
+
+        // Churn Alerts
+        if (churn.length) {
+            html += `<div class="a-card"><div class="a-card-h">Alerte churn</div>
+                <table class="a-tbl"><thead><tr><th>Cumpărător</th><th>Ultima achiziție</th><th style="text-align:right">Zile</th><th style="text-align:right">Risc</th></tr></thead>
+                <tbody>${churn.slice(0, 15).map(c => {
+                    const risk = c.risk || 'medium';
+                    const riskColor = risk === 'high' ? 'var(--v-danger)' : risk === 'medium' ? 'var(--v-warn)' : 'var(--v-muted)';
+                    return `<tr><td style="font-weight:600;">${escapeHtml(c.name || c.email || '')}</td><td style="color:var(--v-muted);">${escapeHtml(c.last_purchase || '')}</td><td style="text-align:right;">${fmtInt(c.days_since)}</td><td style="text-align:right;color:${riskColor};font-weight:600;">${escapeHtml(c.risk_label || risk)}</td></tr>`;
+                }).join('')}</tbody></table>
+            </div>`;
+        }
+
+        // Event Simulator
+        html += `<div class="a-card"><div class="a-card-h">Simulator eveniment</div>
+            <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Verifică ce numere ai avea pentru un eveniment ipotetic.</p>
+            <div class="a-g3">
+                <input id="sim-genre" placeholder="Gen (ex: rock)" style="padding:.4rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+                <input id="sim-dow" placeholder="Zi (ex: Vineri)" style="padding:.4rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+                <input id="sim-price" type="number" placeholder="Preț bilet (RON)" style="padding:.4rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;">
+            </div>
+            <button id="sim-run" style="margin-top:.625rem;padding:.5rem 1rem;background:var(--v-primary);color:#fff;border:none;border-radius:.375rem;font-size:.8125rem;font-weight:600;cursor:pointer;">Simulează</button>
+            <div id="sim-result" style="margin-top:.75rem;"></div>
+        </div>`;
+
+        return html;
+    }
+
+    // ── PROMOTION ───────────────────────────────────────────────
+    function renderPromotion() {
+        const d = state.data;
+        const pp = d.promotionPlanner || {};
+        let html = '';
+
+        html += `<div class="a-card"><div class="a-card-h">Fereastră optimă de anunț</div>
+            <p style="font-size:.875rem;">Cel mai bun moment pentru anunț: <strong>${escapeHtml(pp.optimal_window || pp.recommended_window || '—')}</strong></p>
+            ${pp.window_summary || pp.summary ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.5rem;">${escapeHtml(pp.window_summary || pp.summary)}</p>` : ''}
+        </div>`;
+
+        if (pp.recommended_budget) {
+            html += `<div class="a-card"><div class="a-card-h">Buget recomandat reclame</div>
+                <p style="font-size:.875rem;">Buget total sugerat: <strong>${fmtMoney(pp.recommended_budget)} RON</strong></p>
+                ${pp.budget_summary ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.5rem;">${escapeHtml(pp.budget_summary)}</p>` : ''}
+            </div>`;
+        }
+
+        if (pp.budget_split && pp.budget_split.length) {
+            html += `<div class="a-card"><div class="a-card-h">Distribuție pe platforme</div>
+                <table class="a-tbl"><thead><tr><th>Platformă</th><th style="text-align:right">Buget</th><th style="text-align:right">Pondere</th></tr></thead>
+                <tbody>${pp.budget_split.map(b => `
+                    <tr><td style="font-weight:600;">${escapeHtml(b.platform)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(b.amount)} RON</td><td style="text-align:right;">${b.share}%</td></tr>
+                `).join('')}</tbody></table>
+            </div>`;
+        }
+
+        if (pp.platform_recommendations && Object.keys(pp.platform_recommendations).length) {
+            html += `<div class="a-card"><div class="a-card-h">Recomandări per platformă</div>
+                ${Object.entries(pp.platform_recommendations).map(([platform, rec]) => `
+                    <div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;background:#f8fafc;margin-bottom:.5rem;">
+                        <p style="font-size:.8125rem;font-weight:600;">${escapeHtml(platform)}</p>
+                        <p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(typeof rec === 'string' ? rec : JSON.stringify(rec))}</p>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+
+        return html;
+    }
+
+    // ── UPCOMING ────────────────────────────────────────────────
+    function renderUpcoming() {
+        const d = state.data;
+        const upcoming = d.upcomingEvents || [];
+        if (!upcoming.length) return '<div class="a-card"><p class="text-sm text-slate-500">Niciun eveniment programat.</p></div>';
+
+        return `<div class="a-card"><div class="a-card-h">Evenimente ce urmează (${upcoming.length})</div>
+            <table class="a-tbl"><thead><tr><th>Data</th><th>Eveniment</th><th>Locație</th><th style="text-align:right">Zile</th><th style="text-align:right">Vândute</th></tr></thead>
+            <tbody>${upcoming.slice(0, 30).map(e => {
+                const title = e.title || e.name || '—';
+                const venue = e.venue_name || (e.venue && e.venue.name) || '';
+                return `<tr><td style="white-space:nowrap;">${fmtDate(e.event_date || e.date || e.start_date)}</td><td style="font-weight:600;">${escapeHtml(truncate(title, 40))}</td><td style="color:var(--v-muted);">${escapeHtml(venue)}</td><td style="text-align:right;">${fmtInt(e.days_until)}</td><td style="text-align:right;font-family:monospace;">${fmtInt(e.tickets_sold)}${e.capacity ? '/' + fmtInt(e.capacity) : ''}</td></tr>`;
+            }).join('')}</tbody></table>
+        </div>`;
+    }
+
+    // ── ACTIONS ─────────────────────────────────────────────────
+    function renderActions() {
+        const d = state.data;
+        const ap = d.actionPriority || {};
+        const items = ap.actions || (Array.isArray(ap) ? ap : []);
+        if (!items.length) return '<div class="a-card"><p class="text-sm text-slate-500">Nici o acțiune prioritară detectată.</p></div>';
+
+        return `<div class="a-card"><div class="a-card-h">Priorități acțiune</div>
+            <div class="space-y-2">${items.slice(0, 15).map(a => {
+                const p = a.priority || 'medium';
+                const c = p === 'high' ? 'var(--v-danger)' : p === 'medium' ? 'var(--v-warn)' : 'var(--v-primary)';
+                return `<div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;">
+                        <div style="flex:1;">
+                            <p style="font-size:.8125rem;font-weight:600;">${escapeHtml(a.title || a.action || '')}</p>
+                            ${a.description ? `<p style="font-size:.75rem;color:var(--v-muted);margin-top:.25rem;">${escapeHtml(a.description)}</p>` : ''}
+                        </div>
+                        <span style="padding:.15rem .5rem;font-size:.65rem;font-weight:700;border-radius:.25rem;text-transform:uppercase;background:${c};color:#fff;">${escapeHtml(a.priority_label || p)}</span>
+                    </div>
+                </div>`;
+            }).join('')}</div>
+        </div>`;
+    }
+
+    function wireInteractive() {
+        const runBtn = document.getElementById('sim-run');
+        if (!runBtn) return;
+        runBtn.addEventListener('click', async () => {
+            const genre = document.getElementById('sim-genre').value.trim();
+            const dow   = document.getElementById('sim-dow').value.trim();
+            const price = parseFloat(document.getElementById('sim-price').value);
+            const result = document.getElementById('sim-result');
+            if (!genre || !dow || !price) {
+                result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Completează toate câmpurile.</p>';
+                return;
+            }
+            result.innerHTML = '<p style="font-size:.75rem;color:var(--v-muted);">Se simulează…</p>';
+            try {
+                const res = await AmbiletVenueAPI.simulate(genre, dow, price);
+                if (res && res.success && res.data) {
+                    const r = res.data;
+                    result.innerHTML = `<div class="a-g3">
+                        <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;text-align:center;"><div style="font-size:1.25rem;font-weight:700;">${fmtInt(r.estimated_tickets || 0)}</div><div style="font-size:.7rem;color:var(--v-muted);">Bilete estimate</div></div>
+                        <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;text-align:center;"><div style="font-size:1.25rem;font-weight:700;color:var(--v-warn);">${fmtMoney(r.estimated_revenue || 0)} RON</div><div style="font-size:.7rem;color:var(--v-muted);">Venit estimat</div></div>
+                        <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;text-align:center;"><div style="font-size:1.25rem;font-weight:700;color:var(--v-success);">${r.estimated_occupancy || 0}%</div><div style="font-size:.7rem;color:var(--v-muted);">Ocupare estimată</div></div>
+                    </div>${r.summary ? `<p style="margin-top:.5rem;font-size:.75rem;color:var(--v-muted);">${escapeHtml(r.summary)}</p>` : ''}`;
+                } else {
+                    result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Simulare eșuată.</p>';
+                }
+            } catch (e) {
+                console.error(e);
+                result.innerHTML = '<p style="font-size:.75rem;color:var(--v-danger);">Eroare.</p>';
+            }
+        });
     }
 
     // ── Boot ────────────────────────────────────────────────────
@@ -676,7 +960,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     });
 
     await initVenuePicker();
-    switchTab('overview');
+    await loadAll();
 })());
 </script>
 

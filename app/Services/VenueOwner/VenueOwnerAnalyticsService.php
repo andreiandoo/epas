@@ -339,4 +339,54 @@ class VenueOwnerAnalyticsService
             'action_priority' => $this->actionPriority(),
         ];
     }
+
+    /**
+     * One-shot payload that matches the exact keys the tenant Filament
+     * VenueAnalytics page (venue-analytics.blade.php) reads. Used by the
+     * /venue/analiza web shell so the frontend renders identically to
+     * the Filament UI in one HTTP round-trip.
+     */
+    public function everything(): array
+    {
+        $eventIds = $this->eventIds();
+        $orderIds = $this->orderIds();
+
+        [$months, $eventsSeries, $ticketsSeries, $revenueSeries, $occupancySeries] = $this->buildVenueYearlySeries($eventIds);
+
+        return [
+            'kpis'                => $this->computeVenueKpis($eventIds, $orderIds),
+            'venueHealthScore'    => $this->buildVenueHealthScore($eventIds, $orderIds),
+            'monthlyMomentum'     => $this->buildMonthlyMomentum($eventIds, $orderIds),
+            'months'              => $months,
+            'eventsSeries'        => $eventsSeries,
+            'ticketsSeries'       => $ticketsSeries,
+            'revenueSeries'       => $revenueSeries,
+            'occupancySeries'     => $occupancySeries,
+            'eventPerformance'    => $this->buildEventPerformanceTable($eventIds),
+            'revenueBreakdown'    => $this->buildRevenueBreakdown($eventIds, $orderIds),
+            'pricingIntelligence' => $this->buildPricingIntelligence($eventIds),
+            'audiencePersonas'    => $this->buildVenueAudiencePersonas($orderIds),
+            'customerLoyalty'    => $this->buildVenueCustomerLoyalty($eventIds, $orderIds),
+            'geographicOrigin'    => $this->buildGeographicOrigin($orderIds),
+            'artistPerformance'   => $this->buildArtistPerformanceAtVenue($eventIds),
+            'genrePerformance'    => $this->buildGenrePerformance($eventIds),
+            'neverPlayed'         => $this->buildNeverPlayedArtists($eventIds),
+            'schedulingHeatmap'   => $this->buildSchedulingHeatmap($eventIds),
+            'dayOfWeek'           => $this->buildDayOfWeekAnalysis($eventIds),
+            'seasonality'         => $this->buildSeasonalityAnalysis($eventIds),
+            'idleDays'            => $this->buildIdleDaysAnalysis($eventIds),
+            'salesIntelligence'   => $this->buildSalesIntelligence($eventIds, $orderIds),
+            'opportunities'       => $this->buildOpportunities($eventIds, $orderIds),
+            'promotionPlanner'    => $this->buildPromotionPlanner($eventIds, $orderIds),
+            'revenueForecast'     => $this->buildRevenueForecast($eventIds),
+            'upcomingEvents'      => $this->buildUpcomingVenueEvents($eventIds),
+            'competitorBenchmark' => $this->buildCompetitorBenchmark($eventIds),
+            'churnAlerts'         => $this->buildChurnRiskAlerts($eventIds, $orderIds),
+            'revenuePerSeat'      => $this->buildRevenuePerSeat($eventIds),
+            'genreLoyalty'        => $this->buildGenreLoyalty($eventIds, $orderIds),
+            'checkinAnalysis'     => $this->buildCheckinTimeAnalysis($eventIds),
+            'refundAnalysis'      => $this->buildRefundAnalysis($eventIds),
+            'actionPriority'      => $this->buildActionPriority($eventIds, $orderIds),
+        ];
+    }
 }
