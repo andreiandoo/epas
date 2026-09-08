@@ -95,8 +95,9 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     </div>
 
 <script>
-(async function () {
-    // Wait for AmbiletVenueAPI to be available (loaded from api.js).
+document.addEventListener('DOMContentLoaded', () => (async function () {
+    // Wait for AmbiletVenueAPI to be available (api.js loads with defer,
+    // so DOMContentLoaded is the earliest point it's guaranteed defined).
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
     function fmtDate(d) {
@@ -178,7 +179,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
         console.error('upcoming failed', e);
         document.getElementById('upcoming-list').innerHTML = '<div class="p-6 text-center text-sm text-red-400">Eroare la încărcare</div>';
     }
-})();
+})());
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>

@@ -90,7 +90,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     </div>
 
 <script>
-(async function () {
+document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
     function fmtInt(n) { return Number(n || 0).toLocaleString('ro-RO'); }
@@ -173,7 +173,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
     document.getElementById('filter-venue').addEventListener('change', reload);
     document.getElementById('filter-status').addEventListener('change', reload);
     reload();
-})();
+})());
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>

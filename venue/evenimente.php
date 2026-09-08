@@ -50,7 +50,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
 </style>
 
 <script>
-(async function () {
+document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
     const list = document.getElementById('events-list');
@@ -156,7 +156,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
         console.error('events load failed', e);
         list.innerHTML = '<div class="p-6 text-center text-sm text-red-400 bg-white border rounded-2xl border-slate-200">Eroare la încărcare.</div>';
     }
-})();
+})());
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
