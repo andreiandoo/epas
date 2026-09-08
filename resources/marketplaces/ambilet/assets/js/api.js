@@ -2502,6 +2502,7 @@ const AmbiletVenueAPI = {
             new_password_confirmation: newPasswordConfirmation,
         });
     },
+    linkOrganizer() { return this._request('venue-owner.link-organizer'); },
 
     // Analytics — one call per tab.
     analytics(tab, venueId) {

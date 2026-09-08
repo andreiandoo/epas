@@ -212,10 +212,36 @@ $skipJsComponents = true;
         }
     }
 
+    /**
+     * If the venue owner shares an email with an organizer account on
+     * this marketplace, ask the backend for a matching organizer token
+     * and drop it into the ambilet_organizer_token cookie. That lets
+     * the same header switcher (already wired above) show a "Vezi ca
+     * Organizator" option without the user having to log in twice.
+     */
+    async function detectOrganizerLink() {
+        // Skip if already linked (cookie already there).
+        if (getCookie('ambilet_organizer_token')) return;
+        if (typeof AmbiletVenueAPI === 'undefined') return;
+
+        try {
+            const res = await AmbiletVenueAPI.linkOrganizer();
+            if (res && res.success && res.data && res.data.linked && res.data.token) {
+                setCookie('ambilet_organizer_token', res.data.token, 30);
+                // Re-run the switcher init so the new dropdown row appears
+                // without a page reload.
+                initSwitcher();
+            }
+        } catch (e) {
+            // Silent — not being linked is the common case.
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         initSwitcher();
         initUserMenu();
         loadIdentity();
+        detectOrganizerLink();
     });
 })();
 </script>

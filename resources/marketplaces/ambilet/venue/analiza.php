@@ -420,8 +420,9 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Event Comparison Tool
-        const evPerf = d.eventPerformance || [];
+        // Event Comparison Tool (reuse the evPerf array from the
+        // event-performance table above; declaring it again would
+        // trip a "already declared" SyntaxError and blank the page).
         if (evPerf.length >= 2) {
             html += `<div class="a-card"><div class="a-card-h">Comparație evenimente</div>
                 <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Selectează 2 evenimente pentru comparație.</p>

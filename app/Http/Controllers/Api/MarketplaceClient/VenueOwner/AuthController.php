@@ -114,6 +114,45 @@ class AuthController extends BaseController
     }
 
     /**
+     * If the authenticated venue-owner user shares an email with an
+     * organizer account on the same marketplace, mint an organizer
+     * token so the /venue/* header switcher can flip the user into
+     * the /organizator/* panel without a fresh login. Same-email
+     * check is intentionally narrow (identical email string on the
+     * organizer row), never a fuzzy match — a random venue owner
+     * can't grab an organizer session by claiming a similar address.
+     */
+    public function linkOrganizer(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            return $this->error('Unauthorized', 401);
+        }
+        $client = $this->requireClient($request);
+
+        $email = mb_strtolower(trim($user->email));
+        $organizer = \App\Models\MarketplaceOrganizer::where('marketplace_client_id', $client->id)
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if (!$organizer) {
+            return $this->success(['linked' => false]);
+        }
+
+        if (method_exists($organizer, 'isSuspended') && $organizer->isSuspended()) {
+            return $this->success(['linked' => false, 'reason' => 'suspended']);
+        }
+
+        $token = $organizer->createToken('organizer-api')->plainTextToken;
+
+        return $this->success([
+            'linked'       => true,
+            'token'        => $token,
+            'display_name' => $organizer->company_name ?: $organizer->name ?: $organizer->email,
+        ]);
+    }
+
+    /**
      * Let a venue owner change their own password from the /venue/setari
      * page. Requires the current password so a stolen session token can't
      * silently lock the real user out. Rotates all outstanding Sanctum
