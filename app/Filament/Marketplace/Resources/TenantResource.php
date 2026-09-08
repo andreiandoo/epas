@@ -318,11 +318,19 @@ class TenantResource extends Resource
                     ->label('Login as')
                     ->icon('heroicon-o-arrow-right-on-rectangle')
                     ->color('success')
-                    ->visible(fn (Tenant $record) => static::currentAdminIsSuperAdmin() && $record->owner_id)
+                    // Also gate on Route::has() so a stale route cache
+                    // (deploy without `php artisan route:cache`) hides
+                    // the button instead of crashing the whole list
+                    // view with a "Route [...] not defined" exception.
+                    ->visible(fn (Tenant $record) => static::currentAdminIsSuperAdmin()
+                        && $record->owner_id
+                        && \Illuminate\Support\Facades\Route::has('filament.marketplace.tenant.login-as'))
                     ->tooltip(fn (Tenant $record) => $record->owner_id
                         ? 'Autentifică-te ca proprietarul acestei locații (deschide /venue/panou)'
                         : 'Setează un owner user în Edit înainte de Login as')
-                    ->url(fn (Tenant $record) => route('filament.marketplace.tenant.login-as', ['id' => $record->id]))
+                    ->url(fn (Tenant $record) => \Illuminate\Support\Facades\Route::has('filament.marketplace.tenant.login-as')
+                        ? route('filament.marketplace.tenant.login-as', ['id' => $record->id])
+                        : '#')
                     ->openUrlInNewTab(),
             ])
             ->defaultSort('created_at', 'desc');
