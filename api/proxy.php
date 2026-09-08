@@ -2464,6 +2464,7 @@ switch ($action) {
     case 'venue-owner.analytics.promotion':
     case 'venue-owner.analytics.upcoming':
     case 'venue-owner.analytics.actions':
+    case 'venue-owner.analytics.all':
         $method = 'GET';
         $slice = substr($action, strlen('venue-owner.analytics.'));
         $params = [];
