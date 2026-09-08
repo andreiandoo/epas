@@ -247,9 +247,12 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             `);
         }
 
-        // Yearly chart
+        // Yearly chart. Wrap in a fixed-height container because Chart.js
+        // with maintainAspectRatio:false grows to fill its parent forever
+        // when the parent has no set height (turns into an infinite
+        // vertical scroll bug).
         const chartId = 'chart-overview-yearly';
-        const yearlyHtml = section('Evoluție 12 luni', `<canvas id="${chartId}" height="80"></canvas>`);
+        const yearlyHtml = section('Evoluție 12 luni', `<div style="height:320px; position:relative;"><canvas id="${chartId}"></canvas></div>`);
 
         // Event Performance
         const perf = Array.isArray(d.event_performance) ? d.event_performance : [];
