@@ -115,28 +115,47 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const sold = stats.tickets_sold || 0;
         const cap = stats.stock_total || 0;
         const ci = stats.checked_in_count || 0;
-        const pct = cap > 0 ? Math.round(sold / cap * 100) : null;
+        // Uncapped ticket types (quota_total = -1) don't contribute to
+        // stock_total, so sold can legitimately exceed cap. Cap the
+        // displayed percentage at 100 and flag the case separately.
+        const rawPct = cap > 0 ? sold / cap * 100 : null;
+        const pct = rawPct !== null ? Math.min(100, Math.round(rawPct)) : null;
+        const overCap = rawPct !== null && rawPct > 100;
         const ciPct = sold > 0 ? Math.round(ci / sold * 100) : null;
 
-        const revenue = (salesBreakdown && salesBreakdown.total_revenue) || 0;
+        // Prefer sales-breakdown total when the endpoint returns it;
+        // otherwise fall back to stats.revenue (quota_sold × price
+        // summed on the backend — same source /venue/utilizare uses).
+        const revenue = (salesBreakdown && salesBreakdown.total_revenue)
+            || stats.revenue
+            || 0;
         const avgPrice = sold > 0 && revenue > 0 ? revenue / sold : 0;
 
         const wins = [];
         const issues = [];
         const tips = [];
 
-        if (pct !== null) {
-            if (pct >= 90) wins.push({ h: 'Sold out sau aproape', p: 'Ocupare de ' + pct + '% — evenimentul a fost aproape epuizat. Consideră ridicarea prețului cu 15-20% pentru evenimente similare viitoare.' });
-            else if (pct >= 70) wins.push({ h: 'Ocupare foarte bună', p: 'Ai vândut ' + pct + '% din capacitate. Bun rezultat.' });
-            else if (pct >= 40) issues.push({ h: 'Ocupare medie', p: 'Ai vândut doar ' + pct + '% din capacitate. Verifică promovarea și prețul.' });
-            else issues.push({ h: 'Ocupare scăzută', p: 'Ai vândut doar ' + pct + '% din capacitate — trebuie reevaluat prețul, targetul sau timing-ul reclamelor.' });
+        // Occupancy uses raw so we can distinguish real sold-outs from
+        // uncapped-donation tiers that pushed the count past capacity.
+        if (rawPct !== null) {
+            if (overCap) {
+                wins.push({ h: 'Ai depășit capacitatea de bază', p: 'S-au vândut ' + sold + ' bilete pentru o capacitate declarată de ' + cap + '. Probabil ai tipuri de bilete fără plafon (donații, invitații). Verifică setările tipurilor de bilete.' });
+            } else if (pct >= 90) {
+                wins.push({ h: 'Sold out sau aproape', p: 'Ocupare de ' + pct + '% — evenimentul a fost aproape epuizat. Consideră ridicarea prețului cu 15-20% pentru evenimente similare viitoare.' });
+            } else if (pct >= 70) {
+                wins.push({ h: 'Ocupare foarte bună', p: 'Ai vândut ' + pct + '% din capacitate. Bun rezultat.' });
+            } else if (pct >= 40) {
+                issues.push({ h: 'Ocupare medie', p: 'Ai vândut doar ' + pct + '% din capacitate. Verifică promovarea și prețul.' });
+            } else {
+                issues.push({ h: 'Ocupare scăzută', p: 'Ai vândut doar ' + pct + '% din capacitate — trebuie reevaluat prețul, targetul sau timing-ul reclamelor.' });
+            }
         }
         if (ciPct !== null) {
-            if (ciPct >= 90) wins.push({ h: 'Prezență excelentă', p: ciPct + '% din cumpărători au ajuns la eveniment. Rată foarte bună.' });
-            else if (ciPct < 60 && sold > 20) issues.push({ h: 'Prezență scăzută', p: 'Doar ' + ciPct + '% au ajuns. Investighează cauzele — vremea, competiția, oboseala publicului.' });
+            if (ciPct >= 90) wins.push({ h: 'Prezență excelentă la ușă', p: ciPct + '% dintre cumpărători au fost check-in la eveniment. Rată foarte bună. (Notă: prezența e diferită de ocuparea — ocuparea măsoară vânzările, prezența cine a intrat efectiv.)' });
+            else if (ciPct < 60 && sold > 20) issues.push({ h: 'Prezență scăzută la ușă', p: 'Doar ' + ciPct + '% dintre cei care au cumpărat bilete au fost check-in la ușă. Investighează cauzele — vremea, competiția, oboseala publicului. (Prezența e diferită de ocuparea vânzărilor.)' });
         }
         if (revenue > 0) {
-            if (avgPrice < 30) tips.push({ h: 'Preț mediu foarte mic', p: 'Prețul mediu (' + fmtMoney(avgPrice) + ' RON) e sub media pieței pentru evenimente live. Consideră un tier VIP.' });
+            if (avgPrice < 30) tips.push({ h: 'Preț mediu mic', p: 'Prețul mediu (' + fmtMoney(avgPrice) + ' RON) e sub media pieței pentru evenimente live. Poate există tipuri de bilete la 0 RON (invitații, donații) care trag media jos.' });
         }
         if (ev.is_cancelled) issues.push({ h: 'Eveniment anulat', p: 'Contactează cumpărătorii pentru rambursări și oferă un cod de reducere pentru viitor.' });
         if (ev.is_postponed) tips.push({ h: 'Eveniment amânat', p: 'Actualizează cumpărătorii cu noua dată. Oferă opțiune de rambursare.' });
@@ -145,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             tips.push({ h: 'Date insuficiente', p: 'Evenimentul e prea nou sau prea vechi pentru un analiz semnificativ.' });
         }
 
-        return { wins, issues, tips, sold, cap, pct, ci, ciPct, revenue, avgPrice };
+        return { wins, issues, tips, sold, cap, pct, rawPct, overCap, ci, ciPct, revenue, avgPrice };
     }
 
     // Fetch event + sales breakdown in parallel.
@@ -183,7 +202,11 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     const organizerName = (ev.marketplace_organizer && ev.marketplace_organizer.name) || '—';
     const venueLabel = ev.venue ? `${ev.venue.name || ''}${ev.venue.city ? ' · ' + ev.venue.city : ''}` : '';
 
-    const fillColor = insights.pct === null ? '#94a3b8' : insights.pct >= 75 ? '#10b981' : insights.pct >= 40 ? '#f59e0b' : '#ef4444';
+    const fillColor = insights.pct === null ? '#94a3b8'
+        : insights.overCap ? '#8b5cf6'
+        : insights.pct >= 75 ? '#10b981'
+        : insights.pct >= 40 ? '#f59e0b'
+        : '#ef4444';
 
     let html = '';
 
@@ -242,24 +265,24 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 <div class="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div class="h-full rounded-full transition-all" style="width:${insights.pct}%; background:${fillColor};"></div>
                 </div>
-                <p class="mt-1.5 text-xs font-semibold" style="color:${fillColor};">${insights.pct}% ocupare</p>
+                <p class="mt-1.5 text-xs font-semibold" style="color:${fillColor};">${insights.overCap ? 'Peste capacitatea de bază (' + Math.round(insights.rawPct) + '% — include bilete fără plafon)' : insights.pct + '% ocupare vânzări'}</p>
             ` : ''}
         </div>
         <div class="p-5 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-2">
                 <div class="text-2xl">✅</div>
-                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Check-in</span>
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Prezență (Check-in)</span>
             </div>
             <p class="text-3xl font-black text-slate-900">${fmtInt(insights.ci)}</p>
-            ${insights.ciPct !== null ? `<p class="mt-3 text-xs font-semibold text-slate-500">${insights.ciPct}% din cei ce au cumpărat</p>` : `<p class="mt-3 text-xs text-slate-400">Fără prezență înregistrată</p>`}
+            ${insights.ciPct !== null ? `<p class="mt-3 text-xs font-semibold text-slate-500">${insights.ciPct}% din cei ce au cumpărat bilete</p>` : `<p class="mt-3 text-xs text-slate-400">Fără prezență înregistrată</p>`}
         </div>
         <div class="p-5 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-2">
                 <div class="text-2xl">💰</div>
-                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Venit</span>
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Vânzări</span>
             </div>
             <p class="text-2xl font-black text-slate-900">${fmtMoney(insights.revenue)} <span class="text-sm text-slate-400 font-normal">RON</span></p>
-            <p class="mt-3 text-xs text-slate-500">Total încasat</p>
+            <p class="mt-3 text-xs text-slate-500">Total vânzări bilete</p>
         </div>
         <div class="p-5 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-2">
