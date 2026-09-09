@@ -22,7 +22,8 @@ use Illuminate\Console\Command;
  *
  *   TRUE net       = Σ SalesBreakdownService(event).total_net  over the org's events
  *   paid           = Σ completed payouts   (org-wide, incl. event_id = NULL)
- *   pending        = Σ pending/approved/processing payouts (org-wide)
+ *   pending        = Σ approved + processing payouts (org-wide) — NOT 'pending',
+ *                    which is the abandoned GenerateAutoDeconts auto-draft batch
  *   available_real = net − paid − pending   (may be NEGATIVE = over-paid, owes back)
  *   pending_real   = pending
  *
@@ -176,8 +177,15 @@ class BalancesReconcileCommand extends Command
             ->where('status', 'completed')
             ->sum('amount');
 
+        // Reserved / in-flight = approved + processing ONLY. The 'pending'
+        // status is NOT a real reservation here: it is the abandoned
+        // GenerateAutoDeconts auto-draft batch (2679 rows, all Mar–May 2026,
+        // never approved/paid, and created without reserveBalanceForPayout so
+        // they never touched the ledger). Counting them as reserved understated
+        // every affected organizer's available balance on /organizator/sold
+        // ("prea mic"). Their money is part of `available`, not a reservation.
         $pending = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', ['pending', 'approved', 'processing'])
+            ->whereIn('status', ['approved', 'processing'])
             ->sum('amount');
 
         return [round($netReal, 2), round($paid, 2), round($pending, 2)];
