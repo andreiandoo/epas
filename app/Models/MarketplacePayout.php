@@ -17,6 +17,47 @@ class MarketplacePayout extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * Cut-off separating deconturi that historically settled `legacy_import`
+     * revenue from every decont created afterwards.
+     *
+     * Background: `legacy_import` orders (165k rows, ~27.7M lei) are the old
+     * Ambilet migration. Most were settled in the OLD system, so their revenue
+     * must NOT count towards an organizer's balance — leaving it in showed
+     * QFEEL EVENTS 2.0M "available" against ~197k of real sales. But 190 events
+     * DID have their imported obligation carried over and paid through Tixello
+     * (~1.88M), and there the revenue must stay so it offsets the payout.
+     *
+     * Keying that off "does the event have a decont?" is circular and unsafe:
+     * an imported event that kept selling would show (correctly) only its
+     * post-import balance, then — the moment a decont is created — the imported
+     * revenue would spring back into the maths and offer the operator a second,
+     * bogus payout on money already settled elsewhere.
+     *
+     * Anchoring on a fixed timestamp removes the loop: only deconturi that
+     * already existed when this rule shipped can claim imported revenue. Every
+     * decont created from now on settles post-import sales only.
+     */
+    public const LEGACY_SETTLEMENT_FREEZE = '2026-09-10 00:00:00';
+
+    /**
+     * Did this event's `legacy_import` revenue get settled through Tixello?
+     * True only when a real decont (not a stale auto-draft) existed before the
+     * freeze — see LEGACY_SETTLEMENT_FREEZE. Callers pass the negation as
+     * SalesBreakdownService::build(excludeLegacyImport: …).
+     */
+    public static function eventHasLegacySettlement(?int $eventId): bool
+    {
+        if (!$eventId) {
+            return false;
+        }
+
+        return static::where('event_id', $eventId)
+            ->whereIn('status', ['completed', 'approved', 'processing'])
+            ->where('created_at', '<', static::LEGACY_SETTLEMENT_FREEZE)
+            ->exists();
+    }
+
     protected $fillable = [
         'marketplace_client_id',
         'marketplace_organizer_id',

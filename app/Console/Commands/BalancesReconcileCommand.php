@@ -179,10 +179,10 @@ class BalancesReconcileCommand extends Command
             // event with NO decont was settled in the OLD system, so Ambilet
             // owes nothing and its imported net must be excluded — that is the
             // revenue that inflated organizer balances (QFEEL EVENTS: 2.0M).
-            // Stale 'pending' auto-drafts do NOT count as settled.
-            $settledInTixello = MarketplacePayout::where('event_id', $event->id)
-                ->whereIn('status', ['completed', 'approved', 'processing'])
-                ->exists();
+            // Stale 'pending' auto-drafts do NOT count as settled, and the test
+            // is anchored on MarketplacePayout::LEGACY_SETTLEMENT_FREEZE so a
+            // NEW decont can never resurrect already-settled imported revenue.
+            $settledInTixello = MarketplacePayout::eventHasLegacySettlement($event->id);
 
             $breakdown = $service->build($event, excludeLegacyImport: !$settledInTixello);
             $netReal += (float) ($breakdown['total_net'] ?? 0);
