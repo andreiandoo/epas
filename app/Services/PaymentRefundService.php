@@ -233,15 +233,21 @@ class PaymentRefundService
         foreach ($tickets as $ticket) {
             $originalPrice = (float) ($ticket->price ?? 0);
             $ticketDiscount = round($originalPrice * $discountRatio, 2);
-            $faceValue = round($originalPrice - $ticketDiscount, 2);
+            $grossAfterDiscount = round($originalPrice - $ticketDiscount, 2);
             // Get exact commission from stored commission_details per ticket type
             $typeName = $ticket->ticketType?->name ?? '';
             $cd = $commissionByType[$typeName] ?? null;
             $commission = $cd ? round($cd['amount_per_unit'], 2) : 0;
-            // Included tickets MUST refund with commission (face price already includes it);
-            // a face-only refund would return LESS than the customer paid. On_top tickets
-            // follow the operator's choice.
             $ticketMode = $cd['mode'] ?? $fallbackMode;
+            // For "included" tickets ticket.price is the GROSS amount the
+            // customer paid (commission baked in), so face_value (organizer
+            // share) = gross - commission. For "on_top" tickets ticket.price
+            // IS the net face value and commission was charged on top.
+            $faceValue = $ticketMode === 'included'
+                ? round($grossAfterDiscount - $commission, 2)
+                : $grossAfterDiscount;
+            // Included tickets MUST refund with commission (face+commission = gross
+            // customer paid); on_top tickets follow the operator's choice.
             $effectiveRefundCommission = ($ticketMode === 'included') ? true : $refundCommission;
             $refundAmount = $effectiveRefundCommission ? ($faceValue + $commission) : $faceValue;
 

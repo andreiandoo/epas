@@ -473,12 +473,19 @@ class ViewOrder extends ViewRecord
                 foreach ($refundTickets as $ticket) {
                     $originalPrice = (float) ($ticket->price ?? 0);
                     $ticketDiscount = round($originalPrice * $discountRatio, 2);
-                    $faceValue = round($originalPrice - $ticketDiscount, 2);
+                    $grossAfterDiscount = round($originalPrice - $ticketDiscount, 2);
 
                     $typeName = $ticket->ticketType?->name ?? 'Bilet';
                     $cd = $commissionByType[$typeName] ?? null;
                     $commission = $cd ? round($cd['amount_per_unit'], 2) : 0;
                     $ticketMode = $modeByType[$typeName] ?? $fallbackMode;
+                    // For "included" tickets ticket.price is GROSS (customer-paid),
+                    // so face_value (organizer share) = gross - commission and
+                    // refund = face + commission = gross. For "on_top", ticket.price
+                    // IS the face value and commission was charged on top.
+                    $faceValue = $ticketMode === 'included'
+                        ? round($grossAfterDiscount - $commission, 2)
+                        : $grossAfterDiscount;
                     // Included tickets always refund with commission regardless of operator choice.
                     $effectiveRefundCommission = ($ticketMode === 'included') ? true : $chosenRefundCommission;
                     $refundAmount = $effectiveRefundCommission ? ($faceValue + $commission) : $faceValue;
