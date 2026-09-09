@@ -95,8 +95,23 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false, bool $onlyPos = false, bool $accrualBasis = false): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false, bool $onlyPos = false, bool $accrualBasis = false, bool $excludeLegacyImport = false): array
     {
+        // excludeLegacyImport (balance / payout paths only, default OFF):
+        // `legacy_import` is the historical Ambilet migration — 165k orders /
+        // ~27.7M lei that were already settled in the OLD system, never through
+        // Tixello. Counting them as Tixello revenue inflated every organizer's
+        // "sold disponibil" (QFEEL EVENTS showed 2.0M available when only
+        // ~197k came from real marketplace sales). They must NOT feed balances
+        // or deconturi. Reports / the event "Vânzări" tab keep them visible
+        // (default false), so historical figures don't vanish from analytics.
+        // Note: imported events that KEPT SELLING after migration carry both
+        // sources — excluding legacy_import leaves exactly the post-import
+        // marketplace sales, which is what a decont should settle.
+        $excludedSources = ['external_import', 'pos_test'];
+        if ($excludeLegacyImport) {
+            $excludedSources[] = 'legacy_import';
+        }
         // accrualBasis (payout pipeline only, default OFF for every other
         // caller): count a ticket in the period it was SOLD in, regardless of
         // its CURRENT status. A ticket sold in decont 1's period but refunded
@@ -143,20 +158,22 @@ class SalesBreakdownService
         // dates, not datetimes.
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', $ticketStatuses)
-            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses) {
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses, $excludedSources) {
                 // Normal flow: ticket tied to a paid-status order.
                 // See self::PAID_ORDER_STATUSES for the exact list — includes
                 // 'partially_refunded' so partial-refund orders' still-valid
                 // tickets don't disappear from the payout math.
-                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses) {
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses, $excludedSources) {
                     $q->whereIn('status', $orderStatuses)
                         // Test POS smoke-test sales never touch the payout
                         // pipeline, Vânzări totals, or POS-billed slices
                         // — they're strictly for the mobile app to
                         // exercise sell+print+scan without polluting
                         // the organizer's revenue. Excluded unconditionally
-                        // alongside external_import.
-                        ->whereNotIn('source', ['external_import', 'pos_test']);
+                        // alongside external_import. `legacy_import` joins the
+                        // list only when $excludeLegacyImport is set (balance /
+                        // payout paths) — see the note on the signature.
+                        ->whereNotIn('source', $excludedSources);
                     if ($onlyPos) {
                         // POS-only slice: physical POS sales (mobile POS app +
                         // leisure POS). Used to bill POS commission separately
