@@ -1526,7 +1526,7 @@ class ListPayouts extends ListRecords
         // $cutoff (period end) truncates the slice on order.created_at — the same
         // column buildRemainingTicketsItems uses — so the header "Sold disponibil",
         // the breakdown table and the ticket repeater all agree for the period.
-        $breakdown = $service->build($event, null, $cutoff, excludePos: true, accrualBasis: true);
+        $breakdown = $service->build($event, null, $cutoff, excludePos: true);
 
         $grossRevenue = 0.0;
         $totalCommission = 0.0;
@@ -1584,16 +1584,21 @@ class ListPayouts extends ListRecords
         $keptCommission = round($keptCommission, 2);
         $totalCommission = round($totalCommission + $keptCommission, 2);
 
-        // Net = accrual breakdown net (counts tickets as sold in their period,
-        // incl. those later refunded) MINUS the refund principal that left
-        // Ambilet in the period (anchored on the refund date via
-        // total_refunded_principal). This is the period-accrual + explicit
-        // refund-line model: the sale is counted once in its own period, the
-        // refund is subtracted once in the period it was processed. Grand total
-        // equals the legacy silent-exclusion net, but the refund is now a
-        // visible, period-correct deduction instead of a retroactive vanish.
+        // Net = snapshot breakdown net (currently-valid tickets only). This is
+        // already invariant AND already carries a refund into the next decont:
+        // when a ticket settled in a prior payout is refunded it drops out of
+        // this net, so the remaining balance (net - claims) shrinks by that
+        // ticket's organizer value on its own — no explicit subtraction needed
+        // here, and none wanted: total_refunded_principal is the GROSS amount
+        // returned to the customer (it includes the on-top 6% commission when
+        // commission_refunded=true), which was Ambilet's, never the organizer's
+        // net. Subtracting it here over-removed that commission and pushed net
+        // negative on refund-heavy events (4388: -355.20 = 6% of 5920; 4658:
+        // -122.40 = 6% of 2040). Kept below purely as an informational key so
+        // the payout detail (Step 2) can render a visible refund line using the
+        // correct organizer-net value, not this gross figure.
         $refundedPrincipal = (float) ($breakdown['total_refunded_principal'] ?? 0);
-        $netRevenue = $netRevenueFromBreakdown - $refundedPrincipal;
+        $netRevenue = $netRevenueFromBreakdown;
 
         // Previous payouts. amount = organizer take; refund_amount = customer
         // refund already accounted for on this payout row. The TOTAL claim
