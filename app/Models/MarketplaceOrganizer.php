@@ -612,6 +612,82 @@ class MarketplaceOrganizer extends Authenticatable
     }
 
     /**
+     * Derive this organizer's TRUE balance from source data, ignoring the
+     * incrementally-maintained columns entirely.
+     *
+     * Those columns are kept in sync by reserveBalanceForPayout /
+     * recordPayoutCompleted / returnPendingBalance above, and a single missed
+     * or double-applied call corrupts them permanently — 323 of 326 organizers
+     * had drifted (organizer 586 sat at available 94k / pending -39k against a
+     * real 30.8k / 33.7k). This method recomputes from the facts instead:
+     *
+     *   net       Σ SalesBreakdownService(event).total_net over the org's events.
+     *             `legacy_import` revenue is excluded unless the event had a
+     *             decont before MarketplacePayout::LEGACY_SETTLEMENT_FREEZE —
+     *             imported sales were settled in the OLD system, so counting
+     *             them showed organizers millions they had already been paid.
+     *   paid      Σ completed payouts, org-wide (multi-event deconturi have a
+     *             NULL event_id, so per-event sums would miss them).
+     *   pending   Σ approved + processing. NOT 'pending', which is the
+     *             abandoned GenerateAutoDeconts auto-draft batch (2679 rows,
+     *             ~15M, never paid and never reserved against the ledger).
+     *
+     * `available` may be NEGATIVE — that means the organizer was over-paid and
+     * owes the difference back. Callers must surface it rather than clamp it.
+     *
+     * @return array{net: float, paid: float, pending: float, available: float}
+     */
+    public function deriveBalances(?\App\Services\Marketplace\SalesBreakdownService $service = null): array
+    {
+        $service ??= app(\App\Services\Marketplace\SalesBreakdownService::class);
+
+        $events = \App\Models\Event::where('marketplace_organizer_id', $this->id)
+            ->where('marketplace_client_id', $this->marketplace_client_id)
+            ->get();
+
+        $net = 0.0;
+        foreach ($events as $event) {
+            $settled = \App\Models\MarketplacePayout::eventHasLegacySettlement($event->id);
+            $breakdown = $service->build($event, excludeLegacyImport: !$settled);
+            $net += (float) ($breakdown['total_net'] ?? 0);
+        }
+
+        $paid = (float) \App\Models\MarketplacePayout::where('marketplace_organizer_id', $this->id)
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $pending = (float) \App\Models\MarketplacePayout::where('marketplace_organizer_id', $this->id)
+            ->whereIn('status', ['approved', 'processing'])
+            ->sum('amount');
+
+        return [
+            'net' => round($net, 2),
+            'paid' => round($paid, 2),
+            'pending' => round($pending, 2),
+            'available' => round($net - $paid - $pending, 2),
+        ];
+    }
+
+    /**
+     * Persist the derived balance into the ledger columns, turning them from a
+     * fragile running total into a cache of the truth. Returns the derivation
+     * so callers can log what changed.
+     *
+     * @return array{net: float, paid: float, pending: float, available: float}
+     */
+    public function recomputeBalances(?\App\Services\Marketplace\SalesBreakdownService $service = null): array
+    {
+        $derived = $this->deriveBalances($service);
+
+        $this->forceFill([
+            'available_balance' => $derived['available'],
+            'pending_balance' => $derived['pending'],
+        ])->save();
+
+        return $derived;
+    }
+
+    /**
      * Get payout history
      */
     public function getPayoutHistory(int $limit = 10)

@@ -45,9 +45,10 @@ class BalancesReconcileCommand extends Command
         {--threshold=1 : Absolute RON drift below which an organizer is considered OK}
         {--all : List every scanned organizer, not just the drifting ones}
         {--limit= : Stop after scanning this many organizers (safety valve on huge marketplaces)}
-        {--csv= : Write the full result to this CSV path instead of a table}';
+        {--csv= : Write the full result to this CSV path instead of a table}
+        {--fix : WRITE the derived balance into available_balance / pending_balance for every drifting organizer}';
 
-    protected $description = 'Health-check: flag organizers whose stored available/pending balance drifts from the real (derived) balance.';
+    protected $description = 'Health-check (add --fix to repair): flag organizers whose stored available/pending balance drifts from the real (derived) balance.';
 
     public function handle(): int
     {
@@ -81,6 +82,10 @@ class BalancesReconcileCommand extends Command
         $total = $limit !== null ? min($limit, $organizers->count()) : $organizers->count();
         $this->info("Verific {$total} organizatori…");
 
+        if ($this->option('fix')) {
+            $this->warn('MOD --fix ACTIV: available_balance / pending_balance vor fi REscrise pentru fiecare organizator cu drift.');
+        }
+
         $rows = [];
         $flagged = 0;
         $totalAbsDrift = 0.0;
@@ -93,7 +98,10 @@ class BalancesReconcileCommand extends Command
             $scanned++;
 
             try {
-                [$netReal, $paid, $pending] = $this->deriveFor($organizer, $service);
+                $derived = $organizer->deriveBalances($service);
+                $netReal = $derived['net'];
+                $paid = $derived['paid'];
+                $pending = $derived['pending'];
             } catch (\Throwable $e) {
                 $rows[] = [$organizer->id, $this->name($organizer), 'EROARE', '-', '-', '-', '-', '-', 'calc: ' . mb_substr($e->getMessage(), 0, 40)];
                 $flagged++;
@@ -116,6 +124,14 @@ class BalancesReconcileCommand extends Command
                 $status = 'DRIFT';
                 $flagged++;
                 $totalAbsDrift += $worstDrift;
+
+                // --fix turns the ledger columns into a cache of the derived
+                // truth. Only drifting organizers are written, so a re-run
+                // after a successful fix is a no-op.
+                if ($this->option('fix')) {
+                    $organizer->recomputeBalances($service);
+                    $status = 'REPARAT';
+                }
             }
 
             if (!$this->option('all') && $status === 'OK') {
@@ -155,57 +171,6 @@ class BalancesReconcileCommand extends Command
         $this->line("Organizatori verificati: <fg=cyan>{$scanned}</> | cu drift: <fg=yellow>{$flagged}</> | drift absolut total (cel mai mare per org): <fg=red>" . number_format($totalAbsDrift, 2) . ' RON</>');
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Derive [net, paid, pending] for an organizer the same way the
-     * /organizator/sold finance endpoint does.
-     *
-     * @return array{0: float, 1: float, 2: float}
-     */
-    protected function deriveFor(MarketplaceOrganizer $organizer, SalesBreakdownService $service): array
-    {
-        $events = Event::where('marketplace_organizer_id', $organizer->id)
-            ->where('marketplace_client_id', $organizer->marketplace_client_id)
-            ->get();
-
-        $netReal = 0.0;
-        foreach ($events as $event) {
-            // legacy_import revenue counts ONLY where Tixello actually settled
-            // it. An imported event with a real decont (completed/approved/
-            // processing) had its obligation carried over and paid HERE, so its
-            // imported net must stay in the maths — otherwise the payout looks
-            // like a 1.88M phantom over-payment across 190 events. An imported
-            // event with NO decont was settled in the OLD system, so Ambilet
-            // owes nothing and its imported net must be excluded — that is the
-            // revenue that inflated organizer balances (QFEEL EVENTS: 2.0M).
-            // Stale 'pending' auto-drafts do NOT count as settled, and the test
-            // is anchored on MarketplacePayout::LEGACY_SETTLEMENT_FREEZE so a
-            // NEW decont can never resurrect already-settled imported revenue.
-            $settledInTixello = MarketplacePayout::eventHasLegacySettlement($event->id);
-
-            $breakdown = $service->build($event, excludeLegacyImport: !$settledInTixello);
-            $netReal += (float) ($breakdown['total_net'] ?? 0);
-        }
-
-        // Payout sums are org-wide (NOT per event) so multi-event deconturi
-        // whose event_id is NULL still count against the balance.
-        $paid = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-            ->where('status', 'completed')
-            ->sum('amount');
-
-        // Reserved / in-flight = approved + processing ONLY. The 'pending'
-        // status is NOT a real reservation here: it is the abandoned
-        // GenerateAutoDeconts auto-draft batch (2679 rows, all Mar–May 2026,
-        // never approved/paid, and created without reserveBalanceForPayout so
-        // they never touched the ledger). Counting them as reserved understated
-        // every affected organizer's available balance on /organizator/sold
-        // ("prea mic"). Their money is part of `available`, not a reservation.
-        $pending = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', ['approved', 'processing'])
-            ->sum('amount');
-
-        return [round($netReal, 2), round($paid, 2), round($pending, 2)];
     }
 
     protected function name(MarketplaceOrganizer $organizer): string
