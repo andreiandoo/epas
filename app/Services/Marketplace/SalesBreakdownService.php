@@ -95,8 +95,23 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false, bool $onlyPos = false): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false, bool $onlyPos = false, bool $accrualBasis = false): array
     {
+        // accrualBasis (payout pipeline only, default OFF for every other
+        // caller): count a ticket in the period it was SOLD in, regardless of
+        // its CURRENT status. A ticket sold in decont 1's period but refunded
+        // later must still belong to decont 1's basis (it was real revenue
+        // then); the refund is then subtracted explicitly, by refund date, in
+        // the decont whose period contains it (total_refunded_principal). This
+        // replaces the legacy "silent exclusion" (whereIn valid/used) that
+        // retroactively yanked refunded tickets out of past periods and left
+        // operators reverse-engineering the difference by hand. The two models
+        // yield the SAME grand total; accrual just attributes the refund to the
+        // right period AND makes it a visible line instead of a disappearance.
+        $ticketStatuses = $accrualBasis ? ['valid', 'used', 'refunded'] : ['valid', 'used'];
+        $orderStatuses = $accrualBasis
+            ? array_merge(self::PAID_ORDER_STATUSES, ['refunded'])
+            : self::PAID_ORDER_STATUSES;
         // Some callers (e.g. the dashboard daily report) pass an Event loaded
         // with a lean column projection. This breakdown needs several fields —
         // display_template (leisure valuation), the commission settings and the
@@ -127,14 +142,14 @@ class SalesBreakdownService
         // report) keep the startOfDay/endOfDay behaviour because they pass
         // dates, not datetimes.
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-            ->whereIn('status', ['valid', 'used'])
-            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
+            ->whereIn('status', $ticketStatuses)
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses) {
                 // Normal flow: ticket tied to a paid-status order.
                 // See self::PAID_ORDER_STATUSES for the exact list — includes
                 // 'partially_refunded' so partial-refund orders' still-valid
                 // tickets don't disappear from the payout math.
-                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
-                    $q->whereIn('status', self::PAID_ORDER_STATUSES)
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses) {
+                    $q->whereIn('status', $orderStatuses)
                         // Test POS smoke-test sales never touch the payout
                         // pipeline, Vânzări totals, or POS-billed slices
                         // — they're strictly for the mobile app to

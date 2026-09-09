@@ -1526,7 +1526,7 @@ class ListPayouts extends ListRecords
         // $cutoff (period end) truncates the slice on order.created_at — the same
         // column buildRemainingTicketsItems uses — so the header "Sold disponibil",
         // the breakdown table and the ticket repeater all agree for the period.
-        $breakdown = $service->build($event, null, $cutoff, excludePos: true);
+        $breakdown = $service->build($event, null, $cutoff, excludePos: true, accrualBasis: true);
 
         $grossRevenue = 0.0;
         $totalCommission = 0.0;
@@ -1584,9 +1584,16 @@ class ListPayouts extends ListRecords
         $keptCommission = round($keptCommission, 2);
         $totalCommission = round($totalCommission + $keptCommission, 2);
 
-        // Net = breakdown net only. Refunds excluded from balance math but
-        // still surfaced via 'refunds' for the modal info line.
-        $netRevenue = $netRevenueFromBreakdown;
+        // Net = accrual breakdown net (counts tickets as sold in their period,
+        // incl. those later refunded) MINUS the refund principal that left
+        // Ambilet in the period (anchored on the refund date via
+        // total_refunded_principal). This is the period-accrual + explicit
+        // refund-line model: the sale is counted once in its own period, the
+        // refund is subtracted once in the period it was processed. Grand total
+        // equals the legacy silent-exclusion net, but the refund is now a
+        // visible, period-correct deduction instead of a retroactive vanish.
+        $refundedPrincipal = (float) ($breakdown['total_refunded_principal'] ?? 0);
+        $netRevenue = $netRevenueFromBreakdown - $refundedPrincipal;
 
         // Previous payouts. amount = organizer take; refund_amount = customer
         // refund already accounted for on this payout row. The TOTAL claim
@@ -1624,10 +1631,18 @@ class ListPayouts extends ListRecords
             'discount' => round($totalDiscount, 2),
             'extras' => round($totalExtras, 2),
             'refunds' => round($refundedAmount, 2),
+            'refunded_principal' => round($refundedPrincipal, 2),
             'net' => round($netRevenue, 2),
             'paid' => round($paidPayouts, 2),
             'pending' => round($pendingPayouts, 2),
             'balance' => round(max(0, $netRevenue - $totalPayoutClaims), 2),
+            // Signed balance — negative = the event was OVER-paid (e.g. a
+            // ticket settled in a completed decont was later refunded and
+            // there was no further sale to absorb it). 'balance' clamps this
+            // to 0 for the manual-decont modal's max; reconcile + the
+            // carry-forward adjustment logic read 'signed_balance' so the
+            // over-payment is never silently swallowed.
+            'signed_balance' => round($netRevenue - $totalPayoutClaims, 2),
             // For partial payout: how much gross/commission was already paid
             'paid_gross' => round($paidPayouts > 0 ? $paidPayouts + ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
             'paid_commission' => round($paidPayouts > 0 ? ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
