@@ -20,7 +20,11 @@ use Illuminate\Console\Command;
  * /organizator/sold page does (SalesBreakdownService per event + payout sums)
  * and flags every organizer whose stored columns disagree.
  *
- *   TRUE net       = Σ SalesBreakdownService(event).total_net  over the org's events
+ *   TRUE net       = Σ SalesBreakdownService(event).total_net  over the org's events,
+ *                    with legacy_import revenue excluded on events that have NO
+ *                    Tixello decont (those were settled in the old system) and
+ *                    kept on events that DO (settled here — revenue must offset
+ *                    the payout, else it reads as a phantom over-payment)
  *   paid           = Σ completed payouts   (org-wide, incl. event_id = NULL)
  *   pending        = Σ approved + processing payouts (org-wide) — NOT 'pending',
  *                    which is the abandoned GenerateAutoDeconts auto-draft batch
@@ -167,7 +171,20 @@ class BalancesReconcileCommand extends Command
 
         $netReal = 0.0;
         foreach ($events as $event) {
-            $breakdown = $service->build($event);
+            // legacy_import revenue counts ONLY where Tixello actually settled
+            // it. An imported event with a real decont (completed/approved/
+            // processing) had its obligation carried over and paid HERE, so its
+            // imported net must stay in the maths — otherwise the payout looks
+            // like a 1.88M phantom over-payment across 190 events. An imported
+            // event with NO decont was settled in the OLD system, so Ambilet
+            // owes nothing and its imported net must be excluded — that is the
+            // revenue that inflated organizer balances (QFEEL EVENTS: 2.0M).
+            // Stale 'pending' auto-drafts do NOT count as settled.
+            $settledInTixello = MarketplacePayout::where('event_id', $event->id)
+                ->whereIn('status', ['completed', 'approved', 'processing'])
+                ->exists();
+
+            $breakdown = $service->build($event, excludeLegacyImport: !$settledInTixello);
             $netReal += (float) ($breakdown['total_net'] ?? 0);
         }
 
