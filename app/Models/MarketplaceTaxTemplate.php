@@ -2255,8 +2255,15 @@ class MarketplaceTaxTemplate extends Model
             }
 
             $vatMode = $payout->commission_mode ?: 'included';
+            // For on-top, the taxable base / "Total de plată" is the organizer's
+            // final net. When an admin pinned net_override, THAT is the final
+            // (row E) — the pre-override $payoutAmount computed above can be a
+            // few/108 lei higher (it still carries the refund the override
+            // already netted). Using it here printed "Total de plată 6.856"
+            // while row E showed 6.748 on payout 3442. Honor the override so
+            // both surfaces agree.
             $vatBase = in_array($vatMode, ['added_on_top', 'on_top'], true)
-                ? (float) $payoutAmount
+                ? (float) ($payout->net_override !== null ? $payout->net_override : $payoutAmount)
                 : (float) $payoutGross;
             // TVA is INCLUDED in the settled price, so it is EXTRACTED, not added:
             //   Total fără TVA = PREȚ / (1 + cotă)   (e.g. 1860 / 1.21 = 1537.19)
@@ -2948,7 +2955,17 @@ class MarketplaceTaxTemplate extends Model
         // into row 1a (operator's accounting convention: 1a = gross
         // sold incl. refunded, then row 2a subtracts it in the
         // template's E = A − B formula).
-        $refundAllocByGroup = self::allocateRefundByCommissionGroup($payout, $ticketBreakdown, $posTypeIdsSet);
+        // When an admin pinned net_override, the A/E totals are already
+        // reconciled to it (payout_net_amount = net_override + refund; row E =
+        // net_override). Adding the refund nominal back into row 1a here too
+        // double-counts it — 1a rendered 6.964 while A resolved to 6.856 on
+        // payout 3442 (a cross-decont refund: the 3 tickets were sold+paid in
+        // decont 1, refunded in decont 2's window). Skip the add-back so the 1a
+        // rows sum to the frozen breakdown net (matching A), and row 2a alone
+        // carries the refund in the template's E = A − B.
+        $refundAllocByGroup = $payout->net_override !== null
+            ? []
+            : self::allocateRefundByCommissionGroup($payout, $ticketBreakdown, $posTypeIdsSet);
 
         $groups = [];
 
