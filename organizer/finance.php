@@ -36,7 +36,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <!-- Events with Balances -->
             <div class="mb-8">
-                <h2 class="mb-4 text-lg font-semibold text-secondary">Sold per eveniment</h2>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <h2 class="text-lg font-semibold text-secondary">Sold per eveniment</h2>
+                    <div class="flex items-center gap-2" id="event-filters">
+                        <button type="button" data-filter="all" onclick="setEventFilter('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-white">Toate</button>
+                        <button type="button" data-filter="active" onclick="setEventFilter('active')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-surface text-muted hover:text-secondary">Active</button>
+                        <button type="button" data-filter="past" onclick="setEventFilter('past')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-surface text-muted hover:text-secondary">Încheiate</button>
+                    </div>
+                </div>
                 <div class="bg-white border rounded-2xl border-border">
                     <div>
                         <table class="w-full">
@@ -84,7 +91,29 @@ $scriptsExtra = <<<'JS'
 <script>
 document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 let financeData = null;
+let allEvents = [];
+let currentEventFilter = 'all';
 const highlightEventId = new URLSearchParams(window.location.search).get('event');
+
+// Filter "Sold per eveniment" by event status. Kept purely client-side — the
+// finance endpoint already returns every event with its is_past flag.
+function setEventFilter(filter) {
+    currentEventFilter = filter;
+    document.querySelectorAll('#event-filters button').forEach(function (btn) {
+        const on = btn.dataset.filter === filter;
+        btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg ' +
+            (on ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-secondary');
+    });
+    renderEvents();
+}
+
+function filteredEvents() {
+    return (allEvents || []).filter(function (e) {
+        if (currentEventFilter === 'active') return !e.is_past;
+        if (currentEventFilter === 'past') return !!e.is_past;
+        return true;
+    });
+}
 
 document.addEventListener('DOMContentLoaded', function() { loadFinanceData(); });
 
@@ -93,15 +122,18 @@ async function loadFinanceData() {
         const response = await AmbiletAPI.get('/organizer/finance');
         if (response.success) {
             financeData = response.data;
-            // Calculate available balance as sum of all event net revenues minus payouts
             const events = financeData.events || [];
-            const calculatedAvailable = events.reduce((sum, e) => sum + (e.available_balance || 0), 0);
-            const calculatedPending = events.reduce((sum, e) => sum + (e.pending_payout || 0), 0);
-            const calculatedPaidOut = events.reduce((sum, e) => sum + (e.total_paid_out || 0), 0);
-            document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(calculatedAvailable);
-            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(calculatedPending || financeData.pending_balance || 0);
-            document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(calculatedPaidOut || financeData.total_paid_out || 0);
-            renderEvents(events);
+            // The cards read the ORG-WIDE figures the backend derives and keeps
+            // reconciled (MarketplaceOrganizer::deriveBalances + the nightly
+            // balances:reconcile). Summing the per-event column instead — what
+            // this used to do — overstated the total, because each event's
+            // available_balance is clamped at 0: an over-paid event contributed
+            // nothing rather than reducing the balance.
+            document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(financeData.available_balance || 0);
+            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
+            document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
+            allEvents = events;
+            renderEvents();
             // Highlight event if coming from events page
             if (highlightEventId) {
                 const targetRow = document.querySelector(`.event-row[data-event-id="${highlightEventId}"]`);
@@ -123,10 +155,14 @@ function showEmptyFinance() {
     document.getElementById('events-list').innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">Nu exista evenimente</td></tr>';
 }
 
-function renderEvents(events) {
+function renderEvents() {
     const tbody = document.getElementById('events-list');
+    const events = filteredEvents();
     if (!events.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">Nu exista evenimente</td></tr>';
+        const label = currentEventFilter === 'active' ? 'Niciun eveniment activ'
+            : currentEventFilter === 'past' ? 'Niciun eveniment încheiat'
+            : 'Nu exista evenimente';
+        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">' + label + '</td></tr>';
         return;
     }
 
@@ -175,6 +211,7 @@ function renderEvents(events) {
                 <td class="px-6 py-4 text-right">
                     <span class="font-semibold ${e.available_balance > 0 ? 'text-primary' : 'text-muted'}">${AmbiletUtils.formatCurrency(e.available_balance)}</span>
                     ${e.pending_payout > 0 ? `<br><span class="text-xs text-warning">In procesare: ${AmbiletUtils.formatCurrency(e.pending_payout)}</span>` : ''}
+                    ${(e.available_balance_signed ?? 0) < -0.005 ? `<br><span class="text-xs text-red-600">De regularizat: ${AmbiletUtils.formatCurrency(Math.abs(e.available_balance_signed))}</span>` : ''}
                 </td>
                 <td class="px-6 py-4 text-center">${payoutButton}</td>
             </tr>
