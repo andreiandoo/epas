@@ -160,6 +160,26 @@ Schedule::command('orders:reconcile-expired')
         // Silent success — the command logs only when it actually fixes rows
     });
 
+// Nightly self-heal for organizer balances. available_balance/pending_balance
+// are still maintained incrementally (reserveBalanceForPayout /
+// recordPayoutCompleted / returnPendingBalance), and a single missed or
+// double-applied call corrupts them permanently — that is how 323 of 326
+// organizers ended up drifting by ~5.7M, with organizer 586 showing available
+// 94k / pending -39k against a real 30.8k / 33.7k.
+//
+// This does NOT create, approve or pay anything: it recomputes two columns from
+// source data (SalesBreakdownService net + payout sums) via
+// MarketplaceOrganizer::recomputeBalances and writes them only where they
+// drifted. Worst case it is a no-op. Running it nightly means any future drift
+// self-corrects within a day instead of accumulating for months.
+Schedule::command('balances:reconcile --fix')
+    ->dailyAt('04:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        \Log::error('Nightly organizer balance reconcile (balances:reconcile --fix) failed');
+    });
+
 // Daily full database backup (pg_dump custom format) at 03:00. The command
 // prunes local dumps older than backup.retention.daily (default 7) days, so
 // storage never grows unbounded. Encryption/compression default off (see
