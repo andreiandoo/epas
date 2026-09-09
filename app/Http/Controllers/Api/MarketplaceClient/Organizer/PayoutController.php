@@ -124,7 +124,17 @@ class PayoutController extends BaseController
                 // than was ever collected (event 4564: 58.000 shown vs 53.060 real,
                 // gross 60.900 vs 55.713 confirmed by SUM(orders.total)). The
                 // service values each ticket at the price locked in at sale time.
-                $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)->build($event);
+                // Same rule as MarketplaceOrganizer::deriveBalances: revenue
+                // imported from the OLD Ambilet system (orders.source =
+                // legacy_import) only counts where Tixello actually settled it,
+                // i.e. the event had a decont before
+                // MarketplacePayout::LEGACY_SETTLEMENT_FREEZE. Counting it
+                // everywhere is what showed organizers balances they had
+                // already been paid years ago (QFEEL EVENTS: 2.0M "available"
+                // against ~197k of real marketplace sales).
+                $settledInTixello = MarketplacePayout::eventHasLegacySettlement($event->id);
+                $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)
+                    ->build($event, excludeLegacyImport: !$settledInTixello);
                 $netRevenue = round((float) ($breakdown['total_net'] ?? 0), 2);
                 $commissionAmount = round((float) ($breakdown['total_commission'] ?? 0), 2);
                 $grossRevenue = round((float) ($breakdown['total_revenue'] ?? 0), 2);
@@ -135,10 +145,16 @@ class PayoutController extends BaseController
                     ->where('status', 'completed')
                     ->sum('amount');
 
-                // Calculate pending balance for this event
+                // Reserved / in-flight for this event = approved + processing.
+                // 'pending' is deliberately NOT counted: it is the abandoned
+                // GenerateAutoDeconts auto-draft batch (2679 rows, Mar–May 2026,
+                // never approved or paid, and created without touching the
+                // ledger). Treating those drafts as reservations subtracted
+                // ~15M from organizers' available balance across the platform —
+                // the "soldul e prea mic" complaints.
                 $eventPendingPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
                     ->where('event_id', $event->id)
-                    ->whereIn('status', ['pending', 'approved', 'processing'])
+                    ->whereIn('status', ['approved', 'processing'])
                     ->sum('amount');
 
                 $eventAvailableBalance = $netRevenue - $eventPayouts - $eventPendingPayouts;
@@ -177,6 +193,15 @@ class PayoutController extends BaseController
                     'total_paid_out' => (float) $eventPayouts,
                     'pending_payout' => (float) $eventPendingPayouts,
                     'available_balance' => max(0, $eventAvailableBalance),
+                    // Raw signed figure: NEGATIVE means this event was over-paid
+                    // and the difference is owed back. The clamped field above
+                    // stays for the payout modal (you cannot request a negative
+                    // payout), but the page must surface this instead of hiding
+                    // over-payments behind max(0).
+                    'available_balance_signed' => round($eventAvailableBalance, 2),
+                    // Diagnostic: was this event's imported revenue settled via
+                    // Tixello (kept in net) or in the old system (excluded)?
+                    'is_settled_legacy' => $settledInTixello,
                     'tickets_sold' => \App\Models\Ticket::whereIn('order_id', $completedOrders->pluck('id'))
                         ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
                         ->count(),
