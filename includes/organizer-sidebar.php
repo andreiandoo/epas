@@ -195,23 +195,19 @@ window.addEventListener('load', async function() {
     }
 
     try {
-        // Load events count
-        const eventsResponse = await AmbiletAPI.get('/organizer/events');
-        // API returns {success: true, data: [...events...]} - events array is directly in data
+        // Events count — counted server-side over ALL the organizer's events
+        // (meta.counts). The list itself is paginated, so counting its first
+        // page undercounted. Sole writer of #nav-events-count.
+        const eventsResponse = await AmbiletAPI.get('/organizer/events', { with_counts: 1 });
         const events = eventsResponse.data || [];
-        if (eventsResponse.success && events.length > 0) {
-            // Count only live events (published + not ended)
-            const liveEvents = events.filter(e => {
-                if (e.status !== 'published' && e.status !== 'active') return false;
-                if (e.is_cancelled || e.is_postponed || e.is_past || e.is_ended) return false;
-                const endDate = e.ends_at || e.starts_at;
-                return !endDate || new Date(endDate) >= new Date();
-            }).length;
+        const meta = eventsResponse.meta || {};
+        if (eventsResponse.success) {
             const navCount = document.getElementById('nav-events-count');
-            if (navCount) navCount.textContent = liveEvents;
+            if (navCount && meta.counts) navCount.textContent = meta.counts.ongoing;
 
             // Show "Locație de agrement" link when at least one event has display_template === 'leisure_venue'
-            const hasLeisure = events.some(e => (e.display_template || 'standard') === 'leisure_venue');
+            const hasLeisure = meta.has_leisure_venue
+                ?? events.some(e => (e.display_template || 'standard') === 'leisure_venue');
             const leisureLink = document.getElementById('nav-leisure-link');
             if (leisureLink && hasLeisure) {
                 leisureLink.style.display = 'flex';
