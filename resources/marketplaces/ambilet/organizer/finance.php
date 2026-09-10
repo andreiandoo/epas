@@ -22,7 +22,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
 
-            <div class="grid gap-6 mb-8 lg:grid-cols-3">
+            <div class="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
                 <!-- Disponibil de retras -->
                 <div class="overflow-hidden text-white bg-gradient-to-br from-primary to-primary-dark rounded-2xl">
                     <div class="p-6">
@@ -30,7 +30,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
                             <div class="min-w-0">
                                 <p class="text-sm text-white/80">Disponibil de retras</p>
-                                <p class="text-3xl font-bold" id="available-balance">0 RON</p>
+                                <p class="text-2xl font-bold" id="available-balance">0 RON</p>
                             </div>
                         </div>
                         <p class="mt-3 text-xs leading-relaxed text-white/70">Fonduri obținute din vânzarea de bilete</p>
@@ -51,7 +51,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-warning/10 rounded-xl"><svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
                             <div class="min-w-0">
                                 <p class="text-sm text-muted">În procesare</p>
-                                <p class="text-3xl font-bold text-secondary" id="pending-balance">0 RON</p>
+                                <p class="text-2xl font-bold text-secondary" id="pending-balance">0 RON</p>
                             </div>
                         </div>
                         <p class="mt-3 text-xs leading-relaxed text-muted">Deconturi aprobate, în curs de plată către tine.</p>
@@ -72,7 +72,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-success/10 rounded-xl"><svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
                             <div class="min-w-0">
                                 <p class="text-sm text-muted">Total încasat</p>
-                                <p class="text-3xl font-bold text-secondary" id="total-paid-out">0 RON</p>
+                                <p class="text-2xl font-bold text-secondary" id="total-paid-out">0 RON</p>
                             </div>
                         </div>
                         <p class="mt-3 text-xs leading-relaxed text-muted">Suma deconturilor deja plătite către tine.</p>
@@ -83,6 +83,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                     <div id="bd-paid" class="hidden px-6 pb-6">
                         <div class="pt-3 space-y-2 overflow-auto border-t border-border max-h-64" id="bd-paid-list"></div>
+                    </div>
+                </div>
+
+                <!-- Total vânzări -->
+                <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                    <div class="p-6">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl"><svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+                            <div class="min-w-0">
+                                <p class="text-sm text-muted">Total vânzări</p>
+                                <p class="text-2xl font-bold text-secondary" id="total-sales">0 RON</p>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs leading-relaxed text-muted">Tot ce ai câștigat din bilete, după reduceri — disponibil + în procesare + încasat.</p>
                     </div>
                 </div>
             </div>
@@ -182,6 +196,12 @@ async function loadFinanceData() {
             document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(financeData.available_balance || 0);
             document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
             document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
+            // Total vânzări = tot ce a câștigat organizatorul din bilete, după
+            // reduceri. Fiecare leu se află într-una din cele trei stări, deci
+            // suma lor E netul: disponibil + în procesare + deja încasat.
+            document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(
+                (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0)
+            );
             allEvents = events;
             renderEvents();
             renderBreakdowns();
@@ -206,6 +226,7 @@ function showEmptyFinance() {
     document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(0);
+    document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('events-list').innerHTML = '<div class="p-12 text-center bg-white border rounded-2xl border-border text-muted">Nu exista evenimente</div>';
 }
 
@@ -320,16 +341,18 @@ function renderEvents() {
             : (e.gross_revenue || 0);
 
         const moneyCells = [
-            { label: 'Încasat de la clienți', value: fmt(customerPaid), cls: 'text-secondary' }
+            { label: 'Bilete vândute', value: String(e.tickets_sold || 0), cls: 'text-secondary' },
+            { label: 'Total vânzări', value: fmt(customerPaid), cls: 'text-secondary' }
         ];
         if (!isOnTop) {
             moneyCells.push({ label: 'Comision Ambilet', value: '− ' + fmt(e.commission_amount || 0), cls: 'text-amber-600' });
         }
         moneyCells.push({ label: 'Reduceri acordate', value: '− ' + fmt(e.discount_amount || 0), cls: 'text-amber-600' });
-        moneyCells.push({ label: 'Ți se cuvine', value: fmt(net), cls: 'text-success' });
+        moneyCells.push({ label: 'Venituri eveniment', value: fmt(net), cls: 'text-success' });
+        moneyCells.push({ label: 'Plăți în așteptare', value: fmt(pending), cls: pending > 0 ? 'text-warning' : 'text-muted' });
 
         const moneyGrid = `
-                    <div class="grid grid-cols-2 gap-4 p-4 mb-4 bg-white border ${moneyCells.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} rounded-xl border-border">
+                    <div class="grid grid-cols-2 gap-4 p-4 mb-4 bg-white border sm:grid-cols-3 ${moneyCells.length >= 6 ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} rounded-xl border-border">
                         ${moneyCells.map(c => `<div><p class="text-xs text-muted">${c.label}</p><p class="font-semibold ${c.cls}">${c.value}</p></div>`).join('')}
                     </div>`;
 
@@ -359,6 +382,7 @@ function renderEvents() {
                         <div class="flex items-center min-w-0 gap-2">
                             <p class="font-semibold truncate text-secondary">${e.title}</p>
                             <svg class="flex-shrink-0 w-4 h-4 transition-transform text-muted event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <span class="flex-shrink-0 text-xs text-muted" id="expand-hint-${e.id}">click pentru detalii</span>
                         </div>
                         <p class="text-xs text-muted mt-0.5">${meta}</p>
                         <div class="flex flex-wrap items-center gap-2 mt-1">
@@ -386,27 +410,16 @@ function renderEvents() {
                 <div class="p-4">
 ${moneyGrid}
                     <div class="flex flex-wrap items-center gap-2 mb-4 border-b border-border">
-                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'pending')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="pending">Plăți în așteptare</button>
-                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payouts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="payouts">Plăți primite</button>
+                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payments')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="payments">Plăți</button>
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzacții</button>
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'discounts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="discounts">Reduceri</button>
                     </div>
-                    <div id="event-${e.id}-pending" class="event-tab-content">
+                    <div id="event-${e.id}-payments" class="event-tab-content">
                         <div class="overflow-x-auto bg-white border rounded-xl border-border">
                             <table class="w-full">
-                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
-                                <tbody id="event-${e.id}-pending-list" class="divide-y divide-border">
-                                    <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div id="event-${e.id}-payouts" class="hidden event-tab-content">
-                        <div class="overflow-x-auto bg-white border rounded-xl border-border">
-                            <table class="w-full">
-                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
-                                <tbody id="event-${e.id}-payouts-list" class="divide-y divide-border">
-                                    <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
+                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Valoare</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data generare</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data plată</th></tr></thead>
+                                <tbody id="event-${e.id}-payments-list" class="divide-y divide-border">
+                                    <tr><td colspan="5" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -441,16 +454,20 @@ const expandedEvents = new Set();
 function toggleEventDetails(eventId) {
     const detailsRow = document.getElementById(`event-details-${eventId}`);
     const expandIcon = document.getElementById(`expand-icon-${eventId}`);
+    // Indiciul are rost doar cât timp cardul e închis.
+    const hint = document.getElementById(`expand-hint-${eventId}`);
 
     if (expandedEvents.has(eventId)) {
         // Collapse
         detailsRow.classList.add('hidden');
         expandIcon.classList.remove('rotate-180');
+        if (hint) hint.classList.remove('hidden');
         expandedEvents.delete(eventId);
     } else {
         // Expand
         detailsRow.classList.remove('hidden');
         expandIcon.classList.add('rotate-180');
+        if (hint) hint.classList.add('hidden');
         expandedEvents.add(eventId);
         // Load event-specific data
         loadEventFinanceDetails(eventId);
@@ -470,7 +487,7 @@ function setEventTab(eventId, tabName) {
     }
 
     // Show/hide tab content
-    ['pending', 'payouts', 'transactions', 'discounts'].forEach(function (t) {
+    ['payments', 'transactions', 'discounts'].forEach(function (t) {
         const el = document.getElementById(`event-${eventId}-${t}`);
         if (el) el.classList.toggle('hidden', t !== tabName);
     });
@@ -495,9 +512,19 @@ function loadEventFinanceDetails(eventId) {
     const ev = (allEvents || []).find(function (x) { return x.id === eventId; }) || {};
 
     renderEventTransactions(eventId, eventTransactions);
-    renderEventPayouts(eventId, pending, 'pending', 'Aici apar deconturile aprobate, aflate în curs de plată către tine. Momentan nu există niciunul pentru acest eveniment.');
-    renderEventPayouts(eventId, completed, 'payouts', 'Aici apar deconturile deja plătite. Pentru acest eveniment nu s-a efectuat încă nicio plată.');
+    // Un singur tabel de plăți: întâi cele în curs, apoi cele încasate.
+    renderEventPayments(eventId, pending.concat(completed));
     renderEventDiscounts(eventId, ev.discount_orders || []);
+}
+
+// Data + ora. AmbiletUtils.formatDate dă doar ziua, iar aici organizatorul
+// trebuie să distingă două deconturi generate în aceeași zi.
+function fmtDateTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function renderEventDiscounts(eventId, list) {
@@ -548,11 +575,11 @@ function renderEventTransactions(eventId, transactions) {
     `).join('');
 }
 
-function renderEventPayouts(eventId, payouts, suffix, emptyLabel) {
-    const tbody = document.getElementById(`event-${eventId}-${suffix}-list`);
+function renderEventPayments(eventId, payouts) {
+    const tbody = document.getElementById(`event-${eventId}-payments-list`);
     if (!tbody) return;
     if (!payouts.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">' + emptyLabel + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-sm text-center text-muted">Aici apar deconturile acestui eveniment — cele aprobate, aflate în curs de plată, și cele deja încasate. Momentan nu există niciunul.</td></tr>';
         return;
     }
     tbody.innerHTML = payouts.map(p => {
@@ -584,7 +611,8 @@ function renderEventPayouts(eventId, payouts, suffix, emptyLabel) {
                     <span class="px-2 py-0.5 ${statusInfo.class} text-xs rounded-full">${statusInfo.label}</span>
                     ${rejectionTooltip}
                 </td>
-                <td class="px-4 py-3 text-sm text-muted">${AmbiletUtils.formatDate(p.completed_at || p.created_at)}</td>
+                <td class="px-4 py-3 text-sm text-muted">${fmtDateTime(p.created_at)}</td>
+                <td class="px-4 py-3 text-sm text-muted">${p.status === 'completed' ? fmtDateTime(p.completed_at) : '—'}</td>
             </tr>
         `;
     }).join('');
