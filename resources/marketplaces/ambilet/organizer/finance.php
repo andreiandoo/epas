@@ -147,10 +147,21 @@ function setEventFilter(filter) {
 }
 
 function filteredEvents() {
-    return (allEvents || []).filter(function (e) {
+    const list = (allEvents || []).filter(function (e) {
         if (currentEventFilter === 'active') return !e.is_past;
         if (currentEventFilter === 'past') return !!e.is_past;
         return true;
+    });
+
+    // Ordine: întâi evenimentele active, apoi cele încheiate. În fiecare grup,
+    // cel mai apropiat în timp primul — active crescător (următorul eveniment
+    // sus), încheiate descrescător (cel mai recent încheiat sus). Endpoint-ul
+    // le trimite după created_at, ceea ce nu spune nimic organizatorului.
+    const ts = function (e) { return e.starts_at ? new Date(e.starts_at).getTime() : 0; };
+
+    return list.sort(function (a, b) {
+        if (!!a.is_past !== !!b.is_past) return a.is_past ? 1 : -1;
+        return a.is_past ? ts(b) - ts(a) : ts(a) - ts(b);
     });
 }
 
@@ -176,7 +187,10 @@ async function loadFinanceData() {
             renderBreakdowns();
             // Highlight event if coming from events page
             if (highlightEventId) {
-                const targetRow = document.querySelector(`.event-row[data-event-id="${highlightEventId}"]`);
+                // NB: clasa e finance-event-card, nu event-row — cea din urmă are
+                // în _organizer.css un `:hover { background: var(--surface) }` care
+                // suprascria culoarea de stare a cardului (verde/gri) la hover.
+                const targetRow = document.querySelector(`.finance-event-card[data-event-id="${highlightEventId}"]`);
                 if (targetRow) {
                     targetRow.classList.add('ring-2', 'ring-primary', 'bg-primary/5');
                     targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -310,7 +324,7 @@ function renderEvents() {
         }
 
         return `
-        <div class="overflow-hidden border rounded-2xl border-border event-row ${cardBg}" data-event-id="${e.id}">
+        <div class="overflow-hidden border rounded-2xl border-border finance-event-card ${cardBg}" data-event-id="${e.id}">
             <div class="p-3 cursor-pointer" onclick="toggleEventDetails(${e.id})">
                 <div class="flex items-start gap-4">
                     <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-surface">
