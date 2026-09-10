@@ -22,83 +22,85 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
 
-            <div class="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
-                <!-- Disponibil de retras -->
-                <div class="overflow-hidden text-white bg-gradient-to-br from-primary to-primary-dark rounded-2xl">
-                    <div class="p-6">
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-                            <div class="min-w-0">
-                                <p class="text-sm text-white/80">Disponibil de retras</p>
-                                <p class="text-2xl font-bold" id="available-balance">0 RON</p>
-                            </div>
-                        </div>
-                        <p class="mt-3 text-xs leading-relaxed text-white/70">Fonduri obținute din vânzarea de bilete</p>
-                        <button type="button" onclick="toggleBreakdown('available')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-white/90 hover:text-white">
-                            <span>Din ce evenimente</span>
-                            <svg id="chev-available" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-                    </div>
-                    <div id="bd-available" class="hidden px-6 pb-6">
-                        <div class="pt-3 space-y-2 overflow-auto border-t border-white/20 max-h-64" id="bd-available-list"></div>
-                    </div>
-                </div>
-
-                <!-- În procesare -->
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <div class="p-6">
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-warning/10 rounded-xl"><svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-                            <div class="min-w-0">
-                                <p class="text-sm text-muted">În procesare</p>
-                                <p class="text-2xl font-bold text-secondary" id="pending-balance">0 RON</p>
-                            </div>
-                        </div>
-                        <p class="mt-3 text-xs leading-relaxed text-muted">Deconturi aprobate, în curs de plată către tine.</p>
-                        <button type="button" onclick="toggleBreakdown('pending')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-primary hover:underline">
-                            <span>Din ce deconturi</span>
-                            <svg id="chev-pending" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-                    </div>
-                    <div id="bd-pending" class="hidden px-6 pb-6">
-                        <div class="pt-3 space-y-2 overflow-auto border-t border-border max-h-64" id="bd-pending-list"></div>
-                    </div>
-                </div>
-
-                <!-- Total încasat -->
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <div class="p-6">
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-success/10 rounded-xl"><svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
-                            <div class="min-w-0">
-                                <p class="text-sm text-muted">Total încasat</p>
-                                <p class="text-2xl font-bold text-secondary" id="total-paid-out">0 RON</p>
-                            </div>
-                        </div>
-                        <p class="mt-3 text-xs leading-relaxed text-muted">Suma deconturilor deja plătite către tine.</p>
-                        <button type="button" onclick="toggleBreakdown('paid')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-primary hover:underline">
-                            <span>Din ce deconturi</span>
-                            <svg id="chev-paid" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-                    </div>
-                    <div id="bd-paid" class="hidden px-6 pb-6">
-                        <div class="pt-3 space-y-2 overflow-auto border-t border-border max-h-64" id="bd-paid-list"></div>
-                    </div>
-                </div>
-
+            <div class="grid gap-4 mb-4 sm:grid-cols-2 lg:grid-cols-4">
                 <!-- Total vânzări -->
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <div class="p-6">
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl"><svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
-                            <div class="min-w-0">
-                                <p class="text-sm text-muted">Total vânzări</p>
-                                <p class="text-2xl font-bold text-secondary" id="total-sales">0 RON</p>
-                            </div>
+                <div class="p-6 text-white bg-gradient-to-br from-primary to-primary-dark rounded-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+                        <div class="min-w-0">
+                            <p class="text-sm text-white/80">Total vânzări</p>
+                            <p class="text-2xl font-bold" id="total-sales">0 RON</p>
                         </div>
-                        <p class="mt-3 text-xs leading-relaxed text-muted">Tot ce ai câștigat din bilete, după reduceri — disponibil + în procesare + încasat.</p>
                     </div>
+                    <p class="mt-3 text-xs leading-relaxed text-white/70">Tot ce ai câștigat din bilete, după reduceri.</p>
+                    <button type="button" onclick="toggleBreakdown('sales')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-white/90 hover:text-white">
+                        <span>Din ce evenimente</span>
+                        <svg id="chev-sales" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
                 </div>
+
+                <!-- Total achitat -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-success/10 rounded-xl"><svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
+                        <div class="min-w-0">
+                            <p class="text-sm text-muted">Total achitat</p>
+                            <p class="text-2xl font-bold text-secondary" id="total-paid-out">0 RON</p>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-xs leading-relaxed text-muted">Suma deconturilor deja plătite către tine.</p>
+                    <button type="button" onclick="toggleBreakdown('paid')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-primary hover:underline">
+                        <span>Din ce deconturi</span>
+                        <svg id="chev-paid" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                </div>
+
+                <!-- Plăți în așteptare -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-warning/10 rounded-xl"><svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="min-w-0">
+                            <p class="text-sm text-muted">Plăți în așteptare</p>
+                            <p class="text-2xl font-bold text-secondary" id="pending-balance">0 RON</p>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-xs leading-relaxed text-muted">Deconturi aprobate, în curs de plată către tine.</p>
+                    <button type="button" onclick="toggleBreakdown('pending')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-primary hover:underline">
+                        <span>Din ce deconturi</span>
+                        <svg id="chev-pending" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                </div>
+
+                <!-- Vânzări neprocesate -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl"><svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="min-w-0">
+                            <p class="text-sm text-muted">Vânzări neprocesate</p>
+                            <p class="text-2xl font-bold text-secondary" id="available-balance">0 RON</p>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-xs leading-relaxed text-muted">Fonduri obținute din vânzarea de bilete</p>
+                    <button type="button" onclick="toggleBreakdown('available')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-primary hover:underline">
+                        <span>Din ce evenimente</span>
+                        <svg id="chev-available" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Breakdown-ul cardului selectat: un singur panou, pe toată lățimea,
+                 sub carduri — încape mult mai bine decât înghesuit în card. -->
+            <div id="breakdown-panel" class="hidden p-6 mb-8 bg-white border rounded-2xl border-border">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="font-semibold text-secondary" id="breakdown-title">Detalii</h3>
+                        <p class="text-xs text-muted" id="breakdown-subtitle"></p>
+                    </div>
+                    <button type="button" onclick="closeBreakdown()" aria-label="Închide" class="flex-shrink-0 text-muted hover:text-secondary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="space-y-2 overflow-auto max-h-96" id="breakdown-list"></div>
             </div>
 
             <!-- Events with Balances -->
@@ -230,77 +232,130 @@ function showEmptyFinance() {
     document.getElementById('events-list').innerHTML = '<div class="p-12 text-center bg-white border rounded-2xl border-border text-muted">Nu exista evenimente</div>';
 }
 
-// ---------- Breakdown-uri sub cardurile de sus ----------
-// Fiecare card poate fi desfăcut ca să arate DIN CE anume e compusă suma:
-// disponibilul din evenimente, iar "în procesare" / "încasat" din deconturi.
+// ---------- Breakdown-ul cardurilor ----------
+// Un singur panou, pe toată lățimea, sub carduri. Click pe același trigger îl
+// închide; click pe altul comută conținutul fără să-l închidă.
+let currentBreakdown = null;
+
 function toggleBreakdown(which) {
-    const box = document.getElementById('bd-' + which);
-    const chev = document.getElementById('chev-' + which);
-    if (!box) return;
-    const nowHidden = box.classList.toggle('hidden');
-    if (chev) chev.classList.toggle('rotate-180', !nowHidden);
+    if (currentBreakdown === which) {
+        closeBreakdown();
+        return;
+    }
+    currentBreakdown = which;
+    const meta = breakdownMeta(which);
+    document.getElementById('breakdown-title').textContent = meta.title;
+    document.getElementById('breakdown-subtitle').textContent = meta.subtitle;
+    document.getElementById('breakdown-list').innerHTML = meta.html();
+    document.getElementById('breakdown-panel').classList.remove('hidden');
+    syncBreakdownChevrons();
+}
+
+function closeBreakdown() {
+    currentBreakdown = null;
+    document.getElementById('breakdown-panel').classList.add('hidden');
+    syncBreakdownChevrons();
+}
+
+function syncBreakdownChevrons() {
+    ['sales', 'paid', 'pending', 'available'].forEach(function (k) {
+        const c = document.getElementById('chev-' + k);
+        if (c) c.classList.toggle('rotate-180', currentBreakdown === k);
+    });
 }
 
 function escAttr(s) {
     return String(s == null ? '' : s).replace(/"/g, '&quot;');
 }
 
-function renderBreakdowns() {
-    const fmt = AmbiletUtils.formatCurrency;
-    const events = allEvents || [];
-
-    // Disponibil: evenimentele care contribuie cu sold pozitiv, plus cele
-    // supra-decontate (afișate separat, ca sumă de regularizat).
-    const contributing = events
-        .filter(e => (e.available_balance || 0) > 0.005)
-        .sort((a, b) => (b.available_balance || 0) - (a.available_balance || 0));
-    const overpaid = events.filter(e => (e.available_balance_signed ?? 0) < -0.005);
-
-    const availList = document.getElementById('bd-available-list');
-    if (availList) {
-        if (!contributing.length && !overpaid.length) {
-            availList.innerHTML = '<p class="text-xs text-white/70">Niciun eveniment cu sold disponibil momentan.</p>';
-        } else {
-            availList.innerHTML =
-                contributing.map(e => `
-                    <div class="flex items-start justify-between gap-3 text-sm">
-                        <span class="min-w-0 truncate text-white/90" title="${escAttr(e.title)}">${e.title}</span>
-                        <span class="font-semibold whitespace-nowrap">${fmt(e.available_balance)}</span>
-                    </div>`).join('') +
-                overpaid.map(e => `
-                    <div class="flex items-start justify-between gap-3 text-sm">
-                        <span class="min-w-0 truncate text-white/60" title="${escAttr(e.title)}">${e.title} · de regularizat</span>
-                        <span class="font-semibold text-red-200 whitespace-nowrap">− ${fmt(Math.abs(e.available_balance_signed))}</span>
-                    </div>`).join('');
-        }
+function breakdownMeta(which) {
+    if (which === 'sales') {
+        return {
+            title: 'Total vânzări — din ce evenimente',
+            subtitle: 'Venitul tău din fiecare eveniment, după reduceri.',
+            html: function () { return eventBreakdownHtml('net_revenue', 'Niciun eveniment cu vânzări.'); }
+        };
     }
-
-    renderPayoutBreakdown('pending', (financeData && financeData.payouts_pending) || [], 'Niciun decont în procesare.');
-    renderPayoutBreakdown('paid', (financeData && financeData.payouts_completed) || [], 'Niciun decont plătit încă.');
+    if (which === 'available') {
+        return {
+            title: 'Vânzări neprocesate — din ce evenimente',
+            subtitle: 'Bani din bilete pentru care nu s-a emis încă un decont.',
+            html: availableBreakdownHtml
+        };
+    }
+    if (which === 'pending') {
+        return {
+            title: 'Plăți în așteptare — din ce deconturi',
+            subtitle: 'Deconturi aprobate, în curs de plată către tine.',
+            html: function () { return payoutBreakdownHtml((financeData && financeData.payouts_pending) || [], 'Niciun decont în așteptare.'); }
+        };
+    }
+    return {
+        title: 'Total achitat — din ce deconturi',
+        subtitle: 'Deconturi deja plătite către tine.',
+        html: function () { return payoutBreakdownHtml((financeData && financeData.payouts_completed) || [], 'Niciun decont plătit încă.'); }
+    };
 }
 
-function renderPayoutBreakdown(which, list, emptyLabel) {
+function breakdownRow(label, value, valueCls) {
+    return `
+        <div class="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
+            <span class="min-w-0 text-sm truncate text-secondary" title="${escAttr(label)}">${label}</span>
+            <span class="text-sm font-semibold whitespace-nowrap ${valueCls || 'text-secondary'}">${value}</span>
+        </div>`;
+}
+
+function eventBreakdownHtml(field, emptyLabel) {
     const fmt = AmbiletUtils.formatCurrency;
-    const el = document.getElementById('bd-' + which + '-list');
-    if (!el) return;
-    if (!list.length) {
-        el.innerHTML = '<p class="text-xs text-muted">' + emptyLabel + '</p>';
-        return;
+    const rows = (allEvents || [])
+        .filter(function (e) { return (e[field] || 0) > 0.005; })
+        .sort(function (a, b) { return (b[field] || 0) - (a[field] || 0); });
+    if (!rows.length) return '<p class="text-sm text-muted">' + emptyLabel + '</p>';
+    return rows.map(function (e) { return breakdownRow(e.title, fmt(e[field])); }).join('');
+}
+
+function availableBreakdownHtml() {
+    const fmt = AmbiletUtils.formatCurrency;
+    const events = allEvents || [];
+    const contributing = events
+        .filter(function (e) { return (e.available_balance || 0) > 0.005; })
+        .sort(function (a, b) { return (b.available_balance || 0) - (a.available_balance || 0); });
+    // Evenimentele supra-decontate se arată separat, ca sumă de regularizat —
+    // altfel ar dispărea complet din listă (available e plafonat la 0).
+    const overpaid = events.filter(function (e) { return (e.available_balance_signed ?? 0) < -0.005; });
+
+    if (!contributing.length && !overpaid.length) {
+        return '<p class="text-sm text-muted">Niciun eveniment cu vânzări neprocesate.</p>';
     }
-    el.innerHTML = list.map(p => {
+    return contributing.map(function (e) { return breakdownRow(e.title, fmt(e.available_balance)); }).join('')
+        + overpaid.map(function (e) {
+            return breakdownRow(e.title + ' · de regularizat', '− ' + fmt(Math.abs(e.available_balance_signed)), 'text-red-600');
+        }).join('');
+}
+
+function payoutBreakdownHtml(list, emptyLabel) {
+    const fmt = AmbiletUtils.formatCurrency;
+    if (!list.length) return '<p class="text-sm text-muted">' + emptyLabel + '</p>';
+    return list.map(function (p) {
         // event_id NULL = decont care acoperă mai multe evenimente.
         const label = p.event_title || 'Decont multi-eveniment';
         const ref = p.decont_series || p.reference || ('#' + p.id);
         const when = p.completed_at || p.created_at;
         return `
-            <div class="flex items-start justify-between gap-3 text-sm">
+            <div class="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
                 <div class="min-w-0">
-                    <p class="truncate text-secondary" title="${escAttr(label)}">${label}</p>
-                    <p class="text-xs text-muted">${ref}${when ? ' · ' + AmbiletUtils.formatDate(when) : ''}</p>
+                    <p class="text-sm truncate text-secondary" title="${escAttr(label)}">${label}</p>
+                    <p class="text-xs text-muted">${ref}${when ? ' · ' + fmtDateTime(when) : ''}</p>
                 </div>
-                <span class="font-semibold whitespace-nowrap text-secondary">${fmt(p.amount)}</span>
+                <span class="text-sm font-semibold whitespace-nowrap text-secondary">${fmt(p.amount)}</span>
             </div>`;
     }).join('');
+}
+
+// Reîmprospătează panoul dacă e deschis când se reîncarcă datele.
+function renderBreakdowns() {
+    if (!currentBreakdown) return;
+    document.getElementById('breakdown-list').innerHTML = breakdownMeta(currentBreakdown).html();
 }
 
 function renderEvents() {
