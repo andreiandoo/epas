@@ -29,7 +29,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             Panou organizator
                         </span>
                         <h1 class="text-2xl font-extrabold text-white lg:text-3xl" id="pn-greeting">Bine ai revenit 👋</h1>
-                        <p class="mt-1 text-sm text-slate-300 lg:text-base">Iată cum performează evenimentele tale în derulare.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
                         <a href="/organizator/events?action=create" class="inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-all shadow-lg rounded-xl bg-primary hover:opacity-90">
@@ -460,7 +459,10 @@ const OrgPanouNou = {
             const el = document.getElementById(id);
             if (el) el.textContent = val;
         };
-        setText('pn-total-revenue', this.money(t.revenue || 0));
+        // revenue_net = netul real al organizatorului pe perioadă (aceeași formulă
+        // ca la cardul de sus). t.revenue e suma seriei zilnice, care e brută și
+        // ratează comenzile fără marketplace_organizer_id — doar fallback.
+        setText('pn-total-revenue', this.money(t.revenue_net != null ? t.revenue_net : (t.revenue || 0)));
         setText('pn-total-tickets', this.num(t.tickets || 0));
         setText('pn-total-views', this.num(t.views || 0));
 
@@ -504,6 +506,8 @@ const OrgPanouNou = {
         const emptyEl = document.getElementById('pnChartEmpty');
         if (!canvas || typeof Chart === 'undefined') return;
         const d = this.chartData || {};
+        // { 'YYYY-MM-DD': [{title, venue, city}, ...] } — zilele cu eveniment.
+        const evDays = d.event_days || {};
         // Coerce to real numbers — a JSON API can hand back numeric strings,
         // which Chart.js will not plot as bars.
         const rev = (d.revenue || []).map(Number);
@@ -537,6 +541,13 @@ const OrgPanouNou = {
                     { type: 'bar', label: 'Vizualizări', data: viw, yAxisID: 'y1',
                       backgroundColor: 'rgba(6,182,212,.65)', borderRadius: 4, order: 2,
                       hidden: !this.metrics.views },
+                    // Marcaj pe zilele în care are loc un eveniment. Punct pe linia
+                    // de bază, fără linie; numele apar în tooltip (afterBody).
+                    // Rămâne pe indexul 3 — applyMetricVisibility atinge doar 0..2.
+                    { type: 'scatter', label: '__events__', yAxisID: 'y1', order: 3,
+                      data: (d.raw_dates || []).map(k => (evDays[k] && evDays[k].length) ? 0 : null),
+                      pointStyle: 'triangle', radius: 7, hoverRadius: 10, rotation: 0,
+                      backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
                 ]
             },
             options: {
@@ -547,9 +558,20 @@ const OrgPanouNou = {
                     tooltip: {
                         callbacks: {
                             label: (c) => {
+                                // Marcajul de eveniment nu e o valoare — apare în afterBody.
+                                if (c.dataset.label === '__events__') return null;
                                 let v = c.parsed.y || 0;
                                 if (c.dataset.label.indexOf('Venituri') === 0) return '  Venituri: ' + OrgPanouNou.money(v);
                                 return '  ' + c.dataset.label + ': ' + OrgPanouNou.num(v);
+                            },
+                            afterBody: (items) => {
+                                if (!items || !items.length) return '';
+                                const key = (d.raw_dates || [])[items[0].dataIndex];
+                                const list = evDays[key] || [];
+                                if (!list.length) return '';
+                                return ['', list.length > 1 ? 'Evenimente:' : 'Eveniment:'].concat(
+                                    list.map(e => '  • ' + [e.title, e.venue, e.city].filter(Boolean).join(' · '))
+                                );
                             }
                         }
                     }
