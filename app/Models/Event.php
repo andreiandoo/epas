@@ -884,6 +884,19 @@ class Event extends Model
     }
 
     /**
+     * "În derulare" in the organizer UI: approved, not cancelled or postponed,
+     * and not yet ended. Single definition behind the sidebar counter, the
+     * /organizator/events pill and the dashboard KPI.
+     */
+    public function isOngoing(): bool
+    {
+        return (bool) $this->is_published
+            && !$this->is_cancelled
+            && !$this->is_postponed
+            && !$this->isPast();
+    }
+
+    /**
      * Scope for upcoming events (not past, not cancelled)
      */
     public function scopeUpcoming($query)

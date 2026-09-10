@@ -3288,6 +3288,7 @@ switch ($action) {
             if (isset($_GET['status'])) $params['status'] = $_GET['status'];
             if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
             if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+            if (!empty($_GET['with_counts'])) $params['with_counts'] = 1;
         }
         $endpoint = '/organizer/events' . (!empty($params) ? '?' . http_build_query($params) : '');
         $requiresAuth = true;

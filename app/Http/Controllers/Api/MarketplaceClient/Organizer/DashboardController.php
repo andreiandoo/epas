@@ -33,7 +33,13 @@ class DashboardController extends BaseController
         $upcomingEventsQuery = (clone $eventsBaseQuery)
             ->where('is_published', true)
             ->where('event_date', '>=', now());
-        $upcomingEvents = (clone $upcomingEventsQuery)->count();
+        // "În derulare" — same rule as the sidebar counter (Event::isOngoing);
+        // `event_date >= now()` dropped today's events and running ranges.
+        $upcomingEvents = (clone $eventsBaseQuery)
+            ->with('marketplaceClient')
+            ->get()
+            ->filter(fn (Event $e) => $e->isOngoing())
+            ->count();
 
         // Get list of upcoming events with details
         $eventsList = (clone $upcomingEventsQuery)

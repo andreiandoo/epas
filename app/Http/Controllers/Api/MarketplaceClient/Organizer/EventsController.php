@@ -42,6 +42,8 @@ class EventsController extends BaseController
             }
         }
 
+        $countsQuery = clone $query;
+
         // Mobile-only flag: hide events that aren't approved yet (drafts,
         // pending review, rejected). The mobile scanner / POS app has nothing
         // operational to do with those, and they confused organizers.
@@ -78,12 +80,32 @@ class EventsController extends BaseController
         $sortDir = $request->input('order', 'desc');
         $query->orderBy($sortField, $sortDir);
 
+        // Opt-in summary over ALL the organizer's events (ignores request
+        // filters and pagination) — the sidebar counter needs the full set,
+        // one page of the list undercounts.
+        $meta = [];
+        if ($request->boolean('with_counts')) {
+            $allEvents = (clone $countsQuery)
+                ->without(['ticketTypes', 'venue', 'marketplaceCity'])
+                ->with('marketplaceClient')
+                ->get();
+            $meta = [
+                'counts' => [
+                    'total' => $allEvents->count(),
+                    'ongoing' => $allEvents->filter(fn (Event $e) => $e->isOngoing())->count(),
+                ],
+                'has_leisure_venue' => $allEvents->contains(
+                    fn (Event $e) => ($e->display_template ?? 'standard') === 'leisure_venue'
+                ),
+            ];
+        }
+
         $perPage = min((int) $request->input('per_page', 20), 100);
         $events = $query->paginate($perPage);
 
         return $this->paginated($events, function ($event) {
             return $this->formatEvent($event);
-        });
+        }, $meta);
     }
 
     /**
