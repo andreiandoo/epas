@@ -359,7 +359,7 @@ function renderEvents() {
 
             <div class="hidden border-t border-border bg-slate-50 event-details-row" id="event-details-${e.id}">
                 <div class="p-4">
-                    <div class="grid grid-cols-1 gap-4 p-4 mb-4 bg-white border sm:grid-cols-3 rounded-xl border-border">
+                    <div class="grid grid-cols-2 gap-4 p-4 mb-4 bg-white border sm:grid-cols-4 rounded-xl border-border">
                         <div>
                             <p class="text-xs text-muted">Încasat de la clienți</p>
                             <p class="font-semibold text-secondary">${fmt(e.gross_revenue)}</p>
@@ -369,6 +369,10 @@ function renderEvents() {
                             <p class="font-semibold text-amber-600">− ${fmt(e.commission_amount)}</p>
                         </div>
                         <div>
+                            <p class="text-xs text-muted">Reduceri acordate</p>
+                            <p class="font-semibold text-amber-600">− ${fmt(e.discount_amount || 0)}</p>
+                        </div>
+                        <div>
                             <p class="text-xs text-muted">Ți se cuvine</p>
                             <p class="font-semibold text-success">${fmt(net)}</p>
                         </div>
@@ -376,6 +380,7 @@ function renderEvents() {
                     <div class="flex items-center gap-2 mb-4 border-b border-border">
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzacții</button>
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payouts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="payouts">Plăți primite</button>
+                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'pending')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="pending">Plăți în așteptare</button>
                     </div>
                     <div id="event-${e.id}-transactions" class="event-tab-content">
                         <div class="overflow-hidden bg-white border rounded-xl border-border">
@@ -389,6 +394,16 @@ function renderEvents() {
                             <table class="w-full">
                                 <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
                                 <tbody id="event-${e.id}-payouts-list" class="divide-y divide-border">
+                                    <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="event-${e.id}-pending" class="hidden event-tab-content">
+                        <div class="overflow-x-auto bg-white border rounded-xl border-border">
+                            <table class="w-full">
+                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
+                                <tbody id="event-${e.id}-pending-list" class="divide-y divide-border">
                                     <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
                                 </tbody>
                             </table>
@@ -436,9 +451,10 @@ function setEventTab(eventId, tabName) {
     }
 
     // Show/hide tab content
-    document.getElementById(`event-${eventId}-transactions`).classList.add('hidden');
-    document.getElementById(`event-${eventId}-payouts`).classList.add('hidden');
-    document.getElementById(`event-${eventId}-${tabName}`).classList.remove('hidden');
+    ['transactions', 'payouts', 'pending'].forEach(function (t) {
+        const el = document.getElementById(`event-${eventId}-${t}`);
+        if (el) el.classList.toggle('hidden', t !== tabName);
+    });
 }
 
 function loadEventFinanceDetails(eventId) {
@@ -446,10 +462,18 @@ function loadEventFinanceDetails(eventId) {
     const eventTransactions = (financeData.transactions || []).filter(t =>
         t.event_id === eventId && t.type !== 'payout' && t.type !== 'payout_reversal'
     );
-    const eventPayouts = (financeData.payouts || []).filter(p => p.event_id === eventId);
+
+    // Listele COMPLETE din API, separate pe status. Înainte se filtra din
+    // financeData.payouts, care e doar feed-ul celor mai recente 10 deconturi de
+    // TOATE statusurile: evenimentele ale căror deconturi nu încăpeau în acel top
+    // apăreau goale la "Plăți primite", iar un decont doar aprobat apărea acolo
+    // ca și cum banii ar fi fost deja încasați.
+    const completed = (financeData.payouts_completed || []).filter(p => p.event_id === eventId);
+    const pending = (financeData.payouts_pending || []).filter(p => p.event_id === eventId);
 
     renderEventTransactions(eventId, eventTransactions);
-    renderEventPayouts(eventId, eventPayouts);
+    renderEventPayouts(eventId, completed, 'payouts', 'Nu există plăți primite pentru acest eveniment');
+    renderEventPayouts(eventId, pending, 'pending', 'Niciun decont în așteptare pentru acest eveniment');
 }
 
 function renderEventTransactions(eventId, transactions) {
@@ -471,10 +495,11 @@ function renderEventTransactions(eventId, transactions) {
     `).join('');
 }
 
-function renderEventPayouts(eventId, payouts) {
-    const tbody = document.getElementById(`event-${eventId}-payouts-list`);
+function renderEventPayouts(eventId, payouts, suffix, emptyLabel) {
+    const tbody = document.getElementById(`event-${eventId}-${suffix}-list`);
+    if (!tbody) return;
     if (!payouts.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Nu exista plăți pentru acest eveniment</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">' + emptyLabel + '</td></tr>';
         return;
     }
     tbody.innerHTML = payouts.map(p => {
@@ -497,13 +522,16 @@ function renderEventPayouts(eventId, payouts) {
             : '';
         return `
             <tr class="hover:bg-surface/50">
-                <td class="px-4 py-3 text-sm font-medium text-secondary">${p.reference || '#' + p.id}</td>
+                <td class="px-4 py-3">
+                    <p class="text-sm font-medium text-secondary">${p.decont_series || p.reference || '#' + p.id}</p>
+                    ${p.decont_series && p.reference ? `<p class="text-xs text-muted">${p.reference}</p>` : ''}
+                </td>
                 <td class="px-4 py-3 text-sm font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td>
                 <td class="px-4 py-3">
                     <span class="px-2 py-0.5 ${statusInfo.class} text-xs rounded-full">${statusInfo.label}</span>
                     ${rejectionTooltip}
                 </td>
-                <td class="px-4 py-3 text-sm text-muted">${AmbiletUtils.formatDate(p.created_at)}</td>
+                <td class="px-4 py-3 text-sm text-muted">${AmbiletUtils.formatDate(p.completed_at || p.created_at)}</td>
             </tr>
         `;
     }).join('');
