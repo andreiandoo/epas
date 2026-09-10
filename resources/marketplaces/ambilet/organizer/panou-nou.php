@@ -88,14 +88,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="flex flex-col gap-4 mb-5 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2 class="text-lg font-bold text-secondary">Performanță vânzări</h2>
-                        <p class="text-sm text-muted">Toate evenimentele în derulare, cumulat</p>
+                        <p class="text-sm text-muted" id="pn-period-label">Ultimele 30 de zile, toate evenimentele</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2" id="pn-period">
                         <button data-days="7"  class="pn-period-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-muted hover:bg-surface transition-colors">7 zile</button>
                         <button data-days="30" class="pn-period-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary/10 text-primary transition-colors">30 zile</button>
                         <button data-days="90" class="pn-period-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-muted hover:bg-surface transition-colors">90 zile</button>
+                        <button data-days="custom" class="pn-period-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-muted hover:bg-surface transition-colors">Personalizat</button>
                     </div>
                 </div>
+
+                <!-- custom range (ascuns până se apasă "Personalizat") -->
+                <div id="pn-custom-range" class="flex-wrap items-center hidden gap-2 p-3 mb-4 border rounded-xl bg-surface border-border">
+                    <label class="flex items-center gap-2 text-xs text-muted">De la
+                        <input type="date" id="pn-custom-from" class="px-2 py-1 text-xs bg-white border rounded-lg border-border">
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-muted">Până la
+                        <input type="date" id="pn-custom-to" class="px-2 py-1 text-xs bg-white border rounded-lg border-border">
+                    </label>
+                    <button id="pn-custom-apply" class="px-3 py-1 text-xs font-semibold text-white rounded-lg bg-primary hover:bg-primary/90">Aplică</button>
+                </div>
+
+                <!-- totalurile perioadei selectate -->
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="p-3 rounded-xl bg-surface">
+                        <p class="text-xs truncate text-muted">Vânzări totale</p>
+                        <p class="font-bold text-secondary tabular-nums" id="pn-total-revenue">—</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-surface">
+                        <p class="text-xs truncate text-muted">Bilete</p>
+                        <p class="font-bold text-secondary tabular-nums" id="pn-total-tickets">—</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-surface">
+                        <p class="text-xs truncate text-muted">Vizualizări</p>
+                        <p class="font-bold text-secondary tabular-nums" id="pn-total-views">—</p>
+                    </div>
+                </div>
+
                 <!-- metric toggles -->
                 <div class="flex flex-wrap gap-2 mb-4" id="pn-metrics">
                     <button data-metric="revenue" class="pn-metric-btn active inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors">
@@ -197,6 +226,31 @@ const OrgPanouNou = {
 
         this.bindControls();
         await Promise.all([this.loadEvents(), this.loadChart(this.chartDays)]);
+        // După loadEvents (care pune un fallback din evenimentele în derulare),
+        // suprascriem cu cifrele all-time.
+        await this.loadKpis();
+    },
+
+    // ---------- KPI ALL-TIME ----------
+    // Capul paginii arăta doar evenimentele în derulare, cumulate din cifrele lor
+    // cache-uite — deci nu se potrivea niciodată cu /organizator/sold, care e pe
+    // tot istoricul și pe alt calcul. total_sales vine acum din exact aceeași
+    // sursă ca acolo (netul organizatorului), deci cele două pagini spun la fel.
+    async loadKpis() {
+        try {
+            const res = await AmbiletAPI.get('/organizer/dashboard');
+            const a = ((res.data || res || {}).all_time) || {};
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set('kpi-revenue', this.money(a.total_sales || 0));
+            set('kpi-tickets', this.num(a.tickets_sold || 0));
+            set('kpi-views', this.num(a.views || 0));
+            if (a.ongoing_events != null) set('kpi-events', this.num(a.ongoing_events));
+        } catch (e) {
+            console.warn('KPI all-time indisponibil, rămân cifrele din evenimentele în derulare', e);
+        }
     },
 
     bindControls() {
@@ -208,10 +262,44 @@ const OrgPanouNou = {
                 });
                 btn.classList.add('bg-primary/10', 'text-primary');
                 btn.classList.remove('text-muted', 'hover:bg-surface');
+
+                const range = document.getElementById('pn-custom-range');
+                if (btn.dataset.days === 'custom') {
+                    // Doar deschide selectorul — graficul se reîncarcă la "Aplică",
+                    // ca să nu tragem date la fiecare tastare de dată.
+                    range.classList.remove('hidden');
+                    range.classList.add('flex');
+                    const iso = (d) => d.toISOString().split('T')[0];
+                    const fromEl = document.getElementById('pn-custom-from');
+                    const toEl = document.getElementById('pn-custom-to');
+                    if (toEl && !toEl.value) toEl.value = iso(new Date());
+                    if (fromEl && !fromEl.value) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - 29);
+                        fromEl.value = iso(d);
+                    }
+                    return;
+                }
+                range.classList.add('hidden');
+                range.classList.remove('flex');
                 this.chartDays = parseInt(btn.dataset.days, 10) || 30;
                 this.loadChart(this.chartDays);
             });
         });
+
+        const applyBtn = document.getElementById('pn-custom-apply');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                const from = (document.getElementById('pn-custom-from') || {}).value;
+                const to = (document.getElementById('pn-custom-to') || {}).value;
+                const warn = (msg) => {
+                    if (typeof AmbiletNotifications !== 'undefined') AmbiletNotifications.warning(msg);
+                };
+                if (!from || !to) return warn('Alege ambele date pentru a aplica perioada.');
+                if (from > to) return warn('Data de început trebuie să fie înaintea celei de sfârșit.');
+                this.loadChart({ from, to });
+            });
+        }
         document.querySelectorAll('.pn-metric-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const m = btn.dataset.metric;
@@ -334,10 +422,17 @@ const OrgPanouNou = {
     },
 
     // ---------- CHART ----------
-    async loadChart(days) {
+    // Acceptă fie un număr de zile (preset), fie {from, to} pentru perioadă custom.
+    async loadChart(range) {
+        const isCustom = !!(range && typeof range === 'object' && range.from && range.to);
+        const days = isCustom ? null : (parseInt(range, 10) || 30);
+
         let data = null;
         try {
-            const res = await AmbiletAPI.get('/organizer/dashboard/analytics-timeline?days=' + days);
+            const qs = isCustom
+                ? ('from=' + encodeURIComponent(range.from) + '&to=' + encodeURIComponent(range.to))
+                : ('days=' + days);
+            const res = await AmbiletAPI.get('/organizer/dashboard/analytics-timeline?' + qs);
             data = res.data || res;
         } catch (e) {
             console.warn('analytics-timeline unavailable', e);
@@ -347,11 +442,36 @@ const OrgPanouNou = {
         // Fallback to the always-available sales-timeline (revenue only) when the
         // richer endpoint isn't deployed yet or returned nothing usable.
         if (!hasSignal) {
-            const fb = await this.loadChartFallback(days);
+            const fbDays = isCustom
+                ? Math.max(1, Math.round((new Date(range.to) - new Date(range.from)) / 86400000) + 1)
+                : days;
+            const fb = await this.loadChartFallback(fbDays);
             if (fb) data = fb;
         }
         this.chartData = data;
         this.renderChart();
+        this.renderPeriodTotals(data, isCustom ? range : days);
+    },
+
+    // Totalurile perioadei selectate, deasupra graficului.
+    renderPeriodTotals(data, range) {
+        const t = (data && data.totals) || {};
+        const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        setText('pn-total-revenue', this.money(t.revenue || 0));
+        setText('pn-total-tickets', this.num(t.tickets || 0));
+        setText('pn-total-views', this.num(t.views || 0));
+
+        const label = document.getElementById('pn-period-label');
+        if (!label) return;
+        if (range && typeof range === 'object' && range.from && range.to) {
+            const fmt = (iso) => new Date(iso).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            label.textContent = `${fmt(range.from)} – ${fmt(range.to)}, toate evenimentele`;
+        } else {
+            label.textContent = `Ultimele ${range || 30} de zile, toate evenimentele`;
+        }
     },
 
     async loadChartFallback(days) {

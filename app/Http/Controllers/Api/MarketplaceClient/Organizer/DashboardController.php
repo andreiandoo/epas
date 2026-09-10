@@ -110,10 +110,45 @@ class DashboardController extends BaseController
             ->get()
             ->sum('tickets_count');
 
+        // ---- All-time KPIs for the redesigned dashboard header ----
+        // The header used to sum the ONGOING events' cached figures, so it
+        // disagreed with /organizator/sold on principle: different scope AND a
+        // different formula (Order::sum('total') with a flat commission %, which
+        // includes commission and extras). total_sales here is the very same net
+        // the sold page shows, so the two pages finally state the same number.
+        $allEventIds = (clone $eventsBaseQuery)->pluck('id');
+
+        $allTimeTickets = $allEventIds->isEmpty() ? 0 : \App\Models\Ticket::where(function ($q) use ($allEventIds) {
+                $q->whereIn('event_id', $allEventIds)
+                  ->orWhereIn('marketplace_event_id', $allEventIds);
+            })
+            ->whereIn('status', ['valid', 'used'])
+            ->count();
+
+        $allTimeViews = 0;
+        try {
+            if ($allEventIds->isNotEmpty()) {
+                $allTimeViews = (int) \App\Models\Platform\CoreCustomerEvent::where('event_type', 'page_view')
+                    ->where(function ($q) use ($allEventIds) {
+                        $q->whereIn('event_id', $allEventIds)
+                          ->orWhereIn('marketplace_event_id', $allEventIds);
+                    })
+                    ->count();
+            }
+        } catch (\Throwable $e) {
+            // tracking table/columns missing — same fallback as analyticsTimeline
+        }
+
         return $this->success([
             'period' => [
                 'from' => $fromDate,
                 'to' => $toDate,
+            ],
+            'all_time' => [
+                'total_sales' => $organizer->deriveBalances()['net'],
+                'tickets_sold' => $allTimeTickets,
+                'views' => $allTimeViews,
+                'ongoing_events' => $upcomingEvents,
             ],
             // Structured data
             'events' => [
@@ -206,9 +241,25 @@ class DashboardController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $tz = 'Europe/Bucharest';
-        $days = max(1, min((int) $request->input('days', 30), 365));
-        $from = Carbon::now($tz)->subDays($days - 1)->startOfDay();
-        $to = Carbon::now($tz)->endOfDay();
+
+        // Either a preset window (days=7/30/90) or an explicit from/to range, so
+        // the dashboard's "Personalizat" picker can ask for any period. The range
+        // is still capped at 365 days — the response carries one point per day.
+        $fromInput = $request->input('from');
+        $toInput = $request->input('to');
+        if ($fromInput && $toInput) {
+            $from = Carbon::parse($fromInput, $tz)->startOfDay();
+            $to = Carbon::parse($toInput, $tz)->endOfDay();
+            if ($from->gt($to)) {
+                [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+            }
+            $days = min(365, max(1, $from->diffInDays($to) + 1));
+            $to = $from->copy()->addDays($days - 1)->endOfDay();
+        } else {
+            $days = max(1, min((int) $request->input('days', 30), 365));
+            $from = Carbon::now($tz)->subDays($days - 1)->startOfDay();
+            $to = Carbon::now($tz)->endOfDay();
+        }
         $fromUtc = $from->copy()->utc();
         $toUtc = $to->copy()->utc();
 
@@ -290,6 +341,8 @@ class DashboardController extends BaseController
 
         return $this->success([
             'days' => $days,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
             'labels' => $labels,
             'raw_dates' => $rawDates,
             'revenue' => $revenue,
