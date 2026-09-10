@@ -191,6 +191,73 @@ class PayoutController extends BaseController
                 // (event 4713: 1.007 − 57 ≠ 822, the missing 128 being discounts).
                 $discountAmount = round((float) ($breakdown['total_discount'] ?? 0), 2);
 
+                // Orders behind that discount, for the "Reduceri" tab. Computed
+                // only when the event actually has discounts — otherwise this
+                // would add queries to every one of the organizer's events for
+                // nothing (an organizer can easily have 40+).
+                $discountOrders = [];
+                if ($discountAmount > 0.005) {
+                    $ticketsByOrder = \App\Models\Ticket::where(function ($q) use ($eventId) {
+                            $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId);
+                        })
+                        ->whereIn('status', ['valid', 'used'])
+                        ->get(['id', 'order_id', 'price'])
+                        ->groupBy('order_id');
+
+                    $discountedOrders = Order::whereIn('id', $ticketsByOrder->keys()->filter()->all())
+                        ->where('discount_amount', '>', 0)
+                        ->orderByDesc('created_at')
+                        ->get(['id', 'order_number', 'promo_code', 'promo_code_id', 'created_at', 'subtotal', 'discount_amount', 'meta']);
+
+                    foreach ($discountedOrders as $order) {
+                        $group = $ticketsByOrder[$order->id] ?? collect();
+                        $meta = is_array($order->meta) ? $order->meta : [];
+                        $promoType = $meta['promo_code']['type'] ?? null;
+                        $orderDiscount = (float) $order->discount_amount;
+                        $subtotal = (float) $order->subtotal;
+
+                        // The code lives in one of three places depending on the
+                        // order's origin — same resolution order as the decont
+                        // template uses.
+                        $code = trim((string) ($order->promo_code ?? ''));
+                        if ($code === '' && $order->promo_code_id) {
+                            $code = trim((string) (\Illuminate\Support\Facades\DB::table('promo_codes')
+                                ->where('id', $order->promo_code_id)
+                                ->value('code') ?: ''));
+                        }
+                        if ($code === '') {
+                            $code = trim((string) ($meta['promo_code']['code'] ?? ''));
+                        }
+
+                        // Mirror SalesBreakdownService's allocation so the rows
+                        // add up to the event's discount total: percentage promos
+                        // split by value, fixed amounts split evenly per ticket.
+                        if ($promoType === 'percentage' && $subtotal > 0) {
+                            $allocated = (float) $group->sum('price') * ($orderDiscount / $subtotal);
+                        } else {
+                            $orderTicketCount = \App\Models\Ticket::where('order_id', $order->id)
+                                ->whereIn('status', ['valid', 'used'])
+                                ->count();
+                            $allocated = $orderTicketCount > 0
+                                ? $group->count() * ($orderDiscount / $orderTicketCount)
+                                : 0.0;
+                        }
+
+                        $discountOrders[] = [
+                            'order_id' => $order->id,
+                            'order_number' => $order->order_number,
+                            'date' => $order->created_at?->toIso8601String(),
+                            'code' => $code !== '' ? $code : null,
+                            'order_discount' => round($orderDiscount, 2),
+                            'allocated_discount' => round(min($allocated, $orderDiscount), 2),
+                            'tickets' => $group->count(),
+                            // True when the order also carries tickets for other
+                            // events, so only part of its discount counts here.
+                            'is_shared' => round($allocated, 2) < round($orderDiscount, 2) - 0.005,
+                        ];
+                    }
+                }
+
                 // Get payouts for this event (if tracked per event)
                 $eventPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
                     ->where('event_id', $event->id)
@@ -243,6 +310,7 @@ class PayoutController extends BaseController
                     'net_revenue' => $netRevenue,
                     'commission_amount' => $commissionAmount,
                     'discount_amount' => $discountAmount,
+                    'discount_orders' => $discountOrders,
                     'total_paid_out' => (float) $eventPayouts,
                     'pending_payout' => (float) $eventPendingPayouts,
                     'available_balance' => max(0, $eventAvailableBalance),
