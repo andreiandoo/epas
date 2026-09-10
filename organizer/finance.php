@@ -198,12 +198,13 @@ async function loadFinanceData() {
             document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(financeData.available_balance || 0);
             document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
             document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
-            // Total vânzări = tot ce a câștigat organizatorul din bilete, după
-            // reduceri. Fiecare leu se află într-una din cele trei stări, deci
-            // suma lor E netul: disponibil + în procesare + deja încasat.
-            document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(
-                (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0)
-            );
+            // Total vânzări vine acum direct din endpoint (net live). Fallback pe
+            // sumă pentru siguranță — fiecare leu e într-una din cele trei stări,
+            // deci disponibil + în procesare + încasat = net.
+            const totalSales = financeData.total_sales != null
+                ? financeData.total_sales
+                : (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0);
+            document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(totalSales);
             allEvents = events;
             renderEvents();
             renderBreakdowns();
@@ -268,6 +269,23 @@ function escAttr(s) {
     return String(s == null ? '' : s).replace(/"/g, '&quot;');
 }
 
+// "Titlu (12.09.2026 · Sala Luceafărul · București)" — două evenimente cu
+// același nume în orașe diferite altfel nu s-ar putea distinge în listă.
+function eventLabel(e) {
+    if (!e) return '';
+    const bits = [
+        e.starts_at ? AmbiletUtils.formatDate(e.starts_at) : null,
+        e.venue_name,
+        e.venue_city
+    ].filter(Boolean).join(' · ');
+    return bits ? `${e.title} (${bits})` : e.title;
+}
+
+function eventLabelById(eventId, fallbackTitle) {
+    const e = (allEvents || []).find(function (x) { return x.id === eventId; });
+    return e ? eventLabel(e) : (fallbackTitle || 'Decont multi-eveniment');
+}
+
 function breakdownMeta(which) {
     if (which === 'sales') {
         return {
@@ -311,7 +329,7 @@ function eventBreakdownHtml(field, emptyLabel) {
         .filter(function (e) { return (e[field] || 0) > 0.005; })
         .sort(function (a, b) { return (b[field] || 0) - (a[field] || 0); });
     if (!rows.length) return '<p class="text-sm text-muted">' + emptyLabel + '</p>';
-    return rows.map(function (e) { return breakdownRow(e.title, fmt(e[field])); }).join('');
+    return rows.map(function (e) { return breakdownRow(eventLabel(e), fmt(e[field])); }).join('');
 }
 
 function availableBreakdownHtml() {
@@ -327,9 +345,9 @@ function availableBreakdownHtml() {
     if (!contributing.length && !overpaid.length) {
         return '<p class="text-sm text-muted">Niciun eveniment cu vânzări neprocesate.</p>';
     }
-    return contributing.map(function (e) { return breakdownRow(e.title, fmt(e.available_balance)); }).join('')
+    return contributing.map(function (e) { return breakdownRow(eventLabel(e), fmt(e.available_balance)); }).join('')
         + overpaid.map(function (e) {
-            return breakdownRow(e.title + ' · de regularizat', '− ' + fmt(Math.abs(e.available_balance_signed)), 'text-red-600');
+            return breakdownRow(eventLabel(e) + ' · de regularizat', '− ' + fmt(Math.abs(e.available_balance_signed)), 'text-red-600');
         }).join('');
 }
 
@@ -337,8 +355,10 @@ function payoutBreakdownHtml(list, emptyLabel) {
     const fmt = AmbiletUtils.formatCurrency;
     if (!list.length) return '<p class="text-sm text-muted">' + emptyLabel + '</p>';
     return list.map(function (p) {
-        // event_id NULL = decont care acoperă mai multe evenimente.
-        const label = p.event_title || 'Decont multi-eveniment';
+        // event_id NULL = decont care acoperă mai multe evenimente. Când avem
+        // evenimentul în listă, îi atașăm și data/venue-ul, ca în celelalte
+        // breakdown-uri.
+        const label = p.event_id ? eventLabelById(p.event_id, p.event_title) : 'Decont multi-eveniment';
         const ref = p.decont_series || p.reference || ('#' + p.id);
         const when = p.completed_at || p.created_at;
         return `
