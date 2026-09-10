@@ -80,6 +80,15 @@ call :minify_assets
 cd /d "%TEMP_DIR%"
 echo %DATE% %TIME% > .deploy-timestamp
 
+:: Unique token for THIS deploy, written to a web-readable file. After pushing we
+:: poll ambilet.ro for it, so we know cPanel's auto-pull has actually landed
+:: before we reset OPcache. The old code just slept 8 seconds and reset blindly —
+:: when the pull took longer, the reset flushed the cache while the OLD files
+:: were still on disk, PHP re-cached the old bytecode, and the deploy looked like
+:: it did nothing until you ran the script a second time.
+set "DEPLOY_TOKEN=%RANDOM%%RANDOM%%RANDOM%"
+echo %DEPLOY_TOKEN%> deploy-version.txt
+
 echo [5/7] Staging changes...
 git add -A
 
@@ -101,9 +110,27 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [8/8] Resetting OPcache on ambilet.ro (waits 8s for cPanel auto-pull)...
-timeout /t 8 /nobreak >nul
-curl -s -o nul -w "       opcache-reset HTTP %%{http_code}\n" "https://ambilet.ro/opcache-reset.php?t=deploy" 2>nul
+echo [8/8] Waiting for cPanel to pull this deploy, then resetting OPcache...
+set "DEPLOY_LANDED=0"
+for /l %%i in (1,1,30) do (
+    if "!DEPLOY_LANDED!"=="0" (
+        timeout /t 3 /nobreak >nul
+        curl -s "https://ambilet.ro/deploy-version.txt?cb=%%i%RANDOM%" 2>nul | findstr /c:"%DEPLOY_TOKEN%" >nul 2>&1
+        if not errorlevel 1 (
+            set "DEPLOY_LANDED=1"
+            echo       Files landed on server after ~%%i checks.
+        )
+    )
+)
+
+if "!DEPLOY_LANDED!"=="1" (
+    curl -s -o nul -w "       opcache-reset HTTP %%{http_code}\n" "https://ambilet.ro/opcache-reset.php?t=deploy" 2>nul
+) else (
+    echo       [WARN] Could not confirm the pull within 90s.
+    echo       [WARN] Resetting OPcache anyway - if the changes are not visible, open:
+    echo       [WARN]   https://ambilet.ro/opcache-reset.php?t=manual
+    curl -s -o nul -w "       opcache-reset HTTP %%{http_code}\n" "https://ambilet.ro/opcache-reset.php?t=deploy" 2>nul
+)
 
 echo.
 echo ========================================
