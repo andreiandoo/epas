@@ -109,10 +109,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- totalurile perioadei selectate -->
-                <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="grid grid-cols-2 gap-3 mb-4 lg:grid-cols-4">
                     <div class="p-3 rounded-xl bg-surface">
                         <p class="text-xs truncate text-muted">Vânzări totale</p>
                         <p class="font-bold text-secondary tabular-nums" id="pn-total-revenue">—</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-surface">
+                        <p class="text-xs truncate text-muted">Medie pe zi</p>
+                        <p class="font-bold text-secondary tabular-nums" id="pn-avg-revenue">—</p>
                     </div>
                     <div class="p-3 rounded-xl bg-surface">
                         <p class="text-xs truncate text-muted">Bilete</p>
@@ -463,6 +467,7 @@ const OrgPanouNou = {
         // ca la cardul de sus). t.revenue e suma seriei zilnice, care e brută și
         // ratează comenzile fără marketplace_organizer_id — doar fallback.
         setText('pn-total-revenue', this.money(t.revenue_net != null ? t.revenue_net : (t.revenue || 0)));
+        setText('pn-avg-revenue', this.money(t.revenue_per_day || 0));
         setText('pn-total-tickets', this.num(t.tickets || 0));
         setText('pn-total-views', this.num(t.views || 0));
 
