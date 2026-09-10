@@ -225,10 +225,12 @@ class SalesBreakdownService
             ? collect()
             : Order::with('items')->whereIn('id', $orderIds)->get()->keyBy('id');
 
-        $totalDiscountCard = 0.0;
+        // NB: no order-level discount total here any more — total_discount now
+        // reports $sumDiscountValid (the share allocated to THIS event's valid
+        // tickets). Summing orders.discount_amount charged a multi-event order's
+        // entire discount to every event in it. See the note on the return.
         $totalExtrasCard = 0.0;
         foreach ($ordersById as $o) {
-            $totalDiscountCard += (float) $o->discount_amount;
             $m = is_array($o->meta) ? $o->meta : [];
             $totalExtrasCard += (float) ($m['insurance_amount'] ?? 0);
             $totalExtrasCard += (float) ($m['cultural_card_surcharge'] ?? 0);
@@ -628,7 +630,19 @@ class SalesBreakdownService
             'total_commission_kept_from_refunds' => round($keptCommission, 2),
             'total_refunded_principal' => round($refundedPrincipal, 2),
             'total_extras' => round($totalExtrasCard, 2),
-            'total_discount' => round($totalDiscountCard, 2),
+            // The discount ACTUALLY allocated to this event's valid tickets —
+            // the same figure subtracted when computing total_net above, so
+            // revenue − commission − discount == net always holds.
+            //
+            // This used to return $totalDiscountCard, the raw sum of
+            // orders.discount_amount across every order touched. On a
+            // multi-event order that counts the WHOLE order's discount against
+            // each event in it. Event 4713 showed 200 lei of discounts in the
+            // admin "Vânzări" tab (56 of its own + all 144 from multi-event
+            // order 183696, of which only 72 is its share) against a net of 822
+            // — so 1007 − 57 − 200 ≠ 822 and the tab contradicted itself, while
+            // the organizer's page, which allocates properly, showed 128.
+            'total_discount' => round($sumDiscountValid, 2),
             // F4 — processing fee summed across orders in this period.
             // Zero on marketplaces without payment_fees opted in (kill switch).
             'total_processing_fee' => $totalProcessingFee,
