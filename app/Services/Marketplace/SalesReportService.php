@@ -78,9 +78,11 @@ class SalesReportService
                 // rows the customer pays price*qty + commission, and that
                 // is what should appear under "Brut" — same as the
                 // payout-ticket-breakdown blade. Net stays as the
-                // organizer-side number (gross − commission − discount −
-                // extras), so 1545 brut − 75 comm = 1470 net for an
-                // on-top earlybird and the row arithmetic still ties out.
+                // organizer-side number (gross − commission − discount; extras
+                // are charged on top of the ticket and never belonged to the
+                // organizer, so they don't reduce it), which is why 1545 brut −
+                // 75 comm = 1470 net for an on-top earlybird and the row
+                // arithmetic still ties out.
                 $baseGross = (float) ($row['gross'] ?? 0);
                 $displayGross = $baseGross + ($isOnTop ? $commission : 0);
 

@@ -470,7 +470,14 @@ class SalesBreakdownService
                     $sliceExtras = $extrasValid * ($slice['gross'] / $orderValidGross);
                 }
 
-                $sliceNet = $slice['gross'] - $sliceDiscount - $sliceExtras;
+                // Extras (asigurare bilet + supliment card cultural) sunt
+                // încasate ÎNTOTDEAUNA peste prețul biletului: clientul plătește
+                // bilet + extras + comision. Nu fac parte din valoarea biletului,
+                // deci nu au ce să scadă din banii organizatorului — scăzându-le
+                // aici, organizatorul pierdea exact suma lor din propriul venit
+                // (bilet 100 + asigurare 5 → primea 95 în loc de 100).
+                // Rămân raportate separat (per_type.extras / total_extras).
+                $sliceNet = $slice['gross'] - $sliceDiscount;
                 if (!in_array($slice['mode'], ['on_top', 'added_on_top'], true)) {
                     $sliceNet -= $slice['commission'];
                 }
@@ -510,7 +517,9 @@ class SalesBreakdownService
         }
 
         $totalCommission = $sumOnTop + $sumIncluded;
-        $totalNet = max(0.0, $sumValidGross - $sumDiscountValid - $sumIncluded - $sumExtrasValid);
+        // Extras NU se scad din net — vezi nota de la $sliceNet. Rămân doar în
+        // $totalRevenue (banii chiar au trecut prin casă) și raportate separat.
+        $totalNet = max(0.0, $sumValidGross - $sumDiscountValid - $sumIncluded);
         $totalRevenue = $sumValidGross + $sumOnTop + $sumExtrasValid;
 
         // Commission the platform KEPT from refunded orders — refunds

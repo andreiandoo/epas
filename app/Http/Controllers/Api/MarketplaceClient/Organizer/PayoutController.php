@@ -329,10 +329,24 @@ class PayoutController extends BaseController
                 ];
             });
 
+        // Headline figures computed LIVE from the breakdowns already built in the
+        // loop above — no extra queries beyond the payout sum. The ledger columns
+        // are only reconciled by the nightly balances:reconcile, so reading them
+        // here showed the organizer a figure that lagged every sale made since
+        // midnight (4.31 lei out on organizer 586 when we checked). Same formula
+        // as MarketplaceOrganizer::deriveBalances, so the page and the columns
+        // agree the moment the job runs.
+        $netLive = round((float) $events->sum('net_revenue'), 2);
+        $pendingLive = round((float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', ['approved', 'processing'])
+            ->sum('amount'), 2);
+
         return $this->success([
-            'available_balance' => (float) $organizer->available_balance,
-            'pending_balance' => (float) $organizer->pending_balance,
+            'available_balance' => round($netLive - $totalPaidOut - $pendingLive, 2),
+            'pending_balance' => $pendingLive,
             'total_paid_out' => $totalPaidOut,
+            // Everything the organizer earned from tickets, after discounts.
+            'total_sales' => $netLive,
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
             'transactions' => $transactions,

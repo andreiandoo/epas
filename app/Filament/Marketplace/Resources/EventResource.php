@@ -6229,14 +6229,20 @@ class EventResource extends Resource
      *   extras_valid       = (insurance + cultural_surcharge) × valid_gross / subtotal
      *
      *   Venituri (card)    = valid_gross + on_top_commission + extras_valid
-     *   Net (card)         = valid_gross - discount_valid - included_commission - extras_valid
+     *   Net (card)         = valid_gross - discount_valid - included_commission
      *   Commission (card)  = on_top_commission + included_commission
-     *   Discount (card)    = sum Order.discount_amount  (FULL, informational)
-     *   Extras (card)      = sum (insurance + surcharge) (FULL, informational)
+     *   Discount (card)    = discount_valid — the share allocated to THIS event's
+     *                        valid tickets, not the raw Order.discount_amount sum
+     *                        (which charged a multi-event order's whole discount
+     *                        to every event in it)
+     *   Extras (card)      = sum (insurance + surcharge) — informational ONLY.
+     *                        They are charged on top of the ticket price and were
+     *                        never part of the organizer's slice, so they do not
+     *                        reduce Net.
      *
      *   Per-type Net in the breakdown table = tt's gross minus its share of
-     *   discount/included_commission/extras, allocated with the same rules used
-     *   for the order-level totals. Sum of per-type Net = Net card.
+     *   discount/included_commission, allocated with the same rules used for the
+     *   order-level totals. Sum of per-type Net = Net card.
      */
     protected static array $salesBreakdownCache = [];
 

@@ -101,9 +101,13 @@ class RecomputePayoutBreakdownCommand extends Command
             $isOnTop = in_array($row['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
             $commission = $commPer * $qty;
             $gross = $price * $qty + ($isOnTop ? $commission : 0);
+            // Fallback for rows saved without a net column. Extras (insurance +
+            // cultural-card surcharge) are charged ON TOP of the ticket price
+            // and never belonged to the organizer's slice, so they must not be
+            // deducted here — see SalesBreakdownService.
             $net = isset($row['net'])
                 ? (float) $row['net']
-                : ($gross - $commission - (float) ($row['discount'] ?? 0) - (float) ($row['extras'] ?? 0));
+                : ($gross - $commission - (float) ($row['discount'] ?? 0));
 
             $newGross += $gross;
             $newCommission += $commission;

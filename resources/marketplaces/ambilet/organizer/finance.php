@@ -198,12 +198,13 @@ async function loadFinanceData() {
             document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(financeData.available_balance || 0);
             document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
             document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
-            // Total vânzări = tot ce a câștigat organizatorul din bilete, după
-            // reduceri. Fiecare leu se află într-una din cele trei stări, deci
-            // suma lor E netul: disponibil + în procesare + deja încasat.
-            document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(
-                (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0)
-            );
+            // Total vânzări vine acum direct din endpoint (net live). Fallback pe
+            // sumă pentru siguranță — fiecare leu e într-una din cele trei stări,
+            // deci disponibil + în procesare + încasat = net.
+            const totalSales = financeData.total_sales != null
+                ? financeData.total_sales
+                : (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0);
+            document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(totalSales);
             allEvents = events;
             renderEvents();
             renderBreakdowns();
