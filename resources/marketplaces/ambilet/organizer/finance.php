@@ -308,6 +308,31 @@ function renderEvents() {
         const pctPending = net > 0 ? Math.max(0, Math.min(100 - pctPaid, Math.round((pending / net) * 100))) : 0;
         const meta = [e.starts_at ? AmbiletUtils.formatDate(e.starts_at) + (e.start_time ? ' ' + e.start_time : '') : '', e.venue_name, e.venue_city].filter(Boolean).join(' · ');
 
+        // Comision "peste preț": taxa e plătită de client PESTE prețul biletului,
+        // nu se scade din banii organizatorului — deci nu-l interesează cât e.
+        // Îl ascundem, iar "încasat de la clienți" arată suma fără el, altfel
+        // calculul afișat nu s-ar mai închide (gross include comisionul).
+        // La comision inclus în preț taxa CHIAR se scade din ce ia organizatorul,
+        // deci acolo rândul rămâne vizibil.
+        const isOnTop = (e.commission_mode === 'added_on_top' || e.commission_mode === 'on_top');
+        const customerPaid = isOnTop
+            ? (e.gross_revenue || 0) - (e.commission_amount || 0)
+            : (e.gross_revenue || 0);
+
+        const moneyCells = [
+            { label: 'Încasat de la clienți', value: fmt(customerPaid), cls: 'text-secondary' }
+        ];
+        if (!isOnTop) {
+            moneyCells.push({ label: 'Comision Ambilet', value: '− ' + fmt(e.commission_amount || 0), cls: 'text-amber-600' });
+        }
+        moneyCells.push({ label: 'Reduceri acordate', value: '− ' + fmt(e.discount_amount || 0), cls: 'text-amber-600' });
+        moneyCells.push({ label: 'Ți se cuvine', value: fmt(net), cls: 'text-success' });
+
+        const moneyGrid = `
+                    <div class="grid grid-cols-2 gap-4 p-4 mb-4 bg-white border ${moneyCells.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} rounded-xl border-border">
+                        ${moneyCells.map(c => `<div><p class="text-xs text-muted">${c.label}</p><p class="font-semibold ${c.cls}">${c.value}</p></div>`).join('')}
+                    </div>`;
+
         // Starea evenimentului nu mai e un badge — o comunică fundalul cardului
         // (verde = activ, gri = încheiat).
         const cardBg = e.is_past ? 'bg-slate-300' : 'bg-green-100';
@@ -359,24 +384,7 @@ function renderEvents() {
 
             <div class="hidden border-t border-border bg-slate-50 event-details-row" id="event-details-${e.id}">
                 <div class="p-4">
-                    <div class="grid grid-cols-2 gap-4 p-4 mb-4 bg-white border sm:grid-cols-4 rounded-xl border-border">
-                        <div>
-                            <p class="text-xs text-muted">Încasat de la clienți</p>
-                            <p class="font-semibold text-secondary">${fmt(e.gross_revenue)}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-muted">Comision Ambilet</p>
-                            <p class="font-semibold text-amber-600">− ${fmt(e.commission_amount)}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-muted">Reduceri acordate</p>
-                            <p class="font-semibold text-amber-600">− ${fmt(e.discount_amount || 0)}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-muted">Ți se cuvine</p>
-                            <p class="font-semibold text-success">${fmt(net)}</p>
-                        </div>
-                    </div>
+${moneyGrid}
                     <div class="flex items-center gap-2 mb-4 border-b border-border">
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzacții</button>
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payouts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="payouts">Plăți primite</button>
