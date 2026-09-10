@@ -93,6 +93,51 @@ class PayoutController extends BaseController
                 return $this->formatPayout($payout);
             });
 
+        // Full decont lists backing the "din ce evenimente / deconturi" breakdowns
+        // under the three balance cards on /organizator/sold. Not capped like
+        // $payouts above — the organizer must be able to see every decont that
+        // makes up "În procesare" and "Total încasat". Titles are resolved from
+        // one preloaded map instead of formatPayout()'s per-row Event::find.
+        $breakdownPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', ['approved', 'processing', 'completed'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $payoutTitles = Event::whereIn('id', $breakdownPayouts->pluck('event_id')->filter()->unique()->all())
+            ->get(['id', 'title'])
+            ->mapWithKeys(function ($event) {
+                $title = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? collect($event->title)->first() ?? null)
+                    : $event->title;
+
+                return [$event->id => $title];
+            });
+
+        $mapBreakdownPayout = function (MarketplacePayout $payout) use ($payoutTitles) {
+            return [
+                'id' => $payout->id,
+                'reference' => $payout->reference,
+                'decont_series' => $payout->decont_series,
+                'amount' => (float) $payout->amount,
+                'status' => $payout->status,
+                'event_id' => $payout->event_id,
+                // NULL event_id = multi-event decont; the UI labels it as such.
+                'event_title' => $payout->event_id ? ($payoutTitles[$payout->event_id] ?? null) : null,
+                'created_at' => $payout->created_at?->toIso8601String(),
+                'completed_at' => $payout->completed_at?->toIso8601String(),
+            ];
+        };
+
+        $payoutsPending = $breakdownPayouts
+            ->whereIn('status', ['approved', 'processing'])
+            ->map($mapBreakdownPayout)
+            ->values();
+
+        $payoutsCompleted = $breakdownPayouts
+            ->where('status', 'completed')
+            ->map($mapBreakdownPayout)
+            ->values();
+
         // Get events with their balances
         $events = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
@@ -216,6 +261,8 @@ class PayoutController extends BaseController
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
             'transactions' => $transactions,
             'payouts' => $payouts,
+            'payouts_pending' => $payoutsPending,
+            'payouts_completed' => $payoutsCompleted,
             'events' => $events,
         ]);
     }
