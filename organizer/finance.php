@@ -385,16 +385,20 @@ function renderEvents() {
             <div class="hidden border-t border-border bg-slate-50 event-details-row" id="event-details-${e.id}">
                 <div class="p-4">
 ${moneyGrid}
-                    <div class="flex items-center gap-2 mb-4 border-b border-border">
-                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzacții</button>
+                    <div class="flex flex-wrap items-center gap-2 mb-4 border-b border-border">
+                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'pending')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="pending">Plăți în așteptare</button>
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payouts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="payouts">Plăți primite</button>
-                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'pending')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="pending">Plăți în așteptare</button>
+                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzacții</button>
+                        <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'discounts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="discounts">Reduceri</button>
                     </div>
-                    <div id="event-${e.id}-transactions" class="event-tab-content">
-                        <div class="overflow-hidden bg-white border rounded-xl border-border">
-                            <div class="divide-y divide-border" id="event-${e.id}-transactions-list">
-                                <div class="p-4 text-sm text-center text-muted">Se încarcă...</div>
-                            </div>
+                    <div id="event-${e.id}-pending" class="event-tab-content">
+                        <div class="overflow-x-auto bg-white border rounded-xl border-border">
+                            <table class="w-full">
+                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
+                                <tbody id="event-${e.id}-pending-list" class="divide-y divide-border">
+                                    <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                     <div id="event-${e.id}-payouts" class="hidden event-tab-content">
@@ -407,12 +411,19 @@ ${moneyGrid}
                             </table>
                         </div>
                     </div>
-                    <div id="event-${e.id}-pending" class="hidden event-tab-content">
+                    <div id="event-${e.id}-transactions" class="hidden event-tab-content">
+                        <div class="overflow-hidden bg-white border rounded-xl border-border">
+                            <div class="divide-y divide-border" id="event-${e.id}-transactions-list">
+                                <div class="p-4 text-sm text-center text-muted">Se încarcă...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="event-${e.id}-discounts" class="hidden event-tab-content">
                         <div class="overflow-x-auto bg-white border rounded-xl border-border">
                             <table class="w-full">
-                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Decont</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
-                                <tbody id="event-${e.id}-pending-list" class="divide-y divide-border">
-                                    <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
+                                <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Comandă</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Cod reducere</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Bilete</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Reducere</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
+                                <tbody id="event-${e.id}-discounts-list" class="divide-y divide-border">
+                                    <tr><td colspan="5" class="px-4 py-4 text-sm text-center text-muted">Se încarcă...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -459,7 +470,7 @@ function setEventTab(eventId, tabName) {
     }
 
     // Show/hide tab content
-    ['transactions', 'payouts', 'pending'].forEach(function (t) {
+    ['pending', 'payouts', 'transactions', 'discounts'].forEach(function (t) {
         const el = document.getElementById(`event-${eventId}-${t}`);
         if (el) el.classList.toggle('hidden', t !== tabName);
     });
@@ -479,15 +490,49 @@ function loadEventFinanceDetails(eventId) {
     const completed = (financeData.payouts_completed || []).filter(p => p.event_id === eventId);
     const pending = (financeData.payouts_pending || []).filter(p => p.event_id === eventId);
 
+    // Reducerile vin gata calculate pe eveniment din endpoint (alocate pe
+    // biletele acestui eveniment, nu reducerea brută a comenzii).
+    const ev = (allEvents || []).find(function (x) { return x.id === eventId; }) || {};
+
     renderEventTransactions(eventId, eventTransactions);
-    renderEventPayouts(eventId, completed, 'payouts', 'Nu există plăți primite pentru acest eveniment');
-    renderEventPayouts(eventId, pending, 'pending', 'Niciun decont în așteptare pentru acest eveniment');
+    renderEventPayouts(eventId, pending, 'pending', 'Aici apar deconturile aprobate, aflate în curs de plată către tine. Momentan nu există niciunul pentru acest eveniment.');
+    renderEventPayouts(eventId, completed, 'payouts', 'Aici apar deconturile deja plătite. Pentru acest eveniment nu s-a efectuat încă nicio plată.');
+    renderEventDiscounts(eventId, ev.discount_orders || []);
+}
+
+function renderEventDiscounts(eventId, list) {
+    const tbody = document.getElementById(`event-${eventId}-discounts-list`);
+    if (!tbody) return;
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-sm text-center text-muted">Aici apar comenzile în care s-a folosit un cod de reducere. La acest eveniment nu s-a aplicat nicio reducere.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(function (d) {
+        const code = d.code
+            ? `<span class="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary font-medium">${d.code}</span>`
+            : '<span class="text-xs text-muted">reducere manuală</span>';
+        // is_shared = comanda are bilete si la alte evenimente, deci doar o parte
+        // din reducerea ei se scade aici.
+        const shared = d.is_shared
+            ? `<p class="text-xs font-normal text-muted">din ${AmbiletUtils.formatCurrency(d.order_discount)} pe comandă — restul e al altor evenimente</p>`
+            : '';
+        return `
+            <tr class="hover:bg-surface/50">
+                <td class="px-4 py-3 text-sm font-medium text-secondary">${d.order_number || ('#' + d.order_id)}</td>
+                <td class="px-4 py-3">${code}</td>
+                <td class="px-4 py-3 text-sm text-muted">${d.tickets}</td>
+                <td class="px-4 py-3 text-sm font-semibold text-amber-600">− ${AmbiletUtils.formatCurrency(d.allocated_discount)}${shared}</td>
+                <td class="px-4 py-3 text-sm text-muted">${d.date ? AmbiletUtils.formatDate(d.date) : '—'}</td>
+            </tr>`;
+    }).join('');
 }
 
 function renderEventTransactions(eventId, transactions) {
     const container = document.getElementById(`event-${eventId}-transactions-list`);
     if (!transactions.length) {
-        container.innerHTML = '<div class="p-4 text-sm text-center text-muted">Nu exista tranzacții pentru acest eveniment</div>';
+        // Onest despre regula de afișare: transactions vine din feed-ul general
+        // al contului, limitat la ultimele 20 de mișcări, filtrat apoi pe eveniment.
+        container.innerHTML = '<div class="p-4 text-sm text-center text-muted">Aici apar vânzările și rambursările acestui eveniment. Se încarcă doar din ultimele 20 de mișcări ale contului tău, deci tranzacțiile mai vechi nu apar aici.</div>';
         return;
     }
     container.innerHTML = transactions.map(t => `
