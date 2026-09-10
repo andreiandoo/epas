@@ -294,9 +294,9 @@ function renderEvents() {
         const pctPending = net > 0 ? Math.max(0, Math.min(100 - pctPaid, Math.round((pending / net) * 100))) : 0;
         const meta = [e.starts_at ? AmbiletUtils.formatDate(e.starts_at) + (e.start_time ? ' ' + e.start_time : '') : '', e.venue_name, e.venue_city].filter(Boolean).join(' · ');
 
-        const statusBadge = e.is_past
-            ? '<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">Încheiat</span>'
-            : '<span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Activ</span>';
+        // Starea evenimentului nu mai e un badge — o comunică fundalul cardului
+        // (verde = activ, gri = încheiat).
+        const cardBg = e.is_past ? 'bg-slate-300' : 'bg-green-100';
 
         let payoutButton;
         if (!e.is_past) {
@@ -310,21 +310,20 @@ function renderEvents() {
         }
 
         return `
-        <div class="overflow-hidden bg-white border rounded-2xl border-border event-row" data-event-id="${e.id}">
-            <div class="p-3 cursor-pointer hover:bg-surface/40" onclick="toggleEventDetails(${e.id})">
+        <div class="overflow-hidden border rounded-2xl border-border event-row ${cardBg}" data-event-id="${e.id}">
+            <div class="p-3 cursor-pointer" onclick="toggleEventDetails(${e.id})">
                 <div class="flex items-start gap-4">
                     <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-surface">
                         ${e.image ? `<img src="${e.image}" alt="" class="object-cover w-full h-full">` : '<div class="flex items-center justify-center w-full h-full text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'}
                     </div>
-                    <div class="flex items-start flex-1 min-w-0 gap-2">
-                        <svg class="w-4 h-4 mt-1 transition-transform flex-shrink-0 text-muted event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        <div class="min-w-0">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center min-w-0 gap-2">
                             <p class="font-semibold truncate text-secondary">${e.title}</p>
-                            <p class="text-xs text-muted mt-0.5">${meta}</p>
-                            <div class="flex flex-wrap items-center gap-2 mt-1">
-                                ${statusBadge}
-                                <span class="text-xs text-muted">${e.tickets_sold || 0} bilete vândute</span>
-                            </div>
+                            <svg class="flex-shrink-0 w-4 h-4 transition-transform text-muted event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <p class="text-xs text-muted mt-0.5">${meta}</p>
+                        <div class="flex flex-wrap items-center gap-2 mt-1">
+                            <span class="text-xs font-bold text-muted">${e.tickets_sold || 0} bilete vândute</span>
                         </div>
                     </div>
                     <div class="flex-shrink-0 text-right">
@@ -339,7 +338,7 @@ function renderEvents() {
                         <div class="h-full transition-all bg-success" style="width: ${pctPaid}%"></div>
                         <div class="h-full transition-all bg-warning" style="width: ${pctPending}%"></div>
                     </div>
-                    <p class="mt-1.5 text-xs text-muted">Ai primit <span class="font-medium text-secondary">${fmt(paid)}</span> din ${fmt(net)}${pending > 0 ? ` · <span class="text-warning">${fmt(pending)} în procesare</span>` : ''}</p>
+                    <p class="mt-1.5 text-xs font-bold text-muted">Ai primit <span class="text-secondary">${fmt(paid)}</span> din ${fmt(net)}${pending > 0 ? ` · <span class="text-warning">${fmt(pending)} în procesare</span>` : ''}</p>
                     ${signed < -0.005 ? `<p class="mt-1 text-xs text-red-600">De regularizat: ${fmt(Math.abs(signed))} — s-a decontat mai mult decât valoarea biletelor rămase valide (rambursări ulterioare).</p>` : ''}
                 </div>
             </div>
