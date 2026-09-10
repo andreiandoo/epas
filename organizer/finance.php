@@ -33,7 +33,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <p class="text-3xl font-bold" id="available-balance">0 RON</p>
                             </div>
                         </div>
-                        <p class="mt-3 text-xs leading-relaxed text-white/70">Bani din bilete vândute pe care îi poți cere la plată acum.</p>
+                        <p class="mt-3 text-xs leading-relaxed text-white/70">Fonduri obținute din vânzarea de bilete</p>
                         <button type="button" onclick="toggleBreakdown('available')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-white/90 hover:text-white">
                             <span>Din ce evenimente</span>
                             <svg id="chev-available" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -287,7 +287,11 @@ function renderEvents() {
         const pending = e.pending_payout || 0;
         const avail = e.available_balance || 0;
         const signed = (e.available_balance_signed ?? avail);
-        const pct = net > 0 ? Math.max(0, Math.min(100, Math.round((paid / net) * 100))) : 0;
+        // Bara are două segmente: verde = deja încasat, galben = în procesare.
+        // Galbenul e plafonat la cât a mai rămas din bară, ca să nu depășească
+        // 100% când suma decontată e mai mare decât netul curent (rambursări).
+        const pctPaid = net > 0 ? Math.max(0, Math.min(100, Math.round((paid / net) * 100))) : 0;
+        const pctPending = net > 0 ? Math.max(0, Math.min(100 - pctPaid, Math.round((pending / net) * 100))) : 0;
         const meta = [e.starts_at ? AmbiletUtils.formatDate(e.starts_at) + (e.start_time ? ' ' + e.start_time : '') : '', e.venue_name, e.venue_city].filter(Boolean).join(' · ');
 
         const statusBadge = e.is_past
@@ -296,20 +300,20 @@ function renderEvents() {
 
         let payoutButton;
         if (!e.is_past) {
-            payoutButton = `<p class="mt-2 text-xs text-muted">Poți cere plata<br>după eveniment</p>`;
+            payoutButton = `<p class="mt-2 text-xs text-muted">După încheierea evenimentului</p>`;
         } else if (pending > 0 && avail < 100) {
             payoutButton = `<p class="mt-2 text-xs text-warning">Plată solicitată</p>`;
         } else if (avail < 100) {
-            payoutButton = `<p class="mt-2 text-xs text-muted">${avail > 0 ? 'Minim 100 RON<br>pentru plată' : 'Fără sold disponibil'}</p>`;
+            payoutButton = `<p class="mt-2 text-xs text-muted">${avail > 0 ? 'Minim 100 RON pentru plată' : 'Fără sold disponibil'}</p>`;
         } else {
             payoutButton = `<button onclick="event.stopPropagation(); openPayoutModal(${e.id}, '${String(e.title).replace(/'/g, "\\'")}', ${avail})" class="px-4 py-2 mt-2 text-xs font-medium text-white rounded-lg bg-primary hover:bg-primary-dark">Solicită plata</button>`;
         }
 
         return `
         <div class="overflow-hidden bg-white border rounded-2xl border-border event-row" data-event-id="${e.id}">
-            <div class="p-5 cursor-pointer hover:bg-surface/40" onclick="toggleEventDetails(${e.id})">
+            <div class="p-3 cursor-pointer hover:bg-surface/40" onclick="toggleEventDetails(${e.id})">
                 <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-12 h-12 overflow-hidden rounded-lg bg-surface">
+                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-surface">
                         ${e.image ? `<img src="${e.image}" alt="" class="object-cover w-full h-full">` : '<div class="flex items-center justify-center w-full h-full text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'}
                     </div>
                     <div class="flex items-start flex-1 min-w-0 gap-2">
@@ -330,24 +334,10 @@ function renderEvents() {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 p-4 mt-4 sm:grid-cols-3 rounded-xl bg-surface/60">
-                    <div>
-                        <p class="text-xs text-muted">Încasat de la clienți</p>
-                        <p class="font-semibold text-secondary">${fmt(e.gross_revenue)}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-muted">Comision Ambilet</p>
-                        <p class="font-semibold text-amber-600">− ${fmt(e.commission_amount)}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-muted">Ți se cuvine</p>
-                        <p class="font-semibold text-success">${fmt(net)}</p>
-                    </div>
-                </div>
-
                 <div class="mt-3">
-                    <div class="w-full h-2 overflow-hidden rounded-full bg-surface">
-                        <div class="h-full transition-all bg-success" style="width: ${pct}%"></div>
+                    <div class="flex w-full h-2 overflow-hidden rounded-full bg-surface">
+                        <div class="h-full transition-all bg-success" style="width: ${pctPaid}%"></div>
+                        <div class="h-full transition-all bg-warning" style="width: ${pctPending}%"></div>
                     </div>
                     <p class="mt-1.5 text-xs text-muted">Ai primit <span class="font-medium text-secondary">${fmt(paid)}</span> din ${fmt(net)}${pending > 0 ? ` · <span class="text-warning">${fmt(pending)} în procesare</span>` : ''}</p>
                     ${signed < -0.005 ? `<p class="mt-1 text-xs text-red-600">De regularizat: ${fmt(Math.abs(signed))} — s-a decontat mai mult decât valoarea biletelor rămase valide (rambursări ulterioare).</p>` : ''}
@@ -356,6 +346,20 @@ function renderEvents() {
 
             <div class="hidden border-t border-border bg-slate-50 event-details-row" id="event-details-${e.id}">
                 <div class="p-4">
+                    <div class="grid grid-cols-1 gap-4 p-4 mb-4 bg-white border sm:grid-cols-3 rounded-xl border-border">
+                        <div>
+                            <p class="text-xs text-muted">Încasat de la clienți</p>
+                            <p class="font-semibold text-secondary">${fmt(e.gross_revenue)}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted">Comision Ambilet</p>
+                            <p class="font-semibold text-amber-600">− ${fmt(e.commission_amount)}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted">Ți se cuvine</p>
+                            <p class="font-semibold text-success">${fmt(net)}</p>
+                        </div>
+                    </div>
                     <div class="flex items-center gap-2 mb-4 border-b border-border">
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzacții</button>
                         <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payouts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="payouts">Plăți primite</button>
