@@ -339,17 +339,74 @@ class DashboardController extends BaseController
             $cursor->addDay();
         }
 
+        // Exact net for the selected window — the same formula as the all-time
+        // KPI and /organizator/sold, just time-boxed, so a period covering every
+        // sale reports the same figure as the card.
+        //
+        // The per-day `revenue` series below CANNOT be used for this: it sums
+        // orders.total filtered on orders.marketplace_organizer_id, which is
+        // (a) gross — commission and extras included — and (b) blind to orders
+        // that carry this organizer's tickets without that column set. On
+        // organizer 586 it reported 79,470 against a real net of 87,560, while
+        // the same orders reached via tickets came to 93,859. The series stays
+        // as-is for the shape of the trend; the headline uses this.
+        $breakdownService = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $revenueNet = 0.0;
+        foreach (Event::whereIn('id', $eventIds)->get() as $periodEvent) {
+            $settled = \App\Models\MarketplacePayout::eventHasLegacySettlement($periodEvent->id);
+            $periodBreakdown = $breakdownService->build(
+                $periodEvent,
+                $from->copy(),
+                $to->copy(),
+                excludeLegacyImport: !$settled
+            );
+            $revenueNet += (float) ($periodBreakdown['total_net'] ?? 0);
+        }
+
+        // Events happening inside the window, grouped by day — the chart marks
+        // those days and the tooltip names what is playing.
+        $eventDays = [];
+        if ($eventIds->isNotEmpty()) {
+            $flat = function ($value) {
+                if (is_array($value)) {
+                    return $value['ro'] ?? $value['en'] ?? (reset($value) ?: null);
+                }
+                return $value;
+            };
+            $rangeEvents = Event::whereIn('id', $eventIds)
+                ->whereNotNull('event_date')
+                ->whereBetween('event_date', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+                ->with('venue')
+                ->get(['id', 'title', 'event_date', 'venue_id']);
+
+            foreach ($rangeEvents as $rangeEvent) {
+                $key = $rangeEvent->event_date->copy()->timezone($tz)->format('Y-m-d');
+                $venue = $rangeEvent->venue;
+                $eventDays[$key][] = [
+                    'title' => $flat($rangeEvent->title),
+                    // venues.name is TEXT on prod but jsonb elsewhere — flatten both.
+                    'venue' => $venue ? $flat($venue->name) : null,
+                    'city' => $venue?->city,
+                ];
+            }
+        }
+
         return $this->success([
             'days' => $days,
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
+            'event_days' => $eventDays,
             'labels' => $labels,
             'raw_dates' => $rawDates,
             'revenue' => $revenue,
             'tickets' => $tickets,
             'views' => $views,
             'totals' => [
+                // Gross sum of the daily series — kept for backward compat.
                 'revenue' => array_sum($revenue),
+                // What the page shows as "Vânzări totale": the organizer's real
+                // net for this window, comparable with the all-time KPI.
+                'revenue_net' => round($revenueNet, 2),
                 'tickets' => array_sum($tickets),
                 'views' => array_sum($views),
             ],
