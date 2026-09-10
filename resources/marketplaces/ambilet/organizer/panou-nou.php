@@ -29,7 +29,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             Panou organizator
                         </span>
                         <h1 class="text-2xl font-extrabold text-white lg:text-3xl" id="pn-greeting">Bine ai revenit 👋</h1>
-                        <p class="mt-1 text-sm text-slate-300 lg:text-base">Iată cum performează evenimentele tale în derulare.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
                         <a href="/organizator/events?action=create" class="inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-all shadow-lg rounded-xl bg-primary hover:opacity-90">
