@@ -184,6 +184,13 @@ class PayoutController extends BaseController
                 $commissionAmount = round((float) ($breakdown['total_commission'] ?? 0), 2);
                 $grossRevenue = round((float) ($breakdown['total_revenue'] ?? 0), 2);
 
+                // Promo discounts, summed from the per-type rows — that is the
+                // figure actually subtracted when the service computed net, so
+                // gross − commission − discount == net holds on the page. Without
+                // showing it the card looked like broken arithmetic to organizers
+                // (event 4713: 1.007 − 57 ≠ 822, the missing 128 being discounts).
+                $discountAmount = round((float) collect($breakdown['per_type'] ?? [])->sum('discount'), 2);
+
                 // Get payouts for this event (if tracked per event)
                 $eventPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
                     ->where('event_id', $event->id)
@@ -235,6 +242,7 @@ class PayoutController extends BaseController
                     'gross_revenue' => $grossRevenue,
                     'net_revenue' => $netRevenue,
                     'commission_amount' => $commissionAmount,
+                    'discount_amount' => $discountAmount,
                     'total_paid_out' => (float) $eventPayouts,
                     'pending_payout' => (float) $eventPendingPayouts,
                     'available_balance' => max(0, $eventAvailableBalance),
