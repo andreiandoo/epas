@@ -268,24 +268,22 @@ class DashboardController extends BaseController
             ? "TO_CHAR({$col} AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}', 'YYYY-MM-DD')"
             : "DATE_FORMAT({$col}, '%Y-%m-%d')";
 
-        // Daily gross revenue across all events of this organizer.
-        $revenueRows = Order::where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
-            ->whereBetween('created_at', [$fromUtc, $toUtc])
-            ->selectRaw($dayExpr('created_at') . ' as d')
-            ->selectRaw('SUM(total) as revenue')
-            ->groupBy('d')
-            ->pluck('revenue', 'd');
-
+        // NB: no daily orders.total aggregate any more. It was gross (commission
+        // and extras included) and filtered on orders.marketplace_organizer_id,
+        // so it silently dropped orders holding this organizer's tickets without
+        // that column — 14,389 lei of them on organizer 586. Revenue is now
+        // derived from the same net the headline reports; see below.
         $eventIds = Event::where('marketplace_organizer_id', $organizer->id)->pluck('id');
+        $ticketValueByDay = [];
 
         // Daily issued tickets across all events — counted by event (so it
         // includes invitations, which have no order) to reflect real daily
         // activity even for invitation-heavy organizers.
         $ticketRows = collect();
         if ($eventIds->isNotEmpty()) {
-            $ticketRows = DB::table('tickets as t')
+            // Same aggregate also carries the day's ticket VALUE, which is what
+            // shapes the revenue series below. Free — no extra query.
+            $ticketAgg = DB::table('tickets as t')
                 ->where(function ($q) use ($eventIds) {
                     $q->whereIn('t.event_id', $eventIds)
                       ->orWhereIn('t.marketplace_event_id', $eventIds);
@@ -294,8 +292,16 @@ class DashboardController extends BaseController
                 ->whereBetween('t.created_at', [$fromUtc, $toUtc])
                 ->selectRaw($dayExpr('t.created_at') . ' as d')
                 ->selectRaw('COUNT(*) as tickets')
+                ->selectRaw('COALESCE(SUM(t.price), 0) as value')
                 ->groupBy('d')
-                ->pluck('tickets', 'd');
+                ->get();
+
+            $counts = [];
+            foreach ($ticketAgg as $agg) {
+                $counts[$agg->d] = (int) $agg->tickets;
+                $ticketValueByDay[$agg->d] = (float) $agg->value;
+            }
+            $ticketRows = collect($counts);
         }
 
         // Daily page views straight from the raw event stream — same source and
@@ -333,7 +339,7 @@ class DashboardController extends BaseController
             $key = $cursor->format('Y-m-d');
             $rawDates[] = $key;
             $labels[] = $cursor->day . ' ' . $months[$cursor->month - 1];
-            $revenue[] = round((float) ($revenueRows[$key] ?? 0), 2);
+            // $revenue is filled after the loop — see the net distribution below.
             $tickets[] = (int) ($ticketRows[$key] ?? 0);
             $views[] = (int) ($viewsByDay[$key] ?? 0);
             $cursor->addDay();
@@ -361,6 +367,24 @@ class DashboardController extends BaseController
                 excludeLegacyImport: !$settled
             );
             $revenueNet += (float) ($periodBreakdown['total_net'] ?? 0);
+        }
+        $revenueNet = round($revenueNet, 2);
+
+        // Daily revenue = that exact net, spread across the days by the real
+        // ticket value sold each day. Running SalesBreakdownService per DAY would
+        // mean 90 passes for a 90-day window; per EVENT (which the total already
+        // needs) is a handful, and the shape comes from the ticket aggregate we
+        // fetched anyway. The bars therefore sum to the headline exactly, instead
+        // of being pulled from orders.total — gross, and blind to orders without
+        // marketplace_organizer_id set.
+        $totalTicketValue = array_sum($ticketValueByDay);
+        if ($totalTicketValue > 0) {
+            $revenue = array_map(
+                fn ($key) => round($revenueNet * (($ticketValueByDay[$key] ?? 0) / $totalTicketValue), 2),
+                $rawDates
+            );
+        } else {
+            $revenue = array_fill(0, count($rawDates), 0.0);
         }
 
         // Events happening inside the window, grouped by day — the chart marks
