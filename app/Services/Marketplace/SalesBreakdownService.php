@@ -66,6 +66,9 @@ class SalesBreakdownService
      */
     public const PAID_ORDER_STATUSES = ['paid', 'confirmed', 'completed', 'partially_refunded'];
 
+    /** Timezone the per-day buckets in `net_by_day` are keyed on. */
+    public const REPORT_TZ = 'Europe/Bucharest';
+
     /**
      * Build the sales breakdown for an event, optionally scoped to a date
      * range on order.created_at.
@@ -275,6 +278,8 @@ class SalesBreakdownService
         $sumOnTop = 0.0;
         $sumIncluded = 0.0;
         $sumDiscountValid = 0.0;
+        /** @var array<string, float> net exact per zi, cheie 'Y-m-d' în REPORT_TZ */
+        $netByDay = [];
         $sumExtrasValid = 0.0;
 
         foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
@@ -310,6 +315,14 @@ class SalesBreakdownService
             }
             $order = $ordersById->get($orderId);
             if (!$order) continue;
+
+            // Ziua căreia îi aparține comanda. Netul e aditiv pe zile — o comandă
+            // cade întreagă într-o singură zi, iar alocarea ei (discount, comision)
+            // depinde doar de ea — deci acumulând aici obținem net-ul EXACT pe zi,
+            // fără să mai rulăm serviciul o dată pentru fiecare zi.
+            $orderDayKey = $order->created_at
+                ? $order->created_at->copy()->timezone(self::REPORT_TZ)->format('Y-m-d')
+                : null;
 
             $orderValidGross = 0.0;
             $orderValidCount = 0;
@@ -506,6 +519,9 @@ class SalesBreakdownService
                 $perType[$accumKey]['commission'] += $slice['commission'];
                 $perType[$accumKey]['discount'] += $sliceDiscount;
                 $perType[$accumKey]['extras'] += $sliceExtras;
+                if ($orderDayKey !== null) {
+                    $netByDay[$orderDayKey] = ($netByDay[$orderDayKey] ?? 0.0) + $sliceNet;
+                }
                 $perType[$accumKey]['net'] += $sliceNet;
             }
 
@@ -639,6 +655,10 @@ class SalesBreakdownService
             'total_commission_kept_from_refunds' => round($keptCommission, 2),
             'total_refunded_principal' => round($refundedPrincipal, 2),
             'total_extras' => round($totalExtrasCard, 2),
+            // Net EXACT per zi (cheie 'Y-m-d' în REPORT_TZ), acumulat în aceeași
+            // buclă pe comenzi care produce total_net — deci Σ net_by_day ==
+            // total_net, fără rulări suplimentare ale serviciului.
+            'net_by_day' => array_map(fn ($v) => round($v, 2), $netByDay),
             // The discount ACTUALLY allocated to this event's valid tickets —
             // the same figure subtracted when computing total_net above, so
             // revenue − commission − discount == net always holds.

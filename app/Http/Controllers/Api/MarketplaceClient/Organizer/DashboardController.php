@@ -274,15 +274,12 @@ class DashboardController extends BaseController
         // that column — 14,389 lei of them on organizer 586. Revenue is now
         // derived from the same net the headline reports; see below.
         $eventIds = Event::where('marketplace_organizer_id', $organizer->id)->pluck('id');
-        $ticketValueByDay = [];
 
         // Daily issued tickets across all events — counted by event (so it
         // includes invitations, which have no order) to reflect real daily
         // activity even for invitation-heavy organizers.
         $ticketRows = collect();
         if ($eventIds->isNotEmpty()) {
-            // Same aggregate also carries the day's ticket VALUE, which is what
-            // shapes the revenue series below. Free — no extra query.
             $ticketAgg = DB::table('tickets as t')
                 ->where(function ($q) use ($eventIds) {
                     $q->whereIn('t.event_id', $eventIds)
@@ -292,14 +289,12 @@ class DashboardController extends BaseController
                 ->whereBetween('t.created_at', [$fromUtc, $toUtc])
                 ->selectRaw($dayExpr('t.created_at') . ' as d')
                 ->selectRaw('COUNT(*) as tickets')
-                ->selectRaw('COALESCE(SUM(t.price), 0) as value')
                 ->groupBy('d')
                 ->get();
 
             $counts = [];
             foreach ($ticketAgg as $agg) {
                 $counts[$agg->d] = (int) $agg->tickets;
-                $ticketValueByDay[$agg->d] = (float) $agg->value;
             }
             $ticketRows = collect($counts);
         }
@@ -358,6 +353,7 @@ class DashboardController extends BaseController
         // as-is for the shape of the trend; the headline uses this.
         $breakdownService = app(\App\Services\Marketplace\SalesBreakdownService::class);
         $revenueNet = 0.0;
+        $netByDay = [];
         foreach (Event::whereIn('id', $eventIds)->get() as $periodEvent) {
             $settled = \App\Models\MarketplacePayout::eventHasLegacySettlement($periodEvent->id);
             $periodBreakdown = $breakdownService->build(
@@ -367,25 +363,19 @@ class DashboardController extends BaseController
                 excludeLegacyImport: !$settled
             );
             $revenueNet += (float) ($periodBreakdown['total_net'] ?? 0);
+
+            // Exact per-day net, accumulated by the service inside the very loop
+            // that produced total_net. An order falls entirely in one day and its
+            // allocation depends only on itself, so the net is additive per day —
+            // which is why this needs no extra pass. Nothing here is estimated or
+            // spread proportionally.
+            foreach (($periodBreakdown['net_by_day'] ?? []) as $day => $dayNet) {
+                $netByDay[$day] = ($netByDay[$day] ?? 0.0) + (float) $dayNet;
+            }
         }
         $revenueNet = round($revenueNet, 2);
 
-        // Daily revenue = that exact net, spread across the days by the real
-        // ticket value sold each day. Running SalesBreakdownService per DAY would
-        // mean 90 passes for a 90-day window; per EVENT (which the total already
-        // needs) is a handful, and the shape comes from the ticket aggregate we
-        // fetched anyway. The bars therefore sum to the headline exactly, instead
-        // of being pulled from orders.total — gross, and blind to orders without
-        // marketplace_organizer_id set.
-        $totalTicketValue = array_sum($ticketValueByDay);
-        if ($totalTicketValue > 0) {
-            $revenue = array_map(
-                fn ($key) => round($revenueNet * (($ticketValueByDay[$key] ?? 0) / $totalTicketValue), 2),
-                $rawDates
-            );
-        } else {
-            $revenue = array_fill(0, count($rawDates), 0.0);
-        }
+        $revenue = array_map(fn ($key) => round($netByDay[$key] ?? 0.0, 2), $rawDates);
 
         // Events happening inside the window, grouped by day — the chart marks
         // those days and the tooltip names what is playing.
@@ -430,7 +420,11 @@ class DashboardController extends BaseController
                 'revenue' => array_sum($revenue),
                 // What the page shows as "Vânzări totale": the organizer's real
                 // net for this window, comparable with the all-time KPI.
-                'revenue_net' => round($revenueNet, 2),
+                'revenue_net' => $revenueNet,
+                // Media pe zi peste TOATE zilele perioadei alese, inclusiv cele
+                // fără vânzări — altfel „media" ar depinde de câte zile s-a
+                // vândut, nu de perioada pe care a ales-o organizatorul.
+                'revenue_per_day' => $days > 0 ? round($revenueNet / $days, 2) : 0.0,
                 'tickets' => array_sum($tickets),
                 'views' => array_sum($views),
             ],
