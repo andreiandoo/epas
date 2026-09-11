@@ -119,6 +119,7 @@ class EventResource extends Resource
         $max = (int) $get('max_per_order');
         if ($max === 0 || $max === 10) {
             $set('max_per_order', 3);
+            $set('free_max_per_order', 3);
         }
         $type = $get('commission_type');
         if (!$type || $type === 'inherit') {
@@ -126,6 +127,25 @@ class EventResource extends Resource
             $set('commission_fixed', 0);
             $set('commission_mode', 'included');
         }
+    }
+
+    /**
+     * "Bilet gratuit cu cod promo": fold the section's virtual
+     * free_max_per_order select into max_per_order (never NULL — the column
+     * is NOT NULL) and drop the virtual key before it reaches the model.
+     */
+    protected static function foldFreeMaxPerOrder(array $data): array
+    {
+        $freeMax = (int) ($data['free_max_per_order'] ?? 0);
+        unset($data['free_max_per_order']);
+
+        if (filled($data['meta']['free_with_code']['code'] ?? null)) {
+            $data['max_per_order'] = $freeMax >= 1
+                ? $freeMax
+                : ((int) ($data['max_per_order'] ?? 0) ?: 3);
+        }
+
+        return $data;
     }
 
     /**
@@ -2488,6 +2508,8 @@ class EventResource extends Resource
                                     ->reorderable()
                                     ->reorderableWithDragAndDrop()
                                     ->orderColumn('sort_order')
+                                    ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => static::foldFreeMaxPerOrder($data))
+                                    ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => static::foldFreeMaxPerOrder($data))
                                     ->addActionLabel($t('Adaugă tip bilet', 'Add ticket type'))
                                     ->itemLabel(function (array $state) use ($t) {
                                         $name = e($state['name'] ?? $t('Bilet', 'Ticket'));
@@ -3691,14 +3713,19 @@ class EventResource extends Resource
                                                     ->placeholder($t('Oricare bilet plătit', 'Any paid ticket'))
                                                     ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
                                                     ->columnSpan(6),
-                                                // Same state as the general "Max bilete/comandă" field, which
-                                                // is hidden while a promo code is set (checkout + event page
-                                                // read max_per_order as the free-ticket cap).
-                                                Forms\Components\Select::make('max_per_order')
+                                                // Virtual key, folded into max_per_order on save by
+                                                // foldFreeMaxPerOrder() (checkout + event page read
+                                                // max_per_order as the free-ticket cap). Must NOT share the
+                                                // max_per_order state path with the general input (hidden
+                                                // meanwhile): two fields on one path saved it as NULL.
+                                                Forms\Components\Select::make('free_max_per_order')
                                                     ->label($t('Max. bilete gratuite / comandă', 'Max free tickets / order'))
                                                     ->options(array_combine(range(1, 10), range(1, 10)))
-                                                    ->default(3)
                                                     ->selectablePlaceholder(false)
+                                                    ->afterStateHydrated(function ($component, SGet $get) {
+                                                        $current = (int) ($get('max_per_order') ?: 0);
+                                                        $component->state($current >= 1 && $current <= 10 ? $current : 3);
+                                                    })
                                                     ->helperText($t('Câte bilete gratuite poate alege cumpărătorul într-o comandă.', 'How many free tickets the buyer can pick per order.'))
                                                     ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
                                                     ->columnSpan(6),
