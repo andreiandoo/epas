@@ -49,9 +49,14 @@ foreach ($slugs as $slug) {
 
     $busted = ['slug' => $slug, 'page_cache' => 0, 'api_cached' => 0];
 
-    // 1) api_cached preload + redirect for this slug
-    foreach (['event_preload_', 'event_redirect_'] as $prefix) {
-        $f = $apiCachedDir . '/' . md5($prefix . $slug) . '.json';
+    // 1) api_cached preload + redirect for this slug — the preload also
+    //    exists per locale (event.php keys it `event_preload_<slug>_<lang>`).
+    $apiKeys = ['event_preload_' . $slug, 'event_redirect_' . $slug];
+    foreach (['ro', 'en', 'hu'] as $loc) {
+        $apiKeys[] = 'event_preload_' . $slug . '_' . $loc;
+    }
+    foreach ($apiKeys as $apiKey) {
+        $f = $apiCachedDir . '/' . md5($apiKey) . '.json';
         if (file_exists($f) && @unlink($f)) {
             $busted['api_cached']++;
             $totalApi++;
