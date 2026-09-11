@@ -4876,6 +4876,13 @@ class EventsController extends BaseController
         if (!is_array($fwc)) {
             return null;
         }
+        // No code = not a free-with-code type (same rule as
+        // TicketType::isFreeWithCode). The Filament section used to leave
+        // {"code": null} on every ticket type it saved — treating that as a
+        // free type hid ALL of an event's tickets from the organizer form.
+        if (trim((string) ($fwc['code'] ?? '')) === '') {
+            return null;
+        }
         $seatsFrom = $fwc['seats_from_ticket_type_id'] ?? null;
 
         return [

@@ -139,6 +139,14 @@ class EventResource extends Resource
         $freeMax = (int) ($data['free_max_per_order'] ?? 0);
         unset($data['free_max_per_order']);
 
+        // Regular ticket types: don't persist the section's empty
+        // {"free_with_code": {"code": null}} into meta — code-less leftovers
+        // were mistaken for free types (organizer form hid every ticket).
+        if (!filled($data['meta']['free_with_code']['code'] ?? null)
+            && isset($data['meta']) && is_array($data['meta'])) {
+            unset($data['meta']['free_with_code']);
+        }
+
         if (filled($data['meta']['free_with_code']['code'] ?? null)) {
             $data['max_per_order'] = $freeMax >= 1
                 ? $freeMax
