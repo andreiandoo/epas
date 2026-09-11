@@ -44,6 +44,31 @@ class MarketplaceCity extends Model
         'event_count',
     ];
 
+    /**
+     * Visible marketplace city whose name (any language) equals $name,
+     * diacritics- and case-insensitive — same rule as the Filament venue
+     * picker ("București" == "Bucuresti").
+     */
+    public static function matchByName(?int $marketplaceClientId, ?string $name): ?self
+    {
+        $needle = strtolower(trim(\Illuminate\Support\Str::ascii((string) $name)));
+        if ($needle === '' || !$marketplaceClientId) {
+            return null;
+        }
+
+        return static::where('marketplace_client_id', $marketplaceClientId)
+            ->where('is_visible', true)
+            ->get()
+            ->first(function ($city) use ($needle) {
+                foreach ((is_array($city->name) ? $city->name : [$city->name]) as $variant) {
+                    if (strtolower(trim(\Illuminate\Support\Str::ascii((string) $variant))) === $needle) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+    }
+
     protected $casts = [
         'name' => 'array',
         'description' => 'array',

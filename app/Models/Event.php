@@ -897,6 +897,63 @@ class Event extends Model
     }
 
     /**
+     * "Tip manifestare" keywords, matched in this order against category +
+     * event type names/slugs (diacritics-insensitive). Order matters:
+     * "Festival de teatru" must hit teatrala before muzicala.
+     */
+    public const MANIFESTATION_KEYWORDS = [
+        'standup' => ['stand-up', 'standup', 'stand up', 'comedie', 'comedy'],
+        'teatrala' => ['teatru', 'theatre', 'theater', 'musical'],
+        'sportiva' => ['sport', 'meci', 'fotbal', 'handbal', 'baschet', 'tenis', 'maraton'],
+        'muzicala' => ['concert', 'festival', 'muzic', 'music', 'recital', 'opera', 'simfonic', 'jazz', 'rock', 'petrecere', 'party'],
+        'artistica' => ['expozitie', 'exhibition', 'dans', 'dance', 'balet', 'ballet', 'circ'],
+    ];
+
+    /**
+     * manifestation_type for a set of labels (names / slugs), or null when
+     * no keyword matches — never a blind guess.
+     */
+    public static function manifestationTypeFromLabels(array $labels): ?string
+    {
+        $flat = [];
+        array_walk_recursive($labels, function ($v) use (&$flat) {
+            if (is_scalar($v)) {
+                $flat[] = (string) $v;
+            }
+        });
+        $haystack = strtolower(\Illuminate\Support\Str::ascii(implode(' | ', $flat)));
+        if (trim($haystack, ' |') === '') {
+            return null;
+        }
+        foreach (self::MANIFESTATION_KEYWORDS as $type => $words) {
+            foreach ($words as $word) {
+                if (str_contains($haystack, $word)) {
+                    return $type;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Guess "Tip manifestare" from this event's category + event types
+     * (e.g. Concerte / Concert → muzicala).
+     */
+    public function guessManifestationType(): ?string
+    {
+        $labels = [];
+        if ($category = $this->marketplaceEventCategory) {
+            $labels[] = $category->name;
+            $labels[] = $category->slug;
+        }
+        foreach ($this->eventTypes as $type) {
+            $labels[] = $type->name;
+            $labels[] = $type->slug ?? null;
+        }
+        return self::manifestationTypeFromLabels($labels);
+    }
+
+    /**
      * Scope for upcoming events (not past, not cancelled)
      */
     public function scopeUpcoming($query)

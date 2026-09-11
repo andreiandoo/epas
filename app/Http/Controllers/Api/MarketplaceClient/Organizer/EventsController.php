@@ -303,6 +303,15 @@ class EventsController extends BaseController
                 }
             }
 
+            // City / address / tax registry from the library venue (or the
+            // typed city) + "Tip manifestare" from category/types, so the
+            // admin sees them filled, like events created in Filament.
+            $this->syncEventLocation($event, $validated['venue_city'] ?? null);
+            $event = $event->fresh();
+            if (!$event->manifestation_type && ($guess = $event->guessManifestationType())) {
+                $event->update(['manifestation_type' => $guess]);
+            }
+
             // Sync genres if provided
             if (!empty($validated['genre_ids'])) {
                 $event->eventGenres()->sync($validated['genre_ids']);
@@ -527,6 +536,15 @@ class EventsController extends BaseController
 
             if (!empty($updateData)) {
                 $event->update($updateData);
+            }
+
+            // Location from the library venue / typed city, and the
+            // "Tip manifestare" guess while it's still empty — see store().
+            if (isset($validated['venue_id']) || isset($validated['venue_city'])) {
+                $this->syncEventLocation($event, $validated['venue_city'] ?? null);
+            }
+            if (!$event->fresh()->manifestation_type && ($guess = $event->fresh()->guessManifestationType())) {
+                $event->update(['manifestation_type' => $guess]);
             }
 
             // Sync ticket types if provided (only for unpublished events - we block published above)
@@ -5118,6 +5136,44 @@ class EventsController extends BaseController
 
             $target->fill($updates);
             $target->save();
+        }
+    }
+
+    /**
+     * Library venue → city, address and tax registry come from the venue
+     * record (organizer-typed values are ignored); manual venue → the typed
+     * city is matched to a marketplace city. Mirrors the Filament venue
+     * picker, so organizer-created events don't reach the admin with an
+     * empty "Oraș" / Tax Registry.
+     */
+    protected function syncEventLocation(Event $event, ?string $typedCity): void
+    {
+        $venue = $event->venue_id ? \App\Models\Venue::find($event->venue_id) : null;
+        $updates = [];
+
+        if ($venue) {
+            $venueAddress = $venue->address ?? $venue->full_address ?? null;
+            if ($venueAddress) {
+                $updates['address'] = $venueAddress;
+            }
+            if (!$event->marketplace_tax_registry_id) {
+                $registry = \App\Models\MarketplaceTaxRegistry::matchForVenue($venue, (int) $event->marketplace_client_id);
+                if ($registry) {
+                    $updates['marketplace_tax_registry_id'] = $registry->id;
+                }
+            }
+        }
+
+        $city = \App\Models\MarketplaceCity::matchByName(
+            (int) $event->marketplace_client_id,
+            $venue?->city ?: $typedCity
+        );
+        if ($city) {
+            $updates['marketplace_city_id'] = $city->id;
+        }
+
+        if ($updates) {
+            $event->update($updates);
         }
     }
 

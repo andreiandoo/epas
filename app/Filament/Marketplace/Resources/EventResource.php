@@ -1878,12 +1878,23 @@ class EventResource extends Resource
                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Categorie personalizată de eveniment marketplace', 'Custom marketplace event category'))
                                     ->live(onBlur: true)
                                     ->partiallyRenderAfterStateUpdated()
-                                    ->afterStateUpdated(function ($state, SSet $set) {
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                         // Auto-fill eventTypes from the category's linked event types
                                         if ($state) {
                                             $category = MarketplaceEventCategory::find($state);
                                             if ($category && !empty($category->event_type_ids)) {
                                                 $set('eventTypes', $category->event_type_ids);
+                                            }
+                                            // "Tip manifestare" from category + its types (only while empty)
+                                            if ($category && !$get('manifestation_type')) {
+                                                $guess = \App\Models\Event::manifestationTypeFromLabels([
+                                                    $category->name,
+                                                    $category->slug,
+                                                    \App\Models\EventType::whereIn('id', (array) ($category->event_type_ids ?? []))->get()->map(fn ($t) => $t->name)->all(),
+                                                ]);
+                                                if ($guess) {
+                                                    $set('manifestation_type', $guess);
+                                                }
                                             }
                                         }
                                     })
@@ -1917,6 +1928,15 @@ class EventResource extends Resource
                                     ->partiallyRenderAfterStateUpdated()
                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                         $typeIds = (array) ($get('eventTypes') ?? []);
+                                        // "Tip manifestare" from the chosen types (only while empty)
+                                        if ($typeIds && !$get('manifestation_type')) {
+                                            $guess = \App\Models\Event::manifestationTypeFromLabels(
+                                                \App\Models\EventType::whereIn('id', $typeIds)->get()->map(fn ($t) => $t->name)->all()
+                                            );
+                                            if ($guess) {
+                                                $set('manifestation_type', $guess);
+                                            }
+                                        }
                                         if (!$typeIds) {
                                             $set('eventGenres', []);
                                             return;
