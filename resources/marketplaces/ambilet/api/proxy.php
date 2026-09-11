@@ -800,6 +800,13 @@ switch ($action) {
         if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
         // B7: forward locale pentru evenimentele leisure_venue (translate-uri Event)
         if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
+        // "Bilet gratuit cu cod": forward the flyer code so the API can unlock
+        // the hidden free ticket type. Sanitized to [A-Za-z0-9-], max 50 chars,
+        // and dropped when empty so the no-code request stays byte-identical.
+        if (isset($_GET['free_code']) && is_string($_GET['free_code'])) {
+            $freeCode = substr(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['free_code']), 0, 50);
+            if ($freeCode !== '') $params['free_code'] = $freeCode;
+        }
         $endpoint = '/events/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
@@ -5057,8 +5064,10 @@ if ($useCache && $response !== false) {
 http_response_code($statusCode);
 
 // Browser Cache-Control headers — allows browsers to cache GET responses
-// Preview mode always gets no-store
-if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAuth && empty($_GET['preview'])) {
+// Preview mode always gets no-store. So does an event fetched with a flyer
+// free_code ("bilet gratuit cu cod"): that payload unlocks a hidden ticket
+// type and must never be served from a browser/shared cache.
+if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAuth && empty($_GET['preview']) && empty($_GET['free_code'])) {
     $browserTtl = match(true) {
         // Static/rarely changing content — 1 day browser cache
         in_array($action, ['categories', 'event-categories', 'event-genres', 'venue-categories', 'locations.regions', 'locations.stats']) => 86400,

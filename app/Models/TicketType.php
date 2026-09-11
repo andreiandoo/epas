@@ -677,6 +677,52 @@ class TicketType extends Model
     }
 
     /**
+     * "Bilet gratuit cu cod" — a hidden 0-lei ticket type (e.g. "Copil
+     * însoțit") unlocked on the event page by a flyer code and granted only
+     * alongside a paid ticket of the same event. Config in meta.free_with_code:
+     *   code, enabled, trigger_ticket_type_ids (empty = any paid type),
+     *   seats_from_ticket_type_id (null = mirror the paid types' seating rows).
+     * A type WITH a code is always hidden from public listings, even while the
+     * code is disabled — switching the code off must never publish a 0-lei
+     * ticket to everyone.
+     */
+    public function freeWithCodeConfig(): ?array
+    {
+        $cfg = is_array($this->meta) && is_array($this->meta['free_with_code'] ?? null)
+            ? $this->meta['free_with_code']
+            : null;
+        $code = strtoupper(trim((string) ($cfg['code'] ?? '')));
+        if ($code === '') {
+            return null;
+        }
+
+        return [
+            'code' => $code,
+            'enabled' => (bool) ($cfg['enabled'] ?? true),
+            'trigger_ticket_type_ids' => array_values(array_filter(array_map('intval', (array) ($cfg['trigger_ticket_type_ids'] ?? [])))),
+            'seats_from_ticket_type_id' => !empty($cfg['seats_from_ticket_type_id']) ? (int) $cfg['seats_from_ticket_type_id'] : null,
+        ];
+    }
+
+    public function isFreeWithCode(): bool
+    {
+        return $this->freeWithCodeConfig() !== null;
+    }
+
+    public function isFreeCodeActive(): bool
+    {
+        return (bool) ($this->freeWithCodeConfig()['enabled'] ?? false);
+    }
+
+    public function freeCodeMatches(?string $code): bool
+    {
+        $cfg = $this->freeWithCodeConfig();
+
+        return $cfg !== null && $cfg['enabled'] && $code !== null
+            && hash_equals($cfg['code'], strtoupper(trim($code)));
+    }
+
+    /**
      * Configure activity logging
      */
     public function getActivitylogOptions(): LogOptions

@@ -760,6 +760,22 @@ class MarketplaceEventsController extends BaseController
             ),
         ])->first();
 
+        // "Bilet gratuit cu cod": hidden 0-lei ticket types unlocked by the
+        // event's flyer code (?free_code=). Without a matching code they stay
+        // out of `ticket_types`; the page only learns that a code field exists.
+        $freeCodeInput = strtoupper(trim((string) $request->query('free_code', '')));
+        $freeCodeTypes = $event
+            ? $event->ticketTypes->filter(fn ($tt) => $tt->status === 'active' && $tt->isFreeWithCode())
+            : collect();
+        $unlockedFreeIds = $freeCodeInput !== ''
+            ? $freeCodeTypes->filter(fn ($tt) => $tt->freeCodeMatches($freeCodeInput))->pluck('id')
+            : collect();
+        $freeCodeInfo = $freeCodeInput === '' ? null : [
+            'code' => $freeCodeInput,
+            'valid' => $unlockedFreeIds->isNotEmpty(),
+            'message' => $unlockedFreeIds->isNotEmpty() ? null : 'Codul nu este valid pentru acest eveniment.',
+        ];
+
         if (!$event) {
             // Check if this is a child event (ended performance link) — try with parent_id first
             $endedEvent = Event::where('marketplace_client_id', $client->id)
@@ -1039,7 +1055,10 @@ class MarketplaceEventsController extends BaseController
                 'secondary_company_name' => $organizer->secondary_company_name ?? null,
                 'secondary_company_tax_id' => $organizer->secondary_company_tax_id ?? null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos())->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
+            // "Bilet gratuit cu cod" — see $freeCodeTypes above.
+            'has_free_code_tickets' => $freeCodeTypes->contains(fn ($tt) => $tt->isFreeCodeActive()),
+            'free_code' => $freeCodeInfo,
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && (!$tt->isFreeWithCode() || $unlockedFreeIds->contains($tt->id)))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate, $event) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -1061,11 +1080,26 @@ class MarketplaceEventsController extends BaseController
                     $originalPrice = $tt->price_cents / 100;
                 }
 
+                // Seating rows: the type's own rows — or, for a free-with-code
+                // type without rows of its own, the paid types' rows, so its
+                // seats sit on the same map rows (row chooser popup).
+                $ttRows = $tt->relationLoaded('seatingRows') ? $tt->seatingRows : collect();
+                $freeCfg = $tt->freeWithCodeConfig();
+                if ($freeCfg && $ttRows->isEmpty()) {
+                    $ttRows = $event->ticketTypes
+                        ->filter(fn ($src) => $freeCfg['seats_from_ticket_type_id']
+                            ? (int) $src->id === $freeCfg['seats_from_ticket_type_id']
+                            : ((int) $src->id !== (int) $tt->id && $src->status === 'active' && !$src->isFreeWithCode() && !($src->meta['is_invitation'] ?? false)))
+                        ->flatMap(fn ($src) => $src->relationLoaded('seatingRows') ? $src->seatingRows : collect())
+                        ->unique('id')
+                        ->values();
+                }
+
                 // Get seating sections — derive from assigned rows or direct section assignments
                 $seatingSections = [];
-                if ($tt->relationLoaded('seatingRows') && $tt->seatingRows->isNotEmpty()) {
+                if ($ttRows->isNotEmpty()) {
                     // Derive sections from assigned rows (new model)
-                    $seatingSections = $tt->seatingRows
+                    $seatingSections = $ttRows
                         ->filter(fn ($r) => $r->relationLoaded('section') && $r->section)
                         ->pluck('section')
                         ->unique('id')
@@ -1101,8 +1135,8 @@ class MarketplaceEventsController extends BaseController
 
                 // Build seating_rows for row-level ticket type mapping
                 $seatingRows = [];
-                if ($tt->relationLoaded('seatingRows') && $tt->seatingRows->isNotEmpty()) {
-                    $seatingRows = $tt->seatingRows->map(fn ($r) => [
+                if ($ttRows->isNotEmpty()) {
+                    $seatingRows = $ttRows->map(fn ($r) => [
                         'id' => $r->id,
                         'label' => $r->label,
                         'section_id' => $r->section_id,
@@ -1128,6 +1162,9 @@ class MarketplaceEventsController extends BaseController
                     'has_seating' => !empty($seatingSections),
                     'seating_sections' => $seatingSections,
                     'seating_rows' => $seatingRows,
+                    // "Bilet gratuit cu cod" (present only once the code unlocked it)
+                    'is_free_with_code' => (bool) $freeCfg,
+                    'free_trigger_ticket_type_ids' => $freeCfg['trigger_ticket_type_ids'] ?? [],
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
@@ -1270,7 +1307,10 @@ class MarketplaceEventsController extends BaseController
                 $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
             })
             ->get()
-            ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos())
+            // Free-with-code types only with their code (?free_code=), so a
+            // live availability refresh keeps an unlocked type on the page.
+            ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos()
+                && (!$tt->isFreeWithCode() || $tt->freeCodeMatches($request->query('free_code'))))
             ->map(function ($tt) {
                 $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
@@ -1870,7 +1910,7 @@ class MarketplaceEventsController extends BaseController
         $minPrice = null;
         if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
             // Exclude invitation ticket types from price calculations
-            $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos());
+            $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && !$tt->isFreeWithCode());
             $allPrices = $publicTickets->map(function ($ticket) {
                 if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
                     return $ticket->sale_price_cents;
@@ -1906,7 +1946,7 @@ class MarketplaceEventsController extends BaseController
                     $matchedPerf = $performances->first(fn ($p) => $p->starts_at->format('Y-m-d') === $childDate
                             && (!$childTime || $p->starts_at->format('H:i') === $childTime));
                 }
-                $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos());
+                $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && !$tt->isFreeWithCode());
                 $parentPrices = $parentPublicTts->map(function ($tt) use ($matchedPerf) {
                     if ($matchedPerf) {
                         $override = $matchedPerf->getEffectivePrice($tt);
@@ -1925,7 +1965,7 @@ class MarketplaceEventsController extends BaseController
                 ->whereNotNull('ticket_overrides')
                 ->get();
             if ($performances->isNotEmpty()) {
-                $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos());
+                $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && !$tt->isFreeWithCode());
                 foreach ($performances as $perf) {
                     foreach ($publicTickets as $tt) {
                         $overrideCents = $perf->getEffectivePrice($tt);
@@ -1969,7 +2009,7 @@ class MarketplaceEventsController extends BaseController
             'postponed_date' => $event->is_postponed && $event->postponed_date ? $event->postponed_date->format('Y-m-d') : null,
             'price_from' => $minPrice,
             'ticket_types_count' => $event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()
-                ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos())->count()
+                ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && !$tt->isFreeWithCode())->count()
                 : ($event->parent_id ? ($event->parent?->ticketTypes()->where('status', 'active')->count() ?? 0) : null),
             'commission_mode' => $commissionMode,
             'commission_rate' => $commissionRate,
@@ -2594,7 +2634,7 @@ class MarketplaceEventsController extends BaseController
 
             // Get minimum price (with performance override support)
             $minPrice = null;
-            $tts = $event->ticketTypes;
+            $tts = $event->ticketTypes->reject(fn ($tt) => $tt->isFreeWithCode());
             if ($tts->isEmpty() && $event->parent_id) {
                 $tts = \App\Models\TicketType::where('event_id', $event->parent_id)->where('status', 'active')->get();
             }

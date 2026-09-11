@@ -617,6 +617,58 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                     Adauga alt tip de bilet
                                 </button>
+
+                                <!-- Bilete gratuite cu cod (flyere). Deliberately NOT a
+                                     .ticket-type-item: it must stay out of the regular
+                                     ticket list, summaries, live preview and min-price
+                                     math. Collected separately by collectFreeCodeTicket(). -->
+                                <div id="free-code-card" class="p-4 border rounded-xl border-emerald-200 bg-emerald-50/40">
+                                    <label class="flex items-start gap-3 cursor-pointer">
+                                        <input type="checkbox" id="free-code-enabled" class="w-4 h-4 mt-0.5 border-gray-300 rounded text-primary focus:ring-primary" onchange="onFreeCodeToggle()">
+                                        <span>
+                                            <span class="block text-sm font-semibold text-secondary">Oferă bilete gratuite cu cod (pentru flyere)</span>
+                                            <span class="block mt-0.5 text-xs text-muted">Cine cumpără cel puțin un bilet plătit la acest eveniment și introduce codul de pe flyer poate adăuga gratuit bilete de tipul de mai jos (ex: copil însoțit).</span>
+                                        </span>
+                                    </label>
+                                    <div id="free-code-fields" class="hidden mt-4 space-y-3">
+                                        <div class="grid gap-3 md:grid-cols-2">
+                                            <div>
+                                                <label class="text-xs label" for="free-code-name">Nume bilet <span class="text-red-500">*</span></label>
+                                                <input type="text" id="free-code-name" class="input" maxlength="255" placeholder="Copil însoțit" oninput="updateFreeCodeFlyerText()">
+                                            </div>
+                                            <div>
+                                                <label class="text-xs label" for="free-code-code">Cod flyer <span class="text-red-500">*</span></label>
+                                                <div class="flex gap-2">
+                                                    <input type="text" id="free-code-code" class="uppercase input" maxlength="30" placeholder="ex: FAMILIE4713" autocomplete="off" oninput="onFreeCodeInput(this)">
+                                                    <button type="button" onclick="generateFreeCode()" class="flex-shrink-0 btn btn-sm btn-secondary">Generează</button>
+                                                </div>
+                                                <p class="mt-1 text-xs text-muted">3–30 caractere: litere, cifre sau cratimă.</p>
+                                            </div>
+                                        </div>
+                                        <div class="grid gap-3 md:grid-cols-2">
+                                            <div>
+                                                <label class="text-xs label" for="free-code-max">Max. bilete gratuite / comandă</label>
+                                                <input type="number" id="free-code-max" class="input" min="1" max="10" step="1" placeholder="3">
+                                            </div>
+                                            <div>
+                                                <label class="text-xs label" for="free-code-stock">Stoc declarat (opțional)</label>
+                                                <input type="number" id="free-code-stock" class="input" min="1" step="1" placeholder="Nelimitat">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs label" for="free-code-flyer-text">Text pentru flyer</label>
+                                            <div class="flex items-start gap-2">
+                                                <textarea id="free-code-flyer-text" class="input bg-white" rows="2" readonly></textarea>
+                                                <button type="button" onclick="copyFreeCodeFlyerText()" class="flex-shrink-0 btn btn-sm btn-secondary">Copiază</button>
+                                            </div>
+                                        </div>
+                                        <ul class="pl-4 space-y-1 text-xs list-disc text-muted">
+                                            <li>Fără cod, biletul nu este vizibil pe site.</li>
+                                            <li>Codul se poate folosi o singură dată de fiecare client, doar împreună cu cel puțin un bilet plătit.</li>
+                                            <li>Biletele gratuite folosesc aceleași locuri/rânduri ca biletele plătite și apar în documentele fiscale cu valoarea 0.</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1307,6 +1359,10 @@ function resetFormState() {
         if (perfList) perfList.innerHTML = '';
     }
 
+    // Reset the "bilete gratuite cu cod" card (the loop above blanked its
+    // inputs; restore defaults + forget any previously loaded free type id).
+    if (typeof resetFreeCodeCard === 'function') resetFreeCodeCard();
+
     // Reset saved event ID
     const savedIdEl = document.getElementById('saved-event-id');
     if (savedIdEl) savedIdEl.value = '';
@@ -1582,6 +1638,17 @@ async function loadEventForEdit(eventId) {
         // silently skips locked rows when building the payload. That
         // keeps the backend contract identical for both draft and live
         // edits without a second code path in the collector.
+        // "Bilet gratuit cu cod" types (ticket_types[].free_with_code) are
+        // rendered ONLY in the dedicated card below the list — never as a
+        // regular editable/locked row (and so never in summaries / preview).
+        const allTicketTypes = Array.isArray(event.ticket_types) ? event.ticket_types : [];
+        fillFreeCodeCard(
+            allTicketTypes.find(tt => tt && tt.free_with_code && tt.free_with_code.enabled)
+            || allTicketTypes.find(tt => tt && tt.free_with_code)
+            || null
+        );
+        event.ticket_types = allTicketTypes.filter(tt => !(tt && tt.free_with_code));
+
         if (event.ticket_types && event.ticket_types.length > 0) {
             const container = document.getElementById('ticket-types-container');
             const eventIsLive = event.is_public === true;
@@ -2447,6 +2514,157 @@ function renumberTicketTypes() {
     ticketTypeCount = items.length;
 }
 
+// ==================== FREE TICKETS WITH CODE (flyere) ====================
+// One hidden price-0 ticket type per event (backend: meta.free_with_code)
+// that appears on the site only after the buyer enters the flyer code.
+// Lives in #free-code-card — never a .ticket-type-item — so it stays out of
+// the regular list, summaries, live preview and "de la X lei" math.
+
+const FREE_CODE_DEFAULT_NAME = 'Copil însoțit';
+const FREE_CODE_DEFAULT_MAX = 3;
+const FREE_CODE_PATTERN = /^[A-Z0-9-]{3,30}$/;
+let freeCodeExistingId = null; // id of the free type loaded in edit mode
+
+function normalizeFreeCode(v) {
+    return String(v || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 30);
+}
+
+function onFreeCodeInput(input) {
+    const cleaned = normalizeFreeCode(input.value);
+    if (input.value !== cleaned) input.value = cleaned;
+    updateFreeCodeFlyerText();
+}
+
+function onFreeCodeToggle() {
+    const enabled = !!document.getElementById('free-code-enabled')?.checked;
+    document.getElementById('free-code-fields')?.classList.toggle('hidden', !enabled);
+    if (enabled) {
+        const nameEl = document.getElementById('free-code-name');
+        const maxEl = document.getElementById('free-code-max');
+        const codeEl = document.getElementById('free-code-code');
+        if (nameEl && !nameEl.value.trim()) nameEl.value = FREE_CODE_DEFAULT_NAME;
+        if (maxEl && !maxEl.value) maxEl.value = FREE_CODE_DEFAULT_MAX;
+        if (codeEl && !codeEl.value) generateFreeCode();
+    }
+    updateFreeCodeFlyerText();
+}
+
+function generateFreeCode() {
+    const codeEl = document.getElementById('free-code-code');
+    if (!codeEl) return;
+    codeEl.value = 'FAMILIE' + String(Math.floor(1000 + Math.random() * 9000));
+    updateFreeCodeFlyerText();
+}
+
+function updateFreeCodeFlyerText() {
+    const out = document.getElementById('free-code-flyer-text');
+    if (!out) return;
+    const code = normalizeFreeCode(document.getElementById('free-code-code')?.value) || '[COD]';
+    const name = (document.getElementById('free-code-name')?.value || '').trim() || FREE_CODE_DEFAULT_NAME;
+    out.value = `Pe ambilet.ro, la eveniment, introdu codul ${code} și primești bilete gratuite «${name}».`;
+}
+
+async function copyFreeCodeFlyerText() {
+    updateFreeCodeFlyerText();
+    const out = document.getElementById('free-code-flyer-text');
+    if (!out) return;
+    let ok = false;
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(out.value);
+            ok = true;
+        }
+    } catch (e) {}
+    if (!ok) {
+        try { out.focus(); out.select(); ok = document.execCommand('copy'); } catch (e) {}
+    }
+    if (ok) AmbiletNotifications.success('Textul pentru flyer a fost copiat.');
+    else AmbiletNotifications.error('Nu s-a putut copia automat — selectează textul și copiază-l manual.');
+}
+
+function resetFreeCodeCard() {
+    freeCodeExistingId = null;
+    const cb = document.getElementById('free-code-enabled');
+    if (!cb) return;
+    cb.checked = false;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('free-code-name', FREE_CODE_DEFAULT_NAME);
+    set('free-code-code', '');
+    set('free-code-max', FREE_CODE_DEFAULT_MAX);
+    set('free-code-stock', '');
+    document.getElementById('free-code-fields')?.classList.add('hidden');
+    updateFreeCodeFlyerText();
+}
+
+// Pre-fill from the ticket_types[] entry that carries free_with_code (edit).
+function fillFreeCodeCard(tt) {
+    resetFreeCodeCard();
+    if (!tt || !tt.free_with_code) return;
+    const fwc = tt.free_with_code;
+    freeCodeExistingId = tt.id || null;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('free-code-name', tt.name || FREE_CODE_DEFAULT_NAME);
+    set('free-code-code', normalizeFreeCode(fwc.code));
+    set('free-code-max', tt.max_per_order || FREE_CODE_DEFAULT_MAX);
+    set('free-code-stock', (tt.quantity && Number(tt.quantity) > 0) ? tt.quantity : '');
+    const cb = document.getElementById('free-code-enabled');
+    if (cb) cb.checked = !!fwc.enabled;
+    document.getElementById('free-code-fields')?.classList.toggle('hidden', !fwc.enabled);
+    updateFreeCodeFlyerText();
+}
+
+// Builds the extra ticket_types row. Unchecked + an already-saved free type
+// → sent with enabled:false so the backend disables it (row is kept).
+function collectFreeCodeTicket() {
+    const cb = document.getElementById('free-code-enabled');
+    if (!cb) return null;
+    const enabled = !!cb.checked;
+    if (!enabled && !freeCodeExistingId) return null;
+    const name = (document.getElementById('free-code-name')?.value || '').trim() || FREE_CODE_DEFAULT_NAME;
+    let code = normalizeFreeCode(document.getElementById('free-code-code')?.value);
+    if (!enabled && !FREE_CODE_PATTERN.test(code)) code = ''; // backend keeps the saved code
+    let max = parseInt(document.getElementById('free-code-max')?.value, 10);
+    if (isNaN(max)) max = FREE_CODE_DEFAULT_MAX;
+    if (!enabled) max = Math.min(10, Math.max(1, max));
+    const stock = parseInt(document.getElementById('free-code-stock')?.value, 10);
+    const row = {
+        name: name,
+        price: 0,
+        max_per_order: max,
+        quantity: (!isNaN(stock) && stock > 0) ? stock : null,
+        free_with_code: { enabled: enabled, code: code },
+    };
+    if (freeCodeExistingId) row.id = freeCodeExistingId;
+    return row;
+}
+
+function validateFreeCodeCard() {
+    const cb = document.getElementById('free-code-enabled');
+    if (!cb || !cb.checked) return true;
+    const codeEl = document.getElementById('free-code-code');
+    if (!FREE_CODE_PATTERN.test(normalizeFreeCode(codeEl?.value))) {
+        AmbiletNotifications.error('Codul de flyer trebuie să aibă 3–30 caractere (litere A–Z, cifre sau cratimă).');
+        openAccordionStep(6);
+        codeEl?.focus();
+        return false;
+    }
+    const maxEl = document.getElementById('free-code-max');
+    const max = parseInt(maxEl?.value, 10);
+    if (maxEl && maxEl.value !== '' && (isNaN(max) || max < 1 || max > 10)) {
+        AmbiletNotifications.error('Max. bilete gratuite / comandă trebuie să fie între 1 și 10.');
+        openAccordionStep(6);
+        maxEl.focus();
+        return false;
+    }
+    return true;
+}
+
+// Opens an accordion step without closing it when it's already open.
+function openAccordionStep(step) {
+    const section = document.querySelector(`.accordion-section[data-step="${step}"]`);
+    if (section && section.getAttribute('data-open') !== 'true') toggleAccordion(step);
+}
+
 // ==================== MEDIA PREVIEWS ====================
 
 function previewPoster(input) {
@@ -2672,6 +2890,11 @@ function collectFormData() {
     const salesEnd = form.querySelector('[name="sales_end_at"]').value;
     if (salesEnd) data.sales_end_at = salesEnd;
 
+    // "Bilete gratuite cu cod" card → one extra ticket_types row carrying
+    // free_with_code (the backend splits it off from the regular types).
+    const freeCodeRow = collectFreeCodeTicket();
+    if (freeCodeRow) ticketTypes.push(freeCodeRow);
+
     if (ticketTypes.length > 0) data.ticket_types = ticketTypes;
 
     return data;
@@ -2695,6 +2918,8 @@ async function saveEventDraft() {
             return;
         }
     }
+
+    if (!validateFreeCodeCard()) return;
 
     data.is_draft = true;
 
@@ -2762,11 +2987,14 @@ async function saveAndSubmitEvent() {
     // editable inputs), so collectTicketTypes() intentionally returns none.
     // The backend live-edit path never restructures ticket types anyway.
     const isPublishedNow = !!(currentEventStatus && currentEventStatus.is_published);
-    if (!isPublishedNow && (!data.ticket_types || data.ticket_types.length === 0)) {
+    // The free-with-code row doesn't count as a sellable ticket type.
+    const regularTicketCount = (data.ticket_types || []).filter(t => !t.free_with_code).length;
+    if (!isPublishedNow && regularTicketCount === 0) {
         AmbiletNotifications.error('Adaugă cel puțin un tip de bilet pentru a trimite spre aprobare.');
         toggleAccordion(6);
         return;
     }
+    if (!validateFreeCodeCard()) return;
 
     try {
         const savedEventId = document.getElementById('saved-event-id').value;

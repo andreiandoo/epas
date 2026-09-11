@@ -280,6 +280,34 @@ class MarketplaceRefundRequest extends Model
                 'cancellation_reason' => 'Refund processed: ' . $this->reference,
             ]);
         }
+
+        $this->cancelOrphanedFreeTickets();
+    }
+
+    /**
+     * "Bilet gratuit cu cod": free tickets are granted only alongside a paid
+     * one — once the order has no paid ticket left, cancel its free tickets.
+     */
+    protected function cancelOrphanedFreeTickets(): void
+    {
+        $order = $this->order;
+        if (!$order) {
+            return;
+        }
+        $active = $order->tickets()->with('ticketType')->get()
+            ->reject(fn ($t) => $t->is_cancelled || $t->isRefunded());
+        $free = $active->filter(fn ($t) => $t->ticketType?->isFreeWithCode());
+        if ($free->isEmpty()) {
+            return;
+        }
+        $paidLeft = $active->reject(fn ($t) => $t->ticketType?->isFreeWithCode())
+            ->contains(fn ($t) => (float) ($t->price ?? 0) > 0);
+        if ($paidLeft) {
+            return;
+        }
+        foreach ($free as $ticket) {
+            $ticket->cancel('Bilet gratuit anulat: biletul plătit a fost rambursat (' . $this->reference . ')', $this->id);
+        }
     }
 
     public function markFailed(string $error): void

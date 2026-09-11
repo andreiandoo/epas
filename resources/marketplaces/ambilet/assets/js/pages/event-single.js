@@ -19,6 +19,16 @@ const EventPage = {
     sectionToTicketTypeMap: {},  // sectionId -> [ticketType, ...]
     rowToTicketTypeMap: {},      // rowId -> [ticketType, ...]
 
+    // "Bilet gratuit cu cod" — a flyer code unlocks a hidden free ticket type
+    // (e.g. "Copil însoțit"). Everything below stays inert unless the API
+    // flags the event with has_free_code_tickets.
+    freeCode: null,              // { code, valid, message } of the last apply attempt
+    freeCodeTypes: [],           // normalized is_free_with_code types unlocked by the code
+    freeTargets: {},             // seated free type id -> count chosen in "Câte bilete ... dorești?"
+    _freeCodeDraft: '',
+    _freeCodeBusy: false,
+    _freeCodeAutoTried: false,
+
     // Default color palette when ticket type has no color set
     _colorPalette: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
 
@@ -44,6 +54,11 @@ const EventPage = {
      * @returns {Object} { amount: number, rate: number|null, fixed: number|null, mode: string, type: string }
      */
     calculateTicketCommission(ticketType, basePrice) {
+        // Free companion tickets ("bilet gratuit cu cod") never carry a fee.
+        if (ticketType && ticketType.is_free_with_code) {
+            return { amount: 0, rate: 0, fixed: 0, mode: 'included', type: 'percentage' };
+        }
+
         // Check if ticket has custom commission settings
         if (ticketType.commission && ticketType.commission.type) {
             const comm = ticketType.commission;
@@ -602,6 +617,11 @@ const EventPage = {
             const response = await AmbiletAPI.getEvent(this.slug, params);
             if (response.success && response.data) {
                 this.event = this.transformApiData(response.data);
+                // A plain (code-less) payload never carries the free-with-code
+                // types — keep the ones already unlocked on this page.
+                if (this.freeCodeTypes && this.freeCodeTypes.length) {
+                    this._mergeFreeCodeTypes();
+                }
                 // Re-render only ticket section with fresh data
                 if (this.event.ticketTypes && this.event.ticketTypes.length) {
                     this.renderTicketTypes();
@@ -746,7 +766,11 @@ const EventPage = {
                     commission: tt.commission || null,
                     is_refundable: tt.is_refundable || false,
                     ticket_group: tt.ticket_group || null,
-                    perks: tt.perks || []
+                    perks: tt.perks || [],
+                    // "Bilet gratuit cu cod": only set on the free type a flyer
+                    // code unlocks (false / [] for every regular ticket type).
+                    is_free_with_code: tt.is_free_with_code === true,
+                    free_trigger_ticket_type_ids: Array.isArray(tt.free_trigger_ticket_type_ids) ? tt.free_trigger_ticket_type_ids : []
                 };
             }),
             seating_layout: apiData.seating_layout || null,
@@ -773,7 +797,11 @@ const EventPage = {
             // FOMO payload — null on events where the admin toggle is off.
             // Server-side service returns null + the PHP stripper drops the
             // key, so `apiData.fomo` is undefined for any non-opted-in event.
-            fomo: apiData.fomo || null
+            fomo: apiData.fomo || null,
+            // "Bilet gratuit cu cod": sibling keys of ticket_types in the
+            // payload. free_code is null unless the call carried ?free_code=.
+            has_free_code_tickets: (apiData.has_free_code_tickets === true) || (eventData.has_free_code_tickets === true),
+            free_code: apiData.free_code || eventData.free_code || null
         };
     },
 
@@ -1295,6 +1323,8 @@ const EventPage = {
             this.restoreSelectionFromCart();
             this.renderTicketTypes();
             this.renderCartSeatBanner();
+            // "Bilet gratuit cu cod" — no-op unless the event opts in.
+            this.initFreeCode();
         }
 
         // Ticket terms
@@ -2513,11 +2543,14 @@ const EventPage = {
 
             // Get effective price (with performance override if applicable)
             var displayPrice = self.getEffectivePrice(tt);
+            // Free companion ticket unlocked by a flyer code: shown as
+            // "Gratuit", never with a discount badge or fee tooltip.
+            var isFreeWithCode = !!tt.is_free_with_code;
 
             // Determine discount: use target_price if available and greater than displayPrice
             // Otherwise fall back to original_price from ticket type
-            var hasTargetDiscount = targetPrice && displayPrice < targetPrice;
-            var hasTicketDiscount = tt.original_price && tt.original_price > tt.price;
+            var hasTargetDiscount = !isFreeWithCode && targetPrice && displayPrice < targetPrice;
+            var hasTicketDiscount = !isFreeWithCode && tt.original_price && tt.original_price > tt.price;
 
             var hasDiscount = false;
             var discountPercent = 0;
@@ -2721,12 +2754,12 @@ const EventPage = {
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
                         perksHtml +
                         availabilityHtml +
-                        (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
+                        ((isSoldOut || isFreeWithCode) ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right relative min-w-[130px] flex flex-col justify-between">' +
                         '<div class="">' +
                             (hasDiscount && !isSoldOut ? '<span class="bg-slate-700 p-1 px-3 rounded-md absolute -right-4 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
-                            '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
+                            '<span class="block text-xl font-bold ' + priceClasses + '"' + (isFreeWithCode && !isSoldOut ? ' style="color:#059669;"' : '') + '>' + (isFreeWithCode ? 'Gratuit' : displayPrice.toFixed(2) + ' lei') + '</span>' +
                         '</div>' +
                         controlsHtml +
                     '</div>' +
@@ -2804,7 +2837,12 @@ const EventPage = {
                 '</div>';
         }
 
-        container.innerHTML = perfSelectorHtml + ticketCardsHtml + doorSalesBanner;
+        // "Bilet gratuit cu cod" — flyer-code field (and, once applied, the
+        // free-ticket count picker) above the ticket cards, i.e. before any
+        // seat selection. Empty string for every event without the feature.
+        var freeCodeHtml = (!eventDisabled && self.event.has_free_code_tickets) ? self.renderFreeCodeBlock('list') : '';
+
+        container.innerHTML = perfSelectorHtml + freeCodeHtml + ticketCardsHtml + doorSalesBanner;
 
         // Bind performance pill click handlers
         container.querySelectorAll('.perf-pill').forEach(function(btn) {
@@ -2894,8 +2932,9 @@ const EventPage = {
         if (newQty !== currentQty) {
             this.quantities[ticketId] = newQty;
 
-            // If transitioning to/from 0, re-render to swap between "Adaugă" button and qty controls
-            if (currentQty === 0 || newQty === 0) {
+            // If transitioning to/from 0, re-render to swap between "Adaugă" button and qty controls.
+            // Free-with-code types always re-render so the count picker stays in sync.
+            if (currentQty === 0 || newQty === 0 || tt.is_free_with_code) {
                 this.renderTicketTypes();
             } else {
                 const qtyEl = document.getElementById('qty-' + ticketId);
@@ -2940,6 +2979,7 @@ const EventPage = {
 
                 ticketBreakdown.push({
                     name: tt.name,
+                    isFreeWithCode: !!tt.is_free_with_code,
                     qty: qty,
                     basePrice: ticketBasePrice,
                     lineTotal: qty * ticketBasePrice,
@@ -2974,7 +3014,7 @@ const EventPage = {
                 ticketBreakdown.forEach(function(item) {
                     breakdownHtml += '<div class="flex justify-between text-sm">' +
                         '<span class="text-muted">' + item.qty + 'x ' + item.name + '</span>' +
-                        '<span class="font-medium">' + item.lineTotal.toFixed(2) + ' lei</span>' +
+                        '<span class="font-medium">' + (item.isFreeWithCode ? 'Gratuit' : item.lineTotal.toFixed(2) + ' lei') + '</span>' +
                     '</div>';
                 });
 
@@ -3092,6 +3132,14 @@ const EventPage = {
             return Array.isArray(self.selectedSeats[ttId]) && self.selectedSeats[ttId].length > 0;
         });
 
+        // "Bilet gratuit cu cod": free companion tickets need a paid ticket of
+        // this event. The seated flow only carries the seat selections.
+        var freeError = this.validateFreeSelection({ seatedOnly: hasSelectedSeats });
+        if (freeError) {
+            this.showFreeError(freeError);
+            return;
+        }
+
         if (hasSelectedSeats) {
             // Seats already match the cart (e.g. user clicked back from /cos
             // via bfcache without touching anything) — no need to re-hold,
@@ -3139,6 +3187,14 @@ const EventPage = {
             // Scroll to performance list
             var perfSection = document.getElementById('perf-list-section');
             if (perfSection) perfSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // "Bilet gratuit cu cod": defensive re-check (handleCheckout already
+        // validated). No-op when the page has no free-with-code type.
+        var freeError = this.validateFreeSelection();
+        if (freeError) {
+            this.showFreeError(freeError);
             return;
         }
 
@@ -3216,11 +3272,17 @@ const EventPage = {
                         commission: tt.commission || null,
                         is_refundable: tt.is_refundable || false
                     };
+                    if (tt.is_free_with_code) {
+                        ticketTypeData.is_free_with_code = true;
+                    }
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty, null, { replace: true });
                     addedAny = true;
                 }
             }
         }
+
+        // Carry the flyer code with the cart (dropped when no free lines).
+        this.syncCartFreeCode();
 
         if (addedAny) {
             setTimeout(function() {
@@ -3578,6 +3640,517 @@ const EventPage = {
         }
     },
 
+    // ==================== "BILET GRATUIT CU COD" (flyer free-companion code) ====================
+    // An organizer prints one code per event on flyers. A buyer with at least
+    // one PAID ticket of this event who enters the code may add 1..N free
+    // tickets of a hidden ticket type (N = its max_per_order), each with its
+    // own seat on the map. The API only returns that type when the event call
+    // carries ?free_code=CODE. Every method below is a no-op for events
+    // without has_free_code_tickets; the backend enforces all rules at checkout.
+
+    _freeCodeStorageKey() {
+        return 'ambilet_free_code_' + (this.event && this.event.id ? this.event.id : this.slug);
+    },
+
+    sanitizeFreeCode(raw) {
+        return String(raw == null ? '' : raw).replace(/[^A-Za-z0-9-]/g, '').slice(0, 50);
+    },
+
+    _readStoredFreeCode() {
+        try { return this.sanitizeFreeCode(localStorage.getItem(this._freeCodeStorageKey()) || ''); } catch (e) { return ''; }
+    },
+
+    _storeFreeCode(code) {
+        try { localStorage.setItem(this._freeCodeStorageKey(), code); } catch (e) { /* ignore */ }
+    },
+
+    _clearStoredFreeCode() {
+        try { localStorage.removeItem(this._freeCodeStorageKey()); } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * Code to auto-apply on load: ?cod= in the URL first, then the code this
+     * page saved for the event, then the one travelling with the cart.
+     */
+    getInitialFreeCode() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var fromUrl = this.sanitizeFreeCode(params.get('cod') || '');
+            if (fromUrl) return fromUrl;
+        } catch (e) { /* ignore */ }
+        var stored = this._readStoredFreeCode();
+        if (stored) return stored;
+        if (typeof AmbiletCart !== 'undefined' && typeof AmbiletCart.getFreeCode === 'function' && this.event) {
+            try { return this.sanitizeFreeCode(AmbiletCart.getFreeCode(this.event.id) || ''); } catch (e) { /* ignore */ }
+        }
+        return '';
+    },
+
+    /**
+     * Called from render(). Re-merges already unlocked types (render() resets
+     * this.ticketTypes from the payload) or auto-applies a remembered code.
+     */
+    initFreeCode() {
+        if (!this.event || !this.event.has_free_code_tickets || this.eventEnded) return;
+        if (this.purchaseBlockedLabel() || this.event.door_sales_only) return;
+        if (this.freeCodeTypes && this.freeCodeTypes.length) {
+            this._mergeFreeCodeTypes();
+            this._rebuildSeatMaps();
+            this.renderTicketTypes();
+            return;
+        }
+        if (this._freeCodeAutoTried) return;
+        this._freeCodeAutoTried = true;
+        var code = this.getInitialFreeCode();
+        if (code) {
+            this._freeCodeDraft = code;
+            this.applyFreeCode(code, { auto: true });
+        }
+    },
+
+    /** Replace any free-with-code types in the page lists with the unlocked ones. */
+    _mergeFreeCodeTypes() {
+        var free = this.freeCodeTypes || [];
+        var strip = function(list) {
+            return (list || []).filter(function(t) { return !t.is_free_with_code; });
+        };
+        this.ticketTypes = strip(this.ticketTypes).concat(free);
+        if (this.event) {
+            this.event.ticket_types = strip(this.event.ticket_types).concat(free);
+        }
+    },
+
+    _rebuildSeatMaps() {
+        if (!this.seatingLayout) return;
+        this.sectionToTicketTypeMap = this.buildSectionToTicketTypeMap();
+        this.rowToTicketTypeMap = this.buildRowToTicketTypeMap();
+    },
+
+    /**
+     * Add free-with-code types to the rows they cover, AFTER the regular
+     * mapping (so a row's primary type — and therefore its colour — never
+     * changes). Uses the type's seating_rows, else every row of its sections.
+     */
+    _appendFreeTypesToRowMap(map) {
+        var self = this;
+        (this.ticketTypes || []).forEach(function(tt) {
+            if (!tt.is_free_with_code) return;
+            var rowIds = [];
+            if (tt.seating_rows && tt.seating_rows.length > 0) {
+                rowIds = tt.seating_rows.map(function(r) { return r.id; });
+            } else if (tt.seating_sections && tt.seating_sections.length > 0 && self.seatingLayout && self.seatingLayout.sections) {
+                var sectionIds = tt.seating_sections.map(function(s) { return String(s.id); });
+                self.seatingLayout.sections.forEach(function(section) {
+                    if (sectionIds.indexOf(String(section.id)) === -1) return;
+                    (section.rows || []).forEach(function(row) { rowIds.push(row.id); });
+                });
+            }
+            rowIds.forEach(function(rowId) {
+                if (!map[rowId]) map[rowId] = [];
+                if (!map[rowId].some(function(existing) { return existing.id === tt.id; })) {
+                    map[rowId].push(tt);
+                }
+            });
+        });
+    },
+
+    isSeatedType(tt) {
+        return !!(tt && tt.has_seating && this.seatingLayout);
+    },
+
+    /** Absolute cap for a free type: max_per_order, bounded by stock. */
+    getFreeHardMax(tt) {
+        if (!tt) return 0;
+        var max = parseInt(tt.max_per_order, 10);
+        if (!(max > 0)) max = 1;
+        var available = (typeof tt.available === 'number' && isFinite(tt.available)) ? tt.available : max;
+        return Math.max(0, Math.min(max, available));
+    },
+
+    /** Current cap: the hard max, lowered to the count the buyer chose (seated). */
+    getFreeTypeLimit(tt) {
+        var limit = this.getFreeHardMax(tt);
+        if (tt && this.isSeatedType(tt)) {
+            var target = this.freeTargets[String(tt.id)];
+            if (target !== undefined && target !== null) {
+                limit = Math.min(limit, parseInt(target, 10) || 0);
+            }
+        }
+        return Math.max(0, limit);
+    },
+
+    getSelectedCount(tt) {
+        if (!tt) return 0;
+        if (this.isSeatedType(tt)) return (this.selectedSeats[String(tt.id)] || []).length;
+        return this.quantities[tt.id] || 0;
+    },
+
+    getFreeRemaining(tt) {
+        return Math.max(0, this.getFreeTypeLimit(tt) - this.getSelectedCount(tt));
+    },
+
+    _freeRemainingLabel(tt) {
+        var rem = this.getFreeRemaining(tt);
+        return rem === 1 ? '1 rămas' : rem + ' rămase';
+    },
+
+    /** Toast that also shows above the seat map modal (z-index 9999). */
+    _showFreeNotice(message) {
+        this.flashNotice(message);
+        var el = document.getElementById('ep-flash-notice');
+        if (el) el.style.zIndex = '10060';
+    },
+
+    showFreeError(message) {
+        this._showFreeNotice(message);
+    },
+
+    freeLimitNotice(tt) {
+        if (!tt) return;
+        var limit = this.getFreeTypeLimit(tt);
+        var hardMax = this.getFreeHardMax(tt);
+        var name = tt.name || '';
+        var msg;
+        if (limit < hardMax) {
+            msg = limit > 0
+                ? 'Ai ales deja ' + limit + ' ' + (limit === 1 ? 'loc' : 'locuri') + ' pentru «' + name + '». Mărește numărul de bilete gratuite dorite pentru a alege mai multe.'
+                : 'Alege mai întâi câte bilete «' + name + '» gratuite dorești.';
+        } else {
+            msg = 'Poți adăuga maximum ' + hardMax + ' ' + (hardMax === 1 ? 'bilet' : 'bilete') + ' «' + name + '» ' + (hardMax === 1 ? 'gratuit' : 'gratuite') + ' pe comandă.';
+        }
+        this._showFreeNotice(msg);
+    },
+
+    /**
+     * Error message when the selection holds free-with-code tickets without a
+     * qualifying paid ticket of this event (price > 0; one of
+     * free_trigger_ticket_type_ids when that list is non-empty), else null.
+     * Non-seated free quantities above max_per_order are clamped silently.
+     * opts.seatedOnly: only seat selections count (seated add-to-cart flow).
+     */
+    validateFreeSelection(opts) {
+        opts = opts || {};
+        var self = this;
+        var freeTypes = (this.ticketTypes || []).filter(function(t) { return t.is_free_with_code; });
+        if (freeTypes.length === 0) return null;
+
+        var countOf = function(tt) {
+            if (self.isSeatedType(tt)) return (self.selectedSeats[String(tt.id)] || []).length;
+            return opts.seatedOnly ? 0 : (self.quantities[tt.id] || 0);
+        };
+
+        for (var i = 0; i < freeTypes.length; i++) {
+            var ft = freeTypes[i];
+            var freeQty = countOf(ft);
+            if (freeQty <= 0) continue;
+
+            var hardMax = this.getFreeHardMax(ft);
+            if (freeQty > hardMax) {
+                if (this.isSeatedType(ft)) {
+                    return 'Poți adăuga maximum ' + hardMax + ' ' + (hardMax === 1 ? 'bilet' : 'bilete') + ' «' + ft.name + '» ' + (hardMax === 1 ? 'gratuit' : 'gratuite') + ' pe comandă.';
+                }
+                this.quantities[ft.id] = hardMax;
+                this.renderTicketTypes();
+                this.updateCart();
+            }
+
+            var triggers = (ft.free_trigger_ticket_type_ids || []).map(String);
+            var hasPaid = (this.ticketTypes || []).some(function(tt) {
+                if (tt.is_free_with_code) return false;
+                if (!(self.getEffectivePrice(tt) > 0)) return false;
+                if (triggers.length > 0 && triggers.indexOf(String(tt.id)) === -1) return false;
+                return countOf(tt) > 0;
+            });
+            if (!hasPaid) {
+                return 'Adaugă și un bilet plătit pentru a primi biletele gratuite.';
+            }
+        }
+        return null;
+    },
+
+    /** Mirror the applied flyer code into the cart storage (or drop it). */
+    syncCartFreeCode() {
+        if (typeof AmbiletCart === 'undefined' || !this.event) return;
+        try {
+            var eventId = this.event.id;
+            var hasFree = typeof AmbiletCart.hasFreeItemsForEvent === 'function' && AmbiletCart.hasFreeItemsForEvent(eventId);
+            if (hasFree && this.freeCode && this.freeCode.valid && this.freeCode.code && typeof AmbiletCart.setFreeCode === 'function') {
+                AmbiletCart.setFreeCode(eventId, this.freeCode.code);
+            } else if (typeof AmbiletCart.removeFreeCode === 'function') {
+                AmbiletCart.removeFreeCode(eventId);
+            }
+        } catch (e) { /* never break add-to-cart */ }
+    },
+
+    applyFreeCodeFromInput(el) {
+        var block = el && el.closest ? el.closest('[data-free-code-block]') : null;
+        var input = block ? block.querySelector('[data-free-code-input]') : null;
+        this.applyFreeCode(input ? input.value : this._freeCodeDraft, {});
+    },
+
+    /**
+     * Re-fetch the event with ?free_code= (never cached) and merge the
+     * unlocked free type(s) — normalized exactly like the page's own ticket
+     * types via transformApiData — into the list and the seat maps.
+     */
+    async applyFreeCode(rawCode, opts) {
+        opts = opts || {};
+        if (!this.event || !this.event.has_free_code_tickets || this._freeCodeBusy) return;
+
+        var code = this.sanitizeFreeCode(rawCode);
+        if (!code) {
+            this.freeCode = { code: '', valid: false, message: 'Introdu codul de pe flyer.' };
+            this._refreshFreeCodeUI();
+            return;
+        }
+
+        this._freeCodeBusy = true;
+        this._freeCodeDraft = code;
+        this._refreshFreeCodeUI();
+
+        var self = this;
+        try {
+            var response = await AmbiletAPI.request('/marketplace-events/' + this.slug + '?free_code=' + encodeURIComponent(code), { method: 'GET', noCache: true });
+            var data = response && response.data;
+            if (!response || !response.success || !data) {
+                throw new Error('empty response');
+            }
+            var fresh = this.transformApiData(data);
+            var fc = fresh.free_code || null;
+            var unlocked = (fresh.ticket_types || []).filter(function(t) { return t.is_free_with_code; });
+
+            if (fc && fc.valid === true && unlocked.length > 0) {
+                this.freeCode = { code: this.sanitizeFreeCode(fc.code) || code, valid: true, message: fc.message || '' };
+                this.freeCodeTypes = unlocked;
+                // Chosen counts only survive for types that are still unlocked.
+                var keptTargets = {};
+                unlocked.forEach(function(t) {
+                    var key = String(t.id);
+                    if (self.freeTargets[key] !== undefined) keptTargets[key] = self.freeTargets[key];
+                });
+                this.freeTargets = keptTargets;
+                this._storeFreeCode(this.freeCode.code);
+                this._mergeFreeCodeTypes();
+                this._rebuildSeatMaps();
+            } else {
+                this._dropFreeCodeState();
+                this.freeCode = {
+                    code: code,
+                    valid: false,
+                    message: (fc && fc.message) || 'Codul introdus nu este valid pentru acest eveniment.'
+                };
+            }
+        } catch (err) {
+            var status = err && typeof err.status === 'number' ? err.status : 0;
+            var message = (status >= 400 && status < 500 && err.message && err.message !== 'An error occurred')
+                ? err.message
+                : 'Nu am putut verifica codul acum. Încearcă din nou.';
+            this.freeCode = { code: code, valid: false, message: message };
+        } finally {
+            this._freeCodeBusy = false;
+            this._freeCodeDraft = (this.freeCode && this.freeCode.valid) ? '' : code;
+            this._refreshFreeCodeUI({ cart: true });
+        }
+    },
+
+    /**
+     * Remove the free types plus their quantities / picked seats from the
+     * page state and forget the saved code. Returns the dropped type ids.
+     */
+    _dropFreeCodeState() {
+        var self = this;
+        var ids = {};
+        (this.freeCodeTypes || []).forEach(function(t) { ids[String(t.id)] = true; });
+        (this.ticketTypes || []).forEach(function(t) { if (t.is_free_with_code) ids[String(t.id)] = true; });
+        if (typeof AmbiletCart !== 'undefined' && this.event) {
+            AmbiletCart.getItems().forEach(function(item) {
+                if (item.eventId === self.event.id && item.ticketType && item.ticketType.is_free_with_code) {
+                    ids[String(item.ticketTypeId)] = true;
+                }
+            });
+        }
+        Object.keys(ids).forEach(function(id) {
+            delete self.quantities[id];
+            delete self.selectedSeats[id];
+            delete self.freeTargets[id];
+        });
+        this.freeCodeTypes = [];
+        this._clearStoredFreeCode();
+        this._mergeFreeCodeTypes();
+        this._rebuildSeatMaps();
+        return Object.keys(ids);
+    },
+
+    /** "Elimină codul": drop the free type, its seats and its cart lines. */
+    removeFreeCode() {
+        this._dropFreeCodeState();
+        this.freeCode = null;
+        this._freeCodeDraft = '';
+        if (typeof AmbiletCart !== 'undefined' && this.event) {
+            var eventId = this.event.id;
+            AmbiletCart.getItems().filter(function(item) {
+                return item.eventId === eventId && item.ticketType && item.ticketType.is_free_with_code;
+            }).forEach(function(item) {
+                AmbiletCart.removeItem(item.key); // releases held seats
+            });
+            if (typeof AmbiletCart.removeFreeCode === 'function') AmbiletCart.removeFreeCode(eventId);
+        }
+        this._refreshFreeCodeUI({ cart: true });
+    },
+
+    /**
+     * "Câte bilete «X» dorești?" — seated: sets the target (= cap on the map,
+     * extra picked seats are released); non-seated: sets the quantity.
+     * Clicking the active count again sets it to 0.
+     */
+    setFreeTarget(ticketTypeId, count) {
+        var tt = (this.ticketTypes || []).find(function(t) { return String(t.id) === String(ticketTypeId); });
+        if (!tt || !tt.is_free_with_code) return;
+        var id = String(tt.id);
+        var hardMax = this.getFreeHardMax(tt);
+        var n = Math.max(0, Math.min(hardMax, parseInt(count, 10) || 0));
+
+        if (this.isSeatedType(tt)) {
+            var current = this.freeTargets[id];
+            if (current !== undefined && (parseInt(current, 10) || 0) === n) n = 0;
+            this.freeTargets[id] = n;
+            var seats = this.selectedSeats[id] || [];
+            if (seats.length > n) {
+                seats.splice(n);
+                this.selectedSeats[id] = seats;
+                this.quantities[tt.id] = seats.length;
+            }
+        } else {
+            if ((this.quantities[tt.id] || 0) === n) n = 0;
+            this.quantities[tt.id] = n;
+        }
+        this._refreshFreeCodeUI({ cart: true });
+    },
+
+    /** Re-render every surface that shows free-code state. */
+    _refreshFreeCodeUI(opts) {
+        opts = opts || {};
+        this.renderTicketTypes();
+        this.renderSeatModalFreeCodeBar();
+        var modal = document.getElementById('seat-selection-modal');
+        if (modal && !modal.classList.contains('hidden')) {
+            this.refreshSeatingMap();
+        }
+        if (opts.cart) {
+            this.updateCart();
+            this.renderCartSeatBanner();
+            this.updateHeaderCart();
+        }
+        if (typeof syncDrawerSummary === 'function') {
+            var drawer = document.getElementById('ticketDrawer');
+            if (drawer && drawer.classList.contains('open')) syncDrawerSummary();
+        }
+    },
+
+    /**
+     * Markup of the flyer-code block. context 'list' = ticket list (also
+     * cloned into the mobile drawer, hence data-attributes, no ids);
+     * 'modal' = compact bar inside the seat map modal.
+     */
+    renderFreeCodeBlock(context) {
+        var self = this;
+        var esc = function(v) { return self.escapeHtml(v == null ? '' : String(v)); };
+        var isModal = context === 'modal';
+        var fc = this.freeCode;
+        var applied = !!(fc && fc.valid && this.freeCodeTypes && this.freeCodeTypes.length);
+        var html = '<div data-free-code-block style="border:1px dashed #6ee7b7;background:#ecfdf5;border-radius:12px;padding:' + (isModal ? '10px 12px' : '12px') + ';' + (isModal ? '' : 'margin-bottom:12px;') + '">';
+
+        if (!applied) {
+            var busy = this._freeCodeBusy;
+            html += '<label style="display:block;font-size:14px;font-weight:600;color:#1e293b;margin-bottom:6px;">Ai un cod de pe flyer?</label>' +
+                '<div style="display:flex;gap:8px;">' +
+                    '<input type="text" data-free-code-input value="' + esc(this._freeCodeDraft) + '" maxlength="50" placeholder="Introdu codul" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Cod de pe flyer"' +
+                        ' oninput="EventPage._freeCodeDraft=this.value"' +
+                        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();EventPage.applyFreeCodeFromInput(this);}"' +
+                        ' style="flex:1;min-width:0;padding:8px 12px;font-size:14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;"' +
+                        (busy ? ' disabled' : '') + '>' +
+                    '<button type="button" onclick="EventPage.applyFreeCodeFromInput(this)"' + (busy ? ' disabled' : '') +
+                        ' style="flex-shrink:0;padding:8px 16px;font-size:14px;font-weight:600;color:#fff;background:#059669;border:0;border-radius:8px;cursor:pointer;' + (busy ? 'opacity:.6;' : '') + '">' +
+                        (busy ? 'Se verifică...' : 'Aplică') +
+                    '</button>' +
+                '</div>';
+            if (fc && !fc.valid && fc.message) {
+                html += '<p style="margin-top:6px;font-size:12px;font-weight:500;color:#dc2626;">' + esc(fc.message) + '</p>';
+            }
+            return html + '</div>';
+        }
+
+        // Code applied: success line(s) + remove link
+        html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
+            '<div style="font-size:13px;color:#065f46;line-height:1.45;">' +
+                this.freeCodeTypes.map(function(ft) {
+                    var max = self.getFreeHardMax(ft);
+                    return '<div><strong>Cod aplicat:</strong> poți adăuga până la ' + max + ' ' + (max === 1 ? 'bilet' : 'bilete') + ' «' + esc(ft.name) + '» ' + (max === 1 ? 'gratuit' : 'gratuite') + '.</div>';
+                }).join('') +
+            '</div>' +
+            '<button type="button" onclick="EventPage.removeFreeCode()" style="flex-shrink:0;font-size:12px;font-weight:600;color:#475569;background:none;border:0;text-decoration:underline;cursor:pointer;">Elimină codul</button>' +
+        '</div>';
+
+        // Count picker per free type
+        this.freeCodeTypes.forEach(function(ft) {
+            var id = String(ft.id);
+            var max = self.getFreeHardMax(ft);
+            var seated = self.isSeatedType(ft);
+            var active;
+            if (seated) {
+                active = self.freeTargets[id] !== undefined ? (parseInt(self.freeTargets[id], 10) || 0) : -1;
+            } else {
+                active = self.quantities[ft.id] || 0;
+            }
+
+            html += '<div style="margin-top:10px;">' +
+                '<div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:6px;">Câte bilete «' + esc(ft.name) + '» dorești?</div>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+            for (var n = 1; n <= max; n++) {
+                var isActive = n === active;
+                html += '<button type="button" onclick="EventPage.setFreeTarget(\'' + esc(id) + '\', ' + n + ')"' +
+                    (isActive ? ' title="Apasă din nou pentru a renunța" aria-pressed="true"' : ' aria-pressed="false"') +
+                    ' style="min-width:40px;padding:6px 12px;font-size:14px;font-weight:700;border-radius:8px;cursor:pointer;border:1px solid ' + (isActive ? '#059669' : '#cbd5e1') + ';background:' + (isActive ? '#059669' : '#fff') + ';color:' + (isActive ? '#fff' : '#1e293b') + ';">' + n + '</button>';
+            }
+            html += '</div>';
+
+            if (seated) {
+                var picked = self.selectedSeats[id] || [];
+                var status;
+                if (picked.length > 0) {
+                    status = 'Locuri gratuite alese: ' + picked.length + (active > 0 ? ' din ' + active : '') + ' — ' +
+                        picked.map(function(s) {
+                            return [s.section, s.row ? 'R' + s.row : '', s.seat ? 'L' + s.seat : ''].filter(Boolean).join(' · ');
+                        }).join('; ');
+                } else if (active === 0) {
+                    status = 'Nu ai ales bilete gratuite. Alege un număr de mai sus pentru a le adăuga.';
+                } else if (active > 0) {
+                    status = 'Alege ' + active + ' ' + (active === 1 ? 'loc' : 'locuri') + ' pe hartă și selectează «' + ft.name + '» (Gratuit) la fiecare loc.';
+                } else {
+                    status = 'Pe hartă, la locurile eligibile, vei putea alege «' + ft.name + '» (Gratuit).';
+                }
+                html += '<p style="margin-top:6px;font-size:12px;color:#475569;">' + esc(status) + '</p>';
+            }
+            html += '</div>';
+        });
+
+        html += '<p style="margin-top:8px;font-size:11px;color:#64748b;">Biletele gratuite se acordă doar împreună cu cel puțin un bilet plătit, o singură dată per client.</p>';
+        return html + '</div>';
+    },
+
+    /** Compact flyer-code bar inside the seat map modal (mobile opens the map directly). */
+    renderSeatModalFreeCodeBar() {
+        var bar = document.getElementById('seat-free-code-bar');
+        if (!bar) return;
+        if (!this.event || !this.event.has_free_code_tickets || this.purchaseBlockedLabel() || this.event.door_sales_only) {
+            bar.style.display = 'none';
+            bar.innerHTML = '';
+            return;
+        }
+        bar.innerHTML = this.renderFreeCodeBlock('modal');
+        bar.style.display = '';
+    },
+
     /**
      * Build a mapping of section ID to ticket type(s) that can use it
      */
@@ -3605,8 +4178,11 @@ const EventPage = {
         var map = {};
         var hasRowData = false;
 
-        // Try row-level assignments first (new model)
+        // Try row-level assignments first (new model). Free-with-code types
+        // ("bilet gratuit cu cod") are skipped here and appended at the end so
+        // they never change a row's primary type/colour or the data source.
         this.ticketTypes.forEach(function(tt) {
+            if (tt.is_free_with_code) return;
             if (tt.seating_rows && tt.seating_rows.length > 0) {
                 hasRowData = true;
                 tt.seating_rows.forEach(function(row) {
@@ -3626,7 +4202,7 @@ const EventPage = {
             console.warn('[EventPage] No row-level data found, using section-level fallback.');
             var sectionMap = this.buildSectionToTicketTypeMap();
             this.seatingLayout.sections.forEach(function(section) {
-                var tts = sectionMap[section.id];
+                var tts = (sectionMap[section.id] || []).filter(function(tt) { return !tt.is_free_with_code; });
                 if (tts && tts.length > 0 && section.rows) {
                     // If section has only 1 ticket type, assign all rows to it
                     // If multiple, distribute rows proportionally among ticket types
@@ -3653,6 +4229,9 @@ const EventPage = {
                 }
             });
         }
+
+        // "Bilet gratuit cu cod": append unlocked free types (no-op otherwise).
+        this._appendFreeTypesToRowMap(map);
 
         console.log('[EventPage] Row-to-TicketType map built. Source: ' + this._rowDataSource + ', rows mapped: ' + Object.keys(map).length);
         // Log per-ticket-type row counts
@@ -3817,6 +4396,9 @@ const EventPage = {
         // Render selected tickets panel
         this.renderSelectedTicketsPanel();
 
+        // "Bilet gratuit cu cod" bar (hidden for events without the feature)
+        this.renderSeatModalFreeCodeBar();
+
         // Render the seating map with ALL assigned sections
         this.renderSeatingMapAllSections(allAssignedSectionIds);
 
@@ -3873,6 +4455,9 @@ const EventPage = {
                         '<svg class="w-6 h-6 text-muted mobile:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
+                // "Bilet gratuit cu cod" bar — filled by renderSeatModalFreeCodeBar(),
+                // stays display:none for events without the feature.
+                '<div id="seat-free-code-bar" style="display:none;padding:8px 12px;border-bottom:1px solid #e5e7eb;background:#fff;max-height:38vh;overflow-y:auto;flex-shrink:0;"></div>' +
                 // Mobile-only toggle that exposes the ticket-types legend (desktop has it in the left sidebar)
                 '<button type="button" id="seat-mobile-legend-toggle" aria-expanded="false" aria-controls="seat-modal-sidebar" class="md:hidden w-full flex items-center justify-between px-4 py-2.5 border-b border-border bg-white text-left">' +
                     '<span class="flex items-center gap-2 text-sm font-semibold text-secondary">' +
@@ -4245,7 +4830,9 @@ const EventPage = {
                 'onclick="EventPage.switchTicketType(\'' + tt.id + '\')">' +
                 '<div class="flex justify-between items-start mb-1">' +
                     '<span class="flex items-center gap-1.5 font-semibold text-secondary text-sm"><span class="w-3 h-3 rounded flex-shrink-0" style="background-color: ' + seatColor + '"></span>' + tt.name + '</span>' +
-                    '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
+                    (tt.is_free_with_code
+                        ? '<span class="font-bold" style="color:#059669;">Gratuit</span>'
+                        : '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>') +
                 '</div>' +
                 '<div class="text-xs text-muted">' + (tt.description || 'Acces general') + '</div>' +
                 perksHtml +
@@ -4280,7 +4867,9 @@ const EventPage = {
             html += '<div class="mb-2">' +
                 '<div class="flex items-center justify-between mb-1">' +
                     '<span class="text-xs font-semibold text-secondary">' + tt.name + '</span>' +
-                    '<span class="text-xs font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
+                    (tt.is_free_with_code
+                        ? '<span class="text-xs font-bold" style="color:#059669;">Gratuit</span>'
+                        : '<span class="text-xs font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>') +
                 '</div>';
 
             // Individual seats
@@ -5075,6 +5664,20 @@ const EventPage = {
             return;
         }
 
+        // "Bilet gratuit cu cod": a free-with-code type stops being offered
+        // once its limit (max per order / chosen count) is reached. Rows
+        // without such a type are untouched.
+        if (ticketTypes.some(function(t) { return t.is_free_with_code; })) {
+            var offered = ticketTypes.filter(function(t) {
+                return !t.is_free_with_code || self.getFreeRemaining(t) > 0;
+            });
+            if (offered.length === 0) {
+                self.freeLimitNotice(ticketTypes.find(function(t) { return t.is_free_with_code; }));
+                return;
+            }
+            ticketTypes = offered;
+        }
+
         if (ticketTypes.length === 1) {
             // Single ticket type — select directly
             this.selectSeatForTicketType(ticketTypes[0], seatId, sectionName, rowLabel, seatLabel, seatUid);
@@ -5089,6 +5692,15 @@ const EventPage = {
      */
     selectSeatForTicketType(tt, seatId, sectionName, rowLabel, seatLabel, seatUid) {
         var ticketTypeId = String(tt.id);
+
+        // "Bilet gratuit cu cod": the free type is capped (max_per_order and
+        // the chosen count). Regular ticket types keep having no map limit.
+        if (tt.is_free_with_code) {
+            if ((this.selectedSeats[ticketTypeId] || []).length >= this.getFreeTypeLimit(tt)) {
+                this.freeLimitNotice(tt);
+                return;
+            }
+        }
 
         if (!this.selectedSeats[ticketTypeId]) {
             this.selectedSeats[ticketTypeId] = [];
@@ -5132,7 +5744,9 @@ const EventPage = {
                 'class="w-full text-left px-3 py-2.5 mb-1.5 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 flex items-center gap-3 transition-colors" aria-label="Alege tipul de bilet: ' + tt.name + '">' +
                 '<span class="w-4 h-4 rounded-full flex-shrink-0" style="background:' + color + '"></span>' +
                 '<span class="text-sm font-medium text-gray-800">' + tt.name + '</span>' +
-                '<span class="text-xs text-gray-500 ml-auto">' + tt.price.toFixed(2) + ' lei</span>' +
+                (tt.is_free_with_code
+                    ? '<span class="text-xs ml-auto" style="color:#059669;font-weight:700;">Gratuit <span style="font-weight:500;">(' + self._freeRemainingLabel(tt) + ')</span></span>'
+                    : '<span class="text-xs text-gray-500 ml-auto">' + tt.price.toFixed(2) + ' lei</span>') +
                 '</button>';
         });
 
@@ -5168,6 +5782,8 @@ const EventPage = {
         this.renderSelectedTicketsPanel();
         this.renderModalTicketTypes(this.currentTicketTypeId);
         this.updateSeatSelectionSummary();
+        // Keeps the free-seat counter in the modal bar current (no-op otherwise).
+        this.renderSeatModalFreeCodeBar();
     },
 
     /**
@@ -5187,6 +5803,11 @@ const EventPage = {
             // Deselect
             this.selectedSeats[ticketTypeId].splice(existingIndex, 1);
         } else {
+            // "Bilet gratuit cu cod": only the free type is capped.
+            if (tt && tt.is_free_with_code && this.selectedSeats[ticketTypeId].length >= this.getFreeTypeLimit(tt)) {
+                this.freeLimitNotice(tt);
+                return;
+            }
             // Select - no limit, user can select as many as they want
             this.selectedSeats[ticketTypeId].push({
                 id: seatId,
@@ -5356,6 +5977,14 @@ const EventPage = {
 
         if (totalSeats === 0) {
             alert('Te rugăm să selectezi cel puțin un loc.');
+            return;
+        }
+
+        // "Bilet gratuit cu cod": free companion seats need a paid seat of
+        // this event (no-op when the page has no free-with-code type).
+        var freeError = this.validateFreeSelection({ seatedOnly: true });
+        if (freeError) {
+            this.showFreeError(freeError);
             return;
         }
 
@@ -5684,7 +6313,8 @@ const EventPage = {
                                 originalPrice: ticketTypeData.original_price,
                                 description: ticketTypeData.description,
                                 commission: ticketTypeData.commission || null,
-                                is_refundable: ticketTypeData.is_refundable || false
+                                is_refundable: ticketTypeData.is_refundable || false,
+                                ...(tt.is_free_with_code ? { is_free_with_code: true } : {})
                             },
                             quantity: seats.length,
                             seats: seats,
@@ -5770,7 +6400,8 @@ const EventPage = {
                         originalPrice: ticketTypeData.original_price,
                         description: ticketTypeData.description,
                         commission: ticketTypeData.commission || null,
-                        is_refundable: ticketTypeData.is_refundable || false
+                        is_refundable: ticketTypeData.is_refundable || false,
+                        ...(tt.is_free_with_code ? { is_free_with_code: true } : {})
                     },
                     quantity: seats.length,
                     seats: seats,
@@ -5781,6 +6412,10 @@ const EventPage = {
 
         // Save the cart once after all items are added
         AmbiletCart.save(cart.items);
+
+        // "Bilet gratuit cu cod": carry the flyer code with the cart (after the
+        // save, which prunes codes of events without free lines).
+        self.syncCartFreeCode();
 
         // Start reservation timer (15 minutes)
         if (typeof AmbiletCart.startReservationTimer === 'function') {

@@ -580,6 +580,7 @@ const CheckoutPage = {
                 qty: qty,
                 price: price,
                 lineTotal: itemTotal,
+                isFreeWithCode: !!item.ticketType?.is_free_with_code,
                 hasDiscount: hasDiscount,
                 originalPrice: originalPrice,
                 visitDate: item.meta?.visit_date || item.event?.visit_date || null,
@@ -651,7 +652,7 @@ const CheckoutPage = {
                         </div>
                         <div class="text-right shrink-0">
                             ${ticket.hasDiscount ? `<span class="mr-2 text-xs line-through text-muted">${AmbiletUtils.formatCurrency(ticket.originalPrice * ticket.qty)}</span>` : ''}
-                            <span class="font-medium">${AmbiletUtils.formatCurrency(ticket.lineTotal)}</span>
+                            <span class="font-medium">${ticket.isFreeWithCode ? 'Gratuit' : AmbiletUtils.formatCurrency(ticket.lineTotal)}</span>
                         </div>
                     </div>
                 `;
@@ -899,6 +900,18 @@ const CheckoutPage = {
             if (promo && promo.code) {
                 checkoutData.promo_code = promo.code;
             }
+
+            // "Bilet gratuit cu cod": send the flyer code per event so the
+            // backend can validate and grant the free companion tickets. Only
+            // present when the cart actually holds free-with-code lines
+            // (getFreeCodes prunes events without them). Violations come back
+            // as 422 with a Romanian `message`, shown by the catch below.
+            try {
+                const freeCodes = (typeof AmbiletCart.getFreeCodes === 'function') ? AmbiletCart.getFreeCodes() : {};
+                if (freeCodes && Object.keys(freeCodes).length > 0) {
+                    checkoutData.free_codes = freeCodes;
+                }
+            } catch (e) { /* never block checkout on this */ }
 
             // Add ticket insurance if selected
             if (this.insuranceSelected && this.totals.insurance > 0) {

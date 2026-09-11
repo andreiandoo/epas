@@ -186,9 +186,20 @@ class EventsController extends BaseController
             'ticket_types.*.quantity' => 'nullable|integer|min:1',
             'ticket_types.*.min_per_order' => 'nullable|integer|min:1',
             'ticket_types.*.max_per_order' => 'nullable|integer|min:1',
-        ];
+        ] + $this->freeWithCodeValidationRules();
 
         $validated = $request->validate($rules);
+
+        // "Bilet gratuit cu cod" rows (ticket_types[].free_with_code) are split
+        // off and handled separately: they become hidden price-0 types with
+        // meta.free_with_code. Regular rows keep the exact legacy flow.
+        [$paidTicketRows, $freeTicketRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
+        if (!$isDraft && !empty($freeTicketRows) && empty($paidTicketRows)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'ticket_types' => ['Adaugă cel puțin un tip de bilet (în afară de biletele gratuite cu cod).'],
+            ]);
+        }
+        $freeTicketRows = $this->resolveFreeWithCodeRows(null, $freeTicketRows);
 
         try {
             DB::beginTransaction();
@@ -264,7 +275,7 @@ class EventsController extends BaseController
             // them to 1 and the event-level max_tickets_per_order (or 10) so
             // organizers don't have to fill those fields per ticket type.
             $defaultMaxPerOrder = (int) ($validated['max_tickets_per_order'] ?? 10);
-            foreach ($validated['ticket_types'] ?? [] as $index => $ticketTypeData) {
+            foreach ($paidTicketRows as $index => $ticketTypeData) {
                 TicketType::create([
                     'event_id' => $event->id,
                     'name' => $ticketTypeData['name'],
@@ -278,6 +289,10 @@ class EventsController extends BaseController
                     'status' => 'active',
                 ]);
             }
+
+            // Free-with-code ticket types (created after the regular ones so
+            // trigger/seat references can be checked against real ids).
+            $this->applyFreeWithCodeRows($event, $freeTicketRows);
 
             // Auto-fill eventTypes from the chosen category — this matches the
             // Filament admin behavior so Genuri eveniment isn't blank when the
@@ -366,15 +381,40 @@ class EventsController extends BaseController
             'ticket_types.*.quantity' => 'nullable|integer|min:1',
             'ticket_types.*.min_per_order' => 'nullable|integer|min:1',
             'ticket_types.*.max_per_order' => 'nullable|integer|min:1',
-        ]);
+        ], $this->freeWithCodeValidationRules());
 
         $validated = $request->validate($rules);
+
+        // "Bilet gratuit cu cod" rows are pulled out of ticket_types BEFORE any
+        // existing flow sees them: the live-edit append path / pending-changes
+        // approval would otherwise create them as plain, publicly visible
+        // price-0 types. They are upserted separately (never deleted).
+        [$paidTicketRows, $freeTicketRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
+        $freeTicketRows = $this->resolveFreeWithCodeRows($event, $freeTicketRows);
+        if (!empty($freeTicketRows)) {
+            if (empty($paidTicketRows)) {
+                // Only the free card was submitted → leave regular types alone.
+                unset($validated['ticket_types']);
+            } else {
+                $validated['ticket_types'] = $paidTicketRows;
+            }
+        }
 
         // Published/live events take the live-edit path: only safe fields, and
         // either applied directly (allow_live_edits) or parked as pending
         // changes for a marketplace admin to approve. Ticket-type restructuring
         // is never done on a live event — it would destroy sold tickets.
         if ($event->is_published) {
+            // The free-with-code type is additive and hidden without the code:
+            // it is upserted directly (create / update / disable — never
+            // delete), independent of the pending-approval flow.
+            if (!empty($freeTicketRows)) {
+                try {
+                    DB::transaction(fn () => $this->applyFreeWithCodeRows($event, $freeTicketRows));
+                } catch (\Exception $e) {
+                    return $this->error('Failed to update free tickets: ' . $e->getMessage(), 500);
+                }
+            }
             return $this->handleLiveEdit($event, $organizer, $validated);
         }
 
@@ -490,8 +530,14 @@ class EventsController extends BaseController
 
             // Sync ticket types if provided (only for unpublished events - we block published above)
             if ($ticketTypesData !== null) {
-                // Delete existing ticket types and recreate
-                $event->ticketTypes()->delete();
+                // Delete existing ticket types and recreate. Free-with-code
+                // types are excluded: they are upserted below by id/code and
+                // never deleted (with none on the event this is the exact
+                // legacy query).
+                $freeWithCodeTypeIds = $this->freeWithCodeTicketTypeIds($event);
+                $event->ticketTypes()
+                    ->when(!empty($freeWithCodeTypeIds), fn ($q) => $q->whereNotIn('id', $freeWithCodeTypeIds))
+                    ->delete();
 
                 // Use virtual price_max / capacity (mass-assignable) so the
                 // mutators populate price_cents / quota_total correctly.
@@ -514,6 +560,9 @@ class EventsController extends BaseController
                     ]);
                 }
             }
+
+            // Free-with-code types: create / update (meta merged) / disable.
+            $this->applyFreeWithCodeRows($event, $freeTicketRows);
 
             // Auto-fill eventTypes from the chosen category — keeps the Filament
             // admin's conditional Tipuri/Genuri chain consistent with what the
@@ -4739,6 +4788,11 @@ class EventsController extends BaseController
                     }
                 }
 
+                // "Bilet gratuit cu cod" config (null for regular types). Free
+                // types also expose their real max_per_order (the edit form
+                // pre-fills it); regular types keep the legacy constant.
+                $freeWithCode = $this->extractFreeWithCode($tt);
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -4749,7 +4803,7 @@ class EventsController extends BaseController
                     'quantity_sold' => $validTickets,
                     'available' => $available,
                     'min_per_order' => 1,
-                    'max_per_order' => 10,
+                    'max_per_order' => $freeWithCode !== null ? (int) ($tt->max_per_order ?: 3) : 10,
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
                     'is_visible' => $tt->status === 'active',
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
@@ -4757,12 +4811,313 @@ class EventsController extends BaseController
                     'color' => $tt->color ?? null,
                     'checked_in' => $checkedIn,
                     'is_sold_out' => (bool) ($tt->is_sold_out ?? false),
+                    'free_with_code' => $freeWithCode,
                 ];
                 });
             })(),
             'has_seating' => (bool) $event->seating_layout_id,
             'created_at' => $event->created_at?->toIso8601String(),
         ];
+    }
+
+    // ==================== FREE TICKETS WITH CODE ("bilet gratuit cu cod") ====================
+    //
+    // A free type is a regular ticket_types row: price 0, is_declarable,
+    // max_per_order = free tickets per order, capacity = optional declared
+    // stock, meta.free_with_code = { enabled, code, trigger_ticket_type_ids,
+    // seats_from_ticket_type_id }. The organizer wizard sends it as a
+    // ticket_types[] row carrying `free_with_code` (+ `id` when editing).
+    // These rows never go through the legacy delete/recreate or live-edit
+    // append paths: they are created / updated (meta merged) / disabled, and
+    // never deleted.
+
+    /**
+     * Extra validation rules for ticket_types[] rows (shared by store/update).
+     */
+    protected function freeWithCodeValidationRules(): array
+    {
+        return [
+            'ticket_types.*.id' => 'nullable|integer',
+            'ticket_types.*.free_with_code' => 'nullable|array',
+            'ticket_types.*.free_with_code.enabled' => 'nullable|boolean',
+            'ticket_types.*.free_with_code.code' => 'nullable|string|max:30',
+            'ticket_types.*.free_with_code.trigger_ticket_type_ids' => 'nullable|array',
+            'ticket_types.*.free_with_code.trigger_ticket_type_ids.*' => 'integer',
+            'ticket_types.*.free_with_code.seats_from_ticket_type_id' => 'nullable|integer',
+        ];
+    }
+
+    /**
+     * Normalized meta.free_with_code of a ticket type, or null for regular types.
+     */
+    protected function extractFreeWithCode(TicketType $tt): ?array
+    {
+        $meta = is_array($tt->meta) ? $tt->meta : [];
+        $fwc = $meta['free_with_code'] ?? null;
+        if (!is_array($fwc)) {
+            return null;
+        }
+        $seatsFrom = $fwc['seats_from_ticket_type_id'] ?? null;
+
+        return [
+            'enabled' => (bool) ($fwc['enabled'] ?? false),
+            'code' => strtoupper(trim((string) ($fwc['code'] ?? ''))),
+            'trigger_ticket_type_ids' => $this->normalizeIdList($fwc['trigger_ticket_type_ids'] ?? []),
+            'seats_from_ticket_type_id' => (is_numeric($seatsFrom) && (int) $seatsFrom > 0) ? (int) $seatsFrom : null,
+        ];
+    }
+
+    protected function normalizeIdList($ids): array
+    {
+        if (!is_array($ids)) {
+            return [];
+        }
+        $out = [];
+        foreach ($ids as $id) {
+            if (is_numeric($id) && (int) $id > 0) {
+                $out[(int) $id] = (int) $id;
+            }
+        }
+        return array_values($out);
+    }
+
+    /**
+     * Split validated ticket_types rows into [regular rows, free-with-code rows].
+     */
+    protected function splitFreeWithCodeRows(?array $rows): array
+    {
+        $paid = [];
+        $free = [];
+        foreach ($rows ?? [] as $row) {
+            if (is_array($row) && is_array($row['free_with_code'] ?? null)) {
+                $free[] = $row;
+            } else {
+                $paid[] = $row;
+            }
+        }
+        return [$paid, $free];
+    }
+
+    /**
+     * Ids of the event's existing free-with-code ticket types.
+     */
+    protected function freeWithCodeTicketTypeIds(Event $event): array
+    {
+        return TicketType::where('event_id', $event->id)
+            ->get(['id', 'meta'])
+            ->filter(fn (TicketType $tt) => $this->extractFreeWithCode($tt) !== null)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Validate + normalize free-with-code rows and match each one to an
+     * existing free type of the event (by id, then by code). Throws a 422
+     * ValidationException on invalid code / max / duplicate code. Must run
+     * BEFORE the store/update transaction (its catch would turn it into 500).
+     */
+    protected function resolveFreeWithCodeRows(?Event $event, array $rows): array
+    {
+        if (empty($rows)) {
+            return [];
+        }
+
+        $existingFree = collect();
+        if ($event && $event->exists) {
+            $existingFree = TicketType::where('event_id', $event->id)
+                ->get(['id', 'meta'])
+                ->filter(fn (TicketType $tt) => $this->extractFreeWithCode($tt) !== null)
+                ->keyBy('id');
+        }
+        $codeOf = fn (TicketType $tt) => $this->extractFreeWithCode($tt)['code'] ?? '';
+
+        $errors = [];
+        $seenCodes = [];
+        $usedTargets = [];
+        $out = [];
+
+        foreach ($rows as $row) {
+            $fwc = $row['free_with_code'];
+            $enabled = (!array_key_exists('enabled', $fwc) || $fwc['enabled'] === null)
+                ? true
+                : filter_var($fwc['enabled'], FILTER_VALIDATE_BOOLEAN);
+            $code = strtoupper(trim((string) ($fwc['code'] ?? '')));
+            $name = trim((string) ($row['name'] ?? ''));
+
+            if ($code !== '' && !preg_match('/^[A-Z0-9-]{3,30}$/', $code)) {
+                $errors[] = "Codul „{$code}” nu este valid: folosește 3–30 caractere (litere A–Z, cifre sau cratimă).";
+            } elseif ($enabled && $code === '') {
+                $errors[] = 'Introdu codul de flyer pentru biletele gratuite „' . ($name !== '' ? $name : 'bilet gratuit') . '”.';
+            }
+
+            $max = $row['max_per_order'] ?? null;
+            $max = ($max === null || $max === '') ? null : (int) $max;
+            if ($max !== null && ($max < 1 || $max > 10)) {
+                $errors[] = 'Numărul maxim de bilete gratuite pe comandă trebuie să fie între 1 și 10.';
+            }
+
+            if ($code !== '') {
+                if (isset($seenCodes[$code])) {
+                    $errors[] = "Codul {$code} este folosit de mai multe tipuri de bilet la acest eveniment.";
+                }
+                $seenCodes[$code] = true;
+            }
+
+            // Match an existing FREE type only (an id pointing at a regular
+            // type is ignored — a paid type is never converted).
+            $target = null;
+            if (!empty($row['id']) && $existingFree->has((int) $row['id'])) {
+                $target = $existingFree->get((int) $row['id']);
+            }
+            if (!$target && $code !== '') {
+                $target = $existingFree->first(fn (TicketType $tt) => $codeOf($tt) === $code);
+            }
+            if ($target) {
+                if (isset($usedTargets[$target->id])) {
+                    $errors[] = 'Același tip de bilet gratuit apare de două ori în formular.';
+                }
+                $usedTargets[$target->id] = true;
+            }
+            if ($code !== '') {
+                $conflict = $existingFree->first(
+                    fn (TicketType $tt) => (!$target || (int) $tt->id !== (int) $target->id) && $codeOf($tt) === $code
+                );
+                if ($conflict) {
+                    $errors[] = "Codul {$code} este deja folosit de alt tip de bilet la acest eveniment.";
+                }
+            }
+
+            $out[] = [
+                'target_id' => $target ? (int) $target->id : null,
+                'enabled' => (bool) $enabled,
+                'code' => $code,
+                'name' => $name !== '' ? $name : 'Copil însoțit',
+                'has_description' => array_key_exists('description', $row),
+                'description' => $row['description'] ?? null,
+                'has_quantity' => array_key_exists('quantity', $row),
+                'quantity' => isset($row['quantity']) && $row['quantity'] !== '' ? (int) $row['quantity'] : null,
+                'max_per_order' => $max,
+                'has_trigger_ids' => array_key_exists('trigger_ticket_type_ids', $fwc),
+                'trigger_ticket_type_ids' => $this->normalizeIdList($fwc['trigger_ticket_type_ids'] ?? []),
+                'has_seats_from' => array_key_exists('seats_from_ticket_type_id', $fwc),
+                'seats_from_ticket_type_id' => (isset($fwc['seats_from_ticket_type_id']) && is_numeric($fwc['seats_from_ticket_type_id']) && (int) $fwc['seats_from_ticket_type_id'] > 0)
+                    ? (int) $fwc['seats_from_ticket_type_id']
+                    : null,
+            ];
+        }
+
+        if (!empty($errors)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'ticket_types' => array_values(array_unique($errors)),
+            ]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Create / update / disable free-with-code ticket types (rows from
+     * resolveFreeWithCodeRows). Never deletes. On update meta is MERGED
+     * (other meta keys + unknown free_with_code keys are preserved) and
+     * commission / is_declarable are left as-is (admin edits win).
+     * trigger / seats_from ids are kept only when they point at a regular
+     * ticket type of this event (stale ids → [] / null = automatic).
+     */
+    protected function applyFreeWithCodeRows(Event $event, array $rows): void
+    {
+        if (empty($rows)) {
+            return;
+        }
+
+        $all = TicketType::where('event_id', $event->id)->get();
+        $paidIds = $all->filter(fn (TicketType $tt) => $this->extractFreeWithCode($tt) === null)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $cleanTriggers = fn (array $ids) => array_values(array_intersect($ids, $paidIds));
+        $cleanSeatsFrom = fn ($id) => ($id !== null && in_array((int) $id, $paidIds, true)) ? (int) $id : null;
+
+        foreach ($rows as $row) {
+            $target = $row['target_id'] ? $all->firstWhere('id', $row['target_id']) : null;
+
+            if (!$target) {
+                if (!$row['enabled']) {
+                    continue; // nothing saved yet → nothing to disable
+                }
+                TicketType::create([
+                    'event_id' => $event->id,
+                    'name' => $row['name'],
+                    'description' => $row['description'],
+                    'currency' => 'RON',
+                    'price_max' => 0,
+                    'capacity' => $row['quantity'], // null becomes -1 = unlimited
+                    'min_per_order' => 1,
+                    'max_per_order' => $row['max_per_order'] ?? 3,
+                    'quota_sold' => 0,
+                    'status' => 'active',
+                    'is_declarable' => true,
+                    'commission_type' => 'fixed',
+                    'commission_fixed' => 0,
+                    'commission_mode' => 'included',
+                    'meta' => [
+                        'free_with_code' => [
+                            'enabled' => true,
+                            'code' => $row['code'],
+                            'trigger_ticket_type_ids' => $cleanTriggers($row['trigger_ticket_type_ids']),
+                            'seats_from_ticket_type_id' => $cleanSeatsFrom($row['seats_from_ticket_type_id']),
+                        ],
+                    ],
+                ]);
+                continue;
+            }
+
+            $meta = is_array($target->meta) ? $target->meta : [];
+            $prevRaw = is_array($meta['free_with_code'] ?? null) ? $meta['free_with_code'] : [];
+            $prev = $this->extractFreeWithCode($target) ?? [
+                'enabled' => false, 'code' => '', 'trigger_ticket_type_ids' => [], 'seats_from_ticket_type_id' => null,
+            ];
+            $wasEnabled = (bool) $prev['enabled'];
+
+            $meta['free_with_code'] = array_merge($prevRaw, [
+                'enabled' => $row['enabled'],
+                'code' => $row['code'] !== '' ? $row['code'] : $prev['code'],
+                'trigger_ticket_type_ids' => $cleanTriggers(
+                    $row['has_trigger_ids'] ? $row['trigger_ticket_type_ids'] : $prev['trigger_ticket_type_ids']
+                ),
+                'seats_from_ticket_type_id' => $cleanSeatsFrom(
+                    $row['has_seats_from'] ? $row['seats_from_ticket_type_id'] : $prev['seats_from_ticket_type_id']
+                ),
+            ]);
+
+            $updates = ['name' => $row['name'], 'meta' => $meta];
+            if ($row['max_per_order'] !== null) {
+                $updates['max_per_order'] = $row['max_per_order'];
+            }
+            if ($row['has_description']) {
+                $updates['description'] = $row['description'];
+            }
+            if ($row['has_quantity']) {
+                $updates['capacity'] = $row['quantity'];
+            }
+            if ($row['enabled']) {
+                // Enforce a free ticket: no base price, no sale price.
+                $updates['price_max'] = 0;
+                $updates['price'] = null;
+            }
+            // Disabled free type must not surface as a plain 0-lei ticket on
+            // the site (public listing = status 'active'). Only flip status on
+            // an enabled/disabled TRANSITION so an admin's manual status wins.
+            if ($wasEnabled && !$row['enabled'] && $target->status === 'active') {
+                $updates['status'] = 'hidden';
+            } elseif (!$wasEnabled && $row['enabled'] && $target->status === 'hidden') {
+                $updates['status'] = 'active';
+            }
+
+            $target->fill($updates);
+            $target->save();
+        }
     }
 
     /**

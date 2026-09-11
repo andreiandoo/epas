@@ -454,6 +454,10 @@
     }
 
     function calculateItemCommission(item) {
+        // Free companion tickets ("bilet gratuit cu cod") never carry a fee.
+        if (item.ticketType && item.ticketType.is_free_with_code) {
+            return { amount: 0, rate: 0, fixed: 0, mode: 'included', type: 'percentage' };
+        }
         var basePrice = item.ticketType ? item.ticketType.price : (item.price || 0);
         var commission = item.ticketType ? item.ticketType.commission : null;
         if (commission && commission.type) {
@@ -625,7 +629,7 @@
                         (locationText ? '<p class="text-xs text-gray-400 truncate">' + escapeHtml(locationText) + '</p>' : '') +
                         '<div class="flex items-center justify-between mt-2">' +
                             '<div class="flex items-center gap-2">' + qtyHtml + '</div>' +
-                            '<span class="font-bold text-primary">' + (displayPrice * quantity).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei</span>' +
+                            '<span class="font-bold text-primary">' + ((item.ticketType && item.ticketType.is_free_with_code) ? 'Gratuit' : ((displayPrice * quantity).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei')) + '</span>' +
                         '</div>' +
                     '</div>' +
                     '<button type="button" class="self-start p-1 text-gray-400 transition-colors hover:text-red-500 cart-remove-btn" data-index="' + index + '" aria-label="Șterge"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>' +

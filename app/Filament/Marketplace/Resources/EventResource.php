@@ -104,6 +104,45 @@ class EventResource extends Resource
     protected static array $orgCommissionCache = [];
 
     /**
+     * "Bilet gratuit cu cod": set the code plus the defaults it implies —
+     * price 0, max 3 per order (while still on the stock default of 10) and a
+     * fixed 0-lei included commission (only while the type still inherits;
+     * AmBilet can raise it, e.g. 2 lei per free ticket).
+     */
+    protected static function applyFreeCodeDefaults(string $code, SSet $set, SGet $get): void
+    {
+        $set('meta.free_with_code.code', $code);
+        $set('price_max', 0);
+        if ($get('meta.free_with_code.enabled') === null) {
+            $set('meta.free_with_code.enabled', true);
+        }
+        $max = (int) $get('max_per_order');
+        if ($max === 0 || $max === 10) {
+            $set('max_per_order', 3);
+        }
+        $type = $get('commission_type');
+        if (!$type || $type === 'inherit') {
+            $set('commission_type', 'fixed');
+            $set('commission_fixed', 0);
+            $set('commission_mode', 'included');
+        }
+    }
+
+    /**
+     * Saved, paid, non-free ticket types of the event being edited — options
+     * for the "bilet gratuit cu cod" trigger / seats-from selects.
+     */
+    protected static function paidSiblingTicketTypeOptions($items): array
+    {
+        return collect(is_array($items) ? $items : [])
+            ->filter(fn ($i) => !empty($i['id'])
+                && (float) ($i['price_max'] ?? 0) > 0
+                && !filled($i['meta']['free_with_code']['code'] ?? null))
+            ->mapWithKeys(fn ($i) => [(int) $i['id'] => (string) ($i['name'] ?? ('#' . $i['id']))])
+            ->all();
+    }
+
+    /**
      * Resolve the commission defaults a ticket type INHERITS when its
      * commission_type is "inherit" (stored as null). This is a pure DISPLAY
      * helper for the ticket-type form: it mirrors the exact resolution order
@@ -2465,6 +2504,13 @@ class EventResource extends Resource
                                             $badges .= '<span style="font-size:10px;font-weight:600;color:#a16207;background:#fefce8;padding:1px 6px;border-radius:4px;margin-left:4px;display:inline-flex;align-items:center;gap:3px;"><svg style="width:11px;height:11px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Abonament</span>';
                                         }
 
+                                        // Bilet gratuit cu cod (flyer)
+                                        $freeCode = $state['meta']['free_with_code']['code'] ?? null;
+                                        if (filled($freeCode)) {
+                                            $freeOn = (bool) ($state['meta']['free_with_code']['enabled'] ?? true);
+                                            $badges .= '<span style="font-size:10px;font-weight:700;color:' . ($freeOn ? '#be185d;background:#fdf2f8' : '#6b7280;background:#f3f4f6') . ';padding:1px 6px;border-radius:4px;margin-left:4px;">🎁 ' . e(strtoupper($freeCode)) . ($freeOn ? '' : ' (oprit)') . '</span>';
+                                        }
+
                                         if ($isActive) {
                                             return new \Illuminate\Support\HtmlString('✓ ' . $name . $badges);
                                         }
@@ -3558,6 +3604,103 @@ class EventResource extends Resource
                                             ->columns(12)
                                             ->columnSpan(12),
 
+                                        // ── Bilet gratuit cu cod (flyer): hidden 0-lei type unlocked on the event page ──
+                                        SC\Section::make($t('🎁 Bilet gratuit cu cod (flyer)', '🎁 Free ticket with code (flyer)'))
+                                            ->description($t(
+                                                'Bilet de 0 lei, ascuns pe site, deblocat pe pagina evenimentului cu un cod de pe flyer. Se acordă doar împreună cu un bilet plătit, o singură dată per client. Maxim pe comandă = „Max bilete/comandă” (recomandat 3). „Stoc” = numărul declarat în cererea de avizare (recomandat: numărul de locuri de pe rândurile biletelor plătite).',
+                                                'A 0-price ticket hidden on the site, unlocked on the event page with a flyer code. Granted only together with a paid ticket, once per customer. Max per order = "Max tickets/order" (3 recommended). "Stock" = quantity declared for fiscal approval.'
+                                            ))
+                                            ->schema([
+                                                Forms\Components\TextInput::make('meta.free_with_code.code')
+                                                    ->label($t('Cod flyer', 'Flyer code'))
+                                                    ->placeholder($t('gol = bilet normal', 'empty = normal ticket'))
+                                                    ->helperText($t('Litere, cifre, cratimă (3–30). Evită O/0 și I/1. Golirea codului face biletul vizibil tuturor.', 'Letters, digits, dash (3–30). Clearing the code makes the ticket public.'))
+                                                    ->maxLength(30)
+                                                    ->regex('/^[A-Za-z0-9-]{3,30}$/')
+                                                    ->validationMessages(['regex' => 'Codul: 3–30 caractere, doar litere, cifre și cratimă.'])
+                                                    ->dehydrateStateUsing(fn ($state) => filled($state) ? strtoupper(trim($state)) : null)
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                        if (filled($state)) {
+                                                            static::applyFreeCodeDefaults(strtoupper(trim($state)), $set, $get);
+                                                        }
+                                                    })
+                                                    ->suffixAction(
+                                                        Action::make('generateFreeCode')
+                                                            ->icon('heroicon-m-sparkles')
+                                                            ->tooltip($t('Generează cod', 'Generate code'))
+                                                            ->action(function (SSet $set, SGet $get) {
+                                                                // Digits 2–9 only: no 0/O or 1/I mix-ups on paper.
+                                                                $digits = '';
+                                                                for ($i = 0; $i < 4; $i++) {
+                                                                    $digits .= random_int(2, 9);
+                                                                }
+                                                                static::applyFreeCodeDefaults('FAMILIE' . $digits, $set, $get);
+                                                            })
+                                                    )
+                                                    ->rules([
+                                                        fn (SGet $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get) {
+                                                            if (!filled($value)) {
+                                                                return;
+                                                            }
+                                                            if ((float) ($get('price_max') ?: 0) > 0) {
+                                                                $fail('Biletul gratuit cu cod trebuie să aibă prețul 0.');
+                                                            }
+                                                            $sameCode = collect($get('../../ticketTypes') ?? [])
+                                                                ->filter(fn ($i) => strtoupper(trim((string) ($i['meta']['free_with_code']['code'] ?? ''))) === strtoupper(trim((string) $value)))
+                                                                ->count();
+                                                            if ($sameCode > 1) {
+                                                                $fail('Același cod e folosit de două tipuri de bilet la acest eveniment.');
+                                                            }
+                                                        },
+                                                    ])
+                                                    ->columnSpan(5),
+                                                Forms\Components\Toggle::make('meta.free_with_code.enabled')
+                                                    ->label($t('Cod activ', 'Code active'))
+                                                    ->default(true)
+                                                    ->formatStateUsing(fn ($state) => $state ?? true)
+                                                    ->helperText($t('Oprit = codul nu mai funcționează; biletele emise rămân valabile, biletul rămâne ascuns.', 'Off = the code stops working; issued tickets stay valid.'))
+                                                    ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
+                                                    ->columnSpan(7),
+                                                Forms\Components\Select::make('meta.free_with_code.trigger_ticket_type_ids')
+                                                    ->label($t('Se acordă la cumpărarea', 'Granted when buying'))
+                                                    ->multiple()
+                                                    ->options(fn (SGet $get) => static::paidSiblingTicketTypeOptions($get('../../ticketTypes')))
+                                                    ->placeholder($t('Oricare bilet plătit', 'Any paid ticket'))
+                                                    ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
+                                                    ->columnSpan(6),
+                                                Forms\Components\Select::make('meta.free_with_code.seats_from_ticket_type_id')
+                                                    ->label($t('Locuri pe hartă', 'Seats on map'))
+                                                    ->options(fn (SGet $get) => static::paidSiblingTicketTypeOptions($get('../../ticketTypes')))
+                                                    ->placeholder($t('Automat: rândurile biletelor plătite', 'Auto: rows of the paid tickets'))
+                                                    ->helperText($t('Contează doar dacă acestui bilet nu i-ai alocat rânduri proprii pe hartă.', 'Only used when this ticket has no seating rows of its own.'))
+                                                    ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
+                                                    ->columnSpan(6),
+                                                Forms\Components\Placeholder::make('free_with_code_flyer')
+                                                    ->label($t('Text pentru flyer', 'Flyer text'))
+                                                    ->content(function (SGet $get) {
+                                                        $code = strtoupper(trim((string) $get('meta.free_with_code.code')));
+                                                        $name = trim((string) $get('name')) ?: 'bilet gratuit';
+                                                        $text = "Pe pagina evenimentului introdu codul {$code} și primești bilete gratuite «{$name}».";
+                                                        if ($id = $get('id')) {
+                                                            $issued = \App\Models\Ticket::where('ticket_type_id', $id)
+                                                                ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))
+                                                                ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded']))
+                                                                ->count();
+                                                            $text .= " · Bilete gratuite emise până acum: {$issued}";
+                                                        }
+                                                        return $text;
+                                                    })
+                                                    ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
+                                                    ->columnSpan(12),
+                                            ])
+                                            ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') !== 'leisure_venue')
+                                            ->collapsible()
+                                            ->collapsed(fn (SGet $get) => !filled($get('meta.free_with_code.code')))
+                                            ->compact()
+                                            ->columns(12)
+                                            ->columnSpan(12),
+
                                         // ── Section 3: Comision personalizat (collapsible, collapsed) ──
                                         SC\Section::make($t('Comision personalizat', 'Custom commission'))
                                             ->schema([
@@ -3613,6 +3756,11 @@ class EventResource extends Resource
                                                     // silent divergence seen on event 4744 tt 12000
                                                     // (2026-08-22).
                                                     ->minValue(function (SGet $get) use ($marketplace) {
+                                                        // Free-with-code tickets: the fixed fee is AmBilet's call
+                                                        // (0 or e.g. 2 lei) — the organizer floor doesn't apply to 0-lei tickets.
+                                                        if (filled($get('meta.free_with_code.code'))) {
+                                                            return 0;
+                                                        }
                                                         $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
                                                         return $inh['floor_active'] && $inh['fixed'] > 0 ? $inh['fixed'] : 0;
                                                     })

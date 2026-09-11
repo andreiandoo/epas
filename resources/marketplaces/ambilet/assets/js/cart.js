@@ -8,6 +8,10 @@ const AmbiletCart = {
     STORAGE_KEY: 'ambilet_cart',
     PROMO_KEY: 'ambilet_cart_promo',
     RESERVATION_KEY: 'ambilet_cart_reservation',
+    // "Bilet gratuit cu cod": { "<eventId>": "CODE" } for events whose cart
+    // lines include free companion tickets. Separate key (like PROMO_KEY) so
+    // external save(items) callers can never drop it by rebuilding the cart.
+    FREE_CODES_KEY: 'ambilet_cart_free_codes',
 
     /**
      * Get cart from localStorage
@@ -30,6 +34,12 @@ const AmbiletCart = {
     saveCart(cart) {
         cart.updatedAt = new Date().toISOString();
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+
+        // Drop flyer free-codes of events that no longer hold free companion
+        // tickets. No-op (single localStorage read) when none are stored.
+        try {
+            if (typeof this.getFreeCodes === 'function') this.getFreeCodes();
+        } catch (e) { /* never break the save */ }
 
         // Dispatch cart update event
         window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
@@ -127,7 +137,10 @@ const AmbiletCart = {
                     commission: ticketTypeData.commission || null, // Per-ticket commission settings
                     is_refundable: ticketTypeData.is_refundable || false,
                     is_parking: ticketTypeData.is_parking || false,
-                    requires_vehicle_info: ticketTypeData.requires_vehicle_info || false
+                    requires_vehicle_info: ticketTypeData.requires_vehicle_info || false,
+                    // Free companion ticket unlocked by a flyer code — stamped
+                    // only on those lines so every other item keeps its shape.
+                    ...(ticketTypeData.is_free_with_code ? { is_free_with_code: true } : {})
                 },
                 quantity,
                 meta: meta || null,
@@ -241,6 +254,7 @@ const AmbiletCart = {
         const cart = { items: [], updatedAt: new Date().toISOString() };
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
         localStorage.removeItem(this.PROMO_KEY);
+        localStorage.removeItem(this.FREE_CODES_KEY);
         localStorage.removeItem(this.RESERVATION_KEY);
         // Also clear cart_end_time used by cart.php
         localStorage.removeItem('cart_end_time');
@@ -353,6 +367,10 @@ const AmbiletCart = {
      * @returns {Object} Commission details: { amount, rate, fixed, mode, type }
      */
     calculateItemCommission(item) {
+        // Free companion tickets ("bilet gratuit cu cod") never carry a fee.
+        if (item.ticketType && item.ticketType.is_free_with_code) {
+            return { amount: 0, rate: 0, fixed: 0, mode: 'included', type: 'percentage' };
+        }
         const basePrice = item.ticketType.price || 0;
         const commission = item.ticketType.commission;
 
@@ -678,6 +696,92 @@ const AmbiletCart = {
             totalCommission: this.getTotalCommission(),
             commissionBreakdown: this.getCommissionBreakdown()
         };
+    },
+
+    // ==================== FREE COMPANION CODES ("bilet gratuit cu cod") ====================
+    // A flyer code (one per event) unlocks a hidden free ticket type on the
+    // event page. The code travels with the cart so checkout can send it as
+    // `free_codes: { "<eventId>": "CODE" }`. It is kept only while the cart
+    // still holds free-with-code lines for that event (pruned on every save).
+
+    _readFreeCodes() {
+        try {
+            const raw = localStorage.getItem(this.FREE_CODES_KEY);
+            const parsed = raw ? JSON.parse(raw) : {};
+            return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    },
+
+    _writeFreeCodes(map) {
+        try {
+            if (map && Object.keys(map).length > 0) {
+                localStorage.setItem(this.FREE_CODES_KEY, JSON.stringify(map));
+            } else {
+                localStorage.removeItem(this.FREE_CODES_KEY);
+            }
+        } catch (e) { /* storage full / blocked — checkout will 422 with a clear message */ }
+    },
+
+    /**
+     * Does the cart hold at least one free-with-code line for this event?
+     */
+    hasFreeItemsForEvent(eventId) {
+        return this.getItems().some(item =>
+            String(item.eventId) === String(eventId)
+            && item.ticketType && item.ticketType.is_free_with_code
+            && (item.quantity || 0) > 0
+        );
+    },
+
+    /**
+     * Remember the flyer code used for an event's free tickets. Call AFTER
+     * the free lines were written to the cart (saveCart prunes codes of
+     * events without free lines).
+     */
+    setFreeCode(eventId, code) {
+        if (eventId === undefined || eventId === null) return;
+        const map = this._readFreeCodes();
+        const clean = String(code || '').trim();
+        if (clean) {
+            map[String(eventId)] = clean;
+        } else {
+            delete map[String(eventId)];
+        }
+        this._writeFreeCodes(map);
+    },
+
+    removeFreeCode(eventId) {
+        const map = this._readFreeCodes();
+        if (Object.prototype.hasOwnProperty.call(map, String(eventId))) {
+            delete map[String(eventId)];
+            this._writeFreeCodes(map);
+        }
+    },
+
+    getFreeCode(eventId) {
+        return this.getFreeCodes()[String(eventId)] || null;
+    },
+
+    /**
+     * { "<eventId>": "CODE" } restricted to events that still have free
+     * companion lines in the cart. Stale entries are dropped from storage.
+     */
+    getFreeCodes() {
+        const map = this._readFreeCodes();
+        const eventIds = Object.keys(map);
+        if (eventIds.length === 0) return {};
+        const kept = {};
+        eventIds.forEach(eventId => {
+            if (map[eventId] && this.hasFreeItemsForEvent(eventId)) {
+                kept[eventId] = map[eventId];
+            }
+        });
+        if (Object.keys(kept).length !== eventIds.length) {
+            this._writeFreeCodes(kept);
+        }
+        return kept;
     },
 
     // ==================== RESERVATION TIMER ====================

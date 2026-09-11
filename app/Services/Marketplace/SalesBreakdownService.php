@@ -494,7 +494,11 @@ class SalesBreakdownService
                 if (!in_array($slice['mode'], ['on_top', 'added_on_top'], true)) {
                     $sliceNet -= $slice['commission'];
                 }
-                if ($sliceNet < 0) $sliceNet = 0.0;
+                // A 0-lei slice (e.g. "bilet gratuit cu cod") with a fixed
+                // included commission is legitimately negative: the organizer
+                // pays the fee. total_net subtracts it anyway, so clamping here
+                // would only break Σ per_type.net / net_by_day == total_net.
+                if ($sliceNet < 0 && $slice['gross'] > 0) $sliceNet = 0.0;
 
                 if (!isset($perType[$accumKey])) {
                     $perType[$accumKey] = [

@@ -55,6 +55,9 @@ class CheckoutController extends BaseController
             'payment_method' => 'nullable|string|in:card,card_cultural,cash,transfer',
             'accept_terms' => 'required|accepted',
             'promo_code' => 'nullable|string|max:50',
+            // "Bilet gratuit cu cod": flyer code per event id, e.g. {"4713": "FAMILIE4713"}
+            'free_codes' => 'nullable|array',
+            'free_codes.*' => 'nullable|string|max:50',
             'ticket_insurance' => 'nullable|boolean',
             'ticket_insurance_amount' => 'nullable|numeric|min:0',
             'cultural_card_surcharge' => 'nullable|numeric|min:0',
@@ -251,6 +254,16 @@ class CheckoutController extends BaseController
                 'items' => $validationErrors,
                 'reasons' => $reasons,
             ]);
+        }
+
+        // "Bilet gratuit cu cod" — checked before any stock is touched.
+        $freeCodeError = $this->validateFreeWithCodeItems(
+            $cartItems,
+            (array) ($validated['free_codes'] ?? []),
+            (string) $validated['customer']['email']
+        );
+        if ($freeCodeError !== null) {
+            return $this->error($freeCodeError, 422, ['code' => 'free_code_invalid']);
         }
 
         // Calculate per-ticket insurance amount
@@ -506,7 +519,9 @@ class CheckoutController extends BaseController
                 // nu poate fi mai mic decat fixed_commission_default. Cand NU
                 // bifat (default pentru toti org-urii existenti): floor-ul e 0
                 // -> zero impact fata de comportamentul dinainte.
-                $organizerFloorPerTicket = ($event?->marketplaceOrganizer?->commission_use_floor)
+                // 0-lei tickets (e.g. "bilet gratuit cu cod") get no floor — the
+                // same rule as SalesBreakdownService, so checkout and decont agree.
+                $organizerFloorPerTicket = ($event?->marketplaceOrganizer?->commission_use_floor && $unitPrice > 0)
                     ? (float) ($event?->marketplaceOrganizer?->fixed_commission_default ?? 0)
                     : 0.0;
 
@@ -2140,6 +2155,79 @@ class CheckoutController extends BaseController
             ],
             'expires_at' => $cart->expires_at?->toIso8601String(),
         ]);
+    }
+
+    /**
+     * "Bilet gratuit cu cod": a cart may hold tickets of a hidden 0-lei ticket
+     * type only when (1) that event's flyer code was supplied and is active,
+     * (2) the order also buys ≥1 paid ticket at that event (one of the
+     * configured trigger types, when set), (3) the free quantity stays within
+     * the type's max_per_order and (4) this customer hasn't already used the
+     * code on a paid order. Returns the customer-facing error, or null.
+     */
+    protected function validateFreeWithCodeItems(array $cartItems, array $freeCodes, string $email): ?string
+    {
+        $ttIds = collect($cartItems)->pluck('ticket_type_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        if ($ttIds->isEmpty()) {
+            return null;
+        }
+        $types = TicketType::whereIn('id', $ttIds)->get()->keyBy('id');
+        if (!$types->contains(fn (TicketType $tt) => $tt->isFreeWithCode())) {
+            return null;
+        }
+
+        // Quantities per ticket type — only rows whose event matches the
+        // ticket type's own event (guards against id collisions).
+        $qtyByType = [];
+        foreach ($cartItems as $ci) {
+            $tt = $types->get((int) ($ci['ticket_type_id'] ?? 0));
+            if ($tt && (int) $tt->event_id === (int) ($ci['event_id'] ?? 0)) {
+                $qtyByType[$tt->id] = ($qtyByType[$tt->id] ?? 0) + (int) ($ci['quantity'] ?? 1);
+            }
+        }
+        $codes = collect($freeCodes)->mapWithKeys(fn ($c, $eventId) => [(int) $eventId => strtoupper(trim((string) $c))]);
+
+        foreach ($types->filter(fn (TicketType $tt) => $tt->isFreeWithCode() && ($qtyByType[$tt->id] ?? 0) > 0) as $free) {
+            $cfg = $free->freeWithCodeConfig();
+            $name = is_array($free->name) ? ($free->name['ro'] ?? reset($free->name)) : $free->name;
+
+            if (!$free->freeCodeMatches($codes->get((int) $free->event_id))) {
+                return "Biletele «{$name}» se pot obține doar cu un cod valid pentru acest eveniment.";
+            }
+
+            $max = (int) ($free->max_per_order ?: 3);
+            if ($qtyByType[$free->id] > $max) {
+                return "Poți primi maximum {$max} bilete «{$name}» într-o comandă.";
+            }
+
+            $paidQty = 0;
+            foreach ($types as $tt) {
+                if ((int) $tt->event_id !== (int) $free->event_id || $tt->isFreeWithCode()) {
+                    continue;
+                }
+                if (!empty($cfg['trigger_ticket_type_ids']) && !in_array((int) $tt->id, $cfg['trigger_ticket_type_ids'], true)) {
+                    continue;
+                }
+                if ((int) ($tt->sale_price_cents ?? $tt->price_cents) <= 0) {
+                    continue;
+                }
+                $paidQty += $qtyByType[$tt->id] ?? 0;
+            }
+            if ($paidQty < 1) {
+                return "Pentru biletele «{$name}» adaugă în comandă și un bilet plătit la acest eveniment.";
+            }
+
+            $alreadyUsed = Ticket::where('ticket_type_id', $free->id)
+                ->whereHas('order', fn ($q) => $q
+                    ->whereRaw('LOWER(customer_email) = ?', [mb_strtolower(trim($email))])
+                    ->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded']))
+                ->exists();
+            if ($alreadyUsed) {
+                return "Ai folosit deja codul {$cfg['code']} pentru acest eveniment.";
+            }
+        }
+
+        return null;
     }
 
     /**

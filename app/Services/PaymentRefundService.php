@@ -182,6 +182,26 @@ class PaymentRefundService
     }
 
     /**
+     * $tickets plus the order's free-with-code tickets when $tickets takes the
+     * order's last paid ticket; otherwise $tickets unchanged.
+     */
+    protected function withOrphanedFreeTickets(Order $order, $tickets)
+    {
+        $remaining = $order->tickets()->with('ticketType')
+            ->whereNotIn('id', $tickets->pluck('id')->all())
+            ->get()
+            ->reject(fn (Ticket $t) => $t->is_cancelled || $t->isRefunded());
+        $freeLeft = $remaining->filter(fn (Ticket $t) => $t->ticketType?->isFreeWithCode());
+        if ($freeLeft->isEmpty()) {
+            return $tickets;
+        }
+        $paidLeft = $remaining->reject(fn (Ticket $t) => $t->ticketType?->isFreeWithCode())
+            ->contains(fn (Ticket $t) => (float) ($t->price ?? 0) > 0);
+
+        return $paidLeft ? $tickets : $tickets->concat($freeLeft)->values();
+    }
+
+    /**
      * Process a ticket-level refund with per-ticket commission tracking.
      */
     public function processTicketLevelRefund(
@@ -207,6 +227,13 @@ class PaymentRefundService
         if ($alreadyRefunded->isNotEmpty()) {
             return new RefundResult(success: false, error: 'Unele bilete sunt deja rambursate: ' . $alreadyRefunded->pluck('code')->implode(', '));
         }
+
+        // "Bilet gratuit cu cod": free tickets stay valid only while the order
+        // still holds a paid ticket. When this refund takes the last paid one,
+        // the order's free tickets join it (0 lei) so their seats and stock go
+        // back through the very same full/partial release below.
+        $tickets = $this->withOrphanedFreeTickets($order, $tickets);
+        $ticketIds = $tickets->pluck('id')->all();
 
         // Calculate amounts per ticket using stored order values
         $orderSubtotal = (float) ($order->subtotal ?? 0);
