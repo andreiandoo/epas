@@ -65,6 +65,9 @@ if ($isPreview) {
         $appCacheDir = sys_get_temp_dir() . '/ambilet_cache';
         @unlink($appCacheDir . '/' . md5('event_preload_' . $eventSlug) . '.json');
         @unlink($appCacheDir . '/' . md5('event_redirect_' . $eventSlug) . '.json');
+        foreach ($availableLocalesEv ?? ['ro', 'en', 'hu'] as $loc) {
+            @unlink($appCacheDir . '/' . md5('event_preload_' . $eventSlug . '_' . $loc) . '.json');
+        }
 
         // 3. Invalidate proxy API cache for single event endpoint
         $apiCacheDir = __DIR__ . '/cache/api';

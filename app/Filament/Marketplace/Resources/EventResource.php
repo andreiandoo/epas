@@ -2866,6 +2866,8 @@ class EventResource extends Resource
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul minim de bilete care pot fi cumpărate într-o comandă', 'Minimum tickets that can be purchased in a single order')),
                                                     Forms\Components\TextInput::make('max_per_order')
                                                         ->label($t('Max bilete/comandă', 'Max tickets/order'))
+                                                        // Free-with-code types edit this in their own section (1–10 select).
+                                                        ->visible(fn (SGet $get) => !filled($get('meta.free_with_code.code')))
                                                         ->inlineLabel($il)
                                                         ->numeric()
                                                         ->minValue(1)
@@ -3604,15 +3606,15 @@ class EventResource extends Resource
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // ── Bilet gratuit cu cod (flyer): hidden 0-lei type unlocked on the event page ──
-                                        SC\Section::make($t('🎁 Bilet gratuit cu cod (flyer)', '🎁 Free ticket with code (flyer)'))
+                                        // ── Bilet gratuit cu cod promo: hidden 0-lei type unlocked on the event page ──
+                                        SC\Section::make($t('🎁 Bilet gratuit cu cod promo', '🎁 Free ticket with promo code'))
                                             ->description($t(
-                                                'Bilet de 0 lei, ascuns pe site, deblocat pe pagina evenimentului cu un cod de pe flyer. Se acordă doar împreună cu un bilet plătit, o singură dată per client. Maxim pe comandă = „Max bilete/comandă” (recomandat 3). „Stoc” = numărul declarat în cererea de avizare (recomandat: numărul de locuri de pe rândurile biletelor plătite).',
-                                                'A 0-price ticket hidden on the site, unlocked on the event page with a flyer code. Granted only together with a paid ticket, once per customer. Max per order = "Max tickets/order" (3 recommended). "Stock" = quantity declared for fiscal approval.'
+                                                'Bilet gratuit, ascuns pe site, deblocat pe pagina evenimentului cu codul promo. Se acordă doar împreună cu un bilet plătit.',
+                                                'Free ticket, hidden on the site, unlocked on the event page with the promo code. Granted only together with a paid ticket.'
                                             ))
                                             ->schema([
                                                 Forms\Components\TextInput::make('meta.free_with_code.code')
-                                                    ->label($t('Cod flyer', 'Flyer code'))
+                                                    ->label($t('Cod promo', 'Promo code'))
                                                     ->placeholder($t('gol = bilet normal', 'empty = normal ticket'))
                                                     ->helperText($t('Litere, cifre, cratimă (3–30). Evită O/0 și I/1. Golirea codului face biletul vizibil tuturor.', 'Letters, digits, dash (3–30). Clearing the code makes the ticket public.'))
                                                     ->maxLength(30)
@@ -3669,27 +3671,28 @@ class EventResource extends Resource
                                                     ->placeholder($t('Oricare bilet plătit', 'Any paid ticket'))
                                                     ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
                                                     ->columnSpan(6),
-                                                Forms\Components\Select::make('meta.free_with_code.seats_from_ticket_type_id')
-                                                    ->label($t('Locuri pe hartă', 'Seats on map'))
-                                                    ->options(fn (SGet $get) => static::paidSiblingTicketTypeOptions($get('../../ticketTypes')))
-                                                    ->placeholder($t('Automat: rândurile biletelor plătite', 'Auto: rows of the paid tickets'))
-                                                    ->helperText($t('Contează doar dacă acestui bilet nu i-ai alocat rânduri proprii pe hartă.', 'Only used when this ticket has no seating rows of its own.'))
+                                                // Same state as the general "Max bilete/comandă" field, which
+                                                // is hidden while a promo code is set (checkout + event page
+                                                // read max_per_order as the free-ticket cap).
+                                                Forms\Components\Select::make('max_per_order')
+                                                    ->label($t('Max. bilete gratuite / comandă', 'Max free tickets / order'))
+                                                    ->options(array_combine(range(1, 10), range(1, 10)))
+                                                    ->default(3)
+                                                    ->selectablePlaceholder(false)
+                                                    ->helperText($t('Câte bilete gratuite poate alege cumpărătorul într-o comandă.', 'How many free tickets the buyer can pick per order.'))
                                                     ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
                                                     ->columnSpan(6),
-                                                Forms\Components\Placeholder::make('free_with_code_flyer')
-                                                    ->label($t('Text pentru flyer', 'Flyer text'))
+                                                Forms\Components\Placeholder::make('free_with_code_issued')
+                                                    ->hiddenLabel()
                                                     ->content(function (SGet $get) {
-                                                        $code = strtoupper(trim((string) $get('meta.free_with_code.code')));
-                                                        $name = trim((string) $get('name')) ?: 'bilet gratuit';
-                                                        $text = "Pe pagina evenimentului introdu codul {$code} și primești bilete gratuite «{$name}».";
+                                                        $issued = 0;
                                                         if ($id = $get('id')) {
                                                             $issued = \App\Models\Ticket::where('ticket_type_id', $id)
                                                                 ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))
                                                                 ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded']))
                                                                 ->count();
-                                                            $text .= " · Bilete gratuite emise până acum: {$issued}";
                                                         }
-                                                        return $text;
+                                                        return "Bilete gratuite emise până acum: {$issued}";
                                                     })
                                                     ->visible(fn (SGet $get) => filled($get('meta.free_with_code.code')))
                                                     ->columnSpan(12),

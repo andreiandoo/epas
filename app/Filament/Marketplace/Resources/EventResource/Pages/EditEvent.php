@@ -1770,6 +1770,15 @@ class EditEvent extends EditRecord
 
     protected function afterSave(): void
     {
+        // Refresh the event on ambilet.ro right away (page-cache + preload)
+        // instead of waiting for the 30-min TTL or opening ?preview=1.
+        // afterCommit: runs once the whole save — ticket types included — is
+        // committed, so the next visitor fetches the new data.
+        $bustEvent = $this->record;
+        \Illuminate\Support\Facades\DB::afterCommit(
+            fn () => app(\App\Services\Cache\AmbiletCacheBuster::class)->bustEvent($bustEvent)
+        );
+
         // Transform venue_config seasons schedule_list → schedule (keyed by day)
         if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
             $config = $this->record->venue_config ?? [];
