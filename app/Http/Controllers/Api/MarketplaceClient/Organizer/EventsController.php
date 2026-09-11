@@ -190,16 +190,15 @@ class EventsController extends BaseController
 
         $validated = $request->validate($rules);
 
-        // "Bilet gratuit cu cod" rows (ticket_types[].free_with_code) are split
-        // off and handled separately: they become hidden price-0 types with
-        // meta.free_with_code. Regular rows keep the exact legacy flow.
-        [$paidTicketRows, $freeTicketRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
-        if (!$isDraft && !empty($freeTicketRows) && empty($paidTicketRows)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'ticket_types' => ['Adaugă cel puțin un tip de bilet (în afară de biletele gratuite cu cod).'],
-            ]);
+        // "Bilet gratuit cu cod promo" is ADMIN-ONLY (Filament). Rows carrying
+        // free_with_code (e.g. from a cached old organizer form) are dropped
+        // here — never created from the organizer panel, and never passed on
+        // as a plain (public, 0-lei) ticket type.
+        [$paidTicketRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
+        if (isset($validated['ticket_types'])) {
+            $validated['ticket_types'] = $paidTicketRows;
         }
-        $freeTicketRows = $this->resolveFreeWithCodeRows(null, $freeTicketRows);
+        $freeTicketRows = [];
 
         try {
             DB::beginTransaction();
@@ -385,13 +384,15 @@ class EventsController extends BaseController
 
         $validated = $request->validate($rules);
 
-        // "Bilet gratuit cu cod" rows are pulled out of ticket_types BEFORE any
-        // existing flow sees them: the live-edit append path / pending-changes
-        // approval would otherwise create them as plain, publicly visible
-        // price-0 types. They are upserted separately (never deleted).
-        [$paidTicketRows, $freeTicketRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
-        $freeTicketRows = $this->resolveFreeWithCodeRows($event, $freeTicketRows);
-        if (!empty($freeTicketRows)) {
+        // "Bilet gratuit cu cod promo" is ADMIN-ONLY (Filament). Rows carrying
+        // free_with_code (e.g. a cached old organizer form) are pulled out of
+        // ticket_types BEFORE any existing flow sees them — the legacy paths
+        // would create them as plain, publicly visible 0-lei types — and are
+        // dropped. Existing free types stay untouched (and are excluded from
+        // the draft delete/recreate below).
+        [$paidTicketRows, $strippedFreeRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
+        $freeTicketRows = [];
+        if (!empty($strippedFreeRows)) {
             if (empty($paidTicketRows)) {
                 // Only the free card was submitted → leave regular types alone.
                 unset($validated['ticket_types']);
