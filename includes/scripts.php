@@ -31,16 +31,32 @@
         })();
         function initFlatpickrs() {
             if (typeof flatpickr === 'undefined') return;
-            const apply = () => document.querySelectorAll('input[type="date"]:not(.fp-bound)').forEach((el) => {
-                el.classList.add('fp-bound');
-                flatpickr(el, {
-                    dateFormat: 'Y-m-d',
-                    altInput: true,
-                    altFormat: 'd/m/Y',
-                    locale: window.flatpickr?.l10ns?.ro || undefined,
-                    allowInput: true,
+            const apply = () => {
+                document.querySelectorAll('input[type="date"]:not(.fp-bound)').forEach((el) => {
+                    el.classList.add('fp-bound');
+                    flatpickr(el, {
+                        dateFormat: 'Y-m-d',
+                        altInput: true,
+                        altFormat: 'd/m/Y',
+                        locale: window.flatpickr?.l10ns?.ro || undefined,
+                        allowInput: true,
+                    });
                 });
-            });
+                // <input data-datetime> → DD/MM/YYYY HH:MM (24h). The submitted
+                // value stays "Y-m-dTH:i", same as a datetime-local input.
+                document.querySelectorAll('input[data-datetime]:not(.fp-bound)').forEach((el) => {
+                    el.classList.add('fp-bound');
+                    flatpickr(el, {
+                        enableTime: true,
+                        time_24hr: true,
+                        dateFormat: 'Y-m-d\\TH:i',
+                        altInput: true,
+                        altFormat: 'd/m/Y H:i',
+                        locale: window.flatpickr?.l10ns?.ro || undefined,
+                        allowInput: true,
+                    });
+                });
+            };
             apply();
             // Observer pentru elemente noi adăugate dinamic (modale, repeatere)
             const obs = new MutationObserver(() => apply());

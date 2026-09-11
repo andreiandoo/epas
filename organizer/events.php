@@ -451,6 +451,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <input type="text" name="venue_address" class="input" placeholder="ex: Str. Lipscani nr. 10" id="venue-address-input">
                                     </div>
                                 </div>
+                                <p id="venue-location-locked-hint" class="hidden -mt-2 text-xs text-muted">Orasul si adresa sunt preluate automat din locatia selectata. Pentru alta locatie, cauta sau scrie alt nume.</p>
                                 <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Website eveniment</label>
@@ -497,7 +498,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <div>
                                     <label class="label">Mesaj dupa achizitie (thank-you)</label>
                                     <textarea name="thank_you_message" id="thank-you-editor"></textarea>
-                                    <p class="mt-1 text-xs text-muted">Afisat clientului pe pagina de confirmare a comenzii, dupa plata reusita. Poti include text formatat, linkuri, imagini si embed video YouTube/Vimeo. Continutul este sanitizat automat impotriva XSS.</p>
+                                    <p class="mt-1 text-xs text-muted">Afisat clientului pe pagina de confirmare a comenzii, dupa plata reusita. Poti include text formatat, linkuri, imagini si embed video YouTube/Vimeo.</p>
                                 </div>
                             </div>
                         </div>
@@ -650,12 +651,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Inceput vanzari</label>
-                                        <input type="datetime-local" name="sales_start_at" class="input">
+                                        <input type="text" name="sales_start_at" class="input" data-datetime placeholder="zz/ll/aaaa --:--" autocomplete="off">
                                         <p class="mt-1 text-xs text-muted">Cand incep vanzarile (gol = imediat)</p>
                                     </div>
                                     <div>
                                         <label class="label">Sfarsit vanzari</label>
-                                        <input type="datetime-local" name="sales_end_at" class="input">
+                                        <input type="text" name="sales_end_at" class="input" data-datetime placeholder="zz/ll/aaaa --:--" autocomplete="off">
                                         <p class="mt-1 text-xs text-muted">Cand se opresc vanzarile (gol = la inceput eveniment)</p>
                                     </div>
                                 </div>
@@ -1307,6 +1308,8 @@ function resetFormState() {
         if (perfList) perfList.innerHTML = '';
     }
 
+    setVenueLocationLocked(false);
+
     // Reset saved event ID
     const savedIdEl = document.getElementById('saved-event-id');
     if (savedIdEl) savedIdEl.value = '';
@@ -1477,19 +1480,20 @@ async function loadEventForEdit(eventId) {
             }
         }
 
-        // Step 2: Schedule - parse starts_at/ends_at/doors_open_at
+        // Step 2: Schedule. starts_at / ends_at / doors_open_at are naive local
+        // "YYYY-MM-DDTHH:MM:SS" strings — slice them (Date + toISOString()
+        // shifted to UTC, so a 00:30 start showed the previous day). Date
+        // inputs are flatpickr-enhanced → set them via setDateInputValue().
         if (event.starts_at) {
-            const startDt = new Date(event.starts_at);
-            const startDate = startDt.toISOString().split('T')[0];
-            const startTime = startDt.toTimeString().slice(0, 5);
-            form.querySelector('[name="start_date"]').value = startDate;
+            const startDate = String(event.starts_at).slice(0, 10);
+            const startTime = String(event.starts_at).slice(11, 16);
+            setDateInputValue(form.querySelector('[name="start_date"]'), startDate);
             form.querySelector('[name="start_time"]').value = startTime;
 
             // Determine duration mode
             if (event.ends_at) {
-                const endDt = new Date(event.ends_at);
-                const endDate = endDt.toISOString().split('T')[0];
-                const endTime = endDt.toTimeString().slice(0, 5);
+                const endDate = String(event.ends_at).slice(0, 10);
+                const endTime = String(event.ends_at).slice(11, 16);
 
                 if (endDate === startDate) {
                     // Single day
@@ -1500,7 +1504,7 @@ async function loadEventForEdit(eventId) {
                     // Date range
                     const radio = form.querySelector('[name="duration_mode"][value="range"]');
                     if (radio) { radio.checked = true; onDurationModeChange('range'); }
-                    form.querySelector('[name="end_date"]').value = endDate;
+                    setDateInputValue(form.querySelector('[name="end_date"]'), endDate);
                     const endTimeInput = form.querySelector('[name="end_time"]');
                     if (endTimeInput) endTimeInput.value = endTime;
                 }
@@ -1512,8 +1516,7 @@ async function loadEventForEdit(eventId) {
 
             // Doors open
             if (event.doors_open_at) {
-                const doorDt = new Date(event.doors_open_at);
-                const doorTime = doorDt.toTimeString().slice(0, 5);
+                const doorTime = String(event.doors_open_at).slice(11, 16);
                 const durationMode = form.querySelector('[name="duration_mode"]:checked')?.value;
                 if (durationMode === 'range') {
                     form.querySelector('[name="door_time_range"]').value = doorTime;
@@ -1527,7 +1530,10 @@ async function loadEventForEdit(eventId) {
         if (event.venue_name) form.querySelector('[name="venue_name"]').value = event.venue_name;
         if (event.venue_city) form.querySelector('[name="venue_city"]').value = event.venue_city;
         if (event.venue_address) form.querySelector('[name="venue_address"]').value = event.venue_address;
-        if (event.venue_id) document.getElementById('selected-venue-id').value = event.venue_id;
+        if (event.venue_id) {
+            document.getElementById('selected-venue-id').value = event.venue_id;
+            setVenueLocationLocked(true);
+        }
 
         // Links. The "Website eveniment" field reads event_website_url first
         // (the admin-side "Website Eveniment" column) and falls back to the
@@ -1717,13 +1723,12 @@ async function loadEventForEdit(eventId) {
         // Step 7: Sales settings
         if (event.capacity) form.querySelector('[name="capacity"]').value = event.capacity;
         if (event.max_tickets_per_order) form.querySelector('[name="max_tickets_per_order"]').value = event.max_tickets_per_order;
+        // Local "YYYY-MM-DDTHH:MM" (no UTC shift); flatpickr-aware setter.
         if (event.sales_start_at) {
-            const dt = new Date(event.sales_start_at);
-            form.querySelector('[name="sales_start_at"]').value = dt.toISOString().slice(0, 16);
+            setDateInputValue(form.querySelector('[name="sales_start_at"]'), String(event.sales_start_at).slice(0, 16));
         }
         if (event.sales_end_at) {
-            const dt = new Date(event.sales_end_at);
-            form.querySelector('[name="sales_end_at"]').value = dt.toISOString().slice(0, 16);
+            setDateInputValue(form.querySelector('[name="sales_end_at"]'), String(event.sales_end_at).slice(0, 16));
         }
 
         // Genres - populate after category is loaded
@@ -2063,6 +2068,7 @@ function initVenueSearch() {
         clearTimeout(venueSearchTimeout);
         const query = this.value.trim();
         document.getElementById('selected-venue-id').value = '';
+        setVenueLocationLocked(false);
         // Show suggestion notice when typing manually (no venue selected)
         const notice = document.getElementById('venue-suggestion-notice');
         if (notice && query.length >= 2) {
@@ -2091,6 +2097,34 @@ function initVenueSearch() {
     });
 }
 
+// Date / datetime inputs are flatpickr-enhanced (includes/scripts.php): the
+// visible field is a separate altInput, so setting .value alone leaves it
+// blank (an edited event's date looked "lost"). Sync the picker as well.
+function setDateInputValue(el, value) {
+    if (!el) return;
+    el.value = value || '';
+    if (el._flatpickr) {
+        if (value) el._flatpickr.setDate(value, false);
+        else el._flatpickr.clear(false);
+    }
+}
+
+// Library venue → city / address come from the venue record (the backend
+// re-reads them from the DB anyway), so the organizer can't edit them.
+// Typing another venue name (manual venue) unlocks them.
+function setVenueLocationLocked(locked) {
+    ['venue-city-input', 'venue-address-input'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.readOnly = locked;
+        el.classList.toggle('bg-gray-100', locked);
+        el.classList.toggle('cursor-not-allowed', locked);
+        el.title = locked ? 'Preluat automat din locatia selectata' : '';
+    });
+    const hint = document.getElementById('venue-location-locked-hint');
+    if (hint) hint.classList.toggle('hidden', !locked);
+}
+
 function selectVenue(venue) {
     document.getElementById('venue-search-input').value = venue.name;
     document.getElementById('venue-city-input').value = venue.city || '';
@@ -2100,6 +2134,7 @@ function selectVenue(venue) {
     // Hide suggestion notice when a library venue is selected
     const notice = document.getElementById('venue-suggestion-notice');
     if (notice) notice.classList.add('hidden');
+    setVenueLocationLocked(true);
     updateSummaries();
 }
 
