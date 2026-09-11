@@ -109,7 +109,10 @@ class PosController extends Controller
                     $tt->increment('quota_sold', $qty);
 
                     // PRETUL VINE DIN BAZA, niciodata de la aplicatie
-                    $unit = (float) $tt->price;
+                    // `$tt->price` is the SALE-price accessor (null without an
+                    // active sale → charged 0 lei). Use the effective price:
+                    // sale when set, else list — same rule as the public page.
+                    $unit = ((int) $tt->sale_price_cents > 0 ? (int) $tt->sale_price_cents : (int) $tt->price_cents) / 100;
 
                     for ($i = 0; $i < $qty; $i++) {
                         $total += $unit;
