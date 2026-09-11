@@ -1752,11 +1752,13 @@ function initLeafletMap(locations) {
             attributionControl: false
         });
 
-        // Add CartoDB voyager (light) tile layer - matching core.tixello.com
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            subdomains: 'abcd',
+        // OpenStreetMap standard tiles — no API key. CARTO basemaps now
+        // overlay "API KEY REQUIRED" on keyless requests. OSM's tile policy
+        // requires a visible attribution, hence the small control below.
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19
         }).addTo(map);
+        L.control.attribution({ prefix: false }).addAttribution('&copy; OpenStreetMap').addTo(map);
 
         globeMap = map;
 
