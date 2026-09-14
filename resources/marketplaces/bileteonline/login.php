@@ -120,7 +120,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="au-grid">
         <div class="au-intro">
           <p class="kicker">Client · Locație · Conturi</p>
-          <h1 class="au-h" id="au-title"><?= v2_e($now['hero']) ?></h1>
+          <h1 class="au-h" id="au-title"><?= preg_replace('/\S+-\S+/u', '<span class="au-nw">$0</span>', v2_e($now['hero'])) /* hyphenated words stay whole, see .au-nw */ ?></h1>
           <p class="au-text" id="au-text"><?= v2_e($now['heroText']) ?></p>
           <div class="au-quick">
             <button class="btn btn-primary" type="button" data-go-type="client">Intră ca client</button>

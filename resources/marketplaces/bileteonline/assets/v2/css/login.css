@@ -8,6 +8,8 @@
 .au-grid{display:grid;gap:clamp(32px, 5vw, 64px);align-items:center;margin-top:var(--space-5)}
 @media (min-width:1024px){.au-grid{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}}
 .au-h{margin:0;max-width:14ch;font-size:clamp(2.75rem, 6.5vw, 5.25rem);font-weight:700;line-height:.98;letter-spacing:-.05em;color:var(--green)}
+/* a hyphen is a line-break opportunity: hyphenated words ("Listează-ți", "dashboard-ul") stay whole on one line */
+.au-nw{white-space:nowrap}
 .au-text{margin:var(--space-5) 0 0;max-width:52ch;font-size:var(--text-lead);line-height:1.5;color:var(--muted)}
 .au-quick{display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--space-6)}
 .au-tiles{list-style:none;margin:var(--space-7) 0 0;padding:0;display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:10px;max-width:520px}
