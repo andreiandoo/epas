@@ -1,0 +1,116 @@
+/* bilete.online v2: order recovery (/recuperare-comanda). Needs base.css. */
+
+/* =================== HERO =================== */
+.rc-hero{position:relative;isolation:isolate;overflow:hidden;overflow:clip;background:radial-gradient(50% 65% at 0% 0%, rgba(242,169,0,.18), rgba(242,169,0,0) 70%), radial-gradient(50% 60% at 100% 100%, rgba(43,182,115,.18), rgba(43,182,115,0) 70%), var(--deep);color:var(--on-deep);
+  --drum-main:url(#drum-on-dark);--drum-cave:url(#drum-on-dark);--drum-dot:#7FD1A6;--drum-col:#F2A900}
+.rc-hero :focus-visible{outline-color:var(--online)}
+.rc-hero .deco-arches{left:-120px;top:42%;width:340px;opacity:.14}
+@media (max-width:599px){.rc-hero .deco-arches{display:none}}
+.rc-line{position:absolute;z-index:0;left:-4%;bottom:-6px;width:108%;height:auto;aspect-ratio:3240 / 310;opacity:.22;pointer-events:none}
+.rc-in{position:relative;z-index:1;display:grid;gap:var(--space-7);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(72px, 10vw, 140px)}
+@media (min-width:1024px){.rc-in{grid-template-columns:minmax(0,1fr) minmax(0,520px);align-items:center;column-gap:var(--space-8)}}
+.rc-hero .crumbs,.rc-hero .crumbs a{color:var(--on-deep-muted)}
+.rc-hero .crumbs a:hover{color:#FFFFFF}
+.rc-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
+.rc-h{max-width:12ch;margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5}
+.rc-lead{max-width:52ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}
+.rc-steps{list-style:none;display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:10px;max-width:540px;margin:var(--space-6) 0 0;padding:0}
+.rc-steps li{padding:14px 16px;border:1px solid rgba(247,247,245,.16);border-radius:var(--r-m);background:rgba(247,247,245,.06)}
+.rc-steps small{display:block;font-size:.625rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--on-deep-muted)}
+.rc-steps b{display:block;margin-top:2px;font-size:1.25rem;font-weight:700;line-height:1.2;letter-spacing:-.02em;color:#F7F7F5}
+@media (max-width:479px){.rc-steps{gap:8px}.rc-steps li{padding:12px 10px}.rc-steps b{font-size:1rem;letter-spacing:-.03em}}
+
+/* =================== SEARCH CARD =================== */
+.rc-card{position:relative;padding:clamp(24px, 3vw, 36px);border-radius:var(--r-l);background:var(--surface);color:var(--ink);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.rc-card :focus-visible{outline-color:var(--action)}
+.rc-card .btn{white-space:normal;text-align:center;line-height:1.25;text-wrap:balance}
+.rc-card-k{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rc-card-k.is-ok{color:var(--action)}
+.rc-card-h{margin:6px 0 0;font-size:clamp(2rem, 3.4vw, 2.75rem);font-weight:700;line-height:1.05;letter-spacing:-.035em;color:var(--green)}
+.rc-card-h:focus{outline:none}
+.rc-card-p{margin:8px 0 0;color:var(--muted)}
+.rc-error{margin:var(--space-4) 0 0;padding:12px 16px;border-radius:12px;background:#FCE9E8;color:var(--red-text);font-size:.9375rem;font-weight:600;line-height:1.45}
+.rc-error a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;white-space:nowrap} /* "scrie-ne" must not break at its hyphen */
+.rc-error[hidden]{display:none}
+#rc-form{display:grid;gap:16px;margin-top:var(--space-5)}
+.rc-field label{display:block;margin-bottom:6px;font-size:.875rem;font-weight:700}
+.rc-field input{display:block;width:100%;padding:14px 16px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:500 1.0625rem/1.3 var(--font);transition:border-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-micro) var(--ease-out)}
+.rc-field input.is-code{font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.rc-field input.is-code::placeholder{letter-spacing:.04em;text-transform:none}
+.rc-field input::placeholder{color:var(--placeholder);font-weight:500}
+.rc-field input:hover{border-color:#CFD3CC}
+.rc-field input:focus-visible{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(43,182,115,.22)}
+.rc-field input[aria-invalid="true"]{border-color:var(--red)}
+.rc-hint{display:block;margin-top:6px;font-size:.8125rem;color:var(--muted)}
+.rc-submit{width:100%;margin-top:4px}
+.rc-card .btn:disabled{opacity:.7;cursor:progress}
+.rc-card-foot{margin:var(--space-5) 0 0;padding-top:var(--space-4);border-top:1px solid var(--line);font-size:.9375rem;color:var(--muted)}
+.rc-card-foot[hidden]{display:none}
+.rc-card-foot a,.rc-account a:not(.btn),.rc-note a{color:var(--green);font-weight:700}
+
+/* =================== FOUND ORDER =================== */
+.rc-result[hidden],#rc-form-view[hidden]{display:none}
+.rc-result:not([hidden]){animation:rc-in var(--dur-enter, .32s) var(--ease-out) both}
+@keyframes rc-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.rc-result:not([hidden]){animation:none}}
+.rc-r-head{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:16px}
+.rc-badge{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--tint-green);color:var(--green)}
+.rc-badge .ic{width:28px;height:28px}
+.rc-code{font-size:clamp(1.625rem, 3vw, 2.25rem);letter-spacing:.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+/* the order as a ticket: rows above a perforated stub that carries the total */
+.rc-ticket{position:relative;margin-top:var(--space-5);border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg)}
+.rc-rows{margin:0;padding:4px 18px}
+.rc-rows > div{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.rc-rows > div:last-child{border-bottom:0}
+.rc-rows > div[hidden]{display:none}
+.rc-rows dt{flex:none;font-size:.9375rem;color:var(--muted)}
+.rc-rows dd{min-width:0;margin:0;font-weight:700;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.rc-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:.8125rem;font-weight:700;line-height:1.2;white-space:nowrap}
+.rc-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.rc-status[data-tone="ok"]{background:var(--tint-green);color:var(--green)}
+.rc-status[data-tone="wait"]{background:#FFF7E3;color:#8A5A00}
+.rc-status[data-tone="bad"]{background:#FCE9E8;color:var(--red-text)}
+.rc-total{position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:16px 18px;border-top:2px dashed var(--line)}
+.rc-total::before,.rc-total::after{content:"";position:absolute;top:-13px;width:24px;height:24px;border-radius:50%;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.rc-total::before{left:-13px;clip-path:inset(0 0 0 50%)}
+.rc-total::after{right:-13px;clip-path:inset(0 50% 0 0)}
+.rc-total span{font-size:.6875rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rc-total b{font-size:clamp(1.375rem, 2.6vw, 1.75rem);font-weight:700;line-height:1.1;letter-spacing:-.02em;color:var(--green);font-variant-numeric:tabular-nums}
+
+.rc-note{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;margin-top:var(--space-4);padding:14px 16px;border-radius:12px;font-size:.9375rem;line-height:1.5}
+.rc-note[hidden]{display:none}
+.rc-note > .ic{width:24px;height:24px;margin-top:1px}
+.rc-note b{display:block}
+.rc-note p{margin:2px 0 0;color:var(--muted)}
+.rc-note strong{color:var(--ink);overflow-wrap:anywhere}
+.rc-note a{display:inline-flex;align-items:center;gap:6px}
+.rc-note a .ic{width:16px;height:16px}
+.rc-note.is-ok{background:var(--tint-green)}
+.rc-note.is-ok > .ic,.rc-note.is-ok b{color:var(--green)}
+.rc-note.is-warn{background:#FFF7E3}
+.rc-note.is-warn > .ic,.rc-note.is-warn b{color:#8A5A00}
+.rc-note:focus{outline:none}
+.rc-note:focus-visible{outline:2px solid var(--action);outline-offset:2px}
+
+.rc-account{margin-top:var(--space-4);padding:18px;border:1px solid var(--line);border-radius:var(--r-m)}
+.rc-account[hidden]{display:none}
+.rc-account > b{display:block;font-size:1.0625rem}
+.rc-account > p{margin:4px 0 0;font-size:.9375rem;line-height:1.5;color:var(--muted)}
+.rc-account .rc-error{margin-top:12px}
+.rc-account-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.rc-account-actions .btn{flex:1 1 auto;min-height:48px}
+.rc-account-actions .btn[hidden]{display:none}
+.rc-wide{width:100%}
+#rc-attach{margin-top:14px}
+#rc-attach .ic{flex:none}
+@media (max-width:479px){#rc-attach .ic{display:none}}
+.rc-again{margin-top:var(--space-4)}
+
+/* =================== FAQ =================== */
+.rc-faq{background:var(--bg)}
+.rc-faq-grid{display:grid;gap:var(--space-6)}
+@media (min-width:1024px){.rc-faq-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);align-items:start;gap:var(--space-8)}}
+.rc-faq h2{margin:0;font-size:var(--text-h2);font-weight:700;line-height:1.04;letter-spacing:-.04em;color:var(--green)}
+.rc-faq-cta{margin-top:var(--space-6);white-space:normal;text-align:center;line-height:1.25}
+.rc-faq .qa:first-child{border-top:1px solid var(--line)}

@@ -1487,6 +1487,7 @@ switch ($action) {
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/customer/recover-order/attach';
+        $requiresAuth = true; // auth:sanctum upstream: without the token every attach was a 401
         break;
 
     // ===== bilete.online /cont/setari extras (2026-05-30) =====
