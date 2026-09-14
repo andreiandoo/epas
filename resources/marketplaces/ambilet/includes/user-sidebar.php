@@ -95,7 +95,6 @@ $currentPage = $currentPage ?? 'dashboard';
 </aside>
 
 <script>
-// Sidebar toggle functionality
 document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.getElementById('user-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -118,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
-    // Update user info from auth (cached in localStorage — possibly stale points)
     function updateSidebarUser() {
         if (typeof AmbiletAuth !== 'undefined') {
             const user = AmbiletAuth.getUser();
@@ -137,10 +135,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Background refresh: cached customer_data.points is whatever the value was at
-    // last login — points earned later won't show until next login. Fetch fresh
-    // balance once per page load so sidebar always reflects DB state. Updates
-    // localStorage too so other pages that render from cache stay in sync.
     function refreshSidebarPoints() {
         if (typeof AmbiletAPI === 'undefined' || typeof AmbiletAuth === 'undefined') return;
         if (!AmbiletAuth.isLoggedIn || !AmbiletAuth.isLoggedIn()) return;
@@ -156,18 +150,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const headerEl = document.getElementById('header-user-points');
             if (headerEl) headerEl.textContent = balance.toLocaleString();
 
-            // Persist so cached reads (e.g. AmbiletAuth.getUser().points) are correct on next nav.
             if (AmbiletAuth.updateCustomerData) {
                 AmbiletAuth.updateCustomerData({ points: balance });
             }
         }).catch(() => {});
     }
 
-    // Try immediately and after a short delay (for async auth loading)
     updateSidebarUser();
     setTimeout(updateSidebarUser, 500);
-    // Refresh from server once auth is ready (auth.js fetches /customer/me on
-    // first load for impersonation, so wait a tick to avoid duplicate calls).
     setTimeout(refreshSidebarPoints, 800);
 });
 </script>

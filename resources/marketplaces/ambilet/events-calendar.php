@@ -166,16 +166,13 @@ include 'includes/header.php'; ?>
         bindEvents() {
             var self = this;
 
-            // Month navigation
             document.getElementById('prevMonthBtn').addEventListener('click', function() { self.prevMonth(); });
             document.getElementById('nextMonthBtn').addEventListener('click', function() { self.nextMonth(); });
             document.getElementById('todayBtn').addEventListener('click', function() { self.goToToday(); });
 
-            // View toggle
             document.getElementById('monthViewBtn').addEventListener('click', function() { self.setView('month'); });
             document.getElementById('listViewBtn').addEventListener('click', function() { self.setView('list'); });
 
-            // Filters
             document.getElementById('categoryFilter').addEventListener('change', function(e) {
                 self.selectedCategory = e.target.value;
                 self.loadEvents();
@@ -188,14 +185,12 @@ include 'includes/header.php'; ?>
 
         async loadFilters() {
             try {
-                // Load categories
                 var catResponse = await AmbiletAPI.get('/event-categories');
                 if (catResponse.success && catResponse.data && catResponse.data.categories) {
                     this.categories = catResponse.data.categories;
                     this.renderCategoryFilter();
                 }
 
-                // Load cities
                 var cityResponse = await AmbiletAPI.get('/events/cities');
                 if (cityResponse.success && cityResponse.data && cityResponse.data.cities) {
                     this.cities = cityResponse.data.cities;
@@ -248,9 +243,7 @@ include 'includes/header.php'; ?>
                     this.allEvents = response.data;
                     this.events = {};
 
-                    // Group events by date
                     response.data.forEach(function(event) {
-                        // API returns: starts_at or event_date; name; venue (string) and city
                         var dateStr = event.starts_at ? event.starts_at.split('T')[0] : (event.event_date || null);
                         if (dateStr) {
                             if (!CalendarPage.events[dateStr]) {
@@ -310,7 +303,6 @@ include 'includes/header.php'; ?>
 
             var html = '';
 
-            // Previous month days
             var prevMonthDays = new Date(year, month, 0).getDate();
             for (var i = startDay - 1; i >= 0; i--) {
                 html += '<div class="min-h-[60px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-gray-200 bg-gray-50">' +
@@ -318,7 +310,6 @@ include 'includes/header.php'; ?>
                 '</div>';
             }
 
-            // Current month days
             for (var day = 1; day <= lastDay.getDate(); day++) {
                 var dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
                 var isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
@@ -330,9 +321,7 @@ include 'includes/header.php'; ?>
                 html += '<div class="' + dayClass + ' min-h-[60px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-gray-200 cursor-pointer transition-colors" onclick="CalendarPage.showDayEvents(\'' + dateStr + '\')">' +
                     '<div class="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center text-xs md:text-sm font-semibold text-secondary rounded-lg mb-0.5 md:mb-1.5 ' + numberClass + '">' + day + '</div>';
 
-                // On mobile: show only dots for events, on desktop: show event names
                 if (dayEvents.length > 0) {
-                    // Desktop: event names
                     html += '<div class="flex-col hidden gap-1 md:flex">';
                     dayEvents.slice(0, 2).forEach(function(event) {
                         var colorClass = CalendarPage.typeColors[event.type] || CalendarPage.typeColors['default'];
@@ -343,7 +332,6 @@ include 'includes/header.php'; ?>
                     }
                     html += '</div>';
 
-                    // Mobile: colored dots
                     html += '<div class="flex flex-wrap gap-0.5 md:hidden justify-center">';
                     dayEvents.slice(0, 3).forEach(function(event) {
                         var dotColor = CalendarPage.typeColors[event.type] ? CalendarPage.typeColors[event.type].replace('text-', 'bg-').split(' ')[0] : 'bg-gray-300';
@@ -358,7 +346,6 @@ include 'includes/header.php'; ?>
                 html += '</div>';
             }
 
-            // Next month days
             var remainingDays = 42 - (startDay + lastDay.getDate());
             for (var j = 1; j <= remainingDays; j++) {
                 html += '<div class="min-h-[60px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-gray-200 bg-gray-50">' +
@@ -380,13 +367,11 @@ include 'includes/header.php'; ?>
 
             var html = '';
             this.allEvents.forEach(function(event) {
-                // API returns: starts_at, name, venue_name, venue_city, category (object), price_from
                 var eventDate = event.starts_at || event.event_date;
                 var date = new Date(eventDate);
                 var dayNum = date.getDate();
                 var monthName = CalendarPage.monthNamesShort[date.getMonth()];
 
-                // Extract category name from object or string
                 var categoryName = 'Eveniment';
                 if (typeof event.category === 'string') {
                     categoryName = event.category;
@@ -395,7 +380,6 @@ include 'includes/header.php'; ?>
                 }
                 var colorClass = CalendarPage.typeColors[categoryName] || CalendarPage.typeColors['default'];
 
-                // Extract venue - API returns venue_name and venue_city as flat fields
                 var eventVenue = event.venue_name || (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
                 var eventCity = event.venue_city || event.city || '';
                 var locationStr = eventVenue + (eventCity ? ', ' + eventCity : '');
@@ -427,7 +411,6 @@ include 'includes/header.php'; ?>
             var container = document.getElementById('featuredEvents');
             if (!container || !events.length) return;
 
-            // Filter to only show events from current month
             var currentMonth = this.currentMonth;
             var currentYear = this.currentYear;
             var filteredEvents = events.filter(function(event) {
@@ -437,16 +420,13 @@ include 'includes/header.php'; ?>
                 return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
             });
 
-            // If no events in current month, show first 4 from any month
             if (filteredEvents.length === 0) {
                 filteredEvents = events.slice(0, 4);
             }
 
-            // Use AmbiletEventCard component for consistent rendering
             if (typeof AmbiletEventCard !== 'undefined') {
                 container.innerHTML = AmbiletEventCard.renderMany(filteredEvents.slice(0, 4));
             } else {
-                // Fallback rendering
                 var html = filteredEvents.slice(0, 4).map(function(event) {
                     var eventDate = event.starts_at || event.event_date;
                     var date = new Date(eventDate);
@@ -454,7 +434,6 @@ include 'includes/header.php'; ?>
                     var monthName = CalendarPage.monthNamesShort[date.getMonth()];
                     var imageUrl = event.image || event.image_url || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop';
 
-                    // Extract category name
                     var categoryName = 'Eveniment';
                     if (typeof event.category === 'string') {
                         categoryName = event.category;
@@ -462,7 +441,6 @@ include 'includes/header.php'; ?>
                         categoryName = event.category.name;
                     }
 
-                    // Extract venue
                     var eventVenue = event.venue_name || (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
                     var eventCity = event.venue_city || event.city || '';
                     var locationStr = eventVenue + (eventCity ? ', ' + eventCity : '');
@@ -562,11 +540,9 @@ include 'includes/header.php'; ?>
             var dayEvents = this.events[dateStr] || [];
             if (dayEvents.length === 0) return;
 
-            // Navigate to first event or show modal with events
             if (dayEvents.length === 1) {
                 window.location.href = '/bilete/' + dayEvents[0].slug;
             } else {
-                // For multiple events, could show a modal - for now just go to events page with date filter
                 window.location.href = '/evenimente?date=' + dateStr;
             }
         },

@@ -38,7 +38,6 @@
   window.addEventListener('wl:cart:update', updateCartBadge);
   updateCartBadge();
 
-  // Cart expiry timer
   (function() {
     var bar = document.getElementById('wl-timer-bar');
     var countdownEl = document.getElementById('wl-timer-countdown');
@@ -53,7 +52,6 @@
 
       var remaining = expires - Date.now();
       if (remaining <= 0) {
-        // Timer expired — clear cart and redirect
         WLCart.clearCart();
         bar.style.display = 'none';
         window.location.href = (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/';

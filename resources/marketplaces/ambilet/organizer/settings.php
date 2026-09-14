@@ -403,7 +403,6 @@ $scriptsExtra = <<<'JS'
 document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); loadShareLinks(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); const validSections = ['profile','company','bank','contract','notifications','security','sharelinks']; if (hash && validSections.includes(hash)) showSection(hash); });
 
-// Initialize notification sound toggle from saved preference
 function initNotificationSoundToggle() {
     const checkbox = document.getElementById('notif-sound');
     if (checkbox && typeof AmbiletNotificationSound !== 'undefined') {
@@ -411,11 +410,9 @@ function initNotificationSoundToggle() {
     }
 }
 
-// Toggle notification sound on/off
 function toggleNotificationSound(enabled) {
     if (typeof AmbiletNotificationSound !== 'undefined') {
         AmbiletNotificationSound.setEnabled(enabled);
-        // Play a test sound when enabling
         if (enabled) {
             AmbiletNotificationSound.play('default');
         }
@@ -437,23 +434,19 @@ async function loadSettings() {
         const response = await AmbiletAPI.get('/organizer/settings');
         if (response.success) {
             const data = response.data?.organizer || response.data || {};
-            // Profile/Organizer info
             document.getElementById('org-name').value = data.name || '';
             document.getElementById('org-email').value = data.email || '';
             document.getElementById('org-phone').value = data.phone || '';
             document.getElementById('org-website').value = data.website || '';
             document.getElementById('org-description').value = data.description || '';
-            // Company info
             document.getElementById('company-name').value = data.company_name || '';
             document.getElementById('company-cui').value = data.company_tax_id || '';
             document.getElementById('company-reg').value = data.company_registration || '';
             document.getElementById('company-vat').value = data.company_vat_payer ? '1' : '0';
             document.getElementById('company-address').value = data.company_address || '';
-            // Support both field naming conventions (company_city vs city)
             document.getElementById('company-city').value = data.company_city || data.city || '';
             document.getElementById('company-county').value = data.company_county || data.county || '';
             document.getElementById('company-zip').value = data.company_zip || data.zip || '';
-            // Guarantor/Personal info (read-only)
             document.getElementById('guarantor-first-name').value = data.guarantor_first_name || '';
             document.getElementById('guarantor-last-name').value = data.guarantor_last_name || '';
             document.getElementById('guarantor-cnp').value = data.guarantor_cnp || '';
@@ -465,11 +458,9 @@ async function loadSettings() {
             document.getElementById('guarantor-id-number').value = data.guarantor_id_number || '';
             document.getElementById('guarantor-id-issued-date').value = data.guarantor_id_issued_date || '';
             document.getElementById('guarantor-id-issued-by').value = data.guarantor_id_issued_by || '';
-            // Hide personal info section if no guarantor data
             const hasGuarantorData = data.guarantor_first_name || data.guarantor_last_name || data.guarantor_cnp;
             document.getElementById('personal-info-section').style.display = hasGuarantorData ? '' : 'none';
 
-            // Secondary company hydration
             const hasSec = !!data.has_secondary_issuer;
             const secToggle = document.getElementById('has-secondary-issuer');
             if (secToggle) {
@@ -485,7 +476,7 @@ async function loadSettings() {
             setSec('secondary-company-county', data.secondary_company_county);
             setSec('secondary-company-zip', data.secondary_company_zip);
         }
-    } catch (error) { /* Fields remain empty */ }
+    } catch (error) {  }
 }
 
 function toggleSecondaryCompany(enabled) {
@@ -615,7 +606,6 @@ async function verifyCUI() {
         } else { AmbiletNotifications.error(response.message || 'CUI invalid'); }
     } catch (error) { AmbiletNotifications.error('Eroare la verificare'); }
 }
-// Romanian IBAN validation
 function validateIBAN(input) {
     const value = input.value.toUpperCase().replace(/\s/g, '');
     input.value = value;
@@ -629,7 +619,6 @@ function validateIBAN(input) {
 
     validation.classList.remove('hidden');
 
-    // Romanian IBAN: RO + 2 check digits + 4 bank code + 16 account
     if (value.length < 2) {
         validation.textContent = 'IBAN-ul trebuie să înceapă cu RO';
         validation.className = 'mt-1 text-xs text-red-600';
@@ -662,7 +651,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // Validate structure: RO + 2 digits + 4 alphanumeric (bank) + 16 alphanumeric (account)
     const ibanRegex = /^RO[0-9]{2}[A-Z]{4}[A-Z0-9]{16}$/;
     if (!ibanRegex.test(value)) {
         validation.textContent = 'Format invalid. Structură: RO + 2 cifre control + 4 litere bancă + 16 caractere cont';
@@ -672,7 +660,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // IBAN checksum validation (MOD 97-10)
     if (!validateIBANChecksum(value)) {
         validation.textContent = 'Cifrele de control sunt invalide';
         validation.className = 'mt-1 text-xs text-red-600';
@@ -681,7 +668,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // Extract and display bank code
     const bankCode = value.substring(4, 8);
     const bankNames = {
         'BTRL': 'Banca Transilvania',
@@ -705,7 +691,6 @@ function validateIBAN(input) {
 }
 
 function validateIBANChecksum(iban) {
-    // Move first 4 chars to end, replace letters with numbers (A=10, B=11, etc.)
     const rearranged = iban.substring(4) + iban.substring(0, 4);
     let numericStr = '';
     for (const char of rearranged) {
@@ -715,7 +700,6 @@ function validateIBANChecksum(iban) {
             numericStr += char;
         }
     }
-    // MOD 97 check - use BigInt for large numbers
     let remainder = 0n;
     for (let i = 0; i < numericStr.length; i += 7) {
         const chunk = numericStr.substring(i, Math.min(i + 7, numericStr.length));
@@ -781,12 +765,10 @@ async function loadContract() {
         if (response.success) {
             const data = response.data;
             document.getElementById('contract-commission').textContent = (data.commission_rate || 0) + '%';
-            // Commission mode (included vs on_top)
             const modeLabels = { 'included': 'Inclus in pretul biletului', 'on_top': 'Adaugat peste pretul biletului' };
             const modeDescs = { 'included': 'Comisionul este inclus in pretul afisat al biletului', 'on_top': 'Comisionul se adauga separat la pretul biletului' };
             document.getElementById('contract-mode').textContent = modeLabels[data.commission_mode] || data.commission_mode || '-';
             document.getElementById('contract-mode-desc').textContent = modeDescs[data.commission_mode] || '';
-            // Work mode (exclusive vs non_exclusive)
             const workModeLabels = { 'exclusive': 'Exclusiv', 'non_exclusive': 'Non-exclusiv' };
             const workModeDescs = {
                 'exclusive': 'Vinzi bilete doar pe aceasta platforma',
@@ -802,7 +784,6 @@ async function loadContract() {
                     </div>
                 `).join('');
             }
-            // Show/hide download contract button based on contract existence
             const downloadBtn = document.getElementById('download-contract-btn');
             const noContractMsg = document.getElementById('no-contract-msg');
             const signBtn = document.getElementById('sign-contract-btn');
@@ -811,10 +792,6 @@ async function loadContract() {
                 downloadBtn.classList.remove('hidden');
                 noContractMsg.classList.add('hidden');
 
-                // Signing state controls whether we surface the "Semneaza
-                // acum" CTA vs the green "Semnat electronic" badge. The
-                // badge uses inline-flex when visible (added via JS to
-                // avoid a hidden+inline-flex CSS conflict on the span).
                 if (data.signature_required && !data.is_signed) {
                     signBtn?.classList.remove('hidden');
                     signedBadge?.classList.add('hidden');
@@ -824,8 +801,6 @@ async function loadContract() {
                     signedBadge?.classList.remove('hidden');
                     signedBadge?.classList.add('inline-flex');
                 } else {
-                    // Grandfathered organizer: contract exists but signing
-                    // is not required. Hide both signing indicators.
                     signBtn?.classList.add('hidden');
                     signedBadge?.classList.add('hidden');
                     signedBadge?.classList.remove('inline-flex');
@@ -837,7 +812,6 @@ async function loadContract() {
                 signedBadge?.classList.add('hidden');
                 signedBadge?.classList.remove('inline-flex');
             }
-            // Show existing documents status
             if (data.documents) {
                 if (data.documents.id_card) {
                     showUploadedDocument('id-card', 'Document incarcat');
@@ -847,7 +821,7 @@ async function loadContract() {
                 }
             }
         }
-    } catch (error) { /* Contract info will show defaults */ }
+    } catch (error) {  }
 }
 
 function showUploadedDocument(type, filename) {
@@ -872,7 +846,6 @@ async function downloadContract() {
     } catch (error) { AmbiletNotifications.error('Eroare la descarcare contract'); }
 }
 
-// ==================== SHARE LINKS ====================
 
 let shareLinksData = [];
 let organizerEventsForShare = [];
@@ -968,7 +941,6 @@ async function openShareLinkModal() {
     document.getElementById('share-link-show-revenue').checked = false;
     document.getElementById('create-share-btn').disabled = true;
 
-    // Load events
     document.getElementById('share-events-loading').classList.remove('hidden');
     document.getElementById('share-events-list').classList.add('hidden');
     document.getElementById('share-events-empty').classList.add('hidden');
@@ -977,7 +949,6 @@ async function openShareLinkModal() {
         const response = await AmbiletAPI.get('/organizer/events', { per_page: 50 });
         if (response.success) {
             const allEvents = response.data?.events || response.data || [];
-            // Filter to only active events (exclude ended, cancelled, postponed)
             organizerEventsForShare = Array.isArray(allEvents) ? allEvents.filter(ev => {
                 const endDate = ev.ends_at || ev.starts_at || ev.start_date;
                 const isEnded = ev.status === 'ended' || ev.is_past || ev.is_ended ||
@@ -1005,9 +976,6 @@ async function openShareLinkModal() {
 
 function renderEventCheckboxes(events) {
     const container = document.getElementById('share-events-list');
-    // Format an ISO/string date into Romanian short format. Falls back to
-    // empty when parsing fails — multiple field names tried since the
-    // events listing endpoint has historically used different keys.
     const _fmtShareDate = (raw) => {
         if (!raw) return '';
         const d = new Date(raw);
@@ -1016,8 +984,6 @@ function renderEventCheckboxes(events) {
     };
     container.innerHTML = events.map(ev => {
         const evTitle = ev.title || ev.name || 'Eveniment';
-        // Event date under the name — tried in priority order:
-        // starts_at (ISO with time), start_date, event_date, then date.
         const evDate = _fmtShareDate(ev.starts_at || ev.start_date || ev.event_date || ev.date);
         const evStatus = ev.status || '';
         const meta = [evDate, evStatus].filter(Boolean).join(' · ');
@@ -1070,12 +1036,11 @@ async function createShareLink(e) {
             closeShareLinkModal();
             AmbiletNotifications.success('Link creat cu succes!');
 
-            // Copy to clipboard
             if (response.url) {
                 try {
                     await navigator.clipboard.writeText(response.url);
                     AmbiletNotifications.info('Link-ul a fost copiat in clipboard');
-                } catch (clipErr) { /* clipboard may not be available */ }
+                } catch (clipErr) {  }
             }
 
             loadShareLinks();
@@ -1093,7 +1058,6 @@ async function copyShareLink(code) {
         await navigator.clipboard.writeText(url);
         AmbiletNotifications.success('Link copiat in clipboard!');
     } catch (e) {
-        // Fallback for older browsers
         const input = document.createElement('input');
         input.value = url;
         input.style.position = 'fixed';
@@ -1149,7 +1113,6 @@ async function refreshShareLink(code) {
     }
 }
 
-// Document upload functions
 function handleDragOver(e, type) {
     e.preventDefault();
     e.stopPropagation();
@@ -1191,7 +1154,6 @@ function processFile(file, docType) {
     const placeholder = document.getElementById(type + '-placeholder');
     const filename = document.getElementById(type + '-filename');
 
-    // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
         status.textContent = 'Tip de fișier invalid. Acceptăm doar PDF, JPG sau PNG.';
@@ -1200,7 +1162,6 @@ function processFile(file, docType) {
         return;
     }
 
-    // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
         status.textContent = 'Fișierul este prea mare. Dimensiunea maximă este 5MB.';
         status.className = 'mt-2 text-xs text-red-600';
@@ -1208,12 +1169,10 @@ function processFile(file, docType) {
         return;
     }
 
-    // Show uploading state
     status.textContent = 'Se încarcă...';
     status.className = 'mt-2 text-xs text-blue-600';
     status.classList.remove('hidden');
 
-    // Upload file
     uploadDocument(file, docType).then(response => {
         if (response.success) {
             filename.textContent = file.name;

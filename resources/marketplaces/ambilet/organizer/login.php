@@ -96,8 +96,6 @@ function togglePassword() {
     }
 }
 async function redirectAfterAuth() {
-    // Send organizers who still owe a contract signature to the signing step
-    // (the onboarding final step); everyone else lands on the account.
     let target = '/organizator/events';
     try {
         if (typeof AmbiletAPI !== 'undefined') {
@@ -105,7 +103,7 @@ async function redirectAfterAuth() {
             const d = (res && res.data) || {};
             if (d.signature_required && !d.is_signed) target = '/organizator/semneaza-contract';
         }
-    } catch (e) { /* fall back to the account */ }
+    } catch (e) {  }
     window.location.href = target;
 }
 document.addEventListener('DOMContentLoaded', function() {

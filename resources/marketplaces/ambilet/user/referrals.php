@@ -175,7 +175,6 @@ const ReferralsPage = {
             const response = await AmbiletAPI.customer.getReferrals();
             if (response.success && response.data) {
                 const data = response.data;
-                // API returns 'link' for full URL and 'code' as string
                 this.referralLink = data.link || data.referral_link || this.buildReferralLink(data.code);
                 document.getElementById('referral-link').value = this.referralLink;
                 this.updateStats(data.stats || {});
@@ -207,7 +206,6 @@ const ReferralsPage = {
     },
 
     updateStats(stats) {
-        // API returns: clicks, registrations, conversions, total_earnings, pending_rewards
         document.getElementById('stat-invited').textContent = stats.registrations || stats.invited || '0';
         document.getElementById('stat-completed').textContent = stats.conversions || stats.completed || '0';
         const pending = (stats.registrations || 0) - (stats.conversions || 0);

@@ -302,7 +302,6 @@ $cssBundle = 'static';
     <?php include 'includes/scripts.php'; ?>
 
     <script>
-        // FAQ Accordion
         document.querySelectorAll('.faq-question').forEach(button => {
             button.addEventListener('click', () => {
                 const item = button.parentElement;
@@ -310,7 +309,6 @@ $cssBundle = 'static';
                 const icon = item.querySelector('.faq-icon');
                 const wasOpen = item.classList.contains('open');
 
-                // Close all items
                 document.querySelectorAll('.faq-item').forEach(i => {
                     i.classList.remove('open', 'border-primary', 'shadow-lg', 'shadow-primary/10');
                     i.querySelector('.faq-answer').classList.add('hidden');
@@ -319,7 +317,6 @@ $cssBundle = 'static';
                     i.querySelector('.faq-icon svg').style.transform = '';
                 });
 
-                // Open clicked item if it wasn't open
                 if (!wasOpen) {
                     item.classList.add('open', 'border-primary', 'shadow-lg', 'shadow-primary/10');
                     answer.classList.remove('hidden');
@@ -330,12 +327,10 @@ $cssBundle = 'static';
             });
         });
 
-        // Category Tabs
         document.querySelectorAll('.category-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const category = tab.dataset.category;
 
-                // Update active tab
                 document.querySelectorAll('.category-tab').forEach(t => {
                     t.classList.remove('active', 'bg-gradient-to-r', 'from-primary', 'to-primary-dark', 'text-white');
                     t.classList.add('text-gray-500', 'hover:text-secondary', 'hover:bg-gray-50');
@@ -343,7 +338,6 @@ $cssBundle = 'static';
                 tab.classList.add('active', 'bg-gradient-to-r', 'from-primary', 'to-primary-dark', 'text-white');
                 tab.classList.remove('text-gray-500', 'hover:text-secondary', 'hover:bg-gray-50');
 
-                // Show/hide sections
                 document.querySelectorAll('.faq-section').forEach(section => {
                     if (category === 'all' || section.dataset.category === category) {
                         section.classList.remove('hidden');
@@ -354,11 +348,9 @@ $cssBundle = 'static';
             });
         });
 
-        // Initialize first tab as active
         document.querySelector('.category-tab.active').classList.add('bg-gradient-to-r', 'from-primary', 'to-primary-dark', 'text-white');
         document.querySelector('.category-tab.active').classList.remove('text-gray-500');
 
-        // Initialize open FAQ items
         document.querySelectorAll('.faq-item.open').forEach(item => {
             item.querySelector('.faq-answer').classList.remove('hidden');
             const icon = item.querySelector('.faq-icon');

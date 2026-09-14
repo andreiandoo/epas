@@ -244,7 +244,6 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <script>
-// Mobile filters drawer functions
 function openFiltersDrawer() {
     const backdrop = document.getElementById('filtersDrawerBackdrop');
     const drawer = document.getElementById('filtersDrawer');
@@ -263,7 +262,6 @@ function closeFiltersDrawer() {
     document.body.style.overflow = '';
 }
 
-// Sync filters between mobile and desktop
 function syncFilters(type) {
     const mappings = {
         city: ['cityFilter', 'cityFilterMobile'],
@@ -278,14 +276,12 @@ function syncFilters(type) {
         const desktopEl = document.getElementById(desktop);
         const mobileEl = document.getElementById(mobile);
         if (desktopEl && mobileEl) {
-            // Sync from mobile to desktop
             desktopEl.value = mobileEl.value;
         }
     }
     updateMobileFilterCount();
 }
 
-// Update mobile filter count badge
 function updateMobileFilterCount() {
     let count = 0;
     const filters = ['cityFilterMobile', 'genreFilterMobile', 'dateFilterMobile', 'priceFilterMobile'];
@@ -305,7 +301,6 @@ function updateMobileFilterCount() {
     }
 }
 
-// Sync sort filter on mobile change
 document.addEventListener('DOMContentLoaded', () => {
     const sortMobile = document.getElementById('sortFilterMobile');
     const sortDesktop = document.getElementById('sortFilter');

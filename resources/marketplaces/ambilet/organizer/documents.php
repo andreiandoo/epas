@@ -151,7 +151,6 @@ let dropdownOpen = false;
 document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
 
-    // Close dropdown on outside click
     document.addEventListener('click', function(e) {
         const wrapper = document.getElementById('event-dropdown-wrapper');
         if (wrapper && !wrapper.contains(e.target)) {
@@ -191,7 +190,6 @@ async function loadEvents() {
         const response = await AmbiletAPI.get('/organizer/documents/events');
         if (response.success && response.data.events) {
             const events = response.data.events;
-            // Sort: live first (closest date first), then ended (most recent first)
             events.sort((a, b) => {
                 const aLive = isEventLive(a), bLive = isEventLive(b);
                 if (aLive && !bLive) return -1;
@@ -211,7 +209,6 @@ async function loadEvents() {
 
             document.getElementById('events-loading').classList.add('hidden');
 
-            // Pre-select from URL param
             const params = new URLSearchParams(window.location.search);
             const preselect = params.get('event');
             if (preselect && eventsData[preselect]) {
@@ -287,29 +284,11 @@ function onEventSelected() {
 
     selectedEventId = parseInt(id);
 
-    // SERVICIU TEMPORAR INDISPONIBIL — afișăm mesajul în locul detaliilor.
-    // Pentru a reactiva: șterge următoarele 4 linii și de-commentează blocul de mai jos.
     if (msgEl) msgEl.classList.remove('hidden');
     if (detailEl) detailEl.classList.add('hidden');
     if (historyEl) historyEl.classList.add('hidden');
     return;
 
-    /* --- BLOC NORMAL (păstrat pentru reactivare ușoară) ---
-    const event = eventsData[id];
-    document.getElementById('event-name').textContent = event.name || '';
-    document.getElementById('event-venue-text').textContent = (event.venue_name || '') + (event.venue_city ? ', ' + event.venue_city : '');
-    document.getElementById('event-date-text').textContent = event.starts_at ? formatDate(event.starts_at) : '-';
-    const statusColors = {
-        published: 'success', pending_review: 'warning', ended: 'muted', draft: 'secondary', cancelled: 'error'
-    };
-    const sc = statusColors[event.status] || 'secondary';
-    document.getElementById('event-status-badge').innerHTML =
-        '<span class="px-2.5 py-1 bg-' + sc + '/10 text-' + sc + ' text-xs font-medium rounded-lg">' + escapeHtml(event.status_label || event.status || '') + '</span>';
-    renderAvizActions(event);
-    renderImpoziteActions(event);
-    document.getElementById('event-detail-section').classList.remove('hidden');
-    loadEventDocuments(selectedEventId);
-    --- END BLOC NORMAL --- */
 }
 
 function renderAvizActions(event) {
@@ -367,10 +346,8 @@ async function generateDocument(eventId, documentType) {
         if (response.success) {
             AmbiletNotifications.success(response.data.message || 'Document generat cu succes!');
 
-            // Refresh event data and history
             await refreshEventData(eventId);
 
-            // Auto-download
             if (response.data.document && response.data.document.download_url) {
                 window.open(response.data.document.download_url, '_blank');
             }
@@ -397,10 +374,8 @@ async function regenerateDocument(eventId, documentType) {
         if (response.success) {
             AmbiletNotifications.success('Document regenerat cu succes!');
 
-            // Refresh event data and history
             await refreshEventData(eventId);
 
-            // Auto-download
             if (response.data.document && response.data.document.download_url) {
                 window.open(response.data.document.download_url, '_blank');
             }
@@ -428,9 +403,8 @@ async function refreshEventData(eventId) {
                 }
             }
         }
-    } catch(e) { /* ignore */ }
+    } catch(e) {  }
 
-    // Also reload history
     loadEventDocuments(eventId);
 }
 
@@ -444,7 +418,6 @@ async function loadEventDocuments(eventId) {
     try {
         const response = await AmbiletAPI.get('/organizer/documents', { event_id: eventId });
         if (response.success) {
-            // Filter out payout/decont documents - those are shown in billing page
             const docs = (response.data.documents || []).filter(d => !['payout', 'decont', 'settlement'].includes(d.type));
             renderEventDocuments(docs);
         } else {

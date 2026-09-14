@@ -132,7 +132,6 @@ let totalPages = 1;
 let hasMore = false;
 let notificationTypes = {};
 
-// Initialize
 init();
 
 async function init() {
@@ -316,8 +315,6 @@ function escapeHtml(text) {
 }
 
 function updateStats(notifications) {
-    // Calculate stats from loaded notifications
-    // In production, these should come from a dedicated stats endpoint
     const total = notifications.length;
     const unread = notifications.filter(n => !n.is_read).length;
     const sales = notifications.filter(n => n.type === 'ticket_sale').length;
@@ -355,7 +352,6 @@ async function markAsRead(id) {
                 const markBtn = el.querySelector('button[onclick^="markAsRead"]');
                 if (markBtn) markBtn.remove();
             }
-            // Update unread count
             const unreadEl = document.getElementById('stat-unread');
             const current = parseInt(unreadEl.textContent) || 0;
             if (current > 0) unreadEl.textContent = current - 1;
@@ -423,7 +419,6 @@ function loadMore() {
     }
 }
 
-// Event listeners
 document.getElementById('type-filter').addEventListener('change', () => loadNotifications());
 document.getElementById('read-filter').addEventListener('change', () => loadNotifications());
 </script>

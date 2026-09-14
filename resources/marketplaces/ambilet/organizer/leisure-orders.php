@@ -227,7 +227,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function wireRowEvents() {
         document.querySelectorAll('.lo-row').forEach(row => {
             row.addEventListener('click', (e) => {
-                if (e.target.closest('.lo-del-btn')) return; // click pe delete btn nu expandeaza
+                if (e.target.closest('.lo-del-btn')) return;
                 toggleDetail(row);
             });
         });
@@ -252,7 +252,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
         detailRow.classList.remove('hidden');
         if (caret) caret.textContent = '▼';
-        // Load tickets daca nu-s incarcate
         const detailEl = document.getElementById(`lo-detail-${orderId}`);
         if (!detailEl.dataset.loaded) {
             try {
@@ -363,7 +362,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lo-loading').innerHTML = 'Nu există un eveniment de tip Locație de agrement asociat.';
             return;
         }
-        // Default range: ultimele 30 zile
         const to = new Date();
         const from = new Date(); from.setDate(from.getDate() - 30);
         $('lo-from').value = from.toISOString().slice(0,10);

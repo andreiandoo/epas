@@ -1115,11 +1115,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const config = await AmbiletAPI.get(`/organizer/events/${eventId}/leisure/config`);
             renderConfig(config.data || {});
 
-            // Update edit link
             const tixelloAdminUrl = (window.TIXELLO_ADMIN_URL || 'https://core.tixello.com');
             $('leisure-edit-event-link').href = `${tixelloAdminUrl}/marketplace/events/${eventId}/edit?tab=bilete`;
 
-            // Default range: last 30 days
             const today = new Date();
             const past = new Date(today);
             past.setDate(today.getDate() - 30);
@@ -1138,7 +1136,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function renderConfig(data) {
-        // Issuers
         const issuers = data.issuers || {};
         ['primary', 'secondary'].forEach((key) => {
             const block = $('issuer-' + key);
@@ -1156,7 +1153,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Ticket types
         const types = data.ticket_types || [];
         const rows = $('ticket-types-rows');
         if (types.length === 0) {
@@ -1258,7 +1254,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
-    // ========== TAB SWITCHING ==========
     function setupTabs() {
         const tabsMap = [
             { btn: $('tab-btn-overview'), panel: $('leisure-content'), key: 'overview' },
@@ -1298,9 +1293,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         tabsMap.forEach(t => t.btn && t.btn.addEventListener('click', () => activate(t.key)));
     }
 
-    // Staff management mutat in /organizator/echipa (team.php).
 
-    // ========== ISSUERS (Societati) ==========
     let issuersLoaded = false;
     async function loadIssuers() {
         if (!currentEventId) return;
@@ -1334,7 +1327,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (input.type === 'checkbox') {
                 input.checked = !!val;
             } else if (field === 'next_invoice_number') {
-                // Lasam empty -> placeholder = next_invoice_number sugerat
                 input.value = '';
                 input.placeholder = (data.next_invoice_number || 1).toString();
             } else {
@@ -1349,7 +1341,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             nextHint.textContent = lastN > 0 ? `(ultima emisă: #${lastN})` : '';
         }
         applyVatRateVisibility(company);
-        // Re-bind listener pentru toggle TVA -> show/hide vat_rate
         const vatChk = form.querySelector('[data-f="vat_payer"]');
         if (vatChk && !vatChk._issuerBound) {
             vatChk.addEventListener('change', () => applyVatRateVisibility(company));
@@ -1417,7 +1408,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 status.classList.remove('hidden');
                 setTimeout(() => status.classList.add('hidden'), 4000);
             }
-            // Reload to refresh next_invoice_number hint after series change
             await loadIssuers();
         } catch (e) {
             console.error('[issuers] save', e);
@@ -1436,7 +1426,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
 
-    // ========== GATES CRUD ==========
     let gatesCache = [];
     let editingGate = null;
     let venueIdForGates = null;
@@ -1547,14 +1536,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('gate-modal')?.addEventListener('click', (e) => { if (e.target === $('gate-modal')) closeGateModal(); });
     }
 
-    // ========== PRODUCTS CRUD ==========
     let productsCache = [];
     let editingProductId = null;
 
     const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra', package: '🎁 Pachet' };
     const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate', package: 'rose' };
 
-    // C2 — cache categorii (din /leisure/config) + sync cu products
     let categoriesCache = [];
 
     async function loadProducts() {
@@ -1563,7 +1550,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-list').classList.add('hidden');
         $('pr-empty').classList.add('hidden');
         try {
-            // Load products + categorii in paralel (config endpoint le include pe ambele)
             const [resProducts, resConfig] = await Promise.all([
                 AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/products`),
                 AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`),
@@ -1571,7 +1557,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             productsCache = resProducts.data?.products || [];
             categoriesCache = (resConfig.data?.ticket_categories || []).map(c => ({
                 id: String(c.id || ''),
-                // name poate fi string sau {ro,hu,en} — pastram structura completa
                 name: c.name || '',
                 sort_order: parseInt(c.sort_order ?? 0, 10),
                 image: c.image || null,
@@ -1591,7 +1576,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
-    // C2 — Render lista categorii custom (cu drag&drop reorder + delete inline)
     function renderCategoryList() {
         const list = $('cat-list');
         if (!list) return;
@@ -1600,7 +1584,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             list.innerHTML = '<p class="text-xs text-muted italic py-2">Nicio categorie definită. Adaugă una pentru a grupa biletele pe pagina publică.</p>';
             return;
         }
-        // Helper: nume RO din c.name (poate fi string sau {ro,hu,en})
         const nameRo = (c) => typeof c.name === 'string' ? c.name : (c.name?.ro || '');
         const nameHu = (c) => typeof c.name === 'object' ? (c.name?.hu || '') : (c.translations?.hu || '');
         const nameEn = (c) => typeof c.name === 'object' ? (c.name?.en || '') : (c.translations?.en || '');
@@ -1635,11 +1618,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             `;
         }).join('');
 
-        // Handler upload imagine per categorie. Reutilizeaza endpoint-ul
-        // /leisure/upload-image cu type=categories (separa storage dir).
-        // Salveaza in categoriesCache[i].image (path) + .image_url (URL public)
-        // ca renderCategoryList sa o afiseze imediat. Save persistent la
-        // saveCategoriesList (deja existent).
         list.querySelectorAll('[data-cat-img-file]').forEach((input) => {
             input.addEventListener('change', async (e) => {
                 const file = e.target.files?.[0];
@@ -1670,7 +1648,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Bind input updates — sincronizam name = {ro,hu,en} ca obiect daca avem traduceri.
         list.querySelectorAll('[data-cat-name]').forEach((inp) => {
             inp.addEventListener('input', () => {
                 const row = inp.closest('.cat-row');
@@ -1679,7 +1656,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const roVal = row.querySelector('[data-cat-name][data-tr-locale="ro"]')?.value || '';
                 const huVal = row.querySelector('[data-cat-name][data-tr-locale="hu"]')?.value || '';
                 const enVal = row.querySelector('[data-cat-name][data-tr-locale="en"]')?.value || '';
-                // Daca avem traduceri completate, stocam ca obiect; altfel string simplu
                 if (huVal.trim() || enVal.trim()) {
                     categoriesCache[i].name = { ro: roVal, hu: huVal, en: enVal };
                 } else {
@@ -1695,7 +1671,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Drag&drop reorder (handle pe data-cat-drag, drop target pe .cat-row)
         let dragIdx = null;
         list.querySelectorAll('[data-cat-drag]').forEach((handle) => {
             handle.addEventListener('dragstart', () => {
@@ -1723,7 +1698,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
     }
 
-    // C2 — Populeaza dropdown-ul categorie in modal produs (afișează RO din obiect)
     function renderCategoryOptions() {
         const sel = $('pr-f-group');
         if (!sel) return;
@@ -1734,7 +1708,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         sel.value = current;
     }
 
-    // C2 — Genereaza un ID pentru categorie noua (slug-like)
     function generateCategoryId(name) {
         const slug = (name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
         const base = slug || 'cat';
@@ -1747,10 +1720,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     async function saveCategoriesList() {
         if (!currentEventId) return;
-        // Validare: nume non-empty per item; renumberez sort_order la 10/20/30/...
         const cleaned = categoriesCache
             .map((c, i) => {
-                // name poate fi string sau {ro,hu,en}. Pastram structura ne-empty.
                 let cleanName = c.name;
                 if (typeof cleanName === 'object' && cleanName) {
                     const tr = {};
@@ -1759,7 +1730,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         if (v) tr[loc] = v;
                     }
                     cleanName = Object.keys(tr).length ? tr : '';
-                    // Daca avem DOAR ro completat, simplifica la string
                     if (cleanName && Object.keys(tr).length === 1 && tr.ro) cleanName = tr.ro;
                 } else if (typeof cleanName === 'string') {
                     cleanName = cleanName.trim();
@@ -1834,9 +1804,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-empty').classList.add('hidden');
         $('pr-list').classList.remove('hidden');
 
-        // C2: grupare produse pe ticket_categories. Categoriile au ordinea din
-        // categoriesCache (deja sortate dupa sort_order). Produsele fara
-        // category match apar in "Alte produse".
         const groupsByCategoryId = {};
         const ungrouped = [];
         for (const p of productsCache) {
@@ -1870,15 +1837,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         `).join('');
 
-        // Bind edit + drag&drop sortare in interiorul fiecarei categorii
         $('pr-list').querySelectorAll('button[data-edit-id]').forEach(btn => {
             btn.addEventListener('click', () => openProductModal(parseInt(btn.dataset.editId, 10)));
         });
         bindProductDragAndDrop();
     }
 
-    // C2.6 — Drag&drop sortare in interiorul fiecarei categorii. Folosim
-    // POST /leisure/products/reorder (endpoint existent) cu lista de IDs noua.
     function bindProductDragAndDrop() {
         let dragEl = null;
         $('pr-list').querySelectorAll('.pr-row').forEach(row => {
@@ -1894,25 +1858,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             row.addEventListener('drop', async (e) => {
                 e.preventDefault();
                 if (!dragEl || dragEl === row) return;
-                // Reorder DOAR in interiorul aceleiași secțiuni (categoriei)
                 const dragSection = dragEl.closest('[data-cat-section]');
                 const dropSection = row.closest('[data-cat-section]');
                 if (dragSection !== dropSection) return;
-                // Reordoneaza DOM
                 const rect = row.getBoundingClientRect();
                 const before = (e.clientY - rect.top) < (rect.height / 2);
                 row.parentNode.insertBefore(dragEl, before ? row : row.nextSibling);
-                // Trimite ordine la backend pentru TOATE produsele in ordinea curentă (toate secțiunile)
                 const allIds = Array.from($('pr-list').querySelectorAll('.pr-row')).map(r => parseInt(r.dataset.productId, 10));
                 try {
                     await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/products/reorder`, { ids: allIds });
-                    // Update cache local (re-sortez productsCache dupa ordinea DOM)
                     const idOrder = new Map(allIds.map((id, i) => [id, i]));
                     productsCache.sort((a, b) => (idOrder.get(a.id) ?? 999) - (idOrder.get(b.id) ?? 999));
                 } catch (err) {
                     console.error('[products-reorder]', err);
                     alert('Eroare la salvare ordine: ' + (err?.message || 'necunoscut'));
-                    renderProducts(); // revert
+                    renderProducts();
                 }
             });
         });
@@ -1925,7 +1885,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-name').value = p?.name || '';
         $('pr-f-category').value = p?.service_category || 'access';
         $('pr-f-issuer').value = p?.issuing_company || 'primary';
-        // C2: categorie afișare (folosim ticket_group ca FK la categoria custom)
         renderCategoryOptions();
         $('pr-f-group').value = p?.ticket_group || '';
         $('pr-f-price').value = p ? Number(p.price).toFixed(2) : '';
@@ -1934,7 +1893,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-duration').value = p?.service_duration_minutes || '';
         $('pr-f-icon').value = p?.meta?.icon || '';
         $('pr-f-unit').value = p?.meta?.unit_label || '';
-        // C1: imagine card — populare hidden input + preview drag&drop
         const imgUrl = p?.meta?.image || p?.meta?.image_url || '';
         $('pr-f-image').value = imgUrl;
         renderProductImagePreview(imgUrl);
@@ -1944,36 +1902,27 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-active').checked = p ? !!p.is_active : true;
         $('pr-f-parking').checked = p ? !!p.is_parking : false;
         $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
-        // Cantitati min/step + bilet de grup
-        // min_per_order = coloana SQL; step_qty + grup logic = meta (fără migrare SQL)
         $('pr-f-min-qty').value = (p?.min_per_order ?? '');
         $('pr-f-step-qty').value = (p?.meta?.step_qty ?? '');
         $('pr-f-is-group').checked = !!(p?.meta?.is_group_ticket);
         $('pr-f-group-includes-guide').checked = !!(p?.meta?.group_includes_guide);
         $('pr-f-group-guide-label').value = (p?.meta?.group_guide_label || '');
         $('pr-f-group-extra').classList.toggle('hidden', !$('pr-f-is-group').checked);
-        // F6/F8/F9: access_requirement, is_child_ticket, pos_price
         $('pr-f-access-req').value = p?.access_requirement || 'none';
         $('pr-f-child').checked = p ? !!p.is_child_ticket : false;
         $('pr-f-pos-price').value = (p?.pos_price !== undefined && p?.pos_price !== null) ? p.pos_price : '';
         $('pr-f-pos-only').checked = p ? !!(p.pos_only ?? p?.meta?.pos_only) : false;
-        // B3 — Traduceri (HU + EN) opt-in din meta.translations
         populateTranslationFields(p?.meta?.translations || {});
-        // F10: blocked time ranges
         renderBlockRows(Array.isArray(p?.blocked_time_ranges) ? p.blocked_time_ranges : (Array.isArray(p?.meta?.blocked_time_ranges) ? p.meta.blocked_time_ranges : []));
         $('pr-f-delete').classList.toggle('hidden', !p);
 
-        // Variante — afișează doar pentru rental/activity, populează din meta.variants
         const variants = Array.isArray(p?.variants) ? p.variants : (Array.isArray(p?.meta?.variants) ? p.meta.variants : []);
         renderVariantRows(variants);
-        // Pachet — populează componentele din meta.package_outputs
         const packageOutputs = Array.isArray(p?.package_outputs) ? p.package_outputs : (Array.isArray(p?.meta?.package_outputs) ? p.meta.package_outputs : []);
         renderPackageRows(packageOutputs);
-        // Add-ons — populează din meta.addons
         const addons = Array.isArray(p?.addons) ? p.addons : (Array.isArray(p?.meta?.addons) ? p.meta.addons : []);
         renderAddonRows(addons);
 
-        // F3 — Slot config
         const slotsCfg = (p?.slots_config && typeof p.slots_config === 'object') ? p.slots_config : (p?.meta?.slots_config || null);
         const slotsEnabled = !!(slotsCfg && slotsCfg.enabled);
         $('pr-f-slots-enabled').checked = slotsEnabled;
@@ -1986,7 +1935,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-slot-capacity').value = slotsCfg?.capacity_per_slot || '';
         $('pr-f-slot-pricing').value = slotsCfg?.unit_pricing || 'per_person';
 
-        // F5 — Physical inventory
         const physCfg = (p?.physical_inventory && typeof p.physical_inventory === 'object') ? p.physical_inventory : (p?.meta?.physical_inventory || null);
         const physEnabled = !!(physCfg && physCfg.enabled);
         $('pr-f-physical-enabled').checked = physEnabled;
@@ -2007,19 +1955,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-addons-wrap').classList.toggle('hidden', !(cat === 'access' || cat === 'rental' || cat === 'activity'));
         $('pr-f-slots-wrap').classList.toggle('hidden', !show);
         $('pr-f-physical-wrap').classList.toggle('hidden', !show);
-        // F6/F8/F10 visibility
         $('pr-f-access-req-wrap').classList.toggle('hidden', !show);
         $('pr-f-blocks-wrap').classList.toggle('hidden', !show);
         $('pr-f-child-wrap').classList.toggle('hidden', cat !== 'access');
-        // Pentru pachete, ascunde câmpurile irrelevante (parcare, vehicul)
         const isPkg = (cat === 'package');
         const pkgHiddenFields = ['pr-f-parking', 'pr-f-vehicle'];
         pkgHiddenFields.forEach(id => {
             const el = $(id);
             if (el && el.closest('label')) el.closest('label').classList.toggle('hidden', isPkg);
         });
-        // Optiunea "mix" e valida DOAR pe pachete. Pentru celelalte categorii
-        // o ascundem si daca era selectata, fallback pe 'primary'.
         const mixOpt = document.querySelector('#pr-f-issuer option[value="mix"]');
         if (mixOpt) {
             mixOpt.hidden = !isPkg;
@@ -2031,7 +1975,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (isPkg) updatePackageSavings();
     }
 
-    // F10 — Blocare intervale orare (informativ)
     function makeBlockRow(b) {
         b = b || {};
         const row = document.createElement('div');
@@ -2054,26 +1997,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         (ranges || []).forEach(b => list.appendChild(makeBlockRow(b)));
     }
 
-    // ============================================================
-    // B3 — Traduceri opt-in pe modal produs (HU + EN)
-    // Stocate in meta.translations.{field}.{locale}. Fields simple:
-    // name / description / unit_label / usage_terms (string),
-    // includes (array — separator newline in UI, transformat la save).
-    // Daca operatorul nu completeaza nimic, returnam null → meta.translations
-    // ramane sters din JSON si pagina publica foloseste RO fallback.
-    // ============================================================
     function populateTranslationFields(translations) {
         translations = (translations && typeof translations === 'object') ? translations : {};
         ['hu', 'en'].forEach(loc => {
             document.querySelectorAll(`.pr-f-tr-input[data-tr-locale="${loc}"]`).forEach(inp => {
                 const field = inp.dataset.trField;
                 let value = (translations[field] && translations[field][loc] !== undefined) ? translations[field][loc] : '';
-                // 'includes' poate veni array → afișezi pe linii in textarea
                 if (field === 'includes' && Array.isArray(value)) value = value.join('\n');
                 inp.value = value || '';
             });
         });
-        // Reset accordion la inchis pe deschiderea modal-ului
         $('pr-f-tr-fields').classList.add('hidden');
         const chev = $('pr-f-tr-chevron');
         if (chev) chev.classList.remove('rotate-180');
@@ -2096,7 +2029,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 }
             });
         });
-        // Returnam null daca nu s-a completat nimic → meta.translations nu se salveaza degeaba.
         return Object.keys(out).length > 0 ? out : null;
     }
     function collectBlockedRanges() {
@@ -2210,7 +2142,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             item.ticket_type_id = parseInt(item.ticket_type_id, 10);
             item.qty = Math.max(1, parseInt(item.qty || 1, 10));
             if (!item.variant_id) delete item.variant_id;
-            // Alocare pret per componenta (float). 0 valid; gol -> nu trimit.
             if (item.price !== undefined && item.price !== '') {
                 const px = parseFloat(item.price);
                 if (!Number.isNaN(px) && px >= 0) item.price = Math.round(px * 100) / 100;
@@ -2227,11 +2158,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const outputs = collectPackageOutputs();
         const price = parseFloat($('pr-f-price').value) || 0;
         const issuer = $('pr-f-issuer').value;
-        let sum = 0;      // suma preturilor componentelor la valoarea de referinta (fara alocare)
-        let allocSum = 0; // suma valorilor alocate manual (price per componenta)
+        let sum = 0;
+        let allocSum = 0;
         let allocCount = 0;
 
-        // Actualizeaza badge-urile de societate pe fiecare rand (util pentru Mix)
         $('pr-f-package-list').querySelectorAll(':scope > div').forEach((row, idx) => {
             const sel = row.querySelector('[data-pkg="ticket_type_id"]');
             const badge = row.querySelector('[data-pkg-issuer-badge]');
@@ -2274,8 +2204,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         : `Preț egal cu suma componentelor`));
         }
 
-        // Alocare pentru raportare (Mix). Recomandat si pentru non-mix daca vrei
-        // sa se contorizeze corect pe raport per societate.
         if (allocCount > 0 || issuer === 'mix') {
             const delta = Math.round((allocSum - price) * 100) / 100;
             const ok = Math.abs(delta) < 0.01 && allocCount === outputs.length;
@@ -2292,13 +2220,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (html) { wrap.classList.remove('hidden'); wrap.innerHTML = html; }
         else { wrap.classList.add('hidden'); }
 
-        // Toggle hint Mix
         const hint = $('pr-f-issuer-mix-hint');
         if (hint) hint.classList.toggle('hidden', issuer !== 'mix');
     }
 
-    // Auto-alocare: imparte pretul pachetului proportional cu pretul unitar al fiecarei
-    // componente (unit_price * qty). Corectie diferenta de rotunjire pe ultimul rand.
     function autoAllocatePackagePrices() {
         const price = parseFloat($('pr-f-price').value) || 0;
         if (price <= 0) { alert('Setează întâi prețul pachetului.'); return; }
@@ -2361,8 +2286,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (typeof v === 'string') v = v.trim();
                 if (v !== '' && v !== null && v !== undefined) item[k] = v;
             });
-            if (!item.label) return; // sărim peste rândurile incomplete
-            // normalize: id slug, price float, duration int
+            if (!item.label) return;
             if (!item.id) item.id = item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || ('v' + Date.now());
             if (item.price) item.price = parseFloat(item.price);
             if (item.duration_minutes) item.duration_minutes = parseInt(item.duration_minutes, 10);
@@ -2376,7 +2300,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         editingProductId = null;
     }
 
-    // C1 — preview / upload imagine card produs
     function renderProductImagePreview(url) {
         const empty = $('pr-f-image-empty');
         const preview = $('pr-f-image-preview');
@@ -2396,7 +2319,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     async function handleImageFile(file) {
         if (!file || !currentEventId) return;
-        // Validare client-side (max 10MB, image MIME)
         if (file.size > 10 * 1024 * 1024) {
             alert('Imagine prea mare (max 10MB).');
             return;
@@ -2446,7 +2368,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             is_parking: $('pr-f-parking').checked,
             requires_vehicle_info: $('pr-f-vehicle').checked,
             requires_access_ticket: ($('pr-f-access-req').value || 'none') !== 'none',
-            // min_per_order = coloana SQL; ramane top-level pentru a fi salvat in DB
             min_per_order: $('pr-f-min-qty').value !== '' ? Math.max(1, parseInt($('pr-f-min-qty').value, 10)) : null,
             meta: {
                 icon: $('pr-f-icon').value.trim() || null,
@@ -2456,7 +2377,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 pos_only: $('pr-f-pos-only').checked,
                 is_child_ticket: $('pr-f-child').checked,
                 access_requirement: $('pr-f-access-req').value || 'none',
-                // step_qty + grup ticket (bilet de grup) cu bonus ghid → meta
                 step_qty: $('pr-f-step-qty').value !== '' ? Math.max(1, parseInt($('pr-f-step-qty').value, 10)) : null,
                 is_group_ticket: $('pr-f-is-group').checked,
                 group_includes_guide: $('pr-f-is-group').checked && $('pr-f-group-includes-guide').checked,
@@ -2481,7 +2401,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     enabled: true,
                     count: parseInt($('pr-f-physical-count').value || 1, 10),
                 } : null,
-                // B3 — Traduceri opt-in HU + EN (stocate doar daca operatorul completeaza ceva)
                 translations: collectTranslationFields(),
             },
         };
@@ -2513,7 +2432,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function setupProductsHandlers() {
         const addBtn = $('pr-add-btn'); if (addBtn) addBtn.addEventListener('click', () => openProductModal(null));
-        // C2: Categorii — add + save
         const catAdd = $('cat-add-btn'); if (catAdd) catAdd.addEventListener('click', () => {
             const name = prompt('Nume categorie nouă (ex: Bilete individuale):', '');
             if (!name || !name.trim()) return;
@@ -2524,8 +2442,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const closeBtn = $('pr-modal-close'); if (closeBtn) closeBtn.addEventListener('click', closeProductModal);
         const cancelBtn = $('pr-f-cancel'); if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
 
-        // C1 — Drag & drop pentru imagine card produs.
-        // Upload-ul pleaca catre /organizer/events/{eventId}/leisure/upload-image (multipart).
         const imgZone = $('pr-f-image-zone');
         const imgFileInput = $('pr-f-image-file');
         const imgRemoveBtn = $('pr-f-image-remove');
@@ -2546,39 +2462,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
         const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
-        // Toggle "Bilet de grup" → arata/ascunde optiunile ghid
         const grpToggle = $('pr-f-is-group');
         if (grpToggle) grpToggle.addEventListener('change', () => {
             $('pr-f-group-extra').classList.toggle('hidden', !grpToggle.checked);
         });
-        // C4a: modal-ul se inchide DOAR pe X / Renunta — nu mai inchidem la click outside,
-        // ca utilizatorul sa nu piarda datele introduse accidental dand click in afara modalului.
-        // Variants: add row + show/hide on category change
         const varAdd = $('pr-f-variant-add'); if (varAdd) varAdd.addEventListener('click', () => $('pr-f-variants-list').appendChild(makeVariantRow({})));
         const catSel = $('pr-f-category'); if (catSel) catSel.addEventListener('change', updateVariantsVisibility);
-        // Package outputs: add row + auto-recalc savings on price change
         const pkgAdd = $('pr-f-package-add'); if (pkgAdd) pkgAdd.addEventListener('click', () => { $('pr-f-package-list').appendChild(makePackageRow({})); updatePackageSavings(); });
         const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
         const issuerSel = $('pr-f-issuer'); if (issuerSel) issuerSel.addEventListener('change', updatePackageSavings);
-        // Delegat click: butonul auto-alocare din fiecare rand pachet
         const pkgList = $('pr-f-package-list');
         if (pkgList) pkgList.addEventListener('click', (e) => {
             if (e.target && e.target.matches('[data-pkg-autofill]')) autoAllocatePackagePrices();
         });
-        // Add-ons: add row
         const aoAdd = $('pr-f-addon-add'); if (aoAdd) aoAdd.addEventListener('click', () => $('pr-f-addons-list').appendChild(makeAddonRow({})));
-        // F10 Block ranges: add row
         const blAdd = $('pr-f-block-add'); if (blAdd) blAdd.addEventListener('click', () => $('pr-f-blocks-list').appendChild(makeBlockRow({})));
-        // F3 slots toggle
         const slotsToggle = $('pr-f-slots-enabled'); if (slotsToggle) slotsToggle.addEventListener('change', e => {
             $('pr-f-slots-fields').classList.toggle('hidden', !e.target.checked);
             $('pr-f-slots-fields').classList.toggle('grid', e.target.checked);
         });
-        // F5 physical toggle
         const physToggle = $('pr-f-physical-enabled'); if (physToggle) physToggle.addEventListener('change', e => $('pr-f-physical-fields').classList.toggle('hidden', !e.target.checked));
     }
 
-    // ========== CONTENT EDITOR ==========
     let currentVenueConfig = {};
 
     function hydrateContentForm() {
@@ -2586,24 +2491,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!ev) return;
         currentVenueConfig = ev.venue_config || {};
 
-        // Update public preview link
         const adminLink = $('admin-edit-link');
         if (adminLink && ev.slug) adminLink.href = `/bilete/${ev.slug}-${ev.id}?preview=1`;
 
-        // Populate simple scalar fields
         document.querySelectorAll('[data-vc]').forEach((input) => {
             const key = input.dataset.vc;
             input.value = currentVenueConfig[key] || '';
         });
 
-        // Populate list fields (CSV)
         document.querySelectorAll('[data-vc-list]').forEach((input) => {
             const key = input.dataset.vcList;
             const arr = Array.isArray(currentVenueConfig[key]) ? currentVenueConfig[key] : [];
             input.value = arr.join(', ');
         });
 
-        // Populate nested fields (e.g. safety_warning.title)
         document.querySelectorAll('[data-vc-nested]').forEach((input) => {
             const path = input.dataset.vcNested.split('.');
             let val = currentVenueConfig;
@@ -2611,7 +2512,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             input.value = typeof val === 'string' ? val : '';
         });
 
-        // Populate nested list fields (e.g. translations.hero_badges.hu) — CSV format.
         document.querySelectorAll('[data-vc-list-nested]').forEach((input) => {
             const path = input.dataset.vcListNested.split('.');
             let val = currentVenueConfig;
@@ -2619,8 +2519,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             input.value = Array.isArray(val) ? val.join(', ') : '';
         });
 
-        // Populate FAQ list
-        // Helper: normalize array vs object (Filament Repeater UUID-keyed) la array plain
         const toArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
 
         const faqList = $('faq-list');
@@ -2631,7 +2529,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (faqs.length === 0) faqList.appendChild(makeFaqRow('', '', 0));
         }
 
-        // Populate stats highlights
         const statsList = $('stats-list');
         if (statsList) {
             statsList.innerHTML = '';
@@ -2640,19 +2537,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (stats.length === 0) statsList.appendChild(makeStatRow('', '', 0));
         }
 
-        // Hydrate new repeaters
         hydrateRepeater('attractions-list', currentVenueConfig.attractions, makeAttractionRow);
         hydrateRepeater('trails-list', currentVenueConfig.trails, makeTrailRow);
         hydrateRepeater('gallery-list', currentVenueConfig.gallery, makeGalleryRow);
         hydrateRepeater('videos-list', currentVenueConfig.videos, makeVideoRow);
-        // Fix: Filament stochează POI-urile sub `map_config.pois` (nested), organizer
-        // citea/scria `map_pois` (top-level) → POI-urile dispăreau între cele 2 paneluri.
         hydrateRepeater('pois-list', (currentVenueConfig.map_config && currentVenueConfig.map_config.pois) || currentVenueConfig.map_pois, makePoiRow);
         hydrateRepeater('hotels-list', currentVenueConfig.nearby_hotels, makeHotelRow);
-        // Fix bug raportat: organizer panel citea/scria `flora_species` dar Filament + pagina
-        // publică folosesc `flora`. Datele salvate prin organizer panel ajungeau în câmp diferit
-        // → speciile dispăreau pe public. Acum citim `flora` (cu fallback la `flora_species`
-        // pentru date legacy care n-au fost migrate).
         hydrateRepeater('flora-list', currentVenueConfig.flora || currentVenueConfig.flora_species, makeFloraRow);
         hydrateRepeater('seasons-list', currentVenueConfig.seasons, makeSeasonRow);
         hydrateRepeater('getting-list', currentVenueConfig.getting_there, makeGettingRow);
@@ -2662,9 +2552,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const list = $(listId);
         if (!list) return;
         list.innerHTML = '';
-        // Filament Repeater stochează items ca object {uuid: item, ...} (cu chei UUID),
-        // organizer panel folosește array plain. Convertim object → array via Object.values
-        // ca să afișăm corect și datele salvate prin Filament admin.
         let items = [];
         if (Array.isArray(data)) {
             items = data;
@@ -2713,7 +2600,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return wrap;
     }
 
-    // === Repeater row factories ===
     function repWrap(html, onRemove) {
         const wrap = document.createElement('div');
         wrap.className = 'p-3 bg-slate-50 rounded-lg';
@@ -2724,7 +2610,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
     function repAttr(name, value) { return `data-rep="${name}" value="${escapeHtml(value ?? '')}"`; }
 
-    // Citeste valoare nested dintr-un obiect (ex: getNested(d, 'translations.hu.title')).
     function getNested(obj, pathStr) {
         if (!obj) return '';
         const parts = pathStr.split('.');
@@ -2736,8 +2621,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return (cur === null || cur === undefined) ? '' : cur;
     }
 
-    // Genereaza block <details> cu input-uri HU + EN pentru un set de field-uri.
-    // d = item data, fields = [{key:'title', label:'Titlu'}, {key:'description', type:'textarea', label:'Descriere'}].
     function makeTranslationFields(d, fields) {
         const inputs = ['hu', 'en'].map(loc => {
             const flag = loc === 'hu' ? '🇭🇺 HU' : '🇬🇧 EN';
@@ -2762,8 +2645,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function makeAttractionRow(d) {
-        // Bug-fix: Filament + pagina publică folosesc `name`; organizer panel salva `title`.
-        // Acum citim/salvăm `name` (cu fallback la `title` pentru date legacy).
         const attractionName = d.name || d.title || '';
         return repWrap(`
             <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
@@ -2882,7 +2763,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function makeSeasonRow(d) {
         const wrap = document.createElement('div');
         wrap.className = 'p-3 bg-slate-50 rounded-lg space-y-3';
-        // Schedule_list e o lista cu 7 zile { day, open, close } — completam intotdeauna toate zilele
         const DAYS = [
             { key: 'mon', label: 'Luni' },
             { key: 'tue', label: 'Marți' },
@@ -2969,14 +2849,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 let val = el.value;
                 if (typeof val === 'string') val = val.trim();
                 if (val === '' || val === null || val === undefined) return;
-                // Suport chei nested (translations.hu.name) prin setNested
                 if (key.indexOf('.') !== -1) {
                     setNested(item, key, val);
                 } else {
                     item[key] = val;
                 }
             });
-            // schedule_list: agreggate by data-day-key + data-day-field
             const dayInputs = row.querySelectorAll('[data-day-key]');
             const byDay = {};
             dayInputs.forEach((el) => {
@@ -3003,8 +2881,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 let val = el.value;
                 if (typeof val === 'string') val = val.trim();
                 if (val === '' || val === null || val === undefined) return;
-                // Suport chei nested (ex: "translations.hu.title") pentru a permite
-                // traducerile opt-in fara a sparge layout-ul existent (chei flat).
                 if (key.indexOf('.') !== -1) {
                     setNested(item, key, val);
                 } else {
@@ -3035,34 +2911,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         const payload = {};
 
-        // Scalar fields
         document.querySelectorAll('[data-vc]').forEach((input) => {
             payload[input.dataset.vc] = input.value.trim();
         });
 
-        // List fields
         document.querySelectorAll('[data-vc-list]').forEach((input) => {
             const arr = input.value.split(',').map(s => s.trim()).filter(Boolean);
             payload[input.dataset.vcList] = arr;
         });
 
-        // Nested fields
         document.querySelectorAll('[data-vc-nested]').forEach((input) => {
             setNested(payload, input.dataset.vcNested, input.value.trim());
         });
 
-        // Nested list fields (CSV → array, ex: translations.hero_badges.hu)
         document.querySelectorAll('[data-vc-list-nested]').forEach((input) => {
             const arr = input.value.split(',').map(s => s.trim()).filter(Boolean);
             setNested(payload, input.dataset.vcListNested, arr);
         });
 
-        // FAQ list (cu suport traduceri HU + EN prin data-rep="translations.XX.q/a")
         const faqs = [];
         document.querySelectorAll('#faq-list > div').forEach((row) => {
             const q = row.querySelector('.faq-q')?.value.trim() || '';
             const a = row.querySelector('.faq-a')?.value.trim() || '';
-            // Collectez traducerile prin selector data-rep
             const item = { q, a };
             row.querySelectorAll('[data-rep]').forEach((el) => {
                 const key = el.dataset.rep;
@@ -3075,7 +2945,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         payload.faqs = faqs;
 
-        // Stats highlights (cu suport traduceri prin data-rep="translations.XX.label")
         const stats = [];
         document.querySelectorAll('#stats-list > div').forEach((row) => {
             const value = row.querySelector('.stat-value')?.value.trim() || '';
@@ -3092,22 +2961,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         payload.stats_highlights = stats;
 
-        // New repeaters
         payload.attractions = collectRepeater('attractions-list');
         payload.trails = collectRepeater('trails-list');
         payload.gallery = collectRepeater('gallery-list');
         payload.videos = collectRepeater('videos-list');
-        // Bug-fix: salvăm nested la map_config.pois (sincron cu Filament + pagina publică)
         if (!payload.map_config) payload.map_config = {};
         payload.map_config.pois = collectRepeater('pois-list');
         payload.nearby_hotels = collectRepeater('hotels-list');
-        // Bug-fix: salvăm la cheia corectă `flora` (sincron cu Filament + pagina publică)
         payload.flora = collectRepeater('flora-list');
         payload.getting_there = collectRepeater('getting-list');
         payload.seasons = collectSeasons();
 
-        // Cast numeric fields in trails/hotels/POIs (Postgres expects numbers).
-        // Defensiv: || [] in caz ca un collectRepeater intoarce undefined cumva.
         (payload.trails || []).forEach(t => {
             if (t.distance_km) t.distance_km = parseFloat(t.distance_km);
             if (t.duration_min) t.duration_min = parseInt(t.duration_min, 10);
@@ -3117,8 +2981,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (h.distance_km) h.distance_km = parseFloat(h.distance_km);
             if (h.stars) h.stars = parseInt(h.stars, 10);
         });
-        // POIs sunt salvati nested sub map_config.pois (vezi linia ~2648); cale veche
-        // `payload.map_pois` nu mai exista, ar fi aruncat TypeError la forEach.
         (payload.map_config?.pois || []).forEach(p => {
             if (p.lat) p.lat = parseFloat(p.lat);
             if (p.lng) p.lng = parseFloat(p.lng);
@@ -3129,7 +2991,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (res.success) {
                 status.textContent = '✓ Salvat. Recarcă pagina publică (?preview=1) pentru a vedea modificările.';
                 status.classList.remove('text-red-200');
-                // Update local cache
                 currentVenueConfig = res.data?.venue_config || currentVenueConfig;
                 const ev = leisureEvents.find(e => e.id === currentEventId);
                 if (ev) ev.venue_config = currentVenueConfig;
@@ -3159,7 +3020,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         $('vc-save-btn')?.addEventListener('click', () => saveContent());
 
-        // Generic "+ Adaugă" handlers pentru noile repeatere
         const repeaters = [
             ['attractions-add', 'attractions-list', makeAttractionRow],
             ['trails-add', 'trails-list', makeTrailRow],
@@ -3178,15 +3038,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Delegat: upload imagine + stergere pentru randurile Flora (data-flora-img-file / data-flora-img-remove).
-        // Reutilizeaza endpoint-ul /leisure/upload-image cu type=flora (dir separat).
         const floraList = $('flora-list');
         if (floraList) {
             floraList.addEventListener('change', async (e) => {
                 if (!e.target.matches('[data-flora-img-file]')) return;
                 const file = e.target.files?.[0];
                 if (!file) return;
-                // Row = <div class="flex items-start gap-2"> care e imediat sub repWrap.
                 const row = e.target.closest('div.flex.items-start');
                 if (!row) return;
                 const wrap = row.querySelector('[data-flora-img-wrap]');
@@ -3207,7 +3064,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         if (thumb) { thumb.src = res.data.url || ''; thumb.classList.remove('hidden'); }
                         if (empty) empty.classList.add('hidden');
                         if (wrap) { wrap.classList.remove('border-border'); wrap.classList.add('border-primary'); }
-                        // Injecteaza butonul de stergere daca nu exista deja
                         if (!row.querySelector('[data-flora-img-remove]')) {
                             const btn = document.createElement('button');
                             btn.type = 'button';
@@ -3224,7 +3080,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     alert('Eroare upload imagine floră: ' + (err?.message || 'necunoscut'));
                 } finally {
                     if (loading) loading.classList.add('hidden');
-                    e.target.value = ''; // reset input pentru reincarcare aceleiasi imagini
+                    e.target.value = '';
                 }
             });
             floraList.addEventListener('click', (e) => {
@@ -3250,7 +3106,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         setupGatesHandlers();
         setupIssuerHandlers();
 
-        // B3 — Toggle accordion + tabs limbi pentru sectiunea traduceri
         const trToggle = $('pr-f-tr-toggle');
         if (trToggle) {
             trToggle.addEventListener('click', () => {

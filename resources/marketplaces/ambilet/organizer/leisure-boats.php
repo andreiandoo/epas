@@ -91,7 +91,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     async function loadProducts() {
         const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`);
         const all = res.data?.ticket_types || [];
-        // Suport multi-produs: orice produs cu physical_inventory.enabled apare in dropdown.
         rentalTypes = all.filter(t => t.physical_inventory && t.physical_inventory.enabled);
         const sel = $('lv-tt-select');
         sel.innerHTML = '';
@@ -113,7 +112,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-info-bar').classList.remove('hidden');
     }
     async function loadBoats() {
-        // ALWAYS hide loading at the end — even pentru early returns
         $('lv-loading').classList.remove('hidden');
         $('lv-boats-grid').innerHTML = '';
         if (!currentTtId) {
@@ -195,7 +193,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-error').classList.remove('hidden');
             return;
         }
-        // Empty state: niciun produs cu inventar fizic activat
         if (!rentalTypes.length) {
             $('lv-loading').classList.add('hidden');
             showEmptyState();

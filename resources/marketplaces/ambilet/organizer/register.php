@@ -501,7 +501,6 @@ let formData = {
 };
 const totalSteps = 6;
 
-// Bank code mappings
 const bankNames = {
     'INGB': 'ING Bank',
     'BTRL': 'Banca Transilvania',
@@ -521,7 +520,6 @@ const bankNames = {
     'VBBU': 'Vista Bank'
 };
 
-// Organizer type labels
 const organizerTypeLabels = {
     'agency': 'Agenție de evenimente',
     'promoter': 'Promoter independent',
@@ -532,16 +530,13 @@ const organizerTypeLabels = {
 };
 
 function goToStep(step) {
-    // Hide all steps
     document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
 
-    // Show target step
     const targetStep = document.getElementById(`step${step}`);
     if (targetStep) {
         targetStep.classList.remove('hidden');
     }
 
-    // Update step indicators
     for (let i = 1; i <= totalSteps; i++) {
         const indicator = document.getElementById(`step${i}-indicator`);
         const line = document.getElementById(`step${i}-line`);
@@ -549,7 +544,6 @@ function goToStep(step) {
 
         if (!indicator) continue;
 
-        // Skip step 3 for PF
         if (i === 3 && formData.person_type === 'pf') {
             if (container) container.classList.add('hidden');
             if (line) line.classList.add('hidden');
@@ -585,7 +579,6 @@ function goToPreviousStep() {
     }
 }
 
-// Phone country/prefix handling
 function updatePhonePrefix() {
     const select = document.getElementById('phone-country');
     const prefixSpan = document.getElementById('phone-prefix');
@@ -599,14 +592,13 @@ function updatePhonePrefix() {
     prefixSpan.textContent = prefix;
     countryInput.value = countryCode;
 
-    // Adjust padding based on prefix length
     const prefixLength = prefix.length;
     if (prefixLength <= 3) {
-        phoneInput.style.paddingLeft = '2.5rem'; // +40
+        phoneInput.style.paddingLeft = '2.5rem';
     } else if (prefixLength <= 4) {
-        phoneInput.style.paddingLeft = '3rem'; // +373
+        phoneInput.style.paddingLeft = '3rem';
     } else {
-        phoneInput.style.paddingLeft = '3.5rem'; // +380 etc
+        phoneInput.style.paddingLeft = '3.5rem';
     }
 }
 
@@ -616,7 +608,6 @@ function getFullPhoneNumber() {
     return prefix + ' ' + phone;
 }
 
-// Step 1: Account Form
 document.getElementById('step1-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const form = e.target;
@@ -642,7 +633,6 @@ document.getElementById('step1-form').addEventListener('submit', (e) => {
     goToStep(2);
 });
 
-// Step 2: Organizer Type Form
 document.getElementById('step2-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const form = e.target;
@@ -664,10 +654,8 @@ document.getElementById('step2-form').addEventListener('submit', (e) => {
     formData.person_type = personType;
     formData.work_mode = workMode;
 
-    // Update step 4 based on person type
     updateStep4ForPersonType(personType);
 
-    // If PF, skip to step 4 (Garant)
     if (personType === 'pf') {
         goToStep(4);
     } else {
@@ -675,7 +663,6 @@ document.getElementById('step2-form').addEventListener('submit', (e) => {
     }
 });
 
-// Step 3: Company Form
 document.getElementById('step3-form').addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -707,12 +694,10 @@ document.getElementById('step3-form').addEventListener('submit', (e) => {
     goToStep(4);
 });
 
-// Step 4: Guarantor Form
 document.getElementById('step4-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const form = e.target;
 
-    // Get organizer type for PF
     if (formData.person_type === 'pf') {
         const organizerType = document.getElementById('organizer-type-pf').value;
         if (!organizerType) {
@@ -722,7 +707,6 @@ document.getElementById('step4-form').addEventListener('submit', (e) => {
         formData.organizer_type = organizerType;
     }
 
-    // Validate CNP
     const cnp = document.getElementById('guarantor-cnp').value;
     if (!/^[0-9]{13}$/.test(cnp)) {
         showError('CNP-ul trebuie să aibă exact 13 cifre.');
@@ -744,7 +728,6 @@ document.getElementById('step4-form').addEventListener('submit', (e) => {
     goToStep(5);
 });
 
-// Step 5: Bank Form
 document.getElementById('step5-form').addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -760,7 +743,6 @@ document.getElementById('step5-form').addEventListener('submit', (e) => {
     formData.account_holder = document.getElementById('bank-holder').value;
     formData.bank_name = document.getElementById('bank-name').value;
 
-    // Build summary and go to final step
     buildSummary();
     goToStep(6);
 });
@@ -788,7 +770,6 @@ async function verifyCUI() {
     const btn = document.getElementById('verify-cui-btn');
     let cui = cuiInput.value.trim().toUpperCase();
 
-    // Remove RO prefix if present for the API call
     cui = cui.replace(/^RO/, '');
 
     if (!cui || !/^[0-9]+$/.test(cui)) {
@@ -803,14 +784,12 @@ async function verifyCUI() {
         const response = await AmbiletAPI.post('/organizer/settings/verify-cui', { cui: cui });
 
         if (response.success && response.data) {
-            // Populate fields
             document.getElementById('company-name').value = response.data.company_name || '';
             document.getElementById('company-reg').value = response.data.reg_com || '';
             document.getElementById('company-address').value = response.data.address || '';
             document.getElementById('company-city').value = response.data.city || '';
             document.getElementById('company-county').value = response.data.county || '';
 
-            // VAT status
             const isVatPayer = response.data.vat_payer || false;
             document.getElementById('company-vat').value = isVatPayer ? '1' : '0';
             document.getElementById('vat-display').textContent = isVatPayer ? 'Da' : 'Nu';
@@ -825,7 +804,6 @@ async function verifyCUI() {
                 vatBadge.textContent = 'Neplătitor TVA';
             }
 
-            // Store in formData
             formData.cui = cui;
             formData.company_name = response.data.company_name || '';
             formData.reg_com = response.data.reg_com || '';
@@ -835,7 +813,6 @@ async function verifyCUI() {
             formData.vat_payer = isVatPayer;
             formData.anaf_verified = true;
 
-            // Show company details
             document.getElementById('company-details').classList.remove('hidden');
             document.getElementById('step3-submit').disabled = false;
 
@@ -868,7 +845,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // Must start with RO for Romanian IBAN
     if (!value.startsWith('RO')) {
         validation.textContent = 'IBAN-ul românesc trebuie să înceapă cu RO';
         validation.className = 'mt-1 text-xs text-red-600';
@@ -878,7 +854,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // Check length (Romanian IBAN is exactly 24 characters)
     if (value.length < 24) {
         validation.textContent = `Mai sunt necesare ${24 - value.length} caractere`;
         validation.className = 'mt-1 text-xs text-amber-600';
@@ -896,7 +871,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // Check format
     const ibanRegex = /^RO[0-9]{2}[A-Z]{4}[A-Z0-9]{16}$/;
     if (!ibanRegex.test(value)) {
         validation.textContent = 'Format invalid. Structură: RO + 2 cifre control + 4 litere bancă + 16 caractere cont';
@@ -907,7 +881,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // IBAN checksum validation
     if (!validateIBANChecksum(value)) {
         validation.textContent = 'Cifrele de control sunt invalide';
         validation.className = 'mt-1 text-xs text-red-600';
@@ -917,7 +890,6 @@ function validateIBAN(input) {
         return;
     }
 
-    // Extract and display bank code
     const bankCode = value.substring(4, 8);
     const bankName = bankNames[bankCode] || bankCode;
 
@@ -932,7 +904,6 @@ function validateIBAN(input) {
 function validateIBANChecksum(iban) {
     if (!iban || iban.length !== 24) return false;
 
-    // Move first 4 chars to end, replace letters with numbers
     const rearranged = iban.substring(4) + iban.substring(0, 4);
     let numericStr = '';
 
@@ -944,7 +915,6 @@ function validateIBANChecksum(iban) {
         }
     }
 
-    // Calculate MOD 97-10
     let remainder = 0;
     for (let i = 0; i < numericStr.length; i++) {
         remainder = (remainder * 10 + parseInt(numericStr[i])) % 97;
@@ -954,14 +924,12 @@ function validateIBANChecksum(iban) {
 }
 
 function buildSummary() {
-    // Account summary
     document.getElementById('summary-account').innerHTML = `
         <p><strong>Nume:</strong> ${formData.first_name} ${formData.last_name}</p>
         <p><strong>Email:</strong> ${formData.email}</p>
         <p><strong>Telefon:</strong> ${formData.phone}</p>
     `;
 
-    // Organizer type summary
     const personTypeLabel = formData.person_type === 'pj' ? 'Persoană Juridică' : 'Persoană Fizică';
     const workModeLabel = formData.work_mode === 'exclusive' ? 'Lucru Exclusiv' : 'Lucru Neexclusiv';
     const organizerTypeLabel = organizerTypeLabels[formData.organizer_type] || formData.organizer_type;
@@ -972,7 +940,6 @@ function buildSummary() {
         <p><strong>Tip organizator:</strong> ${organizerTypeLabel}</p>
     `;
 
-    // Company summary (only for PJ)
     const companySection = document.getElementById('summary-company-section');
     if (formData.person_type === 'pj') {
         companySection.classList.remove('hidden');
@@ -988,7 +955,6 @@ function buildSummary() {
         companySection.classList.add('hidden');
     }
 
-    // Guarantor summary
     const guarantorTitle = formData.person_type === 'pj' ? 'Garant' : 'Date Personale';
     document.getElementById('summary-guarantor-title').textContent = guarantorTitle;
 
@@ -1003,14 +969,12 @@ function buildSummary() {
         <p><strong>Eliberat de:</strong> ${formData.guarantor_id_issued_by} la ${issuedDate}</p>
     `;
 
-    // Bank summary
     document.getElementById('summary-bank').innerHTML = `
         <p><strong>IBAN:</strong> ${formData.iban}</p>
         <p><strong>Titular:</strong> ${formData.account_holder}</p>
         <p><strong>Banca:</strong> ${formData.bank_name}</p>
     `;
 
-    // Update invitation cost based on work mode
     const invitationCostText = document.getElementById('invitation-cost-text');
     if (formData.work_mode === 'exclusive') {
         invitationCostText.innerHTML = '<span class="font-semibold text-green-600">GRATUIT</span> (beneficiu lucru exclusiv)';
@@ -1037,14 +1001,11 @@ async function submitRegistration() {
     btnSpinner.classList.remove('hidden');
 
     try {
-        // Prepare registration data
         const registrationData = {
-            // Organizer name (required by API)
             name: formData.person_type === 'pj'
                 ? formData.company_name
                 : `${formData.first_name} ${formData.last_name}`.trim(),
 
-            // Account info
             first_name: formData.first_name,
             last_name: formData.last_name,
             email: formData.email,
@@ -1053,12 +1014,10 @@ async function submitRegistration() {
             password: formData.password,
             password_confirmation: formData.password_confirmation,
 
-            // Organizer type
             person_type: formData.person_type,
             work_mode: formData.work_mode,
             organizer_type: formData.organizer_type,
 
-            // Company info (if PJ)
             cui: formData.cui || null,
             company_name: formData.company_name || null,
             reg_com: formData.reg_com || null,
@@ -1069,7 +1028,6 @@ async function submitRegistration() {
             representative_first_name: formData.representative_first_name || null,
             representative_last_name: formData.representative_last_name || null,
 
-            // Guarantor info
             guarantor_first_name: formData.guarantor_first_name,
             guarantor_last_name: formData.guarantor_last_name,
             guarantor_cnp: formData.guarantor_cnp,
@@ -1081,7 +1039,6 @@ async function submitRegistration() {
             guarantor_id_issued_by: formData.guarantor_id_issued_by,
             guarantor_id_issued_date: formData.guarantor_id_issued_date,
 
-            // Bank info
             iban: formData.iban,
             account_holder: formData.account_holder,
             bank_name: formData.bank_name
@@ -1120,11 +1077,9 @@ function hideError() {
     document.getElementById('error-message').classList.add('hidden');
 }
 
-// Auto-fill guarantor name from account info for PF
 document.querySelectorAll('input[name="person_type"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
         if (e.target.value === 'pf') {
-            // Pre-fill guarantor with account holder info
             setTimeout(() => {
                 const gFirstName = document.getElementById('guarantor-first-name');
                 const gLastName = document.getElementById('guarantor-last-name');
@@ -1135,7 +1090,6 @@ document.querySelectorAll('input[name="person_type"]').forEach(radio => {
     });
 });
 
-// Update radio button styling
 document.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const name = this.name;

@@ -308,7 +308,6 @@ $currentYear = date('Y');
 <?php include __DIR__ . '/cookie-consent.php'; ?>
 
 <script>
-// Newsletter form handler
 document.getElementById('newsletterForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const form = this;

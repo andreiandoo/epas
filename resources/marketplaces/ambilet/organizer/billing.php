@@ -225,9 +225,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
 
 <script>
-/**
- * Billing Management Module
- */
 const BillingManager = {
     invoices: [],
     billingInfo: null,
@@ -238,9 +235,6 @@ const BillingManager = {
     totalInvoices: 0,
     currentInvoice: null,
 
-    /**
-     * Initialize the billing manager
-     */
     async init() {
         await Promise.all([
             this.loadInvoices(),
@@ -248,9 +242,6 @@ const BillingManager = {
         ]);
     },
 
-    // Toggle between "Istoric facturi" and "Istoric deconturi" at the top
-    // of the page. Hidden sections stay lazy — the payouts loader already
-    // runs at page init via PayoutManager, so switching just flips visibility.
     setSection(section) {
         const invoicesEl = document.getElementById('invoices-section');
         const payoutsEl = document.getElementById('payouts-section');
@@ -272,9 +263,6 @@ const BillingManager = {
         });
     },
 
-    /**
-     * Load invoices
-     */
     async loadInvoices() {
         try {
             const params = new URLSearchParams({
@@ -299,9 +287,6 @@ const BillingManager = {
         }
     },
 
-    /**
-     * Load billing info
-     */
     async loadBillingInfo() {
         try {
             const response = await AmbiletAPI.request('/organizer/billing-info');
@@ -314,9 +299,6 @@ const BillingManager = {
         }
     },
 
-    /**
-     * Load payment methods
-     */
     async loadPaymentMethods() {
         try {
             const response = await AmbiletAPI.request('/organizer/payment-methods');
@@ -324,7 +306,6 @@ const BillingManager = {
                 this.paymentMethods = response.data.methods || [];
                 this.renderPaymentMethods();
 
-                // Show next invoice if available
                 if (response.data.next_invoice) {
                     this.renderNextInvoice(response.data.next_invoice);
                 }
@@ -334,16 +315,9 @@ const BillingManager = {
         }
     },
 
-    /**
-     * Update stats (stats cards removed, but keeping method for future use)
-     */
     updateStats(stats) {
-        // Stats cards were removed from the UI
     },
 
-    /**
-     * Render invoices table
-     */
     renderInvoices() {
         const tbody = document.getElementById('invoices-table-body');
         const emptyState = document.getElementById('empty-state');
@@ -358,9 +332,6 @@ const BillingManager = {
         tbody.innerHTML = this.invoices.map(invoice => this.renderInvoiceRow(invoice)).join('');
     },
 
-    /**
-     * Render a single invoice row
-     */
     renderInvoiceRow(invoice) {
         const statusBadge = this.getStatusBadge(invoice.status);
         const isPending = invoice.status === 'pending';
@@ -396,9 +367,6 @@ const BillingManager = {
         `;
     },
 
-    /**
-     * Render billing info
-     */
     renderBillingInfo() {
         if (!this.billingInfo) return;
 
@@ -409,9 +377,6 @@ const BillingManager = {
         document.getElementById('billing-email').textContent = this.billingInfo.email || '-';
     },
 
-    /**
-     * Render payment methods
-     */
     renderPaymentMethods() {
         const container = document.getElementById('payment-methods-list');
 
@@ -434,9 +399,6 @@ const BillingManager = {
         `).join('');
     },
 
-    /**
-     * Render next invoice card
-     */
     renderNextInvoice(nextInvoice) {
         const container = document.getElementById('next-invoice');
         container.classList.remove('hidden');
@@ -444,9 +406,6 @@ const BillingManager = {
         document.getElementById('next-invoice-date').textContent = `Scadentă pe ${this.formatDate(nextInvoice.due_date)}`;
     },
 
-    /**
-     * Render pagination
-     */
     renderPagination() {
         const totalPages = Math.ceil(this.totalInvoices / this.perPage);
         const container = document.getElementById('pagination-buttons');
@@ -463,7 +422,6 @@ const BillingManager = {
 
         let buttons = '';
 
-        // Previous button
         buttons += `
             <button onclick="BillingManager.goToPage(${this.currentPage - 1})"
                     class="flex items-center justify-center w-8 h-8 text-sm border rounded-lg border-border text-muted hover:border-primary hover:text-primary ${this.currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}"
@@ -472,7 +430,6 @@ const BillingManager = {
             </button>
         `;
 
-        // Page numbers
         const pages = this.getPageNumbers(totalPages);
         pages.forEach(page => {
             if (page === '...') {
@@ -487,7 +444,6 @@ const BillingManager = {
             }
         });
 
-        // Next button
         buttons += `
             <button onclick="BillingManager.goToPage(${this.currentPage + 1})"
                     class="flex items-center justify-center w-8 h-8 text-sm border rounded-lg border-border text-muted hover:border-primary hover:text-primary ${this.currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}"
@@ -499,9 +455,6 @@ const BillingManager = {
         container.innerHTML = buttons;
     },
 
-    /**
-     * Get page numbers for pagination
-     */
     getPageNumbers(totalPages) {
         const current = this.currentPage;
         const pages = [];
@@ -524,9 +477,6 @@ const BillingManager = {
         return pages;
     },
 
-    /**
-     * Go to page
-     */
     goToPage(page) {
         const totalPages = Math.ceil(this.totalInvoices / this.perPage);
         if (page < 1 || page > totalPages) return;
@@ -535,14 +485,10 @@ const BillingManager = {
         this.loadInvoices();
     },
 
-    /**
-     * Set filter
-     */
     setFilter(filter) {
         this.currentFilter = filter;
         this.currentPage = 1;
 
-        // Update filter buttons
         document.querySelectorAll('.filter-tab').forEach(btn => {
             const isActive = btn.dataset.filter === filter;
             btn.classList.toggle('bg-primary', isActive);
@@ -554,9 +500,6 @@ const BillingManager = {
         this.loadInvoices();
     },
 
-    /**
-     * View invoice details
-     */
     async viewInvoice(invoiceId) {
         try {
             const response = await AmbiletAPI.request(`/organizer/invoices/${invoiceId}`);
@@ -571,9 +514,6 @@ const BillingManager = {
         }
     },
 
-    /**
-     * Render invoice modal content
-     */
     renderInvoiceModal(invoice) {
         document.getElementById('modal-invoice-number').textContent = invoice.number;
 
@@ -649,26 +589,17 @@ const BillingManager = {
         `;
     },
 
-    /**
-     * Hide invoice modal
-     */
     hideInvoiceModal() {
         document.getElementById('invoice-modal').classList.add('hidden');
         this.currentInvoice = null;
     },
 
-    /**
-     * Download current invoice
-     */
     downloadInvoice() {
         if (this.currentInvoice) {
             this.downloadInvoicePdf(this.currentInvoice.id);
         }
     },
 
-    /**
-     * Download invoice PDF
-     */
     async downloadInvoicePdf(invoiceId) {
         try {
             const token = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : '') || '';
@@ -680,18 +611,10 @@ const BillingManager = {
         }
     },
 
-    /**
-     * Pay invoice
-     */
     async payInvoice(invoiceId) {
-        // This would typically redirect to a payment gateway
         this.showInfo('Redirecționare către pagina de plată...');
-        // window.location.href = `/organizer/pay/${invoiceId}`;
     },
 
-    /**
-     * Export invoices
-     */
     async exportInvoices() {
         try {
             const token = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : '') || '';
@@ -702,23 +625,14 @@ const BillingManager = {
         }
     },
 
-    /**
-     * Edit billing info
-     */
     editBillingInfo() {
         window.location.href = '/organizator/setari#company';
     },
 
-    /**
-     * Add payment method
-     */
     addPaymentMethod() {
         window.location.href = '/organizator/settings#payment';
     },
 
-    /**
-     * Helper functions
-     */
     getStatusBadge(status) {
         const badges = {
             paid: '<span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Plătită</span>',
@@ -785,18 +699,13 @@ const BillingManager = {
     }
 };
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     BillingManager.init();
     PayoutManager.init();
 });
 
-// Site name for modal
 const SITE_NAME = '<?= SITE_NAME ?>';
 
-/**
- * Payout / Decont Management Module
- */
 const PayoutManager = {
     payouts: [],
     currentFilter: 'all',
@@ -896,7 +805,6 @@ const PayoutManager = {
                 const date = p.created_at ? AmbiletUtils.formatDate(p.created_at) : '-';
                 const account = p.account || p.payout_method?.iban || '-';
 
-                // Show in invoice modal (reuse existing modal)
                 document.getElementById('modal-invoice-number').textContent = `Decont ${ref}`;
                 document.getElementById('invoice-modal-content').innerHTML = `
                     <div class="space-y-4">
@@ -924,7 +832,6 @@ const PayoutManager = {
             if (response.success && response.data?.url) {
                 window.open(response.data.url, '_blank');
             } else {
-                // Fallback: generate client-side or show message
                 AmbiletNotifications.info('PDF-ul se genereaza. Vei fi notificat cand este gata.');
             }
         } catch (error) {

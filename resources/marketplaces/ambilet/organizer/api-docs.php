@@ -533,23 +533,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
 
 <script>
-/**
- * API Documentation Module
- */
 const ApiDocs = {
     apiKey: null,
 
-    /**
-     * Initialize
-     */
     async init() {
         await this.loadApiKey();
         this.setupSmoothScroll();
     },
 
-    /**
-     * Load API key
-     */
     async loadApiKey() {
         try {
             const response = await AmbiletAPI.request('/organizer/api-key');
@@ -563,9 +554,6 @@ const ApiDocs = {
         }
     },
 
-    /**
-     * Copy API key to clipboard
-     */
     async copyApiKey() {
         if (!this.apiKey) return;
 
@@ -578,9 +566,6 @@ const ApiDocs = {
         }
     },
 
-    /**
-     * Regenerate API key
-     */
     async regenerateKey() {
         if (!confirm('Ești sigur că vrei să regenerezi cheia API? Toate integrările existente vor înceta să funcționeze.')) {
             return;
@@ -604,9 +589,6 @@ const ApiDocs = {
         }
     },
 
-    /**
-     * Copy code block content
-     */
     async copyCode(button) {
         const codeBlock = button.closest('.code-block');
         const code = codeBlock.querySelector('pre').textContent;
@@ -614,7 +596,6 @@ const ApiDocs = {
         try {
             await navigator.clipboard.writeText(code);
 
-            // Visual feedback
             const originalText = button.innerHTML;
             button.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copiat!';
             button.classList.add('text-green-400');
@@ -628,9 +609,6 @@ const ApiDocs = {
         }
     },
 
-    /**
-     * Save webhook URL
-     */
     async saveWebhook() {
         const url = document.getElementById('webhook-url').value;
 
@@ -656,9 +634,6 @@ const ApiDocs = {
         }
     },
 
-    /**
-     * Setup smooth scrolling for anchor links
-     */
     setupSmoothScroll() {
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
@@ -671,9 +646,6 @@ const ApiDocs = {
         });
     },
 
-    /**
-     * Show notifications
-     */
     showSuccess(message) {
         if (window.AmbiletToast) {
             window.AmbiletToast.success(message);
@@ -691,6 +663,5 @@ const ApiDocs = {
     }
 };
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => ApiDocs.init());
 </script>

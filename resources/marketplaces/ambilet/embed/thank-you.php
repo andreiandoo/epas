@@ -37,7 +37,6 @@ require_once __DIR__ . '/includes/embed-head.php';
 </div>
 
 <script>
-    // Notify parent window about order completion
     if (window.parent !== window) {
         window.parent.postMessage({
             type: 'tixello:order:complete',

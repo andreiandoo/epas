@@ -226,12 +226,10 @@ const OrderDetailPage = {
     },
 
     renderOrder(order) {
-        // Update header
         document.getElementById('order-number-breadcrumb').textContent = '#' + order.number;
         document.getElementById('order-number-title').textContent = '#' + order.number;
         document.getElementById('order-date').textContent = 'Plasata pe ' + order.date;
 
-        // Update status
         const statusEl = document.getElementById('order-status');
         const statusText = document.getElementById('order-status-text');
         statusText.textContent = order.status_label;
@@ -244,13 +242,10 @@ const OrderDetailPage = {
         };
         statusEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full ' + (statusClasses[order.status] || statusClasses.confirmed);
 
-        // Render items
         this.renderItems(order.items);
 
-        // Render timeline
         this.renderTimeline(order.timeline);
 
-        // Update summary
         document.getElementById('tickets-count').textContent = order.tickets_count;
         document.getElementById('subtotal').textContent = order.subtotal + ' RON';
         document.getElementById('service-fee').textContent = order.service_fee + ' RON';
@@ -262,18 +257,14 @@ const OrderDetailPage = {
 
         document.getElementById('total').textContent = order.total + ' RON';
 
-        // Update payment
         document.getElementById('payment-method').textContent = order.payment_method;
         document.getElementById('payment-exp').textContent = order.payment_exp || '';
         document.getElementById('billing-address').innerHTML = '<strong class="block mb-1 font-semibold text-secondary">Adresa de facturare</strong>' + order.billing_address;
 
-        // Update invoice
         document.getElementById('invoice-filename').textContent = order.invoice_filename || 'Nu exista factura';
 
-        // Update view tickets link
         document.getElementById('view-tickets-btn').href = '/cont/bilete?order=' + order.number;
 
-        // DEBUG: Log full order response for troubleshooting
         console.log('=== ORDER API RESPONSE DEBUG ===');
         console.log('Order status:', order.status);
         console.log('Order can_download_tickets:', order.can_download_tickets);
@@ -282,29 +273,23 @@ const OrderDetailPage = {
         console.log('Full order object:', order);
         console.log('================================');
 
-        // Show/hide refund button
         const refundBtn = document.getElementById('refund-btn');
         if (order.can_request_refund) {
             console.log('Showing refund button');
             refundBtn.classList.remove('hidden');
-            // Store refund reason for later use
             this.refundReason = order.refund_reason;
         } else {
             console.log('Hiding refund button (can_request_refund is false or undefined)');
             refundBtn.classList.add('hidden');
         }
 
-        // Show/hide sections based on order status (only for confirmed/paid/completed)
         const isPaidOrder = ['confirmed', 'paid', 'completed'].includes(order.status) || order.can_download_tickets === true;
         console.log('isPaidOrder check:', isPaidOrder, '(status:', order.status, ', can_download_tickets:', order.can_download_tickets, ')');
 
-        // View tickets and Download PDF buttons
         if (isPaidOrder) {
             document.getElementById('view-tickets-btn').classList.remove('hidden');
             document.getElementById('download-pdf-btn').classList.remove('hidden');
-            // Invoice section (only for paid orders)
             document.getElementById('invoice-section').classList.remove('hidden');
-            // Support section (only for paid orders)
             document.getElementById('support-section').classList.remove('hidden');
         } else {
             console.log('Order is NOT paid - hiding tickets/pdf/invoice/support sections');
@@ -373,16 +358,13 @@ const OrderDetailPage = {
 
     downloadPdf() {
         AmbiletNotifications.info('Descarcarea PDF va incepe in curand...');
-        // window.location.href = '/api/v1/customer/orders/' + this.orderId + '/pdf';
     },
 
     downloadInvoice() {
         AmbiletNotifications.info('Descarcarea facturii va incepe in curand...');
-        // window.location.href = '/api/v1/customer/orders/' + this.orderId + '/invoice';
     },
 
     requestRefund() {
-        // Get a human-readable reason message
         let reasonText = '';
         switch (this.refundReason) {
             case 'event_cancelled':
@@ -398,7 +380,6 @@ const OrderDetailPage = {
                 reasonText = 'Cerere de rambursare';
         }
 
-        // Navigate to refund request page with order info
         window.location.href = '/cont/cerere-rambursare?order=' + this.orderId + '&reason=' + encodeURIComponent(this.refundReason);
     }
 };

@@ -238,7 +238,6 @@ const UserDashboard = {
     },
 
     async loadDashboard() {
-        // Load all data in parallel using dedicated endpoints that work correctly
         await Promise.all([
             this.loadStats(),
             this.loadUpcomingEvents(),
@@ -249,8 +248,6 @@ const UserDashboard = {
     },
 
     async loadStats() {
-        // Use dedicated endpoints (same as rewards.php which works correctly)
-        // instead of /customer/stats which returns mismatched field names
         try {
             const [rewardsRes, badgesRes, watchlistRes, statsRes] = await Promise.all([
                 AmbiletAPI.customer.getPoints(),
@@ -259,7 +256,6 @@ const UserDashboard = {
                 AmbiletAPI.customer.getDashboardStats()
             ]);
 
-            // Points: same parsing as rewards.php
             let points = 0, level = 1, levelName = 'Bronze', xp = 0, xpNext = 500, xpToNext = 500;
             if (rewardsRes.success && rewardsRes.data) {
                 const pointsData = rewardsRes.data.points || rewardsRes.data;
@@ -272,24 +268,20 @@ const UserDashboard = {
                 xpNext = xp + xpToNext;
             }
 
-            // Badges count: same parsing as rewards.php
             let badgesCount = 0;
             if (badgesRes.success && badgesRes.data) {
                 const earned = badgesRes.data.earned || [];
                 badgesCount = earned.length;
             }
 
-            // Watchlist/favorites count
             let favoritesCount = 0;
             if (watchlistRes.success && watchlistRes.data) {
-                // API may return total in meta/pagination or array length
                 favoritesCount = watchlistRes.meta?.total || watchlistRes.data?.total || 0;
                 if (!favoritesCount && Array.isArray(watchlistRes.data)) {
                     favoritesCount = watchlistRes.data.length;
                 }
             }
 
-            // Events attended from stats endpoint
             let eventsAttended = 0;
             if (statsRes.success && statsRes.data) {
                 const d = statsRes.data;
@@ -353,7 +345,6 @@ const UserDashboard = {
     },
 
     async loadUpcomingEvents() {
-        // Try dedicated upcoming events endpoint first
         try {
             const response = await AmbiletAPI.customer.getUpcomingEvents(5);
             if (response.success && response.data) {
@@ -367,13 +358,11 @@ const UserDashboard = {
             console.warn('Upcoming events endpoint failed:', e.message);
         }
 
-        // Fallback: load upcoming tickets and group by event
         try {
             const ticketsRes = await AmbiletAPI.customer.getAllTickets('upcoming');
             if (ticketsRes.success && ticketsRes.data) {
                 const tickets = ticketsRes.data.tickets || ticketsRes.data || [];
                 if (Array.isArray(tickets) && tickets.length) {
-                    // Group tickets by event and count per event
                     const byEvent = {};
                     tickets.forEach(t => {
                         const eid = t.event?.id;
@@ -419,7 +408,6 @@ const UserDashboard = {
         }
 
         container.innerHTML = events.map(item => {
-            // Support both nested {event, tickets_count} and flat event objects
             const e = item.event || item;
             const ticketsCount = item.tickets_count || item.ticket_count || 0;
             const imgSrc = e.image ? (typeof getStorageUrl === 'function' ? getStorageUrl(e.image) : e.image) : '/assets/images/default-event.png';
@@ -430,7 +418,6 @@ const UserDashboard = {
             const dateStr = e.date_formatted || this.formatDate(e.start_date || e.date);
             const timeStr = e.start_time || e.time || '';
 
-            // Calculate days until event
             let daysUntil = e.days_until;
             if (daysUntil === undefined && (e.start_date || e.date)) {
                 const eventDate = new Date(e.start_date || e.date);
@@ -460,7 +447,6 @@ const UserDashboard = {
 
     async loadRecommendedEvents() {
         try {
-            // Load promoted/recommended events, same as homepage
             const response = await AmbiletAPI.get('/events', { limit: 6, promoted: true });
             if (response.success) {
                 const events = response.data?.data || response.data || [];
@@ -473,7 +459,6 @@ const UserDashboard = {
             console.warn('Failed to load recommended events:', e.message);
         }
 
-        // Fallback: load latest events
         try {
             const response = await AmbiletAPI.get('/events', { limit: 6 });
             if (response.success) {
@@ -495,7 +480,6 @@ const UserDashboard = {
             return;
         }
 
-        // Use AmbiletEventCard component for consistent display (same as homepage)
         if (typeof AmbiletEventCard !== 'undefined') {
             container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 6), {
                 urlPrefix: '/bilete/',
@@ -529,7 +513,6 @@ const UserDashboard = {
             return;
         }
 
-        // Badge gradient colors for variety
         const gradients = [
             'from-yellow-400 to-orange-500',
             'from-purple-400 to-pink-500',

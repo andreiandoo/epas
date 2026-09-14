@@ -231,7 +231,6 @@ function openChat() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Load user info if authenticated
     if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isAuthenticated()) {
         const user = AmbiletAuth.getUser();
         if (user) {
@@ -247,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Search functionality
     document.getElementById('search-input').addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         document.querySelectorAll('.faq-item').forEach(item => {

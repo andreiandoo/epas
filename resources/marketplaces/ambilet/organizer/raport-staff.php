@@ -226,7 +226,6 @@ function renderReport(data) {
 
     loading.classList.add('hidden');
 
-    // Header info
     const titleEl = document.getElementById('event-title');
     const infoEl = document.getElementById('event-info');
     if (data.event) {
@@ -251,14 +250,12 @@ function renderReport(data) {
 
     content.classList.remove('hidden');
 
-    // Summary cards
     document.getElementById('sum-revenue').textContent = formatLei(totals.revenue);
     document.getElementById('sum-tickets').textContent = (totals.tickets || 0).toLocaleString('ro-RO');
     document.getElementById('sum-cash').textContent = formatLei(totals.cash);
     document.getElementById('sum-card').textContent = formatLei(totals.card);
     document.getElementById('sum-online').textContent = formatLei(totals.online);
 
-    // Staff table
     const tbody = document.getElementById('staff-table-body');
     tbody.innerHTML = staff.map((s, idx) => {
         const onlineBadge = s.is_online ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-violet-100 text-violet-700">Online</span>' : '';
@@ -313,10 +310,8 @@ function renderReport(data) {
         `;
     }).join('');
 
-    // Scanning activity table (only render when the event has any scans)
     renderScanSection(data.scans);
 
-    // Overall ticket types table
     const ttBody = document.getElementById('ticket-types-body');
     const ttData = Array.isArray(data.ticket_types_overall) ? data.ticket_types_overall : [];
     const totalCount = ttData.reduce((acc, t) => acc + (t.count || 0), 0);
@@ -342,9 +337,6 @@ function toggleStaffDetails(idx) {
     row.classList.toggle('hidden');
 }
 
-// Map the per-app `checked_in_via` enum to short, human-friendly badges
-// (color-coded). organizer_app → blue, venue_app → teal, staff_app →
-// indigo, manual → gray. Unknown values pass through as a neutral pill.
 function viaBadge(via, count) {
     const map = {
         staff_app:     { label: 'Staff app',     cls: 'bg-indigo-100 text-indigo-700' },

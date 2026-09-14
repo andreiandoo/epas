@@ -141,7 +141,6 @@ $cssBundle = 'checkout';
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Load popular events
         loadPopularEvents();
     });
 

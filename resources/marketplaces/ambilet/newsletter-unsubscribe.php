@@ -172,7 +172,6 @@ require_once 'includes/head.php';
     </style>
 
     <script>
-        // Show success state
         function showSuccess() {
             document.getElementById('unsubscribe-form').style.display = 'none';
             document.getElementById('success-state').classList.remove('hidden');

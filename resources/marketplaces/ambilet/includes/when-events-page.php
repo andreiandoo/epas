@@ -300,9 +300,6 @@ require_once __DIR__ . '/header.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-// Render the embedded per-category event payloads using the shared
-// event-card component. No API call — server already serialized the
-// data into data-events on each grid container.
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof AmbiletEventCard === 'undefined' || typeof AmbiletEventCard.renderMany !== 'function') {
         console.warn('[when] AmbiletEventCard not available, leaving sections empty');

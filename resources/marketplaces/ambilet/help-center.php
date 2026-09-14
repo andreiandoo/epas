@@ -282,7 +282,6 @@ $cssBundle = 'static';
     <?php include 'includes/scripts.php'; ?>
 
     <script>
-    // Live search functionality
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('kb-search');
         const searchResults = document.getElementById('kb-search-results');
@@ -337,7 +336,6 @@ $cssBundle = 'static';
             }, 300);
         });
 
-        // Hide search results when clicking outside
         document.addEventListener('click', function(e) {
             if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                 searchResults.classList.add('hidden');

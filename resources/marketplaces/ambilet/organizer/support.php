@@ -263,7 +263,6 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-// ==================== Create modal ====================
 
 async function openCreateModal() {
     const modal = document.getElementById('create-modal');
@@ -472,7 +471,7 @@ async function submitCreate(e) {
 
     const meta = {};
     document.querySelectorAll('#conditional-fields .cf-input').forEach(i => {
-        const name = i.getAttribute('name'); // meta[field]
+        const name = i.getAttribute('name');
         const m = name && name.match(/^meta\[(.+)\]$/);
         if (m) meta[m[1]] = i.value.trim();
     });
@@ -481,8 +480,6 @@ async function submitCreate(e) {
         source_url: window.location.href,
         screen_resolution: `${screen.width}x${screen.height}`,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
-        // Pass the real browser UA so the admin context panel shows
-        // "Chrome 147 on Windows" instead of the ambilet proxy's UA.
         user_agent: navigator.userAgent,
     };
 

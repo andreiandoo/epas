@@ -162,8 +162,6 @@ const AcceptInvite = {
             document.getElementById('memberName').textContent = resp.data.member.name || '';
             document.getElementById('memberEmail').textContent = resp.data.member.email || '';
 
-            // If user already has a password set on another active team membership,
-            // skip the password form and just show an activation notice.
             this.hasExistingPassword = !!resp.data.has_existing_password;
             if (this.hasExistingPassword) {
                 document.getElementById('passwordFields').classList.add('hidden');
@@ -209,7 +207,6 @@ const AcceptInvite = {
             phone: phone,
         };
 
-        // Only include password fields if this is a first-time acceptance
         if (!this.hasExistingPassword) {
             const pw = document.getElementById('password').value;
             const pwc = document.getElementById('password_confirmation').value;

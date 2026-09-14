@@ -288,7 +288,6 @@ $cssBundle = 'listing';
         const btnNotHelpful = document.getElementById('btn-not-helpful');
         const voteResult = document.getElementById('vote-result');
 
-        // Disable buttons
         btnHelpful.disabled = true;
         btnNotHelpful.disabled = true;
         btnHelpful.classList.add('opacity-50', 'cursor-not-allowed');
@@ -319,7 +318,6 @@ $cssBundle = 'listing';
             voteResult.classList.remove('hidden', 'text-green-600');
             voteResult.classList.add('text-red-500');
 
-            // Re-enable buttons on error
             btnHelpful.disabled = false;
             btnNotHelpful.disabled = false;
             btnHelpful.classList.remove('opacity-50', 'cursor-not-allowed');

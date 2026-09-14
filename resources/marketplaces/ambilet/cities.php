@@ -252,7 +252,6 @@ const CitiesPage = {
         this.showLoadingStates();
         this.bindEvents();
 
-        // Load all data in parallel
         await Promise.all([
             this.loadStats(),
             this.loadFeaturedCities(),
@@ -269,10 +268,8 @@ const CitiesPage = {
     },
 
     bindEvents() {
-        // Search input
         document.getElementById('citySearch')?.addEventListener('input', AmbiletUtils.debounce(() => this.searchCities(), 300));
 
-        // Load more button
         document.getElementById('loadMoreBtn')?.addEventListener('click', () => this.loadMoreCities());
     },
 
@@ -305,7 +302,6 @@ const CitiesPage = {
             .replace(/[^\w-]/g, '');
     },
 
-    // ==================== STATS ====================
 
     async loadStats() {
         const result = await this.apiRequest('locations.stats');
@@ -318,7 +314,6 @@ const CitiesPage = {
         }
     },
 
-    // ==================== FEATURED CITIES ====================
 
     async loadFeaturedCities() {
         const result = await this.apiRequest('locations.cities.featured');
@@ -343,7 +338,6 @@ const CitiesPage = {
             const image = city.image || defaultImage;
 
             if (isFirst) {
-                // First card spans 2 rows (capital city style)
                 return `
                     <a href="${cityUrl}" class="relative row-span-2 overflow-hidden rounded-2xl group">
                         <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
@@ -371,7 +365,6 @@ const CitiesPage = {
                     </a>
                 `;
             } else {
-                // Regular cards
                 return `
                     <a href="${cityUrl}" class="relative rounded-2xl overflow-hidden aspect-[5/5] group">
                         <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
@@ -395,7 +388,6 @@ const CitiesPage = {
         }).join('');
     },
 
-    // ==================== ALPHABET NAVIGATION ====================
 
     async loadAlphabet() {
         const result = await this.apiRequest('locations.cities.alphabet');
@@ -419,7 +411,6 @@ const CitiesPage = {
             return `<a href="#" data-letter="${letter}" class="w-9 h-9 flex items-center justify-center ${isCurrent ? 'bg-primary text-white' : isActive ? 'bg-surface text-muted hover:bg-gray-100 hover:text-secondary' : 'bg-surface text-muted/40 pointer-events-none'} rounded-lg text-sm font-semibold transition-all">${letter}</a>`;
         }).join('');
 
-        // Bind click events
         container.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -434,7 +425,6 @@ const CitiesPage = {
         });
     },
 
-    // ==================== ALL CITIES ====================
 
     async loadCities(append = false) {
         if (this.isLoading) return;
@@ -480,8 +470,6 @@ const CitiesPage = {
             return;
         }
 
-        // When appending, we already have the full cities array, so just re-render all
-        // This ensures no duplicates and is simpler than tracking indices
         const html = this.cities.map(city => {
             const cityUrl = `/${city.slug}`;
             const image = city.image || defaultImage;
@@ -505,7 +493,6 @@ const CitiesPage = {
             `;
         }).join('');
 
-        // Always replace the entire content - the cities array already contains all cities
         container.innerHTML = html;
     },
 
@@ -527,7 +514,6 @@ const CitiesPage = {
         const search = document.getElementById('citySearch')?.value.trim() || '';
 
         if (!search) {
-            // Reset to normal view
             this.currentLetter = null;
             this.currentPage = 1;
             this.renderAlphabet();
@@ -535,7 +521,6 @@ const CitiesPage = {
             return;
         }
 
-        // Search API call
         const result = await this.apiRequest('locations.cities', {
             search: search,
             per_page: 50
@@ -550,7 +535,6 @@ const CitiesPage = {
         }
     },
 
-    // ==================== REGIONS ====================
 
     async loadRegions() {
         const result = await this.apiRequest('locations.regions');

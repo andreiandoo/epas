@@ -265,17 +265,14 @@ const RegionPage = {
         const desc = this.region.description || 'Descopera cele mai captivante evenimente din aceasta regiune.';
         const totalEvents = this.cities.reduce((sum, c) => sum + (c.events_count || 0), 0);
 
-        // Update hero
         document.getElementById('heroRegionName').textContent = name;
         document.getElementById('heroDescription').textContent = desc;
 
-        // Update stats
         document.getElementById('statEvents').textContent = totalEvents;
         document.getElementById('statCities').textContent = this.cities.length;
-        document.getElementById('statVenues').textContent = Math.round(totalEvents * 0.36); // estimate
-        document.getElementById('statFestivals').textContent = Math.round(totalEvents * 0.02); // estimate
+        document.getElementById('statVenues').textContent = Math.round(totalEvents * 0.36);
+        document.getElementById('statFestivals').textContent = Math.round(totalEvents * 0.02);
 
-        // Update section names
         document.getElementById('sectionRegionName').textContent = name;
         document.getElementById('festivalsRegionName').textContent = name;
         document.getElementById('eventsRegionName').textContent = name;
@@ -284,10 +281,8 @@ const RegionPage = {
         document.getElementById('eventsCount').textContent = totalEvents;
         document.getElementById('tabAllCount').textContent = totalEvents;
 
-        // Update page title
         document.title = 'Evenimente in ' + name + ' - AmBilet.ro';
 
-        // Render highlights
         this.renderHighlights();
     },
 
@@ -317,11 +312,9 @@ const RegionPage = {
             return;
         }
 
-        // Show first 4 cities or all if expanded
         const citiesToShow = this.showingAllCities ? this.cities : this.cities.slice(0, 4);
         container.innerHTML = citiesToShow.map(city => this.renderCityCard(city)).join('');
 
-        // Update button text
         if (showAllBtn) {
             if (this.cities.length <= 4) {
                 showAllBtn.style.display = 'none';
@@ -332,14 +325,12 @@ const RegionPage = {
             }
         }
 
-        // Render city tabs
         const cityTabs = this.cities.slice(0, 7).map(city => `
             <a href="/${city.slug}" class="flex items-center flex-shrink-0 gap-2 px-6 py-4 text-sm font-semibold transition-colors border-b-[3px] border-transparent text-muted hover:text-secondary hover:bg-slate-50">
                 ${city.name} <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-200">${city.events_count}</span>
             </a>
         `).join('');
 
-        // Keep the "All cities" tab and add city tabs
         const allTab = tabsContainer.querySelector('a');
         tabsContainer.innerHTML = allTab.outerHTML + cityTabs;
     },
@@ -348,7 +339,6 @@ const RegionPage = {
         this.showingAllCities = !this.showingAllCities;
         this.renderCities();
 
-        // Scroll to cities section if collapsing
         if (!this.showingAllCities) {
             document.getElementById('citiesGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -392,18 +382,15 @@ const RegionPage = {
 
     async loadEvents() {
         try {
-            // Load events from ALL cities in this region
             const citySlugs = this.cities.map(c => c.slug);
             if (!citySlugs.length) return;
 
-            // Fetch events from each city in parallel
             const promises = citySlugs.map(slug =>
                 AmbiletAPI.get('/events?city=' + encodeURIComponent(slug) + '&per_page=5')
                     .catch(() => ({ data: [] }))
             );
             const responses = await Promise.all(promises);
 
-            // Merge all events, deduplicate by id, sort by date, take first 3
             const allEvents = [];
             const seenIds = new Set();
             responses.forEach(response => {
@@ -438,12 +425,10 @@ const RegionPage = {
             return;
         }
 
-        // Use the shared AmbiletEventCard component for consistent rendering
         container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 3));
     },
 
     async loadFestivals() {
-        // TODO: API integration needed for festivals endpoint
         this.renderFestivals([]);
     },
 

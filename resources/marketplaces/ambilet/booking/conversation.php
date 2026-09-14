@@ -281,7 +281,6 @@ require_once __DIR__ . '/../includes/header.php';
             els.finalSet.textContent = (d.final_terms.set_length_min || 0) + ' min';
         }
 
-        // Thread: initial guest message + thread items
         const items = [];
         items.push({
             sender_type: 'guest',
@@ -293,10 +292,8 @@ require_once __DIR__ . '/../includes/header.php';
         (d.thread || []).forEach(m => items.push(m));
         els.thread.innerHTML = items.map(renderMsg).join('');
 
-        // Show reply panel only if not finalized
         if (!FINAL_STATUSES.includes(d.status)) {
             els.replyPanel.classList.remove('hidden');
-            // Pre-fill counter form with current event values
             const lastCounter = (d.thread || []).filter(m => m.type === 'counter' && m.counter_terms).pop();
             const baseFee = (lastCounter?.counter_terms?.fee_ron) || d.event?.fee_ron || 0;
             const baseSet = (lastCounter?.counter_terms?.set_length_min) || d.event?.set_length_min || 60;

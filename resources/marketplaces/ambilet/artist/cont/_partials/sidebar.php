@@ -247,8 +247,6 @@ $extendedArtistNav = [
     close?.addEventListener('click', hide);
     overlay?.addEventListener('click', hide);
 
-    // Mobile-menu logout — share the desktop button's click handler later
-    // (artist-cont-shared.js wires that on DOMContentLoaded).
     document.querySelectorAll('.artist-mobile-logout').forEach(btn => {
         btn.addEventListener('click', () => {
             if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.logoutArtist) {
@@ -258,14 +256,10 @@ $extendedArtistNav = [
     });
 })();
 
-// Extended Artist gating: cere statusul si actualizeaza sidebar (badge ACTIV +
-// lock icons). Daca artistul nu e logat sau requestul esueaza, lasam linkurile
-// in starea default (locked, redirect la landing).
 (function() {
     const token = localStorage.getItem('ambilet_artist_token');
     if (!token) return;
 
-    // Toate request-urile API trec prin proxy.php (X-API-Key se adauga server-side).
     fetch('/api/proxy.php?action=artist.extended-artist.status', {
         headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token },
     })
@@ -278,7 +272,6 @@ $extendedArtistNav = [
             document.querySelectorAll('[data-extended-artist-lock]').forEach(el => el.remove());
         })
         .catch(() => {
-            // ignored — sidebar ramane in starea default (locked)
         });
 })();
 </script>

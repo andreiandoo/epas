@@ -81,7 +81,6 @@ require_once dirname(__DIR__) . '/includes/head.php';
             return;
         }
 
-        // Nothing to sign → straight to the account.
         if (data.is_signed || data.signature_required === false || !data.contract) {
             window.location.href = '/organizator/events';
             return;
@@ -91,7 +90,6 @@ require_once dirname(__DIR__) . '/includes/head.php';
         $('sc-frame').src = url;
         $('sc-open').href = url;
         $('sc-open2').href = url;
-        // If the cross-origin PDF can't be framed, offer the open-in-tab fallback.
         $('sc-frame').addEventListener('error', () => {
             $('sc-frame').classList.add('hidden');
             $('sc-frame-fallback').classList.remove('hidden');
