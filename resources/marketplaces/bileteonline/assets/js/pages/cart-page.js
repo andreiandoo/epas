@@ -1,3 +1,9 @@
+/**
+ * bilete.online — cart page (/cos).
+ *
+ * Renders the cart kept by assets/js/cart.js (BileteOnlineCart) into the containers of cart.php and keeps the
+ * summary, promo code and reservation timer in sync. Markup uses the v2 classes styled in assets/v2/css/cart.css.
+ */
 const CartPage = {
     timerInterval: null,
     endTime: null,
@@ -6,32 +12,23 @@ const CartPage = {
     taxes: [], // Dynamic taxes from API/config
 
     async init() {
-        await this.loadTaxes();
+        // The summary never reads this.taxes, so the lookup (an API call for carts without event taxes) must not
+        // hold back the first render: the cart used to stay on the skeleton until it returned.
+        this.loadTaxes();
         this.setupTimer();
         this.loadExistingPromo();
         this.render();
 
-        // Re-render when BileteOnlineCart re-validates the promo against new
-        // cart contents. The qty-change path (CartPage.updateQuantity)
-        // calls BileteOnlineCart.save() → saveCart() → revalidatePromoCode()
-        // asynchronously, so by the time this.render() runs the local
-        // discount snapshot is still stale. The async revalidate
-        // dispatches `ambilet:cart:promo` when it lands; we re-render
-        // then so the total updates with the fresh value.
+        // Re-render when BileteOnlineCart re-validates the promo against new cart contents. The qty-change path
+        // calls BileteOnlineCart.save() → saveCart() → revalidatePromoCode() asynchronously, so by the time
+        // this.render() runs the local discount snapshot is still stale; the promo event lands later.
         const onPromoChanged = () => {
             const promo = BileteOnlineCart.getPromoCode();
-            if (promo) {
-                this.appliedPromo = promo.code;
-            } else {
-                this.appliedPromo = null;
-            }
+            this.appliedPromo = promo ? promo.code : null;
             this.render();
         };
-        // cart.js dispatches `bileteonline:cart:*` events. The `ambilet:*`
-        // names below are legacy aliases from when this code was copied
-        // from the ambilet marketplace — they NEVER fire on bilete.online,
-        // so the cart page wasn't re-rendering on quantity changes etc.
-        // Listen to both names for safety during the rename window.
+        // cart.js dispatches `bileteonline:cart:*` events. The `ambilet:*` names are legacy aliases from the
+        // ambilet marketplace; they never fire here but are kept during the rename window.
         window.addEventListener('ambilet:cart:promo', onPromoChanged);
         window.addEventListener('bileteonline:cart:promo', onPromoChanged);
         window.addEventListener('ambilet:cart:update', () => this.render());
@@ -42,7 +39,6 @@ const CartPage = {
      * Load taxes from cart items or use defaults from config
      */
     async loadTaxes() {
-        // First, try to get taxes from cart items (stored when adding to cart)
         const items = BileteOnlineCart.getItems();
         if (items.length > 0 && items[0].event?.taxes?.length > 0) {
             // Show ALL taxes (both included in price and added on top)
@@ -51,7 +47,6 @@ const CartPage = {
         }
 
         try {
-            // Try to load taxes from API
             if (typeof BileteOnlineAPI !== 'undefined') {
                 const response = await BileteOnlineAPI.get('/config/taxes');
                 if (response.success && response.data?.taxes) {
@@ -66,6 +61,65 @@ const CartPage = {
         // Fallback - no hardcoded taxes, they come from DB via cart items
         this.taxes = [];
     },
+
+    // ==================== MARKUP HELPERS ====================
+
+    esc(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    },
+
+    icon(name) {
+        return '<svg class="ic" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
+    },
+
+    money(value) {
+        return BileteOnlineUtils.formatCurrency(value);
+    },
+
+    /** Romanian counting: 1 bilet, 5 bilete, 20 de bilete, 101 bilete. */
+    ticketsWord(n) {
+        if (n === 1) return 'bilet';
+        const rest = n % 100;
+        return n !== 0 && (rest === 0 || rest >= 20) ? 'de bilete' : 'bilete';
+    },
+
+    /** A bare YYYY-MM-DD parses as UTC midnight; adding a local time keeps it on the booked day in any time zone. */
+    localDate(value) {
+        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value + 'T00:00:00' : value;
+    },
+
+    formatDay(value, format) {
+        if (!value) return '';
+        try {
+            const out = BileteOnlineUtils.formatDate(this.localDate(value), format);
+            return out && out !== 'Invalid Date' ? out : String(value);
+        } catch (e) {
+            return String(value);
+        }
+    },
+
+    /** Arched thumbnail: the photo sits over the brand-line fallback, which shows through when there is no photo or it fails. */
+    media(src, href, seed) {
+        const segs = [['1060 585 220 310', '220 / 310'], ['1455 585 290 310', '290 / 310'], ['2170 625 340 270', '340 / 270'], ['2665 625 250 270', '250 / 270']];
+        let sum = 0;
+        for (const ch of String(seed || '')) sum += ch.codePointAt(0);
+        const seg = segs[sum % segs.length];
+        const inner = '<span class="fb"><svg viewBox="' + seg[0] + '" style="aspect-ratio:' + seg[1] + '"><use href="#drum-g"/></svg></span>' +
+            (src ? '<img src="' + this.esc(src) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '');
+        return href
+            ? '<a class="ci-media" href="' + this.esc(href) + '" tabindex="-1" aria-hidden="true">' + inner + '</a>'
+            : '<span class="ci-media" aria-hidden="true">' + inner + '</span>';
+    },
+
+    stepper(index, label, less, more, quantity) {
+        return '<div class="ci-step" role="group" aria-label="' + label + '">' +
+            '<button type="button" data-focus="dec" onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="' + less + '">−</button>' +
+            '<output aria-live="polite">' + quantity + '</output>' +
+            '<button type="button" data-focus="inc" onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="' + more + '">+</button>' +
+        '</div>';
+    },
+
+    // ==================== RESERVATION TIMER ====================
 
     setupTimer() {
         const savedEndTime = localStorage.getItem('cart_end_time');
@@ -102,8 +156,10 @@ const CartPage = {
         if (remaining <= 0) {
             clearInterval(this.timerInterval);
             countdownEl.textContent = '00:00';
-            countdownEl.classList.remove('text-warning');
-            countdownEl.classList.add('text-primary');
+            if (timerBar) {
+                timerBar.classList.remove('is-warn', 'is-urgent');
+                timerBar.classList.add('is-expired');
+            }
 
             // Release held seats via API before clearing cart
             this.releaseAllSeats().then(() => {
@@ -115,21 +171,15 @@ const CartPage = {
                 }
             });
         } else if (remaining < 60000) {
-            // Less than 1 minute - make it red/urgent
-            countdownEl.classList.remove('text-warning');
-            countdownEl.classList.add('text-primary');
+            // Less than 1 minute - urgent
             if (timerBar) {
-                timerBar.classList.remove('bg-warning/10', 'border-warning/20');
-                timerBar.classList.add('bg-red-50', 'border-red-200');
+                timerBar.classList.remove('is-warn');
+                timerBar.classList.add('is-urgent');
             }
         } else if (remaining <= 5 * 60 * 1000 && !this.warningShown) {
             // 5 minutes remaining - show warning notification
             this.warningShown = true;
-            countdownEl.classList.remove('text-warning');
-            countdownEl.classList.add('text-orange-500');
-            if (timerBar) {
-                timerBar.classList.add('animate-pulse');
-            }
+            if (timerBar) timerBar.classList.add('is-warn');
             if (typeof BileteOnlineNotifications !== 'undefined') {
                 BileteOnlineNotifications.warning('Mai ai doar 5 minute pentru a finaliza comanda! După expirare, locurile vor fi eliberate.');
             }
@@ -143,7 +193,6 @@ const CartPage = {
         const items = BileteOnlineCart.getItems();
 
         for (const item of items) {
-            // Check if this item has held seats
             if (item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
                 try {
                     await BileteOnlineAPI.delete('/cart/seats', {
@@ -157,6 +206,8 @@ const CartPage = {
         }
     },
 
+    // ==================== RENDER ====================
+
     render() {
         const items = BileteOnlineCart.getItems();
 
@@ -168,22 +219,26 @@ const CartPage = {
         const timerBar = document.getElementById('timer-bar');
 
         loading.classList.add('hidden');
+        const hadFocus = !!document.activeElement && container.contains(document.activeElement);
 
         if (items.length === 0) {
             container.classList.add('hidden');
+            container.innerHTML = '';
             summarySection.classList.add('hidden');
             promoSection.classList.add('hidden');
             timerBar.classList.add('hidden');
             emptyState.classList.remove('hidden');
-            // Reset the "N bilete" counter in the page header (and the
-            // hidden summary block) — they're cosmetic so leaving them
-            // stale doesn't break anything, but it shows e.g.
-            // "1 bilete" next to "Coșul tău este gol" after the user
-            // clears the cart. Zeroing them keeps the UI honest.
+            // The last line was removed from the keyboard: move focus to the empty-state heading.
+            if (hadFocus) {
+                const heading = emptyState.querySelector('h2');
+                if (heading) heading.focus();
+            }
+            // Reset the counters so the page doesn't show e.g. "1 bilet" next to "Coșul tău e gol".
             const totalItemsEl = document.getElementById('totalItems');
             if (totalItemsEl) totalItemsEl.textContent = '0';
             const summaryItemsEl = document.getElementById('summaryItems');
             if (summaryItemsEl) summaryItemsEl.textContent = '0';
+            document.querySelectorAll('[data-items-word]').forEach((el) => { el.textContent = this.ticketsWord(0); });
             return;
         }
 
@@ -194,22 +249,30 @@ const CartPage = {
         timerBar.classList.remove('hidden');
 
         try {
-            const html = items.map((item, index) => this.renderCartItem(item, index)).join('');
-            container.innerHTML = html;
+            // Re-rendering replaces the buttons, so keyboard focus is carried over to the same control.
+            const active = document.activeElement;
+            const focusKey = active && container.contains(active) ? active.getAttribute('data-focus') : null;
+            const focusCard = focusKey ? active.closest('.ci') : null;
+            const focusIndex = focusCard ? focusCard.getAttribute('data-index') : null;
+
+            container.innerHTML = items.map((item, index) => this.renderCartItem(item, index)).join('');
+
+            if (focusKey) {
+                const target = container.querySelector('.ci[data-index="' + focusIndex + '"] [data-focus="' + focusKey + '"]')
+                    || [...container.querySelectorAll('[data-focus="' + focusKey + '"]')].pop();
+                if (target) target.focus();
+            }
             this.updateSummary();
         } catch (error) {
-            // Don't swallow render failures silently — they're the only
-            // signal we have when a cart item shape changes (e.g. an
-            // activity item field rename) and the page ends up empty.
+            // Don't swallow render failures silently — they're the only signal we have when a cart item shape
+            // changes (e.g. an activity item field rename) and the page ends up empty.
             console.error('[CartPage] render failed:', error, items);
         }
     },
 
     /**
-     * Render an activity cart line. Simpler than event lines — activities
-     * sell by (slot date + start time + variant) instead of (event +
-     * ticket type), so quantity-controls double as participant-count
-     * controls and the variant's capacity_share is informational.
+     * Render an activity cart line. Activities sell by (slot date + start time + variant) instead of
+     * (event + ticket type), so the quantity controls double as participant-count controls.
      */
     renderActivityCartItem(item, index) {
         const itemKey = item.key || index;
@@ -219,82 +282,51 @@ const CartPage = {
         const price = (typeof v.price === 'number' ? v.price : item.price) || 0;
         const lineTotal = price * quantity;
 
-        const imgSrc = (typeof getStorageUrl === 'function' && a.image)
-            ? getStorageUrl(a.image)
-            : (a.image || '/assets/images/placeholder-activity.svg');
-
+        const imgSrc = a.image ? (typeof getStorageUrl === 'function' ? getStorageUrl(a.image) : a.image) : '';
         const title = a.title || 'Activitate';
         const variantName = v.name || 'Bilet';
-        const slotDate = item.booking_date || '';
         const slotStart = (item.slot_start_time || '').substring(0, 5);
         const slotEnd = (item.slot_end_time || '').substring(0, 5);
         const venueLine = [a.venue, a.city].filter(Boolean).join(' · ');
+        const href = a.slug ? '/activitate/' + encodeURIComponent(a.slug) : '';
 
-        let formattedDate = slotDate;
-        try {
-            if (typeof BileteOnlineUtils !== 'undefined' && BileteOnlineUtils.formatDate) {
-                formattedDate = BileteOnlineUtils.formatDate(slotDate, 'medium');
-            }
-        } catch (e) { /* fall back to raw YYYY-MM-DD */ }
-
+        const formattedDate = this.formatDay(item.booking_date || '', 'long');
         const slotLine = slotStart
             ? `${formattedDate} · ${slotStart}${slotEnd ? '–' + slotEnd : ''}`
             : formattedDate;
 
-        return '<div class="bg-paper border-2 border-ink/10 cart-item rounded-3xl" data-item-key="' + itemKey + '" data-index="' + index + '">' +
-            '<div class="flex gap-4 p-4">' +
-                '<div class="w-24 h-24 overflow-hidden rounded-2xl shrink-0 bg-paper-2 border border-ink/10 mobile:w-14 mobile:h-14">' +
-                    '<img src="' + imgSrc + '" alt="' + title + '" class="object-cover w-full h-full" loading="lazy" onerror="this.style.display=\'none\'">' +
+        return '<article class="ci" data-item-key="' + this.esc(itemKey) + '" data-index="' + index + '">' +
+            this.media(imgSrc, href, title) +
+            '<div class="ci-head">' +
+                '<div class="ci-text">' +
+                    '<p class="ci-kicker">Activitate</p>' +
+                    '<h3 class="ci-title">' + (href ? '<a href="' + href + '">' + this.esc(title) + '</a>' : this.esc(title)) + '</h3>' +
+                    (slotLine ? '<p class="ci-meta">' + this.icon('calendar-blank') + '<span>' + this.esc(slotLine) + '</span></p>' : '') +
+                    (venueLine ? '<p class="ci-meta">' + this.icon('map-pin') + '<span>' + this.esc(venueLine) + '</span></p>' : '') +
                 '</div>' +
-                '<div class="flex-1 min-w-0">' +
-                    '<div class="flex items-start justify-between gap-3">' +
-                        '<div class="min-w-0">' +
-                            '<p class="text-[10px] font-mono tracking-[.18em] text-vermilion">ACTIVITATE</p>' +
-                            '<h3 class="font-display text-xl font-bold truncate">' + title + '</h3>' +
-                            '<p class="text-sm text-ink-soft truncate">' + slotLine + '</p>' +
-                            (venueLine ? '<p class="text-xs text-ink-soft truncate">' + venueLine + '</p>' : '') +
-                        '</div>' +
-                        '<button onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge rezervarea" class="self-start p-2 rounded-full text-ink-soft hover:text-vermilion hover:bg-paper-2 transition">' +
-                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
-                        '</button>' +
-                    '</div>' +
-                    '<div class="flex items-center justify-between gap-3 mt-3">' +
-                        '<div>' +
-                            '<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-ochre/15 text-ochre text-xs font-bold">' + variantName + '</span>' +
-                        '</div>' +
-                        '<div class="flex items-center gap-2">' +
-                            '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade nr. participanți" class="flex items-center justify-center w-8 h-8 rounded-full bg-paper border-2 border-ink/10 hover:border-ink transition">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
-                            '</button>' +
-                            '<span class="w-8 font-bold text-center font-mono">' + quantity + '</span>' +
-                            '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește nr. participanți" class="flex items-center justify-center w-8 h-8 rounded-full bg-paper border-2 border-ink/10 hover:border-ink transition">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
-                            '</button>' +
-                        '</div>' +
-                        '<div class="text-right">' +
-                            '<div class="text-xs text-ink-soft font-mono">' + price.toFixed(2) + ' lei × ' + quantity + '</div>' +
-                            '<div class="font-display text-xl font-bold text-vermilion">' + lineTotal.toFixed(2) + ' lei</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
+                '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge rezervarea: ' + this.esc(title) + '">' + this.icon('x') + '</button>' +
             '</div>' +
-        '</div>';
+            '<div class="ci-bottom">' +
+                '<span class="ci-chip">' + this.icon('ticket') + this.esc(variantName) + '</span>' +
+                this.stepper(index, 'Participanți', 'Scade nr. participanți', 'Crește nr. participanți', quantity) +
+                '<div class="ci-price"><small>' + this.money(price) + ' × ' + quantity + '</small> <b>' + this.money(lineTotal) + '</b></div>' +
+            '</div>' +
+        '</article>';
     },
 
     renderCartItem(item, index) {
-        // Activity items take a separate, simpler card. Event-style code
-        // below assumes a ticketType + event date — activities have a
-        // slot date + variant instead.
+        // Activity items take a separate card: event code below assumes a ticketType + event date.
         if (item.type === 'activity') {
             return this.renderActivityCartItem(item, index);
         }
 
         // Handle both BileteOnlineCart format and legacy format
         const itemKey = item.key || index;
-        const eventImage = getStorageUrl(item.event?.image || item.event_image);
+        const imagePath = item.event?.image || item.event_image;
+        const eventImage = imagePath ? getStorageUrl(imagePath) : '';
         const eventTitle = item.event?.title || item.event_title || 'Eveniment';
         const eventDate = item.event?.performance_date || item.event?.date || item.event_date || '';
-        const venueName = item.event?.venue?.name || item.event?.venue || item.venue_name || '';
+        const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
         const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
         const ticketDescription = item.ticketType?.description || '';
         const price = item.ticketType?.price || item.price || 0;
@@ -303,6 +335,7 @@ const CartPage = {
         const seats = item.seats || [];
         const hasSeats = seats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
         const eventSlug = item.event?.slug || '';
+        const eventHref = '/bilete/' + encodeURIComponent(eventSlug);
 
         // Get per-ticket commission or fall back to event-level
         const commission = BileteOnlineCart.calculateItemCommission(item);
@@ -310,149 +343,78 @@ const CartPage = {
 
         const hasDiscount = originalPrice && originalPrice > price;
         const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
-        const formattedDate = eventDate ? BileteOnlineUtils.formatDate(eventDate, 'medium') : '';
+        const formattedDate = this.formatDay(eventDate, 'medium');
 
-        // Calculate commission - price is always base price
+        // Price is always the base price; an added-on-top commission is shown in the breakdown
         let commissionAmount = 0;
         if (commissionMode === 'added_on_top') {
             commissionAmount = commission.amount;
         }
         const totalWithCommission = price + commissionAmount;
 
-        // Build tooltip HTML with price breakdown
-        let tooltipHtml = '<p class="pb-2 mb-3 text-sm font-semibold border-b border-white/20">Detalii preț bilet ' + ticketTypeName + '</p>' +
-            '<div class="space-y-2 text-xs">' +
-                '<div class="flex justify-between"><span class="text-white/90">Preț bilet:</span><span>' + price.toFixed(2) + ' lei</span></div>';
-
+        let tip = '<b>Detalii preț bilet ' + this.esc(ticketTypeName) + '</b>' +
+            '<span><em>Preț bilet</em><strong>' + this.money(price) + '</strong></span>';
         if (commissionMode === 'added_on_top' && commissionAmount > 0) {
-            // Build commission description based on type
             let commissionLabel = 'Taxe procesare';
             if (commission.type === 'percentage') {
                 commissionLabel += ' (' + commission.rate + '%)';
             } else if (commission.type === 'fixed') {
                 commissionLabel += ' (fix)';
             } else if (commission.type === 'both') {
-                commissionLabel += ' (' + commission.rate + '% + ' + commission.fixed.toFixed(2) + ' lei)';
+                commissionLabel += ' (' + commission.rate + '% + ' + this.money(commission.fixed) + ')';
             }
-            tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">' + commissionLabel + ':</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                '<div class="flex justify-between pt-2 mt-2 border-t border-white/20"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
+            tip += '<span><em>' + commissionLabel + '</em><strong>+' + this.money(commissionAmount) + '</strong></span>' +
+                '<span class="is-total"><em>Total la plată</em><strong>' + this.money(totalWithCommission) + '</strong></span>';
         }
+        const tipId = 'ci-tip-' + index;
 
-        tooltipHtml += '</div>';
+        const quantityControl = hasSeats
+            ? '<div class="ci-seated"><span class="ci-qty">' + quantity + ' ' + this.ticketsWord(quantity) + '</span> ' +
+                '<a class="ci-add" href="' + eventHref + '">' + this.icon('plus') + 'Adaugă locuri</a></div>'
+            : this.stepper(index, 'Cantitate', 'Scade cantitatea', 'Crește cantitatea', quantity);
 
-        return '<div class="bg-white border-2 cart-item rounded-2xl border-border" data-item-key="' + itemKey + '" data-index="' + index + '">' +
-            '<div class="flex gap-4 p-3">' +
-                '<div class="w-24 h-24 overflow-hidden rounded-xl shrink-0 mobile:w-12 mobile:h-12">' +
-                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full" loading="lazy">' +
+        const metaLine = [formattedDate, venueName].filter(Boolean).join(' · ');
+
+        return '<article class="ci" data-item-key="' + this.esc(itemKey) + '" data-index="' + index + '">' +
+            this.media(eventImage, eventSlug ? eventHref : '', eventTitle) +
+            '<div class="ci-head">' +
+                '<div class="ci-text">' +
+                    '<p class="ci-kicker">Eveniment</p>' +
+                    '<h3 class="ci-title">' + (eventSlug ? '<a href="' + eventHref + '">' + this.esc(eventTitle) + '</a>' : this.esc(eventTitle)) + '</h3>' +
+                    (metaLine ? '<p class="ci-meta">' + this.icon('calendar-blank') + '<span>' + this.esc(metaLine) + '</span></p>' : '') +
+                    (ticketDescription ? '<p class="ci-notes">' + this.esc(ticketDescription) + '</p>' : '') +
+                    (seats.length > 0 ? '<p class="ci-seats">' + this.icon('map-pin') + '<span>' + this.esc(this.formatSeats(seats)) + '</span></p>' : '') +
                 '</div>' +
-                '<div class="flex-1 min-w-0">' +
-                    '<div class="flex items-center justify-between">' +
-                        '<div class="flex-1 min-w-0">' +
-                            '<h3 class="font-semibold truncate text-secondary">' + eventTitle + '</h3>' +
-                            '<p class="text-sm text-muted">' +
-                                formattedDate +
-                                (venueName ? ' • ' + venueName : '') +
-                            '</p>' +
-                        '</div>' +
-                        '<button onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge" class="self-start p-2 transition-colors rounded-lg text-muted hover:text-error hover:bg-red-50">' +
-                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>' +
-                            '</svg>' +
-                        '</button>' +
-                    '</div>' +
-                    '<div class="flex items-center justify-between mt-1 mobile:hidden">' +
-                        '<div class="relative inline-block tooltip-trigger">' +
-                            '<div class="flex items-center gap-2">' +
-                                '<span class="inline-flex items-center py-1 text-sm font-semibold text-secondary">' + ticketTypeName +
-                                    (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
-                                '</span>' +
-                                '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
-                            '</div>' +
-                            (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
-                            (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
-                            '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
-                        '</div>' +
-                        (hasSeats ?
-                        '<div class="flex items-center gap-2 ml-auto mr-8">' +
-                            '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
-                            '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors flex-none">' +
-                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
-                                'Adaugă locuri' +
-                            '</a>' +
-                        '</div>' :
-                        '<div class="flex items-center gap-2 ml-auto mr-8">' +
-                            '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
-                                '</svg>' +
-                            '</button>' +
-                            '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
-                            '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>' +
-                                '</svg>' +
-                            '</button>' +
-                        '</div>') +
-                        '<div class="flex-none text-right">' +
-                            (hasDiscount ? '<div class="text-sm line-through text-muted">' + BileteOnlineUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
-                            '<div class="font-bold text-primary">' + BileteOnlineUtils.formatCurrency(price * quantity) + '</div>' +
-                        '</div>' +
-                    '</div>' +
+                '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge: ' + this.esc(eventTitle) + ', ' + this.esc(ticketTypeName) + '">' + this.icon('x') + '</button>' +
+            '</div>' +
+            '<div class="ci-bottom">' +
+                '<div class="ci-ticket">' +
+                    '<span class="ci-chip">' + this.icon('ticket') + this.esc(ticketTypeName) + (hasDiscount ? '<em class="ci-off">-' + discountPercent + '%</em>' : '') + '</span>' +
+                    '<button class="ci-tip-btn" type="button" aria-label="Detalii preț" aria-describedby="' + tipId + '">' +
+                        '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>' +
+                    '</button>' +
+                    '<span class="ci-tip-box" role="tooltip" id="' + tipId + '">' + tip + '</span>' +
+                '</div>' +
+                quantityControl +
+                '<div class="ci-price">' +
+                    (hasDiscount ? '<s>' + this.money(originalPrice * quantity) + '</s> ' : '') +
+                    '<b>' + this.money(price * quantity) + '</b>' +
                 '</div>' +
             '</div>' +
-            '<div class="items-center justify-between hidden px-2 pb-2 mobile:flex">' +
-                '<div class="relative inline-block tooltip-trigger">' +
-                    '<div class="flex items-center gap-2">' +
-                        '<span class="w-8 font-semibold text-center">' + quantity + ' x </span>' +
-                        '<span class="inline-flex items-center py-1 pr-2 text-sm font-semibold text-secondary">' + ticketTypeName +
-                            (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
-                        '</span>' +
-                        '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
-                    '</div>' +
-                    (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
-                    (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
-                    '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
-                '</div>' +
-                '<div class="flex-none text-right">' +
-                    '<div class="flex items-center gap-2">' +
-                        (hasDiscount ? '<div class="text-sm line-through text-muted">' + BileteOnlineUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
-                        '<div class="font-bold text-primary">' + BileteOnlineUtils.formatCurrency(price * quantity) + '</div>' +
-                    '</div>' +
-                    (hasSeats ?
-                    '<div class="flex items-center gap-2 ml-auto">' +
-                        '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors flex-none">' +
-                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
-                            'Adaugă locuri' +
-                        '</a>' +
-                    '</div>' :
-                    '<div class="flex items-center gap-2 ml-auto">' +
-                        '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
-                            '</svg>' +
-                        '</button>' +
-                        '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
-                        '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>' +
-                            '</svg>' +
-                        '</button>' +
-                    '</div>') +
-                '</div>' +
-            '</div>' +
-        '</div>';
+        '</article>';
     },
+
+    // ==================== ACTIONS ====================
 
     updateQuantity(index, delta) {
         const items = BileteOnlineCart.getItems();
         if (!items[index]) return;
 
         const item = items[index];
+        const isActivity = item.type === 'activity';
 
-        // For seated cart items quantity is bound to the picked seats —
-        // bumping qty without picking more seats produced ghost tickets
-        // with no seat_uid on the checkout. Force the user back to the
-        // event page where they can re-open the seat picker.
+        // For seated cart items quantity is bound to the picked seats — bumping qty without picking more seats
+        // produced ghost tickets with no seat_uid on the checkout. Send the user back to the event page instead.
         const hasHeldSeats = Array.isArray(item.seat_uids) && item.seat_uids.length > 0;
         if (hasHeldSeats) {
             if (typeof BileteOnlineNotifications !== 'undefined') {
@@ -461,7 +423,9 @@ const CartPage = {
             return;
         }
 
-        const currentQty = item.quantity;
+        // Activity lines count participants: participants_count is what the card, the summary and checkout read and
+        // quantity is its legacy alias, so both move together (only quantity used to change and the line looked stuck).
+        const currentQty = isActivity ? (item.participants_count || item.quantity || 1) : item.quantity;
         let newQty = currentQty + delta;
         const minQty = item.ticketType?.min_per_order || item.min_per_order || 1;
         const maxQty = item.ticketType?.max_per_order || item.max_per_order || item.max_quantity || 10;
@@ -483,18 +447,25 @@ const CartPage = {
             this.removeItem(index);
         } else {
             items[index].quantity = newQty;
+            if (isActivity) items[index].participants_count = newQty;
             BileteOnlineCart.save(items);
             this.render();
         }
     },
 
     async removeItem(index) {
-        const items = BileteOnlineCart.getItems();
-        const item = items[index];
-        const itemEl = document.querySelector(`[data-index="${index}"]`) || document.querySelector(`.cart-item:nth-child(${index + 1})`);
+        const item = BileteOnlineCart.getItems()[index];
+        if (!item) return;
+        const itemEl = document.querySelector(`#cartPageItems .ci[data-index="${index}"]`);
+        // A second click during the fade-out is ignored. The card is flagged rather than the button disabled: a
+        // disabled button drops keyboard focus before render() can move it to the next line.
+        if (itemEl) {
+            if (itemEl.hasAttribute('data-removing')) return;
+            itemEl.setAttribute('data-removing', '');
+        }
 
         // Release seats if this item has them
-        if (item && item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
+        if (item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
             try {
                 await BileteOnlineAPI.delete('/cart/seats', {
                     event_seating_id: item.event_seating_id,
@@ -505,24 +476,32 @@ const CartPage = {
             }
         }
 
+        const finish = () => {
+            // Re-read the cart and remove by key: two removals started close together must not restore each other's line.
+            const items = BileteOnlineCart.getItems();
+            const at = item.key ? items.findIndex((it) => it.key === item.key) : index;
+            if (at >= 0 && at < items.length) items.splice(at, 1);
+            BileteOnlineCart.save(items);
+            this.render();
+
+            if (items.length === 0) {
+                localStorage.removeItem('cart_end_time');
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                }
+            }
+        };
+
         if (itemEl) {
             itemEl.style.opacity = '0';
             itemEl.style.transform = 'translateX(-20px)';
-            itemEl.style.transition = 'all 0.3s ease';
-            setTimeout(() => {
-                items.splice(index, 1);
-                BileteOnlineCart.save(items);
-                this.render();
-
-                if (items.length === 0) {
-                    localStorage.removeItem('cart_end_time');
-                    if (this.timerInterval) {
-                        clearInterval(this.timerInterval);
-                    }
-                }
-            }, 300);
+            setTimeout(finish, 300);
+        } else {
+            finish();
         }
     },
+
+    // ==================== SUMMARY ====================
 
     updateSummary() {
         const items = BileteOnlineCart.getItems();
@@ -533,12 +512,9 @@ const CartPage = {
         const savingsTickets = [];
         let hasAddedOnTopCommission = false;
 
-        // Group items by event. Activities use a different item shape
-        // (item.activity + item.variant + item.participants_count) than
-        // event tickets (item.event + item.ticketType + item.quantity), so
-        // we normalize here before grouping. Without this branch, activities
-        // landed in the "0 bilete, 0.00 lei" bucket because the legacy
-        // ticketType lookups returned undefined.
+        // Group items by event. Activities use a different item shape (item.activity + item.variant +
+        // item.participants_count) than event tickets (item.event + item.ticketType + item.quantity), so we
+        // normalize here before grouping.
         const eventGroups = {};
         items.forEach(item => {
             const isActivity = item.type === 'activity';
@@ -613,21 +589,15 @@ const CartPage = {
                 originalPrice: originalPrice
             });
 
-            // Calculate savings for discounted items
             if (originalPrice && originalPrice > price) {
-                const itemSavings = (originalPrice - price) * quantity;
-                savings += itemSavings;
+                savings += (originalPrice - price) * quantity;
                 savingsTickets.push(ticketName);
             }
         });
 
-        // Total = base prices + commission (no other taxes).
-        // Read the live discount from BileteOnlineCart every time we render
-        // instead of relying on this.discount, which used to cache the
-        // value at apply-time and went stale after any qty change. The
-        // single source of truth is BileteOnlineCart.getPromoDiscount() —
-        // it already clamps against subtotal and reflects the latest
-        // backend revalidation result.
+        // Total = base prices + commission − discount. The live discount is read from BileteOnlineCart on every
+        // render (it clamps against the subtotal and reflects the latest backend revalidation); a value cached at
+        // apply time went stale after any qty change.
         const subtotalWithCommission = baseSubtotal + totalCommission;
         let liveDiscount = 0;
         try {
@@ -637,26 +607,18 @@ const CartPage = {
         } catch (e) {
             liveDiscount = this.discount || 0;
         }
-        // Defensive clamp — the discount must never exceed the displayed
-        // subtotal (with commission), otherwise the total would go
-        // negative and the cart would silently zero out.
+        // The discount must never exceed the subtotal (with commission), or the total would go negative.
         if (liveDiscount > subtotalWithCommission) liveDiscount = subtotalWithCommission;
-        // Keep this.discount in sync for callers that still read it.
         this.discount = liveDiscount;
         const subtotalAfterDiscount = subtotalWithCommission - liveDiscount;
 
-        // Payment processing fee preview (Stripe et al.). Computed against
-        // (subtotal + commission - discount) to match the order snapshot —
-        // ProcessingFeeCalculator on the server applies on the same base.
-        // Pre-warmed via BileteOnlineCart.init(); if it hasn't loaded yet
-        // (slow network) we render fee=0 now and refresh once it arrives.
-        let processingFee = { amount: 0, percent_rate: 0, fixed: 0, provider: null, label: '', pass_to_customer: false };
+        // Payment processing fee config is pre-warmed via BileteOnlineCart.init(); if it hasn't loaded yet we
+        // render now and refresh once it arrives. The fee itself is shown at checkout, not here.
         try {
             if (typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.computeProcessingFee === 'function') {
-                processingFee = BileteOnlineCart.computeProcessingFee(subtotalAfterDiscount);
-                // Lazy-load + re-render once if the config wasn't there yet.
-                if (! BileteOnlineCart.getPaymentFeeConfig() && BileteOnlineCart.loadPaymentFeeConfig) {
-                    if (! this._feeConfigReloadScheduled) {
+                BileteOnlineCart.computeProcessingFee(subtotalAfterDiscount);
+                if (!BileteOnlineCart.getPaymentFeeConfig() && BileteOnlineCart.loadPaymentFeeConfig) {
+                    if (!this._feeConfigReloadScheduled) {
                         this._feeConfigReloadScheduled = true;
                         BileteOnlineCart.loadPaymentFeeConfig().then(cfg => {
                             if (cfg) this.updateSummary();
@@ -666,34 +628,28 @@ const CartPage = {
             }
         } catch (e) {}
 
-        // Cart page total = tickets + ticketing commission (− discount) ONLY.
-        // The payment transaction fee depends on the chosen payment method, so
-        // it is applied & shown at checkout, not here.
-        let total = subtotalAfterDiscount;
+        // Cart page total = tickets + ticketing commission (− discount) ONLY. The payment transaction fee depends
+        // on the chosen payment method, so it is applied & shown at checkout.
+        const total = subtotalAfterDiscount;
         const points = Math.floor(total / 10);
 
-        // Update DOM. Subtotal now shows BASE prices only — the platform
-        // commission gets its own row below so the customer can see exactly
-        // what they're paying for instead of having it rolled into one
-        // ambiguous "subtotal" number.
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
-        document.getElementById('subtotal').textContent = BileteOnlineUtils.formatCurrency(baseSubtotal);
+        document.querySelectorAll('[data-items-word]').forEach((el) => { el.textContent = this.ticketsWord(totalItems); });
+        // Subtotal shows BASE prices only; the platform commission gets its own row.
+        document.getElementById('subtotal').textContent = this.money(baseSubtotal);
 
-        // Platform commission row (added on top, organizer-configured rate)
         const commRow = document.getElementById('platformCommissionRow');
         if (commRow) {
             if (hasAddedOnTopCommission && totalCommission > 0) {
                 commRow.classList.remove('hidden');
-                document.getElementById('platformCommissionAmount').textContent = BileteOnlineUtils.formatCurrency(totalCommission);
-                // Surface the rate — "Comision platformă (2%)".
+                document.getElementById('platformCommissionAmount').textContent = this.money(totalCommission);
                 const lbl = document.getElementById('platformCommissionLabel');
                 if (lbl) {
-                    // Derive effective % from the actual amount so multi-item
-                    // carts with different rates collapse to an average that
-                    // customers can still verify with their calculator.
+                    // Effective % from the actual amount, so carts with different rates show an average that
+                    // customers can still verify.
                     const ratePct = baseSubtotal > 0
-                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
+                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '').replace('.', ',')
                         : '';
                     lbl.textContent = 'Comision ticketing' + (ratePct ? ' (' + ratePct + '%)' : '');
                 }
@@ -702,75 +658,54 @@ const CartPage = {
             }
         }
 
-        // The payment transaction fee is NOT shown on the cart page — it moves
-        // to checkout (where the payment method, each with its own fee, is
-        // chosen). Always keep the row hidden here.
+        // The payment transaction fee is NOT shown on the cart page (it depends on the payment method chosen at checkout).
         const feeRow = document.getElementById('processingFeeRow');
         if (feeRow) feeRow.classList.add('hidden');
 
-        // Render breakdown in taxes container - grouped by event
+        // Breakdown, grouped by event or activity
         const taxesContainer = document.getElementById('taxesContainer');
         if (taxesContainer) {
             let breakdownHtml = '';
             const eventIds = Object.keys(eventGroups);
             const hasMultipleEvents = eventIds.length > 1;
 
-            eventIds.forEach(function(eventId, eventIndex) {
+            eventIds.forEach((eventId, eventIndex) => {
                 const group = eventGroups[eventId];
 
-                // Show event title only if multiple events
+                // Show the title only when the cart spans several events
                 if (hasMultipleEvents) {
                     if (eventIndex > 0) {
-                        breakdownHtml += '<div class="pt-3 mt-3 border-t border-border"></div>';
+                        breakdownHtml += '<hr class="cs-sep">';
                     }
-                    // Build event info string: title (date, venue, city)
-                    var eventInfo = group.title;
-                    var details = [];
-                    if (group.date) details.push(BileteOnlineUtils.formatDate(group.date, 'short'));
+                    const details = [];
+                    if (group.date) details.push(this.formatDay(group.date, 'short'));
                     if (group.venue) details.push(group.venue);
                     if (group.city && group.city !== group.venue) details.push(group.city);
-                    if (details.length > 0) {
-                        eventInfo += ' <span class="font-normal text-muted">(' + details.join(', ') + ')</span>';
-                    }
-                    breakdownHtml += '<div class="mb-2 text-sm font-bold text-secondary">' + eventInfo + '</div>';
+                    breakdownHtml += '<p class="cs-group">' + this.esc(group.title) +
+                        (details.length > 0 ? ' <span>(' + this.esc(details.join(', ')) + ')</span>' : '') + '</p>';
                 }
 
-                // Show each ticket type
-                group.tickets.forEach(function(ticket) {
-                    breakdownHtml += '<div class="flex justify-between text-sm">' +
-                        '<span class="text-muted">' + ticket.qty + 'x ' + ticket.name + '</span>' +
-                        '<span class="font-medium">' + BileteOnlineUtils.formatCurrency(ticket.lineTotal) + '</span>' +
-                    '</div>';
+                group.tickets.forEach((ticket) => {
+                    breakdownHtml += '<div class="cs-line"><span>' + ticket.qty + ' × ' + this.esc(ticket.name) + '</span>' +
+                        '<strong>' + this.money(ticket.lineTotal) + '</strong></div>';
                 });
             });
-
-            // Commission used to be rendered here as a generic "Taxe procesare"
-            // line, but it's now surfaced separately in #platformCommissionRow
-            // with the explicit "Comision platformă (X%)" label between
-            // Subtotal and Taxa procesare card. Keeping it here too would
-            // double-charge visually.
 
             taxesContainer.innerHTML = breakdownHtml;
         }
 
-        document.getElementById('totalPrice').textContent = BileteOnlineUtils.formatCurrency(total);
+        document.getElementById('totalPrice').textContent = this.money(total);
 
-        // Discount row — use the live value computed above (liveDiscount)
-        // so a stale this.discount can't show a non-zero amount when the
-        // promo has been revalidated to 0 / removed.
         if (liveDiscount > 0) {
             document.getElementById('discountRow').classList.remove('hidden');
-            document.getElementById('discountAmount').textContent = `-${BileteOnlineUtils.formatCurrency(liveDiscount)}`;
+            document.getElementById('discountAmount').textContent = `-${this.money(liveDiscount)}`;
         } else {
             document.getElementById('discountRow').classList.add('hidden');
         }
 
-        // Savings row with ticket name
         if (savings > 0) {
             document.getElementById('savingsRow').classList.remove('hidden');
-            document.getElementById('savings').textContent = BileteOnlineUtils.formatCurrency(savings);
-
-            // Update the savings text to include ticket name(s)
+            document.getElementById('savings').textContent = this.money(savings);
             const savingsTextEl = document.getElementById('savingsText');
             if (savingsTextEl && savingsTickets.length > 0) {
                 const ticketNames = [...new Set(savingsTickets)].join(', ');
@@ -794,7 +729,6 @@ const CartPage = {
     formatSeats(seats) {
         if (!seats || seats.length === 0) return '';
 
-        // Group seats by section and row
         const grouped = {};
         seats.forEach(seat => {
             const key = (seat.section || 'Secțiune') + ' - Rând ' + (seat.row || '?');
@@ -802,47 +736,45 @@ const CartPage = {
             grouped[key].push(seat.seat || seat.label || '?');
         });
 
-        // Format output
         const parts = [];
         Object.keys(grouped).forEach(key => {
-            const seatLabels = grouped[key].join(', ');
-            parts.push(key + ': Loc ' + seatLabels);
+            parts.push(key + ': Loc ' + grouped[key].join(', '));
         });
 
         return parts.join(' | ');
     },
 
-    // Markup for the applied-promo message. Includes an "×" button so the
-    // user can actually remove the code after applying it.
+    // ==================== PROMO CODE ====================
+
+    // Markup for the applied-promo message, with a button that removes the code.
     renderAppliedPromoMessage(promo, prefix) {
         const label = promo.type === 'percentage'
             ? `-${promo.value}% reducere`
-            : `-${BileteOnlineUtils.formatCurrency(promo.value)} reducere`;
+            : `-${this.money(promo.value)} reducere`;
         const appliedTo = promo.appliedToLabel
-            ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
+            ? `<small>Aplicat pe: ${this.esc(promo.appliedToLabel)}</small>`
             : '';
-        const codeSuffix = prefix.includes(':') ? '' : ` (${promo.code})`;
-        return `<span class="inline-flex items-start gap-2">
-                    <span class="flex-1">${prefix} ${label}${codeSuffix}${appliedTo}</span>
-                    <button type="button" onclick="CartPage.removePromo()" class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 text-muted hover:text-primary hover:bg-primary/10 rounded-full transition-colors" aria-label="Elimină codul promoțional" title="Elimină codul">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </span>`;
+        const codeSuffix = prefix.includes(':') ? '' : ` (${this.esc(promo.code)})`;
+        return '<span class="co-promo-applied">' + this.icon('check-circle') +
+            `<span>${this.esc(prefix)} ${this.esc(label)}${codeSuffix}${appliedTo}</span>` +
+            '<button class="co-promo-x" type="button" onclick="CartPage.removePromo()" aria-label="Elimină codul promoțional" title="Elimină codul">' + this.icon('x') + '</button>' +
+        '</span>';
     },
 
     async applyPromo() {
-        const code = document.getElementById('promoCode').value.trim().toUpperCase();
+        const input = document.getElementById('promoCode');
+        const code = input.value.trim().toUpperCase();
         const messageEl = document.getElementById('promoMessage');
+        const btn = document.querySelector('#promo-section button');
+        if (btn && btn.disabled) return;
 
         if (!code) {
             messageEl.textContent = 'Te rugăm să introduci un cod promoțional';
-            messageEl.className = 'mt-2 text-sm text-muted';
-            messageEl.classList.remove('hidden');
+            messageEl.className = 'co-promo-msg';
+            input.focus();
             return;
         }
 
-        // Disable button during validation
-        const btn = document.querySelector('#promo-section button');
         if (btn) { btn.disabled = true; btn.textContent = 'Se verifică...'; }
 
         const result = await BileteOnlineCart.applyPromoCode(code);
@@ -852,18 +784,16 @@ const CartPage = {
             this.discount = BileteOnlineCart.getPromoDiscount();
             this.appliedPromo = code;
 
-            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, '✓ Cod aplicat!');
-            messageEl.className = 'mt-2 text-sm text-success';
-            messageEl.classList.remove('hidden');
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, 'Cod aplicat!');
+            messageEl.className = 'co-promo-msg is-ok';
 
-            document.getElementById('promoCode').disabled = true;
+            input.disabled = true;
             if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
 
             this.updateSummary();
         } else {
             messageEl.textContent = '✗ ' + (result.message || 'Cod invalid sau expirat');
-            messageEl.className = 'mt-2 text-sm text-primary';
-            messageEl.classList.remove('hidden');
+            messageEl.className = 'co-promo-msg is-err';
             if (btn) { btn.disabled = false; btn.textContent = 'Aplică'; }
         }
     },
@@ -877,12 +807,12 @@ const CartPage = {
         const messageEl = document.getElementById('promoMessage');
         if (messageEl) {
             messageEl.innerHTML = '';
-            messageEl.classList.add('hidden');
+            messageEl.className = 'co-promo-msg hidden';
         }
-        const input = document.getElementById('promoCode');
-        if (input) { input.value = ''; input.disabled = false; }
         const btn = document.querySelector('#promo-section button');
         if (btn) { btn.textContent = 'Aplică'; btn.disabled = false; }
+        const input = document.getElementById('promoCode');
+        if (input) { input.value = ''; input.disabled = false; input.focus(); }
 
         this.updateSummary();
     },
@@ -891,9 +821,7 @@ const CartPage = {
         const promo = BileteOnlineCart.getPromoCode();
         if (!promo) return;
 
-        // If the cart is empty, any promo left in storage is stale (e.g. the
-        // previous order finished but the cart was reopened before storage
-        // cleared) — wipe it so the new order starts fresh.
+        // An empty cart with a promo left in storage is stale (a finished order) — wipe it so the new order starts fresh.
         if (BileteOnlineCart.getItemCount() === 0) {
             BileteOnlineCart.removePromoCode();
             return;
@@ -904,9 +832,8 @@ const CartPage = {
 
         const messageEl = document.getElementById('promoMessage');
         if (messageEl) {
-            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, `✓ Cod aplicat: ${promo.code}`);
-            messageEl.className = 'mt-2 text-sm text-success';
-            messageEl.classList.remove('hidden');
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, `Cod aplicat: ${promo.code}`);
+            messageEl.className = 'co-promo-msg is-ok';
         }
         const input = document.getElementById('promoCode');
         if (input) { input.value = promo.code; input.disabled = true; }
@@ -917,9 +844,7 @@ const CartPage = {
 
 document.addEventListener('DOMContentLoaded', () => CartPage.init());
 
-// Listen for cart expiration event from cart.js
-// `ambilet:` alias kept for the legacy listener; `bileteonline:` is what
-// cart.js actually dispatches on this marketplace.
+// Cart expiration event from cart.js (`ambilet:` alias kept for the legacy listener).
 function _onCartExpired() {
     if (CartPage.timerInterval) {
         clearInterval(CartPage.timerInterval);
@@ -929,6 +854,3 @@ function _onCartExpired() {
 }
 window.addEventListener('ambilet:cart:expired', _onCartExpired);
 window.addEventListener('bileteonline:cart:expired', _onCartExpired);
-
-// Initialize featured carousel
-document.addEventListener('DOMContentLoaded', () => FeaturedCarousel.init());

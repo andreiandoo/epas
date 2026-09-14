@@ -103,7 +103,7 @@ const BileteOnlineCart = {
         // Start/reset reservation timer when adding items
         this.startReservationTimer();
 
-        this.showNotification(`${ticketTypeData.name} adÄƒugat Ã®n coÈ™!`);
+        this.showNotification(`${ticketTypeData.name} adăugat în coș!`);
 
         // CAPI AddToCart (Layer B bridge â€” backend forwards to Meta Graph API)
         try {
@@ -233,6 +233,8 @@ const BileteOnlineCart = {
                 this._releaseItemSeats(removed);
             } else {
                 cart.items[index].quantity = quantity;
+                // Activity lines count participants; quantity is only the legacy alias of participants_count
+                if (cart.items[index].type === 'activity') cart.items[index].participants_count = quantity;
             }
             this.saveCart(cart);
         }
@@ -271,7 +273,7 @@ const BileteOnlineCart = {
             const removed = cart.items.splice(index, 1)[0];
             this._releaseItemSeats(removed);
             this.saveCart(cart);
-            this.showNotification(`${removed.ticketType.name} eliminat din coÈ™`);
+            this.showNotification(`${this._lineName(removed)} eliminat din coș`);
         }
 
         return cart;
@@ -316,8 +318,29 @@ const BileteOnlineCart = {
     getSubtotal() {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
-            return total + (item.ticketType.price * item.quantity);
+            return total + (this._unitPrice(item) * this._lineQuantity(item));
         }, 0);
+    },
+
+    // Activity items carry variant + participants_count instead of ticketType + quantity. These read either shape;
+    // the ticketType-only versions threw on activities (e.g. every promo code failed with a TypeError).
+    _unitPrice(item) {
+        if (item.type === 'activity') {
+            return (typeof item.variant?.price === 'number' ? item.variant.price : item.price) || 0;
+        }
+        return item.ticketType?.price || item.price || 0;
+    },
+
+    _originalPrice(item) {
+        return (item.type === 'activity' ? item.variant?.originalPrice : item.ticketType?.originalPrice) || item.original_price || 0;
+    },
+
+    _lineQuantity(item) {
+        return (item.type === 'activity' ? item.participants_count : 0) || item.quantity || 0;
+    },
+
+    _lineName(item) {
+        return (item.type === 'activity' ? item.variant?.name : item.ticketType?.name) || item.ticket_type_name || 'Bilet';
     },
 
     /**
@@ -326,8 +349,9 @@ const BileteOnlineCart = {
     getSavings() {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
-            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
-                return total + ((item.ticketType.originalPrice - item.ticketType.price) * item.quantity);
+            const price = this._unitPrice(item), original = this._originalPrice(item);
+            if (original && original > price) {
+                return total + ((original - price) * this._lineQuantity(item));
             }
             return total;
         }, 0);
@@ -343,9 +367,10 @@ const BileteOnlineCart = {
         const ticketNames = [];
 
         cart.items.forEach(item => {
-            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
-                totalSavings += (item.ticketType.originalPrice - item.ticketType.price) * item.quantity;
-                ticketNames.push(item.ticketType.name);
+            const price = this._unitPrice(item), original = this._originalPrice(item);
+            if (original && original > price) {
+                totalSavings += (original - price) * this._lineQuantity(item);
+                ticketNames.push(this._lineName(item));
             }
         });
 
@@ -490,7 +515,7 @@ const BileteOnlineCart = {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
             const commission = this.calculateItemCommission(item);
-            return total + (commission.amount * item.quantity);
+            return total + (commission.amount * this._lineQuantity(item));
         }, 0);
     },
 
@@ -503,12 +528,12 @@ const BileteOnlineCart = {
         return cart.items.map(item => {
             const commission = this.calculateItemCommission(item);
             return {
-                ticketName: item.ticketType.name,
-                eventTitle: item.event.title,
-                basePrice: item.ticketType.price,
+                ticketName: this._lineName(item),
+                eventTitle: item.event?.title || item.activity?.title || '',
+                basePrice: this._unitPrice(item),
                 commission: commission,
-                quantity: item.quantity,
-                totalCommission: commission.amount * item.quantity
+                quantity: this._lineQuantity(item),
+                totalCommission: commission.amount * this._lineQuantity(item)
             };
         });
     },
@@ -534,17 +559,24 @@ const BileteOnlineCart = {
     async applyPromoCode(code) {
         const cart = this.getCart();
         if (cart.items.length === 0) {
-            return { success: false, message: 'CoÈ™ul este gol' };
+            return { success: false, message: 'Coșul este gol' };
+        }
+
+        // Promo codes are validated against an event (the API requires event_id), so only event tickets count.
+        // For a cart of event tickets only this is exactly what was sent before.
+        const eventItems = cart.items.filter(item => item.type !== 'activity');
+        if (eventItems.length === 0) {
+            return { success: false, message: 'Codurile promoționale se aplică doar biletelor la evenimente, nu și rezervărilor de activități.' };
         }
 
         try {
-            // Get first event ID for validation (simplified)
-            const eventId = cart.items[0].eventId;
-            const subtotal = this.getSubtotal();
-            const ticketCount = this.getItemCount();
+            // First event ID for validation (simplified)
+            const eventId = eventItems[0].eventId;
+            const subtotal = eventItems.reduce((total, item) => total + (this._unitPrice(item) * this._lineQuantity(item)), 0);
+            const ticketCount = eventItems.reduce((total, item) => total + (item.quantity || 0), 0);
 
             // Build cart items with ticket_type_id for ticket-type-specific discounts
-            const items = cart.items.map(item => ({
+            const items = eventItems.map(item => ({
                 event_id: item.eventId,
                 ticket_type_id: item.ticketTypeId,
                 quantity: item.quantity,
@@ -580,7 +612,7 @@ const BileteOnlineCart = {
                     detail: { promo: promoData }
                 }));
 
-                this.showNotification(`Cod promoÈ›ional "${code}" aplicat cu succes!`, 'success');
+                this.showNotification(`Cod promoțional "${code}" aplicat cu succes!`, 'success');
                 return { success: true, promo: promoData };
             }
 
@@ -600,7 +632,7 @@ const BileteOnlineCart = {
             detail: { promo: null }
         }));
 
-        this.showNotification('Cod promoÈ›ional eliminat');
+        this.showNotification('Cod promoțional eliminat');
     },
 
     /**
@@ -892,7 +924,7 @@ const BileteOnlineCart = {
 
         // Show notification to user
         if (hadItems) {
-            this.showNotification('Timpul de rezervare a expirat. CoÈ™ul a fost golit.', 'warning');
+            this.showNotification('Timpul de rezervare a expirat. Coșul a fost golit.', 'warning');
         }
 
         console.log('Cart reservation expired - cart cleared');
