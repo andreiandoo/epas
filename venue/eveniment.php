@@ -66,9 +66,9 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
 document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
-    // Same defensive read as the PHP header: try ?id= first, then
-    // parse from the path so /venue/eveniment/{id} works even before
-    // the browser JS sees the query-param version of the URL.
+    
+    
+    
     const params = new URLSearchParams(window.location.search);
     let eventId = parseInt(params.get('id'), 10);
     if (!eventId) {
@@ -105,27 +105,27 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             : { text: 'Trecut', class: 'bg-slate-100 text-slate-500' };
     }
 
-    /**
-     * Compute an "insights" object with what went well, what didn't
-     * and suggestions — computed frontend-side from the event stats.
-     * The values pull from the same data the analytics page uses.
-     */
+    
+
+
+
+
     function computeInsights(ev, salesBreakdown) {
         const stats = ev.stats || {};
         const sold = stats.tickets_sold || 0;
         const cap = stats.stock_total || 0;
         const ci = stats.checked_in_count || 0;
-        // Uncapped ticket types (quota_total = -1) don't contribute to
-        // stock_total, so sold can legitimately exceed cap. Cap the
-        // displayed percentage at 100 and flag the case separately.
+        
+        
+        
         const rawPct = cap > 0 ? sold / cap * 100 : null;
         const pct = rawPct !== null ? Math.min(100, Math.round(rawPct)) : null;
         const overCap = rawPct !== null && rawPct > 100;
         const ciPct = sold > 0 ? Math.round(ci / sold * 100) : null;
 
-        // Prefer sales-breakdown total when the endpoint returns it;
-        // otherwise fall back to stats.revenue (quota_sold × price
-        // summed on the backend — same source /venue/utilizare uses).
+        
+        
+        
         const revenue = (salesBreakdown && salesBreakdown.total_revenue)
             || stats.revenue
             || 0;
@@ -135,8 +135,8 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const issues = [];
         const tips = [];
 
-        // Occupancy uses raw so we can distinguish real sold-outs from
-        // uncapped-donation tiers that pushed the count past capacity.
+        
+        
         if (rawPct !== null) {
             if (overCap) {
                 wins.push({ h: 'Ai depășit capacitatea de bază', p: 'S-au vândut ' + sold + ' bilete pentru o capacitate declarată de ' + cap + '. Probabil ai tipuri de bilete fără plafon (donații, invitații). Verifică setările tipurilor de bilete.' });
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return { wins, issues, tips, sold, cap, pct, rawPct, overCap, ci, ciPct, revenue, avgPrice };
     }
 
-    // Fetch event + sales breakdown in parallel.
+    
     let ev = null, salesBreakdown = null;
     try {
         const [evRes, sbRes] = await Promise.all([
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
     let html = '';
 
-    // Hero
+    
     html += `<section class="relative overflow-hidden bg-white border rounded-3xl border-slate-200 shadow-lg">
         <div class="relative flex flex-col md:flex-row gap-6 p-6">
             ${posterUrl ? `
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </div>
     </section>`;
 
-    // KPI grid
+    
     html += `<section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div class="p-5 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-2">
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </div>
     </section>`;
 
-    // Insights (ce a mers / ce n-a mers / sfaturi)
+    
     html += `<section class="grid gap-4 md:grid-cols-3">
         <div class="p-5 border rounded-2xl shadow-sm" style="background:linear-gradient(135deg, rgba(16,185,129,0.05), rgba(16,185,129,0.02)); border-color:rgba(16,185,129,0.2);">
             <div class="flex items-center gap-2 mb-3">
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </div>
     </section>`;
 
-    // Ticket types breakdown
+    
     if (ev.ticket_types && ev.ticket_types.length) {
         html += `<section class="p-6 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <h2 class="text-lg font-bold text-slate-900 mb-4">Tipuri de bilete</h2>
@@ -378,9 +378,30 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </section>`;
     }
 
-    // Sales breakdown (if available)
+    
     if (salesBreakdown && salesBreakdown.by_channel && salesBreakdown.by_channel.length) {
         html += `<section class="p-6 bg-white border rounded-2xl border-slate-200 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900 mb-4">Distribuție vânzări pe canale</h2>
+            <div class="space-y-2">
+                ${salesBreakdown.by_channel.map(ch => `
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-b-0">
+                        <span class="text-sm font-semibold text-slate-700">${escapeHtml(ch.source || 'Necunoscut')}</span>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-slate-500">${fmtInt(ch.tickets || 0)} bilete</span>
+                            <span class="text-sm font-bold text-slate-900">${fmtMoney(ch.revenue || 0)} RON</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </section>`;
+    }
+
+    content.innerHTML = html;
+})());
+</script>
+
+<?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
+                                                                           der-slate-200 shadow-sm">
             <h2 class="text-lg font-bold text-slate-900 mb-4">Distribuție vânzări pe canale</h2>
             <div class="space-y-2">
                 ${salesBreakdown.by_channel.map(ch => `

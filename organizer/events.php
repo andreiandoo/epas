@@ -639,18 +639,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <p class="mt-1 text-xs text-muted">Cate bilete poate cumpara un client intr-o comanda</p>
                                     </div>
                                 </div>
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label class="label">Inceput vanzari</label>
-                                        <input type="text" name="sales_start_at" class="input" data-datetime placeholder="zz/ll/aaaa --:--" autocomplete="off">
-                                        <p class="mt-1 text-xs text-muted">Cand incep vanzarile (gol = imediat)</p>
-                                    </div>
-                                    <div>
-                                        <label class="label">Sfarsit vanzari</label>
-                                        <input type="text" name="sales_end_at" class="input" data-datetime placeholder="zz/ll/aaaa --:--" autocomplete="off">
-                                        <p class="mt-1 text-xs text-muted">Cand se opresc vanzarile (gol = la inceput eveniment)</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -893,23 +881,17 @@ let ticketTypeCount = 1;
 let descriptionEditor = null;
 let ticketTermsEditor = null;
 let thankYouEditor = null;
-// Content queued to be applied as soon as the TinyMCE editors finish
-// initialising — the editors load async from a CDN and the setTimeout
-// race used previously sometimes fired before init(), leaving the
-// editor empty even though the event had description/ticket_terms.
 let pendingDescription = null;
 let pendingTicketTerms = null;
 let pendingThankYouMessage = null;
 let categoriesData = [];
 let venueSearchTimeout = null;
 let artistSearchTimeout = null;
-let selectedGenres = []; // [{id, name}]
-let selectedArtists = []; // [{id, name}]
-let availableGenres = []; // full list from API
+let selectedGenres = [];
+let selectedArtists = [];
+let availableGenres = [];
 
-// Check if we should show create form or edit on load
 const urlParams = new URLSearchParams(window.location.search);
-// Extract event ID from path (e.g., /organizator/event/4) or query string
 const pathMatch = window.location.pathname.match(/\/organizator\/event\/(\d+)/);
 const eventIdFromPath = pathMatch ? pathMatch[1] : null;
 const eventIdFromQuery = urlParams.get('id');
@@ -925,13 +907,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ==================== EVENTS LIST ====================
 
-let allEventsCache = []; // Cache for instant search
+let allEventsCache = [];
 
 async function loadEvents() {
     try {
-        // Fetch all events (API defaults to 20 per_page)
         let allEvents = [];
         let page = 1;
         while (true) {
@@ -942,11 +922,9 @@ async function loadEvents() {
             page++;
         }
         const events = allEvents;
-        allEventsCache = events; // Cache for instant filtering
+        allEventsCache = events;
         updatePillCounts(events);
-        // #nav-events-count is owned by organizer-sidebar.php (server-side count).
 
-        // Apply current filters (status + search)
         applyFilters();
     } catch (error) {
         document.getElementById('events-list').classList.add('hidden');
@@ -954,7 +932,7 @@ async function loadEvents() {
     }
 }
 
-let currentStatusFilter = 'ongoing'; // Default: show ongoing events
+let currentStatusFilter = 'ongoing';
 
 function updatePillCounts(events) {
     const counts = { ongoing: 0, draft: 0, ended: 0 };
@@ -962,7 +940,7 @@ function updatePillCounts(events) {
         const s = getEventDisplayStatus(e);
         if (s === 'ongoing') counts.ongoing++;
         else if (s === 'draft') counts.draft++;
-        else counts.ended++; // ended, cancelled, postponed
+        else counts.ended++;
     });
     const labels = { ongoing: 'În derulare', draft: 'Ciorne', ended: 'Încheiate', '': 'Toate' };
     document.querySelectorAll('.status-pill').forEach(pill => {
@@ -979,7 +957,6 @@ function getEventDisplayStatus(event) {
     if (event.is_cancelled || event.status === 'cancelled') return 'cancelled';
     if (event.is_postponed || event.status === 'postponed') return 'postponed';
     if (isEnded) return 'ended';
-    // Rejected = not approved → Ciorne (was counted as "În derulare").
     if (event.status === 'draft' || event.status === 'pending_review' || event.status === 'rejected') return 'draft';
     return 'ongoing';
 }
@@ -987,7 +964,6 @@ function getEventDisplayStatus(event) {
 function filterEvents(events, query) {
     let filtered = events;
 
-    // Status filter
     if (currentStatusFilter === 'ongoing') {
         filtered = filtered.filter(e => getEventDisplayStatus(e) === 'ongoing');
     } else if (currentStatusFilter === 'draft') {
@@ -995,9 +971,7 @@ function filterEvents(events, query) {
     } else if (currentStatusFilter === 'ended') {
         filtered = filtered.filter(e => ['ended', 'cancelled', 'postponed'].includes(getEventDisplayStatus(e)));
     }
-    // '' = all, no status filter
 
-    // Text search
     if (query) {
         filtered = filtered.filter(event => {
             const name = (event.name || event.title || '').toLowerCase();
@@ -1024,11 +998,9 @@ function applyFilters() {
     }
 }
 
-// Initialize filters
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(applyFilters, 150));
 
-    // Status pill clicks
     document.querySelectorAll('.status-pill').forEach(pill => {
         pill.addEventListener('click', function() {
             document.querySelectorAll('.status-pill').forEach(p => p.classList.remove('active'));
@@ -1044,28 +1016,22 @@ function renderEvents(events) {
     const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error', postponed: 'warning', sold_out: 'info' };
     const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Eveniment încheiat', pending_review: 'În revizie - așteaptă aprobare', rejected: 'Respins', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
 
-    // Sort: ongoing events by closest date first, ended by most recent first
     events = [...events].sort((a, b) => {
         const aStatus = getEventDisplayStatus(a), bStatus = getEventDisplayStatus(b);
         const aOngoing = aStatus === 'ongoing', bOngoing = bStatus === 'ongoing';
         if (aOngoing && bOngoing) {
-            // Both ongoing: closest date first (ascending)
             return new Date(a.starts_at || 0) - new Date(b.starts_at || 0);
         }
-        // Ended/other: most recent first (descending)
         return new Date(b.starts_at || 0) - new Date(a.starts_at || 0);
     });
 
     container.innerHTML = events.map(event => {
-        // Determine if event has ended
         const eventEndDate = event.ends_at || event.starts_at;
         const isEnded = event.status === 'ended' || event.is_past || event.is_ended ||
             (eventEndDate && new Date(eventEndDate) < new Date());
 
-        // Determine if event is ongoing (published and not ended)
         const isOngoing = event.status === 'published' && !isEnded && !event.is_cancelled && !event.is_postponed;
 
-        // Determine display status
         let displayStatus = event.status;
         let saleStatus = '';
         if (event.is_cancelled || event.status === 'cancelled') displayStatus = 'cancelled';
@@ -1075,7 +1041,6 @@ function renderEvents(events) {
         else if (isEnded) displayStatus = 'ended';
         else if (isOngoing) saleStatus = 'În vânzare';
 
-        // Days until event
         const daysUntil = event.days_until;
         let daysText = '';
         if (daysUntil !== null && daysUntil !== undefined && !isEnded) {
@@ -1084,41 +1049,27 @@ function renderEvents(events) {
             else if (daysUntil > 0) daysText = `${daysUntil}`;
         }
 
-        // While the event is awaiting approval (draft / pending_review /
-        // rejected), the operational buttons aren't useful — there's no
-        // public ticket sales, nothing to invite people to, no analytics.
-        // Only Edit, View, Delete remain.
         const isAwaitingApproval = ['draft', 'pending_review', 'rejected'].includes(event.status);
 
-        // Generate Analytics/Report button (violet — data/reports)
         const analyticsBtnCls = 'btn btn-sm bg-violet-50 text-violet-700 border border-solid border-violet-200 hover:bg-violet-100 hover:border-violet-300 hover:text-violet-800';
         const analyticsButton = isAwaitingApproval ? '' : (isEnded
             ? `<a href="/organizator/report/${event.id}" class="${analyticsBtnCls}" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Raport</a>`
             : `<a href="/organizator/analytics/${event.id}" class="${analyticsBtnCls}" title="Analiză"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> Analiză</a>`);
 
-        // Promote button (only for ongoing events)
         const promoteButton = isOngoing
             ? `<a href="/organizator/servicii?event=${event.id}" class="btn btn-sm btn-primary bg-primary" title="Promovează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>Promovează</a>`
             : '';
 
-        // Documents button (indigo — paperwork)
         const documentsButton = isAwaitingApproval ? '' : `<a href="/organizator/documente?event=${event.id}" class="text-indigo-700 border border-indigo-200 border-solid btn btn-sm bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Documente</a>`;
 
-        // Finance button (emerald — money/sales)
         const financeButton = isAwaitingApproval ? '' : `<a href="/organizator/sold?event=${event.id}" class="border border-solid btn btn-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 hover:text-emerald-800" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
 
-        // Staff report button (teal — staff sales breakdown). Only shown
-        // for ended events — the report aggregates POS operator sales
-        // post-event, so it's not useful while sales are still ongoing.
         const staffReportButton = (isAwaitingApproval || !isEnded) ? '' : `<a href="/organizator/raport-staff?event=${event.id}" class="border border-solid btn btn-sm bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 hover:text-teal-800" title="Raport staff"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg> Raport staff</a>`;
 
-        // Participants button (cyan — attendees / check-in list)
         const participantsButton = isAwaitingApproval ? '' : `<a href="/organizator/participanti?event=${event.id}" class="border border-solid btn btn-sm bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300 hover:text-cyan-800" title="Participanți"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Participanți</a>`;
 
-        // Invitations button (rose — only while the event is upcoming / ongoing AND already approved)
         const invitationsButton = (isAwaitingApproval || isEnded) ? '' : `<a href="/organizator/invitatii?event=${event.id}" class="border border-solid text-rose-700 border-rose-200 btn btn-sm bg-rose-50 hover:bg-rose-100 hover:border-rose-300 hover:text-rose-800" title="Generează invitații"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Invitații</a>`;
 
-        // View/Preview button - hidden for ended events; use /bilete/{slug} for published, add ?preview=1 for drafts
         const isPublishedEvent = event.status === 'published' || event.is_public;
         const viewUrl = isPublishedEvent ? `/bilete/${event.slug}` : `/bilete/${event.slug}?preview=1`;
         const viewButton = !isEnded
@@ -1186,7 +1137,7 @@ async function deleteEvent(eventId, eventName) {
 
         if (response.success) {
             AmbiletNotifications.success('Evenimentul a fost șters cu succes');
-            loadEvents(); // Reload the events list
+            loadEvents();
         } else {
             AmbiletNotifications.error(response.message || 'Eroare la ștergerea evenimentului');
         }
@@ -1196,7 +1147,6 @@ async function deleteEvent(eventId, eventName) {
     }
 }
 
-// ==================== CREATE FORM ====================
 
 function showCreateForm() {
     document.getElementById('events-view').classList.add('hidden');
@@ -1205,12 +1155,6 @@ function showCreateForm() {
     toggleAccordion(1);
     loadCategories();
 
-    // Order matters: resetFormState() calls tinymce.get(...).remove() to
-    // tear down any lingering editor instances from a previous edit
-    // session. We must run that BEFORE initEditors() — on browsers where
-    // TinyMCE 6 attaches synchronously (modern Chrome / Edge), the
-    // earlier order destroyed the editor right after creating it, leaving
-    // both Descriere completă and Condiții eveniment as bare textareas.
     resetFormState();
     initEditors();
     initVenueSearch();
@@ -1221,17 +1165,14 @@ function showCreateForm() {
 }
 
 function resetFormState() {
-    // Reset genres and artists
     selectedGenres = [];
     selectedArtists = [];
     renderGenreTags();
     renderArtistTags();
 
-    // Reset edit-only UI bits (rejection banner + delete button stay hidden until edit mode re-shows them)
     document.getElementById('rejection-banner')?.classList.add('hidden');
     document.getElementById('edit-delete-btn')?.classList.add('hidden');
 
-    // Reset image previews
     const posterPreview = document.getElementById('poster-preview');
     const posterUploadArea = document.getElementById('poster-upload-area');
     const coverPreview = document.getElementById('cover-preview');
@@ -1242,16 +1183,11 @@ function resetFormState() {
     if (coverPreview) coverPreview.classList.add('hidden');
     if (coverUploadArea) coverUploadArea.classList.remove('hidden');
 
-    // Clear file inputs
     const posterInput = document.querySelector('[name="poster"]');
     const coverInput = document.querySelector('[name="cover_image"]');
     if (posterInput) posterInput.value = '';
     if (coverInput) coverInput.value = '';
 
-    // Reset form — but FIRST detach TinyMCE editors, otherwise their internal
-    // 'reset' handler fires on the form's reset event and crashes when the
-    // editor instance got out of sync with the DOM (the
-    // "Cannot read properties of undefined (reading 'reset')" error).
     if (window.tinymce) {
         try { tinymce.get('description-editor')?.remove(); } catch (e) {}
         try { tinymce.get('ticket-terms-editor')?.remove(); } catch (e) {}
@@ -1264,49 +1200,34 @@ function resetFormState() {
     const form = document.getElementById('create-event-form');
     if (form) {
         form.reset();
-        // form.reset() restores HTML defaults — but loadEventForEdit injects
-        // ticket-type-item rows with value="..." attributes, which become
-        // the new defaults. Reset would leave Machines / 25 sep / 4 ticket
-        // types stuck across an edit→create transition. Force-clear every
-        // input and radio in the form, then rebuild the ticket-types
-        // container to its initial single-empty-row state. Chrome autofill
-        // is also defeated here by overwriting whatever it injects on load.
         form.querySelectorAll('input, textarea, select').forEach(el => {
-            if (el.type === 'hidden') return; // saved-event-id handled below
+            if (el.type === 'hidden') return;
             if (el.type === 'checkbox' || el.type === 'radio') {
                 el.checked = el.defaultChecked;
             } else if (el.type === 'file') {
                 el.value = '';
             } else {
                 el.value = '';
-                el.setAttribute('value', ''); // clear inline default too
+                el.setAttribute('value', '');
             }
         });
-        // Rebuild ticket-types-container: keep a single empty row, drop
-        // anything that was added by addTicketType() during a prior edit.
         const ttContainer = document.getElementById('ticket-types-container');
         if (ttContainer) {
             ttContainer.innerHTML = '';
             ticketTypeCount = 0;
             if (typeof addTicketType === 'function') addTicketType();
-            // Hide the remove button on the first (only) row to match
-            // the server-rendered default state.
             const firstRemove = ttContainer.querySelector('.remove-ticket-btn');
             if (firstRemove) firstRemove.classList.add('hidden');
         }
-        // Clear performances list (multi-day mode) if it exists
         const perfList = document.getElementById('performances-list');
         if (perfList) perfList.innerHTML = '';
     }
 
     setVenueLocationLocked(false);
 
-    // Reset saved event ID
     const savedIdEl = document.getElementById('saved-event-id');
     if (savedIdEl) savedIdEl.value = '';
 
-    // Reset duration mode to default (single_day) so date pickers don't
-    // carry over a "range" or "multi_day" UI state from edit mode.
     const singleDayRadio = document.querySelector('[name="duration_mode"][value="single_day"]');
     if (singleDayRadio) {
         singleDayRadio.checked = true;
@@ -1315,7 +1236,6 @@ function resetFormState() {
 }
 
 async function loadEventForEdit(eventId) {
-    // First, fetch the event to check if it's editable BEFORE showing the form
     try {
         const response = await AmbiletAPI.organizer.getEvent(eventId);
         const event = response.data?.event || response.event || response.data || response;
@@ -1326,38 +1246,25 @@ async function loadEventForEdit(eventId) {
             return;
         }
 
-        // Check if event is editable (not past/ended) - redirect BEFORE showing form
         if (event.is_editable === false || event.is_past === true) {
             AmbiletNotifications.error('Acest eveniment este încheiat și nu mai poate fi editat.');
             window.location.href = '/organizator/events';
             return;
         }
 
-        // Event is editable - now show the form
         showCreateForm();
 
-        // Fix URL for edit mode (showCreateForm sets it to action=create)
         history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
 
-        // Update page title for edit mode — prefer the actual event name
-        // so the new sticky header reads "Concert X" instead of the generic
-        // "Editare eveniment" placeholder.
         const titleEl = document.querySelector('#create-event-view h1');
         if (titleEl) titleEl.textContent = event.name || event.title || 'Editare eveniment';
 
-        // Hydrate the redesigned sticky header (status pill, date, venue,
-        // event id chip + reveals Preview / Submit buttons). No-op if the
-        // helper isn't loaded.
         if (typeof window.hydrateEventHeader === 'function') {
             try { window.hydrateEventHeader(event); } catch (e) {}
         }
 
-        // Set the event ID so subsequent saves update instead of create
         document.getElementById('saved-event-id').value = eventId;
 
-        // Show status actions section ONLY for published events. While the
-        // event is in draft / pending_review / rejected, sold-out / postponed /
-        // cancelled / door-sales toggles aren't meaningful yet.
         const statusActions = document.getElementById('event-status-actions');
         const isAwaitingApprovalState = ['draft', 'pending_review', 'rejected'].includes(event.status);
         if (statusActions) {
@@ -1368,9 +1275,6 @@ async function loadEventForEdit(eventId) {
             }
         }
 
-        // Toggle delete button in edit-mode header. Only available while the
-        // event is still in draft / pending / rejected; once published, deletion
-        // happens via dedicated cancel/refund flows.
         const editDeleteBtn = document.getElementById('edit-delete-btn');
         if (editDeleteBtn) {
             if (isAwaitingApprovalState) {
@@ -1381,7 +1285,6 @@ async function loadEventForEdit(eventId) {
             }
         }
 
-        // Rejection banner — show the reason so the organizer knows what to fix
         const rejectionBanner = document.getElementById('rejection-banner');
         const rejectionReason = document.getElementById('rejection-reason-text');
         if (rejectionBanner) {
@@ -1393,7 +1296,6 @@ async function loadEventForEdit(eventId) {
             }
         }
 
-        // Load current status flags
         currentEventStatus = {
             is_sold_out: event.is_sold_out || false,
             door_sales_only: event.door_sales_only || false,
@@ -1405,7 +1307,6 @@ async function loadEventForEdit(eventId) {
         };
         updateStatusIndicators();
 
-        // Handle published event - hide draft buttons, update submit button
         const isPublished = currentEventStatus.is_published;
         const saveDraftBtn = document.getElementById('save-draft-btn');
         const bottomDraftBtns = document.querySelectorAll('button[onclick="saveEventDraft()"]');
@@ -1417,15 +1318,10 @@ async function loadEventForEdit(eventId) {
         const mobileSubmitBtn = document.getElementById('mobile-submit-btn');
 
         if (isPublished) {
-            // Hide "Salvează ciorna" buttons for published events
             if (saveDraftBtn) saveDraftBtn.style.display = 'none';
             bottomDraftBtns.forEach(btn => {
                 if (btn !== saveDraftBtn) btn.style.display = 'none';
             });
-            // Organizers with "modificări live" publish changes directly
-            // ("Salvează & Publică"). Everyone else sends the changes for admin
-            // approval ("Trimite spre aprobare") — the live event is untouched
-            // until approved.
             const liveEdit = currentEventStatus.allow_live_edits;
             const mainLabel = liveEdit ? 'Salvează & Publică' : 'Trimite spre aprobare';
             const mainIcon = liveEdit ? checkIconSvg : approveIconSvg;
@@ -1433,7 +1329,6 @@ async function loadEventForEdit(eventId) {
             if (headerSubmitBtn) headerSubmitBtn.innerHTML = mainIcon + '<span class="mobile:hidden">' + mainLabel + '</span>';
             if (mobileSubmitBtn) mobileSubmitBtn.innerHTML = mainIcon + (liveEdit ? 'Publică' : 'Trimite');
         } else {
-            // Show buttons for draft events (restore default approval labels)
             if (saveDraftBtn) saveDraftBtn.style.display = '';
             bottomDraftBtns.forEach(btn => btn.style.display = '');
             if (submitReviewBtn) submitReviewBtn.innerHTML = approveIconSvg + 'Salvează și trimite spre aprobare';
@@ -1443,11 +1338,9 @@ async function loadEventForEdit(eventId) {
 
         const form = document.getElementById('create-event-form');
 
-        // Step 1: Basic details
         if (event.name) form.querySelector('[name="name"]').value = event.name;
         if (event.short_description) {
             form.querySelector('[name="short_description"]').value = event.short_description;
-            // Update word count
             const wordCount = event.short_description.trim().split(/\s+/).filter(w => w.length > 0).length;
             const countEl = document.getElementById('short-desc-count');
             if (countEl) countEl.textContent = wordCount;
@@ -1457,11 +1350,6 @@ async function loadEventForEdit(eventId) {
             form.querySelector('[name="tags"]').value = tagsStr;
         }
 
-        // Category — wait for categories API to actually finish before
-        // setting the select value. The previous setTimeout(500ms) raced
-        // against loadCategories() and often fired before the <option>
-        // existed, leaving the select on the placeholder and losing the
-        // saved category on next submit.
         if (event.marketplace_event_category_id) {
             await loadCategories();
             const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
@@ -1471,28 +1359,21 @@ async function loadEventForEdit(eventId) {
             }
         }
 
-        // Step 2: Schedule. starts_at / ends_at / doors_open_at are naive local
-        // "YYYY-MM-DDTHH:MM:SS" strings — slice them (Date + toISOString()
-        // shifted to UTC, so a 00:30 start showed the previous day). Date
-        // inputs are flatpickr-enhanced → set them via setDateInputValue().
         if (event.starts_at) {
             const startDate = String(event.starts_at).slice(0, 10);
             const startTime = String(event.starts_at).slice(11, 16);
             setDateInputValue(form.querySelector('[name="start_date"]'), startDate);
             form.querySelector('[name="start_time"]').value = startTime;
 
-            // Determine duration mode
             if (event.ends_at) {
                 const endDate = String(event.ends_at).slice(0, 10);
                 const endTime = String(event.ends_at).slice(11, 16);
 
                 if (endDate === startDate) {
-                    // Single day
                     const radio = form.querySelector('[name="duration_mode"][value="single_day"]');
                     if (radio) { radio.checked = true; onDurationModeChange('single_day'); }
                     form.querySelector('[name="end_time_single"]').value = endTime;
                 } else {
-                    // Date range
                     const radio = form.querySelector('[name="duration_mode"][value="range"]');
                     if (radio) { radio.checked = true; onDurationModeChange('range'); }
                     setDateInputValue(form.querySelector('[name="end_date"]'), endDate);
@@ -1500,12 +1381,10 @@ async function loadEventForEdit(eventId) {
                     if (endTimeInput) endTimeInput.value = endTime;
                 }
             } else {
-                // No end date - single day mode
                 const radio = form.querySelector('[name="duration_mode"][value="single_day"]');
                 if (radio) { radio.checked = true; onDurationModeChange('single_day'); }
             }
 
-            // Doors open
             if (event.doors_open_at) {
                 const doorTime = String(event.doors_open_at).slice(11, 16);
                 const durationMode = form.querySelector('[name="duration_mode"]:checked')?.value;
@@ -1517,7 +1396,6 @@ async function loadEventForEdit(eventId) {
             }
         }
 
-        // Step 3: Venue
         if (event.venue_name) form.querySelector('[name="venue_name"]').value = event.venue_name;
         if (event.venue_city) form.querySelector('[name="venue_city"]').value = event.venue_city;
         if (event.venue_address) form.querySelector('[name="venue_address"]').value = event.venue_address;
@@ -1526,10 +1404,6 @@ async function loadEventForEdit(eventId) {
             setVenueLocationLocked(true);
         }
 
-        // Links. The "Website eveniment" field reads event_website_url first
-        // (the admin-side "Website Eveniment" column) and falls back to the
-        // legacy website_url so organizer-only data still shows up. Save
-        // writes the value back to event_website_url — see submit handler.
         const eventWebsite = event.event_website_url || event.website_url;
         if (eventWebsite) form.querySelector('[name="website_url"]').value = eventWebsite;
         if (event.facebook_url) form.querySelector('[name="facebook_url"]').value = event.facebook_url;
@@ -1538,9 +1412,6 @@ async function loadEventForEdit(eventId) {
             if (videoInput) videoInput.value = event.video_url;
         }
 
-        // Step 4: Content — if the editors are already up, set directly;
-        // otherwise queue the content so the 'init' callback in
-        // initEditors() can apply it as soon as TinyMCE finishes loading.
         if (event.description) {
             if (descriptionEditor) {
                 descriptionEditor.setContent(event.description);
@@ -1564,33 +1435,12 @@ async function loadEventForEdit(eventId) {
         }
         updateSummaries();
 
-        // Step 6: Ticket types
-        // Once the event is published, EXISTING ticket types render read-only
-        // (display-only fields, no inputs, no delete button) — Ambilet
-        // marketplace policy: touching prices/stock on live tickets would
-        // break already-sold orders. Adding NEW ticket types is still allowed
-        // (see the "Adaugă alt tip de bilet" button below the list).
-        //
-        // Marketplace operators editing the same event via Filament (admin)
-        // are NOT affected — this is a client-facing lock only.
-        //
-        // Read-only markup omits the input `name` attributes, so
-        // collectTicketTypes() (which looks up name="ticket_name_${i}")
-        // silently skips locked rows when building the payload. That
-        // keeps the backend contract identical for both draft and live
-        // edits without a second code path in the collector.
-        // "Bilet gratuit cu cod promo" types (ticket_types[].free_with_code)
-        // are ADMIN-ONLY (Filament): never shown or editable here, so they
-        // can't be re-sent as a regular (public, 0-lei) ticket type.
         const allTicketTypes = Array.isArray(event.ticket_types) ? event.ticket_types : [];
         event.ticket_types = allTicketTypes.filter(tt => !(tt && tt.free_with_code));
 
         if (event.ticket_types && event.ticket_types.length > 0) {
             const container = document.getElementById('ticket-types-container');
             const eventIsLive = event.is_public === true;
-            // Show the locked-state notice above the ticket list only when we
-            // actually have live tickets to gate. Idempotent — same node is
-            // re-populated on every edit-fill pass.
             let notice = document.getElementById('tickets-locked-notice');
             if (eventIsLive) {
                 if (!notice) {
@@ -1604,7 +1454,6 @@ async function loadEventForEdit(eventId) {
                 notice.remove();
             }
 
-            // Clear default ticket type
             container.innerHTML = '';
             ticketTypeCount = 0;
 
@@ -1612,7 +1461,6 @@ async function loadEventForEdit(eventId) {
                 ticketTypeCount = i + 1;
                 const removeBtn = i === 0 ? 'hidden' : '';
                 if (eventIsLive) {
-                    // Locked card — pure display; no inputs, no delete.
                     const fmtMoney = (v) => Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const stockLabel = tt.quantity ? (Number(tt.quantity).toLocaleString('ro-RO') + ' bilete') : 'Nelimitat';
                     const minLabel = tt.min_per_order ? tt.min_per_order : '—';
@@ -1715,12 +1563,6 @@ async function loadEventForEdit(eventId) {
         if (event.capacity) form.querySelector('[name="capacity"]').value = event.capacity;
         if (event.max_tickets_per_order) form.querySelector('[name="max_tickets_per_order"]').value = event.max_tickets_per_order;
         // Local "YYYY-MM-DDTHH:MM" (no UTC shift); flatpickr-aware setter.
-        if (event.sales_start_at) {
-            setDateInputValue(form.querySelector('[name="sales_start_at"]'), String(event.sales_start_at).slice(0, 16));
-        }
-        if (event.sales_end_at) {
-            setDateInputValue(form.querySelector('[name="sales_end_at"]'), String(event.sales_end_at).slice(0, 16));
-        }
 
         // Genres - populate after category is loaded
         if (event.genres && event.genres.length > 0) {
@@ -1939,7 +1781,6 @@ function initArtistSearch() {
                     `<div class="multiselect-option" onclick="selectArtist(${a.id}, '${a.name.replace(/'/g, "\\'")}')">${a.name}</div>`
                 ).join('');
 
-                // Always show "create new" option
                 html += `<div class="multiselect-option create-new" onclick="createNewArtist()">+ Adauga "${query}" ca artist nou</div>`;
 
                 dropdown.innerHTML = html;
@@ -1996,7 +1837,6 @@ async function createNewArtist() {
     }
 }
 
-// ==================== DURATION MODE ====================
 
 function onDurationModeChange(mode) {
     const scheduleFields = document.getElementById('schedule-fields');
@@ -2021,7 +1861,6 @@ function onDurationModeChange(mode) {
     updateSummaries();
 }
 
-// ==================== VENUE SEARCH ====================
 
 function initVenueSearch() {
     const input = document.getElementById('venue-search-input');
@@ -2697,12 +2536,6 @@ function collectFormData() {
 
     const maxTickets = form.querySelector('[name="max_tickets_per_order"]').value;
     if (maxTickets) data.max_tickets_per_order = parseInt(maxTickets);
-
-    const salesStart = form.querySelector('[name="sales_start_at"]').value;
-    if (salesStart) data.sales_start_at = salesStart;
-
-    const salesEnd = form.querySelector('[name="sales_end_at"]').value;
-    if (salesEnd) data.sales_end_at = salesEnd;
 
     if (ticketTypes.length > 0) data.ticket_types = ticketTypes;
 

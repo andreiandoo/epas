@@ -36,9 +36,6 @@ require_once __DIR__ . '/includes/head.php';
 
 <?php if ($orderNumber): ?>
 <script>
-// Fetch order details to fire WLTracking.trackPurchase with the real order id + total.
-// Sends channel='whitelabel' via the tracking lib so this conversion shows in the
-// whitelabel slice of the analytics funnel.
 (function () {
     var orderRef = <?= json_encode($orderNumber) ?>;
     if (!orderRef) return;
@@ -58,7 +55,7 @@ require_once __DIR__ . '/includes/head.php';
                     order.currency || 'RON'
                 );
             })
-            .catch(function () { /* silent fail — analytics, not user-facing */ });
+            .catch(function () {  });
     });
 })();
 </script>

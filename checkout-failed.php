@@ -220,7 +220,6 @@ require_once 'includes/head.php';
     </style>
 
     <script>
-        // Countdown timer
         let time = 9 * 60 + 45;
         const timerEl = document.querySelector('.timer');
 

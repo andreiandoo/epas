@@ -515,8 +515,6 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <style>[x-cloak]{display:none!important}</style>
 
 <script>
-// Extended Artist access gate — redirect to the landing page when the
-// subscription/trial is not active (mirrors booking.php / tour.php).
 (function() {
     const token = localStorage.getItem('ambilet_artist_token');
     if (!token) { window.location.href = '/artist/login'; return; }
@@ -542,7 +540,6 @@ function fanCrm() {
             { id: 'vip',          label: 'VIP' },
         ],
 
-        // Data per tab
         overview: { kpis: {}, top_cities: [], countries: [], dormant_cities: [], growth_chart: null, fan_types: [], insights: [] },
         mapData: { points: [] },
         segmentsData: { predefined: [], counts: {}, custom: [] },
@@ -552,7 +549,6 @@ function fanCrm() {
         compareData: { supported: false, a_kpis: [], b_kpis: [], chart: null },
         vipData: [],
 
-        // UI state
         mapView: 'heat',
         map: null, heatLayer: null, pinLayer: null,
         fansFilters: { search: '', segment: '', custom_segment_id: null, page: 1 },
@@ -577,7 +573,6 @@ function fanCrm() {
             const yr = new Date().getFullYear();
             for (let y = yr; y >= yr - 5; y--) this.compareYears.push(y);
 
-            // Read ?tab= from URL for deep-linking
             const validTabs = this.tabs.map(t => t.id);
             const urlTab = (new URL(window.location.href)).searchParams.get('tab');
             const initialTab = (urlTab && validTabs.includes(urlTab)) ? urlTab : 'overview';
@@ -621,7 +616,7 @@ function fanCrm() {
                 const url = new URL(window.location.href);
                 url.searchParams.set('tab', t);
                 window.history.replaceState({}, '', url.toString());
-            } catch (e) { /* noop */ }
+            } catch (e) {  }
         },
 
         async fetchAction(action, params = {}) {
@@ -711,8 +706,6 @@ function fanCrm() {
             if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
         },
 
-        // Defensive: kill any Chart.js instance attached to this canvas
-        // (handles stale instances from previous renders not tracked in this.charts).
         clearCanvas(elId) {
             const el = document.getElementById(elId);
             if (!el || typeof Chart === 'undefined') return null;
@@ -755,7 +748,6 @@ function fanCrm() {
                 this.map = L.map('fanMap').setView([this.mapData.center?.lat || 45.94, this.mapData.center?.lng || 24.97], this.mapData.zoom || 6);
                 AmbiletTileLayer('light_all').addTo(this.map);
             }
-            // Curăță layere vechi
             if (this.heatLayer) this.map.removeLayer(this.heatLayer);
             if (this.pinLayer) this.map.removeLayer(this.pinLayer);
 
@@ -817,7 +809,6 @@ function fanCrm() {
             });
         },
 
-        // Segment modal
         openSegmentModal() {
             this.segmentModal.open = true;
             this.segmentModal.name = '';

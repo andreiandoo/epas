@@ -103,7 +103,6 @@ require_once 'includes/head.php';
     </style>
 
     <script>
-        // Simulate progress (for demo)
         function updateStep(stepId, status) {
             const step = document.getElementById(stepId);
             const icon = step.querySelector('.step-icon');
@@ -129,8 +128,6 @@ require_once 'includes/head.php';
 
         setTimeout(() => {
             updateStep('step3', 'completed');
-            // Redirect to thank you page
-            // window.location.href = '/checkout/thank-you';
         }, 5000);
     </script>
 </body>

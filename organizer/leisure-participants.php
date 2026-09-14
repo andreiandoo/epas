@@ -134,7 +134,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     let currentEventId = null;
     let currentFrom = null;
     let currentTo = null;
-    let allRows = [];          // accumulated across loaded pages (used by export)
+    let allRows = [];          
     let searchTimer = null;
     let currentPage = 1;
     let lastPage = 1;
@@ -146,7 +146,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return (window.AmbiletFmt?.datetime(iso)) || iso;
     }
 
-    // Format DD.MM.YYYY HH:MM:SS (cu secunde) - folosit pt nr comanda si check-in.
+    
     function fmtDateTimeSec(iso) {
         if (!iso) return '—';
         try {
@@ -189,8 +189,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const plate = r.vehicle_plate
             ? `<span class="inline-block px-2 py-0.5 text-[14px] font-mono font-bold bg-slate-100 text-slate-800 rounded border border-slate-300">${esc(r.vehicle_plate)}</span>`
             : '<span class="text-muted">—</span>';
-        // Coloana Check-in: fie timestamp validat, fie buton manual check-in.
-        // Butonul e ascuns pentru bilete cancelled/refunded (nu pot fi validate).
+        
+        
         const canCheckin = !r.checked_in_at && !['cancelled','refunded'].includes(r.status);
         const checkinCell = r.checked_in_at
             ? `<span class="text-emerald-700 font-semibold">✓ ${fmtDate(r.checked_in_at)}</span>`
@@ -240,19 +240,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (!resp.ok) throw new Error(data?.message || ('HTTP ' + resp.status));
             const ts = data?.data?.checked_in_at;
             if (cell && ts) cell.innerHTML = `<span class="text-emerald-700 font-semibold">✓ ${fmtDate(ts)}</span>`;
-            // Update in allRows pt export CSV
+            
             const rowIdx = allRows.findIndex(r => r.id == ticketId);
             if (rowIdx >= 0) allRows[rowIdx].checked_in_at = ts;
         } catch (e) {
             alert('Eroare check-in: ' + (e?.message || 'necunoscut'));
-            if (cell) cell.innerHTML = origHtml; // restore button
-            // Re-wire click event pentru butonul restored
+            if (cell) cell.innerHTML = origHtml; 
+            
             const restored = cell?.querySelector('.lv-manual-checkin');
             if (restored) restored.addEventListener('click', () => manualCheckin(restored));
         }
     }
 
-    // Event delegation pentru butoanele manual-checkin (rowurile sunt append-uite dinamic)
+    
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.lv-manual-checkin');
         if (btn) { e.preventDefault(); manualCheckin(btn); }
@@ -279,14 +279,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function populateTypes(types) {
         const menu = $('lv-type-menu');
-        // Sort: access primele (default participanti), apoi parking/activity/rental/extra/package.
+        
         const catOrder = { access: 1, parking: 2, activity: 3, rental: 4, extra: 5, package: 6 };
         const sorted = (types || []).slice().sort((a, b) => {
             const oa = catOrder[a.service_category] || 99;
             const ob = catOrder[b.service_category] || 99;
             return oa - ob || String(a.name).localeCompare(String(b.name));
         });
-        // Grupare vizuala pe categorie cu badge cat mic langa nume
+        
         menu.innerHTML = sorted.map(t => {
             const cat = t.service_category || 'access';
             const badgeCat = categoryBadge(cat);
@@ -347,8 +347,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function setRange(days) {
         currentRange = days;
-        // Fix: eliminam bg-white din butoane cand adaugam bg-primary (conflict CSS,
-        // bg-white castiga specificitatea). Repopulam bg-white cand deselecteaza.
+        
+        
         document.querySelectorAll('.lv-range-btn').forEach(b => {
             b.classList.remove('bg-primary', 'text-white', 'border-primary');
             b.classList.add('bg-white');
@@ -514,14 +514,35 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-range-label').textContent = `${f} → ${t}`;
             loadParticipants(true);
         });
-        // Search + header filters are server-side now (they query the WHOLE set,
-        // not just the loaded rows), each resets to page 1.
+        
+        
         $('lv-search').addEventListener('input', () => {
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => { updateResetBtn(); loadParticipants(true); }, 300);
         });
         ['lv-f-status', 'lv-f-checkin', 'lv-f-visit-from', 'lv-f-visit-to'].forEach(id => {
             $(id).addEventListener('change', () => { updateResetBtn(); loadParticipants(true); });
+        });
+        
+        $('lv-type-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            $('lv-type-menu').classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!$('lv-type-wrap').contains(e.target)) $('lv-type-menu').classList.add('hidden');
+        });
+        $('lv-reset').addEventListener('click', resetFilters);
+        
+        window.addEventListener('scroll', maybeLoadMore, { passive: true });
+        $('lv-export').addEventListener('click', exportCsv);
+        setRange('30');
+    });
+})();
+</script>
+<?php
+require_once dirname(__DIR__) . '/includes/scripts.php';
+?>
+                                                                                                                              $(id).addEventListener('change', () => { updateResetBtn(); loadParticipants(true); });
         });
         // Ticket-type multi-select dropdown open/close.
         $('lv-type-btn').addEventListener('click', (e) => {

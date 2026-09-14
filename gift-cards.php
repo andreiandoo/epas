@@ -316,7 +316,6 @@ $cssBundle = 'static';
     <?php include 'includes/scripts.php'; ?>
 
     <script>
-        // Amount selection
         document.querySelectorAll('.amount-card').forEach(card => {
             card.addEventListener('click', () => {
                 document.querySelectorAll('.amount-card').forEach(c => {
@@ -333,7 +332,6 @@ $cssBundle = 'static';
             });
         });
 
-        // Custom amount
         document.getElementById('customAmount').addEventListener('input', function() {
             const amount = parseInt(this.value) || 0;
             if (amount >= 25 && amount <= 2000) {
@@ -352,7 +350,6 @@ $cssBundle = 'static';
             });
         }
 
-        // Design selection
         document.querySelectorAll('.design-option').forEach(option => {
             option.addEventListener('click', () => {
                 document.querySelectorAll('.design-option').forEach(o => {
@@ -368,11 +365,9 @@ $cssBundle = 'static';
             });
         });
 
-        // Delivery option selection
         const scheduledDelivery = document.getElementById('scheduledDelivery');
         const deliveryDateInput = document.getElementById('deliveryDate');
 
-        // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
         if (deliveryDateInput) deliveryDateInput.min = today;
 
@@ -393,11 +388,9 @@ $cssBundle = 'static';
                     icon.classList.add('bg-primary', 'text-white');
                 }
 
-                // Show/hide scheduled delivery section
                 const deliveryType = option.dataset.delivery;
                 if (deliveryType === 'scheduled') {
                     scheduledDelivery.classList.remove('hidden');
-                    // Set default date to tomorrow
                     const tomorrow = new Date();
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     deliveryDateInput.value = tomorrow.toISOString().split('T')[0];

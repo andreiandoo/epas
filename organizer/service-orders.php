@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadOrders();
     loadStats();
 
-    // Event listeners for filters
     document.getElementById('search-orders').addEventListener('input', AmbiletUtils.debounce(filterOrders, 300));
     document.getElementById('filter-status').addEventListener('change', filterOrders);
     document.getElementById('filter-type').addEventListener('change', filterOrders);
@@ -158,7 +157,6 @@ async function loadOrders() {
             allOrders = response.data.data || [];
             document.getElementById('total-orders').textContent = response.data.total || allOrders.length;
 
-            // Count pending orders
             const pendingCount = allOrders.filter(o => o.status === 'pending_payment' || o.status === 'processing').length;
             document.getElementById('pending-count').textContent = pendingCount;
 
@@ -178,7 +176,6 @@ function filterOrders() {
     const typeFilter = document.getElementById('filter-type').value;
 
     filteredOrders = allOrders.filter(order => {
-        // Search filter
         if (searchQuery) {
             const searchMatch =
                 (order.order_number || '').toLowerCase().includes(searchQuery) ||
@@ -186,10 +183,8 @@ function filterOrders() {
             if (!searchMatch) return false;
         }
 
-        // Status filter
         if (statusFilter && order.status !== statusFilter) return false;
 
-        // Type filter
         if (typeFilter && order.type !== typeFilter) return false;
 
         return true;
@@ -203,7 +198,6 @@ function filterOrders() {
 function renderOrders(orders) {
     const container = document.getElementById('orders-list');
 
-    // Get current page slice
     const start = (currentPage - 1) * perPage;
     const end = start + perPage;
     const pageOrders = orders.slice(start, end);
@@ -311,12 +305,10 @@ function renderPagination() {
 
     let buttons = '';
 
-    // Previous button
     buttons += `<button onclick="goToPage(${currentPage - 1})" class="px-3 py-1 rounded-lg border border-border text-sm ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-surface'}" ${currentPage === 1 ? 'disabled' : ''}>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     </button>`;
 
-    // Page numbers
     for (let i = 1; i <= totalPages; i++) {
         if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
             buttons += `<button onclick="goToPage(${i})" class="px-3 py-1 rounded-lg text-sm ${i === currentPage ? 'bg-primary text-white' : 'border border-border hover:bg-surface'}">${i}</button>`;
@@ -325,7 +317,6 @@ function renderPagination() {
         }
     }
 
-    // Next button
     buttons += `<button onclick="goToPage(${currentPage + 1})" class="px-3 py-1 rounded-lg border border-border text-sm ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-surface'}" ${currentPage === totalPages ? 'disabled' : ''}>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
     </button>`;

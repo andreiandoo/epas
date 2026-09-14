@@ -181,7 +181,6 @@ require_once __DIR__ . '/includes/head.php';
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <script>
-// Calendar strip + date filter
 (function(){
   var days=['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
   var months=['Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Nov','Dec'];
@@ -204,14 +203,13 @@ require_once __DIR__ . '/includes/head.php';
     div.addEventListener('click', function(){
       var wasActive = this.classList.contains('active');
       document.querySelectorAll('.cal-day').forEach(function(x){x.classList.remove('active')});
-      if (wasActive) { selectedDate = null; } // deselect = show all
+      if (wasActive) { selectedDate = null; }
       else { this.classList.add('active'); selectedDate = this.dataset.date; }
       filterEvents();
     });
     container.appendChild(div);
   }
 
-  // Category filters
   document.querySelectorAll('.filter-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
       document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
@@ -220,7 +218,6 @@ require_once __DIR__ . '/includes/head.php';
     });
   });
 
-  // Expose filter function
   window.filterEvents = function() {
     var cat = document.querySelector('.filter-btn.active')?.dataset.cat || '';
     var search = (document.getElementById('wl-search')?.value || '').toLowerCase();

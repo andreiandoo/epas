@@ -201,7 +201,6 @@ $eventId = $_GET['event'] ?? null;
 const eventId = <?= json_encode($eventId) ?>;
 let reportData = null;
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     if (!eventId) {
         window.location.href = '/organizator/events';
@@ -212,13 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadReport() {
     try {
-        // Load analytics data
         const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=all`);
         if (response.success) {
             const data = response.data || {};
-            // Event info may be at top level or inside data
             if (response.event && !data.event) data.event = response.event;
-            // Transform chart_data array of objects → flat arrays for chart
             if (data.chart_data && !data.chart) {
                 const cd = data.chart_data;
                 data.chart = {
@@ -233,7 +229,6 @@ async function loadReport() {
             updateReport(data);
         }
 
-        // Load goals
         try {
             const goalsResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/goals`);
             if (goalsResponse.success) {
@@ -241,7 +236,6 @@ async function loadReport() {
             }
         } catch (e) { console.log('No goals data'); }
 
-        // Load milestones
         try {
             const milestonesResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/milestones`);
             if (milestonesResponse.success) {
@@ -254,7 +248,6 @@ async function loadReport() {
 }
 
 function updateReport(data) {
-    // Top bar event info
     if (data.event) {
         const e = data.event;
         document.getElementById('event-title').textContent = e.title || 'Eveniment';
@@ -273,21 +266,17 @@ function updateReport(data) {
         document.getElementById('event-info').textContent = [dateStr, venueStr].filter(Boolean).join(' · ');
     }
 
-    // Summary stats
     if (data.overview) {
         const o = data.overview;
-        // Venituri totale = net revenue (from API, calculated from ticket base prices)
         document.getElementById('summary-revenue').textContent = formatCurrency(o.net_revenue ?? o.total_revenue ?? 0);
         document.getElementById('summary-tickets').textContent = formatNumber(o.tickets_sold || 0);
         document.getElementById('summary-views').textContent = formatNumber(o.page_views || 0);
         document.getElementById('summary-conversion').textContent = (o.conversion_rate || 0).toFixed(1) + '%';
 
-        // Commission rate (kept for the Financial Summary section at the bottom)
         const commissionRate = o.commission_rate || data.event?.commission_rate || 5;
         const useFixedCommission = o.use_fixed_commission || data.event?.use_fixed_commission || false;
         const commissionMode = o.commission_mode || data.event?.commission_mode || 'included';
 
-        // Financial summary - use values from API (calculated from actual ticket prices)
         const grossRevenue = o.gross_revenue ?? o.total_revenue ?? 0;
         const refunds = o.refunds_total || 0;
         const commission = o.commission_amount ?? (grossRevenue * (commissionRate / 100));
@@ -308,28 +297,23 @@ function updateReport(data) {
         document.getElementById('refunds-total').textContent = formatCurrency(refunds);
     }
 
-    // Charts
     if (data.chart) {
         renderSalesChart(data.chart, data.event);
     }
 
-    // Ticket types
     if (data.ticket_performance) {
         renderTicketTypes(data.ticket_performance);
         renderTicketChart(data.ticket_performance);
     }
 
-    // Traffic sources
     if (data.traffic_sources) {
         renderTrafficSources(data.traffic_sources);
     }
 
-    // Locations
     if (data.top_locations) {
         renderLocations(data.top_locations);
     }
 
-    // Refunds (if available)
     if (data.refunds) {
         renderRefunds(data.refunds);
     }
@@ -341,7 +325,6 @@ function renderSalesChart(chartData, eventData) {
     let revenue = chartData.revenue || [];
     let tickets = chartData.tickets || [];
 
-    // Trim chart to event end date (not today) for past events
     if (eventData) {
         const endDate = eventData.ends_at || eventData.starts_at;
         if (endDate && rawDates.length > 0) {
@@ -357,7 +340,6 @@ function renderSalesChart(chartData, eventData) {
         }
     }
 
-    // Build labels with year for tooltip
     const tooltipLabels = rawDates.map(d => {
         if (!d) return '';
         const dt = new Date(d);
@@ -425,7 +407,6 @@ function renderTicketTypes(tickets) {
         return;
     }
 
-    // Sort by tickets sold (descending)
     tickets = [...tickets].sort((a, b) => (b.sold || 0) - (a.sold || 0));
 
     const totalRevenue = tickets.reduce((sum, t) => sum + (t.revenue || t.price * (t.sold || 0)), 0);
@@ -434,9 +415,6 @@ function renderTicketTypes(tickets) {
     const html = tickets.map((t, i) => {
         const revenue = t.revenue || t.price * (t.sold || 0);
         const percent = totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0;
-        // Annotate ticket type name based on its kind:
-        //   invitation  → "(titlu gratuit)"
-        //   entry (POS) → "(încasat de organizator)"
         let nameSuffix = '';
         if (t.is_invitation) {
             nameSuffix = ' <span class="text-xs font-normal text-gray-500">(titlu gratuit)</span>';
@@ -630,10 +608,6 @@ async function exportReport() {
     try {
         AmbiletNotifications.info('Se genereaza raportul PDF...');
 
-        // Use the canonical AmbiletAuth helper — localStorage key is
-        // 'ambilet_organizer_token', not 'organizer_token'. The old code
-        // read the wrong key, got null, and tripped the early-return that
-        // showed "Sesiune expirata" immediately after the toast.
         const authToken = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken)
             ? AmbiletAuth.getToken()
             : null;
@@ -642,9 +616,6 @@ async function exportReport() {
             return;
         }
 
-        // Go through proxy.php like every other API call from the
-        // marketplace; direct hits to /api/marketplace-client/... rely on
-        // request rewriting that isn't in place on ambilet.ro.
         const response = await fetch(`/api/proxy.php?action=organizer.event.report.export&event_id=${encodeURIComponent(eventId)}`, {
             method: 'GET',
             headers: {
@@ -658,7 +629,6 @@ async function exportReport() {
             throw new Error(errorData.message || 'Eroare la generarea raportului');
         }
 
-        // Get filename from Content-Disposition header or use default
         const contentDisposition = response.headers.get('Content-Disposition');
         let filename = `raport-eveniment-${eventId}.pdf`;
         if (contentDisposition) {
@@ -668,7 +638,6 @@ async function exportReport() {
             }
         }
 
-        // Create blob and download
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

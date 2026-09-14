@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     function fmtInt(n) { return Number(n || 0).toLocaleString('ro-RO'); }
     function fmtMoney(n) { return Number(n || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
 
-    // ── Venues + KPIs ─────────────────────────────────────────
+    
     let totalUpcoming = 0;
     let venueList = [];
     try {
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             document.getElementById('kpi-tickets').textContent = fmtInt(totalSold);
             document.getElementById('kpi-upcoming').textContent = fmtInt(totalUpcoming);
 
-            // Venues quick — richer card style
+            
             document.getElementById('venues-quick').innerHTML = venueList.slice(0, 5).map(v => `
                 <a href="/venue/analiza?venue_id=${v.id}" class="block p-4 transition-all border rounded-xl border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-sm group">
                     <div class="flex items-start justify-between gap-2">
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }
     } catch (e) { console.error('venues failed', e); }
 
-    // ── Upcoming events (rich cards) ──────────────────────────
+    
     try {
         const events = await AmbiletVenueAPI.events({ scope: 'upcoming' });
         const list = document.getElementById('upcoming-list');
@@ -270,3 +270,4 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
+                                                                                                                                                                                                                                                                                                             

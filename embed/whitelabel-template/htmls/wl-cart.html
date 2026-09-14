@@ -669,12 +669,10 @@ function changeQty(btn, delta, price, subId, totalId) {
   document.getElementById(totalId).textContent = (qty * price);
 }
 
-// Card number formatting
 document.querySelector('input[maxlength="19"]').addEventListener('input', function(e) {
   var v = e.target.value.replace(/\D/g,'').substring(0,16);
   e.target.value = v.replace(/(.{4})/g,'$1 ').trim();
 });
-// Expiry formatting
 document.querySelector('input[placeholder="LL / AA"]').addEventListener('input', function(e) {
   var v = e.target.value.replace(/\D/g,'').substring(0,4);
   if(v.length>=2) e.target.value = v.substring(0,2)+' / '+v.substring(2);

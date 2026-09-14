@@ -123,11 +123,9 @@ let selectedEventId = null;
 let eventsList = [];
 let dropdownOpen = false;
 
-// Initialize
 document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
 
-    // Close dropdown on outside click
     document.addEventListener('click', function(e) {
         const wrapper = document.getElementById('event-dropdown-wrapper');
         if (wrapper && !wrapper.contains(e.target)) {
@@ -156,7 +154,6 @@ async function loadEvents() {
         const events = response.data || [];
 
         if (response.success && events.length > 0) {
-            // Sort: live first (closest date first), then ended (most recent first)
             const sortedEvents = events.sort((a, b) => {
                 const aLive = isEventLive(a), bLive = isEventLive(b);
                 if (aLive && !bLive) return -1;
@@ -174,8 +171,6 @@ async function loadEvents() {
                 return { id: event.id, label: dot + (event.name || event.title) + (meta ? ' — ' + meta : ''), live };
             });
 
-            // Preselect from ?event=ID when present; otherwise fall back to the
-            // most-recent live event at the top of the sorted list.
             if (eventsList.length > 0) {
                 const urlEventId = new URLSearchParams(window.location.search).get('event');
                 const matched = urlEventId ? eventsList.find(e => String(e.id) === String(urlEventId)) : null;
@@ -306,13 +301,9 @@ function renderParticipants(participants) {
     }
 
     container.innerHTML = participants.map(p => {
-        // Get initials safely
         const initials = (p.name || '').split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase();
-        // Spoof email for privacy
         const spoofedEmail = spoofEmail(p.email);
-        // Format order date
         const orderDate = p.order_date ? AmbiletUtils.formatDate(p.order_date) : (p.created_at ? AmbiletUtils.formatDate(p.created_at) : '-');
-        // Seat info
         const seatInfo = p.seat_label ? `<div class="mt-1 text-xs text-muted">${escapeHtmlP(p.seat_label)}</div>` : '';
 
         return `
@@ -367,7 +358,6 @@ function renderParticipants(participants) {
     }).join('');
 }
 
-// Full date + time of the check-in (e.g. "21 iul. 2026, 14:30").
 function formatCheckinDateTime(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -377,12 +367,11 @@ function formatCheckinDateTime(iso) {
     return `${date}, ${time}`;
 }
 
-// Human label for where the check-in was performed (tickets.checked_in_via).
 function checkinSourceLabel(via) {
     switch (via) {
         case 'organizer_mobile':  return 'Aplicație mobilă';
         case 'organizer_desktop': return 'Cont organizator (desktop)';
-        case 'organizer_app':     return 'Cont organizator'; // legacy (device unknown)
+        case 'organizer_app':     return 'Cont organizator';
         case 'pos_app':           return 'POS';
         case 'venue_app':         return 'Aplicație locație';
         case 'online_join':       return 'Online (self check-in)';
@@ -390,7 +379,6 @@ function checkinSourceLabel(via) {
     }
 }
 
-// Small icon matching the check-in source (phone for mobile, monitor for desktop).
 function checkinSourceIcon(via) {
     const cls = 'class="w-3.5 h-3.5 shrink-0"';
     if (via === 'organizer_mobile') {
@@ -464,14 +452,12 @@ async function exportParticipants() {
     try {
         AmbiletNotifications.info('Se genereaza lista participantilor...');
 
-        // Get auth token
         const authToken = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null);
         if (!authToken) {
             AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
             return;
         }
 
-        // Fetch CSV via proxy with authentication
         const response = await fetch(`/api/proxy.php?action=organizer.participants.export&event_id=${selectedEventId}`, {
             method: 'GET',
             headers: {
@@ -485,14 +471,12 @@ async function exportParticipants() {
             throw new Error(errorData.message || 'Eroare la export');
         }
 
-        // Build filename: [event title]-Participanti-[export date].csv
         const eventItem = eventsList.find(e => String(e.id) === String(selectedEventId));
         const eventTitle = eventItem ? eventItem.label.split(' - ')[0].trim() : 'Eveniment';
         const safeTitle = eventTitle.replace(/[^a-zA-Z0-9àáâãäåăîșțâéèêëìíïòóôõöùúûüñç -]/gi, '').replace(/\s+/g, '-');
         const exportDate = new Date().toISOString().slice(0, 10);
         let filename = `${safeTitle}-Participanti-${exportDate}.csv`;
 
-        // Override with server-provided filename if available
         const contentDisposition = response.headers.get('Content-Disposition');
         if (contentDisposition) {
             const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
@@ -501,7 +485,6 @@ async function exportParticipants() {
             }
         }
 
-        // Create blob and download
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -519,7 +502,6 @@ async function exportParticipants() {
     }
 }
 
-// Event listeners (inside DOMContentLoaded to ensure utils.js is loaded)
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('checkin-filter').addEventListener('change', loadParticipants);
     document.getElementById('search-participant').addEventListener('input', AmbiletUtils.debounce(filterAndRenderParticipants, 300));

@@ -133,7 +133,6 @@ async function loadEvents() {
             } else if (Array.isArray(res.data)) {
                 allEvents = res.data;
             }
-            // Filter out past/finished events
             promoEvents = allEvents.filter(e => e.is_editable !== false && e.is_past !== true && !e.is_cancelled);
 
             const sel = document.getElementById('promo-event');
@@ -144,8 +143,6 @@ async function loadEvents() {
                 sel.appendChild(opt);
             });
 
-            // Setup event change listener for ticket types — wrap to ignore
-            // the Event object that the listener passes as first arg.
             sel.addEventListener('change', () => onEventSelected());
         }
     } catch (e) { console.error('Failed to load events:', e); }
@@ -164,7 +161,6 @@ function formatPriceRon(value) {
 }
 
 async function onEventSelected(preSelectedTicketTypeIds) {
-    // Defensive: if called by addEventListener fără arg, sau cu Event obj, normalize la []
     if (!Array.isArray(preSelectedTicketTypeIds)) {
         preSelectedTicketTypeIds = [];
     }
@@ -212,15 +208,11 @@ async function loadPromoCodes() {
     try {
         const response = await AmbiletAPI.get('/organizer/promo-codes');
         if (response.success) {
-            // API may return data as array, response.data.data (merged), or response.data.promo_codes
             allPromoCodes = Array.isArray(response.data) ? response.data : (response.data.data || response.data.promo_codes || []);
             promoCodes = [...allPromoCodes];
             renderPromoCodes();
-            // "Active" tile counts codes that are TRULY usable right now, not just
-            // status='active' (which lies for expired / exhausted / pending codes).
             document.getElementById('active-codes').textContent = allPromoCodes.filter(isCodeEffectivelyActive).length;
             document.getElementById('total-uses').textContent = allPromoCodes.reduce((s, c) => s + (c.usage_count || 0), 0);
-            // Calculate total discounts from usage
             const totalDiscounts = allPromoCodes.reduce((sum, c) => sum + ((c.usage_count || 0) * (c.value || 0)), 0);
             document.getElementById('total-discounts').textContent = AmbiletUtils.formatCurrency(response.meta?.total_discounts || totalDiscounts || 0);
             document.getElementById('revenue-codes').textContent = AmbiletUtils.formatCurrency(response.meta?.revenue_generated || 0);
@@ -228,9 +220,6 @@ async function loadPromoCodes() {
     } catch (error) { console.error('Failed to load promo codes:', error); allPromoCodes = []; promoCodes = []; renderPromoCodes(); }
 }
 
-// Mirror of the server-side isValid() in MarketplaceOrganizerPromoCode:
-// status='active' is necessary but not sufficient — also need to be inside
-// the start/end window and under usage_limit.
 function isCodeEffectivelyActive(c) {
     if (c.status !== 'active') return false;
     const now = Date.now();
@@ -244,7 +233,6 @@ function isCodeEffectivelyActive(c) {
 }
 
 function getCardColor(code) {
-    // Return different colors based on status and discount type
     if (!isCodeEffectivelyActive(code)) return 'muted';
     const type = code.type || code.discount_type;
     const value = code.value || code.discount_value || 0;
@@ -256,13 +244,11 @@ function getCardColor(code) {
 function renderPromoCodes() {
     const container = document.getElementById('promo-codes-grid');
 
-    // Generate cards HTML
     let cardsHtml = promoCodes.map(c => {
         const discountType = c.type || c.discount_type;
         const discountValue = c.value || c.discount_value || 0;
         const color = getCardColor(c);
 
-        // Handle event name
         let eventName = 'Toate evenimentele';
         if (c.event) {
             if (typeof c.event === 'string') {
@@ -280,18 +266,10 @@ function renderPromoCodes() {
         const usageLimit = c.usage_limit || 0;
         const usagePercent = usageLimit > 0 ? Math.min((usageCount / usageLimit) * 100, 100) : 0;
 
-        // Discount display
         const discountDisplay = discountType === 'percentage'
             ? discountValue + '% reducere'
             : AmbiletUtils.formatCurrency(discountValue) + ' reducere';
 
-        // Effective status — DB `status` is not auto-rolled when a code's
-        // expires_at passes (no cron updates it), so a row stuck at
-        // status='active' can in fact be expired / not-yet-started / exhausted.
-        // The /promo-codes/validate endpoint enforces these checks server-side,
-        // which is how an "Activ" badge in the list pairs with a
-        // "Codul promoțional nu este activ" error on checkout. We recompute
-        // the effective status client-side so the badge matches reality.
         const nowMs = Date.now();
         const startMs = startDate ? new Date(startDate).getTime() : null;
         const endMs = endDate ? new Date(endDate).getTime() : null;
@@ -303,7 +281,6 @@ function renderPromoCodes() {
         }
         const isExpired = effectiveStatus === 'expired' || effectiveStatus === 'disabled' || effectiveStatus === 'exhausted';
 
-        // Status badge
         let statusBadge = '';
         if (effectiveStatus === 'active') {
             statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-success/10 text-success">Activ</span>';
@@ -381,7 +358,6 @@ function renderPromoCodes() {
         </div>`;
     }).join('');
 
-    // Add "Create New" card at the end
     cardsHtml += `
     <div onclick="openCreateModal()" class="border-2 border-dashed border-border rounded-xl lg:rounded-2xl flex items-center justify-center min-h-[240px] hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
         <div class="p-6 text-center">
@@ -402,8 +378,6 @@ function filterPromoCodes() {
 
     promoCodes = allPromoCodes.filter(c => {
         const matchesSearch = !searchQuery || c.code.toLowerCase().includes(searchQuery);
-        // Match against the EFFECTIVE status so picking "Activ" hides expired codes
-        // that are still status='active' in DB, and picking "Expirat" surfaces them.
         const now = Date.now();
         const startMs = (c.starts_at || c.start_date) ? new Date(c.starts_at || c.start_date).getTime() : null;
         const endMs = (c.expires_at || c.end_date) ? new Date(c.expires_at || c.end_date).getTime() : null;
@@ -450,10 +424,8 @@ async function editCode(id) {
     document.getElementById('usage-limit').value = code.usage_limit || '';
     document.getElementById('usage-limit-per-customer').value = code.usage_limit_per_customer || '';
 
-    // Load ticket types if event is selected, pre-check the right ones
     const eventId = code.event?.id || code.event_id;
     if (eventId) {
-        // Build pre-selected list: prefer applicable_ticket_type_ids array, else legacy single id
         let preSelected = [];
         if (Array.isArray(code.applicable_ticket_type_ids) && code.applicable_ticket_type_ids.length) {
             preSelected = code.applicable_ticket_type_ids;
@@ -466,7 +438,6 @@ async function editCode(id) {
         document.getElementById('ticket-type-container').classList.add('hidden');
     }
 
-    // Handle both date formats (ISO string and date string)
     const startDate = code.starts_at || code.start_date;
     const endDate = code.expires_at || code.end_date;
     document.getElementById('start-date').value = startDate ? startDate.split('T')[0] : '';
@@ -487,7 +458,6 @@ function togglePromoMenu(id) {
 function closeAllPromoMenus() {
     document.querySelectorAll('[id^="promo-menu-"]').forEach(m => m.classList.add('hidden'));
 }
-// Close menus on click outside
 document.addEventListener('click', function(e) {
     if (!e.target.closest('[id^="promo-menu-"]') && !e.target.closest('button[onclick^="togglePromoMenu"]')) {
         closeAllPromoMenus();
@@ -543,11 +513,6 @@ async function savePromoCode(e) {
     } catch (error) { AmbiletNotifications.error(error.message || 'Eroare la salvare'); }
 }
 
-// Bind filter handlers after defer-loaded scripts finish (utils.js carries
-// AmbiletUtils.debounce). Without the DOMContentLoaded wrap, this inline
-// <script> evaluates immediately on parse — before utils.js has executed —
-// and the AmbiletUtils.debounce(...) argument throws ReferenceError, which
-// aborts the rest of the script block.
 document.addEventListener('DOMContentLoaded', function () {
     var searchEl = document.getElementById('search-codes');
     var statusEl = document.getElementById('status-filter');

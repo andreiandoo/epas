@@ -117,8 +117,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function startOfWeek(d) {
         const r = new Date(d);
-        const dow = r.getDay(); // 0=sun..6=sat
-        const diff = (dow + 6) % 7; // distance to monday
+        const dow = r.getDay();
+        const diff = (dow + 6) % 7;
         r.setDate(r.getDate() - diff);
         r.setHours(0,0,0,0);
         return r;
@@ -167,7 +167,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-empty').classList.remove('hidden');
             return;
         }
-        // Group shifts by member_id × day_index (0..6 from monday)
         const grid = {};
         for (const s of shifts) {
             const start = new Date(s.start_at);
@@ -204,7 +203,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-body').innerHTML = rows;
         $('lv-grid').classList.remove('hidden');
 
-        // Bind clicks
         $('lv-body').querySelectorAll('.lv-cell').forEach(td => {
             td.addEventListener('click', (e) => {
                 if (e.target.closest('.lv-chip')) return;
@@ -225,7 +223,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         editing = shift;
         $('lv-modal-title').textContent = shift ? 'Editează turnetă' : 'Adaugă turnetă';
 
-        // members select
         $('lv-f-member').innerHTML = '<option value="">— Fără atribuire —</option>' +
             members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 

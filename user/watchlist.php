@@ -103,12 +103,9 @@ const WatchlistPage = {
 
     async loadWatchlist() {
         try {
-            // Load events from watchlist API
             const eventsResponse = await AmbiletAPI.customer.getWatchlist();
             if (eventsResponse.success && eventsResponse.data) {
-                // API returns array directly in data, not data.events
                 this.events = Array.isArray(eventsResponse.data) ? eventsResponse.data : [];
-                // Transform event data to expected format
                 this.events = this.events.map(item => ({
                     id: item.event?.id || item.id,
                     title: item.event?.name || item.title || 'Eveniment',
@@ -124,7 +121,6 @@ const WatchlistPage = {
                 }));
             }
 
-            // Load favorite artists
             try {
                 const artistsResponse = await AmbiletAPI.getFavoriteArtists();
                 if (artistsResponse.success && artistsResponse.data) {
@@ -135,7 +131,6 @@ const WatchlistPage = {
                 this.artists = [];
             }
 
-            // Load favorite venues
             try {
                 const venuesResponse = await AmbiletAPI.getFavoriteVenues();
                 if (venuesResponse.success && venuesResponse.data) {
@@ -157,13 +152,11 @@ const WatchlistPage = {
 
 
     render() {
-        // Update counts
         document.getElementById('events-count').textContent = this.events.length;
         document.getElementById('artists-count').textContent = this.artists.length;
         document.getElementById('venues-count').textContent = this.venues.length;
         document.getElementById('notification-count').textContent = this.events.length;
 
-        // Render all sections
         this.renderEvents();
         this.renderArtists();
         this.renderVenues();
@@ -174,7 +167,6 @@ const WatchlistPage = {
             const response = await AmbiletAPI.customer.removeFromWatchlist(type, id);
             if (response.success) {
                 AmbiletNotifications.success('Eliminat din favorite!');
-                // Remove from local array
                 if (type === 'event') {
                     this.events = this.events.filter(e => e.id !== id);
                 } else if (type === 'artist') {
@@ -303,22 +295,18 @@ const WatchlistPage = {
     }
 };
 
-// Initialize page
 document.addEventListener('DOMContentLoaded', () => WatchlistPage.init());
 
 function showTab(tabName) {
-    // Hide all tabs
     document.getElementById('tab-events').classList.add('hidden');
     document.getElementById('tab-artists').classList.add('hidden');
     document.getElementById('tab-venues').classList.add('hidden');
 
-    // Reset all tab buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
         btn.classList.add('text-muted');
     });
 
-    // Show selected tab
     document.getElementById('tab-' + tabName).classList.remove('hidden');
     document.getElementById('tab-btn-' + tabName).classList.add('active');
     document.getElementById('tab-btn-' + tabName).classList.remove('text-muted');

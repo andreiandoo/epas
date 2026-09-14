@@ -175,10 +175,10 @@ function toggleSidebar() {
     document.getElementById('sidebarOverlay').classList.toggle('active');
 }
 
-// Load sidebar data (events count, org info) on all organizer pages
-// Use window load event to ensure all scripts are loaded
+
+
 window.addEventListener('load', async function() {
-    // Wait for AmbiletAPI to be available (retry a few times)
+    
     let retries = 0;
     while (typeof AmbiletAPI === 'undefined' && retries < 10) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -191,9 +191,9 @@ window.addEventListener('load', async function() {
     }
 
     try {
-        // Events count — counted server-side over ALL the organizer's events
-        // (meta.counts). The list itself is paginated, so counting its first
-        // page undercounted. Sole writer of #nav-events-count.
+        
+        
+        
         const eventsResponse = await AmbiletAPI.get('/organizer/events', { with_counts: 1 });
         const events = eventsResponse.data || [];
         const meta = eventsResponse.meta || {};
@@ -201,7 +201,7 @@ window.addEventListener('load', async function() {
             const navCount = document.getElementById('nav-events-count');
             if (navCount && meta.counts) navCount.textContent = meta.counts.ongoing;
 
-            // Show "Locație de agrement" link when at least one event has display_template === 'leisure_venue'
+            
             const hasLeisure = meta.has_leisure_venue
                 ?? events.some(e => (e.display_template || 'standard') === 'leisure_venue');
             const leisureLink = document.getElementById('nav-leisure-link');
@@ -210,12 +210,12 @@ window.addEventListener('load', async function() {
             }
         }
 
-        // Fresh fetch /organizer/me to get latest organizer_type (LocalStorage can be stale)
+        
         let orgData = {};
         try {
             const meResp = await AmbiletAPI.get('/organizer/me');
             orgData = (meResp.data && meResp.data.organizer) || meResp.organizer || {};
-            // Cache pentru alte pagini
+            
             if (orgData && orgData.id) {
                 localStorage.setItem('ambilet_organizer_data', JSON.stringify(orgData));
             }
@@ -223,7 +223,7 @@ window.addEventListener('load', async function() {
             orgData = AmbiletAuth.getOrganizerData?.() || JSON.parse(localStorage.getItem('ambilet_organizer_data') || '{}');
         }
 
-        // Apply org type — toggle leisure vs standard sidebar links
+        
         const orgType = (orgData && orgData.organizer_type) === 'leisure' ? 'leisure' : 'standard';
         document.body.setAttribute('data-org-type', orgType);
         document.querySelectorAll('[data-org-show]').forEach(el => {
@@ -231,9 +231,9 @@ window.addEventListener('load', async function() {
             el.style.display = (showFor === orgType) ? 'flex' : 'none';
         });
 
-        // Kiosk POS: rol restrictionat 'pos_cashier' vede DOAR
-        // /organizator/leisure-dashboard si /organizator/leisure-pos.
-        // Ascunde sidebar-ul complet + redirect din alte pagini.
+        
+        
+        
         const leisureRole = (orgData && orgData.team_member && orgData.team_member.leisure_role) || null;
         if (leisureRole === 'pos_cashier') {
             const allowedPaths = ['/organizator/leisure-dashboard', '/organizator/leisure-pos'];
@@ -242,24 +242,24 @@ window.addEventListener('load', async function() {
                 window.location.replace('/organizator/leisure-pos');
                 return;
             }
-            // Ascunde sidebar + overlay ca sa nu poata naviga aiurea
+            
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             if (sidebar) sidebar.style.display = 'none';
             if (overlay) overlay.style.display = 'none';
-            // Ascunde si butonul hamburger de pe mobile (topbar)
+            
             document.querySelectorAll('[onclick*="toggleSidebar"]').forEach(el => { el.style.display = 'none'; });
-            // Marker CSS pt eventuale ajustari de layout
+            
             document.body.setAttribute('data-restricted-role', 'pos_cashier');
         }
 
-        // Rol 'staff' (membru echipa): acces DOAR la aplicatia de scanare /
-        // vanzare (PWA /organizator/scan*). Din orice pagina de dashboard e
-        // redirectionat catre aplicatie si nu vede sidebar-ul. Owner-ul si
-        // rolurile admin/manager NU sunt afectate.
-        // EXCEPTIE: organizatorii de tip 'leisure' au staff = operatori POS,
-        // care folosesc fluxul lor (leisure-pos / leisure_role='pos_cashier').
-        // Pentru ei NU aplicam redirect-ul (raman ca inainte).
+        
+        
+        
+        
+        
+        
+        
         const teamRole = (orgData && orgData.team_member && orgData.team_member.role) || null;
         if (teamRole === 'staff' && orgType !== 'leisure') {
             const currentPath = window.location.pathname.replace(/\/$/, '');
@@ -271,6 +271,34 @@ window.addEventListener('load', async function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             if (sidebar) sidebar.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
+            document.querySelectorAll('[onclick*="toggleSidebar"]').forEach(el => { el.style.display = 'none'; });
+            document.body.setAttribute('data-restricted-role', 'staff');
+        }
+
+        if (orgData) {
+            const orgName = document.getElementById('sidebar-org-name');
+            const orgInitials = document.getElementById('sidebar-org-initials');
+            const orgPlan = document.getElementById('sidebar-org-plan');
+
+            if (orgName && orgData.public_name) {
+                orgName.textContent = orgData.public_name;
+            }
+            if (orgInitials && orgData.public_name) {
+                orgInitials.textContent = orgData.public_name.substring(0, 2).toUpperCase();
+            }
+            if (orgPlan && orgData.plan_name) {
+                orgPlan.textContent = orgData.plan_name;
+            } else if (orgPlan && orgType === 'leisure') {
+                orgPlan.textContent = 'Leisure venue';
+            }
+        }
+    } catch (error) {
+        console.error('Sidebar init error:', error);
+    }
+});
+</script>
+                                                                                                                                                                                                                                                                                   display = 'none';
             if (overlay) overlay.style.display = 'none';
             document.querySelectorAll('[onclick*="toggleSidebar"]').forEach(el => { el.style.display = 'none'; });
             document.body.setAttribute('data-restricted-role', 'staff');

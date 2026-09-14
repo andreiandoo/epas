@@ -308,7 +308,7 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
 document.addEventListener('DOMContentLoaded', () => (async function () {
     if (typeof AmbiletVenueAPI === 'undefined') return;
 
-    // ── Helpers ─────────────────────────────────────────────────
+    
     const fmtInt = n => Number(n || 0).toLocaleString('ro-RO');
     const fmtMoney = n => Number(n || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -319,14 +319,14 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         try { return new Date(d).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: '2-digit' }); }
         catch (e) { return d; }
     };
-    // Normalize a city name — strip diacritics, trim, lowercase — so
-    // "Constanta", "CONSTANTA" and "Constanța" all collapse into the
-    // same bucket in the Geographic Origin table. Uses NFD decomposition
-    // to remove combining marks (works for all Romanian diacritics).
+    
+    
+    
+    
     const normalizeCity = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
-    // Prettify the collapsed city bucket key for display (Title Case).
+    
     const prettyCity = key => key.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    // ── Translation dicts (blade labels are in English) ─────────
+    
     const T_DAY = {
         'Monday': 'Luni', 'Tuesday': 'Marți', 'Wednesday': 'Miercuri',
         'Thursday': 'Joi', 'Friday': 'Vineri', 'Saturday': 'Sâmbătă', 'Sunday': 'Duminică',
@@ -347,11 +347,11 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     const T_HEALTH_COMP = { 'Occupancy': 'Ocupare', 'Revenue Growth': 'Creștere venit', 'Customer Loyalty': 'Loialitate', 'Activity': 'Activitate' };
     const T_MOMENTUM = { 'Events': 'Evenimente', 'Tickets Sold': 'Bilete vândute', 'Revenue': 'Venit', 'Avg Occupancy': 'Ocupare medie' };
     const T_DAYTYPE = { 'Weekend': 'Weekend', 'Weekday': 'Zi lucrătoare', 'Fri': 'Vineri', 'Sat': 'Sâmbătă', 'Sun': 'Duminică' };
-    // Translate a token by looking it up in a dict; fall back to the
-    // original text so English strings we haven't mapped still render.
+    
+    
     const tr = (dict, key) => (dict[key] !== undefined ? dict[key] : key);
-    // "May 25" (Carbon 'M y' format) → "Mai 25". Regex handles both
-    // 3-letter month prefixes and full month names.
+    
+    
     const translateMonthLabel = (label) => {
         if (!label) return label;
         const parts = String(label).split(' ');
@@ -359,15 +359,15 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return parts.join(' ');
     };
 
-    // ── State ───────────────────────────────────────────────────
+    
     const state = {
         venueId: 'all',
-        data: null,     // full analytics payload
-        charts: {},     // { yearlyEv, yearlyRev }
+        data: null,     
+        charts: {},     
         activeTab: 'overview',
     };
 
-    // ── Venue picker ────────────────────────────────────────────
+    
     async function initVenuePicker() {
         try {
             const res = await AmbiletVenueAPI.venues();
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         } catch (e) { console.error(e); }
     }
 
-    // ── Load ────────────────────────────────────────────────────
+    
     async function loadAll() {
         const loading = document.getElementById('analiza-loading');
         loading.classList.remove('hidden');
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         if (id === 'overview') renderOverviewCharts();
     }
 
-    // ── Render all tabs (skeleton, charts drawn lazily) ─────────
+    
     function renderAllTabs() {
         document.getElementById('tab-overview').innerHTML     = renderOverview();
         document.getElementById('tab-financial').innerHTML    = renderFinancial();
@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         wireInteractive();
     }
 
-    // ── OVERVIEW ────────────────────────────────────────────────
+    
     function renderOverview() {
         const d = state.data;
         const k = d.kpis || {};
@@ -442,10 +442,10 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const loyalty = d.customerLoyalty || {};
         let html = '';
 
-        // ── Combined hero: KPI strip + Health Score in one panel ─
-        // Compact 2/3 (KPI grid) + 1/3 (Health Score gauge with
-        // component breakdown) so the whole "at-a-glance" state fits
-        // in one horizontal strip instead of stacking two full cards.
+        
+        
+        
+        
         const uniqueBuyers = loyalty.total || 0;
         const healthScore = Math.round(h.score || 0);
         const healthColor = h.color || (healthScore >= 75 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444');
@@ -517,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             ` : ''}
         </div>`;
 
-        // ── Impuls lunar ── premium cards cu gradient subtil per direction
+        
         if (m && Array.isArray(m.metrics) && m.metrics.length) {
             html += `<div class="a-card">
                 <div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">📈</span>Impuls lunar
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // ── Grafice: Evenimente & Bilete + Venit & Ocupare ── ambele într-un card 2‑cols
+        
         if (d.months && d.months.length) {
             html += `<div class="a-g2">
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📊</span>Evenimente & Bilete<span class="a-card-sub">Ultimele 12 luni</span></div>
@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // ── Performanță evenimente ── tabel premium cu chip-uri ocupare + sold-bar mini
+        
         const evPerf = d.eventPerformance || [];
         if (evPerf.length) {
             html += `<div class="a-card">
@@ -590,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // ── Weekend vs zi lucrătoare  +  An vs an ── redesign visual
+        
         const rb = d.revenueBreakdown || {};
         const dayType = rb.revenue_by_day_type || [];
         const yoy = rb.yoy || {};
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // ── Comparație oraș + Venit / loc ── premium
+        
         const bench = d.competitorBenchmark || {};
         const rps = d.revenuePerSeat || {};
         if ((bench.city_avg && bench.my) || (rps.avg_rev_per_seat || 0) > 0) {
@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // ── Comparație evenimente ── selects premium
+        
         if (evPerf.length >= 2) {
             const cmpSelStyle = 'width:100%;padding:.55rem .7rem;border:1px solid var(--v-ring);border-radius:.5rem;font-size:.8125rem;background:#fff;font-weight:500;';
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">⚖️</span>Comparație evenimente<span class="a-card-sub">Selectează 2 evenimente pentru analiză lângă‑lângă</span></div>
@@ -730,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const d = state.data;
         if (!d.months || !d.months.length) return;
 
-        // Kill any old charts before recreating (venue picker change).
+        
         Object.values(state.charts).forEach(c => c && c.destroy && c.destroy());
         state.charts = {};
 
@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }
     }
 
-    // ── FINANCIAL ───────────────────────────────────────────────
+    
     function renderFinancial() {
         const d = state.data;
         const rb = d.revenueBreakdown || {};
@@ -774,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const refunds = d.refundAnalysis || {};
         let html = '';
 
-        // Top Artists by Revenue
+        
         if (rb.top_artists_by_revenue && rb.top_artists_by_revenue.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🎤</span>Top artiști după venit</div>
                 <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev.</th><th style="text-align:right">Venit</th><th style="text-align:right">ST med</th></tr></thead>
@@ -783,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 `).join('')}</tbody></table></div>`;
         }
 
-        // Genre + Channel
+        
         html += `<div class="a-g2">
             ${rb.revenue_by_genre && rb.revenue_by_genre.length ? `
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🎵</span>Venit pe gen muzical</div>
@@ -807,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             ` : ''}
         </div>`;
 
-        // Pricing Intelligence
+        
         if (pi.price_buckets && pi.price_buckets.length) {
             html += `<div class="a-g2">
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🎯</span>Sensibilitate preț ${pi.sweet_spot ? `<span style="color:var(--v-success);font-size:.7rem;margin-left:.5rem;">Sweet spot: ${pi.sweet_spot} RON</span>` : ''}</div>
@@ -836,7 +836,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Revenue Forecast
+        
         if (rf.forecast && rf.forecast.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🔮</span>Prognoză venituri (6 luni) ${rf.yoy_change_pct !== null ? `<span style="color:${rf.yoy_change_pct >= 0 ? 'var(--v-success)' : 'var(--v-danger)'};font-size:.7rem;margin-left:.5rem;">YoY: ${rf.yoy_change_pct >= 0 ? '+' : ''}${rf.yoy_change_pct}%</span>` : ''}</div>
                 <table class="a-tbl"><thead><tr><th>Lună</th><th style="text-align:right">Pesimist</th><th style="text-align:right">Realist</th><th style="text-align:right">Optimist</th></tr></thead>
@@ -846,7 +846,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Refunds
+        
         if ((refunds.total_refunds || 0) > 0) {
             const refColor = refunds.refund_rate > 5 ? 'var(--v-danger)' : refunds.refund_rate > 2 ? 'var(--v-warn)' : 'var(--v-success)';
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">↩️</span>Rambursări & anulări</div>
@@ -869,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date financiare.</p></div>';
     }
 
-    // ── AUDIENCE ────────────────────────────────────────────────
+    
     function renderAudience() {
         const d = state.data;
         const personas = (d.audiencePersonas && d.audiencePersonas.personas) || [];
@@ -879,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const gLoyalty = d.genreLoyalty || [];
         let html = '';
 
-        // Personas
+        
         if (personas.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">👥</span>Persoane public (${totals.total_customers || 0} cumpărători)</div>
                 <div class="a-g3">${personas.map(p => `
@@ -894,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Age + Gender
+        
         const ageDist = totals.age_distribution || {};
         const genderDist = totals.gender_overall || {};
         if (Object.keys(ageDist).length || Object.keys(genderDist).length) {
@@ -938,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Loyalty + Geographic
+        
         html += `<div class="a-g2">
             ${(loyalty.total || 0) > 0 ? `
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">❤️</span>Loialitate cumpărători</div>
@@ -951,9 +951,9 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 </div>
             ` : ''}
             ${geo.cities && geo.cities.length ? (() => {
-                // Merge "Constanta", "CONSTANTA" and "Constanța" into one
-                // row — backend keeps whatever the buyer typed at checkout,
-                // so we normalize on display before summing.
+                
+                
+                
                 const bucketed = new Map();
                 geo.cities.forEach(c => {
                     const key = normalizeCity(c.city);
@@ -979,7 +979,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             })() : ''}
         </div>`;
 
-        // Superfans
+        
         if (loyalty.superfan_details && loyalty.superfan_details.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">⭐</span>Top superfani</div>
                 <table class="a-tbl"><thead><tr><th>Nume</th><th>Email</th><th>Oraș</th><th style="text-align:right">Evenimente</th><th style="text-align:right">Total cheltuit</th></tr></thead>
@@ -988,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 `).join('')}</tbody></table></div>`;
         }
 
-        // Genre Loyalty
+        
         if (gLoyalty.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🔁</span>Cumpărători recurenți pe gen — Ce genuri construiesc loialitate?</div>
                 <table class="a-tbl"><thead><tr><th>Gen</th><th style="text-align:right">Total</th><th style="text-align:right">Recurenți</th><th style="text-align:right">Rată</th><th style="text-align:right">Ev./cumpărător</th></tr></thead>
@@ -1000,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date despre public.</p></div>';
     }
 
-    // ── ARTISTS ─────────────────────────────────────────────────
+    
     function renderArtists() {
         const d = state.data;
         const ap = d.artistPerformance || [];
@@ -1037,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date artiști.</p></div>';
     }
 
-    // ── SCHEDULING ──────────────────────────────────────────────
+    
     function renderScheduling() {
         const d = state.data;
         const heatmap = d.schedulingHeatmap || {};
@@ -1050,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const velCurves = si.velocity_curves || [];
         let html = '';
 
-        // Heatmap
+        
         if (heatmap.matrix) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">🔥</span>Heatmap performanță (zi × lună)</div>
                 <div style="overflow-x:auto;"><table style="width:100%;font-size:.75rem;border-collapse:collapse;">
@@ -1067,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Day of Week + Seasonality
+        
         html += `<div class="a-g2">
             ${dow.length ? `
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📅</span>Zi a săptămânii</div>
@@ -1087,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             ` : ''}
         </div>`;
 
-        // Idle + Frequency
+        
         html += `<div class="a-g2">
             ${(idle.total_idle_weekend_days || 0) > 0 ? `
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">⏳</span>Zile weekend libere (ultimele 12 luni)</div>
@@ -1108,7 +1108,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             ` : ''}
         </div>`;
 
-        // Purchase Timing + Sales Velocity
+        
         html += `<div class="a-g2">
             ${Object.keys(timing).length ? `
                 <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">⏰</span>Timing achiziții <span style="color:var(--v-muted);font-size:.7rem;margin-left:.5rem;">(medie ${si.avg_lead_days || 0}z înainte)</span></div>
@@ -1154,14 +1154,14 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date de programare.</p></div>';
     }
 
-    // ── OPPORTUNITIES ───────────────────────────────────────────
+    
     function renderOpportunities() {
         const d = state.data;
         const opps = d.opportunities || {};
         const churn = d.churnAlerts || [];
         let html = '';
 
-        // Opportunities list
+        
         const findings = opps.findings || opps || [];
         html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">💎</span>Oportunități</div>
             <div class="space-y-2">${(Array.isArray(findings) ? findings : []).slice(0, 12).map(o => `
@@ -1172,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             `).join('') || '<p class="text-sm text-slate-500">Nici o oportunitate detectată încă.</p>'}</div>
         </div>`;
 
-        // Churn Alerts
+        
         if (churn.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">⚠️</span>Alerte churn</div>
                 <table class="a-tbl"><thead><tr><th>Cumpărător</th><th>Ultima achiziție</th><th style="text-align:right">Zile</th><th style="text-align:right">Risc</th></tr></thead>
@@ -1184,12 +1184,12 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Event Simulator — dropdowns populate din istoric (backend
-        // face match case-insensitive pe numele exact al genului și
-        // pe day_name în engleză din TO_CHAR(...,'Day')).
+        
+        
+        
         const simGenres = (d.genrePerformance || []).map(g => g.genre).filter(Boolean);
         const simDows = (d.dayOfWeek || []).map(x => x.day).filter(Boolean);
-        // Fallback: dacă istoricul zilelor e gol, listăm săptămâna completă.
+        
         const dowFallback = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
         const dowList = simDows.length ? simDows : dowFallback;
         const DOW_RO = { Monday: 'Luni', Tuesday: 'Marți', Wednesday: 'Miercuri', Thursday: 'Joi', Friday: 'Vineri', Saturday: 'Sâmbătă', Sunday: 'Duminică' };
@@ -1221,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return html;
     }
 
-    // ── PROMOTION ───────────────────────────────────────────────
+    
     function renderPromotion() {
         const d = state.data;
         const pp = d.promotionPlanner || {};
@@ -1231,7 +1231,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const topGenres = pp.top_genres || [];
         let html = '';
 
-        // Announcement window
+        
         if (aw.optimal_announce_days !== undefined) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📢</span>Fereastră optimă de anunț</div>
                 <div class="a-g3" style="margin-bottom:.75rem;">
@@ -1252,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Ad budget with phases
+        
         if (ab.recommended_budget !== undefined) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💵</span>Buget recomandat reclame</div>
                 <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
@@ -1270,9 +1270,9 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Platform Strategy — backend returns [{platform, budget_pct,
-        // recommended, audience: {age, location, interests, keywords,
-        // custom, segments}, formats: [], phases: [], tips: '...'}].
+        
+        
+        
         if (ps.length) {
             const T_PHASE_IN = { 'Announce': 'Anunț', 'Peak': 'Maxim', 'Urgency': 'Urgență', 'Last Call': 'Ultimul apel' };
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">📱</span>Strategie pe platforme</div>
@@ -1328,7 +1328,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             </div>`;
         }
 
-        // Top genres for targeting
+        
         if (topGenres.length) {
             html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">🎯</span>Genuri principale pentru targetare</div>
                 <div class="a-g3">${topGenres.map(g => `
@@ -1343,7 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         return html || '<div class="a-card"><p class="text-sm text-slate-500">Fără date de promovare.</p></div>';
     }
 
-    // ── UPCOMING ────────────────────────────────────────────────
+    
     function renderUpcoming() {
         const d = state.data;
         const upcoming = d.upcomingEvents || [];
@@ -1359,25 +1359,25 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </div>`;
     }
 
-    // ── ACTIONS ─────────────────────────────────────────────────
+    
     function renderActions() {
         const d = state.data;
         const ap = d.actionPriority || {};
-        // Backend returns a plain array [{priority, urgency, category,
-        // title, action, impact}, ...], NOT a wrapped object.
+        
+        
         const items = Array.isArray(ap) ? ap : (ap.actions || []);
         if (!items.length) return '<div class="a-card"><p class="text-sm text-slate-500">Nici o acțiune prioritară detectată.</p></div>';
 
-        // English → Romanian for the backend-produced labels.
+        
         const T_URGENCY = { 'critical': 'CRITIC', 'high': 'ÎNALT', 'medium': 'MEDIU', 'low': 'SCĂZUT' };
         const T_CATEGORY = {
             'Event at Risk': 'Eveniment la risc', 'Revenue Opportunity': 'Oportunitate venit',
             'Loyalty': 'Loialitate', 'Pricing': 'Prețuri', 'Competitive': 'Competiție',
             'Refunds': 'Rambursări',
         };
-        // Translate the machine-generated English sentences the backend
-        // emits inside title/action/impact strings. Simple regex swaps
-        // — enough to cover every phrase buildActionPriority produces.
+        
+        
+        
         const translatePhrases = (text) => {
             if (!text) return '';
             return String(text)
@@ -1406,7 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 .replace(/Potential:/g, 'Potențial:');
         };
 
-        // Sort by priority (1 = most urgent) → shown at top.
+        
         const sorted = items.slice().sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
         return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">✅</span>Priorități acțiune (${sorted.length})</div>
@@ -1442,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     }
 
     function wireInteractive() {
-        // Event comparison
+        
         const cmpRun = document.getElementById('cmp-run');
         if (cmpRun) {
             cmpRun.addEventListener('click', async () => {
@@ -1548,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         });
     }
 
-    // ── Help modal ──────────────────────────────────────────────
+    
     const HELP_CONTENT = {
         overview: {
             title: 'Vedere generală',
@@ -1670,7 +1670,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     helpModal.addEventListener('click', (e) => { if (e.target === helpModal) hideHelp(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideHelp(); });
 
-    // ── Boot ────────────────────────────────────────────────────
+    
     document.querySelectorAll('.analiza-tab-btn').forEach(b => {
         b.addEventListener('click', () => switchTab(b.dataset.tab));
     });
@@ -1681,3 +1681,95 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
+                                                                                                                                                                                            { h: 'Zi a săptămânii', p: 'Care zile ale săptămânii aduc cei mai mulți bilete și cel mai mare venit.' },
+                { h: 'Sezonalitate', p: 'Performanță lună cu lună + câte zile ai lăsat goale în fiecare lună.' },
+                { h: 'Zile weekend libere', p: 'Vin/Sâm/Dum pe care nu ai avut evenimente. Fiecare zi liberă = venit potențial ratat.' },
+                { h: 'Frecvență optimă', p: 'Sub ce interval (săptămâni fără eveniment) ai avut cea mai bună ocupare.' },
+                { h: 'Timing achiziții', p: 'Când cumpără publicul biletele: cu 90+ zile înainte, în ultima săptămână etc. Ajută să știi când să investești în reclame.' },
+                { h: 'Viteză vânzări', p: 'Ultimele 5 evenimente: cât de repede s-au vândut biletele. Fiecare bară = un procent de bilete vândute cu X zile înainte.' },
+            ],
+        },
+        opportunities: {
+            title: 'Oportunități',
+            sections: [
+                { h: 'Oportunități', p: 'Sugestii concrete detectate automat: evenimente sub-priced, timing anunț mai bun, genuri sub-explorate etc.' },
+                { h: 'Alerte churn', p: 'Cumpărători care obișnuiau să vină des dar nu au mai apărut de mult. Risc mare = probabil pierduți. Rulează campanie remarketing.' },
+                { h: 'Simulator eveniment', p: 'Introdu un gen, o zi și un preț ipotetic — sistemul îți spune câte bilete și cât venit ai putea avea, pe baza istoricului.' },
+            ],
+        },
+        promotion: {
+            title: 'Promovare',
+            sections: [
+                { h: 'Fereastră optimă de anunț', p: 'Zilele înainte de eveniment când să-l publici. „Optim" = ai timp să prinzi 90% din cumpărători. „P90" = până la câte zile înainte cumpără 90% din public.' },
+                { h: 'Buget recomandat', p: 'Sumă recomandată pentru reclame pe eveniment (~12% din venitul estimat) + cum s-o împarți pe faze (anunț, maxim, urgență, ultimul <?php
+/**
+ * Tour Single Page - Ambilet Marketplace
+ * Visual based on resources/marketplaces/ambilet/designs/ambilet-tour-v2.html.
+ * Data loaded async via AmbiletAPI.get('/tours/{slug}').
+ */
+$pageCacheTTL = 300;
+require_once __DIR__ . '/includes/page-cache.php';
+require_once __DIR__ . '/includes/config.php';
+
+$tourSlug = $_GET['slug'] ?? '';
+if (empty($tourSlug)) {
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (preg_match('#/turnee/([a-z0-9-]+)#i', $uri, $matches)) {
+        $tourSlug = $matches[1];
+    }
+}
+
+$pageTitle = "Turneu — {$siteName}";
+$pageDescription = "Descoperă turneul și concertele incluse pe {$siteName}.";
+$bodyClass = 'antialiased bg-slate-50 text-slate-900 page-tour-single';
+$cssBundle = 'single';
+require_once __DIR__ . '/includes/head.php';
+require_once __DIR__ . '/includes/header.php';
+?>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+    body.page-tour-single { background: #f8fafc; }
+    .card-shadow { box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.04); }
+    .card-shadow-hover:hover { box-shadow: 0 4px 12px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04); }
+    .date-card { transition: all .2s ease; }
+    .date-card:hover { border-color: var(--color-primary, #C8102E); transform: translateY(-2px); }
+    .date-card:hover .buy-btn { background: var(--color-primary, #C8102E); color: #fff; }
+    @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+    .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+    @keyframes ping-slow { 0% { transform: scale(1); opacity: 1; } 75%, 100% { transform: scale(2.5); opacity: 0; } }
+    .ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    @keyframes progress-fill { from { width: 0; } to { width: var(--progress); } }
+    .progress-bar { animation: progress-fill 1.2s ease-out forwards; }
+    [data-hidden] { display: none !important; }
+
+    /* Leaflet pin styling */
+    .tour-pin {
+        display: flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px;
+        background: var(--color-primary, #C8102E);
+        color: #fff; border-radius: 9999px;
+        font-weight: 800; font-size: 12px;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    }
+    .tour-pin.tour-pin-past { background: #94a3b8; }
+    .tour-pin-final::after {
+        content: '★'; position: absolute;
+        top: -4px; right: -6px;
+        width: 16px; height: 16px;
+        background: #fbbf24; color: #fff;
+        font-size: 10px; line-height: 16px;
+        border-radius: 9999px; text-align: center;
+        border: 2px solid #fff;
+    }
+    .leaflet-container { font-family: inherit; }
+    .leaflet-popup-content-wrapper { border-radius: 8px; }
+    .leaflet-popup-content { margin: 10px 12px; font-size: 13px; }
+</style>
+
+<!-- HERO with poster -->
+<section class="px-4 pt-4 mx-auto max-w-7xl md:px-6 mt-17 mobile:mt-16">
+  <div class="overflow-hidden bg-gradient-to-br 

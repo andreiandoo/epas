@@ -213,7 +213,6 @@ const WriteReviewPage = {
                 document.getElementById('event-venue').textContent = response.event.venue;
             }
         } catch (error) {
-            // Demo data
             document.getElementById('event-title').textContent = 'Coldplay - Music of the Spheres World Tour';
             document.getElementById('event-date').textContent = 'Sambata, 15 Iunie 2025';
             document.getElementById('event-venue').textContent = 'Arena Nationala, Bucuresti';

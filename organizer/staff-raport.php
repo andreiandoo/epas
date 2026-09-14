@@ -56,8 +56,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 </div>
 
 <script>
-// IIFE standalone — independent de team.php. Foloseste AmbiletAPI + AmbiletAuth deja
-// incarcate prin scripts.php common bundle.
 (function () {
     const $ = (id) => document.getElementById(id);
 
@@ -133,14 +131,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Default range: ultimele 30 zile
         const now = new Date();
         const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         const iso = d => d.toISOString().slice(0, 10);
         $('staff-rep-to').value = iso(now);
         $('staff-rep-from').value = iso(past);
 
-        // Astept API ready si trigger
         let retries = 0;
         const waitForApi = setInterval(() => {
             retries++;

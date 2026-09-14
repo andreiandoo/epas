@@ -85,7 +85,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         secondary: 'bg-purple-100 text-purple-800',
     };
 
-    // Invoice status pill (used inside the invoices accordion, per payout).
+    
     const INV_STATUS_LABEL = {
         paid: 'Achitată',
         outstanding: 'Neachitată',
@@ -106,9 +106,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     };
 
     let currentEventId = null;
-    let openPeriodKeys = new Set();   // perioadele expandate (parent accordion)
-    let openBreakdownIds = new Set(); // decont-uri expandate (grandchild — bilete)
-    let openInvoiceIds = new Set();   // facturi expandate (grandchild — articole)
+    let openPeriodKeys = new Set();   
+    let openBreakdownIds = new Set(); 
+    let openInvoiceIds = new Set();   
 
     async function loadPayouts() {
         if (!currentEventId) return;
@@ -153,7 +153,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return s + ' → ' + e;
     }
 
-    // Cardurile de sus - cifre cumulate de la 16.07.2026 pana azi.
+    
     async function loadCumulative() {
         if (!currentEventId) return;
         try {
@@ -179,9 +179,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
 
-        // Group payouts by settlement period (period_start + period_end pair)
-        // so each period becomes a parent accordion that expands to its
-        // children (deconturi + facturi). Newest period on top.
+        
+        
+        
         const byPeriod = {};
         payouts.forEach(p => {
             const key = (p.period_start || '') + '_' + (p.period_end || '');
@@ -199,8 +199,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return s + ' – ' + e;
         }
 
-        // Render a single decont child row (chevron + inline summary), plus
-        // its bilet-breakdown sub-row when expanded.
+        
+        
         function renderDecontChild(p) {
             const isOpen = openBreakdownIds.has(p.id);
             const chevron = `<svg class="w-4 h-4 text-emerald-700 transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
@@ -261,9 +261,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return row;
         }
 
-        // Render a single factura child row (sibling of decont) + its
-        // articole sub-row when expanded. Uses the parent payout's society
-        // (issuer of the invoice) for the society badge.
+        
+        
+        
         function renderInvoiceChild(inv, parentPayout) {
             const invOpen = openInvoiceIds.has(inv.id);
             const chevron = `<svg class="w-4 h-4 text-amber-700 transition-transform ${invOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
@@ -273,8 +273,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const dateLabel = inv.issue_date
                 ? new Date(inv.issue_date + 'T00:00:00').toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' })
                 : '-';
-            // Number cell: Oblio number BIG, Tixello internal small below,
-            // prefixed by "factura" label (per operator request).
+            
+            
             const numberCell = inv.accounting_number
                 ? `<div class="flex items-center gap-2">
                         <span class="text-[10px] text-amber-700 font-bold uppercase">factura</span>
@@ -331,12 +331,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return row;
         }
 
-        // Render one PERIOD accordion group.
+        
         tbody.innerHTML = groups.map(g => {
             const isOpen = openPeriodKeys.has(g.key);
             const chevron = `<svg class="w-4 h-4 text-slate-600 transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
 
-            // Aggregate summary for the parent row.
+            
             let sumNet = 0, sumGross = 0, sumComm = 0, cntInv = 0;
             g.payouts.forEach(p => {
                 sumNet += Number(p.amount || 0);
@@ -363,10 +363,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </tr>`;
 
             if (isOpen) {
-                // Children: interleave decont child + its invoice children.
-                // Each payout emits: [decont row] [invoice rows...] so the
-                // decont-to-facturi grouping stays visible even inside a
-                // shared period.
+                
+                
+                
+                
                 g.payouts.forEach(p => {
                     out += renderDecontChild(p);
                     (p.invoices || []).forEach(inv => {
@@ -377,7 +377,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return out;
         }).join('');
 
-        // Wire up toggle for period parent rows
+        
         tbody.querySelectorAll('[data-period-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
@@ -388,7 +388,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Wire up toggle for decont child rows
+        
         tbody.querySelectorAll('[data-dc-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
@@ -399,7 +399,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Wire up toggle for invoice child rows (siblings of decont)
+        
         tbody.querySelectorAll('[data-inv-toggle]').forEach(tr => {
             tr.addEventListener('click', (ev) => {
                 if (ev.target.closest('a')) return;
@@ -437,7 +437,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         loadPayouts();
         loadCumulative();
 
-        // Settlement: build half-month period selector (1-15 & 16-end, din 2026-07-15) and load.
+        
         buildSettlePeriods();
         const sel = $('dc-settle-period');
         if (sel) {
@@ -450,7 +450,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     });
 
-    // ---- Settlement (compensare) ----
+    
     const PROJECT_START = '2026-07-15';
 
     function ymd(d) {
@@ -460,10 +460,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return new Date(s + 'T00:00:00').toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
     }
 
-    // Genereaza perioade jumatati-de-luna: [1-15] si [16-ultima_zi].
-    // Regula: sarim perioada care a inceput INAINTE de PROJECT_START (ex: proiectul
-    // incepe 15 iulie -> jumatatea 1-15 iulie a inceput pe 1 iulie -> skip; prima
-    // afisata devine 16-31 iulie).
+    
+    
+    
+    
     function buildSettlePeriods() {
         const sel = $('dc-settle-period');
         if (!sel) return;
@@ -471,13 +471,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const start = new Date(PROJECT_START + 'T00:00:00');
         const periods = [];
 
-        // Determina jumatatea de start (1 = 1-15, 2 = 16-end):
-        //   startDay=1  -> half 1 (incepe fix pe 1)
-        //   startDay=16 -> half 2 (incepe fix pe 16)
-        //   startDay 2..15 -> half 1 a inceput pe 1, e partiala -> sarim la half 2
-        //   startDay >16 -> half 2 a inceput pe 16, e partiala -> sarim la half 1 luna urmatoare
+        
+        
+        
+        
+        
         let year = start.getFullYear();
-        let month = start.getMonth(); // 0-indexed
+        let month = start.getMonth(); 
         let half = 1;
         const sd = start.getDate();
         if (sd === 1) { half = 1; }
@@ -489,13 +489,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         while (safety++ < 500) {
             const fromDay = (half === 1) ? 1 : 16;
             const from = new Date(year, month, fromDay);
-            // half 1: pana pe 15; half 2: ultima zi din luna curenta (day 0 din luna urmatoare)
+            
             const to = (half === 1)
                 ? new Date(year, month, 15)
                 : new Date(year, month + 1, 0);
             if (from > today) break;
             periods.push({ from: ymd(from), to: ymd(to) });
-            // avanseaza
+            
             if (half === 1) {
                 half = 2;
             } else {
@@ -506,14 +506,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
 
         if (!periods.length) {
-            // Fallback defensiv: jumatatea curenta a lunii
+            
             const now = new Date();
             const d = now.getDate() <= 15
                 ? { from: new Date(now.getFullYear(), now.getMonth(), 1), to: new Date(now.getFullYear(), now.getMonth(), 15) }
                 : { from: new Date(now.getFullYear(), now.getMonth(), 16), to: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
             periods.push({ from: ymd(d.from), to: ymd(d.to) });
         }
-        // Newest first
+        
         periods.reverse();
         sel.innerHTML = periods.map((p, i) =>
             `<option value="${i}" data-from="${p.from}" data-to="${p.to}">${shortDate(p.from)} – ${shortDate(p.to)} ${new Date(p.to + 'T00:00:00').getFullYear()}</option>`
@@ -562,7 +562,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>`;
         }
 
-        // Breakdown pe societate (SC1/SC2)
+        
         const byIssuer = d.by_issuer || {};
         const societyCard = (iss) => {
             if (!iss || !iss.name) return '';
@@ -610,6 +610,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="space-y-1 text-sm">
                         <div class="flex justify-between"><span class="text-muted">Brut</span><strong>${M(on.gross)}</strong></div>
                         <div class="flex justify-between"><span class="text-muted">Comision AmBilet</span><strong class="text-blue-700">${M(on.commission)}</strong></div>
+                        <div class="flex justify-between pt-1 border-t border-border"><span class="text-muted">Net (AmBilet datorează)</span><strong class="text-emerald-800">${M(on.net)}</strong></div>
+                    </div>
+                </div>
+                <div class="p-4 border rounded-xl border-border">
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700 mb-2">🏪 POS (încasat în locație)</p>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between"><span class="text-muted">Brut</span><strong>${M(pos.gross)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">💵 Cash</span><strong>${M(pos.cash)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">💳 Card</span><strong>${M(pos.card)}</strong></div>
+                        <div class="flex justify-between pt-1 border-t border-border"><span class="text-muted">Comision (locația datorează)</span><strong class="text-amber-700">${M(pos.commission)}</strong></div>
+                    </div>
+                </div>
+                ${balanceBox}
+            </div>
+            <p class="mt-3 text-[11px] text-muted">
+                Compensare: AmBilet datorează locației netul online (<strong>${M(bal.ambilet_owes_venue)}</strong>), iar locația datorează AmBilet comisionul POS (<strong>${M(bal.venue_owes_ambilet)}</strong>).
+                Soldul net = ${M(bal.ambilet_owes_venue)} − ${M(bal.venue_owes_ambilet)} = <strong>${M(bal.net)}</strong>.
+            </p>
+            ${issuerSection}`;
+    }
+})();
+</script>
+<?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
+                                                                                                                                                                                                                                                                             v class="flex justify-between"><span class="text-muted">Comision AmBilet</span><strong class="text-blue-700">${M(on.commission)}</strong></div>
                         <div class="flex justify-between pt-1 border-t border-border"><span class="text-muted">Net (AmBilet datorează)</span><strong class="text-emerald-800">${M(on.net)}</strong></div>
                     </div>
                 </div>

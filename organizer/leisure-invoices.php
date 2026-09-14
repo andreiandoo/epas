@@ -200,7 +200,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('li-modal').classList.add('flex');
 
         try {
-            // Fetch order complet cu bilete
+            
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/orders/${listRow.id}`);
             const d = res.data || {};
             const meta = d.meta || {};
@@ -208,7 +208,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             let html = '';
 
-            // Datele firmei
+            
             html += `<div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                 <h4 class="font-bold text-blue-900 mb-3 flex items-center gap-2">🏢 Date firmă (client B2B)</h4>
                 <div class="grid grid-cols-2 gap-3 text-sm">
@@ -221,7 +221,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>`;
 
-            // Datele comenzii
+            
             html += `<div class="mb-6 p-4 bg-white border border-border rounded-xl">
                 <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">📋 Detalii comandă</h4>
                 <div class="grid grid-cols-2 gap-3 text-sm">
@@ -236,7 +236,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>`;
 
-            // Datele clientului (contact)
+            
             html += `<div class="mb-6 p-4 bg-white border border-border rounded-xl">
                 <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">👤 Contact client</h4>
                 <div class="grid grid-cols-2 gap-3 text-sm">
@@ -246,7 +246,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>`;
 
-            // Bilete
+            
             if (Array.isArray(d.tickets) && d.tickets.length) {
                 html += `<div class="p-4 bg-white border border-border rounded-xl">
                     <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">🎟️ Bilete emise (${d.tickets.length})</h4>
@@ -330,3 +330,4 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 })();
 </script>
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
+                                                                                                         

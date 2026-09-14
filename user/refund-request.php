@@ -218,14 +218,12 @@ const RefundRequestPage = {
 
     async loadData(preselectedReason) {
         try {
-            // Load eligibility check and reasons in parallel
             const [eligibilityRes, reasonsRes, orderRes] = await Promise.all([
                 AmbiletAPI.customer.checkRefundEligibility(this.orderId),
                 AmbiletAPI.customer.getRefundReasons(),
                 AmbiletAPI.customer.getOrder(this.orderId)
             ]);
 
-            // Check eligibility
             const eligData = eligibilityRes.data || eligibilityRes;
             if (!eligData.eligible) {
                 if (eligData.existing_request) {
@@ -236,26 +234,21 @@ const RefundRequestPage = {
                 return;
             }
 
-            // Store order data
             const orderWrapper = orderRes.data || orderRes;
             this.orderData = orderWrapper.order || orderWrapper;
 
-            // Populate reasons
             const reasonsData = reasonsRes.data || reasonsRes;
             this.reasons = reasonsData.reasons || [];
             this.populateReasons(preselectedReason);
 
-            // Populate order summary
             this.populateOrderSummary(this.orderData, eligData);
 
-            // Show warnings if any
             if (eligData.warnings && eligData.warnings.length > 0) {
                 const warningsContainer = document.getElementById('warnings-container');
                 document.getElementById('warnings-text').innerHTML = eligData.warnings.map(w => '<p>' + w + '</p>').join('');
                 warningsContainer.classList.remove('hidden');
             }
 
-            // Show form
             document.getElementById('loading-state').classList.add('hidden');
             document.getElementById('refund-form-container').classList.remove('hidden');
 
@@ -285,7 +278,6 @@ const RefundRequestPage = {
             select.appendChild(opt);
         });
 
-        // If reason from URL maps to a known reason like "ticket_refundable", map it
         if (preselectedReason && !select.value) {
             const mappings = {
                 'ticket_refundable': 'cannot_attend',

@@ -376,17 +376,14 @@ const OrganizerPage = {
     },
 
     renderOrganizer(data) {
-        // Update page title
         document.title = data.name + ' — Ambilet';
 
-        // Hero image: prefer cover_image, fallback to first event image, else keep gradient
         if (data.cover_image) {
             document.getElementById('heroImage').innerHTML = `<img src="${data.cover_image}" alt="${data.name}" class="absolute inset-0 object-cover object-center w-full h-full">`;
         } else if (data.upcomingEvents && data.upcomingEvents.length > 0 && data.upcomingEvents[0].image) {
             document.getElementById('heroImage').innerHTML = `<img src="${data.upcomingEvents[0].image}" alt="${data.name}" class="absolute inset-0 object-cover object-center w-full h-full">`;
         }
 
-        // Profile Card
         document.getElementById('profileCard').innerHTML = `
             <div class="w-[140px] h-[140px] rounded-[20px] overflow-hidden flex-shrink-0 border-4 border-white shadow-lg ${data.avatar ? '' : 'bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center'}">
                 ${data.avatar
@@ -456,31 +453,26 @@ const OrganizerPage = {
             </div>
         `;
 
-        // Upcoming Events — use shared vertical card component (3 per row)
         if (data.upcomingEvents && data.upcomingEvents.length > 0) {
             document.getElementById('eventsGrid').innerHTML = AmbiletEventCard.renderMany(data.upcomingEvents, { columns: 3 });
         } else {
             document.getElementById('eventsGrid').innerHTML = '<p class="py-8 text-center text-gray-400 col-span-3">Nu sunt evenimente viitoare momentan.</p>';
         }
 
-        // Past Events — horizontal cards, no link
         if (data.pastEvents && data.pastEvents.length > 0) {
             document.getElementById('pastEventsGrid').innerHTML = AmbiletEventCard.renderManyHorizontal(data.pastEvents, { showBuyButton: false, showPrice: false, showTime: false });
         } else {
             document.getElementById('pastEventsGrid').innerHTML = '<p class="py-8 text-center text-gray-400">Nu sunt evenimente trecute.</p>';
         }
 
-        // Update tab counts
         const upCount = data.upcomingEvents?.length || 0;
         const pastCount = data.pastEvents?.length || 0;
         document.getElementById('tabCountEvents').textContent = upCount;
         document.getElementById('tabCountPast').textContent = pastCount;
 
-        // About text
         document.getElementById('aboutText').textContent = data.about || 'Informații indisponibile momentan.';
         document.getElementById('aboutTextFull').textContent = data.about || 'Informații indisponibile momentan.';
 
-        // Quick Facts (sidebar)
         const iconMap = {
             calendar: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
             location: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -510,7 +502,6 @@ const OrganizerPage = {
                 `).join('')}
             `;
 
-            // Quick Facts Full (About tab)
             document.getElementById('quickFactsFull').innerHTML = `
                 <h3 class="mb-5 text-base font-bold text-gray-900">Informații despre organizator</h3>
                 <div class="grid gap-4 md:grid-cols-2">
@@ -529,11 +520,9 @@ const OrganizerPage = {
             `;
         }
 
-        // Update tab counts
         document.getElementById('tabCountEvents').textContent = data.upcomingEvents ? data.upcomingEvents.length : 0;
         document.getElementById('tabCountPast').textContent = data.pastEvents ? data.pastEvents.length : 0;
 
-        // Contact card - update links
         if (data.social && data.social.website) {
             var websiteBtn = document.getElementById('contactWebsite');
             websiteBtn.href = data.social.website;
@@ -549,7 +538,6 @@ const OrganizerPage = {
             tab.addEventListener('click', () => {
                 const targetTab = tab.dataset.tab;
 
-                // Update tab buttons styling
                 tabs.forEach(t => {
                     t.classList.remove('bg-primary', 'text-white');
                     t.classList.add('text-gray-500');
@@ -567,7 +555,6 @@ const OrganizerPage = {
                     activeBadge.classList.add('bg-white/20');
                 }
 
-                // Show/hide content sections
                 contents.forEach(content => content.classList.add('hidden'));
                 const targetContent = document.getElementById(`tabContent${targetTab.charAt(0).toUpperCase() + targetTab.slice(1)}`);
                 if (targetContent) {
@@ -581,7 +568,6 @@ const OrganizerPage = {
 document.addEventListener('DOMContentLoaded', () => {
     OrganizerPage.init();
 
-    // Contact form submit
     const contactForm = document.getElementById('contactForm');
     if (contactForm) {
         contactForm.addEventListener('submit', async function(e) {

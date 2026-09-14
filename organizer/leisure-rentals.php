@@ -69,7 +69,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 (function(){
     const $ = (id) => document.getElementById(id);
     let currentEventId = null;
-    let rentalTypes = []; // toate TicketType-urile cu service_category=rental
+    let rentalTypes = [];
     let currentTtId = null;
     let boatsCache = [];
     let pollHandle = null;
@@ -105,7 +105,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     async function loadProducts() {
         const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`);
         const all = res.data?.ticket_types || [];
-        // Filtrez cele cu physical_inventory.enabled (= bărci)
         rentalTypes = all.filter(t => t.physical_inventory && t.physical_inventory.enabled);
         const sel = $('lv-tt-select');
         sel.innerHTML = '';
@@ -175,12 +174,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div id="lv-end-result-${r.id}" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm"></div>
             </div>`;
         }).join('');
-        // Bind end buttons
         wrap.querySelectorAll('button[data-end]').forEach(b => {
             b.addEventListener('click', () => endRental(parseInt(b.dataset.end, 10)));
         });
     }
-    // Update elapsed timer per card every second
     setInterval(() => {
         document.querySelectorAll('[data-elapsed]').forEach(el => {
             el.textContent = fmtDuration(el.dataset.elapsed);
@@ -223,11 +220,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     };
 
-    // Modal start
     function openStartModal() {
         if (!currentTtId) { alert('Selectează un produs.'); return; }
         const tt = rentalTypes.find(t => t.id == currentTtId);
-        // Variante
         const varSel = $('lv-start-variant');
         varSel.innerHTML = '<option value="">— Folosește prețul de bază —</option>';
         (tt?.variants || []).forEach(v => {
@@ -236,7 +231,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             o.textContent = v.label + ' (' + parseFloat(v.price).toFixed(2) + ' RON)';
             varSel.appendChild(o);
         });
-        // Bărci available
         const boatSel = $('lv-start-boat');
         boatSel.innerHTML = '';
         boatsCache.filter(b => b.status === 'available').forEach(b => {
@@ -267,7 +261,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         };
         const ticketCode = $('lv-start-ticket-code').value.trim();
         if (ticketCode) {
-            // TODO: lookup ticket by code → trimite rental_ticket_id sau access_ticket_id
             body.notes = (body.notes ? body.notes + ' · ' : '') + 'Cod: ' + ticketCode;
         }
         try {

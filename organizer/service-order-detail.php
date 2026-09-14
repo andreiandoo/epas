@@ -268,11 +268,9 @@ function renderOrder(order) {
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
 
-    // Header
     document.getElementById('breadcrumb-number').textContent = order.order_number;
     document.getElementById('page-title').textContent = `${order.type_label} - ${order.order_number}`;
 
-    // Type icon
     const typeIcons = {
         featuring: '<svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>',
         email: '<svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>',
@@ -285,7 +283,6 @@ function renderOrder(order) {
     document.getElementById('order-type-label').textContent = order.type_label;
     document.getElementById('order-number-display').textContent = order.order_number;
 
-    // Status badge
     const statusColors = {
         active: 'bg-green-100 text-green-700',
         pending_payment: 'bg-amber-100 text-amber-700',
@@ -297,7 +294,6 @@ function renderOrder(order) {
     badge.textContent = order.status_label;
     badge.className = `px-3 py-1.5 text-sm font-medium rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`;
 
-    // Order info
     document.getElementById('event-name').textContent = order.event?.name || order.event_name || '-';
     document.getElementById('order-details').textContent = order.details || '-';
     document.getElementById('created-at').textContent = fmtDateTime(order.created_at);
@@ -306,7 +302,6 @@ function renderOrder(order) {
         : order.service_start_date ? `Din ${fmtDate(order.service_start_date)}` : '-';
     document.getElementById('service-period').textContent = period;
 
-    // Payment
     document.getElementById('subtotal').textContent = fmtCurrency(order.subtotal) + ' ' + order.currency;
     document.getElementById('tax').textContent = fmtCurrency(order.tax) + ' ' + order.currency;
     document.getElementById('total').textContent = fmtCurrency(order.total) + ' ' + order.currency;
@@ -314,10 +309,8 @@ function renderOrder(order) {
     document.getElementById('payment-status-text').textContent = order.payment_status === 'paid' ? 'Platit' : (order.payment_status || '-');
     document.getElementById('paid-at').textContent = order.paid_at ? fmtDateTime(order.paid_at) : '-';
 
-    // Config JSON
     document.getElementById('config-json').textContent = JSON.stringify(order.config, null, 2);
 
-    // Email Marketing Stats
     if (order.type === 'email') {
         document.getElementById('email-stats-section').classList.remove('hidden');
 
@@ -334,7 +327,6 @@ function renderOrder(order) {
             document.getElementById('click-rate-text').textContent = nl.click_rate + '%';
             document.getElementById('click-rate-bar').style.width = Math.min(nl.click_rate, 100) + '%';
 
-            // Newsletter status
             const nlStatusColors = {
                 draft: 'bg-gray-100 text-gray-700',
                 scheduled: 'bg-blue-100 text-blue-700',
@@ -359,7 +351,6 @@ function renderOrder(order) {
             document.getElementById('stat-sent').textContent = order.sent_count || 0;
         }
 
-        // Audience config
         const config = order.config || {};
         const audienceLabels = { own: 'Clientii tai', marketplace: 'Baza Marketplace' };
         document.getElementById('audience-type-label').textContent = audienceLabels[config.audience_type] || config.audience_type || '-';
@@ -367,7 +358,6 @@ function renderOrder(order) {
         document.getElementById('partial-count').textContent = config.partial_count ?? '0';
         document.getElementById('email-template').textContent = config.template || '-';
 
-        // Filters
         const filters = config.filters || {};
         const tags = [];
         if (filters.cities?.length) tags.push(...filters.cities.map(c => `Oras: ${c}`));
@@ -384,7 +374,6 @@ function renderOrder(order) {
         }
     }
 
-    // Tracking pixel setup (only for tracking orders, only when paid)
     if (order.type === 'tracking' && order.payment_status === 'paid' && Array.isArray(order.tracking_setup)) {
         renderTrackingSetup(order);
     }

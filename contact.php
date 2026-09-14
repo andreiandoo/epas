@@ -334,13 +334,13 @@ const ContactPage = {
         this.initForm();
     },
 
-    /**
-     * Lightweight toast helper. AmbiletUtils.showToast doesn't exist on
-     * this codebase — the legacy form silently swallowed every call, but
-     * once we made the form actually post, the missing function started
-     * throwing in the success/error path. This helper renders a fixed-
-     * position toast tied to the contact form's lifecycle.
-     */
+    
+
+
+
+
+
+
     showToast(msg, kind) {
         kind = kind || 'info';
         const colors = {
@@ -371,7 +371,7 @@ const ContactPage = {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
-            // Validate
+            
             if (!data.lastName || !data.firstName || !data.email || !data.subject || !data.message) {
                 ContactPage.showToast('Te rugăm să completezi toate câmpurile obligatorii', 'error');
                 return;
@@ -382,7 +382,7 @@ const ContactPage = {
                 return;
             }
 
-            // Submit
+            
             const submitBtn = form.querySelector('[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = `
@@ -395,8 +395,8 @@ const ContactPage = {
             submitBtn.disabled = true;
 
             try {
-                // Backend keys are snake_case to match the Laravel validator;
-                // the visible form keeps camelCase names for legacy reasons.
+                
+                
                 const res = await AmbiletAPI.post('/contact', {
                     first_name: data.firstName,
                     last_name: data.lastName,
@@ -405,9 +405,9 @@ const ContactPage = {
                     subject: data.subject,
                     order_id: data.orderId || '',
                     message: data.message,
-                    // Honeypot — invisible field that bots auto-fill; humans
-                    // never see it. Backend drops the submission silently when
-                    // this carries a value.
+                    
+                    
+                    
                     website_url: data.website_url || '',
                 });
 
@@ -417,7 +417,7 @@ const ContactPage = {
 
                 ContactPage.showToast('Mesajul a fost trimis cu succes! Te vom contacta în curând.', 'success');
 
-                // CAPI Lead — contact form submission
+                
                 try {
                     if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
                         EPASTracking.trackLead('contact', {
@@ -425,12 +425,29 @@ const ContactPage = {
                             event_label: 'contact:' + (data.subject || ''),
                         });
                     }
-                } catch (e) { /* never break contact UI */ }
+                } catch (e) {  }
 
                 form.reset();
             } catch (err) {
                 ContactPage.showToast(
                     (err && err.message) || 'Trimiterea a eșuat. Te rugăm să încerci din nou sau să ne scrii direct pe email.',
+                    'error'
+                );
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => ContactPage.init());
+</script>
+SCRIPTS;
+
+require_once __DIR__ . '/includes/scripts.php';
+?>
+                                                                                                                                                                                                                                                                                                                          ncerci din nou sau să ne scrii direct pe email.',
                     'error'
                 );
             } finally {

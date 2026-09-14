@@ -234,7 +234,6 @@ function openCityFiltersDrawer() {
     document.getElementById('cityFiltersBackdrop').style.visibility = 'visible';
     document.getElementById('cityFiltersDrawer').style.transform = 'translateY(0)';
     document.body.style.overflow = 'hidden';
-    // Sync desktop values to mobile
     document.getElementById('categoryFilterMobile').value = document.getElementById('categoryFilter').value;
     document.getElementById('dateFilterMobile').value = document.getElementById('dateFilter').value;
     document.getElementById('priceFilterMobile').value = document.getElementById('priceFilter').value;

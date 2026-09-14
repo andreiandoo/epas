@@ -1665,17 +1665,17 @@ function reservationPage() {
     const MAX_ADVANCE = DATA.max_advance_days || 90;
     const IS_PREVIEW = !!DATA.is_preview;
 
-    // B4/B5 — locale + dicționar i18n
+    
     const PUBLIC_LOCALE = DATA.locale || 'ro';
     const I18N_DICT = (DATA.i18n && DATA.i18n[PUBLIC_LOCALE]) ? DATA.i18n[PUBLIC_LOCALE] : (DATA.i18n?.ro || {});
-    // Helper global pentru template-uri Alpine: t('key') sau t('days_short')
+    
     function t(key, fallback) {
         const v = I18N_DICT[key];
         if (v === undefined || v === null) return fallback ?? '';
         return v;
     }
-    // Aplica traduceri pe elementele cu data-i18n. Ruleaza dupa Alpine init (DOMContentLoaded);
-    // daca un element nu are cheia in dictionar, lasa textul HTML original neatins (RO).
+    
+    
     function applyI18N() {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
@@ -1692,21 +1692,21 @@ function reservationPage() {
         applyI18N();
     }
 
-    // Numele lunilor — citite din dicționar daca exista, altfel RO ca default
+    
     const MONTHS_RO = Array.isArray(I18N_DICT.months) && I18N_DICT.months.length === 12
         ? I18N_DICT.months
         : ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
 
     return {
-        // i18n helper expus pe Alpine scope (utilizat in template prin t('key'))
+        
         t: t,
         cartOpen: false,
         hoverTooltipKey: null,
-        // Count total items in localStorage cart for THIS event (indiferent de visit_date).
-        // Sursa de adevar pentru vizibilitatea floating cart + a numarului afisat.
-        // Actualizat la init + pe eveniment 'ambilet:cart:update'.
+        
+        
+        
         _storageCartCount: 0,
-        // Categorie selectata in flow-ul nou (null = arata picker categorii)
+        
         selectedCategoryId: null,
         openFaq: 0,
         upsellDismissed: false,
@@ -1714,15 +1714,15 @@ function reservationPage() {
         currentMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         loadingMonth: true,
         loadingTickets: false,
-        monthCache: {},        // 'YYYY-MM' -> { dates: { 'YYYY-MM-DD': { status } } }
-        ticketsRaw: [],        // toate ticket types pentru data selectata (din API)
-        ticketCategoriesRaw: [], // C2: categorii custom pentru grupare bilete
-        qtyById: {},           // { ticketTypeId: qty } sau { 'ticketTypeId|variantId': qty }
-        variantSelectedByTicket: {}, // { ticketId: variantId } — varianta activă pe card
-        addonQtyByKey: {},     // { 'ticketCartKey::addonId': qty } — add-ons selectate per linie de cart
-        slotSelectedByTicket: {}, // { ticketId: 'HH:MM' } — slot/ora aleasă (F3 / F5)
-        ticketSlots: {},          // { ticketId: [{time, remaining, sold_out}] } — F3 cache disponibilitate
-        physicalAvailableByTicket: {}, // { ticketId: number } — F5 cache rămas la interval
+        monthCache: {},        
+        ticketsRaw: [],        
+        ticketCategoriesRaw: [], 
+        qtyById: {},           
+        variantSelectedByTicket: {}, 
+        addonQtyByKey: {},     
+        slotSelectedByTicket: {}, 
+        ticketSlots: {},          
+        physicalAvailableByTicket: {}, 
         issuers: DATA.issuers || {},
         faqs: DATA.faqs || [],
         gallery: DATA.gallery || [],
@@ -1736,20 +1736,20 @@ function reservationPage() {
                 this.renderTrailMap();
                 this.renderLocationMap();
             });
-            // Restaurare cos: daca clientul a navigat la /cos si a venit inapoi,
-            // AmbiletCart are itemi pentru EVENT.id — re-selectam data lor +
-            // hidratam qtyById dupa ce ticketsRaw e incarcat. Astfel cosul
-            // float ramane plin, nu se reseteaza la 0.
-            // Poll pentru AmbiletCart — cart.js este defer + declara AmbiletCart
-            // la parse-time, dar in unele cazuri (cache, order defer) Alpine
-            // init ruleaza inainte. Retry-uim pana e disponibil, apoi apelam
-            // restoreCartState + refresh + timer.
+            
+            
+            
+            
+            
+            
+            
+            
             const waitForCart = (tries = 30) => {
                 if (typeof window.AmbiletCart !== 'undefined') {
                     this.restoreCartState();
                     this.setupCartTimer();
                     this.refreshStorageCartCount();
-                    // Re-evalueaza timer + contor cand AmbiletCart se schimba
+                    
                     window.addEventListener('ambilet:cart:update', () => { this.setupCartTimer(); this.refreshStorageCartCount(); });
                     window.addEventListener('ambilet:cart:clear', () => { this.hideCartTimer(); this.refreshStorageCartCount(); });
                     return;
@@ -1758,16 +1758,16 @@ function reservationPage() {
                 setTimeout(() => waitForCart(tries - 1), 100);
             };
             waitForCart();
-            // BFCACHE fix: cand utilizatorul face BACK din /cos, pagina poate fi
-            // servita din back-forward cache si init nu ruleaza. pageshow cu
-            // persisted=true acopera acest caz — recitim cart-ul + repornim
-            // timer-ul din localStorage pentru a nu ramane in stare stale.
+            
+            
+            
+            
             window.addEventListener('pageshow', (ev) => {
                 if (ev.persisted) {
                     this.refreshStorageCartCount();
                     this.setupCartTimer();
-                    // Daca ticketsRaw e populat + qtyById gol, re-hidram din cart
-                    // (fara sa reincarcam data — items sunt deja acolo)
+                    
+                    
                     try {
                         const items = (AmbiletCart.getItems() || []).filter(i => Number(i.eventId) === Number(EVENT.id));
                         items.forEach(it => {
@@ -1776,13 +1776,13 @@ function reservationPage() {
                                 this.qtyById[key] = Number(it.quantity) || 0;
                             }
                         });
-                    } catch (e) { /* best-effort */ }
+                    } catch (e) {  }
                 }
             });
         },
 
-        // Numara items din localStorage AmbiletCart pentru EVENT.id (indiferent
-        // de visit_date). Sursa de adevar pentru vizibilitatea floating cart.
+        
+        
         refreshStorageCartCount() {
             try {
                 if (typeof AmbiletCart === 'undefined' || !EVENT.id) { this._storageCartCount = 0; return; }
@@ -1790,15 +1790,15 @@ function reservationPage() {
                 this._storageCartCount = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
             } catch (e) { this._storageCartCount = 0; }
         },
-        // Called cand user click pe cos flotant si acesta e populat DOAR din
-        // storage (nu se vede in UI, ex: data selectata != visit_date items).
-        // In loc sa arate panou gol, redirectam direct la /cos.
+        
+        
+        
         openStorageCart() {
             const langParam = PUBLIC_LOCALE && PUBLIC_LOCALE !== 'ro' ? ('?lang=' + encodeURIComponent(PUBLIC_LOCALE)) : '';
             window.location.href = '/cos' + langParam;
         },
 
-        // ========== Reservation timer bar ==========
+        
         _cartTimerInterval: null,
         setupCartTimer() {
             try {
@@ -1808,15 +1808,15 @@ function reservationPage() {
                 if (!cart.items || cart.items.length === 0) { this.hideCartTimer(); return; }
                 let endTime = parseInt(localStorage.getItem('cart_end_time') || '0', 10);
                 if (!endTime || endTime <= Date.now()) {
-                    // Pornim un timer nou de 15 minute daca avem cart valid dar fara end_time
-                    // (ex: cart restaurat dintr-o sesiune veche fara timer setat).
+                    
+                    
                     endTime = Date.now() + 15 * 60 * 1000;
                     localStorage.setItem('cart_end_time', String(endTime));
                 }
                 bar.style.display = '';
                 bar.classList.remove('hidden');
-                // Cand timer-ul e activ, quick-stats nu mai e sticky — timer-bar
-                // ramane singurul sticky top. Asa nu ai 2 bare care se acopera.
+                
+                
                 const stats = document.getElementById('quick-stats-bar');
                 if (stats) { stats.classList.remove('lg:sticky'); }
                 const tick = () => {
@@ -1828,14 +1828,14 @@ function reservationPage() {
                     if (remaining <= 0) {
                         clearInterval(this._cartTimerInterval);
                         this._cartTimerInterval = null;
-                        // Goleste cosul (in-tab) + ascunde bara
+                        
                         try { if (typeof AmbiletCart !== 'undefined' && AmbiletCart.clear) AmbiletCart.clear(); } catch (e) {}
                         Object.keys(this.qtyById).forEach(k => this.qtyById[k] = 0);
                         this.hideCartTimer();
                         alert(t('timer_expired', 'Timpul a expirat. Coșul a fost golit.'));
                         return;
                     }
-                    // Sub 1 minut: rosu urgent
+                    
                     if (remaining < 60000) {
                         bar.classList.remove('bg-warning/10', 'border-warning/20');
                         bar.classList.add('bg-red-50', 'border-red-200');
@@ -1850,29 +1850,29 @@ function reservationPage() {
         hideCartTimer() {
             const bar = document.getElementById('timer-bar');
             if (bar) { bar.style.display = 'none'; bar.classList.add('hidden'); }
-            // Re-activeaza sticky pe quick-stats cand timer-ul dispare
+            
             const stats = document.getElementById('quick-stats-bar');
             if (stats) { stats.classList.add('lg:sticky'); }
             if (this._cartTimerInterval) { clearInterval(this._cartTimerInterval); this._cartTimerInterval = null; }
         },
 
-        // Re-hidrare a starii coşului din AmbiletCart (localStorage) după ce
-        // utilizatorul navighează înapoi din /cos. Apelată o singură dată la init.
+        
+        
         async restoreCartState() {
             if (typeof AmbiletCart === 'undefined' || !EVENT.id) return;
             const items = (AmbiletCart.getItems() || []).filter(i => i && Number(i.eventId) === Number(EVENT.id));
             if (!items.length) return;
 
-            // Toate item-urile aceluiași eveniment au aceeasi visit_date in mod
-            // normal. Folosim primul ca sursa pentru selectedDate; daca lipseste,
-            // skip restore (clientul va alege data manual).
+            
+            
+            
             const restoreDate = items[0]?.meta?.visit_date || '';
             if (!restoreDate) return;
 
             await this.selectDate(restoreDate);
 
-            // selectDate a populat ticketsRaw + a setat qtyById la 0 pentru
-            // fiecare ticket type. Acum suprascriem cu cantitatile reale din cart.
+            
+            
             items.forEach(it => {
                 const ttId = Number(it.ticketTypeId);
                 if (!ttId) return;
@@ -1884,9 +1884,9 @@ function reservationPage() {
                 if (slot) this.slotSelectedByTicket[ttId] = slot;
             });
 
-            // Daca toate biletele restaurate sunt dintr-o singura categorie, auto-selectam acea
-            // categorie ca utilizatorul sa o vada deschisa imediat. Daca sunt mixte, lasam
-            // picker-ul activ.
+            
+            
+            
             const groupIds = new Set(items.map(it => {
                 const tt = this.ticketsRaw.find(t => Number(t.id) === Number(it.ticketTypeId));
                 return tt?.ticket_group || null;
@@ -1895,11 +1895,11 @@ function reservationPage() {
                 this.selectedCategoryId = [...groupIds][0];
             }
 
-            // Deschide cart-ul float automat ca utilizatorul sa vada produsele restaurate
+            
             this.cartOpen = true;
         },
 
-        // ========== Calendar ==========
+        
         monthKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); },
 
         get monthLabel() {
@@ -1948,8 +1948,8 @@ function reservationPage() {
             try {
                 const url = `/marketplace-events/${SLUG}/date-availability` + (IS_PREVIEW ? `?month=${monthStr}&preview=1` : `?month=${monthStr}`);
                 const baseParams = Object.fromEntries(new URLSearchParams(url.split('?')[1] || ''));
-                // B4: propaga locale-ul la API (date-availability filtreaza ticket types
-                // si returnaza string-urile traduse din meta.translations).
+                
+                
                 baseParams.lang = PUBLIC_LOCALE;
                 const resp = await AmbiletAPI.get(url.split('?')[0], baseParams);
                 if (resp && resp.dates) this.monthCache[monthStr] = resp;
@@ -1959,15 +1959,15 @@ function reservationPage() {
             this.loadingMonth = false;
         },
 
-        // ========== Date selection ==========
+        
         async selectDate(key) {
             this.selectedDate = key;
             this.loadingTickets = true;
             this.ticketsRaw = [];
             this.qtyById = {};
-            // Reset categoria selectata daca schimbam data — categoriile pot diferi
-            // intre date (ex: anumite tipuri de bilete nu sunt disponibile in
-            // sezonul ales). Picker-ul se reafiseaza, utilizatorul alege din nou.
+            
+            
+            
             this.selectedCategoryId = null;
             try {
                 const params = { date: key, lang: PUBLIC_LOCALE };
@@ -1975,19 +1975,19 @@ function reservationPage() {
                 const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, params);
                 if (resp && resp.is_open) {
                     this.ticketsRaw = resp.ticket_types || [];
-                    // C2 — categorii custom pentru gruparea biletelor (din venue_config.ticket_categories)
+                    
                     this.ticketCategoriesRaw = Array.isArray(resp.ticket_categories) ? resp.ticket_categories : [];
                     if (resp.commission) this.commission = resp.commission;
-                    // Init qty map pentru ambele scenarii (cu/fara variants)
+                    
                     this.ticketsRaw.forEach(t => {
                         if (Array.isArray(t.variants) && t.variants.length > 0) {
                             t.variants.forEach(v => { this.qtyById[`${t.id}|${v.id}`] = 0; });
-                            // pre-selecteaza prima varianta
+                            
                             this.variantSelectedByTicket[t.id] = t.variants[0].id;
                         } else {
                             this.qtyById[t.id] = 0;
                         }
-                        // F3: preload slot availability dacă produsul are slots configurate
+                        
                         if (t.slots_config && t.slots_config.enabled) {
                             this.loadSlotsFor(t);
                         }
@@ -2002,8 +2002,8 @@ function reservationPage() {
             this.loadingTickets = false;
         },
 
-        // ========== Tickets/Services derived ==========
-        // Helper: qty pe (ticket, variantă) — sau direct pe ticket dacă fără variants
+        
+        
         cartKey(ticketId, variantId) {
             return variantId ? `${ticketId}|${variantId}` : String(ticketId);
         },
@@ -2021,77 +2021,77 @@ function reservationPage() {
             return v ? parseFloat(v.price || 0) : parseFloat(t.effective_price || 0);
         },
         qtyForTicket(t) {
-            // Pe card, qty = qty pentru varianta selectată curent (sau pentru tichet dacă fără variants)
+            
             const vid = this.activeVariantId(t);
             return this.qtyById[this.cartKey(t.id, vid)] || 0;
         },
-        // Sumă totală qty pe acest ticket (toate variantele)
+        
         totalQtyForTicket(t) {
             if (!Array.isArray(t.variants) || t.variants.length === 0) {
                 return this.qtyById[t.id] || 0;
             }
             return t.variants.reduce((s, v) => s + (this.qtyById[this.cartKey(t.id, v.id)] || 0), 0);
         },
-        // Pune qty + reactivitate pe ticketsRaw items
+        
         get _ticketsWithQty() {
             return this.ticketsRaw.map(t => ({ ...t, qty: this.totalQtyForTicket(t) }));
         },
-        // accessTickets = bilete de acces PLUS pachete promotionale (pachetele
-        // sunt afișate în secțiunea principală de bilete, NU în Servicii suplimentare).
+        
+        
         get accessTickets() {
             return this._ticketsWithQty.filter(t => {
                 const cat = t.service_category || 'access';
                 return cat === 'access' || cat === 'package';
             });
         },
-        // services = TOATE produsele care nu sunt bilete acces și nu sunt pachete
-        // ȘI care NU au fost asignate manual de organizator unei categorii
-        // (cele cu ticket_group valid apar in accessTicketsGrouped).
+        
+        
+        
         get services() {
             const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
             const catIds = new Set(cats.map(c => c.id));
             return this._ticketsWithQty.filter(t => {
                 const cat = t.service_category || 'access';
                 if (cat === 'access' || cat === 'package') return false;
-                // Daca user-ul a clasat manual o activitate intr-o categorie, NU mai apare in Servicii
+                
                 if (t.ticket_group && catIds.has(t.ticket_group)) return false;
                 return true;
             });
         },
-        // Pachetele promoționale ca grup virtual de afișare (apar mereu la finalul
-        // listei de bilete, sub un header dedicat "Pachete promoționale").
+        
+        
         get packageTickets() {
             return this._ticketsWithQty.filter(t => (t.service_category || '') === 'package');
         },
-        // Eticheta grupului de pachete in functie de locale curent.
+        
         get packageGroupLabel() {
             return t('packages_promo_title') || 'Pachete promoționale';
         },
-        // C2 — Grupare bilete pe ticket_categories (definite de organizator in
-        // /organizator/leisure tab Produse → Categorii afișare).
-        //
-        // Regula UNICA: alocarea MANUALA (t.ticket_group) decide totul. Daca un
-        // ticket are ticket_group setat catre o categorie existenta, intra in
-        // acea categorie INDIFERENT de service_category (access/activity/package).
-        //
-        // Fallback pentru tickets FARA ticket_group: tip 'access' (default) →
-        // grup ungrouped (header gol) DOAR daca nu exista categorii custom; cand
-        // exista categorii, tickets-urile fara categorie ASIGNATA nu apar
-        // (organizatorul decide ce e public). Pachetele NU mai au auto-grup
-        // dedicat — daca nu e clasat manual, nu apare pe pagina publica.
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         get accessTicketsGrouped() {
             const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
             const catIds = new Set(cats.map(c => c.id));
 
-            // Manual: orice ticket cu ticket_group valid intra in acea categorie.
+            
             const manuallyGrouped = this._ticketsWithQty.filter(t =>
                 t.ticket_group && catIds.has(t.ticket_group)
             );
             const manualIds = new Set(manuallyGrouped.map(t => t.id));
 
-            // Backward compat: cand NU exista categorii custom, listam toate
-            // biletele de acces intr-un grup flat (fara header). Asa pastram
-            // pagina functionala pe organizatorii care nu folosesc categorii.
+            
+            
+            
             if (!cats.length) {
                 const autoAccess = this._ticketsWithQty.filter(t =>
                     (t.service_category || 'access') === 'access'
@@ -2099,7 +2099,7 @@ function reservationPage() {
                 return autoAccess.length ? [{ id: '__all__', name: '', items: autoAccess }] : [];
             }
 
-            // Cu categorii custom: doar ce a clasat organizatorul manual.
+            
             const byId = {};
             for (const t of manuallyGrouped) {
                 (byId[t.ticket_group] ||= []).push(t);
@@ -2111,9 +2111,9 @@ function reservationPage() {
             }
             return groups;
         },
-        // ===== FLOW CATEGORII v2: picker + selected category navigation =====
-        // Toate grupurile populate (folosit ca lista pentru picker + navigare).
-        // Reuses accessTicketsGrouped + injecteaza image_url din ticketCategoriesRaw.
+        
+        
+        
         get publicCategoryGroups() {
             const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
             return this.accessTicketsGrouped.map(g => {
@@ -2121,44 +2121,44 @@ function reservationPage() {
                 return {
                     ...g,
                     image_url: cat?.image_url || null,
-                    // Pachetele primesc un placeholder vizual (nu au image_url propriu)
+                    
                     is_packages: g.id === '__packages__',
                 };
             }).filter(g => g.items && g.items.length > 0);
         },
-        // True daca avem >=2 grupuri afisabile → flow picker activ.
+        
         get hasMultipleCategories() {
             return this.publicCategoryGroups.length >= 2;
         },
-        // True cand avem CEL PUTIN 1 produs de aratat in sectiunea bilete (acces sau
-        // manual-categorizat). Foloseste pentru gate-ul x-show al sectiunilor de
-        // picker / mode-B, ca sa nu fie ascunse cand categoria selectata are doar
-        // activitati/pachete (accessTickets.length nu numara activitatile).
+        
+        
+        
+        
         get hasDisplayableTickets() {
             return this.publicCategoryGroups.length > 0;
         },
-        // True cand picker-ul de categorii e activ (utilizatorul nu a ales nimic INCA).
+        
         get showCategoryPicker() {
-            if (!this.hasMultipleCategories) return false;     // 0 sau 1 grup → fallback flat
-            if (!this.selectedCategoryId) return true;          // niciun grup ales → picker
-            // Verifica grupul ales sa existe (caz: se schimba data si grupul vechi nu mai are bilete)
+            if (!this.hasMultipleCategories) return false;     
+            if (!this.selectedCategoryId) return true;          
+            
             return !this.publicCategoryGroups.find(g => g.id === this.selectedCategoryId);
         },
-        // Grupurile de afisat in lista de bilete: doar cel ales daca avem picker; toate altfel.
+        
         get displayedTicketGroups() {
             if (!this.hasMultipleCategories) {
-                // Fallback flat — afisam toate grupurile (ca inainte)
+                
                 return this.accessTicketsGrouped;
             }
             const sel = this.publicCategoryGroups.find(g => g.id === this.selectedCategoryId);
             return sel ? [sel] : [];
         },
-        // Numele categoriei selectate (pentru breadcrumb back).
+        
         get selectedCategoryName() {
             const sel = this.publicCategoryGroups.find(g => g.id === this.selectedCategoryId);
             return sel?.name || '';
         },
-        // Chip-uri navigare jos: toate celelalte categorii (nu cea curenta).
+        
         get otherCategoryChips() {
             if (!this.selectedCategoryId) return [];
             return this.publicCategoryGroups.filter(g => g.id !== this.selectedCategoryId);
@@ -2169,7 +2169,7 @@ function reservationPage() {
         get hasAccessInCart() {
             return this.accessTickets.some(t => this.totalQtyForTicket(t) > 0);
         },
-        // F6 — Total bilete acces în coș (any vs adult)
+        
         get accessAnyInCart() {
             let n = 0;
             for (const t of this.accessTickets) n += this.totalQtyForTicket(t);
@@ -2183,7 +2183,7 @@ function reservationPage() {
             }
             return n;
         },
-        // F6 — Necesar pe baza produselor cu access_requirement
+        
         get requiresAccessAny() {
             let n = 0;
             for (const t of this.ticketsRaw) {
@@ -2204,7 +2204,7 @@ function reservationPage() {
                 && this.requiresAccessAdult <= this.accessAdultInCart;
         },
         get cartItems() {
-            // Splite pe (ticket, variant) — fiecare combinaţie cu qty>0 = un line item în coş
+            
             const out = [];
             for (const t of this.ticketsRaw) {
                 if (Array.isArray(t.variants) && t.variants.length > 0) {
@@ -2238,7 +2238,7 @@ function reservationPage() {
             }
             return out;
         },
-        // Construiește lista add-ons pentru o linie de cart (cu qty + paid_qty + total)
+        
         _lineAddonsFor(ticket, cartK) {
             const out = [];
             if (!Array.isArray(ticket.addons)) return out;
@@ -2264,19 +2264,19 @@ function reservationPage() {
             return out;
         },
         get cartCount() {
-            // Prioritizam localul (ce vede pe ecran); daca e 0 dar avem items in
-            // localStorage (ex: back din /cos sau utilizatorul a schimbat data),
-            // aratam contorul din storage ca sa nu para gol coșul.
+            
+            
+            
             const local = this.cartItems.reduce((s, t) => s + t.qty, 0);
             return local > 0 ? local : this._storageCartCount;
         },
-        // True cand avem items in localStorage pt EVENT.id dar nu apar in UI
-        // (data selectata != visit_date-ul lor sau nu am selectat inca o data).
+        
+        
         get hasStorageOnlyItems() {
             const local = this.cartItems.reduce((s, t) => s + t.qty, 0);
             return local === 0 && this._storageCartCount > 0;
         },
-        // Comision per UN bilet din acel tip: max(price * rate%, fixed) — numai daca mode='added_on_top'
+        
         commissionPerTicket(price) {
             if ((this.commission.mode || 'included') !== 'added_on_top') return 0;
             const rate = parseFloat(this.commission.rate || 0);
@@ -2305,19 +2305,19 @@ function reservationPage() {
             return (this.commission.mode === 'added_on_top') && (this.commission.rate > 0 || this.commission.fixed > 0);
         },
         get canCheckout() {
-            // F6: gating cumulativ — toate produsele care cer acces (any sau adult_only)
-            // trebuie să aibă suficiente bilete acces în coș
+            
+            
             return this.accessGatingOk;
         },
         get topUpsellServices() {
-            // Primele 3 servicii cu qty=0 (utilizatorul nu le-a adaugat inca)
+            
             return this.services.filter(s => s.qty === 0).slice(0, 3);
         },
 
-        // Helper: pas + minim pentru un ticket (default 1 / 1).
-        // Pentru "bilet de grup" + pas absent → forțam pasul = min_per_order
-        // (ex: grup de 10 → +10 / -10) ca sa nu poată ajunge la cantitati
-        // invalide între pași.
+        
+        
+        
+        
         ticketStep(ticket) {
             const meta = ticket.meta || {};
             const min = Math.max(1, Number(ticket.min_per_order) || 1);
@@ -2332,8 +2332,8 @@ function reservationPage() {
         isGroupTicket(ticket) {
             return !!(ticket && ticket.meta && ticket.meta.is_group_ticket);
         },
-        // Pretul afișat pentru un bilet "de grup" este min_per_order × unit.
-        // Pentru bilete normale e prețul unitar (același comportament ca înainte).
+        
+        
         groupDisplayPrice(ticket) {
             const unit = this.displayPriceFor(ticket);
             if (this.isGroupTicket(ticket)) {
@@ -2343,13 +2343,13 @@ function reservationPage() {
         },
 
         incrementTicket(ticket) {
-            // F3/F5: blochează adăugare dacă produsul cere slot/oră
+            
             const needsSlot = (ticket.slots_config && ticket.slots_config.enabled) || (ticket.physical_inventory && ticket.physical_inventory.enabled);
             if (needsSlot && !this.slotSelectedByTicket[ticket.id]) {
                 alert('Selectează mai întâi ora pentru ' + ticket.name);
                 return;
             }
-            // F5: verifică disponibilitate fizică
+            
             if (ticket.physical_inventory && ticket.physical_inventory.enabled) {
                 const av = this.physicalAvailableByTicket[ticket.id];
                 const curQty = this.qtyForTicket(ticket);
@@ -2363,8 +2363,8 @@ function reservationPage() {
             const current = this.qtyById[key] || 0;
             const min = this.ticketMin(ticket);
             const step = this.ticketStep(ticket);
-            // Prima adăugare → setam direct la minim (nu la 0 + step, pentru ca
-            // operatorii pot avea min > step si vrem sa respectam minim setat).
+            
+            
             this.qtyById[key] = current === 0 ? Math.max(min, step) : current + step;
         },
         decrementTicket(ticket) {
@@ -2374,20 +2374,20 @@ function reservationPage() {
             const min = this.ticketMin(ticket);
             const step = this.ticketStep(ticket);
             const next = current - step;
-            // Sub minim → 0 (resetare completa)
+            
             this.qtyById[key] = (next < min) ? 0 : next;
         },
-        // Elimină complet o linie din coș (pe baza cheii compuse din _cartKey)
+        
         removeLineFromCart(item) {
             if (!item || !item._cartKey) return;
             this.qtyById[item._cartKey] = 0;
-            // Curăță și add-on-urile legate de acea linie
+            
             Object.keys(this.addonQtyByKey).forEach(k => {
                 if (k.startsWith(item._cartKey + '::')) this.addonQtyByKey[k] = 0;
             });
         },
 
-        // ========== F3: Slot availability ==========
+        
         async loadSlotsFor(ticket) {
             if (!ticket || !ticket.slots_config || !ticket.slots_config.enabled || !this.selectedDate) return;
             try {
@@ -2402,7 +2402,7 @@ function reservationPage() {
             }
         },
 
-        // ========== F5: Physical inventory availability ==========
+        
         async refreshPhysicalAvailability(ticket) {
             if (!ticket || !ticket.physical_inventory || !ticket.physical_inventory.enabled) return;
             if (!this.selectedDate) return;
@@ -2430,7 +2430,7 @@ function reservationPage() {
             return av > 0 ? `${av}/${total} libere la acea oră` : `Niciuna liberă la acea oră`;
         },
 
-        // ========== Add-ons helpers ==========
+        
         addonCartKey(ticket, addon) {
             const vid = this.activeVariantId(ticket);
             return this.cartKey(ticket.id, vid) + '::' + addon.id;
@@ -2480,11 +2480,11 @@ function reservationPage() {
             this.cartOpen = true;
         },
 
-        // ========== Helpers ==========
+        
         formatDate(d) {
             if (!d) return '';
             const date = new Date(d + 'T00:00:00');
-            // Mapare locale → cod browser pentru toLocaleDateString
+            
             const localeMap = { ro: 'ro-RO', hu: 'hu-HU', en: 'en-GB' };
             const loc = localeMap[PUBLIC_LOCALE] || 'ro-RO';
             return date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -2515,15 +2515,15 @@ function reservationPage() {
             return map[cat] || '✨';
         },
         get currentScheduleLabel() {
-            // Returneaza programul pe ziua curenta (sau "Verificați programul" fallback).
-            // Suporta atat noua structura `schedule_list` (array de {day,open,close})
-            // cat si vechea `schedule` (object cu chei zile) ca fallback.
+            
+            
+            
             const seasons = (DATA.venue_config || {}).seasons || [];
             if (seasons.length === 0) return t('check_schedule') || 'Verificați programul';
-            const today = new Date().toISOString().slice(5, 10); // MM-DD
+            const today = new Date().toISOString().slice(5, 10); 
             const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-            // Suport 2 stocări: season.translations.hu/en.name (Filament) SAU
-            // season.name = {ro,hu,en} (legacy) SAU string simplu RO.
+            
+            
             const seasonName = (s) => {
                 if (s?.translations && s.translations[PUBLIC_LOCALE]?.name) {
                     return s.translations[PUBLIC_LOCALE].name;
@@ -2537,7 +2537,7 @@ function reservationPage() {
                 const start = s.start || '01-01', end = s.end || '12-31';
                 const inSeason = start <= end ? (today >= start && today <= end) : (today >= start || today <= end);
                 if (!inSeason) continue;
-                // Schema noua: schedule_list (array de {day, open, close})
+                
                 if (Array.isArray(s.schedule_list)) {
                     for (const entry of s.schedule_list) {
                         if (entry && entry.day === dayKey && entry.open) {
@@ -2546,7 +2546,7 @@ function reservationPage() {
                         }
                     }
                 }
-                // Schema veche: schedule object cu chei zile
+                
                 if (s.schedule && s.schedule[dayKey] && s.schedule[dayKey].open) {
                     const name = seasonName(s) || (t('label_program') || 'Program');
                     return name + ': ' + s.schedule[dayKey].open + ' – ' + s.schedule[dayKey].close;
@@ -2560,8 +2560,215 @@ function reservationPage() {
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         },
 
-        // Video helpers
+        
         extractYoutubeId(url) {
+            if (!url) return '';
+            const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            return m ? m[1] : url.trim();
+        },
+        extractVimeoId(url) {
+            if (!url) return '';
+            const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            return m ? m[1] : url.trim();
+        },
+        storageUrl(path) {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            return '<?= STORAGE_URL ?>/' + path.replace(/^\//, '');
+        },
+
+        
+        checkout() {
+            if (!this.selectedDate || this.cartCount === 0 || !this.canCheckout) return;
+            if (typeof AmbiletCart === 'undefined' || !AmbiletCart.addItem) {
+                console.error('AmbiletCart not available');
+                return;
+            }
+
+            
+            
+            
+            
+            
+            
+            try {
+                const existing = (AmbiletCart.getItems() || []).filter(i =>
+                    Number(i?.eventId) === Number(EVENT.id) &&
+                    String(i?.meta?.visit_date || '') === String(this.selectedDate)
+                );
+                existing.forEach(i => {
+                    if (i && i.key && AmbiletCart.removeItem) AmbiletCart.removeItem(i.key);
+                });
+            } catch (e) {  }
+
+            
+            
+            
+            const eventPayload = {
+                id: Number(EVENT.id) || 0,
+                title: String(EVENT.name || ''),
+                slug: String(EVENT.slug || ''),
+                image: String(EVENT.image || ''),
+                visit_date: String(this.selectedDate),
+            };
+
+            this.cartItems.forEach(t => {
+                const unit = parseFloat(t.effective_price) || 0;
+                const commission = this.commissionPerTicket(unit);
+                const finalUnit = unit + commission;
+                const variantInfo = t.variant ? {
+                    id: String(t.variant.id),
+                    label: String(t.variant.label),
+                    duration_minutes: t.variant.duration_minutes ? Number(t.variant.duration_minutes) : null,
+                    price: Number(parseFloat(t.variant.price)) || 0,
+                } : null;
+                const tMeta = t.meta || {};
+                const ticketPayload = {
+                    id: Number(t.id) || 0,
+                    name: String(t.name || ''),
+                    price: Number(finalUnit) || 0,
+                    originalPrice: Number(parseFloat(t.base_price)) || null,
+                    commission_per_ticket: Number(commission) || 0,
+                    min_per_order: Number(t.min_per_order) || 1,
+                    max_per_order: Number(t.max_per_order) || 10,
+                    is_parking: Boolean(t.is_parking),
+                    requires_vehicle_info: Boolean(t.requires_vehicle_info),
+                    service_category: String(t.service_category || 'access'),
+                    issuing_company: String(t.issuing_company || 'primary'),
+                    image_url: t.image_url ? String(t.image_url) : null,
+                    variant: variantInfo,
+                    
+                    is_group_ticket: !!tMeta.is_group_ticket,
+                    group_includes_guide: !!tMeta.group_includes_guide,
+                    group_guide_label: tMeta.group_guide_label ? String(tMeta.group_guide_label) : null,
+                };
+                const qty = parseInt(t.qty, 10) || 0;
+                if (qty <= 0) return;
+
+                
+                
+                
+                
+                const addonsForCart = Array.isArray(t._addons) && t._addons.length > 0
+                    ? t._addons.map(a => ({
+                        addon_id: String(a.addon_id),
+                        label: String(a.label),
+                        total_qty: Number(a.total_qty) || 0,
+                        free_qty: Number(a.free_qty) || 0,
+                        paid_qty: Number(a.paid_qty) || 0,
+                        unit_price: Number(a.unit_price) || 0,
+                        line_total: Number(a.line_total) || 0,
+                    }))
+                    : null;
+
+                const slotTime = this.slotSelectedByTicket[t.id] || null;
+
+                AmbiletCart.addItem(
+                    Number(EVENT.id) || 0,
+                    eventPayload,
+                    Number(t.id) || 0,
+                    ticketPayload,
+                    qty,
+                    {
+                        visit_date: String(this.selectedDate),
+                        variant_id: variantInfo ? variantInfo.id : null,
+                        variant_label: variantInfo ? variantInfo.label : null,
+                        addons: addonsForCart,
+                        slot_time: slotTime,
+                        start_time: slotTime, 
+                    }
+                );
+            });
+
+            
+            const langParam = PUBLIC_LOCALE && PUBLIC_LOCALE !== 'ro' ? ('?lang=' + encodeURIComponent(PUBLIC_LOCALE)) : '';
+            window.location.href = '/cos' + langParam;
+        },
+
+        
+        renderTrailMap() {
+            
+            
+            return;
+            if (typeof L === 'undefined') return;
+            const cfg = DATA.map_config || {};
+            const center = cfg.center;
+            const pois = cfg.pois || [];
+            const trails = DATA.trails || [];
+            const hotels = DATA.nearby_hotels || [];
+            if (!center || !document.getElementById('trailMap')) return;
+            const lat = center.lat || center[0];
+            const lng = center.lng || center[1];
+            const map = L.map('trailMap').setView([lat, lng], cfg.zoom || 13);
+            L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap, &copy; OpenTopoMap',
+                maxZoom: 17,
+            }).addTo(map);
+
+            
+            pois.forEach(p => {
+                const icon = L.divIcon({
+                    html: `<div style="background:${p.color || '#1F4E37'};color:white;border-radius:50%;padding:6px 10px;font-weight:bold;font-size:11px;white-space:nowrap;border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)">${(p.label || '').replace(/[<>&]/g, '')}</div>`,
+                    className: '', iconSize: null,
+                });
+                L.marker([p.lat, p.lng], { icon }).addTo(map);
+            });
+
+            
+            hotels.forEach(h => {
+                if (!h.lat || !h.lng) return;
+                const icon = L.divIcon({
+                    html: `<div style="background:#B89968;color:white;border-radius:8px;padding:4px 8px;font-weight:600;font-size:10px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px"><span>🏨</span><span>${(h.name || '').replace(/[<>&]/g, '')}</span></div>`,
+                    className: '', iconSize: null,
+                });
+                const marker = L.marker([h.lat, h.lng], { icon }).addTo(map);
+                if (h.subtitle || h.url) {
+                    const popup = `<strong>${(h.name || '').replace(/[<>&]/g, '')}</strong>` +
+                        (h.subtitle ? `<br><small>${(h.subtitle || '').replace(/[<>&]/g, '')}</small>` : '') +
+                        (h.url ? `<br><a href="${h.url}" target="_blank" rel="noopener">Vezi detalii →</a>` : '');
+                    marker.bindPopup(popup);
+                }
+            });
+
+            
+            trails.forEach(t => {
+                if (!t.polyline || !Array.isArray(t.polyline) || t.polyline.length < 2) return;
+                const color = (t.marker && t.marker.toLowerCase().includes('albast')) ? '#3B82F6' : '#EF4444';
+                L.polyline(t.polyline, { color, weight: 3, dashArray: '6, 6' })
+                    .addTo(map)
+                    .bindPopup(`<strong>${(t.name || '').replace(/[<>&]/g, '')}</strong>`);
+            });
+        },
+
+        renderLocationMap() {
+            if (typeof L === 'undefined') return;
+            const cfg = DATA.map_config || {};
+            const center = cfg.center;
+            if (!center || !document.getElementById('locationMap')) return;
+            const lat = center.lat || center[0];
+            const lng = center.lng || center[1];
+            const map = L.map('locationMap').setView([lat, lng], (cfg.zoom || 13) - 1);
+            AmbiletTileLayer('light_all').addTo(map);
+            const icon = L.divIcon({
+                html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">📍</div>`,
+                className: '', iconSize: [48, 48],
+            });
+            L.marker([lat, lng], { icon }).addTo(map).bindPopup(EVENT.name || 'Locație');
+        },
+    };
+}
+</script>
+
+<?php
+// Inject leisure-venue.js (păstrat pentru retrocompatibilitate cu vechi DOM, dar
+// designul nou foloseste Alpine inline; JS-ul vechi nu mai gaseste elementele
+// vechi #cal-days etc., deci nu strica nimic).
+$leisureJsPath = __DIR__ . '/assets/js/pages/leisure-venue.js';
+$leisureAssets = defined('ASSETS_URL') ? ASSETS_URL : '/assets';
+require_once __DIR__ . '/includes/footer.php';
+require_once __DIR__ . '/includes/scripts.php';
+?>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                       d(url) {
             if (!url) return '';
             const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
             return m ? m[1] : url.trim();

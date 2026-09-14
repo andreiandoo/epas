@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
             const d = res.data;
 
-            // KPIs
+            
             const s = d.stats || {};
             document.getElementById('usage-kpi-total').textContent = fmtInt(s.total);
             document.getElementById('usage-kpi-upcoming').textContent = fmtInt(s.upcoming);
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             document.getElementById('usage-kpi-sold').textContent = fmtInt(s.total_sold);
             document.getElementById('usage-kpi-revenue').textContent = fmtMoney(s.total_revenue);
 
-            // Populate venue filter first time
+            
             const venueSel = document.getElementById('filter-venue');
             if (venueSel.options.length === 1 && d.venues && typeof d.venues === 'object') {
                 Object.entries(d.venues).forEach(([id, label]) => {
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 if (!d.showVenueFilter) venueSel.parentElement.style.display = 'none';
             }
 
-            // Table
+            
             const tbody = document.getElementById('usage-tbody');
             const events = d.events || [];
             if (!events.length) {
@@ -181,3 +181,4 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
+                                                  

@@ -793,7 +793,6 @@ function bookingApp() {
         ],
         kpis: { active: 0, new: 0, negotiating: 0, this_year: 0, last_year: 0, year_trend: 0, acceptance_rate: 0, avg_response_hours: null, total_decided: 0 },
 
-        // Inbox state
         inbox: [],
         inboxFilter: 'all',
         inboxFilters: [
@@ -818,7 +817,6 @@ function bookingApp() {
         rejectReason: '',
         sending: false,
 
-        // Listing state
         listing: { status: 'paused', event_types: [], min_fee_ron: 0, max_fee_ron: 0, show_fee_publicly: false, requires_soundcheck: false, requires_backline: false, requires_catering: false, requires_accommodation: false, requires_transport: false, soundcheck_min_minutes: 60, standard_set_length_min: 60, standard_min_audience: null, standard_max_audience: null, max_distance_km: null, response_target_hours: 24, description: {} },
         listingDescriptionRo: '',
         savingListing: false,
@@ -833,7 +831,6 @@ function bookingApp() {
             { id: 'charity', label: 'Caritate' },
         ],
 
-        // Calendar state
         calYear: 0,
         calMonth: 0,
         calCells: [],
@@ -844,7 +841,6 @@ function bookingApp() {
         icalCopied: false,
         regeneratingToken: false,
 
-        // Contracts
         contracts: [],
 
         toast: { message: '', type: 'info' },
@@ -884,7 +880,6 @@ function bookingApp() {
             window.history.replaceState({}, '', url);
         },
 
-        // ---------------- API helpers ----------------
         async api(action, options = {}) {
             const tk = localStorage.getItem('ambilet_artist_token');
             const headers = Object.assign({
@@ -907,7 +902,6 @@ function bookingApp() {
             return data;
         },
 
-        // ---------------- KPIs ----------------
         async loadKpis() {
             try {
                 const d = await this.api('artist.booking.kpis');
@@ -915,7 +909,6 @@ function bookingApp() {
             } catch (e) { console.warn('kpis', e); }
         },
 
-        // ---------------- Listing ----------------
         async loadListing() {
             try {
                 const d = await this.api('artist.booking.listing');
@@ -958,7 +951,6 @@ function bookingApp() {
             }
         },
 
-        // ---------------- Inbox ----------------
         setInboxFilter(id) {
             this.inboxFilter = id;
             this.loadInbox();
@@ -994,7 +986,6 @@ function bookingApp() {
                     this.acceptSetLength = this.currentRequest.event.set_length_min || 60;
                     this.acceptDate = this.currentRequest.event.date_iso || '';
 
-                    // Pull latest counter terms (by either side) into accept defaults
                     const counters = (this.currentRequest.thread || []).filter(m => m.type === 'counter' && m.counter_terms);
                     if (counters.length) {
                         const last = counters[counters.length - 1].counter_terms;
@@ -1008,7 +999,6 @@ function bookingApp() {
                 url.searchParams.set('request', id);
                 window.history.replaceState({}, '', url);
 
-                // Refresh inbox to update unread/status indicators
                 this.loadInbox();
                 this.loadKpis();
             } catch (e) {
@@ -1121,7 +1111,6 @@ function bookingApp() {
             }
         },
 
-        // ---------------- Contracts ----------------
         async loadContracts() {
             try {
                 const d = await this.api('artist.booking.contracts');
@@ -1129,7 +1118,6 @@ function bookingApp() {
             } catch (e) { console.warn('contracts', e); }
         },
 
-        // ---------------- Calendar ----------------
         async loadCalendar() {
             try {
                 const from = new Date(this.calYear, this.calMonth - 1, 1).toISOString().slice(0, 10);
@@ -1154,7 +1142,6 @@ function bookingApp() {
 
         overlayItemForDate(iso) {
             if (!iso) return null;
-            // Prioritize confirmed booking over pending
             return this.calendarOverlay.find(ev => ev.kind === 'booking' && ev.date === iso)
                 || this.calendarOverlay.find(ev => ev.kind === 'pending' && ev.date === iso)
                 || null;
@@ -1174,7 +1161,7 @@ function bookingApp() {
 
         buildCalendar() {
             const first = new Date(this.calYear, this.calMonth, 1);
-            const startWeekday = (first.getDay() + 6) % 7; // Monday-first
+            const startWeekday = (first.getDay() + 6) % 7;
             const lastDay = new Date(this.calYear, this.calMonth + 1, 0).getDate();
             const cells = [];
             for (let i = 0; i < startWeekday; i++) cells.push({ empty: true });
@@ -1229,7 +1216,6 @@ function bookingApp() {
         async onCalCellClick(c) {
             if (c.empty) return;
 
-            // 1) Click pe o zi cu booking/cerere → deschide cererea în Inbox
             const overlay = this.overlayItemForDate(c.iso);
             if (overlay) {
                 this.setTab('inbox');
@@ -1237,7 +1223,6 @@ function bookingApp() {
                 return;
             }
 
-            // 2) Click pe o zi blocată manual → confirm deblocare
             const blocked = this.isDateBlocked(c.iso);
             if (blocked) {
                 if (!confirm('Vrei să deblochezi data ' + this.formatDate(c.iso) + '?')) return;
@@ -1245,7 +1230,6 @@ function bookingApp() {
                 return;
             }
 
-            // 3) Click pe o zi liberă → blochează manual
             const reason = prompt('Marchează această zi ca indisponibilă. Motiv (opțional):', '');
             if (reason === null) return;
             try {
@@ -1310,7 +1294,6 @@ function bookingApp() {
             }
         },
 
-        // ---------------- Helpers ----------------
         statusBadgeClass(status) {
             const map = {
                 new: 'bg-blue-100 text-blue-800',

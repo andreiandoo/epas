@@ -232,7 +232,6 @@ const NotificationsPage = {
 
         let filtered = this.notifications;
 
-        // Apply tab filter
         if (this.currentTab === 'unread') {
             filtered = filtered.filter(n => !n.is_read);
         } else if (this.currentTab === 'events') {
@@ -241,7 +240,6 @@ const NotificationsPage = {
             filtered = filtered.filter(n => n.category === 'rewards');
         }
 
-        // Update counts
         const unreadCount = this.notifications.filter(n => !n.is_read).length;
         document.getElementById('unread-count').textContent = `Ai ${unreadCount} notificari necitite`;
         document.getElementById('count-all').textContent = this.notifications.length;
@@ -257,7 +255,6 @@ const NotificationsPage = {
         container.classList.remove('hidden');
         emptyState.classList.add('hidden');
 
-        // Group by date
         const groups = this.groupByDate(filtered);
 
         let html = '';
@@ -275,7 +272,6 @@ const NotificationsPage = {
 
         container.innerHTML = html;
 
-        // Show load more if needed
         loadMoreContainer.style.display = filtered.length > 10 ? 'block' : 'none';
     },
 
@@ -369,7 +365,6 @@ const NotificationsPage = {
             notification.is_read = true;
             this.render();
 
-            // API call
             AmbiletAPI.customer.markNotificationsRead([id]).catch(console.error);
         }
     },
@@ -379,7 +374,6 @@ const NotificationsPage = {
         this.render();
         AmbiletNotifications.success('Toate notificarile au fost marcate ca citite');
 
-        // API call - null marks all as read
         AmbiletAPI.customer.markNotificationsRead(null).catch(console.error);
     }
 };
@@ -406,7 +400,6 @@ function loadMore() {
     AmbiletNotifications.info('Toate notificarile au fost incarcate');
 }
 
-// Initialize page
 document.addEventListener('DOMContentLoaded', () => NotificationsPage.init());
 </script>
 JS;

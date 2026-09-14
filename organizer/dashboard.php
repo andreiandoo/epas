@@ -276,13 +276,11 @@ const OrgDashboard = {
         const name = this.org.company_name || this.org.name || `${this.org.first_name || ''} ${this.org.last_name || ''}`.trim() || 'Organizator';
         const initials = this.getInitials(this.org.first_name, this.org.last_name);
 
-        // Sidebar elements (use correct IDs from organizer-sidebar.php)
         const sidebarInitials = document.getElementById('sidebar-org-initials');
         const sidebarName = document.getElementById('sidebar-org-name');
         if (sidebarInitials) sidebarInitials.textContent = initials;
         if (sidebarName) sidebarName.textContent = name;
 
-        // Topbar elements (use correct IDs from organizer-topbar.php)
         const topbarInitials = document.getElementById('topbar-org-initials');
         const topbarName = document.getElementById('topbar-org-name');
         const topbarEmail = document.getElementById('topbar-org-email');
@@ -303,7 +301,6 @@ const OrgDashboard = {
             console.error('Failed to load dashboard:', e);
         }
 
-        // Empty data fallback
         this.data = {
             revenue_month: 0,
             tickets_sold: 0,
@@ -317,7 +314,6 @@ const OrgDashboard = {
     render() {
         const d = this.data;
 
-        // Stats (handle both new API format and fallback demo data)
         const revenueMonth = d.revenue_month ?? d.sales?.gross_revenue ?? 0;
         const ticketsSold = d.tickets_sold ?? d.sales?.tickets_sold ?? 0;
         const activeEvents = d.active_events ?? d.events?.upcoming ?? 0;
@@ -335,7 +331,6 @@ const OrgDashboard = {
         document.getElementById('stat-conversion').textContent = `${conversionRate}%`;
         document.getElementById('stat-conv-change').textContent = `+${convChange}%`;
 
-        // Welcome stat - vary message based on weekly sales count
         const weeklySales = d.weekly_sales ?? 0;
         let welcomeMsg;
         if (weeklySales === 0) {
@@ -349,22 +344,17 @@ const OrgDashboard = {
         }
         document.getElementById('welcome-stat').textContent = welcomeMsg;
 
-        // Events table - use events_list from API or events from demo data
         const eventsList = d.events_list ?? d.events ?? [];
         this.renderEvents(eventsList);
 
-        // Events-in-progress cards (total sales + total tickets + details)
         this.renderOngoingEvents(eventsList);
 
-        // Upcoming event
         if (eventsList?.length) {
             this.renderUpcomingEvent(eventsList[0]);
         }
 
-        // Activity
         this.renderActivity(d.recent_activity);
 
-        // Notifications
         this.renderNotifications();
     },
 
@@ -450,11 +440,9 @@ const OrgDashboard = {
             const eventName = e.name || e.title || 'Eveniment';
             const venueName = e.venue || e.venue_name || '';
             const venueCity = e.venue_city ? `, ${e.venue_city}` : '';
-            // Total sales (all-time) and total tickets for this event.
             const revenue = e.revenue ?? 0;
             const ticketsTotalSold = e.tickets_total_sold ?? e.tickets_sold ?? 0;
 
-            // Days until event badge
             const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
             let daysLabel = '';
             if (diffDays === 0) daysLabel = 'Astăzi';
@@ -503,7 +491,6 @@ const OrgDashboard = {
         const venueName = event.venue || event.venue_name || '';
         const venueCity = event.venue_city ? `, ${event.venue_city}` : '';
 
-        // Calculate days until event
         const now = new Date();
         const diffTime = date - now;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -650,7 +637,6 @@ const OrgDashboard = {
                 }
             }
         });
-        // Load initial data for 7 days
         this.loadChartData(7);
     },
 
@@ -658,7 +644,6 @@ const OrgDashboard = {
         const self = this;
         const customRangeEl = document.getElementById('chartCustomRange');
 
-        // Highlight the active period button and clear the others.
         const activate = (btn) => {
             document.querySelectorAll('.chart-period').forEach(b => {
                 b.classList.remove('bg-primary/10', 'text-primary');
@@ -677,8 +662,6 @@ const OrgDashboard = {
                 activate(btn);
 
                 if (mode === 'custom') {
-                    // Open the custom range panel and default inputs to the
-                    // last-used range or the last 7 days as a starting point.
                     if (customRangeEl) {
                         customRangeEl.style.display = '';
                         const fromEl = document.getElementById('chartCustomFrom');
@@ -693,7 +676,6 @@ const OrgDashboard = {
                     return;
                 }
 
-                // Preset ranges hide the custom picker
                 if (customRangeEl) customRangeEl.style.display = 'none';
 
                 const days = parseInt(mode) || 7;
@@ -701,7 +683,6 @@ const OrgDashboard = {
             });
         });
 
-        // Apply button for the custom date range
         const applyBtn = document.getElementById('chartCustomApply');
         if (applyBtn) {
             applyBtn.addEventListener('click', async () => {
@@ -726,8 +707,6 @@ const OrgDashboard = {
         }
     },
 
-    // Updates the "Ultimele N zile" / "DD/MM – DD/MM" subtitle under the chart
-    // so users can see what range they actually chose.
     updateChartPeriodLabel(range) {
         const el = document.getElementById('chartPeriodLabel');
         if (!el) return;
@@ -743,8 +722,6 @@ const OrgDashboard = {
         }
     },
 
-    // loadChartData accepts either a number of days (preset) or an
-    // { from, to } object for a custom date range.
     async loadChartData(range = 7) {
         try {
             let fromDate, toDate;
@@ -769,7 +746,6 @@ const OrgDashboard = {
                 const tickets = timeline.map(t => t.orders || 0);
                 const revenue = timeline.map(t => parseFloat(t.revenue) || 0);
 
-                // Update chart
                 if (this.salesChart) {
                     this.salesChart.data.labels = labels;
                     this.salesChart.data.datasets[0].data = tickets;

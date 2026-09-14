@@ -234,14 +234,12 @@ require_once __DIR__ . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-// FAQ Accordion
 document.querySelectorAll('.faq-question').forEach(question => {
     question.addEventListener('click', () => {
         const item = question.parentElement;
         const answer = item.querySelector('.faq-answer');
         const icon = question.querySelector('svg');
 
-        // Close all other items
         document.querySelectorAll('.faq-item').forEach(other => {
             if (other !== item) {
                 other.querySelector('.faq-answer').classList.add('hidden');
@@ -249,13 +247,11 @@ document.querySelectorAll('.faq-question').forEach(question => {
             }
         });
 
-        // Toggle current item
         answer.classList.toggle('hidden');
         icon.style.transform = answer.classList.contains('hidden') ? '' : 'rotate(180deg)';
     });
 });
 
-// Calculator
 function calculateFees() {
     const price = parseFloat(document.getElementById('ticketPrice').value) || 0;
     const count = parseInt(document.getElementById('ticketCount').value) || 0;

@@ -139,7 +139,6 @@ const GiftCardsPage = {
             });
         });
 
-        // Set initial active state
         const activeBtn = document.querySelector('.tab-btn.active');
         if (activeBtn) {
             activeBtn.classList.add('bg-primary', 'text-white');

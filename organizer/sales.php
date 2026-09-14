@@ -127,21 +127,15 @@ let totalPages = 1;
 let searchTimeout = null;
 const perPage = 25;
 
-// Server-side sort: default is reverse chronological. Clicking a header
-// once sets it as the sort key (descending), clicking again flips to
-// ascending. Reset to created_at desc when any filter changes — the
-// pagination resets too, so this keeps the table predictable.
 let sortBy = 'created_at';
 let sortDir = 'desc';
 
-// Highlight event from URL param
 const urlParams = new URLSearchParams(window.location.search);
 const highlightEventId = urlParams.get('event');
 
 document.addEventListener('DOMContentLoaded', function() {
     renderSortArrows();
     loadEvents().then(() => {
-        // Only auto-load orders if an event is pre-selected via URL
         if (highlightEventId) {
             loadOrders();
         }
@@ -176,13 +170,12 @@ async function loadEvents() {
         const response = await AmbiletAPI.get('/organizer/events', { per_page: 100 });
         if (response.success) {
             eventsData = response.data.events || response.data || [];
-            // Sort: live first, then by date ascending (closest first)
             eventsData.sort((a, b) => {
                 const aLive = isEventLive(a), bLive = isEventLive(b);
                 if (aLive && !bLive) return -1;
                 if (!aLive && bLive) return 1;
                 const aDate = new Date(a.starts_at || 0), bDate = new Date(b.starts_at || 0);
-                return aLive ? aDate - bDate : bDate - aDate; // live: closest first, ended: most recent first
+                return aLive ? aDate - bDate : bDate - aDate;
             });
             const select = document.getElementById('filter-event');
             select.innerHTML = '<option value="">Selecteaza un eveniment</option>';
@@ -197,7 +190,6 @@ async function loadEvents() {
                 opt.textContent = dot + (ev.name || ev.title) + (meta ? ' — ' + meta : '');
                 select.appendChild(opt);
             });
-            // Set from URL param
             if (highlightEventId) {
                 select.value = highlightEventId;
             }
@@ -219,7 +211,7 @@ function toggleSort(column) {
         sortBy = column;
         sortDir = 'desc';
     }
-    currentPage = 1; // reset to page 1 when sort changes
+    currentPage = 1;
     loadOrders();
 }
 
@@ -248,15 +240,11 @@ async function loadOrders() {
     const search = document.getElementById('filter-search').value.trim();
 
     if (!eventId) {
-        // No event selected — show prompt
         document.getElementById('orders-list').innerHTML = `<tr><td colspan="9" class="px-4 py-16 text-center">
             <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <p class="mb-1 text-base font-medium text-secondary">Selectează un eveniment</p>
             <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
         </td></tr>`;
-        // Guard each setter: some of these IDs only exist on certain
-        // layouts, so null-check before touching textContent to avoid
-        // aborting the whole flow with "Cannot set properties of null".
         ['stat-total-orders', 'stat-total-value', 'stat-total-tickets', 'stat-completed', 'stat-orders-breakdown'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = '-';
@@ -382,10 +370,6 @@ function getSourceLabel(source) {
 }
 
 function updateStats(meta) {
-    // Null-guard each stat element: the dashboard layout has been slimmed
-    // down (stat-total-orders / stat-orders-breakdown aren't rendered
-    // anymore on this page), so unconditional getElementById(...).textContent
-    // threw "Cannot set properties of null" and aborted loadOrders().
     const setText = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
@@ -396,7 +380,6 @@ function updateStats(meta) {
     setText('stat-total-tickets', (meta.total_tickets || 0).toLocaleString('ro-RO'));
     setText('stat-completed', (meta.completed_orders || 0).toLocaleString('ro-RO'));
 
-    // Order breakdown
     const bd = meta.order_breakdown;
     if (bd) {
         const parts = [];
@@ -470,7 +453,6 @@ async function exportSales() {
             throw new Error(errorData.message || 'Eroare la export');
         }
 
-        // Build filename: [event name]-Vanzari-[date].csv
         const selectedEvent = eventsData.find(e => String(e.id) === String(eventId));
         const eventTitle = selectedEvent ? (selectedEvent.name || selectedEvent.title || 'Eveniment') : 'Eveniment';
         const safeTitle = eventTitle.replace(/[^a-zA-Z0-9àáâãäåăîșțâéèêëìíïòóôõöùúûüñç -]/gi, '').replace(/\s+/g, '-');

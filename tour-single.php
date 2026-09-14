@@ -380,8 +380,6 @@ $scriptsExtra = <<<'JS'
     if (!slug) return;
 
     const $ = (id) => document.getElementById(id);
-    // Null-safe textContent setter — when the page template trims an element
-    // (e.g. user removed a meta card from the HTML), the JS shouldn't crash.
     const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     const setHTML = (id, value) => { const el = document.getElementById(id); if (el) el.innerHTML = value; };
     const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
@@ -400,9 +398,6 @@ $scriptsExtra = <<<'JS'
         const d = new Date(iso);
         return d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
     }
-    // Display time directly from the API's start_time (avoids JS timezone
-    // weirdness — when only event_date is present, the API returns a
-    // midnight starts_at which would render as "03:00" everywhere).
     function eventTime(e) {
         if (e && typeof e.start_time === 'string' && e.start_time.length >= 5) {
             return e.start_time.slice(0, 5);
@@ -463,14 +458,12 @@ $scriptsExtra = <<<'JS'
 
         document.title = (tour.name || 'Turneu') + (window.AMBILET?.siteName ? ' — ' + window.AMBILET.siteName : '');
 
-        // Hero — poster
         if (tour.poster_url) {
             const img = $('tourPosterImg');
             img.src = tour.poster_url;
             img.alt = tour.name || '';
             show(img, true);
         } else if (tour.cover_url) {
-            // fallback to cover image as the hero left panel
             const img = $('tourPosterImg');
             img.src = tour.cover_url;
             img.alt = tour.name || '';
@@ -482,10 +475,8 @@ $scriptsExtra = <<<'JS'
             show(dl, true);
         }
 
-        // Title
         $('tourName').textContent = tour.name || '';
 
-        // Badges
         const badges = [];
         if (tour.type === 'turneu') {
             badges.push('<span class="inline-flex items-center gap-1.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Turneu</span>');
@@ -502,7 +493,6 @@ $scriptsExtra = <<<'JS'
         }
         $('tourBadges').innerHTML = badges.join('');
 
-        // Artist link in toolbar + chip
         if (artist?.name) {
             const link = $('tourArtistLink');
             link.href = '/artist/' + (artist.slug || '');
@@ -525,13 +515,11 @@ $scriptsExtra = <<<'JS'
             show(chip, true);
         }
 
-        // Short description
         if (tour.short_description) {
             $('tourShortDescription').textContent = tour.short_description;
             show($('tourShortDescription'), true);
         }
 
-        // Share menu
         const shareUrl = window.location.href;
         const shareTitle = tour.name || 'Turneu';
         $('shareFb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl);
@@ -563,9 +551,6 @@ $scriptsExtra = <<<'JS'
             document.body.removeChild(ta);
         }
 
-        // META STRIP — setText is null-safe so any card the template trims
-        // away (e.g. metaCapacity / metaCapacityNote when those rows were
-        // removed from the HTML) silently no-ops.
         setText('metaPeriod', shortPeriod(periodStart, periodEnd));
         if (periodStart && periodEnd) {
             const days = daysBetween(periodStart, periodEnd);
@@ -584,7 +569,6 @@ $scriptsExtra = <<<'JS'
             setText('metaCapacityNote', fmtNumber(aggregates.total_sold) + ' vândute');
         }
 
-        // Min price across events
         let minPrice = Infinity;
         events.forEach(e => {
             (e.ticket_types || []).forEach(t => {
@@ -598,10 +582,8 @@ $scriptsExtra = <<<'JS'
             setText('metaPrice', '—');
         }
 
-        // Setlist duration in meta
         setText('metaDuration', tour.setlist_duration_minutes ? '~' + tour.setlist_duration_minutes + ' min' : '—');
 
-        // PROGRESS
         const totalEvents = events.length;
         const now = Date.now();
         const completedEvents = events.filter(e => e.starts_at && new Date(e.starts_at).getTime() < now).length;
@@ -632,21 +614,17 @@ $scriptsExtra = <<<'JS'
         if (periodStart) $('progressStart').textContent = new Date(periodStart).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
         if (periodEnd) $('progressEnd').textContent = new Date(periodEnd).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
 
-        // DATES LIST — upcoming first; past events behind a collapsed toggle
         const list = $('datesList');
         if (events.length === 0) {
             list.innerHTML = '';
             show($('datesEmpty'), true);
         } else {
             const pastEvents = events.filter(e => e.starts_at && new Date(e.starts_at).getTime() < now);
-            // Stop number assigned by global event order (oldest first) so an event's
-            // "Stop N" matches its place in the original tour list, regardless of
-            // whether it's past or upcoming.
             const stopNumberById = new Map();
             events.forEach((e, idx) => stopNumberById.set(e.id, idx + 1));
 
-            const upcomingHtml = upcomingEvents.map(e => buildDateRow(e, stopNumberById.get(e.id), events.length, now, /*isPast*/ false)).join('');
-            const pastHtml = pastEvents.map(e => buildDateRow(e, stopNumberById.get(e.id), events.length, now, /*isPast*/ true)).join('');
+            const upcomingHtml = upcomingEvents.map(e => buildDateRow(e, stopNumberById.get(e.id), events.length, now,  false)).join('');
+            const pastHtml = pastEvents.map(e => buildDateRow(e, stopNumberById.get(e.id), events.length, now,  true)).join('');
 
             const togglePastHtml = pastEvents.length > 0
                 ? `
@@ -674,12 +652,10 @@ $scriptsExtra = <<<'JS'
                 });
             }
 
-            // MAP view — populate pins + simple route polyline
             renderDatesMap(events, stopNumberById, now);
             wireViewToggle();
         }
 
-        // ABOUT (description + setlist)
         let hasAbout = false;
         if (tour.description) {
             $('tourDescription').innerHTML = tour.description;
@@ -699,7 +675,6 @@ $scriptsExtra = <<<'JS'
         }
         show($('aboutSection'), hasAbout);
 
-        // ARTISTS
         const artistsList = aggregates.artists || [];
         const headlinerId = artist?.id;
         const headlinerData = headlinerId ? artistsList.find(a => a.id === headlinerId) || artist : artist;
@@ -737,7 +712,6 @@ $scriptsExtra = <<<'JS'
         }
         show($('artistsSection'), !!headlinerData?.name || guestsList.length > 0);
 
-        // FAQ
         if (Array.isArray(tour.faq) && tour.faq.length > 0) {
             $('faqList').innerHTML = tour.faq.map((item, i) => `
                 <details class="overflow-hidden border border-slate-200 rounded-xl group">
@@ -751,7 +725,6 @@ $scriptsExtra = <<<'JS'
             show($('faqSection'), true);
         }
 
-        // SIDEBAR — Next date CTA
         if (nextEvent) {
             $('nextDateCity').textContent = nextEvent.venue?.city || nextEvent.venue?.name || nextEvent.name || '';
             const dateLabel = fmtDateLong(nextEvent.event_date || nextEvent.starts_at);
@@ -766,7 +739,6 @@ $scriptsExtra = <<<'JS'
             show($('nextDateCard'), true);
         }
 
-        // SIDEBAR — Info
         const infoRows = [];
         if (organizer?.name) infoRows.push(['Organizator', organizer.name]);
         if (periodStart) infoRows.push(['Început turneu', fmtDateLong(periodStart)]);
@@ -780,7 +752,6 @@ $scriptsExtra = <<<'JS'
             </div>
         `).join('');
 
-        // SIDEBAR — Follow artist
         if (artist?.name) {
             const fa = $('followArtist');
             fa.href = '/artist/' + (artist.slug || '');
@@ -797,7 +768,6 @@ $scriptsExtra = <<<'JS'
             show(fa, true);
         }
 
-        // Mobile sticky
         if (events.length > 0) {
             $('mobileStickyMeta').textContent = events.length + (events.length === 1 ? ' concert' : ' concerte') + ' · începe ' + (periodStart ? new Date(periodStart).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '');
             $('mobileStickyTitle').textContent = tour.name || '';
@@ -807,11 +777,8 @@ $scriptsExtra = <<<'JS'
     }
 
     function buildDateRow(e, stopNumber, total, now, isPast) {
-        // stopNumber = 1-based position in the original tour list (oldest first)
         const isFirst = stopNumber === 1;
         const isFinal = stopNumber === total && total > 1;
-        // Date object built from event_date only — purely for day/month/dow display.
-        // We never derive time from this (that's why all events used to read 03:00).
         const dateOnly = e.event_date ? new Date(e.event_date + 'T12:00:00') : null;
         const day = dateOnly ? String(dateOnly.getDate()).padStart(2, '0') : '—';
         const monthShort = dateOnly ? ROMONTHS[dateOnly.getMonth()].slice(0, 3) : '';
@@ -821,8 +788,6 @@ $scriptsExtra = <<<'JS'
         const ticketTypes = (e.ticket_types || []).filter(t => Number(t.price) > 0);
         const minPrice = ticketTypes.length ? Math.min.apply(null, ticketTypes.map(t => Number(t.price))) : 0;
 
-        // Prefer the API-supplied available_capacity (shared pool remaining or total)
-        // — same number admin's "Capacitate generală" badge shows.
         const availableCap = (e.available_capacity != null) ? Number(e.available_capacity) : null;
         const generalQuota = (e.general_quota != null) ? Number(e.general_quota) : null;
 
@@ -850,17 +815,15 @@ $scriptsExtra = <<<'JS'
         const bgClass = isFinal && !isPast ? ' bg-gradient-to-r from-rose-50/40 to-transparent' : '';
         const finalDot = isFinal && !isPast ? '<span class="absolute w-3 h-3 border-2 border-white rounded-full -top-1 -right-1 bg-amber-400" title="Finalul turneului"></span>' : '';
 
-        // Capacity meta line: for active events show available, for past events show total quota
         const capMetaLine = (() => {
             if (isPast) {
                 if (generalQuota && generalQuota > 0) return fmtNumber(generalQuota) + ' locuri';
                 return '';
             }
-            if (availableCap === null || availableCap < 0) return ''; // unlimited or unknown
+            if (availableCap === null || availableCap < 0) return '';
             return fmtNumber(availableCap) + ' locuri disponibile';
         })();
 
-        // Past events: no price column, no clickable link to the event
         const pastClasses = isPast ? ' opacity-70' : '';
         const wrapperOpen = isPast
             ? `<div class="grid items-center grid-cols-12 gap-4 p-4 border-l-4 border-transparent md:p-5${bgClass}${pastClasses}">`
@@ -868,7 +831,7 @@ $scriptsExtra = <<<'JS'
         const wrapperClose = isPast ? '</div>' : '</a>';
 
         const priceColumn = isPast
-            ? '' // past events: hide price + CTA per spec
+            ? ''
             : `
                 <div class="flex items-center justify-between col-span-12 gap-4 pt-3 border-t md:col-span-4 md:justify-end md:border-0 border-slate-100 md:pt-0">
                     ${minPrice > 0
@@ -907,10 +870,6 @@ $scriptsExtra = <<<'JS'
         `;
     }
 
-    // ── MAP view (Leaflet + OpenStreetMap) ──────────────────────────────
-    // Each event needs a lat/lng. We prefer the venue's stored coordinates
-    // (Venue.lat/lng on core.tixello.com); for any missing location, we fall
-    // back to a small RO_CITY_COORDS table covering the major venues.
     const RO_CITY_LATLNG = {
         'baia mare': [47.6573, 23.5681],
         'oradea': [47.0723, 21.9189],
@@ -965,7 +924,6 @@ $scriptsExtra = <<<'JS'
         const emptyEl = $('datesMapEmpty');
         if (!canvas) return;
 
-        // Resolve every event to a [lat, lng]; track unmapped ones for the legend.
         const points = [];
         const unmapped = [];
         events.forEach(e => {
@@ -990,12 +948,10 @@ $scriptsExtra = <<<'JS'
 
         const initLeaflet = () => {
             if (typeof L === 'undefined') {
-                // Leaflet still loading — retry shortly
                 setTimeout(initLeaflet, 80);
                 return;
             }
 
-            // Tear down a previous instance if user switches tour pages without reload
             if (_mapInstance) {
                 _mapInstance.remove();
                 _mapInstance = null;
@@ -1005,7 +961,6 @@ $scriptsExtra = <<<'JS'
             _mapInstance = map;
             AmbiletTileLayer('light_all').addTo(map);
 
-            // Markers
             const bounds = [];
             sorted.forEach(p => {
                 const isPast = p.event.starts_at && new Date(p.event.starts_at).getTime() < now;
@@ -1039,7 +994,6 @@ $scriptsExtra = <<<'JS'
                 marker.bindPopup(popupHtml);
             });
 
-            // Route line connecting stops in tour order — white halo + dashed primary
             if (sorted.length > 1) {
                 const latlngs = sorted.map(p => [p.lat, p.lng]);
                 L.polyline(latlngs, { color: '#fff', weight: 6, opacity: 1 }).addTo(map);
@@ -1049,24 +1003,18 @@ $scriptsExtra = <<<'JS'
                 }).addTo(map);
             }
 
-            // Fit map to all markers (with some padding); fallback to Romania center
             if (bounds.length === 1) {
                 map.setView(bounds[0], 10);
             } else if (bounds.length > 1) {
                 map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
             } else {
-                map.setView([45.9432, 24.9668], 6); // Romania center
+                map.setView([45.9432, 24.9668], 6);
             }
 
-            // Recalc map size after the toggle reveals it (Leaflet draws blank tiles
-            // if the container had display:none at init).
             setTimeout(() => map.invalidateSize(), 100);
         };
         initLeaflet();
 
-        // Legend below map: link + red number for upcoming, plain text + gray
-        // number for past events (no buying anything for an event that already
-        // happened).
         const legendItems = sorted.map(p => {
             const isPast = p.event.starts_at && new Date(p.event.starts_at).getTime() < now;
             const cityVenue = esc(p.city) + (p.event.venue?.name ? ' · ' + esc(p.event.venue.name) : '');
@@ -1111,8 +1059,6 @@ $scriptsExtra = <<<'JS'
                     b.classList.toggle('text-slate-900', active);
                     b.classList.toggle('text-slate-500', !active);
                 });
-                // Leaflet draws blank tiles if the container was display:none
-                // when init ran; recalc the size each time the map becomes visible.
                 if (target === 'map' && _mapInstance) {
                     setTimeout(() => _mapInstance.invalidateSize(), 50);
                 }

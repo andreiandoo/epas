@@ -207,8 +207,8 @@ const RewardsPage = {
             return;
         }
 
-        // Render cached points immediately so #user-points isn't '0' for the
-        // few seconds the API needs — fresh value from loadPoints() overwrites it.
+        
+        
         const cachedUser = AmbiletAuth.getUser();
         if (cachedUser && typeof cachedUser.points === 'number') {
             this.points = cachedUser.points;
@@ -216,7 +216,7 @@ const RewardsPage = {
             if (el) el.textContent = this.points.toLocaleString();
         }
 
-        // Load all data in parallel
+        
         await Promise.all([
             this.loadPoints(),
             this.loadXP(),
@@ -232,20 +232,20 @@ const RewardsPage = {
         try {
             const response = await AmbiletAPI.customer.getPoints();
             if (response.success && response.data) {
-                // API returns nested structure: data.points.balance
+                
                 const pointsData = response.data.points || response.data;
                 this.points = pointsData.balance || 0;
                 if (response.data.history) {
                     this.pointsHistory = response.data.history;
                 }
 
-                // Update header and sidebar points display
+                
                 const headerPoints = document.getElementById('header-user-points');
                 const sidebarPoints = document.getElementById('sidebar-user-points');
                 if (headerPoints) headerPoints.textContent = this.points.toLocaleString();
                 if (sidebarPoints) sidebarPoints.textContent = this.points.toLocaleString();
 
-                // Update stored user data
+                
                 if (typeof AmbiletAuth !== 'undefined') {
                     AmbiletAuth.updateCustomerData({ points: this.points });
                 }
@@ -259,7 +259,7 @@ const RewardsPage = {
         try {
             const response = await AmbiletAPI.customer.getXP();
             if (response.success && response.data) {
-                // API returns nested structure: data.level.current, data.level.name, etc.
+                
                 const levelData = response.data.level || {};
                 this.xp = levelData.total_xp || response.data.total_xp || 0;
                 this.level = levelData.current || (typeof response.data.level === 'number' ? response.data.level : 1);
@@ -326,11 +326,11 @@ const RewardsPage = {
 
 
     render() {
-        // Update hero section with points
+        
         document.getElementById('user-points').textContent = this.points.toLocaleString();
         document.getElementById('points-value').textContent = '≈ ' + (this.points / 100).toFixed(2) + ' lei reducere';
 
-        // Update XP/Level info
+        
         document.getElementById('level-info').textContent = 'Nivel ' + this.level + ' - ' + this.levelName;
         const xpRemaining = Math.max(0, this.nextLevelXP - this.xp);
         document.getElementById('level-remaining').textContent = xpRemaining.toLocaleString() + ' XP pana la nivelul urmator';
@@ -340,14 +340,14 @@ const RewardsPage = {
         document.getElementById('level-current').textContent = 'Nivel ' + this.level;
         document.getElementById('level-next').textContent = 'Nivel ' + (this.level + 1);
 
-        // Update badges count
+        
         const earnedCount = this.badges.earned?.length || 0;
         const availableCount = this.badges.available?.length || 0;
         const totalBadges = earnedCount + availableCount;
         document.getElementById('badges-count').textContent = earnedCount + '/' + totalBadges;
         document.getElementById('badges-desc').textContent = 'Ai obtinut ' + earnedCount + ' din ' + totalBadges + ' badge-uri disponibile. Continua sa participi la evenimente!';
 
-        // Render all sections
+        
         this.renderRewards();
         this.renderBadges();
         this.renderHistory();
@@ -439,7 +439,7 @@ const RewardsPage = {
         const container = document.getElementById('badges-container');
         const badges = this.badges;
 
-        // Combine earned and available badges for display
+        
         const earnedHtml = (badges.earned || []).map(badge => {
             const gradient = badge.gradient || badge.color || 'from-yellow-400 to-orange-500';
             const emoji = badge.emoji || badge.icon || '🏆';
@@ -480,7 +480,7 @@ const RewardsPage = {
             return;
         }
 
-        // Show/hide load more button based on pagination
+        
         if (loadMoreBtn) {
             if (this.historyMeta && this.historyPage < this.historyMeta.last_page) {
                 loadMoreBtn.classList.remove('hidden');
@@ -529,7 +529,7 @@ const RewardsPage = {
     renderLevels() {
         const container = document.getElementById('levels-container');
         if (!this.levels || this.levels.length === 0) {
-            // Use default levels if none from API
+            
             this.levels = [
                 { range: '1-5', name: 'Newbie', emoji: '🎵', gradient: 'from-gray-400 to-gray-500', xp: '0 - 500', status: this.level <= 5 ? 'current' : 'completed' },
                 { range: '6-10', name: 'Fan', emoji: '🎸', gradient: 'from-blue-400 to-blue-500', xp: '500 - 2,000', status: this.level > 5 && this.level <= 10 ? 'current' : (this.level > 10 ? 'completed' : 'locked') },
@@ -592,17 +592,29 @@ const RewardsPage = {
     }
 };
 
-// Initialize page
+
 document.addEventListener('DOMContentLoaded', () => RewardsPage.init());
 
 function showTab(tabName) {
-    // Hide all tabs
+    
     document.querySelectorAll('[id^="tab-"]:not([id^="tab-btn-"])').forEach(tab => tab.classList.add('hidden'));
 
-    // Reset all tab buttons
+    
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
         btn.classList.add('text-muted');
+    });
+
+    
+    document.getElementById('tab-' + tabName).classList.remove('hidden');
+    document.getElementById('tab-btn-' + tabName).classList.add('active');
+    document.getElementById('tab-btn-' + tabName).classList.remove('text-muted');
+}
+</script>
+JS;
+require_once dirname(__DIR__) . '/includes/scripts.php';
+?>
+                                                                                                                                                                                                                                                                                                                                                uted');
     });
 
     // Show selected tab

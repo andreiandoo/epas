@@ -116,7 +116,7 @@ require_once __DIR__ . '/includes/head.php';
 
     const SHARE_CODE = <?= json_encode($code) ?>;
     const API_URL = '/api/proxy.php';
-    const REFRESH_INTERVAL = 30000; // 30 seconds
+    const REFRESH_INTERVAL = 30000;
     let refreshTimer = null;
     let sharePassword = null;
     let isFirstLoad = true;
@@ -156,12 +156,10 @@ require_once __DIR__ . '/includes/head.php';
 
     function formatTime(timeStr) {
         if (!timeStr) return '';
-        // Handle full datetime strings like "2026-01-31T18:30:00"
         if (timeStr.includes('T')) {
             const timePart = timeStr.split('T')[1];
             return timePart ? timePart.substring(0, 5) : '';
         }
-        // Handle time-only strings like "18:30:00"
         return timeStr.substring(0, 5);
     }
 
@@ -198,7 +196,6 @@ require_once __DIR__ . '/includes/head.php';
 
             let response;
             if (sharePassword) {
-                // Send password via POST
                 headers['Content-Type'] = 'application/json';
                 response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`, {
                     method: 'POST',
@@ -252,7 +249,6 @@ require_once __DIR__ . '/includes/head.php';
         }
     }
 
-    // Password submit handler (exposed globally for the form)
     window._submitSharePassword = function(e) {
         e.preventDefault();
         const pw = document.getElementById('share-password-input').value.trim();
@@ -282,7 +278,6 @@ require_once __DIR__ . '/includes/head.php';
             delete openAccordions[evId];
         }
     }
-    // Expose globally for onclick
     window._toggleAccordion = toggleAccordion;
 
     function switchTab(evId, tab) {
@@ -315,16 +310,9 @@ require_once __DIR__ . '/includes/head.php';
 
         const events = data.events || [];
         showParticipants = !!data.show_participants;
-        // show_revenue gates the "Incasari nete" summary card and the
-        // per-event "Incasari" stat. Defaults to true on the client so
-        // older clients that haven't reloaded post-deploy don't suddenly
-        // start hiding the revenue card mid-session — the server-side
-        // gate in proxy.php is what makes this safe (revenue_net is
-        // stripped from event payloads when show_revenue is false).
         window.shareShowRevenue = data.show_revenue !== false;
         participantsData = data.participants || {};
 
-        // Calculate totals
         let totalTickets = 0, totalSold = 0, totalEvents = events.length, totalRevenue = 0;
         let revenueCurrency = 'RON';
         events.forEach(ev => {
@@ -336,12 +324,8 @@ require_once __DIR__ . '/includes/head.php';
             if (ev.currency) revenueCurrency = ev.currency;
         });
 
-        // Summary cards
         const summaryEl = document.getElementById('summary-cards');
         const pct = totalTickets > 0 ? Math.round((totalSold / totalTickets) * 100) : 0;
-        // Revenue card hidden when the link's show_revenue is false. Grid
-        // shrinks naturally from 4 to 3 columns via Tailwind responsive
-        // wrappers in the parent element.
         const revenueCardHtml = window.shareShowRevenue ? `
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <p class="mb-1 text-sm text-muted">Incasari nete</p>
@@ -363,7 +347,6 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         `;
 
-        // Events as accordions
         const eventsEl = document.getElementById('events-container');
         if (!events.length) {
             eventsEl.innerHTML = '<div class="py-12 text-center text-muted">Nu sunt evenimente in acest link.</div>';
@@ -379,7 +362,6 @@ require_once __DIR__ . '/includes/head.php';
             const evPct = evTotal > 0 ? Math.round((evSold / evTotal) * 100) : 0;
             const isOpen = !!openAccordions[evId];
 
-            // Ticket types tab content
             let ticketTypesHtml = '<p class="py-4 text-sm text-muted">Nu sunt categorii de bilete.</p>';
             if (ev.ticket_types && ev.ticket_types.length > 0) {
                 ticketTypesHtml = `<div class="space-y-2">${ev.ticket_types.map(tt => {
@@ -402,7 +384,6 @@ require_once __DIR__ . '/includes/head.php';
                 }).join('')}</div>`;
             }
 
-            // Participants tab content
             let participantsHtml = '';
             if (showParticipants) {
                 const evParticipants = participantsData[evId] || participantsData[String(evId)] || [];
@@ -428,7 +409,6 @@ require_once __DIR__ . '/includes/head.php';
                 }
             }
 
-            // Tabs (only show if participants enabled)
             let tabsHtml = '';
             if (showParticipants) {
                 tabsHtml = `
@@ -519,7 +499,6 @@ require_once __DIR__ . '/includes/head.php';
         }
     }
 
-    // Start
     fetchShareData();
 })();
 </script>

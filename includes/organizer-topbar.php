@@ -73,8 +73,8 @@ $skipJsComponents = true;
 
         <script>
         (function(){
-            // Detecteaza rol restrictionat imediat ce sidebar-ul seteaza body[data-restricted-role].
-            // Sidebar init este async (fetch /organizer/me), asa ca observam mutarile pe body.
+            
+            
             let posClockInterval = null;
 
             const DAYS_RO = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
@@ -102,20 +102,20 @@ $skipJsComponents = true;
                 if (orgname) { orgname.classList.remove('hidden'); orgname.classList.add('flex'); }
                 if (clock) { clock.classList.remove('hidden'); clock.classList.add('flex'); }
 
-                // Populeaza numele locatiei (public_name) din cache-ul local scris de sidebar-init
+                
                 try {
                     const cached = JSON.parse(localStorage.getItem('ambilet_organizer_data') || '{}');
                     const orgEl = document.getElementById('pos-orgname-text');
                     if (orgEl && cached.public_name) orgEl.textContent = cached.public_name;
-                } catch (e) { /* ignore */ }
+                } catch (e) {  }
 
-                // Ceas live 1Hz — pornim doar o data
+                
                 if (!posClockInterval) {
                     tickClock();
                     posClockInterval = setInterval(tickClock, 1000);
                 }
 
-                // Highlight tab-ul curent
+                
                 const path = window.location.pathname.replace(/\/$/, '');
                 const posBtn = document.querySelector('[data-nav-pos]');
                 const dashBtn = document.querySelector('[data-nav-dashboard]');
@@ -126,9 +126,9 @@ $skipJsComponents = true;
                     dashBtn.classList.add('bg-primary', 'border-primary');
                 }
             }
-            // Try immediately (in case sidebar deja procesat)
+            
             applyPOSCashierUI();
-            // Watch pentru cazul sidebar-async
+            
             new MutationObserver(applyPOSCashierUI).observe(document.body, { attributes: true, attributeFilter: ['data-restricted-role'] });
         })();
         </script>
@@ -231,7 +231,7 @@ $skipJsComponents = true;
 </div>
 
 <script>
-// Populate topbar with logged-in organizer data
+
 (function() {
     try {
         const orgData = JSON.parse(localStorage.getItem('ambilet_organizer_data') || 'null');
@@ -254,7 +254,7 @@ $skipJsComponents = true;
                 initialsEl.textContent = initials;
             }
 
-            // Show pending account banner if status is not active
+            
             if (pendingBanner && orgData.status && orgData.status !== 'active') {
                 pendingBanner.classList.remove('hidden');
             }
@@ -262,16 +262,16 @@ $skipJsComponents = true;
     } catch (e) {}
 })();
 
-// Unsigned contract banner — async fetch because localStorage
-// (ambilet_organizer_data) doesn't carry signing state. Only fires
-// when the org is active AND required to sign AND hasn't signed yet.
-// Skipped entirely on non-organizer contexts (AmbiletAPI undefined).
+
+
+
+
 (function() {
     if (typeof AmbiletAPI === 'undefined') return;
     try {
-        // Skip if the pending-account banner already surfaced — the
-        // organizer needs to activate first anyway, no point stacking
-        // two nags before their account is even usable.
+        
+        
+        
         const pendingVisible = document.getElementById('pending-account-banner')
             && !document.getElementById('pending-account-banner').classList.contains('hidden');
         if (pendingVisible) return;
@@ -282,11 +282,11 @@ $skipJsComponents = true;
                 const el = document.getElementById('unsigned-contract-banner');
                 if (el) el.classList.remove('hidden');
             }
-        }).catch(function() { /* silent — banner stays hidden */ });
+        }).catch(function() {  });
     } catch (e) {}
 })();
 
-// Header instant search functionality
+
 (function() {
     let headerSearchCache = null;
     let searchDebounceTimer = null;
@@ -296,7 +296,7 @@ $skipJsComponents = true;
         const searchResults = document.getElementById('header-search-results');
         if (!searchInput || !searchResults) return;
 
-        // Load events for search
+        
         async function loadSearchData() {
             if (headerSearchCache) return headerSearchCache;
             try {
@@ -310,7 +310,7 @@ $skipJsComponents = true;
             }
         }
 
-        // Search and render results
+        
         async function performSearch(query) {
             if (query.length < 3) {
                 searchResults.classList.add('hidden');
@@ -325,7 +325,7 @@ $skipJsComponents = true;
                 const venue = (event.venue_name || '').toLowerCase();
                 const city = (event.venue_city || '').toLowerCase();
                 return name.includes(q) || venue.includes(q) || city.includes(q);
-            }).slice(0, 8); // Limit to 8 results
+            }).slice(0, 8); 
 
             if (results.length === 0) {
                 searchResults.innerHTML = '<div class="p-4 text-sm text-center text-muted">Niciun rezultat gasit</div>';
@@ -356,6 +356,39 @@ $skipJsComponents = true;
                         <div class="flex-1 min-w-0">
                             <p class="font-medium truncate text-secondary">${event.name || event.title}</p>
                             <p class="text-xs truncate text-muted">${subLine}</p>
+                        </div>
+                        <span class="badge badge-${statusColors[status] || 'secondary'} text-xs">${statusLabels[status] || status}</span>
+                    </a>
+                `;
+            }).join('');
+
+            searchResults.classList.remove('hidden');
+        }
+
+        
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchDebounceTimer);
+            const query = this.value.trim();
+            searchDebounceTimer = setTimeout(() => performSearch(query), 200);
+        });
+
+        
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#header-search-container')) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length >= 3) {
+                performSearch(this.value.trim());
+            }
+        });
+    });
+})();
+</script>
+                                                                    <p class="text-xs truncate text-muted">${subLine}</p>
                         </div>
                         <span class="badge badge-${statusColors[status] || 'secondary'} text-xs">${statusLabels[status] || status}</span>
                     </a>

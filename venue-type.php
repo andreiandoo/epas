@@ -570,8 +570,6 @@ const VenueTypePage = {
     },
 
     async loadEvents() {
-        // TODO: API integration needed for events by venue type
-        // Hide events section when no data available
         const eventsSection = document.getElementById('eventsSection');
         if (eventsSection) {
             eventsSection.classList.add('hidden');

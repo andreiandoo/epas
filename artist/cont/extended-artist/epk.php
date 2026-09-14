@@ -727,9 +727,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <style>[x-cloak]{display:none!important}</style>
 
 <script>
-// Extended Artist access gate — redirect to the landing page when the
-// subscription/trial is not active (mirrors booking.php / tour.php), so the
-// EPK page never falls through to a raw "subscription required" alert.
+
+
+
 (function() {
     const token = localStorage.getItem('ambilet_artist_token');
     if (!token) { window.location.href = '/artist/login'; return; }
@@ -741,7 +741,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
 function smartEpk() {
     return {
-        // ========== UI state ==========
+        
         loading: true,
         saving: false,
         dirty: false,
@@ -752,7 +752,7 @@ function smartEpk() {
         previewBust: Date.now(),
         charts: {},
 
-        // ========== Static config ==========
+        
         tabs: [
             { id: 'editor',    label: 'Editor',         icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>' },
             { id: 'analytics', label: 'Analytics',      icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>' },
@@ -786,13 +786,13 @@ function smartEpk() {
         ],
 
         statKeys: [
-            // LIVE stats din platformă
+            
             { key: 'tickets_sold',              label: 'Bilete vândute',           group: 'live' },
             { key: 'events_played',             label: 'Concerte',                 group: 'live' },
             { key: 'cities',                    label: 'Orașe',                    group: 'live' },
             { key: 'countries',                 label: 'Țări',                     group: 'live' },
             { key: 'peak_audience',             label: 'Audiență max',             group: 'live' },
-            // Social stats din profilul artistului
+            
             { key: 'instagram_followers',       label: 'Followers Instagram',      group: 'social' },
             { key: 'facebook_followers',        label: 'Followers Facebook',       group: 'social' },
             { key: 'youtube_followers',         label: 'Subscriberi YouTube',      group: 'social' },
@@ -802,7 +802,7 @@ function smartEpk() {
             { key: 'tiktok_followers',          label: 'Followers TikTok',         group: 'social' },
         ],
 
-        // ========== Server state ==========
+        
         state: {
             epk_id: null,
             active_variant_id: null,
@@ -811,18 +811,18 @@ function smartEpk() {
             limits: { max_variants: 3, max_gallery_images: 12, max_youtube_videos: 4 },
             marketplace_domain: '',
             artist: { slug: '', name: '' },
-            artist_profile: {}, // fallback values din profilul artistului (social, contact, images)
+            artist_profile: {}, 
         },
         versions: [],
 
-        // ========== Active variant editing state ==========
+        
         active: { id: null, name: '', target: '', slug: '', accent_color: '#A51C30', template: 'modern' },
-        sections: [],   // [{id, label, summary, description, icon, enabled}]
-        data: {},       // flat editing object — synced with sections
+        sections: [],   
+        data: {},       
         branding: { accent: '#A51C30', template: 'modern' },
-        stats: [],      // [{key, label, value, show}]
+        stats: [],      
 
-        // ========== Mock analytics (Faza B placeholder) ==========
+        
         hotLeads: [
             { id: 1, initials: 'EC', name: 'Electric Castle Productions', type: 'Organizator festival', city: 'Cluj-Napoca', visits: 5, lastVisit: 'acum 2 ore', timeSpent: '14 min' },
             { id: 2, initials: 'BK', name: 'Berăria H Booking',           type: 'Venue',                city: 'București',   visits: 4, lastVisit: 'ieri',        timeSpent: '8 min' },
@@ -842,19 +842,19 @@ function smartEpk() {
             { icon: '📧', label: 'Click email',             count: 28 },
         ],
 
-        // ========== Computed ==========
+        
         get enabledSections() { return this.sections.filter(s => s.enabled); },
 
-        // ========== Lifecycle ==========
+        
         async init() {
             await this.load();
             this.$nextTick(() => this.renderTab(this.tab));
-            // Re-wire WYSIWYG când utilizatorul navighează între secțiuni —
-            // textarea[data-rich-editor] e creat/distrus de Alpine x-if per secțiune.
+            
+            
             this.$watch('selectedSection', () => {
                 this.$nextTick(() => this.wireRichEditors());
             });
-            // Re-wire și după schimbare de tab (Editor → ... → Editor recreează DOM)
+            
             this.$watch('tab', () => {
                 if (this.tab === 'editor') {
                     this.$nextTick(() => this.wireRichEditors());
@@ -885,12 +885,12 @@ function smartEpk() {
                 };
                 this.versions = d.variants || [];
                 this.loadActiveVariant();
-                // Wire WYSIWYG editors după ce DOM-ul are noile valori
+                
                 this.$nextTick(() => this.wireRichEditors());
             } catch (e) {
-                // No active subscription/trial → redirect to the Extended Artist
-                // landing instead of showing a raw alert (the async access gate
-                // may not have redirected yet on first paint).
+                
+                
+                
                 if (/subscription required|Extended Artist/i.test(e.message || '')) {
                     window.location.href = '/artist/cont/extended-artist';
                     return;
@@ -901,7 +901,7 @@ function smartEpk() {
             }
         },
 
-        // Map variant.sections (server format) → flat data + sections array (UI format)
+        
         loadActiveVariant() {
             const v = this.versions.find(x => x.id === this.state.active_variant_id) || this.versions[0];
             if (!v) return;
@@ -912,8 +912,8 @@ function smartEpk() {
             };
             this.branding = { accent: v.accent_color, template: v.template };
 
-            // Build sections array (merge metadata with server enabled flags).
-            // Auto-enable se face mai jos, după ce data e populat (cu fallback la artist_profile).
+            
+            
             const serverSections = (v.sections || []).reduce((acc, s) => { acc[s.id] = s; return acc; }, {});
             const sectionEnabledMap = {};
             this.sectionsMeta.forEach(meta => {
@@ -921,19 +921,19 @@ function smartEpk() {
                 sectionEnabledMap[meta.id] = s.enabled ?? true;
             });
 
-            // Build flat data object from sections data
+            
             const get = (id, key, def) => serverSections[id]?.data?.[key] ?? def;
             const profile = this.state.artist_profile || {};
-            // fallback helper: returnează valoarea dacă e completă, altfel valoarea fallback
+            
             const fb = (val, fallback) => (val !== null && val !== undefined && val !== '') ? val : (fallback || '');
 
-            // Filter gallery to non-empty strings, fallback la imaginile din profil dacă tot gol
+            
             let gallery = (get('gallery', 'images', []) || []).filter(img => typeof img === 'string' && img.length > 0);
             if (gallery.length === 0) {
                 gallery = [profile.main_image_url, profile.portrait_url].filter(x => !!x);
             }
 
-            // Bio long: dacă e gol, ia bio_html.ro / bio_html.en din profil
+            
             let bioLong = get('bio', 'bio_long', '');
             if (!bioLong && profile.bio_html) {
                 bioLong = profile.bio_html.ro || profile.bio_html.en || Object.values(profile.bio_html)[0] || '';
@@ -947,7 +947,7 @@ function smartEpk() {
                 bio_long: bioLong,
                 gallery: gallery,
                 spotify_url: fb(get('spotify', 'spotify_url', null), profile.spotify_url),
-                // Normalize la [{url: '...'}] indiferent de forma stocată anterior
+                
                 youtube_videos: this.normalizeYoutubeVideos(get('youtube', 'videos', null), profile.youtube_videos),
                 achievements: this.firstNonEmptyArray(get('achievements', 'items', []), profile.achievements),
                 press_quotes: get('press_quotes', 'quotes', []),
@@ -960,28 +960,28 @@ function smartEpk() {
                 contact_email: fb(get('contact', 'email', null), profile.email),
                 contact_phone: fb(get('contact', 'phone', null), profile.phone),
                 show_booking_cta: get('contact', 'show_booking_cta', true),
-                // Tipuri evenimente pentru CTA Booking — editabile de artist
+                
                 event_types: (() => {
                     const e = get('contact', 'event_types', null);
                     if (Array.isArray(e) && e.length > 0) return e;
                     return ['Concerte', 'Festivaluri', 'Evenimente private', 'Corporate'];
                 })(),
-                // Custom stats — array de {label, value} adăugate manual de artist
+                
                 custom_stats: Array.isArray(get('stats', 'custom', [])) ? get('stats', 'custom', []) : [],
             };
-            // Stats: merge live values with show flags from server
+            
             const showFlags = get('stats', 'show', {});
             this.stats = this.statKeys.map(s => ({
                 key: s.key,
                 label: s.label,
                 group: s.group,
                 value: this.state.live_stats?.[s.key]?.display ?? '—',
-                show: showFlags[s.key] ?? (s.group === 'live'), // LIVE stats default ON, social default OFF
+                show: showFlags[s.key] ?? (s.group === 'live'), 
             }));
 
-            // Build this.sections AFTER this.data e construit, pentru auto-enable
-            // bazat pe conținut. Dacă serverul a returnat enabled=false dar avem
-            // date populate prin fallback (din artist_profile), forțăm enabled=true.
+            
+            
+            
             const hasData = (sectionId) => {
                 switch (sectionId) {
                     case 'youtube': return this.data.youtube_videos.length > 0;
@@ -997,7 +997,7 @@ function smartEpk() {
             };
             this.sections = this.sectionsMeta.map(meta => {
                 let enabled = sectionEnabledMap[meta.id];
-                // Dacă server a zis false dar avem date populate prin fallback → enable
+                
                 if (!enabled && hasData(meta.id)) enabled = true;
                 return { ...meta, enabled };
             });
@@ -1007,7 +1007,7 @@ function smartEpk() {
 
         markDirty() { this.dirty = true; },
 
-        // Map flat data + sections + stats → variant.sections array (server format) for save
+        
         buildSectionsForSave() {
             const showFlags = {};
             this.stats.forEach(s => { showFlags[s.key] = s.show; });
@@ -1186,14 +1186,14 @@ function smartEpk() {
             this.markDirty();
         },
 
-        // ========== Data normalization & fallback helpers ==========
+        
         mergeSocial(serverSocial, profile) {
             const out = { website: '', facebook: '', instagram: '', tiktok: '', youtube: '' };
             const fb = (val, fallback) => (val !== null && val !== undefined && val !== '') ? val : (fallback || '');
             if (serverSocial && typeof serverSocial === 'object') {
                 Object.assign(out, serverSocial);
             }
-            // Fallback la profilul artistului pentru câmpurile goale
+            
             out.website = fb(out.website, profile.website);
             out.facebook = fb(out.facebook, profile.facebook_url);
             out.instagram = fb(out.instagram, profile.instagram_url);
@@ -1230,7 +1230,7 @@ function smartEpk() {
             return this.stats.filter(s => s.group === 'social');
         },
 
-        // ========== Variant card preview helpers ==========
+        
         variantHasCover(v) {
             const hero = (v.sections || []).find(s => s.id === 'hero');
             return !!(hero?.data?.cover_image);
@@ -1243,12 +1243,12 @@ function smartEpk() {
             if (cover) {
                 return `background-image: url('${cover}'); background-color: ${accent}`;
             }
-            // Fallback la gradient atunci când nu există cover image
+            
             return `background: linear-gradient(135deg, ${accent}, ${accent}88)`;
         },
 
         removeGalleryImage(displayIdx) {
-            // displayIdx e index-ul în lista filtrată; trebuie să găsim corespondentul în array-ul real
+            
             const filtered = this.nonEmptyGallery();
             const target = filtered[displayIdx];
             const realIdx = (this.data.gallery || []).indexOf(target);
@@ -1257,8 +1257,8 @@ function smartEpk() {
             }
         },
 
-        // ========== Rich text editor (WYSIWYG pentru bio extins) ==========
-        // Inline copy of the editor from artist-cont-detalii.js — same toolbar.
+        
+        
         wireRichEditors() {
             document.querySelectorAll('textarea[data-rich-editor]').forEach(textarea => {
                 if (textarea._editorAttached) {
@@ -1324,7 +1324,7 @@ function smartEpk() {
                         if (!arg) return;
                     }
                     editor.focus();
-                    try { document.execCommand(btn.cmd, false, arg); } catch (e) { /* old browsers */ }
+                    try { document.execCommand(btn.cmd, false, arg); } catch (e) {  }
                     sync();
                 });
                 toolbar.appendChild(b);
@@ -1348,7 +1348,7 @@ function smartEpk() {
             textarea._editor = editor;
         },
 
-        // ========== URL helpers ==========
+        
         domainBase() {
             if (!this.state.marketplace_domain) return '';
             const d = this.state.marketplace_domain;
@@ -1357,7 +1357,7 @@ function smartEpk() {
 
         publicUrl() {
             if (!this.state.artist?.slug) return '#';
-            // Active variant: /epk/{slug}; non-active: /epk/{slug}/{variant_slug}
+            
             const isActive = this.active.id === this.state.active_variant_id;
             const path = isActive
                 ? `/epk/${this.state.artist.slug}`
@@ -1380,10 +1380,75 @@ function smartEpk() {
         },
 
         qrUrl() {
-            // Folosim api.qrserver.com (gratuit, fără auth) pentru a evita
-            // dependența de endroid/qr-code pe server. URL-ul scanat va fi
-            // pagina publică EPK din varianta activă.
+            
+            
+            
             const url = this.publicUrl();
+            if (url === '#') return '#';
+            return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`;
+        },
+
+        pdfUrl() {
+            if (!this.active.id) return '#';
+            return `/api/proxy.php?action=artist.epk.variant.pdf&id=${this.active.id}&token=${this.token()}`;
+        },
+
+        copyUrl() {
+            navigator.clipboard?.writeText(this.publicUrl());
+            this.urlCopied = true;
+            setTimeout(() => this.urlCopied = false, 2000);
+        },
+
+        setTab(id) {
+            this.tab = id;
+            if (id === 'preview') this.previewBust = Date.now();
+            this.$nextTick(() => this.renderTab(id));
+        },
+
+        renderTab(id) {
+            if (id === 'analytics') {
+                this.renderTrafficChart();
+                this.renderSourcesChart();
+            }
+        },
+
+        destroyChart(key) {
+            if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
+        },
+
+        renderTrafficChart() {
+            this.destroyChart('traffic');
+            const el = document.getElementById('trafficChart');
+            if (!el || typeof Chart === 'undefined') return;
+            const labels = Array.from({ length: 30 }, (_, i) => i + 1);
+            const data = Array.from({ length: 30 }, () => Math.floor(Math.random() * 80) + 40);
+            this.charts.traffic = new Chart(el.getContext('2d'), {
+                type: 'line',
+                data: { labels, datasets: [{ data, borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        },
+
+        renderSourcesChart() {
+            this.destroyChart('sources');
+            const el = document.getElementById('sourcesChart');
+            if (!el || typeof Chart === 'undefined') return;
+            this.charts.sources = new Chart(el.getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: ['Direct (link)', 'Booking Marketplace', 'Email organizator', 'Social media', 'Search'],
+                    datasets: [{ data: [42, 28, 15, 10, 5], backgroundColor: ['#A51C30', '#E67E22', '#10B981', '#3B82F6', '#94A3B8'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right' } } }
+            });
+        },
+    }
+}
+</script>
+
+<?php
+$scriptsExtra = '<script defer src="' . asset('assets/js/pages/artist-cont-shared.js') . '"></script>';
+require_once dirname(__DIR__, 3) . '/includes/scripts.php';
+?>
+                                                                                                                                                                                                                                                                                                                                                                                              const url = this.publicUrl();
             if (url === '#') return '#';
             return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`;
         },

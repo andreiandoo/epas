@@ -218,7 +218,6 @@ const PaymentsPage = {
                 headerPoints.textContent = user.points || '0';
             }
 
-            // Load billing address
             if (user.address || user.city) {
                 document.getElementById('billing-address').innerHTML = `
                     <p class="font-medium text-secondary">${user.first_name || ''} ${user.last_name || ''}</p>
@@ -241,7 +240,6 @@ const PaymentsPage = {
             }
         } catch (error) {
             console.error('Error loading payment methods:', error);
-            // Show demo cards for testing
             this.cards = [
                 { id: 1, type: 'visa', last4: '4532', expiry: '08/26', is_default: true },
                 { id: 2, type: 'mastercard', last4: '8891', expiry: '12/25', is_default: false }
@@ -313,7 +311,6 @@ const PaymentsPage = {
             this.renderCards();
             AmbiletNotifications.success('Card sters cu succes!');
         } catch (error) {
-            // Demo mode
             this.cards = this.cards.filter(c => c.id !== id);
             this.renderCards();
             AmbiletNotifications.success('Card sters cu succes!');
@@ -333,7 +330,6 @@ function closeModal() {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
     document.body.style.overflow = '';
-    // Reset form
     document.getElementById('card-form').reset();
     document.getElementById('cardNumberPreview').textContent = '**** **** **** ****';
     document.getElementById('cardNamePreview').textContent = 'NUME PRENUME';
@@ -397,7 +393,6 @@ async function saveCard() {
         AmbiletNotifications.success('Card adaugat cu succes!');
         PaymentsPage.loadPaymentMethods();
     } catch (error) {
-        // Demo mode - add locally
         const newCard = {
             id: Date.now(),
             type: cardNumber.startsWith('4') ? 'visa' : 'mastercard',
@@ -424,17 +419,14 @@ function logout() {
     window.location.href = '/';
 }
 
-// Close modal on backdrop click
 document.getElementById('cardModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
 });
 
-// Close modal on ESC
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
 });
 
-// Initialize page
 document.addEventListener('DOMContentLoaded', () => PaymentsPage.init());
 </script>
 JS;

@@ -223,7 +223,6 @@ const ResetPage = {
         const str4 = document.getElementById('str4');
         const text = document.getElementById('strengthText');
 
-        // Reset
         [str1, str2, str3, str4].forEach(el => el.style.background = '#E2E8F0');
 
         if (password.length === 0) {
@@ -267,7 +266,6 @@ const ResetPage = {
         text.textContent = texts[strength] || 'Foarte slabă';
         text.className = `text-xs ${textColors[strength] || 'text-error'}`;
 
-        // Also check match
         this.checkMatch();
     },
 
@@ -330,7 +328,6 @@ const ResetPage = {
                 document.getElementById('resetForm').classList.add('hidden');
                 document.getElementById('successState').classList.remove('hidden');
 
-                // Countdown
                 let countdown = 5;
                 const countdownEl = document.getElementById('countdown');
 

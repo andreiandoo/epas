@@ -453,14 +453,11 @@ const SettingsPage = {
         document.getElementById('city').value = c.city || '';
         document.getElementById('language').value = c.locale || 'ro';
 
-        // Avatar
         this.updateAvatarPreview();
 
-        // Privacy
         const profilePublic = c.settings?.profile_public ?? false;
         document.getElementById('profile-public').checked = profilePublic;
 
-        // Load billing address
         const billing = c.settings?.billing_address || {};
         document.getElementById('billing_address').value = billing.address || c.address || '';
         document.getElementById('billing_city').value = billing.city || c.city || '';
@@ -468,7 +465,6 @@ const SettingsPage = {
         document.getElementById('billing_postal_code').value = billing.postal_code || c.postal_code || '';
         document.getElementById('billing_country').value = billing.country || 'RO';
 
-        // Load notification preferences from customer settings
         this.loadNotificationSettings();
     },
 
@@ -490,10 +486,8 @@ const SettingsPage = {
         const c = this.customer;
         if (!c) return;
 
-        // Get notification preferences from customer.settings.notification_preferences
         const prefs = c.settings?.notification_preferences || {};
 
-        // Default values if not set
         const defaults = {
             reminders: true,
             newsletter: true,
@@ -502,7 +496,6 @@ const SettingsPage = {
             marketing: false
         };
 
-        // Set checkbox values from DB or defaults
         document.getElementById('notif-reminders').checked = prefs.reminders ?? defaults.reminders;
         document.getElementById('notif-newsletter').checked = prefs.newsletter ?? c.accepts_marketing ?? defaults.newsletter;
         document.getElementById('notif-favorites').checked = prefs.favorites ?? defaults.favorites;
@@ -511,36 +504,30 @@ const SettingsPage = {
     },
 
     setupEventListeners() {
-        // Profile form
         document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.saveProfile();
         });
 
-        // Password form
         document.getElementById('passwordForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.changePassword();
         });
 
-        // Delete account form
         document.getElementById('deleteAccountForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.deleteAccount();
         });
 
-        // Billing address form
         document.getElementById('billingAddressForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.saveBillingAddress();
         });
 
-        // Password strength indicator
         document.getElementById('new_password').addEventListener('input', (e) => {
             this.updatePasswordStrength(e.target.value);
         });
 
-        // Avatar upload
         document.getElementById('avatarInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) await this.uploadAvatar(file);
@@ -643,7 +630,6 @@ const SettingsPage = {
 
             if (response.success) {
                 AmbiletNotifications.success('Profilul a fost actualizat!');
-                // Update cached user data
                 if (response.data?.customer) {
                     this.customer = response.data.customer;
                     const user = AmbiletAuth.getUser();
@@ -763,7 +749,6 @@ const SettingsPage = {
                 country: document.getElementById('billing_country').value
             };
 
-            // Save to API using settings endpoint
             const response = await AmbiletAPI.put('/customer/settings', {
                 billing_address: billingAddress
             });
@@ -807,7 +792,6 @@ async function saveNotificationSettings() {
             marketing: document.getElementById('notif-marketing').checked
         };
 
-        // Save to API
         await AmbiletAPI.put('/customer/settings', {
             accepts_marketing: notificationPreferences.newsletter,
             notification_preferences: notificationPreferences
@@ -823,21 +807,18 @@ async function saveNotificationSettings() {
     }
 }
 
-// Close modal on escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         hideDeleteConfirmation();
     }
 });
 
-// Close modal on click outside
 document.getElementById('deleteModal').addEventListener('click', (e) => {
     if (e.target.id === 'deleteModal') {
         hideDeleteConfirmation();
     }
 });
 
-// Initialize page
 document.addEventListener('DOMContentLoaded', () => SettingsPage.init());
 </script>
 JS;

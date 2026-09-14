@@ -182,15 +182,15 @@ const LeisureDash = {
             return;
         }
         this.refreshAll();
-        // Live refresh: KPI + casa la 20s; compare la 60s (mai lent, sunt date agregate);
-        // weather doar la init (cache-uit 1h server-side).
+        
+        
         setInterval(() => { this.loadLive(); this.loadCasa(); }, 20000);
         setInterval(() => { this.loadCompare(); }, 60000);
     },
 
     refreshAll() { this.loadLive(); this.loadCasa(); this.loadSales(); this.loadParticipants(); this.loadWeather(); this.loadCompare(); },
 
-    // ---- Live stats + stream ----
+    
     async loadLive() {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/dashboard/live`);
@@ -198,8 +198,8 @@ const LeisureDash = {
             const refEl = document.getElementById('lv-last-refresh');
             if (refEl) refEl.textContent = this.fmtTime(d.now || new Date().toISOString());
             document.getElementById('ld-sold').textContent = this.num(s.sold_today);
-            // Sub-label: numar vizitatori (bilete fizice, include componente pachet).
-            // Cand === sold_today, ascundem randul (n-are informatie noua).
+            
+            
             const vhint = document.getElementById('ld-visitors-hint');
             if (vhint) {
                 const v = s.visitors_today != null ? Number(s.visitors_today) : null;
@@ -233,7 +233,7 @@ const LeisureDash = {
             </div>`).join('');
     },
 
-    // ---- Casă (cash drawer) ----
+    
     async loadCasa() {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/cashier/current`);
@@ -281,7 +281,7 @@ const LeisureDash = {
             </div>`;
     },
 
-    // ---- Participants ----
+    
     async loadParticipants() {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/participants`);
@@ -292,7 +292,7 @@ const LeisureDash = {
         } catch (e) { console.warn('participants', e); }
     },
 
-    // ---- Weather (Open-Meteo, 7 zile) ----
+    
     async loadWeather() {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/weather`);
@@ -333,7 +333,7 @@ const LeisureDash = {
         } catch (e) { console.warn('weather', e); document.getElementById('ld-weather')?.classList.add('hidden'); }
     },
 
-    // ---- Compare: azi vs ieri / sapt trecuta / luna trecuta / an trecut ----
+    
     async loadCompare() {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/dashboard/compare`);
@@ -375,7 +375,7 @@ const LeisureDash = {
                     ${cells}
                 </tr>`;
             }).join('');
-            // Sub-note cu datele efective ale zilelor comparate + ora cutoff
+            
             const noteEl = document.getElementById('ld-compare-note');
             const subEl = document.getElementById('ld-compare-subtitle');
             const cutoff = (res.data || {}).cutoff_time;
@@ -392,15 +392,15 @@ const LeisureDash = {
         }
     },
 
-    // ---- Sales chart ----
+    
     async loadSales() {
         try {
             const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
             const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/sales-timeline`, { from: fmt(from), to: fmt(to), group_by: 'day' });
-            // Fix chart care nu apare la prima incarcare: Chart.js poate fi inca
-            // in curs de load (defer script), sau canvas-ul nu are inca dimensiuni
-            // finale. Asteapta pana ambele sunt disponibile inainte de render.
+            
+            
+            
             let retries = 0;
             while ((typeof Chart === 'undefined' || !document.getElementById('ld-sales-chart')?.offsetParent) && retries < 20) {
                 await new Promise(r => setTimeout(r, 100));
@@ -417,8 +417,8 @@ const LeisureDash = {
         const labels = rows.map(r => { const d = new Date((r.date || '') + 'T00:00:00'); return isNaN(d) ? (r.date || '') : (d.getDate() + '.' + (d.getMonth() + 1)); });
         const revenue = rows.map(r => Number(r.revenue || 0));
         const tickets = rows.map(r => Number(r.tickets || 0));
-        // Vizitatori = bilete fizice scanabile (componente pachet + individuale + bonus ghid,
-        // exclus umbrella pachet). Fallback la `tickets` pentru rows vechi fara acest field.
+        
+        
         const visitors = rows.map(r => (r.visitors != null ? Number(r.visitors) : Number(r.tickets || 0)));
         const has = revenue.some(v => v > 0) || tickets.some(v => v > 0) || visitors.some(v => v > 0);
         if (this.salesChart) { this.salesChart.destroy(); this.salesChart = null; }
@@ -428,9 +428,9 @@ const LeisureDash = {
             type: 'bar',
             data: { labels, datasets: [
                 { type: 'line', label: 'Venituri (RON)', data: revenue, yAxisID: 'y', borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.12)', borderWidth: 2.5, fill: true, tension: .35, pointRadius: 0, order: 0 },
-                // 2 bare grupate: Bilete vandute (tranzactii cu valoare) + Vizitatori (bilete fizice).
-                // Diferenta = componente pachet + bonusuri ghid + invitatii. Ambele impartesc aceeasi
-                // axa Y1 (numeric compact); grupate side-by-side pe fiecare zi.
+                
+                
+                
                 { type: 'bar', label: 'Bilete vândute', data: tickets, yAxisID: 'y1', backgroundColor: 'rgba(20,184,166,.65)', borderRadius: 4, order: 1 },
                 { type: 'bar', label: 'Vizitatori', data: visitors, yAxisID: 'y1', backgroundColor: 'rgba(139,92,246,.55)', borderRadius: 4, order: 1 },
             ]},
@@ -439,7 +439,7 @@ const LeisureDash = {
                     legend: { display: true, labels: { boxWidth: 10, font: { size: 11 } } },
                     tooltip: {
                         callbacks: {
-                            // Tooltip explicativ pentru diferenta bilete vs vizitatori
+                            
                             afterBody: (items) => {
                                 const t = Number(items.find(i => i.dataset.label === 'Bilete vândute')?.parsed?.y || 0);
                                 const v = Number(items.find(i => i.dataset.label === 'Vizitatori')?.parsed?.y || 0);
@@ -457,11 +457,29 @@ const LeisureDash = {
         });
     },
 
-    // ---- helpers ----
+    
     money(v) { return new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(Math.round(Number(v) || 0)); },
     num(v) { return new Intl.NumberFormat('ro-RO').format(Number(v) || 0); },
     fmtTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }); },
     fmtDateTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); },
+    since(s) { if (!s) return '—'; const mins = Math.max(0, Math.floor((Date.now() - new Date(s).getTime()) / 60000)); const h = Math.floor(mins / 60), m = mins % 60; return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm'); },
+    esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; },
+};
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('-translate-x-full');
+    if (overlay) overlay.classList.toggle('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => LeisureDash.init());
+</script>
+JS;
+
+require_once dirname(__DIR__) . '/includes/scripts.php';
+?>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ,
     since(s) { if (!s) return '—'; const mins = Math.max(0, Math.floor((Date.now() - new Date(s).getTime()) / 60000)); const h = Math.floor(mins / 60), m = mins % 60; return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm'); },
     esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; },
 };

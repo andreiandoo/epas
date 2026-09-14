@@ -894,7 +894,6 @@ let emailFilterOptions = {
     genres: []
 };
 
-// ==================== SEARCHABLE MULTISELECT COMPONENT ====================
 
 const multiselectInstances = {};
 
@@ -906,23 +905,19 @@ function initSearchableMultiselect(containerId, options, onChange) {
     const instance = { selected: new Set(), options, onChange };
     multiselectInstances[containerId] = instance;
 
-    // Selected tags area
     const tagsArea = document.createElement('div');
     tagsArea.className = 'flex flex-wrap gap-1 mb-1';
     tagsArea.id = containerId + '-tags';
 
-    // Search input
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'input w-full text-sm';
     searchInput.placeholder = container.dataset.placeholder || 'Cauta...';
 
-    // Dropdown list
     const dropdown = document.createElement('div');
     dropdown.className = 'hidden absolute z-50 w-full mt-1 bg-white border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto';
     dropdown.id = containerId + '-dropdown';
 
-    // Wrapper for relative positioning
     const wrapper = document.createElement('div');
     wrapper.className = 'relative';
     wrapper.appendChild(searchInput);
@@ -931,7 +926,6 @@ function initSearchableMultiselect(containerId, options, onChange) {
     container.appendChild(tagsArea);
     container.appendChild(wrapper);
 
-    // Populate dropdown
     function renderDropdown(filter = '') {
         dropdown.innerHTML = '';
         const lowerFilter = filter.toLowerCase();
@@ -984,7 +978,6 @@ function initSearchableMultiselect(containerId, options, onChange) {
         });
     }
 
-    // Events
     searchInput.addEventListener('focus', () => {
         renderDropdown(searchInput.value);
         dropdown.classList.remove('hidden');
@@ -1016,7 +1009,6 @@ function clearMultiselect(containerId) {
     }
 }
 
-// ==================== END SEARCHABLE MULTISELECT ====================
 
 document.addEventListener('DOMContentLoaded', function() {
     loadPricing();
@@ -1033,19 +1025,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkUrlParams() {
     const params = new URLSearchParams(window.location.search);
 
-    // Check for success messages
     if (params.get('featuring_activated') === '1') {
         showSuccessBanner('Promovare Activata!', 'Evenimentul tau este acum afisat in sectiunile selectate.');
     } else if (params.get('payment_success') === '1' || params.get('payment') === 'success') {
         showSuccessBanner('Plata Confirmata!', 'Serviciul a fost activat cu succes. Evenimentul tau va aparea in sectiunile selectate.');
     }
 
-    // Check for cancelled payment
     if (params.get('cancelled') === '1' || params.get('payment') === 'cancel') {
         document.getElementById('cancelled-banner').classList.remove('hidden');
     }
 
-    // Clean URL parameters without refresh
     if (params.toString()) {
         window.history.replaceState({}, '', window.location.pathname);
     }
@@ -1072,7 +1061,6 @@ async function loadPricing() {
             servicePricing = response.data.pricing;
             updatePricingUI();
         } else if (response.success && response.data) {
-            // Fallback: if pricing is directly in data
             servicePricing = response.data;
             updatePricingUI();
         }
@@ -1083,7 +1071,6 @@ async function loadPricing() {
 }
 
 function updatePricingUI() {
-    // Update email card price
     const cardEmailPrice = document.getElementById('card-email-price');
     if (cardEmailPrice) {
         const lowestEmailPrice = Math.min(
@@ -1093,7 +1080,6 @@ function updatePricingUI() {
         cardEmailPrice.textContent = AmbiletUtils.formatCurrency(lowestEmailPrice);
     }
 
-    // Update email prices in the UI
     const ownPriceEl = document.querySelector('#email-options input[value="own"]')?.closest('label')?.querySelector('.text-accent.font-semibold');
     if (ownPriceEl) {
         ownPriceEl.textContent = AmbiletUtils.formatCurrency(servicePricing.email.own_per_email || 0.40) + ' / email';
@@ -1103,7 +1089,6 @@ function updatePricingUI() {
         marketplacePriceEl.textContent = AmbiletUtils.formatCurrency(servicePricing.email.marketplace_per_email || 0.50) + ' / email';
     }
 
-    // Update featuring prices in the UI
     const fp = servicePricing.featuring || {};
     document.querySelectorAll('#featuring-options input[name="featuring_locations[]"]').forEach(input => {
         const priceEl = input.closest('label').querySelector('[data-price-key]');
@@ -1114,7 +1099,6 @@ function updatePricingUI() {
         }
     });
 
-    // Update "de la" price on featuring card
     const cardFeaturingPrice = document.getElementById('card-featuring-price');
     if (cardFeaturingPrice) {
         const lowestFeaturing = Math.min(...Object.values(fp).filter(v => typeof v === 'number' && v > 0));
@@ -1123,7 +1107,6 @@ function updatePricingUI() {
         }
     }
 
-    // Update tracking prices
     document.querySelectorAll('#tracking-options input[name="tracking_platforms[]"]').forEach(input => {
         const priceEl = input.closest('label').querySelector('.text-blue-600');
         if (priceEl && servicePricing.tracking.per_platform_monthly) {
@@ -1131,7 +1114,6 @@ function updatePricingUI() {
         }
     });
 
-    // Update campaign prices
     const campaignPrices = servicePricing.campaign;
     document.querySelectorAll('#campaign-options input[name="campaign_type"]').forEach(input => {
         const priceEl = input.closest('label').querySelector('.text-purple-600');
@@ -1140,7 +1122,6 @@ function updatePricingUI() {
         }
     });
 
-    // Update the email price per label
     updateEmailAudienceUI();
 }
 
@@ -1158,23 +1139,19 @@ function setupDateValidation() {
     const startInput = document.getElementById('featuring-start');
     const endInput = document.getElementById('featuring-end');
 
-    // Set minimum date to today
     const today = new Date().toISOString().split('T')[0];
     startInput.min = today;
     endInput.min = today;
 
-    // When start date changes, update end date minimum
     startInput.addEventListener('change', function() {
         if (this.value) {
             endInput.min = this.value;
-            // If end date is before start date, reset it
             if (endInput.value && endInput.value < this.value) {
                 endInput.value = this.value;
             }
         }
     });
 
-    // Validate end date is not before start date
     endInput.addEventListener('change', function() {
         if (startInput.value && this.value < startInput.value) {
             AmbiletNotifications.error('Data de sfarsit trebuie sa fie dupa data de inceput');
@@ -1186,16 +1163,13 @@ function setupDateValidation() {
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events');
-        // API returns paginated response with data array directly
         if (response.success && response.data) {
             const allEvents = Array.isArray(response.data) ? response.data : [];
-            // Filter out past/finished events - only show live events for promotions
             events = allEvents.filter(e => e.is_editable !== false && e.is_past !== true && !e.is_cancelled);
 
             const select = document.getElementById('service-event');
 
             if (events.length === 0) {
-                // No live events available
                 const opt = document.createElement('option');
                 opt.value = '';
                 opt.textContent = 'Momentan nu ai evenimente in derulare pentru care sa faci promovare';
@@ -1207,11 +1181,9 @@ async function loadEvents() {
             events.forEach(e => {
                 const opt = document.createElement('option');
                 opt.value = e.id;
-                // API returns 'name' not 'title', 'starts_at' not 'date', 'venue_name' not 'venue'
                 opt.textContent = e.name || e.title;
                 opt.dataset.image = e.image;
                 opt.dataset.date = e.starts_at || e.date;
-                // Handle venue - can be string, object with name, or null
                 let venueName = e.venue_name || (typeof e.venue === 'object' && e.venue?.name) || (typeof e.venue === 'string' ? e.venue : '') || e.venue_city || '';
                 opt.dataset.venue = venueName;
                 select.appendChild(opt);
@@ -1245,7 +1217,6 @@ async function loadStats() {
             document.getElementById('total-spent').textContent = AmbiletUtils.formatCurrency(response.data.total_spent || 0);
         }
     } catch (e) {
-        // Stats will load when API is available
     }
 }
 
@@ -1282,11 +1253,6 @@ function renderActiveServices() {
 
     container.innerHTML = activeServices.map(s => {
         const statusInfo = statusMap[s.status] || { label: s.status, color: 'muted' };
-        // Tracking orders that still need the organizer to fill in a pixel
-        // ID get a warning chip next to the service type so the operator
-        // knows there's work to do before tracking actually fires. Click
-        // takes them straight to the service detail page where the new
-        // "Pixel ID-uri" panel lives.
         const needsPixel = !!s.needs_pixel_setup;
         const missingPlatforms = (s.missing_pixel_platforms || []).map(p => platformLabelsShort[p] || p).join(', ');
         const pixelAlert = needsPixel
@@ -1332,7 +1298,6 @@ function openServiceModal(type) {
     currentStep = 1;
     document.getElementById('service-type').value = type;
 
-    // Set modal title
     const titles = {
         featuring: 'Promovare Eveniment',
         email: 'Campanie Email Marketing',
@@ -1341,11 +1306,9 @@ function openServiceModal(type) {
     };
     document.getElementById('modal-title').textContent = titles[type];
 
-    // Reset form and steps
     document.getElementById('service-form').reset();
     updateStepUI();
 
-    // Show modal
     document.getElementById('service-modal').classList.remove('hidden');
     document.getElementById('service-modal').classList.add('flex');
 }
@@ -1356,7 +1319,6 @@ function closeServiceModal() {
 }
 
 function updateStepUI() {
-    // Update step indicators
     for (let i = 1; i <= 3; i++) {
         const indicator = document.getElementById(`step-${i}-indicator`);
         const circle = indicator.querySelector('div');
@@ -1374,12 +1336,10 @@ function updateStepUI() {
         }
     }
 
-    // Show/hide step content
     document.querySelectorAll('.step-content').forEach((el, i) => {
         el.classList.toggle('hidden', i + 1 !== currentStep);
     });
 
-    // Show/hide service-specific options in step 2
     if (currentStep === 2) {
         document.getElementById('featuring-options').classList.toggle('hidden', currentServiceType !== 'featuring');
         document.getElementById('email-options').classList.toggle('hidden', currentServiceType !== 'email');
@@ -1387,7 +1347,6 @@ function updateStepUI() {
         document.getElementById('campaign-options').classList.toggle('hidden', currentServiceType !== 'campaign');
     }
 
-    // Update buttons
     document.getElementById('btn-back').classList.toggle('hidden', currentStep === 1);
     document.getElementById('btn-next').classList.toggle('hidden', currentStep === 3);
     document.getElementById('btn-pay').classList.toggle('hidden', currentStep !== 3);
@@ -1400,7 +1359,6 @@ function nextStep() {
             AmbiletNotifications.error('Selecteaza un eveniment');
             return;
         }
-        // Show event preview
         const event = events.find(e => e.id == eventId);
         if (event) {
             document.getElementById('event-preview').classList.remove('hidden');
@@ -1413,9 +1371,7 @@ function nextStep() {
     }
 
     if (currentStep === 2) {
-        // Validate step 2 based on service type
         if (!validateStep2()) return;
-        // Calculate and show order summary
         calculateOrderSummary();
     }
 
@@ -1440,7 +1396,6 @@ function validateStep2() {
                 AmbiletNotifications.error('Selecteaza cel putin o locatie');
                 return false;
             }
-            // Validate dates
             const startDate = document.getElementById('featuring-start').value;
             const endDate = document.getElementById('featuring-end').value;
             if (!startDate || !endDate) {
@@ -1458,14 +1413,12 @@ function validateStep2() {
             }
             break;
         case 'email':
-            // Validate recipient count
             const emailAudienceTypeVal = document.querySelector('input[name="email_audience"]:checked').value;
             const recipientCount = emailAudiences[emailAudienceTypeVal]?.filtered_count || 0;
             if (recipientCount < 1) {
                 AmbiletNotifications.error('Nu exista destinatari pentru filtrele selectate');
                 return false;
             }
-            // Validate send date and time
             const sendDate = document.getElementById('email-send-date').value;
             const sendTime = document.getElementById('email-send-time').value;
             if (!sendDate) {
@@ -1485,7 +1438,6 @@ function validateStep2() {
             }
             break;
         case 'campaign':
-            // Validate budget
             const budget = parseInt(document.getElementById('campaign-budget').value);
             if (isNaN(budget) || budget < 500) {
                 AmbiletNotifications.error('Bugetul minim este 500 RON');
@@ -1509,8 +1461,6 @@ function calculateOrderSummary() {
             const startVal = document.getElementById('featuring-start').value;
             const endVal = document.getElementById('featuring-end').value;
 
-            // Day-based calculation:
-            // Days = difference between end date and start date (integer)
             const startDate = new Date(startVal + 'T00:00:00');
             const endDate = new Date(endVal + 'T00:00:00');
             const daysMultiplier = Math.max(Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)), 1);
@@ -1575,7 +1525,6 @@ function calculateOrderSummary() {
     }
 
     const eventName = event ? (event.name || event.title || '') : '';
-    // Handle category - can be string, object with name, or null
     let eventCategory = '';
     if (event?.category_name) {
         eventCategory = event.category_name;
@@ -1620,7 +1569,6 @@ function setupPaymentMethodToggle() {
 
 async function loadEmailFilterOptions() {
     try {
-        // Load cities (request all with per_page=200)
         const citiesRes = await AmbiletAPI.get('/cities', { per_page: 200 });
         const cities = citiesRes?.data || citiesRes?.cities || [];
         if (Array.isArray(cities) && cities.length > 0) {
@@ -1635,12 +1583,10 @@ async function loadEmailFilterOptions() {
     }
 
     try {
-        // Load categories (use ID as value for DB filtering)
         const catRes = await AmbiletAPI.get('/event-categories');
         const categories = catRes?.categories || catRes?.data?.categories || catRes?.data || [];
         if (Array.isArray(categories) && categories.length > 0) {
             emailFilterOptions.categories = categories;
-            // Flatten children into parent list
             const flatCats = [];
             categories.forEach(cat => {
                 flatCats.push({ value: String(cat.id), label: cat.name });
@@ -1657,7 +1603,6 @@ async function loadEmailFilterOptions() {
     }
 
     try {
-        // Load genres (use ID as value for DB filtering)
         const genreRes = await AmbiletAPI.get('/event-genres');
         const genres = genreRes?.genres || genreRes?.data?.genres || genreRes?.data || [];
         if (Array.isArray(genres) && genres.length > 0) {
@@ -1671,13 +1616,11 @@ async function loadEmailFilterOptions() {
         console.log('Failed to load genres:', e.message);
     }
 
-    // Load initial audience counts for BOTH types
     updateEmailAudienceCount();
     loadInitialAudienceCounts();
 }
 
 async function loadInitialAudienceCounts() {
-    // Load base counts for both audience types (no filters)
     try {
         const [ownRes, mpRes] = await Promise.all([
             AmbiletAPI.get('/organizer/services/email-audiences', { audience_type: 'own' }),
@@ -1709,7 +1652,6 @@ function updateEmailAudienceUI() {
     const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
     const isOwn = audienceType === 'own';
 
-    // Update labels
     document.getElementById('email-audience-type-label').textContent = isOwn ? 'Clientii Tai' : 'Baza Marketplace';
     document.getElementById('email-price-per').textContent = isOwn
         ? AmbiletUtils.formatCurrency(servicePricing.email.own_per_email || 0.40)
@@ -1720,7 +1662,6 @@ async function updateEmailAudienceCount() {
     const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
     const eventId = document.getElementById('service-event').value;
 
-    // Get values from searchable multiselects
     const cities = getMultiselectValues('email-filter-city');
     const categories = getMultiselectValues('email-filter-category');
     const genres = getMultiselectValues('email-filter-genre');
@@ -1738,7 +1679,6 @@ async function updateEmailAudienceCount() {
         genres: genres.length > 0 ? genres : null
     };
 
-    // Remove null values
     Object.keys(filters).forEach(k => filters[k] === null && delete filters[k]);
 
     try {
@@ -1748,7 +1688,6 @@ async function updateEmailAudienceCount() {
             const baseCount = response.data.total_count || 0;
             const fc = response.data.filter_counts || {};
 
-            // Calculate partial matches extra count
             let partialExtra = 0;
             const maxWithout = Math.max(
                 fc.without_city || 0,
@@ -1757,16 +1696,14 @@ async function updateEmailAudienceCount() {
             );
             partialExtra = Math.max(0, maxWithout - count);
 
-            // Check if include partial matches is enabled
             const includePartial = document.getElementById('include-partial-matches')?.checked;
-            const perfectCount = count; // Before adding partial
+            const perfectCount = count;
             let partialCount = 0;
             if (includePartial && partialExtra > 0) {
                 partialCount = partialExtra;
                 count = perfectCount + partialCount;
             }
 
-            // Update UI counts
             document.getElementById('audience-filtered-count').textContent = AmbiletUtils.formatNumber(count);
             document.getElementById('email-recipient-count').textContent = AmbiletUtils.formatNumber(count);
 
@@ -1784,7 +1721,6 @@ async function updateEmailAudienceCount() {
                 emailAudiences.marketplace.partial_count = partialCount;
             }
 
-            // Calculate cost with separate pricing for partial matches (half price)
             const pricePerEmail = audienceType === 'own'
                 ? (servicePricing.email.own_per_email || 0.40)
                 : (servicePricing.email.marketplace_per_email || 0.50);
@@ -1794,7 +1730,6 @@ async function updateEmailAudienceCount() {
             const totalCost = perfectCost + partialCostVal;
             document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(totalCost);
 
-            // Update pricing breakdown UI
             if (includePartial && partialCount > 0) {
                 document.getElementById('email-recipient-row-simple').classList.add('hidden');
                 document.getElementById('email-pricing-breakdown').classList.remove('hidden');
@@ -1809,12 +1744,10 @@ async function updateEmailAudienceCount() {
                 document.getElementById('email-pricing-breakdown').classList.add('hidden');
             }
 
-            // Show filter breakdowns
             displayFilterBreakdowns(fc, baseCount, partialExtra);
         }
     } catch (e) {
         console.log('Audience count error:', e.message);
-        // Use cached values
         const count = emailAudiences[audienceType]?.filtered_count || 0;
         document.getElementById('audience-filtered-count').textContent = AmbiletUtils.formatNumber(count);
         document.getElementById('email-recipient-count').textContent = AmbiletUtils.formatNumber(count);
@@ -1856,7 +1789,6 @@ function displayFilterBreakdowns(filterCounts, totalCount, partialExtra) {
 
     container.classList.remove('hidden');
 
-    // City breakdowns
     const citySection = document.getElementById('breakdown-city');
     const cityItems = document.getElementById('breakdown-city-items');
     const withoutCityEl = document.getElementById('breakdown-without-city');
@@ -1882,7 +1814,6 @@ function displayFilterBreakdowns(filterCounts, totalCount, partialExtra) {
         citySection.classList.add('hidden');
     }
 
-    // Category breakdown
     const catSection = document.getElementById('breakdown-category');
     const withoutCatEl = document.getElementById('breakdown-without-category');
     if (filterCounts.without_category !== undefined) {
@@ -1892,7 +1823,6 @@ function displayFilterBreakdowns(filterCounts, totalCount, partialExtra) {
         catSection.classList.add('hidden');
     }
 
-    // Genre breakdown
     const genreSection = document.getElementById('breakdown-genre');
     const withoutGenreEl = document.getElementById('breakdown-without-genre');
     if (filterCounts.without_genre !== undefined) {
@@ -1902,7 +1832,6 @@ function displayFilterBreakdowns(filterCounts, totalCount, partialExtra) {
         genreSection.classList.add('hidden');
     }
 
-    // Birth date info
     const bdSection = document.getElementById('breakdown-birthdate');
     const bdText = document.getElementById('breakdown-birthdate-text');
     if (filterCounts.with_birth_date !== undefined && totalCount > 0) {
@@ -1913,7 +1842,6 @@ function displayFilterBreakdowns(filterCounts, totalCount, partialExtra) {
         bdSection.classList.add('hidden');
     }
 
-    // Partial matches toggle
     const partialToggle = document.getElementById('partial-matches-toggle');
     if (partialExtra > 0) {
         partialToggle.classList.remove('hidden');
@@ -1932,7 +1860,6 @@ document.getElementById('service-event').addEventListener('change', function() {
         const eventDate = event.starts_at || event.date;
         document.getElementById('event-date').textContent = eventDate ? AmbiletUtils.formatDate(eventDate) : '';
         document.getElementById('event-venue').textContent = event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || event.venue_city || '';
-        // Update email audience counts for this event
         updateEmailAudienceCount();
     } else {
         document.getElementById('event-preview').classList.add('hidden');
@@ -1961,7 +1888,6 @@ document.getElementById('service-form').addEventListener('submit', async functio
         payment_method: paymentMethod
     };
 
-    // Add service-specific data nested under "config" (required by server)
     switch (currentServiceType) {
         case 'featuring': {
             const featStartVal = document.getElementById('featuring-start').value;
@@ -1970,14 +1896,12 @@ document.getElementById('service-form').addEventListener('submit', async functio
             let startDatetime, endDatetime;
 
             if (featStartVal === todayStr) {
-                // Start today: begins now, ends at same time on end date
                 const now = new Date();
                 const hh = String(now.getHours()).padStart(2, '0');
                 const mm = String(now.getMinutes()).padStart(2, '0');
                 startDatetime = featStartVal + 'T' + hh + ':' + mm;
                 endDatetime = featEndVal + 'T' + hh + ':' + mm;
             } else {
-                // Future start: begins at 07:00, ends at 00:00 (midnight) on end date
                 startDatetime = featStartVal + 'T07:00';
                 endDatetime = featEndVal + 'T00:00';
             }
@@ -2040,7 +1964,6 @@ document.getElementById('service-form').addEventListener('submit', async functio
     }
 
     try {
-        // Step 1: Create service order
         const response = await AmbiletAPI.post('/organizer/services/orders', data);
 
         if (!response.success) {
@@ -2052,9 +1975,7 @@ document.getElementById('service-form').addEventListener('submit', async functio
             throw new Error('Nu s-a putut crea comanda');
         }
 
-        // Step 2: Handle payment based on method
         if (paymentMethod === 'card' && order.total > 0) {
-            // Initiate payment through marketplace payment gateway
             payBtn.innerHTML = `
                 <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -2070,9 +1991,7 @@ document.getElementById('service-form').addEventListener('submit', async functio
             });
 
             if (payResponse.success && payResponse.data.payment_url) {
-                // Check if payment requires POST form submission (e.g., Netopia)
                 if (payResponse.data.method === 'POST' && payResponse.data.form_data) {
-                    // Create and submit a form for Netopia
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = payResponse.data.payment_url;
@@ -2088,19 +2007,16 @@ document.getElementById('service-form').addEventListener('submit', async functio
                     document.body.appendChild(form);
                     form.submit();
                 } else {
-                    // Standard redirect for other payment processors
                     window.location.href = payResponse.data.payment_url;
                 }
             } else {
                 throw new Error(payResponse.message || 'Nu s-a putut initia plata');
             }
         } else if (paymentMethod === 'transfer') {
-            // Bank transfer - show success message
             AmbiletNotifications.success('Comanda a fost inregistrata! Vei primi un email cu instructiunile de plata prin transfer bancar.');
             closeServiceModal();
             loadActiveServices();
         } else {
-            // Free service or zero total
             AmbiletNotifications.success('Serviciul a fost activat cu succes!');
             closeServiceModal();
             loadActiveServices();
@@ -2114,7 +2030,6 @@ document.getElementById('service-form').addEventListener('submit', async functio
 });
 
 function viewServiceDetails(id) {
-    // Open service details modal or navigate to details page
     window.location.href = '/organizator/services/' + id;
 }
 
@@ -2127,8 +2042,6 @@ document.getElementById('service-filter').addEventListener('change', function() 
     activeServices = temp;
 });
 
-// Email Preview Functions - Subject & promo text variants per template
-// The selected variant index is locked once chosen so preview = sent content
 
 const emailSubjectVariants = {
     classic: [
@@ -2178,7 +2091,6 @@ const emailPromoTexts = {
     ]
 };
 
-// Locked variant indices - set once on first preview, used for the actual sent email
 let lockedVariants = {};
 
 function getLockedVariantIndex(templateType, variantType, maxLen) {
@@ -2189,7 +2101,6 @@ function getLockedVariantIndex(templateType, variantType, maxLen) {
     return lockedVariants[key];
 }
 
-// Reset locked variants when template type changes
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('input[name="email_template"]').forEach(radio => {
         radio.addEventListener('change', () => { lockedVariants = {}; });
@@ -2391,19 +2302,15 @@ function showEmailPreview() {
     const template = emailTemplates[templateType];
     const subjectText = template.subject(eventName);
 
-    // Update preview header
     document.getElementById('preview-recipients').textContent = AmbiletUtils.formatNumber(recipientCount) + ' destinatari';
     document.getElementById('preview-subject').textContent = subjectText;
 
-    // Generate email preview content (uses locked variants - same as what will be sent)
     const previewHtml = template.body(event, eventName, eventDate, eventVenue);
     document.getElementById('email-preview-content').innerHTML = previewHtml;
 
-    // Store the locked subject + variant indices in a hidden field for order submission
     window._emailPreviewSubject = subjectText;
     window._emailPreviewVariants = { ...lockedVariants };
 
-    // Show modal
     document.getElementById('email-preview-modal').classList.remove('hidden');
     document.getElementById('email-preview-modal').classList.add('flex');
 }
@@ -2413,7 +2320,6 @@ function closeEmailPreview() {
     document.getElementById('email-preview-modal').classList.remove('flex');
 }
 
-// Placement Preview Functions
 const placementPreviews = {
     home_hero: {
         title: 'Prima pagina — Hero Banner',
@@ -2729,7 +2635,6 @@ function showPlacementPreview(placement) {
     const preview = placementPreviews[placement];
     if (!preview) return;
 
-    // Use selected event data for a realistic preview
     const eventId = document.getElementById('service-event')?.value;
     const event = events.find(e => e.id == eventId);
     const eventName = event ? (event.name || event.title || 'Evenimentul Tau') : 'Evenimentul Tau';

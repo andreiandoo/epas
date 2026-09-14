@@ -91,7 +91,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 $('ls-empty').classList.remove('hidden');
                 return;
             }
-            // Summary card
             let tCash = 0, tCard = 0;
             sessions.forEach(s => { tCash += Number(s.cash || 0); tCard += Number(s.card || 0); });
             $('ls-summary-count').textContent = sessions.length;
@@ -99,7 +98,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('ls-summary-card').textContent = fmtMoney(tCard);
             $('ls-summary-total').textContent = fmtMoney(tCash + tCard) + ' RON';
             $('ls-summary').classList.remove('hidden');
-            // Session cards
             $('ls-list').innerHTML = sessions.map(sessionHtml).join('');
         } catch (e) {
             $('ls-loading').classList.add('hidden');

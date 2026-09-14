@@ -140,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     loadTicket();
-    // Load attachment rules from departments endpoint (best-effort, non-blocking).
     AmbiletAPI.organizer.getSupportDepartments().then(r => {
         if (r?.data?.attachment_rules) attachmentRules = r.data.attachment_rules;
     }).catch(() => {});
@@ -186,7 +185,6 @@ function renderTicket(t, messages) {
 
     renderMeta(t.meta || {});
 
-    // Action buttons
     const closeBtn = document.getElementById('close-btn');
     const reopenBtn = document.getElementById('reopen-btn');
     const replyCard = document.getElementById('reply-card');
@@ -233,9 +231,6 @@ function renderThread(messages) {
         return;
     }
     thread.innerHTML = messages.map(m => {
-        // System events (close/reopen/resolve etc.) render as a slim
-        // timeline line, not a chat bubble — both sides need to see who
-        // closed/reopened the ticket and when.
         if (m.event_type) {
             const author = m.author_name || (m.author_type === 'staff' ? 'Echipa AmBilet' : 'Tu');
             return `
@@ -297,7 +292,6 @@ function escapeAttr(str) {
     return String(str ?? '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-// ==================== Actions ====================
 
 async function closeTicket() {
     if (!confirm('Marchezi tichetul ca rezolvat? Vei putea sa-l redeschizi daca problema reapare.')) return;

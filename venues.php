@@ -138,7 +138,6 @@ include __DIR__ . '/includes/header.php';
         document.getElementById('venueFiltersBackdrop').style.visibility = 'visible';
         document.getElementById('venueFiltersDrawer').style.transform = 'translateY(0)';
         document.body.style.overflow = 'hidden';
-        // Mirror current desktop values into mobile inputs
         const cityM = document.getElementById('cityFilterMobile');
         const capM = document.getElementById('capacityFilterMobile');
         if (cityM) cityM.value = document.getElementById('cityFilter')?.value || '';
@@ -155,7 +154,6 @@ include __DIR__ . '/includes/header.php';
         const cap = document.getElementById('capacityFilter');
         if (city) city.value = document.getElementById('cityFilterMobile')?.value || '';
         if (cap) cap.value = document.getElementById('capacityFilterMobile')?.value || '';
-        // Trigger change so the page filter reloads + badge updates
         city?.dispatchEvent(new Event('change'));
         cap?.dispatchEvent(new Event('change'));
     }
@@ -248,12 +246,10 @@ const VenuesPage = {
     currentPage: 1,
     itemsPerPage: 9,
 
-    // Remove diacritics for search comparison
     normalize(str) {
         return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     },
 
-    // Shuffle array (Fisher-Yates)
     shuffle(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -271,11 +267,6 @@ const VenuesPage = {
         this.filterVenues();
     },
 
-    // Pre-apply filters from the URL so deep-linked queries (e.g. clicking
-    // "Vezi toate" from a venue page's "Locații similare în București")
-    // land pre-filtered instead of showing every venue.
-    //   ?category=<slug> → highlight the matching category tab
-    //   ?city=<name>     → select the matching option in #cityFilter
     applyUrlFilters() {
         const params = new URLSearchParams(window.location.search);
 
@@ -296,7 +287,6 @@ const VenuesPage = {
         if (cityName) {
             const sel = document.getElementById('cityFilter');
             if (sel) {
-                // Try exact match first, then case-insensitive
                 const target = this.normalize(cityName);
                 const match = Array.from(sel.options).find(o => this.normalize(o.value) === target);
                 if (match) sel.value = match.value;
@@ -312,8 +302,6 @@ const VenuesPage = {
         document.getElementById('capacityFilter')?.addEventListener('change', () => { this.filterVenues(); this.updateMobileFilterBadge(); });
         document.getElementById('sortFilter')?.addEventListener('change', () => this.filterVenues());
 
-        // Mobile sort mirrors desktop — change one, fire the other so the
-        // shared filter pipeline keeps a single source of truth.
         const sortMobile = document.getElementById('sortFilterMobile');
         if (sortMobile) {
             sortMobile.addEventListener('change', () => {
@@ -326,9 +314,6 @@ const VenuesPage = {
         }
     },
 
-    // Show a "n" badge on the mobile "Filtre" button whenever city or
-    // capacity is set, so users see at a glance that filters are active
-    // even while the drawer is closed.
     updateMobileFilterBadge() {
         const badge = document.getElementById('venueMobileFilterCount');
         if (!badge) return;
@@ -359,12 +344,6 @@ const VenuesPage = {
 
     async loadVenues() {
         try {
-            // Featured is fetched independently from the full list because the
-            // /venues endpoint caps per_page at 50 — when a marketplace has
-            // more than 50 venues, an alphabetically-late featured venue would
-            // never appear in the "Locații populare" section. The /featured
-            // endpoint runs inRandomOrder server-side so when more than 4 are
-            // flagged we get a rotating subset on each page load.
             const mapVenue = (v) => ({
                 id: v.id,
                 name: v.name || '',
@@ -387,17 +366,12 @@ const VenuesPage = {
             const raw = listResp.data || listResp || [];
             this.venues = (Array.isArray(raw) ? raw : []).map(mapVenue);
 
-            // /venues/featured wraps the list as { data: { venues: [...] } } (unlike
-            // /venues which returns { data: [...] } directly), so unwrap explicitly
-            // before mapping — otherwise Array.isArray() rejects the object payload
-            // and we'd silently fall back to filtering the per_page-capped main list.
             const featuredPayload = featuredResp.data ?? featuredResp;
             const featuredRaw = Array.isArray(featuredPayload)
                 ? featuredPayload
                 : (featuredPayload?.venues || []);
             this.featuredVenues = featuredRaw.map(mapVenue);
 
-            // Shuffle the main list for random default order on filter views.
             this.shuffle(this.venues);
             this.renderFeatured();
         } catch (err) {
@@ -423,7 +397,6 @@ const VenuesPage = {
         const container = document.getElementById('categoryTabs');
         if (!container) return;
 
-        // Compute real counts from loaded venues
         const countBySlug = {};
         this.venues.forEach(v => {
             (v.categorySlugs || []).forEach(slug => {
@@ -431,7 +404,6 @@ const VenuesPage = {
             });
         });
 
-        // "Toate" tab
         let html = `<button class="flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white transition-all rounded-full category-tab active bg-primary cursor-pointer" data-category="all">
             Toate
             <span class="px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold" id="totalCount">${this.venues.length}</span>
@@ -455,7 +427,6 @@ const VenuesPage = {
         const selectMobile = document.getElementById('cityFilterMobile');
         if (!select && !selectMobile) return;
 
-        // Extract unique cities, sorted alphabetically
         const cities = [...new Set(this.venues.map(v => v.location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ro'));
 
         const fill = (sel) => {
@@ -473,9 +444,6 @@ const VenuesPage = {
     },
 
     renderFeatured() {
-        // Use the dedicated featured set (already random-ordered + capped at
-        // 4 server-side) instead of filtering the main list, which would miss
-        // featured venues sitting beyond the per_page cap.
         const featured = (this.featuredVenues && this.featuredVenues.length)
             ? this.featuredVenues
             : this.venues.filter(v => v.featured).slice(0, 4);
@@ -533,22 +501,17 @@ const VenuesPage = {
         const activeTab = document.querySelector('.category-tab.active')?.dataset.category || 'all';
 
         let filtered = this.venues.filter(v => {
-            // Search: case + diacritics insensitive
             const matchSearch = !search || this.normalize(v.name).includes(search) || this.normalize(v.location).includes(search);
-            // City: exact match
             const matchCity = !city || v.location === city;
-            // Capacity range
             let matchCapacity = true;
             if (capacityRange === 'small') matchCapacity = v.capacity > 0 && v.capacity < 500;
             else if (capacityRange === 'medium') matchCapacity = v.capacity >= 500 && v.capacity <= 2000;
             else if (capacityRange === 'large') matchCapacity = v.capacity > 2000 && v.capacity <= 10000;
             else if (capacityRange === 'xlarge') matchCapacity = v.capacity > 10000;
-            // Category: venue can belong to multiple categories
             const matchCategory = activeTab === 'all' || v.categorySlugs.includes(activeTab);
             return matchSearch && matchCity && matchCapacity && matchCategory;
         });
 
-        // Sort
         if (sort === 'name') {
             filtered.sort((a, b) => a.name.localeCompare(b.name, 'ro'));
         } else if (sort === 'events') {
@@ -558,7 +521,6 @@ const VenuesPage = {
         } else if (sort === 'popular') {
             filtered.sort((a, b) => b.eventsCount - a.eventsCount);
         }
-        // No sort = random (already shuffled)
 
         this.filteredVenues = filtered;
         this.currentPage = 1;

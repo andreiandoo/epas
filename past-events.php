@@ -180,7 +180,6 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <script>
-// Mobile filters drawer functions
 function openFiltersDrawer() {
     const backdrop = document.getElementById('filtersDrawerBackdrop');
     const drawer = document.getElementById('filtersDrawer');
@@ -199,7 +198,6 @@ function closeFiltersDrawer() {
     document.body.style.overflow = '';
 }
 
-// Sync filters between mobile and desktop
 function syncFilters(type) {
     const mappings = {
         city: ['cityFilter', 'cityFilterMobile'],
@@ -218,7 +216,6 @@ function syncFilters(type) {
     updateMobileFilterCount();
 }
 
-// Update mobile filter count badge
 function updateMobileFilterCount() {
     let count = 0;
     const filters = ['cityFilterMobile', 'genreFilterMobile'];

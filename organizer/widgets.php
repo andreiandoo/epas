@@ -389,7 +389,6 @@ const WidgetsPage = {
         document.getElementById('whitelabel-section').classList.remove('hidden');
         document.getElementById('widget-tabs-section').classList.remove('hidden');
 
-        // Show current domain
         this.domain = embedDomains[0] || '';
         if (this.domain) {
             document.getElementById('domain-input').value = this.domain;
@@ -398,14 +397,12 @@ const WidgetsPage = {
             $current.classList.remove('hidden');
         }
 
-        // Pre-fill return URL with domain + /multumim
         if (this.domain) {
             const baseHost = this.domain.replace(/^\*\./, 'www.');
             const returnBase = this.domain.startsWith('http') ? this.domain : 'https://' + baseHost;
             document.getElementById('full-return-url').value = returnBase + '/multumim';
         }
 
-        // Pre-fill from saved widget config (safe — elements may not exist on older deploys)
         const wc = this.organizer.settings?.widget_config || {};
         const _s = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
         _s('full-logo', wc.logo || this.organizer.logo);
@@ -418,14 +415,12 @@ const WidgetsPage = {
         _s('full-theme', wc.theme);
         _s('full-accent', wc.accent);
         _s('full-accent-hex', wc.accent);
-        // Auto-generate return URL from domain
         if (this.domain) {
             const baseHost = this.domain.replace(/^\*\./, 'www.');
             const returnBase = this.domain.startsWith('http') ? this.domain : 'https://' + baseHost;
             _s('full-return-url', returnBase + '/multumim');
         }
 
-        // Show image previews for existing uploads
         ['logo', 'hero_image', 'bg_image'].forEach(key => {
             const url = wc[key];
             if (url) {
@@ -436,21 +431,16 @@ const WidgetsPage = {
                     $preview.innerHTML = '<img src="' + url + '" alt="">';
                     $zone.classList.add('has-image');
                 }
-                // Also set hidden input value
                 const fieldMap = { logo: 'full-logo', hero_image: 'full-hero-image', bg_image: 'full-bg-image' };
                 _s(fieldMap[key], url);
             }
         });
 
-        // Pre-fill terms & privacy
         const terms = this.organizer.settings?.widget_terms || '';
         const privacy = this.organizer.settings?.widget_privacy || '';
         _s('wl-terms-editor', terms);
         _s('wl-privacy-editor', privacy);
 
-        // Pre-fill tracking IDs + toggle checkbox state based on whether value exists.
-        // Non-empty stored value → checkbox checked + input enabled (carry the saved id forward).
-        // Empty stored value → checkbox unchecked + input disabled (preserves "no tracker" state).
         const trackerSetup = (key, inputId, checkboxId) => {
             const val = this.organizer.settings?.[key] || '';
             const $input = document.getElementById(inputId);
@@ -487,7 +477,6 @@ const WidgetsPage = {
             hint.classList.remove('hidden');
             setTimeout(() => hint.classList.add('hidden'), 2000);
 
-            // Update return URL
             const baseHost = val.replace(/^\*\./, 'www.');
             const returnBase = val.startsWith('http') ? val : 'https://' + baseHost;
             document.getElementById('full-return-url').value = returnBase + '/multumim';
@@ -512,10 +501,6 @@ const WidgetsPage = {
         if (panel) panel.style.display = '';
     },
 
-    // Opens the file picker without recursively triggering itself when the
-    // user clicks the embedded × delete button (which lives inside the same
-    // .wl-upload-zone). Without this guard, removeImage()'s stopPropagation
-    // would still race the zone's onclick handler in some browsers.
     openPicker(ev) {
         if (ev && ev.target && ev.target.closest && ev.target.closest('.wl-upload-remove')) {
             return;
@@ -547,24 +532,17 @@ const WidgetsPage = {
         if ($preview) $preview.innerHTML = '';
         if ($zone) $zone.classList.remove('has-image');
         if ($field) $field.value = '';
-        // Reset the file input so the same file can be re-selected after fix
         const $file = $zone?.querySelector('input[type=file]');
         if ($file) $file.value = '';
     },
 
-    // Map upstream error response to a Romanian message the user can act on.
-    // Laravel returns 422 with { errors: { image: ['...'] } } when validation
-    // fails; everything else falls back to message/status-based defaults.
     _mapUploadError(status, file, body) {
-        // Hard size cap before bytes even leave the browser
         if (file && file.size > 5 * 1024 * 1024) {
             return 'Fișier prea mare (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Limita este 5 MB.';
         }
 
         const validationMsg = body?.errors?.image?.[0] || body?.errors?.type?.[0];
         if (validationMsg) {
-            // Laravel produces English messages by default; translate the
-            // common ones so the organizer sees something useful.
             const lower = String(validationMsg).toLowerCase();
             if (lower.includes('may not be greater') || lower.includes('larger than') || lower.includes('mai mare')) {
                 return 'Fișier prea mare. Limita este 5 MB.';
@@ -607,16 +585,12 @@ const WidgetsPage = {
 
         this._clearUploadError(type);
 
-        // Early client-side size guard so the user doesn't wait for the upload
-        // round-trip to find out the file is too big.
         if (file.size > 5 * 1024 * 1024) {
             this._showUploadError(type, this._mapUploadError(0, file, null));
-            // Don't keep a misleading preview from the rejected file.
             fileInput.value = '';
             return;
         }
 
-        // Show local preview immediately
         const reader = new FileReader();
         reader.onload = (e) => {
             if ($preview) { $preview.innerHTML = '<img src="' + e.target.result + '" alt="">'; }
@@ -624,7 +598,6 @@ const WidgetsPage = {
         };
         reader.readAsDataURL(file);
 
-        // Upload to server
         const formData = new FormData();
         formData.append('image', file);
         formData.append('type', type);
@@ -656,8 +629,6 @@ const WidgetsPage = {
             return;
         }
 
-        // Anything else = server-side failure; revert UI so the user doesn't
-        // think the upload succeeded.
         this._resetUploadZone(type, fieldId);
         this._showUploadError(type, this._mapUploadError(resp.status, file, result));
     },
@@ -669,16 +640,9 @@ const WidgetsPage = {
         }
         this._resetUploadZone(type, fieldId);
         this._clearUploadError(type);
-        // The actual file in storage is cleaned up either by the backend's
-        // oldPath delete on the NEXT upload, or stays orphan until support
-        // sweep. The persisted widget_config field becomes empty on Save.
     },
 
     toggleTracker(key) {
-        // Enables/disables the matching tracker input based on its checkbox.
-        // When the user unchecks, we leave the input value alone so they can
-        // re-enable without re-typing — but the save handler skips the value
-        // for unchecked trackers (see trackerVal in saveWidgetConfig).
         const map = {
             ga: { input: 'full-tracking-ga', checkbox: 'tracking-ga-enabled' },
             gtm: { input: 'full-tracking-gtm', checkbox: 'tracking-gtm-enabled' },
@@ -707,12 +671,8 @@ const WidgetsPage = {
             accent: this._v('full-accent'),
             return_url: this._v('full-return-url'),
         };
-        // Also save terms and privacy content
         const terms = this._v('wl-terms-editor');
         const privacy = this._v('wl-privacy-editor');
-        // Tracking IDs — saved as top-level settings keys. Empty when the per-tracker
-        // checkbox is unchecked, regardless of any leftover input value, so disabling
-        // a tracker in the UI immediately stops injecting its script on the next ZIP.
         const trackerVal = (inputId, checkboxId) => {
             const $cb = document.getElementById(checkboxId);
             if ($cb && !$cb.checked) return '';
@@ -808,7 +768,6 @@ const WidgetsPage = {
     },
 
     loadWidgetPreview(containerId, type, eventSlug, orgSlug, theme, limit) {
-        // Remove old script + styles to force fresh re-execution
         const existing = document.getElementById('txw-preview-script');
         if (existing) existing.remove();
         const oldStyles = document.getElementById('txw-styles');
