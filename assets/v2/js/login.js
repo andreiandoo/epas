@@ -54,7 +54,10 @@
   function render() {
     root.setAttribute('data-type', state.type);
     root.setAttribute('data-mode', state.mode);
-    $('au-title').textContent = textFor(state.type, state.mode, 'hero');
+    // escaped text; hyphenated words wrapped so they never break at the hyphen (see .au-nw)
+    $('au-title').innerHTML = textFor(state.type, state.mode, 'hero')
+      .replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
+      .replace(/\S+-\S+/g, '<span class="au-nw">$&</span>');
     $('au-text').textContent = textFor(state.type, state.mode, 'heroText');
     $('au-form-title').textContent = textFor(state.type, state.mode, 'form');
     $('au-form-text').textContent = textFor(state.type, state.mode, 'formText');
