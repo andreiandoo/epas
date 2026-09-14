@@ -197,6 +197,102 @@
   });
 })();
 
+/* ---------- header state and newsletter forms ----------
+   The cart count and the signed-in customer come from the same localStorage keys as assets/js/cart.js and
+   assets/js/auth.js. Newsletter forms (form[data-newsletter="source"]) post to the same proxy action as the
+   old pages; data-ok / data-err hold the messages, data-keep locks the form after a successful sign-up. */
+(function () {
+  'use strict';
+  function stored(key) {
+    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
+  }
+
+  var badge = document.querySelector('[data-cart-count]');
+  function renderCart() {
+    var cart = stored('bileteonline_cart'), n = 0;
+    if (cart && Array.isArray(cart.items)) {
+      cart.items.forEach(function (it) { n += parseInt(it && it.quantity, 10) || 0; });
+    }
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.hidden = n < 1;
+    badge.parentElement.setAttribute('aria-label', n > 0 ? 'Coșul de cumpărături (' + n + ')' : 'Coșul de cumpărături');
+  }
+  if (badge) {
+    renderCart();
+    window.addEventListener('storage', function (e) { if (e.key === 'bileteonline_cart') renderCart(); });
+    window.addEventListener('bileteonline:cart:update', renderCart);
+  }
+
+  var acct = document.querySelector('[data-account]');
+  var userType = null, token = null;
+  try {
+    userType = localStorage.getItem('bileteonline_user_type');
+    token = localStorage.getItem('bileteonline_customer_token');
+  } catch (e) {}
+  var user = acct && token && (!userType || userType === 'customer') ? stored('bileteonline_customer_data') : null;
+  if (user && typeof user === 'object') {
+    var full = ((user.first_name || '') + ' ' + (user.last_name || '')).trim() || user.name || '';
+    var initials = full.split(/\s+/).filter(Boolean).map(function (s) { return s.charAt(0); }).join('').slice(0, 2).toUpperCase()
+      || String(user.email || '').charAt(0).toUpperCase();
+    var box = acct.querySelector('.acct-ini');
+    if (initials && box) {
+      box.textContent = initials;
+      box.hidden = false;
+      acct.classList.add('is-user');
+      acct.setAttribute('aria-label', 'Contul tău' + (full ? ', ' + full : ''));
+    }
+  }
+
+  [].forEach.call(document.querySelectorAll('form[data-newsletter]'), function (form) {
+    var btn = form.querySelector('button[type="submit"]'), msg = document.getElementById(form.getAttribute('data-msg'));
+    var label = btn ? btn.innerHTML : '', busy = false;
+    function say(ok, text) {
+      if (!msg) return;
+      msg.textContent = text;
+      msg.classList.toggle('is-ok', ok);
+      msg.classList.toggle('is-err', !ok);
+      msg.hidden = false;
+    }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = form.elements.email;
+      if (busy || !btn || !email || email.disabled) return;
+      if (!email.checkValidity()) { email.reportValidity(); return; }
+      busy = true;
+      btn.disabled = true;
+      btn.textContent = 'Se trimite…';
+      var payload = { email: email.value.trim(), source: form.getAttribute('data-newsletter') };
+      if (form.elements.city && form.elements.city.value) payload.city = form.elements.city.value;
+      fetch('/api/proxy.php?action=newsletter.subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (r.ok && d.success !== false) return;
+          var err = new Error((d && d.message) || '');
+          err.fromServer = true;
+          throw err;
+        });
+      }).then(function () {
+        say(true, form.getAttribute('data-ok'));
+        if (form.hasAttribute('data-keep')) {
+          email.disabled = true;
+          btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Gata';
+        } else {
+          form.reset();
+          btn.disabled = false;
+          btn.innerHTML = label;
+        }
+      }).catch(function (err) {
+        say(false, err && err.fromServer && err.message ? err.message : form.getAttribute('data-err'));
+        btn.disabled = false;
+        btn.innerHTML = label;
+      }).then(function () { busy = false; });
+    });
+  });
+})();
+
 /* ---------- cookie consent ----------
    Same storage key, version and `bo-cookie-consent-updated` event as includes/cookie-consent.php and the
    consent-mode snippet in the <head>, so a choice holds on every page. */

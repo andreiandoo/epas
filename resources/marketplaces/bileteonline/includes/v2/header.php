@@ -41,8 +41,8 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       <button type="submit" aria-label="Caută"><?= v2_ic('arrow-right') ?></button>
     </form>
     <div class="hdr-tools">
-      <a class="icon-btn" href="/cos" aria-label="Coșul de cumpărături"><?= v2_ic('shopping-cart-simple') ?></a>
-      <a class="icon-btn" href="/cont" aria-label="Contul meu"><?= v2_ic('user-circle') ?></a>
+      <a class="icon-btn" href="/cos" aria-label="Coșul de cumpărături"><?= v2_ic('shopping-cart-simple') ?><span class="hdr-badge" data-cart-count hidden></span></a>
+      <a class="icon-btn" href="/cont" aria-label="Contul meu" data-account><?= v2_ic('user-circle') ?><span class="acct-ini" hidden></span></a>
       <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Deschide meniul"><?= v2_ic('list') ?></button>
     </div>
   </div>
@@ -172,6 +172,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
     </ul>
   </details>
   <a class="dr-link" href="/card-cadou">Card cadou</a>
+  <a class="dr-link" href="/operatori">Operatori</a>
   <div class="dr-foot">
     <a class="btn btn-primary" href="/cont"><?= v2_ic('user-circle') ?>Contul meu</a>
     <a class="btn btn-ghost" href="/recuperare-comanda">Recuperează comanda</a>

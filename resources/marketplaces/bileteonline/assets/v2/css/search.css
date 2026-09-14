@@ -2,9 +2,6 @@
 
 /* =================== HEADER BAND =================== */
 .sr-hero{padding-block:clamp(24px, 4vw, 44px) clamp(20px, 3vw, 28px);border-bottom:1px solid var(--line);background:radial-gradient(55% 90% at 100% 0%, rgba(43,182,115,.12), rgba(43,182,115,0) 70%), var(--bg)}
-.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 var(--space-3);font-size:var(--text-small);color:var(--muted)}
-.crumbs a{color:var(--muted);text-decoration:none}
-.crumbs a:hover{color:var(--green);text-decoration:underline;text-underline-offset:3px}
 .sr-h{margin:0;max-width:26ch;font-size:clamp(2rem, 4.2vw, 3.25rem);font-weight:700;line-height:1.05;letter-spacing:-.04em;color:var(--green)}
 .sr-count{margin:var(--space-2) 0 0;color:var(--muted)}
 .sr-count b{color:var(--ink)}
@@ -46,20 +43,9 @@ html:not(.js) .sr-filter-toggle{display:none}
   .sr-filter-toggle{display:none}
   .sr-filter-body{display:grid;margin-top:0}
 }
-.fgroup{display:grid;gap:10px}
-.flabel{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.fchips{display:flex;flex-wrap:wrap;gap:6px}
-.fchip{display:inline-flex;align-items:center;min-height:36px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:500;line-height:1.2;text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
-.fchip:hover{border-color:var(--green);color:var(--green)}
-.fchip[aria-current="true"]{border-color:var(--green);background:var(--green);color:#FFFFFF}
 
 .sr-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-5)}
 .sr-active{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.achip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:6px 10px 6px 13px;border-radius:999px;background:var(--tint-green);color:var(--green);font-size:.875rem;font-weight:600;text-decoration:none}
-.achip .ic{width:14px;height:14px}
-.achip:hover{background:#D5EDDF}
-.aclear{padding:6px 4px;color:var(--muted);font-size:.875rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
-.aclear:hover{color:var(--green)}
 .sr-sort{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:auto;padding:4px;border-radius:999px;background:var(--surface-2)}
 .sr-sort a{padding:8px 14px;border-radius:999px;color:var(--ink);font-size:.875rem;font-weight:600;text-decoration:none;white-space:nowrap}
 .sr-sort a:hover{background:rgba(30,91,72,.08)}
@@ -71,11 +57,6 @@ html:not(.js) .sr-filter-toggle{display:none}
 @media (min-width:1200px){.sr-results .xp-grid{grid-template-columns:repeat(3, minmax(0,1fr))}}
 .xp-avail.is-muted{color:var(--muted);font-weight:500}
 
-.pager{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:var(--space-7)}
-.pager a,.pager span{display:grid;place-items:center;min-width:44px;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:999px;color:var(--ink);font-weight:600;text-decoration:none}
-.pager a:hover{border-color:var(--green)}
-.pager .ic{width:18px;height:18px}
-.pager [aria-current="page"]{border-color:var(--green);background:var(--green);color:#FFFFFF}
 
 /* =================== EMPTY STATE =================== */
 .sr-empty{position:relative;overflow:hidden;overflow:clip;display:grid;justify-items:start;gap:var(--space-4);padding:clamp(28px, 4vw, 48px) clamp(24px, 4vw, 48px) 0;border-radius:var(--r-l);background:var(--deep);color:var(--on-deep);

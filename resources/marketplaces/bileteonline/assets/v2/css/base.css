@@ -90,6 +90,13 @@ h1,h2,h3{text-wrap:balance}
 .icon-btn:hover{background:rgba(247,247,245,.14)}
 .hdr.is-solid .icon-btn:hover,.hdr.menu-open .icon-btn:hover{background:var(--surface-2)}
 .icon-btn .ic{width:22px;height:22px}
+/* cart count and the signed-in customer's initials (filled in by base.js) */
+.hdr-tools .icon-btn{position:relative}
+.hdr-badge{position:absolute;top:3px;right:1px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red-text);color:#FFFFFF;font:700 .6875rem/18px var(--font);text-align:center;font-variant-numeric:tabular-nums}
+.hdr-badge[hidden],.acct-ini[hidden]{display:none}
+.acct-ini{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#F7F7F5;color:var(--deep);font:700 .75rem/1 var(--font);letter-spacing:.02em}
+.hdr.is-solid .acct-ini,.hdr.menu-open .acct-ini,.hdr.mega-open .acct-ini{background:var(--green);color:#FFFFFF}
+.icon-btn.is-user > .ic{display:none}
 .lang{display:none}
 @media (min-width:1024px){
   .menu-btn{display:none}
@@ -404,6 +411,33 @@ h1,h2,h3{text-wrap:balance}
 .credits ul{display:grid;gap:4px;margin:var(--space-3) 0 0;padding-left:1.1em}
 .credits a{color:inherit}
 
+/* footer: newsletter and the invitation for venues, above the link columns */
+.ftr-top{display:grid;gap:var(--space-4);margin-bottom:var(--space-8)}
+@media (min-width:1024px){.ftr-top{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}}
+.ftr-card{padding:clamp(24px, 3vw, 36px);border:1px solid rgba(247,247,245,.14);border-radius:var(--r-l);background:rgba(247,247,245,.05)}
+.ftr .ftr-card h3{margin:0;max-width:26ch;font-size:clamp(1.375rem, 2.2vw, 1.75rem);font-weight:700;line-height:1.15;letter-spacing:-.025em;text-transform:none;color:#F7F7F5}
+.ftr-card > p{margin:var(--space-3) 0 0;max-width:52ch;color:#CFDDD7}
+.ftr .ftr-k{margin:0 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9FE0BF}
+.ftr-nl-form{display:grid;gap:8px;margin-top:var(--space-5)}
+@media (min-width:640px){.ftr-nl-form{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto}}
+.ftr-nl-form input,.ftr-nl-form select{min-width:0;min-height:52px;padding:0 18px;border:0;border-radius:999px;background:#F7F7F5;color:var(--ink);font:500 1rem/1.2 var(--font)}
+.ftr-nl-form select{appearance:none;-webkit-appearance:none;padding-right:40px;background:#F7F7F5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%235F6360' d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") no-repeat right 16px center / 14px;cursor:pointer}
+.ftr-nl-form input::placeholder{color:var(--placeholder);opacity:1}
+.ftr .ftr-nl-form input:focus-visible,.ftr .ftr-nl-form select:focus-visible{outline:2px solid var(--online);outline-offset:2px}
+.ftr .form-msg.is-ok{background:rgba(43,182,115,.18);color:#BDEBD3}
+.ftr .form-msg.is-err{background:rgba(228,58,51,.2);color:#FFD2CF}
+.ftr .ftr-fine{margin-top:var(--space-3);font-size:.8125rem;color:#A9C2B8}
+.ftr-cta{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--space-5)}
+.btn-outline-light{border:1.5px solid rgba(247,247,245,.35);background:transparent;color:#F7F7F5}
+.btn-outline-light:hover{border-color:#F7F7F5}
+.ftr-bottom p a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.ftr-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px}
+.ftr .ftr-pay{display:inline-flex;align-items:center;gap:8px}
+.ftr-pay .ic{width:18px;height:18px;color:#9FE0BF}
+.ftr-up{display:inline-flex;align-items:center;gap:6px;color:#DCE7E2;font-weight:600;text-decoration:none}
+.ftr-up:hover{color:#FFFFFF;text-decoration:underline;text-underline-offset:3px}
+.ftr-up .ic{width:16px;height:16px;transform:rotate(-90deg)}
+
 
 
 /* =================== PORT: days section =================== */
@@ -444,6 +478,33 @@ h1,h2,h3{text-wrap:balance}
 .cc-switch:disabled{cursor:not-allowed;opacity:.7}
 .cc-switch:focus-visible{outline:2px solid var(--action);outline-offset:2px}
 .cc-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:18px}
+
+/* =================== LISTING PAGES: breadcrumbs, filter chips, active filters, pager =================== */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 var(--space-3);font-size:var(--text-small);color:var(--muted)}
+.crumbs a{color:var(--muted);text-decoration:none}
+.crumbs a:hover{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+.fgroup{display:grid;gap:10px}
+.flabel{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{display:inline-flex;align-items:center;min-height:36px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:500;line-height:1.2;text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
+.fchip:hover{border-color:var(--green);color:var(--green)}
+.fchip[aria-current="true"]{border-color:var(--green);background:var(--green);color:#FFFFFF}
+.achip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:6px 10px 6px 13px;border-radius:999px;background:var(--tint-green);color:var(--green);font-size:.875rem;font-weight:600;text-decoration:none}
+.achip .ic{width:14px;height:14px}
+.achip:hover{background:#D5EDDF}
+.aclear{padding:6px 4px;color:var(--muted);font-size:.875rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.aclear:hover{color:var(--green)}
+.pager{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:var(--space-7)}
+.pager a,.pager span{display:grid;place-items:center;min-width:44px;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:999px;color:var(--ink);font-weight:600;text-decoration:none}
+.pager a:hover{border-color:var(--green)}
+.pager .ic{width:18px;height:18px}
+.pager [aria-current="page"]{border-color:var(--green);background:var(--green);color:#FFFFFF}
+
+/* form status line (newsletter forms) */
+.form-msg{margin:var(--space-3) 0 0;padding:10px 14px;border-radius:12px;font-size:.9375rem;font-weight:600}
+.form-msg[hidden]{display:none}
+.form-msg.is-ok{background:var(--tint-green);color:var(--green)}
+.form-msg.is-err{background:#FCE9E8;color:var(--red-text)}
 
 /* =================== PAGES WITHOUT A HERO =================== */
 /* the fixed header is solid from the start and the content starts below it */
