@@ -33,12 +33,12 @@
 .ty-line{position:absolute;left:50%;bottom:-2px;width:max(1440px, 100%);height:auto;transform:translateX(-50%);pointer-events:none}
 
 /* =================== CONTENT =================== */
-.ty-wrap{position:relative;z-index:1;display:flex;flex-direction:column;gap:clamp(20px, 3vw, 28px);max-width:calc(1040px + 2 * var(--gutter));padding-bottom:clamp(56px, 8vw, 104px)}
+.ty-wrap{position:relative;z-index:1;display:flex;flex-direction:column;gap:clamp(20px, 3vw, 28px);max-width:calc(1040px + 2 * var(--gutter));padding-block:clamp(36px, 5vw, 56px) clamp(56px, 8vw, 104px)}
 .ty .kicker{margin:0 0 6px}
 
 /* printer: a ticket slides out of a slot on the edge of the hero, then drops away once the real tickets show.
    It takes no room in the flow, so nothing is left behind after the animation. */
-.ty-printer{position:relative;z-index:3;height:0;margin-top:calc(-10px - clamp(20px, 3vw, 28px))}
+.ty-printer{position:absolute;z-index:3;top:-10px;left:0;right:0;height:0}
 .ty-slot{position:absolute;left:50%;top:0;translate:-50% 0;width:min(300px, 78vw);height:20px;border-radius:999px;background:#05231A;box-shadow:inset 0 4px 8px rgba(0,0,0,.6), 0 0 0 6px rgba(14,72,55,.12)}
 .ty-print{position:absolute;left:50%;top:10px;translate:-50% 0;width:min(210px, 56vw);overflow:hidden;border-radius:0 0 16px 16px;background:var(--surface);box-shadow:0 24px 40px -24px rgba(14,72,55,.6), 0 0 0 1px var(--line);animation:ty-print 1.1s var(--ease-out) .2s both}
 .ty[data-state="success"] .ty-print{animation:ty-print 1.1s var(--ease-out) .2s both, ty-print-out .5s var(--ease-in-out, ease) 1.6s both}
