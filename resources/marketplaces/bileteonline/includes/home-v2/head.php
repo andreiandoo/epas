@@ -40,24 +40,37 @@ $hv2HeroSet = hv2_asset('img/hero-900.webp') . ' 900w, ' . hv2_asset('img/hero-1
 <link rel="stylesheet" href="<?= hv2_asset('home.css') ?>">
 <script>document.documentElement.classList.add('js')</script>
 
+<?php /* Google consent mode: same snippet as includes/head.php — keep both in sync with consentVersion in cookie-consent.php and home.js */ ?>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 (function(){
-    var c=null;
-    try{c=JSON.parse(localStorage.getItem('bileteonline_cookie_consent'))}catch(e){}
-    var m=c&&c.marketing,a=c&&c.analytics,f=c&&c.functional;
-    gtag('consent','default',{
-        'ad_storage':m?'granted':'denied',
-        'ad_user_data':m?'granted':'denied',
-        'ad_personalization':m?'granted':'denied',
-        'analytics_storage':a?'granted':'denied',
-        'functionality_storage':f?'granted':'denied',
-        'personalization_storage':f?'granted':'denied',
-        'security_storage':'granted',
-        'wait_for_update':c?0:500
-    });
+    function read(){
+        try{
+            var s=JSON.parse(localStorage.getItem('bo_cookie_consent_v1'));
+            if(s&&s.version==='2026-05-26'&&s.consent)return s.consent;
+        }catch(e){}
+        return null;
+    }
+    function state(c){
+        var m=!!(c&&c.marketing),a=!!(c&&c.analytics),p=!!(c&&c.personalization);
+        return {
+            'ad_storage':m?'granted':'denied',
+            'ad_user_data':m?'granted':'denied',
+            'ad_personalization':m?'granted':'denied',
+            'analytics_storage':a?'granted':'denied',
+            'functionality_storage':p?'granted':'denied',
+            'personalization_storage':p?'granted':'denied',
+            'security_storage':'granted'
+        };
+    }
+    var c=read(),d=state(c);
+    d.wait_for_update=c?0:500;
+    gtag('consent','default',d);
     gtag('set','ads_data_redaction',true);
     gtag('set','url_passthrough',true);
+    window.addEventListener('bo-cookie-consent-updated',function(e){
+        gtag('consent','update',state(e.detail&&e.detail.consent));
+    });
 })();
 </script>
 <?php

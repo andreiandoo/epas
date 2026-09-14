@@ -26,6 +26,28 @@ $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $pr
 $sortAllowed = ['recommended', 'cheapest', 'soon'];
 $sort     = (isset($_GET['sort']) && in_array($_GET['sort'], $sortAllowed, true)) ? $_GET['sort'] : 'recommended';
 $page     = max(1, (int) ($_GET['page'] ?? 1));
+// Date ("Când" in the homepage search): a real calendar day from today up to 90 days ahead.
+$tzB      = new DateTimeZone('Europe/Bucharest');
+$todayB   = new DateTimeImmutable('today', $tzB);
+$dateF    = '';
+if (isset($_GET['data']) && is_string($_GET['data']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['data'])) {
+    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $_GET['data'], $tzB);
+    if ($d && $d->format('Y-m-d') === $_GET['data'] && $d >= $todayB && $d <= $todayB->modify('+90 days')) {
+        $dateF = $_GET['data'];
+    }
+}
+$bo_date_label = function (string $iso) use ($tzB, $todayB): string {
+    $d = new DateTimeImmutable($iso, $tzB);
+    $days = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+    $months = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
+    $label = $days[(int) $d->format('w')] . ', ' . $d->format('j') . ' ' . $months[(int) $d->format('n') - 1];
+    $diff = (int) $todayB->diff($d)->format('%r%a');
+    return $diff === 0 ? 'azi, ' . $label : ($diff === 1 ? 'mâine, ' . $label : $label);
+};
+$dateQuick = [];
+foreach (['Azi' => $todayB, 'Mâine' => $todayB->modify('+1 day'), 'Sâmbătă' => $todayB->modify((int) $todayB->format('w') === 6 ? 'today' : 'next saturday'), 'Duminică' => $todayB->modify((int) $todayB->format('w') === 0 ? 'today' : 'next sunday')] as $dl => $dd) {
+    if (!in_array($dd->format('Y-m-d'), $dateQuick, true)) $dateQuick[$dl] = $dd->format('Y-m-d');
+}
 
 // ---- Fetch ----
 $params = ['per_page' => 24, 'page' => $page];
@@ -36,12 +58,28 @@ if ($intF)       $params['interests'] = implode(',', $intF);
 if ($travF)      $params['traveler_types'] = implode(',', $travF);
 if ($maxPrice)   $params['max_price_ron'] = $maxPrice;
 if ($sort !== 'recommended') $params['sort'] = $sort;
+if ($dateF)      $params['date'] = $dateF;
 
 $resp = api_cached('search_' . md5(json_encode($params)), fn () => api_get('/activities', $params), 120);
 $items = $resp['data']['items'] ?? [];
 if (!is_array($items)) $items = [];
 $pagination = $resp['data']['pagination'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => count($items)];
 $total = (int) ($pagination['total'] ?? count($items));
+if ($dateF && ($resp['data']['applied_date'] ?? null) !== $dateF && $items) {
+    // Core deployment without the `date` filter: check this page's activities one by one
+    // (available-dates, cached 10 min). The count then covers this page only.
+    $horizon = (int) $todayB->diff(new DateTimeImmutable($dateF, $tzB))->format('%a') + 1;
+    $dateJobs = [];
+    foreach ($items as $i => $a) {
+        if (!empty($a['slug'])) {
+            $dateJobs[$i] = ['key' => 'avail_dates_' . $a['slug'] . '_' . $horizon, 'endpoint' => '/activities/' . rawurlencode($a['slug']) . '/available-dates', 'params' => ['days' => $horizon], 'ttl' => 600];
+        }
+    }
+    $dateRes = $dateJobs ? api_cached_many($dateJobs) : [];
+    $items = array_values(array_filter($items, fn ($a, $i) => in_array($dateF, (array) ($dateRes[$i]['data']['dates'] ?? []), true), ARRAY_FILTER_USE_BOTH));
+    $total = count($items);
+    $pagination = ['current_page' => 1, 'last_page' => 1, 'total' => $total];
+}
 
 // ---- Facet option pools ----
 $navCities     = navGetCities(24);
@@ -86,9 +124,11 @@ if ($q !== '') {
     $heading = 'Activități · ' . $intNames[$intF[0]];
 } elseif ($catF) {
     foreach ($navCategories as $c) if ($c['slug'] === $catF) { $heading = $c['label']; break; }
+} elseif ($dateF) {
+    $heading = 'Activități disponibile ' . $bo_date_label($dateF);
 }
 
-$activeCount = ($q !== '' ? 1 : 0) + ($cityF ? 1 : 0) + ($catF ? 1 : 0) + count($intF) + count($travF) + ($maxPrice ? 1 : 0);
+$activeCount = ($q !== '' ? 1 : 0) + ($cityF ? 1 : 0) + ($catF ? 1 : 0) + count($intF) + count($travF) + ($maxPrice ? 1 : 0) + ($dateF ? 1 : 0);
 
 $pageTitleRaw = ($q !== '' ? $heading : 'Caută activități, experiențe și atracții') . ' | bilete.online';
 $pageDescription = 'Caută și filtrează activități pe bilete.online după oraș, categorie, preț, interese și pentru cine. Rezervi online cu bilet QR.';
@@ -112,7 +152,7 @@ include __DIR__ . '/includes/header.php';
             <div class="flex items-center gap-2">
                 <svg viewBox="0 0 24 24" class="ml-3 h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" class="w-full bg-transparent px-2 py-3 font-bold outline-none placeholder:text-ink-soft/70" placeholder="Caută activități, orașe, experiențe...">
-                <?php foreach (['city' => $cityF, 'category' => $catF, 'interests' => implode(',', $intF), 'traveler_types' => implode(',', $travF)] as $hk => $hv): ?>
+                <?php foreach (['city' => $cityF, 'category' => $catF, 'interests' => implode(',', $intF), 'traveler_types' => implode(',', $travF), 'data' => $dateF] as $hk => $hv): ?>
                     <?php if ($hv !== ''): ?><input type="hidden" name="<?= $hk ?>" value="<?= htmlspecialchars($hv, ENT_QUOTES) ?>"><?php endif; ?>
                 <?php endforeach; ?>
                 <button class="shrink-0 rounded-full bg-vermilion px-6 py-3 font-bold text-paper transition hover:bg-vermilion-d">Caută</button>
@@ -126,8 +166,25 @@ include __DIR__ . '/includes/header.php';
         <!-- Facets -->
         <aside class="space-y-6">
             <?php if ($activeCount): ?>
-                <a href="<?= htmlspecialchars($bo_qs(['city' => '', 'category' => '', 'interests' => '', 'traveler_types' => '', 'max_price' => '', 'q' => $q]), ENT_QUOTES) ?>" class="inline-flex rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">Șterge filtrele (<?= $activeCount ?>) ×</a>
+                <a href="<?= htmlspecialchars($bo_qs(['city' => '', 'category' => '', 'interests' => '', 'traveler_types' => '', 'max_price' => '', 'data' => '', 'q' => $q]), ENT_QUOTES) ?>" class="inline-flex rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">Șterge filtrele (<?= $activeCount ?>) ×</a>
             <?php endif; ?>
+
+            <div>
+                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">DATA</p>
+                <div class="flex flex-wrap gap-2">
+                    <?php foreach ($dateQuick as $dl => $dv): ?>
+                        <a href="<?= htmlspecialchars($bo_qs(['data' => $dateF === $dv ? '' : $dv]), ENT_QUOTES) ?>" class="rounded-full border-2 px-3 py-1.5 text-sm font-bold transition <?= $dateF === $dv ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>"><?= $dl ?></a>
+                    <?php endforeach; ?>
+                </div>
+                <form action="/cauta" method="get" class="mt-3 flex items-center gap-2">
+                    <?php foreach ($baseGet as $hk => $hv): if ($hk === 'data' || !is_string($hv) || $hv === '') continue; ?>
+                        <input type="hidden" name="<?= htmlspecialchars((string) $hk, ENT_QUOTES) ?>" value="<?= htmlspecialchars($hv, ENT_QUOTES) ?>">
+                    <?php endforeach; ?>
+                    <label class="sr-only" for="cauta-data">Alege o dată</label>
+                    <input id="cauta-data" type="date" name="data" value="<?= htmlspecialchars($dateF, ENT_QUOTES) ?>" min="<?= $todayB->format('Y-m-d') ?>" max="<?= $todayB->modify('+90 days')->format('Y-m-d') ?>" class="min-w-0 flex-1 rounded-full border-2 border-ink/15 bg-paper-2 px-3 py-1.5 text-sm font-bold">
+                    <button class="shrink-0 rounded-full bg-ink px-3 py-1.5 text-sm font-bold text-paper">Aplică</button>
+                </form>
+            </div>
 
             <div>
                 <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">PREȚ MAXIM</p>
@@ -186,7 +243,7 @@ include __DIR__ . '/includes/header.php';
         <!-- Results -->
         <div>
             <div class="mb-5 flex items-center justify-between gap-4">
-                <p class="text-sm font-bold text-ink-soft"><?= $total ?> rezultate</p>
+                <p class="text-sm font-bold text-ink-soft"><?= $total ?> rezultate<?= $dateF ? ' disponibile ' . htmlspecialchars($bo_date_label($dateF)) : '' ?></p>
                 <div class="flex gap-2 text-sm font-bold">
                     <?php foreach (['recommended' => 'Recomandate', 'cheapest' => 'Preț', 'soon' => 'Curând'] as $sk => $sl): ?>
                         <a href="<?= htmlspecialchars($bo_qs(['sort' => $sk === 'recommended' ? '' : $sk]), ENT_QUOTES) ?>" class="rounded-full px-3 py-1.5 transition <?= $sort === $sk ? 'bg-ink text-paper' : 'bg-paper-2 hover:bg-ink hover:text-paper' ?>"><?= $sl ?></a>

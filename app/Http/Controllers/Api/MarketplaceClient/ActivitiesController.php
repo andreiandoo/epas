@@ -36,6 +36,7 @@ class ActivitiesController extends BaseController
      *   - search (free text on title)
      *   - max_price_ron (filters cheapest_price_cents)
      *   - sort: 'recent' | 'cheapest' | 'soon' (default 'recent')
+     *   - date (Y-m-d): only activities with at least one bookable slot that day
      *   - page, per_page (default 1, 20; max 50)
      *   - locale (default 'ro')
      */
@@ -116,7 +117,36 @@ class ActivitiesController extends BaseController
         }
 
         $perPage = max(1, min(50, (int) $request->query('per_page', 20)));
-        $paginator = $query->paginate($perPage);
+
+        // Availability on one calendar day (Europe/Bucharest). Whether a day is bookable depends on
+        // schedules, exceptions, the booking window and booked capacity (SlotResolver), which SQL
+        // can't express, so candidates are resolved in PHP (capped at 500) and paginated by hand.
+        $appliedDate = null;
+        if (($dateRaw = (string) $request->query('date', '')) !== '') {
+            try {
+                $date = CarbonImmutable::createFromFormat('!Y-m-d', $dateRaw, 'Europe/Bucharest');
+            } catch (\Throwable $e) {
+                $date = null;
+            }
+            if (! $date || $date->format('Y-m-d') !== $dateRaw) {
+                return response()->json(['success' => false, 'message' => 'Invalid date'], 422);
+            }
+            $matching = $query->with(['schedules', 'scheduleExceptions'])
+                ->limit(500)
+                ->get()
+                ->filter(fn (Activity $a) => SlotResolver::slotsFor($a, $date)->where('is_bookable', true)->isNotEmpty())
+                ->values();
+            $page = max(1, (int) $request->query('page', 1));
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $matching->forPage($page, $perPage)->values(),
+                $matching->count(),
+                $perPage,
+                $page
+            );
+            $appliedDate = $dateRaw;
+        } else {
+            $paginator = $query->paginate($perPage);
+        }
 
         return $this->success([
             'items' => $paginator->getCollection()->map(fn ($a) => $this->summarisePayload($a, $locale))->values(),
@@ -126,6 +156,8 @@ class ActivitiesController extends BaseController
                 'total'        => $paginator->total(),
                 'last_page'    => $paginator->lastPage(),
             ],
+            // Echoed so clients can tell the filter was honoured (older deployments ignore `date`).
+            'applied_date' => $appliedDate,
         ]);
     }
 
