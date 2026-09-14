@@ -229,16 +229,16 @@ const OrgPanouNou = {
 
         this.bindControls();
         await Promise.all([this.loadEvents(), this.loadChart(this.chartDays)]);
-        
-        
+        // După loadEvents (care pune un fallback din evenimentele în derulare),
+        // suprascriem cu cifrele all-time.
         await this.loadKpis();
     },
 
-    
-    
-    
-    
-    
+    // ---------- KPI ALL-TIME ----------
+    // Capul paginii arăta doar evenimentele în derulare, cumulate din cifrele lor
+    // cache-uite — deci nu se potrivea niciodată cu /organizator/sold, care e pe
+    // tot istoricul și pe alt calcul. total_sales vine acum din exact aceeași
+    // sursă ca acolo (netul organizatorului), deci cele două pagini spun la fel.
     async loadKpis() {
         try {
             const res = await AmbiletAPI.get('/organizer/dashboard');
@@ -268,8 +268,8 @@ const OrgPanouNou = {
 
                 const range = document.getElementById('pn-custom-range');
                 if (btn.dataset.days === 'custom') {
-                    
-                    
+                    // Doar deschide selectorul — graficul se reîncarcă la "Aplică",
+                    // ca să nu tragem date la fiecare tastare de dată.
                     range.classList.remove('hidden');
                     range.classList.add('flex');
                     const iso = (d) => d.toISOString().split('T')[0];
@@ -313,16 +313,16 @@ const OrgPanouNou = {
         });
     },
 
-    
+    // ---------- EVENTS ----------
     async loadEvents() {
         try {
-            
-            
+            // upcoming=1 uses the Event "upcoming" scope (handles multi-day/range
+            // events) + status=published → exactly the "în derulare" set.
             const res = await AmbiletAPI.get('/organizer/events?status=published&upcoming=1&per_page=100&sort=event_date&order=asc');
             const all = res.data || res || [];
-            
-            
-            
+            // "În derulare" = active/published, not ended, not cancelled, not draft.
+            // Filtered client-side too (belt-and-suspenders) so ended/draft never leak in.
+            // Sorted by date, nearest event first.
             this.events = all
                 .filter(e => e.status === 'published' && !e.is_past && !e.is_cancelled && !e.is_postponed)
                 .sort((a, b) => (new Date(a.starts_at || 0).getTime()) - (new Date(b.starts_at || 0).getTime()));
@@ -416,7 +416,7 @@ const OrgPanouNou = {
         out.push(btn(`/organizator/analytics/${e.id}`, 'Analiză', 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'));
         const slug = e.slug || '';
         out.push(btn(`/bilete/${slug}`, 'Pagină event', 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100', 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14', true));
-        
+        // Promovează — always last, full-width primary CTA.
         const promo = `<a href="/organizator/servicii?event=${e.id}" class="col-span-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-bold text-white rounded-lg bg-primary hover:opacity-90 transition-opacity">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
                 Promovează
@@ -424,8 +424,8 @@ const OrgPanouNou = {
         return out.join('') + promo;
     },
 
-    
-    
+    // ---------- CHART ----------
+    // Acceptă fie un număr de zile (preset), fie {from, to} pentru perioadă custom.
     async loadChart(range) {
         const isCustom = !!(range && typeof range === 'object' && range.from && range.to);
         const days = isCustom ? null : (parseInt(range, 10) || 30);
@@ -442,8 +442,8 @@ const OrgPanouNou = {
         }
         const hasSignal = data && data.labels && data.labels.length &&
             ((data.revenue || []).some(v => v > 0) || (data.tickets || []).some(v => v > 0) || (data.views || []).some(v => v > 0));
-        
-        
+        // Fallback to the always-available sales-timeline (revenue only) when the
+        // richer endpoint isn't deployed yet or returned nothing usable.
         if (!hasSignal) {
             const fbDays = isCustom
                 ? Math.max(1, Math.round((new Date(range.to) - new Date(range.from)) / 86400000) + 1)
@@ -456,16 +456,16 @@ const OrgPanouNou = {
         this.renderPeriodTotals(data, isCustom ? range : days);
     },
 
-    
+    // Totalurile perioadei selectate, deasupra graficului.
     renderPeriodTotals(data, range) {
         const t = (data && data.totals) || {};
         const setText = (id, val) => {
             const el = document.getElementById(id);
             if (el) el.textContent = val;
         };
-        
-        
-        
+        // revenue_net = netul real al organizatorului pe perioadă (aceeași formulă
+        // ca la cardul de sus). t.revenue e suma seriei zilnice, care e brută și
+        // ratează comenzile fără marketplace_organizer_id — doar fallback.
         setText('pn-total-revenue', this.money(t.revenue_net != null ? t.revenue_net : (t.revenue || 0)));
         setText('pn-avg-revenue', this.money(t.revenue_per_day || 0));
         setText('pn-total-tickets', this.num(t.tickets || 0));
@@ -511,10 +511,10 @@ const OrgPanouNou = {
         const emptyEl = document.getElementById('pnChartEmpty');
         if (!canvas || typeof Chart === 'undefined') return;
         const d = this.chartData || {};
-        
+        // { 'YYYY-MM-DD': [{title, venue, city}, ...] } — zilele cu eveniment.
         const evDays = d.event_days || {};
-        
-        
+        // Coerce to real numbers — a JSON API can hand back numeric strings,
+        // which Chart.js will not plot as bars.
         const rev = (d.revenue || []).map(Number);
         const tik = (d.tickets || []).map(Number);
         const viw = (d.views || []).map(Number);
@@ -546,9 +546,9 @@ const OrgPanouNou = {
                     { type: 'bar', label: 'Vizualizări', data: viw, yAxisID: 'y1',
                       backgroundColor: 'rgba(6,182,212,.65)', borderRadius: 4, order: 2,
                       hidden: !this.metrics.views },
-                    
-                    
-                    
+                    // Marcaj pe zilele în care are loc un eveniment. Punct pe linia
+                    // de bază, fără linie; numele apar în tooltip (afterBody).
+                    // Rămâne pe indexul 3 — applyMetricVisibility atinge doar 0..2.
                     { type: 'scatter', label: '__events__', yAxisID: 'y1', order: 3,
                       data: (d.raw_dates || []).map(k => (evDays[k] && evDays[k].length) ? 0 : null),
                       pointStyle: 'triangle', radius: 7, hoverRadius: 10, rotation: 0,
@@ -563,7 +563,7 @@ const OrgPanouNou = {
                     tooltip: {
                         callbacks: {
                             label: (c) => {
-                                
+                                // Marcajul de eveniment nu e o valoare — apare în afterBody.
                                 if (c.dataset.label === '__events__') return null;
                                 let v = c.parsed.y || 0;
                                 if (c.dataset.label.indexOf('Venituri') === 0) return '  Venituri: ' + OrgPanouNou.money(v);
@@ -585,46 +585,6 @@ const OrgPanouNou = {
                     x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, font: { size: 10 } } },
                     y:  { position: 'left',  beginAtZero: true, grid: { color: 'rgba(148,163,184,.15)' },
                           ticks: { color: '#10b981', font: { size: 10 },
-                                   callback: (v) => new Intl.NumberFormat('ro-RO', { notation: 'compact', maximumFractionDigits: 1 }).format(v) } },
-                    y1: { position: 'right', beginAtZero: true, grid: { display: false },
-                          ticks: { color: '#3b82f6', font: { size: 10 }, precision: 0 } },
-                }
-            }
-        });
-    },
-
-    applyMetricVisibility() {
-        if (!this.chart) return;
-        this.chart.data.datasets[0].hidden = !this.metrics.revenue;
-        this.chart.data.datasets[1].hidden = !this.metrics.tickets;
-        this.chart.data.datasets[2].hidden = !this.metrics.views;
-        this.chart.update();
-    },
-
-    
-    money(v) { return new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(Math.round(Number(v) || 0)) + ' lei'; },
-    num(v) { return new Intl.NumberFormat('ro-RO').format(Number(v) || 0); },
-    esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; },
-};
-
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.toggle('-translate-x-full');
-    if (overlay) overlay.classList.toggle('active');
-}
-
-document.addEventListener('DOMContentLoaded', () => OrgPanouNou.init());
-</script>
-<style>
-    .pn-metric-btn { border-color: rgba(148,163,184,.35); color: #64748b; background: #fff; opacity: .55; }
-    .pn-metric-btn.active { opacity: 1; border-color: rgba(148,163,184,.6); color: #334155; background: #f8fafc; }
-</style>
-JS;
-
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                                                                                                                                                                                                                                      ticks: { color: '#10b981', font: { size: 10 },
                                    callback: (v) => new Intl.NumberFormat('ro-RO', { notation: 'compact', maximumFractionDigits: 1 }).format(v) } },
                     y1: { position: 'right', beginAtZero: true, grid: { display: false },
                           ticks: { color: '#3b82f6', font: { size: 10 }, precision: 0 } },

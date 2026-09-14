@@ -593,29 +593,29 @@ $eventId = $_GET['event'] ?? null;
 <script>
 const eventId = <?= json_encode($eventId) ?>;
 let currentPeriod = 'all';
-let currentChannel = 'all'; 
+let currentChannel = 'all'; // all | marketplace | whitelabel | embed_widget
 let mainChart = null;
 let chartMetrics = { revenue: true, tickets: true, views: true };
 let eventData = null;
 let milestonesData = [];
 let globeMap = null;
 
-
+// Helper to fix image URLs - use core.tixello.com URLs directly
 function fixImageUrl(url) {
     if (!url) return '';
-    
+    // If it's a relative path (like /storage/...), prepend the core domain
     if (url.startsWith('/storage/') || url.startsWith('storage/')) {
         return 'https://core.tixello.com' + (url.startsWith('/') ? '' : '/') + url;
     }
-    
+    // If it's events/posters path, it's from core storage
     if (url.includes('events/posters/') && !url.includes('://')) {
         return 'https://core.tixello.com/storage/' + url;
     }
-    
+    // Already a full URL, return as-is
     return url;
 }
 
-
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     if (!eventId) {
         window.location.href = '/organizator/events';
@@ -665,20 +665,20 @@ async function loadAnalytics() {
             updateDashboard(response.data);
         }
 
-        
+        // Load milestones/campaigns
         try {
             const milestonesResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/milestones`);
             if (milestonesResponse.success) {
                 milestonesData = milestonesResponse.data.milestones || milestonesResponse.data || [];
                 updateCampaigns(milestonesResponse.data);
-                
+                // Re-render chart with milestone annotations
                 if (eventData?.chart) {
                     updateMainChart(eventData.chart);
                 }
             }
         } catch (e) { console.log('No milestones endpoint'); }
 
-        
+        // Load goals
         try {
             const goalsResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/goals`);
             if (goalsResponse.success) {
@@ -691,11 +691,11 @@ async function loadAnalytics() {
 }
 
 function updateDashboard(data) {
-    
+    // Event selector
     if (data.event) {
         document.getElementById('event-selector-name').textContent = data.event.title || 'Eveniment';
 
-        
+        // Format date properly (from ISO to DD.MM.YYYY | HH:MM)
         let dateStr = '';
         const dateSource = data.event.starts_at || data.event.start_date || data.event.date_start || data.event.date;
         if (dateSource) {
@@ -708,7 +708,7 @@ function updateDashboard(data) {
                 const minutes = String(d.getMinutes()).padStart(2, '0');
                 dateStr = `${day}.${month}.${year} | ${hours}:${minutes}`;
             } else if (typeof dateSource === 'string') {
-                
+                // Try to parse date string like "2025-01-30"
                 const match = dateSource.match(/(\d{4})-(\d{2})-(\d{2})/);
                 if (match) {
                     dateStr = `${match[3]}.${match[2]}.${match[1]}`;
@@ -718,7 +718,7 @@ function updateDashboard(data) {
             }
         }
 
-        
+        // Format venue properly (handle object or string)
         let venueStr = '';
         let cityStr = '';
         if (data.event.venue) {
@@ -729,11 +729,11 @@ function updateDashboard(data) {
                 venueStr = data.event.venue;
             }
         }
-        
+        // Also check for city at event level
         if (!cityStr && data.event.city) {
             cityStr = data.event.city;
         }
-        
+        // Build location string
         let locationStr = venueStr;
         if (cityStr && cityStr !== venueStr) {
             locationStr = venueStr ? `${venueStr}, ${cityStr}` : cityStr;
@@ -744,9 +744,9 @@ function updateDashboard(data) {
             document.getElementById('event-selector-image').innerHTML = `<img src="${fixImageUrl(data.event.image)}" class="object-cover w-full h-full">`;
         }
 
-        
+        // Days until event
         let daysUntil = data.event.days_until ?? data.overview?.days_until;
-        
+        // Calculate days until if not provided
         if (daysUntil === undefined || daysUntil === null) {
             const eventDateSource = data.event.starts_at || data.event.start_date || data.event.date_start || data.event.date;
             if (eventDateSource) {
@@ -760,7 +760,7 @@ function updateDashboard(data) {
         document.getElementById('stat-days').textContent = daysUntil !== undefined && daysUntil !== null ? daysUntil : '-';
         document.getElementById('stat-event-date').textContent = dateStr || data.event.date || '';
 
-        
+        // Status
         let statusText = 'Activ';
         let statusClass = 'bg-emerald-100 text-emerald-700';
         if (data.event.is_cancelled) {
@@ -777,7 +777,7 @@ function updateDashboard(data) {
         document.getElementById('stat-event-status').className = `px-2 py-1 text-xs font-medium rounded-full ${statusClass}`;
     }
 
-    
+    // Stats
     if (data.overview) {
         const o = data.overview;
         document.getElementById('stat-revenue').textContent = formatCurrency(o.total_revenue || 0);
@@ -787,7 +787,7 @@ function updateDashboard(data) {
         document.getElementById('stat-unique').textContent = formatNumber(o.unique_visitors || 0) + ' unice';
         document.getElementById('stat-tickets-today').textContent = '+' + (o.tickets_today || 0) + ' azi';
 
-        
+        // Progress bars
         const revenueTarget = o.revenue_target || o.total_revenue * 1.5 || 100000;
         const revenuePercent = Math.min((o.total_revenue / revenueTarget) * 100, 100);
         document.getElementById('stat-revenue-bar').style.width = revenuePercent + '%';
@@ -798,47 +798,47 @@ function updateDashboard(data) {
         document.getElementById('stat-tickets-bar').style.width = ticketsPercent + '%';
         document.getElementById('stat-tickets-percent').textContent = Math.round(ticketsPercent) + '%';
 
-        
+        // Revenue change
         updateChangeIndicator('stat-revenue-change', o.revenue_change);
 
-        
+        // Live indicator
         if (o.live_visitors > 0) {
             document.getElementById('live-indicator').classList.remove('hidden');
             document.getElementById('live-indicator').classList.add('flex');
             document.getElementById('live-count').textContent = o.live_visitors + ' online';
         }
 
-        
+        // Forecast
         updateForecast(o);
     }
 
-    
+    // Chart
     if (data.chart) {
         updateMainChart(data.chart);
     }
 
-    
+    // Ticket types
     if (data.ticket_performance) {
         updateTicketTypes(data.ticket_performance);
     }
 
-    
+    // Traffic sources
     if (data.traffic_sources) {
         updateTrafficSources(data.traffic_sources);
     }
 
-    
+    // Locations
     if (data.top_locations) {
         updateLocations(data.top_locations);
     }
 
-    
+    // Recent sales
     if (data.recent_sales) {
         updateRecentSales(data.recent_sales);
     }
 }
 
-
+// Get milestone type-specific color
 function getMilestoneColor(type) {
     const colors = {
         'campaign_fb': '#1877f2',
@@ -897,13 +897,13 @@ function updateMainChart(chartData) {
         });
     }
 
-    
+    // Build milestone annotations for the chart
     const rawDates = chartData.raw_dates || [];
     const labels = chartData.labels || [];
     const milestoneAnnotations = (milestonesData || [])
         .filter(m => m.start_date)
         .map(m => {
-            const milestoneDate = m.start_date.split('T')[0]; 
+            const milestoneDate = m.start_date.split('T')[0]; // "2026-01-14"
             const dateIndex = rawDates.findIndex(d => d === milestoneDate);
             if (dateIndex === -1) return null;
 
@@ -933,7 +933,7 @@ function updateMainChart(chartData) {
         })
         .filter(Boolean);
 
-    
+    // Store milestone data indexed by label text for tooltip lookup
     const milestoneLabelMap = {};
     (milestonesData || []).forEach(m => {
         if (m.start_date) {
@@ -952,7 +952,7 @@ function updateMainChart(chartData) {
             zoom: { enabled: false },
             events: {
                 mounted: function() {
-                    
+                    // Add click listeners to annotation labels after chart renders
                     setupMilestoneAnnotationListeners();
                 },
                 updated: function() {
@@ -999,28 +999,28 @@ function updateMainChart(chartData) {
     mainChart.render();
 }
 
-
+// Setup click/hover listeners for milestone annotations in the chart
 function setupMilestoneAnnotationListeners() {
     setTimeout(() => {
         const chartEl = document.getElementById('mainChart');
         if (!chartEl) return;
 
-        
+        // Find all annotation label elements (they are in <g> elements with class 'apexcharts-xaxis-annotations')
         const annotationLabels = chartEl.querySelectorAll('.apexcharts-xaxis-annotations text, .apexcharts-xaxis-annotations rect');
 
         annotationLabels.forEach(el => {
-            
+            // Get the label text from nearby text element
             let labelText = '';
             if (el.tagName === 'text') {
                 labelText = el.textContent;
             } else if (el.tagName === 'rect') {
-                
+                // Find sibling text element
                 const parent = el.parentElement;
                 const textEl = parent?.querySelector('text');
                 labelText = textEl?.textContent || '';
             }
 
-            
+            // Add hover and click events
             el.style.cursor = 'pointer';
             el.addEventListener('mouseenter', (e) => showMilestoneTooltip(e, labelText));
             el.addEventListener('mouseleave', hideMilestoneTooltip);
@@ -1032,7 +1032,7 @@ function setupMilestoneAnnotationListeners() {
     }, 100);
 }
 
-
+// Show milestone tooltip
 function showMilestoneTooltip(event, labelText, sticky = false) {
     const milestone = window.milestoneLabelMap?.[labelText];
     if (!milestone) return;
@@ -1040,7 +1040,7 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     const tooltip = document.getElementById('milestone-tooltip');
     if (!tooltip) return;
 
-    
+    // Populate tooltip content
     const typeLabels = {
         'campaign_fb': 'Facebook Ads',
         'campaign_google': 'Google Ads',
@@ -1071,7 +1071,7 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     document.getElementById('milestone-tooltip-icon').style.background = color + '20';
     document.getElementById('milestone-tooltip-icon').style.color = color;
 
-    
+    // Build details
     let detailsHtml = '';
     if (milestone.budget && milestone.budget > 0) {
         detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">Buget:</span><span class="font-medium">${formatCurrency(milestone.budget)}</span></div>`;
@@ -1096,7 +1096,7 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     }
     document.getElementById('milestone-tooltip-details').innerHTML = detailsHtml || '<div class="text-xs text-gray-400">Fără detalii suplimentare</div>';
 
-    
+    // Dates
     let datesText = '';
     if (milestone.start_date) {
         const startDate = new Date(milestone.start_date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -1108,16 +1108,16 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     }
     document.getElementById('milestone-tooltip-dates').textContent = datesText;
 
-    
+    // Position tooltip near the mouse
     const rect = event.target.getBoundingClientRect();
     const tooltipEl = tooltip;
     tooltipEl.classList.remove('hidden');
 
-    
+    // Position above the annotation
     let left = rect.left + window.scrollX;
     let top = rect.top + window.scrollY - tooltipEl.offsetHeight - 10;
 
-    
+    // Ensure tooltip stays within viewport
     if (top < 50) {
         top = rect.bottom + window.scrollY + 10;
     }
@@ -1131,7 +1131,7 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     tooltipEl.style.left = left + 'px';
     tooltipEl.style.top = top + 'px';
 
-    
+    // If sticky (clicked), add a close-on-click-outside listener
     if (sticky) {
         tooltipEl.dataset.sticky = 'true';
         setTimeout(() => {
@@ -1140,7 +1140,7 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     }
 }
 
-
+// Hide milestone tooltip
 function hideMilestoneTooltip() {
     const tooltip = document.getElementById('milestone-tooltip');
     if (tooltip && tooltip.dataset.sticky !== 'true') {
@@ -1148,7 +1148,7 @@ function hideMilestoneTooltip() {
     }
 }
 
-
+// Hide tooltip on outside click (for sticky mode)
 function hideMilestoneTooltipOnOutsideClick(e) {
     const tooltip = document.getElementById('milestone-tooltip');
     if (tooltip && !tooltip.contains(e.target)) {
@@ -1162,7 +1162,7 @@ function toggleChartMetric(metric) {
     chartMetrics[metric] = !chartMetrics[metric];
     const btn = document.querySelector(`.chart-metric-btn[data-metric="${metric}"]`);
 
-    
+    // Get appropriate colors for each metric
     const activeStyles = {
         revenue: { border: 'border-emerald-200', bg: 'bg-emerald-50' },
         tickets: { border: 'border-blue-200', bg: 'bg-blue-50' },
@@ -1188,24 +1188,24 @@ function updateForecast(overview) {
     const daysRemaining = overview.days_until || 7;
     const chart = eventData?.chart;
 
-    
+    // Use actual chart data for daily averages instead of dividing by arbitrary number
     let avgDailyRevenue = 0;
     let avgDailyTickets = 0;
 
     if (chart && chart.revenue && chart.revenue.length > 0) {
-        
+        // Only count days that have actually passed (have data)
         const daysWithData = chart.revenue.length;
         const totalChartRevenue = chart.revenue.reduce((sum, v) => sum + (v || 0), 0);
         const totalChartTickets = chart.tickets ? chart.tickets.reduce((sum, v) => sum + (v || 0), 0) : 0;
 
         if (daysWithData > 0) {
-            
+            // Weight recent days more heavily (last 7 days get 2x weight)
             const recentDays = Math.min(7, daysWithData);
             const recentRevenue = chart.revenue.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0);
             const recentTickets = chart.tickets ? chart.tickets.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0) : 0;
 
             if (recentDays < daysWithData && totalChartRevenue > 0) {
-                
+                // Blend: 60% recent trend, 40% overall average
                 avgDailyRevenue = (recentRevenue / recentDays) * 0.6 + (totalChartRevenue / daysWithData) * 0.4;
                 avgDailyTickets = (recentTickets / recentDays) * 0.6 + (totalChartTickets / daysWithData) * 0.4;
             } else {
@@ -1214,7 +1214,7 @@ function updateForecast(overview) {
             }
         }
     } else if (overview.total_revenue > 0) {
-        
+        // Fallback: if no chart data, use event creation to now
         const createdAt = eventData?.event?.created_at;
         const daysSinceCreation = createdAt
             ? Math.max(1, Math.ceil((Date.now() - new Date(createdAt)) / (1000 * 60 * 60 * 24)))
@@ -1457,7 +1457,7 @@ function exportReport() {
     window.open(`/api/marketplace-client/organizer/events/${eventId}/analytics/export?period=${currentPeriod}`, '_blank');
 }
 
-
+// Event dropdown functions
 let eventDropdownOpen = false;
 let eventsListLoaded = false;
 
@@ -1507,7 +1507,7 @@ function renderEventsList(events) {
     const html = events.map(e => {
         const isActive = String(e.id) === String(eventId);
 
-        
+        // Format date - API returns starts_at
         let dateStr = '';
         const dateSource = e.starts_at || e.start_date || e.date;
         if (dateSource) {
@@ -1529,7 +1529,7 @@ function renderEventsList(events) {
             }
         }
 
-        
+        // Get venue name and city - API returns venue_name and venue_city directly
         const venueName = e.venue_name || (typeof e.venue === 'object' ? e.venue?.name : e.venue) || '';
         const cityName = e.venue_city || (typeof e.venue === 'object' ? e.venue?.city : '') || e.city || '';
         let locationStr = venueName;
@@ -1537,7 +1537,7 @@ function renderEventsList(events) {
             locationStr = venueName ? `${venueName}, ${cityName}` : cityName;
         }
 
-        
+        // Get event name - API returns 'name' not 'title'
         const eventName = e.name || e.title || 'Eveniment';
 
         return `
@@ -1557,7 +1557,7 @@ function renderEventsList(events) {
     listEl.innerHTML = html;
 }
 
-
+// Close dropdown when clicking outside
 document.addEventListener('click', function(e) {
     const container = document.getElementById('event-dropdown-container');
     if (container && !container.contains(e.target) && eventDropdownOpen) {
@@ -1565,11 +1565,11 @@ document.addEventListener('click', function(e) {
     }
 });
 
-
+// Globe modal functions with Leaflet map
 let globeModalOpen = false;
 let liveVisitorsData = null;
 
-
+// Romanian cities with lat/lng coordinates
 const cityCoordinates = {
     'București': { lat: 44.4268, lng: 26.1025 },
     'Bucharest': { lat: 44.4268, lng: 26.1025 },
@@ -1604,14 +1604,14 @@ const cityCoordinates = {
 function openGlobeModal() {
     document.getElementById('globe-modal').classList.remove('hidden');
     globeModalOpen = true;
-    
+    // Small delay to ensure modal is visible before initializing map
     setTimeout(() => loadLiveVisitors(), 100);
 }
 
 function closeGlobeModal() {
     document.getElementById('globe-modal').classList.add('hidden');
     globeModalOpen = false;
-    
+    // Clean up map when closing
     if (globeMap) {
         try {
             globeMap.remove();
@@ -1622,11 +1622,11 @@ function closeGlobeModal() {
 
 async function loadLiveVisitors() {
     try {
-        
+        // Try to get live visitors data from analytics
         if (eventData?.top_locations) {
             renderGlobeData(eventData.top_locations);
         } else {
-            
+            // Fallback to showing the analytics data
             const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=1d`);
             if (response.success && response.data?.top_locations) {
                 renderGlobeData(response.data.top_locations);
@@ -1637,7 +1637,7 @@ async function loadLiveVisitors() {
     }
 }
 
-
+// Country flags
 const countryFlags = {
     'RO': '🇷🇴', 'Romania': '🇷🇴',
     'DE': '🇩🇪', 'Germany': '🇩🇪',
@@ -1676,14 +1676,14 @@ function renderGlobeData(locations) {
         return;
     }
 
-    
+    // Calculate totals
     const totalVisitors = locations.reduce((sum, l) => sum + (l.visitors || l.count || 0), 0);
     liveCountEl.textContent = formatNumber(totalVisitors);
 
-    
+    // Initialize Leaflet map
     initLeafletMap(locations);
 
-    
+    // Render live activity list
     const activityHtml = locations.slice(0, 8).map(l => {
         const flag = getFlag(l.country || 'RO');
         const action = `Viewed event page`;
@@ -1702,7 +1702,7 @@ function renderGlobeData(locations) {
     }).join('');
     activityEl.innerHTML = activityHtml || '<div class="py-2 text-sm text-center text-slate-400">No activity</div>';
 
-    
+    // Render top locations
     const maxCount = Math.max(...locations.map(l => l.visitors || l.count || 0));
     const topHtml = locations.slice(0, 5).map(l => {
         const count = l.visitors || l.count || 0;
@@ -1729,13 +1729,13 @@ function renderGlobeData(locations) {
 function initLeafletMap(locations) {
     const container = document.getElementById('globeMapContainer');
 
-    
+    // Check if Leaflet is loaded
     if (typeof L === 'undefined') {
         console.warn('Leaflet not loaded');
         return;
     }
 
-    
+    // Remove existing map if any
     if (globeMap) {
         try {
             globeMap.remove();
@@ -1744,7 +1744,7 @@ function initLeafletMap(locations) {
     }
 
     try {
-        
+        // Initialize Leaflet map centered on Romania
         const map = L.map(container, {
             center: [46, 25],
             zoom: 6,
@@ -1752,14 +1752,14 @@ function initLeafletMap(locations) {
             attributionControl: false
         });
 
-        
-        
+        // CARTO voyager when a key is configured, else OpenStreetMap.
+        // Both require a visible attribution, hence the small control.
         AmbiletTileLayer('rastertiles/voyager').addTo(map);
         L.control.attribution({ prefix: false }).addTo(map);
 
         globeMap = map;
 
-        
+        // Prepare locations with coordinates
         const mappedLocations = (locations || []).map(l => {
             const city = l.city || '';
             const coords = cityCoordinates[city] || l;
@@ -1772,7 +1772,7 @@ function initLeafletMap(locations) {
             };
         }).filter(l => l.lat && l.lng);
 
-        
+        // Add markers
         mappedLocations.forEach(loc => {
             const marker = L.circleMarker([loc.lat, loc.lng], {
                 radius: loc.isLive ? 12 : Math.max(8, Math.min(25, (loc.visitors || 1) / 2)),
@@ -1790,10 +1790,10 @@ function initLeafletMap(locations) {
             marker.bindPopup(popupContent);
         });
 
-        
+        // Force map to recalculate size after container is visible
         setTimeout(() => {
             map.invalidateSize();
-            
+            // Fit bounds to markers if we have locations
             if (mappedLocations.length > 0) {
                 const bounds = L.latLngBounds(mappedLocations.map(l => [l.lat, l.lng]));
                 map.fitBounds(bounds, { padding: [50, 50] });
@@ -1805,10 +1805,10 @@ function initLeafletMap(locations) {
     }
 }
 
-
+// Goal modal functions
 function showAddGoalModal() {
     document.getElementById('goal-modal').classList.remove('hidden');
-    
+    // Set max date for deadline based on event date
     const deadlineInput = document.getElementById('goal-deadline-input');
     const deadlineHint = document.getElementById('goal-deadline-hint');
     if (deadlineInput && eventData?.event) {
@@ -1826,7 +1826,7 @@ async function saveGoal(e) {
     e.preventDefault();
     const form = e.target;
 
-    
+    // Date validation is handled by HTML5 max attribute on the input
     const data = {
         type: form.type.value,
         name: form.name.value,
@@ -1839,13 +1839,13 @@ async function saveGoal(e) {
     } catch (error) { console.error('Error saving goal:', error); alert('Eroare la salvarea obiectivului'); }
 }
 
-
+// Milestone modal functions
 const AD_CAMPAIGN_TYPES = ['facebook_ads', 'google_ads', 'instagram_ads', 'tiktok_ads', 'influencer'];
 
 function showAddMilestoneModal() {
     document.getElementById('milestone-modal').classList.remove('hidden');
-    updateMilestoneFields('facebook_ads'); 
-    
+    updateMilestoneFields('facebook_ads'); // Default to ad fields
+    // Set date restrictions based on event dates
     const startInput = document.getElementById('milestone-start-date');
     const endInput = document.getElementById('milestone-end-date');
     const dateHint = document.getElementById('milestone-date-hint');
@@ -1879,90 +1879,7 @@ function updateMilestoneFields(type) {
     if (AD_CAMPAIGN_TYPES.includes(type)) {
         adFields.classList.remove('hidden');
         otherFields.classList.add('hidden');
-        
-        const utmSourceInput = document.querySelector('input[name="utm_source"]');
-        const utmMediumInput = document.querySelector('input[name="utm_medium"]');
-        if (utmSourceInput) {
-            switch(type) {
-                case 'facebook_ads':
-                case 'instagram_ads':
-                    utmSourceInput.placeholder = 'facebook';
-                    utmMediumInput.placeholder = 'cpc';
-                    break;
-                case 'google_ads':
-                    utmSourceInput.placeholder = 'google';
-                    utmMediumInput.placeholder = 'cpc';
-                    break;
-                case 'tiktok_ads':
-                    utmSourceInput.placeholder = 'tiktok';
-                    utmMediumInput.placeholder = 'cpc';
-                    break;
-                default:
-                    utmSourceInput.placeholder = 'organic';
-                    utmMediumInput.placeholder = 'referral';
-            }
-        }
-    } else {
-        adFields.classList.add('hidden');
-        otherFields.classList.remove('hidden');
-    }
-}
-
-async function saveMilestone(e) {
-    e.preventDefault();
-    const form = e.target;
-
-    
-    
-    const typeMap = {
-        'facebook_ads': 'campaign_fb',
-        'google_ads': 'campaign_google',
-        'instagram_ads': 'campaign_instagram',
-        'tiktok_ads': 'campaign_tiktok',
-        'email_campaign': 'email',
-        'price_change': 'price',
-        'announcement': 'announcement',
-        'press': 'press',
-        'lineup': 'lineup',
-        'influencer': 'campaign_other',
-        'other': 'custom'
-    };
-
-    const formType = form.type.value;
-    const isAdCampaign = AD_CAMPAIGN_TYPES.includes(formType);
-
-    const data = {
-        title: form.name.value,
-        type: typeMap[formType] || formType,
-        start_date: startDateValue,
-        end_date: endDateValue || null
-    };
-
-    if (isAdCampaign) {
-        
-        data.budget = form.budget.value ? parseFloat(form.budget.value) : null;
-        data.platform_campaign_id = form.platform_campaign_id.value || null;
-        data.utm_source = form.utm_source.value || null;
-        data.utm_medium = form.utm_medium.value || null;
-        data.utm_campaign = form.utm_campaign.value || null;
-        data.utm_content = form.utm_content.value || null;
-    } else {
-        
-        data.description = form.description.value || null;
-        data.impact_metric = form.impact_metric.value || null;
-        data.baseline_value = form.baseline_value.value ? parseFloat(form.baseline_value.value) : null;
-        data.post_value = form.post_value.value ? parseFloat(form.post_value.value) : null;
-    }
-
-    try {
-        const response = await AmbiletAPI.post(`/organizer/events/${eventId}/milestones`, data);
-        if (response.success) { closeMilestoneModal(); loadAnalytics(); }
-    } catch (error) { console.error('Error saving milestone:', error); alert('Eroare la salvarea campaniei'); }
-}
-</script>
-
-<?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
-                                                                                                                                                                 // Pre-fill UTM source based on type
+        // Pre-fill UTM source based on type
         const utmSourceInput = document.querySelector('input[name="utm_source"]');
         const utmMediumInput = document.querySelector('input[name="utm_medium"]');
         if (utmSourceInput) {

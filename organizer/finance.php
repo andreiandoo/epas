@@ -148,8 +148,8 @@ let allEvents = [];
 let currentEventFilter = 'all';
 const highlightEventId = new URLSearchParams(window.location.search).get('event');
 
-
-
+// Filter "Sold per eveniment" by event status. Kept purely client-side — the
+// finance endpoint already returns every event with its is_past flag.
 function setEventFilter(filter) {
     currentEventFilter = filter;
     document.querySelectorAll('#event-filters button').forEach(function (btn) {
@@ -167,10 +167,10 @@ function filteredEvents() {
         return true;
     });
 
-    
-    
-    
-    
+    // Ordine: întâi evenimentele active, apoi cele încheiate. În fiecare grup,
+    // cel mai apropiat în timp primul — active crescător (următorul eveniment
+    // sus), încheiate descrescător (cel mai recent încheiat sus). Endpoint-ul
+    // le trimite după created_at, ceea ce nu spune nimic organizatorului.
     const ts = function (e) { return e.starts_at ? new Date(e.starts_at).getTime() : 0; };
 
     return list.sort(function (a, b) {
@@ -187,18 +187,18 @@ async function loadFinanceData() {
         if (response.success) {
             financeData = response.data;
             const events = financeData.events || [];
-            
-            
-            
-            
-            
-            
+            // The cards read the ORG-WIDE figures the backend derives and keeps
+            // reconciled (MarketplaceOrganizer::deriveBalances + the nightly
+            // balances:reconcile). Summing the per-event column instead — what
+            // this used to do — overstated the total, because each event's
+            // available_balance is clamped at 0: an over-paid event contributed
+            // nothing rather than reducing the balance.
             document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(financeData.available_balance || 0);
             document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
             document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
-            
-            
-            
+            // Total vânzări vine acum direct din endpoint (net live). Fallback pe
+            // sumă pentru siguranță — fiecare leu e într-una din cele trei stări,
+            // deci disponibil + în procesare + încasat = net.
             const totalSales = financeData.total_sales != null
                 ? financeData.total_sales
                 : (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0);
@@ -206,16 +206,16 @@ async function loadFinanceData() {
             allEvents = events;
             renderEvents();
             renderBreakdowns();
-            
+            // Highlight event if coming from events page
             if (highlightEventId) {
-                
-                
-                
+                // NB: clasa e finance-event-card, nu event-row — cea din urmă are
+                // în _organizer.css un `:hover { background: var(--surface) }` care
+                // suprascria culoarea de stare a cardului (verde/gri) la hover.
                 const targetRow = document.querySelector(`.finance-event-card[data-event-id="${highlightEventId}"]`);
                 if (targetRow) {
                     targetRow.classList.add('ring-2', 'ring-primary', 'bg-primary/5');
                     targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
+                    // Auto-expand the highlighted event
                     toggleEventDetails(parseInt(highlightEventId));
                 }
             }
@@ -231,9 +231,9 @@ function showEmptyFinance() {
     document.getElementById('events-list').innerHTML = '<div class="p-12 text-center bg-white border rounded-2xl border-border text-muted">Nu exista evenimente</div>';
 }
 
-
-
-
+// ---------- Breakdown-ul cardurilor ----------
+// Un singur panou, pe toată lățimea, sub carduri. Click pe același trigger îl
+// închide; click pe altul comută conținutul fără să-l închidă.
 let currentBreakdown = null;
 
 function toggleBreakdown(which) {
@@ -267,8 +267,8 @@ function escAttr(s) {
     return String(s == null ? '' : s).replace(/"/g, '&quot;');
 }
 
-
-
+// "Titlu (12.09.2026 · Sala Luceafărul · București)" — două evenimente cu
+// același nume în orașe diferite altfel nu s-ar putea distinge în listă.
 function eventLabel(e) {
     if (!e) return '';
     const bits = [
@@ -336,8 +336,8 @@ function availableBreakdownHtml() {
     const contributing = events
         .filter(function (e) { return (e.available_balance || 0) > 0.005; })
         .sort(function (a, b) { return (b.available_balance || 0) - (a.available_balance || 0); });
-    
-    
+    // Evenimentele supra-decontate se arată separat, ca sumă de regularizat —
+    // altfel ar dispărea complet din listă (available e plafonat la 0).
     const overpaid = events.filter(function (e) { return (e.available_balance_signed ?? 0) < -0.005; });
 
     if (!contributing.length && !overpaid.length) {
@@ -353,9 +353,9 @@ function payoutBreakdownHtml(list, emptyLabel) {
     const fmt = AmbiletUtils.formatCurrency;
     if (!list.length) return '<p class="text-sm text-muted">' + emptyLabel + '</p>';
     return list.map(function (p) {
-        
-        
-        
+        // event_id NULL = decont care acoperă mai multe evenimente. Când avem
+        // evenimentul în listă, îi atașăm și data/venue-ul, ca în celelalte
+        // breakdown-uri.
         const label = p.event_id ? eventLabelById(p.event_id, p.event_title) : 'Decont multi-eveniment';
         const ref = p.decont_series || p.reference || ('#' + p.id);
         const when = p.completed_at || p.created_at;
@@ -370,7 +370,7 @@ function payoutBreakdownHtml(list, emptyLabel) {
     }).join('');
 }
 
-
+// Reîmprospătează panoul dacă e deschis când se reîncarcă datele.
 function renderBreakdowns() {
     if (!currentBreakdown) return;
     document.getElementById('breakdown-list').innerHTML = breakdownMeta(currentBreakdown).html();
@@ -395,19 +395,19 @@ function renderEvents() {
         const pending = e.pending_payout || 0;
         const avail = e.available_balance || 0;
         const signed = (e.available_balance_signed ?? avail);
-        
-        
-        
+        // Bara are două segmente: verde = deja încasat, galben = în procesare.
+        // Galbenul e plafonat la cât a mai rămas din bară, ca să nu depășească
+        // 100% când suma decontată e mai mare decât netul curent (rambursări).
         const pctPaid = net > 0 ? Math.max(0, Math.min(100, Math.round((paid / net) * 100))) : 0;
         const pctPending = net > 0 ? Math.max(0, Math.min(100 - pctPaid, Math.round((pending / net) * 100))) : 0;
         const meta = [e.starts_at ? AmbiletUtils.formatDate(e.starts_at) + (e.start_time ? ' ' + e.start_time : '') : '', e.venue_name, e.venue_city].filter(Boolean).join(' · ');
 
-        
-        
-        
-        
-        
-        
+        // Comision "peste preț": taxa e plătită de client PESTE prețul biletului,
+        // nu se scade din banii organizatorului — deci nu-l interesează cât e.
+        // Îl ascundem, iar "încasat de la clienți" arată suma fără el, altfel
+        // calculul afișat nu s-ar mai închide (gross include comisionul).
+        // La comision inclus în preț taxa CHIAR se scade din ce ia organizatorul,
+        // deci acolo rândul rămâne vizibil.
         const isOnTop = (e.commission_mode === 'added_on_top' || e.commission_mode === 'on_top');
         const customerPaid = isOnTop
             ? (e.gross_revenue || 0) - (e.commission_amount || 0)
@@ -429,8 +429,8 @@ function renderEvents() {
                         ${moneyCells.map(c => `<div><p class="text-xs text-muted">${c.label}</p><p class="font-semibold ${c.cls}">${c.value}</p></div>`).join('')}
                     </div>`;
 
-        
-        
+        // Starea evenimentului nu mai e un badge — o comunică fundalul cardului
+        // (verde = activ, gri = încheiat).
         const cardBg = e.is_past ? 'bg-slate-300' : 'bg-green-100';
 
         let payoutButton;
@@ -714,81 +714,6 @@ async function openPayoutModal(eventId, eventName, availableBalance) {
             select.innerHTML = '<option value="">Selecteaza contul</option>';
             if (accounts.length === 0) {
                 select.innerHTML = '<option value="">Nu ai conturi bancare adăugate. Adaugă unul în Setări.</option>';
-            } else {
-                accounts.forEach(acc => {
-                    const label = (acc.bank_name || 'Cont') + ' - ****' + (acc.iban ? acc.iban.slice(-4) : acc.account_number?.slice(-4) || '');
-                    select.innerHTML += `<option value="${acc.id}">${label}</option>`;
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Failed to load bank accounts:', error);
-        select.innerHTML = '<option value="">Eroare la încărcarea conturilor</option>';
-    }
-
-    document.getElementById('payout-modal').classList.remove('hidden');
-    document.getElementById('payout-modal').classList.add('flex');
-
-    // Add input watcher for amount
-    const amountInput = document.getElementById('payout-amount');
-    amountInput.oninput = function() {
-        const val = parseFloat(this.value) || 0;
-        if (val > currentPayoutMaxAmount) {
-            this.value = currentPayoutMaxAmount;
-        }
-    };
-}
-
-function closePayoutModal() {
-    document.getElementById('payout-modal').classList.add('hidden');
-    document.getElementById('payout-modal').classList.remove('flex');
-}
-
-async function submitPayoutRequest(e) {
-    e.preventDefault();
-    const eventId = document.getElementById('payout-event-id').value;
-    const amount = parseFloat(document.getElementById('payout-amount').value);
-    const notes = document.getElementById('payout-notes').value;
-    const accountId = document.getElementById('payout-account').value;
-
-    if (!accountId) {
-        AmbiletNotifications.error('Te rugăm să selectezi un cont bancar');
-        return;
-    }
-    if (amount < 100) {
-        AmbiletNotifications.error('Suma minimă este 100 RON');
-        return;
-    }
-    if (amount > currentPayoutMaxAmount) {
-        AmbiletNotifications.error('Suma depășește soldul disponibil');
-        return;
-    }
-
-    try {
-        const response = await AmbiletAPI.post('/organizer/payouts', {
-            amount: amount,
-            event_id: eventId || null,
-            bank_account_id: accountId,
-            notes: notes || null
-        });
-
-        if (response.success) {
-            AmbiletNotifications.success('Cererea de plată a fost trimisă cu succes!');
-            closePayoutModal();
-            loadFinanceData(); // Refresh data
-        } else {
-            AmbiletNotifications.error(response.message || 'Eroare la trimiterea cererii de plată');
-        }
-    } catch (error) {
-        console.error('Payout request failed:', error);
-        AmbiletNotifications.error('Eroare la trimiterea cererii de plată');
-    }
-}
-</script>
-JS;
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                                                                                                                                 ion>';
             } else {
                 accounts.forEach(acc => {
                     const label = (acc.bank_name || 'Cont') + ' - ****' + (acc.iban ? acc.iban.slice(-4) : acc.account_number?.slice(-4) || '');

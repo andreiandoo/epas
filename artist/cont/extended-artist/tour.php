@@ -947,16 +947,16 @@ function tourOptimizer() {
             { id: 'scenarios',     label: 'Scenarii salvate' },
         ],
 
-        
+        // Data
         opportunities: { cities: [], recommendations: [], dormant_alerts: [], kpis: {} },
         predictionsData: { cities: [], weekday: { labels: [], values: [] }, seasonality: { labels: [], values: [] } },
         scenariosData: { scenarios: [], total: 0, limit: 20 },
 
-        
+        // UI state
         cityInput: '',
         predictionFilter: 'all',
         quickCities: ['București', 'Cluj-Napoca', 'Iași', 'Brașov', 'Timișoara', 'Constanța', 'Sibiu'],
-        
+        // Home base options — populat la init() din API. Format: [{name, state, country}, ...]
         homeBaseOptions: [
             { name: 'București', state: 'București', country: 'RO' },
             { name: 'Cluj-Napoca', state: 'Cluj', country: 'RO' },
@@ -999,7 +999,7 @@ function tourOptimizer() {
             },
         },
 
-        
+        // venuesByCity[cityName] = [{id, name, capacity_total, ...}] | undefined while loading | [] if none
         venuesByCity: {},
 
         cityUidCounter: 1,
@@ -1051,17 +1051,17 @@ function tourOptimizer() {
             }).slice(0, 50);
         },
 
-        
+        // Returnează true dacă stop[idx].date_iso < stop[idx-1].date_iso → în afara ordinii cronologice
         isStopOutOfOrder(idx) {
             if (idx <= 0) return false;
             const route = this.planner.route || [];
             const cur = route[idx]?.date_iso;
             const prev = route[idx - 1]?.date_iso;
             if (!cur || !prev) return false;
-            return cur < prev; 
+            return cur < prev; // string comparison pe Y-m-d ISO funcționează cronologic
         },
 
-        
+        // Lista de indici cu probleme cronologice (pentru afișaj count în toolbar)
         get outOfOrderStops() {
             const out = [];
             const route = this.planner.route || [];
@@ -1071,8 +1071,8 @@ function tourOptimizer() {
             return out;
         },
 
-        
-        
+        // Sortează planner.route după date_iso ascendent. Stop-urile fără dată merg la final.
+        // După sortare: _syncCitiesFromRoute + auto-recalc.
         sortChronologically() {
             const route = (this.planner.route || []).slice();
             route.sort((a, b) => {
@@ -1087,8 +1087,8 @@ function tourOptimizer() {
             this.markDirty();
         },
 
-        
-        
+        // Returnează prețul maxim per cameră bazat pe camerele REAL configurate (cu count > 0).
+        // Ex: 0 single, 4 double, 0 apartment + price double=380 → returnează 380.
         maxRoomPrice() {
             const r = this.planner.config.rooms;
             const p = this.planner.config.room_prices;
@@ -1097,13 +1097,13 @@ function tourOptimizer() {
             if ((r.double | 0) > 0) candidates.push(p.double | 0);
             if ((r.apartment | 0) > 0) candidates.push(p.apartment | 0);
             if (candidates.length === 0) {
-                
+                // Fallback: ia max din toate prețurile configurate, indiferent de count
                 return Math.max(p.single | 0, p.double | 0, p.apartment | 0) || 400;
             }
             return Math.max(...candidates);
         },
 
-        
+        // Total camere configurate (suma single + double + apartment)
         totalRoomsCount() {
             const r = this.planner.config.rooms;
             return (r.single | 0) + (r.double | 0) + (r.apartment | 0);
@@ -1160,7 +1160,7 @@ function tourOptimizer() {
         },
 
         async init() {
-            
+            // Default planner dates: start = today + 30 days, end = start + 30 days
             if (!this.planner.startDate) {
                 this.planner.startDate = this.defaultStartDate();
             }
@@ -1185,7 +1185,7 @@ function tourOptimizer() {
             } else {
                 this.$nextTick(() => this.renderTab('opportunities'));
             }
-            
+            // Init flatpickr pe toate input[type=date] (sidebar planner + alt locuri)
             this.$nextTick(() => this.setupDatepickers());
         },
 
@@ -1243,14 +1243,14 @@ function tourOptimizer() {
                 const r = await this.fetchAction('artist.tour.cities-list');
                 const cities = r?.data?.cities;
                 if (Array.isArray(cities) && cities.length > 0) {
-                    
+                    // Backend now returns objects {name, state, country}; tolerate both formats
                     if (typeof cities[0] === 'string') {
                         this.homeBaseOptions = cities.map(name => ({ name, state: null, country: null }));
                     } else {
                         this.homeBaseOptions = cities;
                     }
                 }
-            } catch (e) {  }
+            } catch (e) { /* fallback la hardcoded */ }
         },
 
         async loadPredictions() {
@@ -1304,7 +1304,7 @@ function tourOptimizer() {
                     this.planner.summary = r.data.summary || {};
                     this.planner.optimized = true;
                     this.planner.dirty = false;
-                    
+                    // Pre-load venues for every city in route (for search suggestions on inline edit)
                     (this.planner.route || []).forEach(s => this.loadVenuesForCity(s.city));
                     this.$nextTick(() => {
                         this.renderPlannerMap();
@@ -1332,8 +1332,8 @@ function tourOptimizer() {
                     summary: this.planner.summary,
                 };
                 let r;
-                
-                
+                // Dacă scenariul a fost deja salvat o dată (currentScenarioId există), PATCH în loc de POST.
+                // Altfel s-ar crea duplicate la fiecare Save.
                 if (this.planner.currentScenarioId) {
                     r = await this.fetchAction('artist.tour.scenario.update&id=' + this.planner.currentScenarioId, {}, { method: 'PATCH', body });
                 } else {
@@ -1345,7 +1345,7 @@ function tourOptimizer() {
                     if (r?.data?.id && !this.planner.currentScenarioId) {
                         this.planner.currentScenarioId = r.data.id;
                     }
-                    this.scenariosData.scenarios = []; 
+                    this.scenariosData.scenarios = []; // force reload on next visit
                     if (!silent) alert('Scenariul a fost salvat.');
                 } else {
                     if (!silent) alert(r?.message || 'Eroare la salvare.');
@@ -1384,7 +1384,7 @@ function tourOptimizer() {
             this.planner.endDate = s.end_date;
             this.planner.currentScenarioId = s.id;
 
-            
+            // Restore cities (fiecare cu uid nou ca să nu se ciocnească chei Alpine)
             const restoredCities = (s.cities || []).map(c => ({
                 uid: 'c' + (this.cityUidCounter++),
                 name: c.name,
@@ -1403,7 +1403,7 @@ function tourOptimizer() {
                 this.loadVenuesForCity(c.name);
             });
 
-            
+            // Restore constraints + tour_config
             const cs = s.constraints || {};
             this.planner.minDaysBetween = cs.min_days_between ?? 2;
             this.planner.includeBorder = !!cs.include_border;
@@ -1411,15 +1411,15 @@ function tourOptimizer() {
                 this.planner.config = Object.assign({}, this.planner.config, cs.tour_config);
             }
 
-            
+            // Restore optimized route + summary (din JSON-ul salvat — folosește logica veche)
             this.planner.route = s.optimized_route || [];
             this.planner.summary = s.summary || null;
             this.planner.optimized = (this.planner.route && this.planner.route.length > 0);
 
             this.setTab('planner');
 
-            
-            
+            // Re-rulăm calculul DOAR dacă scenariul folosește format vechi (lipsesc câmpurile noi).
+            // Detectăm prin absența confidence_factors / arrival_road_km — acelea apar doar de la backend nou.
             const firstStop = this.planner.route?.[0];
             const usesOldFormat = firstStop && (
                 firstStop.confidence_factors === undefined ||
@@ -1427,8 +1427,8 @@ function tourOptimizer() {
             );
             if (usesOldFormat && this.planner.cities.length >= 2) {
                 await this.optimizeRoute(true);
-                
-                
+                // După recalc cu logica nouă, persistăm summary actualizat în DB (silent),
+                // ca lista de Scenarii Salvate să afișeze cifrele corecte la următoarea vizualizare.
                 if (this.planner.optimized) {
                     await this.saveScenario({ silent: true });
                 }
@@ -1438,7 +1438,7 @@ function tourOptimizer() {
         addCity(name) {
             if (!this.planner.cities.find(c => c.name === name)) {
                 const uid = 'c' + (this.cityUidCounter++);
-                
+                // Primul oraș adăugat are by default from_start=true (pleacă din home base)
                 const isFirst = this.planner.cities.length === 0;
                 this.planner.cities.push({ uid, name, fixed: false, date: '', venue_id: null, from_start: isFirst });
                 this.loadVenuesForCity(name);
@@ -1474,15 +1474,15 @@ function tourOptimizer() {
         },
 
         markDirty() {
-            
-            
+            // Marks state as needing recalc; only relevant if route was already optimized.
+            // Auto-recalc: declanșăm un debounce → backend re-rulează automat după 1s de liniște.
             if (this.planner.optimized) {
                 this.planner.dirty = true;
                 this.scheduleAutoRecalc();
             }
         },
 
-        
+        // Inline edit handlers for itinerary
         updateStopDate(idx, value) {
             if (!this.planner.route?.[idx]) return;
             this.planner.route[idx].date_iso = value;
@@ -1550,7 +1550,7 @@ function tourOptimizer() {
             if (!stop) return;
             stop.extra_cost_description = value || null;
             this._syncCitiesFromRoute();
-            
+            // NU markDirty pe descriere — text inutil să recalculeze
         },
 
         _syncCitiesFromRoute() {
@@ -1570,12 +1570,12 @@ function tourOptimizer() {
 
         async recalcRoute() {
             this._syncCitiesFromRoute();
-            
+            // Recalcul după drag/edit — păstrăm ordinea curentă, recomputăm doar costurile/predicțiile
             await this.optimizeRoute(true);
         },
 
-        
-        
+        // Auto-recalc cu debounce: orice modificare relevantă invocă asta. Backend recompute după 1s
+        // de inactivitate. Pe rapid-typing, doar ultima cerere pleacă.
         _autoRecalcTimer: null,
         scheduleAutoRecalc() {
             if (!this.planner.optimized) return;
@@ -1609,8 +1609,8 @@ function tourOptimizer() {
             this.setupDatepickers();
         },
 
-        
-        
+        // Init flatpickr pe toate input[type=date] din planner — afișează DD/MM/YYYY (locale ro)
+        // dar trimite Y-m-d către backend (compatibil cu logica de date_iso existentă).
         setupDatepickers() {
             if (typeof flatpickr === 'undefined') return;
             const inputs = document.querySelectorAll('main input[type="date"]:not([data-fp-init])');
@@ -1798,7 +1798,7 @@ function tourOptimizer() {
             return lines.join('\n');
         },
 
-        
+        // Formule explicative pentru tooltip-urile cost cards
         fuelFormulaText(stop) {
             const cfg = this.planner.config;
             const totalConsumption = (cfg.vehicles || []).reduce((s, v) => s + (v.count * v.consumption_l_100km), 0);
@@ -1896,51 +1896,3 @@ function tourOptimizer() {
 $scriptsExtra = '<script defer src="' . asset('assets/js/pages/artist-cont-shared.js') . '"></script>';
 require_once dirname(__DIR__, 3) . '/includes/scripts.php';
 ?>
-                                                                  <?php
-/**
- * Extended Artist — Fan CRM (Modulul 1)
- *
- * Audience analytics dashboard cu 8 tab-uri: Overview, Hartă, Segmente,
- * Listă fani, Cohort, Demografie, Comparații, VIP.
- *
- * State: Alpine.js. Charts: Chart.js. Map: Leaflet + leaflet-heat.
- * API: /api/proxy.php?action=artist.fan-crm.*
- */
-require_once dirname(__DIR__, 3) . '/includes/config.php';
-
-$pageTitle = 'Premium — Fan CRM';
-$bodyClass = 'min-h-screen bg-surface font-sans';
-$cssBundle = 'account';
-require_once dirname(__DIR__, 3) . '/includes/head.php';
-?>
-
-<style>
-    .fc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; transition: all 0.15s; cursor: pointer; border: none; }
-    .fc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .fc-btn-primary { background: #A51C30; color: white; }
-    .fc-btn-primary:hover:not(:disabled) { background: #8B1728; }
-    .fc-btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
-    .fc-btn-secondary:hover:not(:disabled) { background: #F8FAFC; }
-    .fc-btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
-    .fc-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.875rem; background: white; }
-    .fc-input:focus { outline: none; border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
-    .fc-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-    .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
-    #fanMap { width: 100%; height: 480px; border-radius: 1rem; }
-    .cohort-cell { padding: 0.5rem; text-align: center; font-size: 0.75rem; min-width: 60px; }
-</style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-<?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
-
-<main class="min-h-screen pt-16 lg:ml-64 lg:pt-0" x-data="fanCrm()" x-init="init()" x-cloak>
-    <div class="p-4 lg:p-8">
-
-        <!-- Page Header -->
-        <div class="mb-6">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="pro-ba

@@ -209,8 +209,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
     }
 
-    
-    
+    // Cache pentru breakdown metoda plata (folosit sa populeze cardurile Cash/Card/Online
+    // cu revenue + procent). Nu mai afisam bara distincta - sectiunea dreapta a fost stearsa.
     let lastPaymentMethods = [];
     function applyPaymentMethodsToCards(rows) {
         lastPaymentMethods = rows || [];
@@ -229,7 +229,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-stat-online-pct').textContent = pct(byMethod.online) + '%';
     }
 
-    
+    // Breakdown per tip bilet (nume + count + venit + procent din total)
     function renderTicketTypes(rows) {
         const wrap = $('lv-ticket-types');
         if (!rows || !rows.length) {
@@ -255,10 +255,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
     }
 
-    
-    
-    
-    
+    // Populeaza cardul "Pe categorie" din top-row cu by_category din timeline
+    // (include categoria 'package' ca entitate distincta - mai clar decat suma
+    // componentelor emise de summary). Include procent din total in dreptul fiecarei
+    // categorii. Actualizat la fiecare loadTimeline.
     function renderCategoryBreakdown(byCat) {
         const wrap = $('lv-cat-breakdown');
         const entries = Object.entries(byCat || {}).filter(([, n]) => Number(n) > 0);
@@ -278,7 +278,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function setRange(days) {
         currentDays = days;
-        
+        // Fix bg-white conflict: elimin bg-white cand adaug bg-primary + repopulez la deselect
         document.querySelectorAll('.lv-range-btn').forEach(b => {
             b.classList.remove('bg-primary', 'text-white', 'border-primary');
             b.classList.add('bg-white');
@@ -291,19 +291,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const from = new Date(Date.now() - parseInt(days, 10) * 86400000);
         currentFrom = from.toISOString().slice(0, 10);
         currentTo = to.toISOString().slice(0, 10);
-        
+        // Sync inputs date pentru vizibilitate + ca export CSV sa functioneze cu presetul curent
         const dfEl = $('lv-date-from'); if (dfEl) dfEl.value = currentFrom;
         const dtEl = $('lv-date-to');   if (dtEl) dtEl.value = currentTo;
         loadTimeline();
     }
 
-    
+    // Interval custom: iau valorile din inputs, valideaza, aplica.
     function applyCustomRange() {
         const df = $('lv-date-from').value;
         const dt = $('lv-date-to').value;
         if (!df || !dt) { alert('Selectează ambele date (de la / până la).'); return; }
         if (df > dt) { alert('„De la" trebuie să fie înainte de „Până la".'); return; }
-        
+        // Deselecteaza toate presetele - suntem in custom
         document.querySelectorAll('.lv-range-btn').forEach(b => {
             b.classList.remove('bg-primary', 'text-white', 'border-primary');
             b.classList.add('bg-white');
@@ -316,8 +316,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         loadTimeline();
     }
 
-    
-    
+    // Descarca CSV cu vanzarile din intervalul curent (currentFrom - currentTo).
+    // Foloseste AmBiletAPI cu Authorization header (endpointul e proteged).
     async function exportCsv() {
         if (!currentEventId) { alert('Nu e configurat evenimentul.'); return; }
         if (!currentFrom || !currentTo) { alert('Selectează perioada înainte de export.'); return; }
@@ -347,11 +347,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
-    
-    
-    
-    
-    
+    // Skeleton state pt schimbari de perioada. Aplic:
+    //  1. Overlay spinner peste chart + 3 carduri breakdown
+    //  2. Skeleton gri animat in locul valorilor din cardurile de sus (nu doar opacity)
+    // setLoading(false) e apelat DUPA ce AMBELE (loadTimeline + loadSummary) termina,
+    // altfel cifrele revin la valorile vechi inainte de update -> flicker perceput.
     const LOADING_TARGETS = ['lv-chart', 'lv-ticket-types'];
     const STAT_TARGETS = ['lv-stat-total', 'lv-rev-online', 'lv-rev-pos', 'lv-stat-comm', 'lv-comm-online', 'lv-comm-pos',
         'lv-stat-net', 'lv-net-online', 'lv-net-pos', 'lv-stat-orders', 'lv-stat-avg',
@@ -379,7 +379,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (overlay) overlay.remove();
             }
         });
-        
+        // Skeleton bare gri animate in loc de valori numerice (mai clar decat opacity)
         STAT_TARGETS.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -387,9 +387,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (!_skeletonBackup.has(id)) _skeletonBackup.set(id, el.innerHTML);
                 el.innerHTML = '<span class="inline-block h-4 w-16 rounded bg-slate-200 animate-pulse align-middle"></span>';
             } else {
-                
-                
-                
+                // NU restauram din backup - noile valori sunt scrise de loadSummary()
+                // dupa ce setLoading(false) e apelat, iar backup-ul e sters ca sa nu
+                // ramana asociat cu next cycle.
                 _skeletonBackup.delete(id);
             }
         });
@@ -403,9 +403,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
         setLoading(true);
-        
-        
-        
+        // Paralel: timeline + summary. setLoading(false) doar dupa ce ambele termina,
+        // altfel cifrele stat (lv-stat-*) revin la valorile vechi inainte ca loadSummary
+        // sa apuce sa scrie cele noi -> user percepe reset la valorile vechi + flicker.
         const p1 = (async () => {
             try {
                 const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/sales-timeline`, {
@@ -428,8 +428,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try { await Promise.all([p1, p2]); } finally { setLoading(false); }
     }
 
-    
-    
+    // Populare carduri Total/Comision/Net (cu split online-POS) + comenzi/cos/bilete
+    // + cash/card POS + sesiuni operatori. Endpoint dedicat sales-summary.
     async function loadSummary() {
         if (!currentEventId || !currentFrom || !currentTo) return;
         try {
@@ -437,7 +437,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 from: currentFrom, to: currentTo,
             });
             const d = res.data || {}; const t = d.totals || {};
-            
+            // Row 1: Total vandut / Comision / Net (cu split online + POS)
             $('lv-stat-total').textContent = fmtMoney(t.revenue_total);
             $('lv-rev-online').textContent = fmtMoney(t.revenue_online) + ' RON';
             $('lv-rev-pos').textContent    = fmtMoney(t.revenue_pos) + ' RON';
@@ -447,50 +447,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-stat-net').textContent   = fmtMoney(t.net_total);
             $('lv-net-online').textContent = fmtMoney(t.net_online) + ' RON';
             $('lv-net-pos').textContent    = fmtMoney(t.net_pos) + ' RON';
-            
+            // Row 2: Comenzi / Cos mediu / Bilete / Categorii
             $('lv-stat-orders').textContent = t.orders || 0;
             $('lv-stat-avg').textContent = fmtMoney(t.avg_order);
             $('lv-stat-tickets-physical').textContent = t.tickets_physical || 0;
-            $('lv-stat-tickets-transactions').textContent = t.tickets_transactions || 0;
-            
-            
-            
-            
-            const sessions = Array.isArray(d.sessions) ? d.sessions : [];
-            $('lv-sessions-count').textContent = sessions.length;
-            
-        } catch (e) {
-            console.warn('[leisure-sales] summary failed', e);
-        }
-    }
-
-    window.addEventListener('load', async () => {
-        let retries = 0;
-        while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
-        if (typeof AmbiletAPI === 'undefined' || typeof Chart === 'undefined') {
-            $('lv-error').textContent = 'Resurse JS indisponibile — reîncarcă pagina.';
-            $('lv-error').classList.remove('hidden');
-            return;
-        }
-        try {
-            const res = await AmbiletAPI.get('/organizer/events');
-            const events = res.data || [];
-            const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
-            if (leisure.length > 0) currentEventId = leisure[0].id;
-        } catch (e) { console.error(e); }
-
-        document.querySelectorAll('.lv-range-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
-        $('lv-groupby').addEventListener('change', (e) => { currentGroupBy = e.target.value; loadTimeline(); });
-        $('lv-apply-custom')?.addEventListener('click', applyCustomRange);
-        $('lv-export-csv')?.addEventListener('click', exportCsv);
-        setRange('7');
-    });
-})();
-</script>
-<?php
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                                                                                                                                                                                                                                                                                                                             hysical').textContent = t.tickets_physical || 0;
             $('lv-stat-tickets-transactions').textContent = t.tickets_transactions || 0;
             // NOTE: lv-cat-breakdown si lv-stat-cash / lv-stat-card / lv-stat-online
             // sunt populate de loadTimeline (renderCategoryBreakdown / applyPaymentMethodsToCards)

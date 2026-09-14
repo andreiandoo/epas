@@ -1,6 +1,6 @@
     <!-- Core Scripts -->
     <script>
-        
+        // Public config only - sensitive data kept server-side
         window.AMBILET = {
             apiUrl: '/api/proxy.php',
             siteName: '<?= SITE_NAME ?>',
@@ -12,9 +12,9 @@
             cartoKey: '<?= defined('CARTO_API_KEY') ? CARTO_API_KEY : '' ?>'
         };
 
-        
-        
-        
+        // Leaflet tile layer. CARTO basemaps need an API key (keyless tiles
+        // get an "API KEY REQUIRED" watermark) — without one we fall back to
+        // OpenStreetMap. style: 'rastertiles/voyager' | 'light_all' | 'dark_all'.
         window.AmbiletTileLayer = function (style) {
             const key = (window.AMBILET && window.AMBILET.cartoKey) || '';
             const osm = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -27,9 +27,9 @@
                 attribution: '&copy; OpenStreetMap, &copy; CARTO',
                 maxZoom: 20,
             });
-            
-            
-            
+            // CARTO answers 403 to a key it doesn't accept (inactive, or the
+            // domain isn't allowed). Swap to OSM on the first tile error so a
+            // rejected key can never leave a blank map.
             let swapped = false;
             layer.on('tileerror', function () {
                 if (swapped) return;
@@ -42,7 +42,7 @@
             return layer;
         };
 
-        
+        // Flatpickr — calendar custom DD/MM/YYYY pe orice <input type="date">
         (function () {
             if (document.getElementById('ambilet-flatpickr-css')) return;
             const css = document.createElement('link');
@@ -73,8 +73,8 @@
                         allowInput: true,
                     });
                 });
-                
-                
+                // <input data-datetime> → DD/MM/YYYY HH:MM (24h). The submitted
+                // value stays "Y-m-dTH:i", same as a datetime-local input.
                 document.querySelectorAll('input[data-datetime]:not(.fp-bound)').forEach((el) => {
                     el.classList.add('fp-bound');
                     flatpickr(el, {
@@ -89,42 +89,42 @@
                 });
             };
             apply();
-            
+            // Observer pentru elemente noi adăugate dinamic (modale, repeatere)
             const obs = new MutationObserver(() => apply());
             obs.observe(document.body, { childList: true, subtree: true });
         }
 
-        
+        // Helpers globale pentru formatare data DD/MM/YYYY (locale ro)
         window.AmbiletFmt = {
             _pad: (n) => String(n).padStart(2, '0'),
-            
+            // "2026-05-12" or ISO → "12/05/2026"
             date: function (input) {
                 if (!input) return '';
                 let d;
                 if (input instanceof Date) d = input;
                 else if (typeof input === 'string') {
-                    
+                    // YYYY-MM-DD plain date → parse local
                     if (/^\d{4}-\d{2}-\d{2}$/.test(input)) d = new Date(input + 'T00:00:00');
                     else d = new Date(input);
                 } else d = new Date(input);
                 if (isNaN(d)) return '';
                 return this._pad(d.getDate()) + '/' + this._pad(d.getMonth() + 1) + '/' + d.getFullYear();
             },
-            
+            // ISO datetime → "12/05/2026 14:30"
             datetime: function (input) {
                 if (!input) return '';
                 const d = input instanceof Date ? input : new Date(input);
                 if (isNaN(d)) return '';
                 return this.date(d) + ' ' + this._pad(d.getHours()) + ':' + this._pad(d.getMinutes());
             },
-            
+            // ISO time → "14:30"
             time: function (input) {
                 if (!input) return '';
                 const d = input instanceof Date ? input : new Date(input);
                 if (isNaN(d)) return '';
                 return this._pad(d.getHours()) + ':' + this._pad(d.getMinutes());
             },
-            
+            // "12 mai 2026"
             longDate: function (input) {
                 if (!input) return '';
                 const d = input instanceof Date ? input : new Date(typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input) ? (input + 'T00:00:00') : input);
@@ -201,30 +201,10 @@
             autoTrackClicks: true
         });
         <?php if (!empty($trackingMarketplaceEventId)): ?>
-        
-        
-        
-        
-        try {
-            setTimeout(function () {
-                if (window.EPASTracking && typeof EPASTracking.trackViewItem === 'function') {
-                    EPASTracking.trackViewItem(
-                        <?= (int) $trackingMarketplaceEventId ?>,
-                        <?= json_encode($trackingMarketplaceEventName ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
-                    );
-                }
-            }, 50);
-        } catch (e) {}
-        <?php endif; ?>
-    });
-    </script>
-    <?php endif; ?>
-
-    <!-- Tracking Scripts (body) -->
-    <?php if (!empty($trackingBodyScripts)) echo $trackingBodyScripts . "\n"; ?>
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+        // ViewContent — fires after PageView on event detail pages, signals
+        // a more specific funnel step to Meta (a user actually viewed an
+        // event's detail page, not just any random page). Wrapped in a
+        // small delay so it lands right after the auto trackPageView.
         try {
             setTimeout(function () {
                 if (window.EPASTracking && typeof EPASTracking.trackViewItem === 'function') {

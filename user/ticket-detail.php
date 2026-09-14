@@ -228,7 +228,7 @@ const TicketDetailPage = {
             }
         } catch (error) {
             console.error('Error loading ticket:', error);
-            
+            // Demo data for testing
             this.renderTicket({
                 id: this.ticketId,
                 code: 'AMB-GC-2024-00847-01',
@@ -268,13 +268,13 @@ const TicketDetailPage = {
         document.getElementById('purchase-date').textContent = ticket.purchase_date;
         document.getElementById('ticket-index').textContent = ticket.ticket_index;
 
-        
+        // Attendee
         const initials = ticket.attendee_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '--';
         document.getElementById('attendee-avatar').textContent = initials;
         document.getElementById('attendee-name').textContent = ticket.attendee_name;
         document.getElementById('attendee-email').textContent = ticket.attendee_email;
 
-        
+        // Transfer status
         if (!ticket.transferable) {
             const transferStatus = document.getElementById('transfer-status');
             transferStatus.textContent = 'Nu este transferabil';
@@ -283,10 +283,10 @@ const TicketDetailPage = {
             document.getElementById('transfer-section').querySelector('button').classList.add('opacity-50', 'cursor-not-allowed');
         }
 
-        
-        
-        
-        
+        // Online-event mode: swap the QR sidebar for a big "Alătură-te
+        // online" panel. Enabled ONLY when the backend flags is_online.
+        // For physical events the panel stays hidden + QR stays visible
+        // (regression-safe default).
         const online = ticket.event && ticket.event.online;
         if (online && online.is_online) {
             const joinSection = document.getElementById('online-join-section');
@@ -306,10 +306,10 @@ const TicketDetailPage = {
             }
             if (joinBtn && online.join_url) {
                 joinBtn.href = online.join_url;
-                
-                
-                
-                
+                // For events that aren't joinable yet, we still show the
+                // button but change the label — clicking still lands on
+                // /join/{code} which will render the "too early" state
+                // with a countdown.
                 if (!online.is_joinable_now) {
                     joinBtn.querySelector('span').textContent = 'Deschide pagina de acces';
                 }
@@ -324,8 +324,8 @@ const TicketDetailPage = {
                 }
             }
 
-            
-            
+            // Print/download PDF for online events would produce an empty
+            // QR page — swap the CTAs to focus on the join button too.
             const importantNotice = document.querySelector('.notice-box, [class*="bg-yellow-50"]');
             if (importantNotice) {
                 const noticeP = importantNotice.querySelector('p');
@@ -345,24 +345,6 @@ const TicketDetailPage = {
     },
 
     transferTicket() {
-        AmbiletNotifications.info('Functie in dezvoltare. Vei putea transfera biletul in curand.');
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => TicketDetailPage.init());
-</script>
-
-<style>
-@media print {
-    .btn, .notice-box, #transfer-section, header, footer, nav, .back-link { display: none !important; }
-    body { background: white !important; }
-    #ticket-card { box-shadow: none !important; border: 2px solid #E2E8F0 !important; }
-}
-</style>
-JS;
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                     transferTicket() {
         AmbiletNotifications.info('Functie in dezvoltare. Vei putea transfera biletul in curand.');
     }
 };

@@ -222,18 +222,18 @@ $scriptsExtra = <<<'JS'
     let currentMode = 'manual';
     let parsedCsvRecipients = null;
 
-    
-    
-    
-    
-    
+    // Seat-mode state: populated once the organizer loads a seated event.
+    // `seatingData` holds the layout payload; `selectedSeats` is the ordered
+    // list of seats the organizer picked in the modal (array of objects with
+    // seat_uid / section_name / row_label / seat_label). When non-empty it
+    // replaces the manual quantity input and drives recipient row count.
     let isSeated = false;
     let seatingData = null;
     let selectedSeats = [];
 
-    
-    
-    
+    // Pan/zoom state for the seat modal. The transform is applied to
+    // #seat-modal-map (transform-origin:0 0), so changing mapPan/mapZoom
+    // and calling applyMapTransform() updates the view.
     const mapView = {
         zoom: 1,
         pan: { x: 0, y: 0 },
@@ -271,9 +271,9 @@ $scriptsExtra = <<<'JS'
         $('history-section').classList.remove('hidden');
         await loadHistory();
 
-        
-        
-        
+        // Seated vs. non-seated UX: when the event has a seating layout we
+        // replace step 1 with a seat picker. Otherwise the legacy quantity
+        // input flow stays intact.
         if (isSeated) {
             $('step-seats').classList.remove('hidden');
             $('open-seat-picker').addEventListener('click', openSeatModal);
@@ -320,9 +320,9 @@ $scriptsExtra = <<<'JS'
         }
     }
 
-    
-    
-    
+    // ===================================================================
+    // Seat picker (seated events only)
+    // ===================================================================
 
     async function openSeatModal() {
         $('seat-modal').classList.remove('hidden');
@@ -336,8 +336,8 @@ $scriptsExtra = <<<'JS'
                 if (!res || !res.success) throw new Error((res && res.message) || 'Nu pot încărca harta');
                 seatingData = res.data;
             }
-            
-            
+            // Make the map visible before rendering so getBoundingClientRect
+            // returns real dimensions for the fit-to-screen calculation.
             $('seat-modal-loading').classList.add('hidden');
             $('seat-modal-map').classList.remove('hidden');
             renderSeatModal();
@@ -355,7 +355,7 @@ $scriptsExtra = <<<'JS'
     function clearAllSeats() {
         selectedSeats = [];
         updateSeatModalCount();
-        
+        // Repaint each seat circle to clear the "selected" style
         document.querySelectorAll('#seat-modal-map [data-seat-uid]').forEach((el) => paintSeat(el));
     }
 
@@ -373,8 +373,8 @@ $scriptsExtra = <<<'JS'
         if (selectedSeats.length === 0) return;
         $('step-seats').classList.add('hidden');
         $('step-recipients').classList.remove('hidden');
-        
-        
+        // Seated mode: each row is pinned to a specific seat, so CSV import
+        // doesn't make sense (can't line up N rows from CSV with N picked seats)
         $('mode-switcher').classList.add('hidden');
         $('mode-switcher').classList.remove('inline-flex');
         setMode('manual');
@@ -410,8 +410,8 @@ $scriptsExtra = <<<'JS'
         const canvasW = (data.canvas && data.canvas.width) || 1000;
         const canvasH = (data.canvas && data.canvas.height) || 800;
 
-        
-        
+        // Render at intrinsic canvas pixel size; #seat-modal-map scales via
+        // CSS transform (applyMapTransform). This way 1:1 == 100% zoom.
         let svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" width="' + canvasW + '" height="' + canvasH + '" xmlns="http://www.w3.org/2000/svg" style="display:block;">';
 
         data.sections.forEach(function (section) {
@@ -422,17 +422,17 @@ $scriptsExtra = <<<'JS'
 
             svg += '<g' + transform + '>';
 
-            
-            
+            // Icon sections (stage, exit, toilet, bar, etc.) — same rendering
+            // as the customer map so the organizer sees venue orientation cues.
             if (section.section_type === 'icon') {
                 svg += renderIconSection(section);
                 svg += '</g>';
                 return;
             }
 
-            
-            
-            
+            // Decorative sections (text labels, lines, polygons) — shapes the
+            // designer added to outline stage/aisles/areas. Label-only so no
+            // seat click logic.
             if (section.section_type === 'decorative') {
                 svg += renderDecorativeSection(section);
                 svg += '</g>';
@@ -449,9 +449,9 @@ $scriptsExtra = <<<'JS'
             const seatRadius = seatSize / 2;
             const seatFontSize = Math.round(seatRadius * 0.85 * 10) / 10;
 
-            
-            
-            
+            // Row labels: align to section-wide leftmost/rightmost seat columns
+            // (same approach the customer map uses — placed just outside the
+            // first/last seat of each row). Skipped when section opts out.
             const allSeatXs = [];
             let seatGap = seatRadius * 3;
             let gapDetected = false;
@@ -474,7 +474,7 @@ $scriptsExtra = <<<'JS'
             section.rows.forEach(function (row) {
                 if (!row.seats || row.seats.length === 0) return;
 
-                
+                // Row labels at both ends (matches the customer map)
                 if (autoShowRowLabels) {
                     const firstSeat = row.seats[0];
                     if (firstSeat) {
@@ -491,20 +491,20 @@ $scriptsExtra = <<<'JS'
                     const cy2 = (section.y || 0) + (seat.y || 0);
                     const uid = seat.seat_uid;
                     const status = seat.status || 'available';
-                    
-                    
+                    // blocked/disabled are hard-unavailable (blocked from admin
+                    // or physically impossible seats) — rendered light-gray + X.
                     const isBlocked = (status === 'blocked' || status === 'disabled');
 
-                    
-                    
+                    // Tooltip mirrors the customer map: section·row·seat, plus the
+                    // ticket type on selectable seats and the reason on the rest.
                     let tip = esc(section.name || '') + ' · Rând ' + esc(row.label || '') + ' · Loc ' + esc(seat.label || '');
                     if (isBlocked) tip += ' — indisponibil';
                     else if (status === 'sold') tip += ' — vândut';
                     else if (status === 'held') tip += ' — rezervat';
                     else if (seat.ticket_type_name) tip += ' · ' + esc(seat.ticket_type_name);
 
-                    
-                    
+                    // data-color carries the ticket-type color so paintSeat() can
+                    // fill available seats exactly like the admin/public map.
                     svg += '<circle data-seat-uid="' + esc(uid) + '"'
                         + ' data-section="' + esc(section.name || '') + '"'
                         + ' data-row="' + esc(row.label || '') + '"'
@@ -516,13 +516,13 @@ $scriptsExtra = <<<'JS'
                         + '<title>' + tip + '</title>'
                         + '</circle>';
 
-                    
-                    
+                    // Seat number inside the circle for everything except
+                    // blocked/disabled (which get the X mark below instead).
                     if (!isBlocked && seat.label) {
                         svg += '<text x="' + cx2 + '" y="' + (cy2 + seatRadius * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + esc(seat.label) + '</text>';
                     }
 
-                    
+                    // X mark on blocked / physically-impossible seats.
                     if (isBlocked) {
                         svg += '<line x1="' + (cx2 - xOff) + '" y1="' + (cy2 - xOff) + '" x2="' + (cx2 + xOff) + '" y2="' + (cy2 + xOff) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round" class="pointer-events-none"/>'
                             + '<line x1="' + (cx2 + xOff) + '" y1="' + (cy2 - xOff) + '" x2="' + (cx2 - xOff) + '" y2="' + (cy2 + xOff) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round" class="pointer-events-none"/>';
@@ -536,14 +536,14 @@ $scriptsExtra = <<<'JS'
         svg += '</svg>';
         host.innerHTML = svg;
 
-        
+        // Paint initial state + wire click handlers
         host.querySelectorAll('[data-seat-uid]').forEach((el) => {
             paintSeat(el);
             el.addEventListener('click', onSeatClick);
         });
 
-        
-        
+        // Ticket-type legend — one color chip per ticket type, so the organizer
+        // reads the same color→category mapping shown on the admin/public map.
         const ttLegend = $('seat-modal-tt-legend');
         if (ttLegend) {
             const tts = data.ticket_types || [];
@@ -554,13 +554,13 @@ $scriptsExtra = <<<'JS'
             }).join('');
         }
 
-        
-        
-        
+        // Fit the map to the visible modal area on first open; subsequent
+        // opens preserve the previous zoom/pan so organizers don't lose
+        // their viewport when deselecting/closing.
         fitMapToScreen();
     }
 
-    
+    // ====== Pan / zoom (desktop drag + wheel, mobile pinch + drag) =====
 
     function applyMapTransform() {
         const host = $('seat-modal-map');
@@ -597,7 +597,7 @@ $scriptsExtra = <<<'JS'
         const oldZoom = mapView.zoom;
         const newZoom = Math.max(mapView.min, Math.min(mapView.max, oldZoom + delta));
         if (newZoom === oldZoom) return;
-        
+        // Keep focal point stationary: newPan = focal − (focal − oldPan) * (newZoom / oldZoom)
         const ratio = newZoom / oldZoom;
         mapView.pan.x = focalX - (focalX - mapView.pan.x) * ratio;
         mapView.pan.y = focalY - (focalY - mapView.pan.y) * ratio;
@@ -619,12 +619,12 @@ $scriptsExtra = <<<'JS'
         const host = $('seat-modal-map');
         if (!body || !host) return;
 
-        
+        // Zoom buttons
         $('seat-zoom-in').addEventListener('click', () => zoomAt(0.2));
         $('seat-zoom-out').addEventListener('click', () => zoomAt(-0.2));
         $('seat-zoom-reset').addEventListener('click', () => fitMapToScreen());
 
-        
+        // Mouse wheel — anchor at cursor
         body.addEventListener('wheel', (e) => {
             e.preventDefault();
             const r = body.getBoundingClientRect();
@@ -632,9 +632,9 @@ $scriptsExtra = <<<'JS'
             zoomAt(step, e.clientX - r.left, e.clientY - r.top);
         }, { passive: false });
 
-        
-        
-        
+        // Mouse drag pan — skip when the user actually clicked a seat.
+        // Clicks on circles are filtered via a "did the mouse move?" check:
+        // tiny movements count as clicks and leave the seat toggle intact.
         let dragging = false;
         let startX, startY, startPanX, startPanY, movedEnough;
         body.addEventListener('mousedown', (e) => {
@@ -659,13 +659,13 @@ $scriptsExtra = <<<'JS'
             dragging = false;
             host.style.cursor = 'grab';
         });
-        
-        
+        // If a drag actually happened, swallow the next click so it doesn't
+        // toggle a seat the user was only panning past.
         body.addEventListener('click', (e) => {
             if (movedEnough) { e.stopPropagation(); e.preventDefault(); movedEnough = false; }
         }, true);
 
-        
+        // Touch: single-finger pan, two-finger pinch-zoom
         let pinchStartDist = 0;
         let pinchStartZoom = 1;
         let touchDragging = false;
@@ -718,7 +718,7 @@ $scriptsExtra = <<<'JS'
             if (e.touches.length < 2) pinchStartDist = 0;
             if (e.touches.length === 0) {
                 touchDragging = false;
-                
+                // Swallow the ghost click after a pan
                 if (tMoved) {
                     const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); body.removeEventListener('click', swallow, true); };
                     body.addEventListener('click', swallow, true);
@@ -814,17 +814,17 @@ $scriptsExtra = <<<'JS'
     function paintSeat(el) {
         const status = el.getAttribute('data-status') || 'available';
         const uid = el.getAttribute('data-seat-uid');
-        
-        
+        // Ticket-type color from the API (falls back to the map's default purple
+        // for seats with no ticket type assigned, matching the admin/public map).
         const ttColor = el.getAttribute('data-color') || '#8b5cf6';
         const isSelected = selectedSeats.some((s) => s.seat_uid === uid);
 
-        
-        
-        
-        
-        
-        
+        // Same visual states as the customer/public map (event-single.js):
+        //   blocked/disabled → light gray (+ X, drawn in renderSeatModal)
+        //   sold/held        → medium gray
+        //   selected by me   → red
+        //   available        → its ticket-type color
+        // Only available seats are clickable for the organizer.
         let fill, stroke, clickable;
         if (status === 'blocked' || status === 'disabled') {
             fill = '#d1d5db';
@@ -870,9 +870,9 @@ $scriptsExtra = <<<'JS'
         updateSeatModalCount();
     }
 
-    
-    
-    
+    // ===================================================================
+    // Non-seated flow (unchanged)
+    // ===================================================================
 
     function onQuantityContinue() {
         const qty = Math.max(1, Math.min(1000, parseInt($('qty-input').value || '1', 10)));
@@ -911,7 +911,7 @@ $scriptsExtra = <<<'JS'
         for (let i = 1; i <= qty; i++) {
             const tr = document.createElement('tr');
             tr.className = 'border-b border-slate-100';
-            
+            // When seated, show a locked seat cell pinned to this row's index.
             const seatCell = isSeated && selectedSeats[i - 1]
                 ? '<td class="py-2 pr-3 text-xs text-secondary align-middle whitespace-nowrap"><span class="inline-block px-2 py-1 rounded bg-rose-50 text-rose-700 font-semibold">' + esc(seatRefFor(selectedSeats[i - 1])) + '</span></td>'
                 : (isSeated ? '<td class="py-2 pr-3 text-xs text-muted"></td>' : '');
@@ -938,9 +938,9 @@ $scriptsExtra = <<<'JS'
     }
 
     function collectManualRecipients() {
-        
-        
-        
+        // Emit one record per rendered row — all recipient fields are
+        // optional now, so rows with blank inputs become {} and still
+        // count toward the batch quantity.
         const rows = Array.from(document.querySelectorAll('#recipients-tbody tr'));
         return rows.map((row) => {
             const rec = {};
@@ -1044,9 +1044,9 @@ $scriptsExtra = <<<'JS'
             return;
         }
 
-        
-        
-        
+        // Seated events: each row is tied to a specific picked seat (same
+        // index into selectedSeats). Reject mismatches upfront so the server
+        // doesn't waste a transaction just to 422 us.
         if (isSeated) {
             if (recipients.length !== selectedSeats.length) {
                 alert('Numărul de invitați completați (' + recipients.length + ') trebuie să fie egal cu numărul de locuri alese (' + selectedSeats.length + ').');
@@ -1083,21 +1083,21 @@ $scriptsExtra = <<<'JS'
             $('download-link').onclick = (e) => { e.preventDefault(); downloadZip(batch.id); };
             $('step-recipients').classList.add('hidden');
             $('step-done').classList.remove('hidden');
-            
-            
-            
+            // Seated events: after a successful submit, the chosen seats are
+            // now sold (server confirmPurchase). Clear local state so the next
+            // batch forces a fresh map fetch.
             if (isSeated) {
                 selectedSeats = [];
                 seatingData = null;
             }
             await loadHistory();
         } catch (e) {
-            
-            
+            // Surface seat-specific conflict errors so the organizer understands
+            // which seat another buyer grabbed between the map open and submit.
             let msg = e.message || 'Eroare necunoscută';
             if (e.data && e.data.errors && e.data.errors.unavailable_seats) {
                 msg += '\n\nLocuri indisponibile: ' + e.data.errors.unavailable_seats.join(', ');
-                seatingData = null; 
+                seatingData = null; // force refresh on next open
             }
             alert('Generarea a eșuat: ' + msg);
         } finally {
@@ -1147,7 +1147,7 @@ $scriptsExtra = <<<'JS'
             document.body.appendChild(a); a.click(); a.remove();
             URL.revokeObjectURL(blobUrl);
 
-            
+            // Mark as downloaded inline (server already updated downloaded_at).
             const row = document.querySelector('[data-invite-row="' + inviteId + '"]');
             if (row && !row.querySelector('[data-downloaded-badge="' + inviteId + '"]')) {
                 const codeCell = row.querySelector('td:nth-child(' + (row.querySelectorAll('td').length - 1) + ')');
@@ -1262,91 +1262,10 @@ $scriptsExtra = <<<'JS'
                 invite_ids: [parseInt(inviteId, 10)],
             });
             if (!res || !res.success) throw new Error((res && res.message) || 'Eroare la ștergere');
-            
+            // Drop the row from the DOM; if the batch is gone, reload history
             const row = document.querySelector('[data-invite-row="' + inviteId + '"]');
             if (row) row.remove();
             if (res.data && res.data.batch_remaining === 0) {
-                
-                await loadHistory();
-            }
-        } catch (e) {
-            alert('Ștergerea a eșuat: ' + (e.message || e));
-        }
-    }
-
-    async function toggleInvites(batchId) {
-        const panel = $('invites-panel-' + batchId);
-        if (!panel) return;
-        if (!panel.classList.contains('hidden')) {
-            panel.classList.add('hidden');
-            panel.innerHTML = '';
-            return;
-        }
-        panel.classList.remove('hidden');
-        panel.innerHTML = '<p class="text-sm text-muted py-2">Se încarcă…</p>';
-        try {
-            const res = await AmbiletAPI.get('/organizer/invitations/' + batchId);
-            const invites = (res && res.data && res.data.invites) ? res.data.invites : [];
-            if (invites.length === 0) {
-                panel.innerHTML = '<p class="text-sm text-muted py-2">Fără invitați.</p>';
-                return;
-            }
-            const hasSeats = invites.some(i => i.seat_ref || (i.recipient && i.recipient.seat));
-            const rowsHtml = invites.map(i => {
-                const r = i.recipient || {};
-                const seat = r.seat || null;
-                const seatRef = i.seat_ref
-                    || (seat ? seatRefFor({ section_name: seat.section, row_label: seat.row, seat_label: seat.label, seat_uid: seat.uid }) : '');
-                const downloadedBadge = i.downloaded_at
-                    ? '<span class="inline-block px-2 py-0.5 ml-2 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded" data-downloaded-badge="' + i.id + '" title="Descărcată la ' + esc(fmtDate(i.downloaded_at)) + '">✓ ' + esc(fmtDate(i.downloaded_at)) + '</span>'
-                    : '';
-                const downloadBtn = i.has_pdf
-                    ? '<button class="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3" data-dl-invite="' + i.id + '" data-batch-id="' + batchId + '" title="Descarcă PDF-ul invitației">Descarcă</button>'
-                    : '<span class="text-xs text-muted mr-3" title="PDF indisponibil — regenerează batch-ul">PDF lipsă</span>';
-                return '<tr class="border-b border-slate-100" data-invite-row="' + i.id + '">' +
-                    '<td class="py-1.5 pr-3">' + esc(r.name || '') + '</td>' +
-                    '<td class="py-1.5 pr-3">' + esc(r.email || '') + '</td>' +
-                    (hasSeats ? '<td class="py-1.5 pr-3">' + esc(seatRef || '—') + '</td>' : '') +
-                    '<td class="py-1.5 pr-3">' + esc(r.phone || '') + '</td>' +
-                    '<td class="py-1.5 pr-3">' + esc(r.company || '') + '</td>' +
-                    '<td class="py-1.5 pr-3"><code class="text-xs">' + esc(i.code) + '</code>' + downloadedBadge + '</td>' +
-                    '<td class="py-1.5 pr-3 text-right whitespace-nowrap">' +
-                        downloadBtn +
-                        '<button class="text-red-600 hover:text-red-800 text-xs font-semibold" data-del-invite="' + i.id + '" data-batch-id="' + batchId + '" title="Șterge invitația și eliberează locul">Șterge</button>' +
-                    '</td>' +
-                '</tr>';
-            }).join('');
-            panel.innerHTML =
-                '<div class="mt-3 bg-slate-50 rounded-lg p-3 overflow-x-auto">' +
-                    '<table class="w-full text-sm">' +
-                        '<thead><tr class="text-left text-xs uppercase text-muted">' +
-                            '<th class="py-1.5 pr-3">Nume</th>' +
-                            '<th class="py-1.5 pr-3">Email</th>' +
-                            (hasSeats ? '<th class="py-1.5 pr-3">Loc</th>' : '') +
-                            '<th class="py-1.5 pr-3">Telefon</th>' +
-                            '<th class="py-1.5 pr-3">Companie</th>' +
-                            '<th class="py-1.5 pr-3">Cod</th>' +
-                            '<th class="py-1.5 pr-3 text-right">Acțiuni</th>' +
-                        '</tr></thead>' +
-                        '<tbody>' + rowsHtml + '</tbody>' +
-                    '</table>' +
-                '</div>';
-            panel.querySelectorAll('[data-del-invite]').forEach(btn => {
-                btn.addEventListener('click', () => onDeleteInvite(btn.dataset.batchId, btn.dataset.delInvite));
-            });
-            panel.querySelectorAll('[data-dl-invite]').forEach(btn => {
-                btn.addEventListener('click', () => downloadInvite(btn.dataset.batchId, btn.dataset.dlInvite, btn));
-            });
-        } catch (e) {
-            panel.innerHTML = '<p class="text-sm text-red-600 py-2">Nu pot încărca invitații: ' + esc(e.message) + '</p>';
-        }
-    }
-})();
-</script>
-JS;
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                                             a && res.data.batch_remaining === 0) {
                 // Batch was deleted server-side — refresh the history list
                 await loadHistory();
             }

@@ -284,28 +284,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     const $ = (id) => document.getElementById(id);
     let currentEventId = null;
     let types = [];
-    let cart = {}; 
+    let cart = {}; // { key (tid sau tid|variantId): {qty, price, name, category, ticket_type_id, variant} }
     let payment = 'cash';
-    let posLocale = 'ro'; 
+    let posLocale = 'ro'; // default RO; staff il schimba pentru turisti HU/EN
     let commission = { rate: 0, fixed: 0, mode: 'included' };
-    
-    
+    // C2: categoriile custom de afișare definite în /organizator/leisure tab Produse.
+    // Folosite pentru gruparea + ordonarea produselor în panoul POS.
     let ticketCategories = [];
-    
-    
+    // Issuers organizator (primary + secondary daca exista) — incarcati din /leisure/config.
+    // Folositi de PosPrinter ca header pe biletele termice.
     let posIssuerPrimary = null;
     let posIssuerSecondary = null;
-    
-    
-    
+    // State A1: ultima comanda finalizata cu succes (pentru reprint din panou).
+    // Stocata in memorie (volatile la refresh). Pastram doar campurile necesare
+    // print-ului — fara date sensibile customer/billing.
     let lastSaleSnapshot = null;
-    
+    // Interval polling status imprimanta (paper-out)
     let printerStatusTimer = null;
-    
+    // Stare deschis/închis pentru accordions (per categorie id). Default: toate deschise.
     let categoryAccordionState = {};
 
-    
-    
+    // Helper: extrage numele categoriei in functie de tip (string sau {ro,hu,en}).
+    // POS staff foloseste posLocale ales din UI (default RO).
     function categoryName(cat) {
         if (!cat) return '';
         if (typeof cat.name === 'string') return cat.name;
@@ -334,13 +334,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const color = CAT_COLOR[cat] || 'slate';
             const variants = Array.isArray(t.variants) ? t.variants : [];
             const hasVariants = variants.length > 0;
-            
+            // F9: pos_price are prioritate față de price online (pentru POS la fața locului)
             const basePrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '')
                 ? Number(t.pos_price)
                 : Number(t.price_max ?? t.price ?? 0);
 
             if (hasVariants) {
-                
+                // Card cu butoane separate per variantă
                 const varBtns = variants.map(v => {
                     const key = cartKey(t.id, v.id);
                     const qty = (cart[key]?.qty || 0);
@@ -362,7 +362,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>`;
             }
 
-            
+            // Card simplu fără variante
             const inCart = (cart[t.id]?.qty || 0);
             return `<button data-tt="${t.id}" data-price="${basePrice}" data-name="${(t.name || '').replace(/"/g,'&quot;')}" data-cat="${cat}"
                 class="lv-tt-btn relative p-4 border-2 border-border hover:border-${color}-400 rounded-xl text-left transition-colors group">
@@ -2349,30 +2349,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     name: it.name,
                     qty: it.qty,
                     unit_price: it.unit_price,
-                    total: it.line_total,
-                })),
-                total: total,
-                currency: order.currency || 'RON',
-                // TVA se propaga din issuer (backend expune vat_payer + vat_rate pe getIssuerData).
-                // Pos-printer.js afiseaza randul 'TVA (X%): valoare' chiar cand 0 (regulatie fiscala).
-                vat_payer: !!(issuer && issuer.vat_payer),
-                vat_rate: parseFloat((issuer && issuer.vat_rate) || 0),
-                // Bottom note cand am sarit produse SC2 (ca operatorul sa stie ca
-                // exista bilete printate care nu apar pe factura)
-                footer_note: skipped > 0
-                    ? 'Produsele de pe societatea secundara nu sunt facturate aici (' + skipped + ' produse separate)'
-                    : null,
-            });
-        } catch (e) {
-            console.warn('[invoice-print] failed:', e);
-        }
-    };
-})();
-</script>
-<?php
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                      t_price: it.unit_price,
                     total: it.line_total,
                 })),
                 total: total,

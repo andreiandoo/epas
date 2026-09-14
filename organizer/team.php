@@ -464,23 +464,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
 
 <script>
-
-
-
+/**
+ * Team Management Module
+ */
 const TeamManager = {
     members: [],
     currentOrganizer: null,
 
-    
-
-
+    /**
+     * Initialize the team manager
+     */
     async init() {
-        
+        // Setup role change handlers
         document.querySelector('select[name="role"]').addEventListener('change', this.handleRoleChange.bind(this));
         document.querySelector('#edit-role').addEventListener('change', this.handleEditRoleChange.bind(this));
 
-        
-        
+        // Cand user selecteaza leisure_role=kiosk_selfcheckin: auto-Staff + uncheck send-email
+        // (contul e tehnic; parola se comunica direct tabletei, nu prin email).
         const leisureSel = document.querySelector('select[name="leisure_role"]');
         if (leisureSel) {
             leisureSel.addEventListener('change', (e) => {
@@ -495,7 +495,7 @@ const TeamManager = {
             });
         }
 
-        
+        // Detect daca organizatorul are evenimente leisure → arata leisure_role dropdown
         try {
             const ev = await AmbiletAPI.get('/organizer/events');
             const events = ev.data || ev || [];
@@ -504,15 +504,15 @@ const TeamManager = {
                 document.getElementById('leisure-role-section').classList.remove('hidden');
                 document.getElementById('edit-leisure-role-section').classList.remove('hidden');
             }
-        } catch (e) {  }
+        } catch (e) { /* ignore — show defaults */ }
 
-        
+        // Load team data
         await this.loadTeam();
     },
 
-    
-
-
+    /**
+     * Load team members
+     */
     async loadTeam() {
         try {
             const response = await AmbiletAPI.request('/organizer/team');
@@ -530,9 +530,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Render team table
+     */
     renderTeam() {
         const tbody = document.getElementById('team-table-body');
         const emptyState = document.getElementById('empty-state');
@@ -547,9 +547,9 @@ const TeamManager = {
         tbody.innerHTML = this.members.map(member => this.renderMemberRow(member)).join('');
     },
 
-    
-
-
+    /**
+     * Render a single member row
+     */
     renderMemberRow(member) {
         const initials = this.getInitials(member.name);
         const avatarClass = this.getAvatarClass(member.role);
@@ -592,9 +592,9 @@ const TeamManager = {
         `;
     },
 
-    
-
-
+    /**
+     * Render member actions
+     */
     renderActions(member, isCurrentUser, isOwner) {
         if (isCurrentUser) {
             return '<span class="text-xs text-muted">Tu</span>';
@@ -629,9 +629,9 @@ const TeamManager = {
         `;
     },
 
-    
-
-
+    /**
+     * Render permissions tags
+     */
     renderPermissions(member) {
         if (member.role === 'owner') {
             return '<span class="px-2 py-1 text-xs font-medium rounded bg-red-50 text-red-700">Acces complet</span>';
@@ -655,9 +655,9 @@ const TeamManager = {
         </div>`;
     },
 
-    
-
-
+    /**
+     * Update stats
+     */
     updateStats() {
         const total = this.members.length;
         const active = this.members.filter(m => m.status === 'active').length;
@@ -669,7 +669,7 @@ const TeamManager = {
         document.getElementById('stat-pending').textContent = pending;
         document.getElementById('stat-admins').textContent = admins;
 
-        
+        // Show/hide pending invites alert
         const alert = document.getElementById('pending-invites-alert');
         if (pending > 0) {
             alert.classList.remove('hidden');
@@ -681,9 +681,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Filter members by search query
+     */
     filterMembers(query) {
         const rows = document.querySelectorAll('.member-row');
         const lowerQuery = query.toLowerCase();
@@ -696,38 +696,38 @@ const TeamManager = {
         });
     },
 
-    
-
-
+    /**
+     * Show invite modal
+     */
     showInviteModal() {
         document.getElementById('invite-form').reset();
         document.getElementById('permissions-section').classList.add('hidden');
         document.getElementById('invite-modal').classList.remove('hidden');
     },
 
-    
-
-
+    /**
+     * Hide invite modal
+     */
     hideInviteModal() {
         document.getElementById('invite-modal').classList.add('hidden');
     },
 
-    
-
-
+    /**
+     * Handle role change in invite form
+     */
     handleRoleChange(e) {
         const permissionsSection = document.getElementById('permissions-section');
         const role = e.target.value;
 
         if (role === 'admin') {
-            
+            // Admin has all permissions by default
             permissionsSection.classList.add('hidden');
             permissionsSection.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
         } else if (role === 'manager' || role === 'staff') {
             permissionsSection.classList.remove('hidden');
-            
+            // Reset checkboxes
             permissionsSection.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            
+            // Staff defaults to check-in only
             if (role === 'staff') {
                 document.querySelector('input[value="checkin"]').checked = true;
             }
@@ -736,9 +736,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Submit invite form
+     */
     async submitInvite(e) {
         e.preventDefault();
         const form = e.target;
@@ -781,7 +781,7 @@ const TeamManager = {
         }
     },
 
-    
+    // Generează o parolă random ușor de tastat (12 caractere, fără chars ambigue).
     generatePassword() {
         const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let pwd = '';
@@ -802,9 +802,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Show edit modal
+     */
     showEditModal(memberId) {
         const member = this.members.find(m => m.id === memberId);
         if (!member) return;
@@ -812,11 +812,11 @@ const TeamManager = {
         document.getElementById('edit-member-id').value = memberId;
         document.getElementById('edit-role').value = member.role;
 
-        
+        // Set leisure_role (poate fi null)
         const leisureRoleSel = document.getElementById('edit-leisure-role');
         if (leisureRoleSel) leisureRoleSel.value = member.leisure_role || '';
 
-        
+        // Set permissions
         const permissions = member.permissions || [];
         ['events', 'orders', 'reports', 'team', 'checkin'].forEach(perm => {
             document.getElementById(`edit-perm-${perm}`).checked = permissions.includes(perm);
@@ -826,16 +826,16 @@ const TeamManager = {
         document.getElementById('edit-modal').classList.remove('hidden');
     },
 
-    
-
-
+    /**
+     * Hide edit modal
+     */
     hideEditModal() {
         document.getElementById('edit-modal').classList.add('hidden');
     },
 
-    
-
-
+    /**
+     * Handle role change in edit form
+     */
     handleEditRoleChange(e) {
         const permissionsSection = document.getElementById('edit-permissions-section');
         const role = e.target.value;
@@ -847,9 +847,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Submit edit form
+     */
     async submitEdit(e) {
         e.preventDefault();
         const form = e.target;
@@ -881,24 +881,24 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Show delete modal
+     */
     showDeleteModal(memberId) {
         document.getElementById('delete-member-id').value = memberId;
         document.getElementById('delete-modal').classList.remove('hidden');
     },
 
-    
-
-
+    /**
+     * Hide delete modal
+     */
     hideDeleteModal() {
         document.getElementById('delete-modal').classList.add('hidden');
     },
 
-    
-
-
+    /**
+     * Confirm delete
+     */
     async confirmDelete() {
         const memberId = document.getElementById('delete-member-id').value;
 
@@ -921,9 +921,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Resend invite to a member
+     */
     async resendInvite(memberId) {
         try {
             const response = await AmbiletAPI.request('/organizer/team/resend-invite', {
@@ -942,9 +942,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Resend all pending invites
+     */
     async resendAllInvites() {
         try {
             const response = await AmbiletAPI.request('/organizer/team/resend-all-invites', {
@@ -962,9 +962,9 @@ const TeamManager = {
         }
     },
 
-    
-
-
+    /**
+     * Helper functions
+     */
     getInitials(name) {
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     },
@@ -1032,14 +1032,14 @@ const TeamManager = {
     }
 };
 
-
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => TeamManager.init());
 
-
-
-
-
-
+// ============================================================
+// PERMANENT STAFF MANAGEMENT (leisure organizers — Sf. Ana etc.)
+// Auto-init la DOMContentLoaded daca secțiunea există în DOM.
+// CRUD + raport + export într-un IIFE separat ca să nu conflicteze cu TeamManager.
+// ============================================================
 (function () {
     const root = document.getElementById('permanent-staff-section');
     if (!root) return;
@@ -1072,8 +1072,8 @@ document.addEventListener('DOMContentLoaded', () => TeamManager.init());
         } catch (e) {
             console.error('[staff] load failed', e);
             staffCache = [];
-            
-            
+            // Ascund secțiunea dacă endpoint-ul nu există (deployment incomplet)
+            // sau organizatorul nu are acces leisure.
             if (e?.status === 404 || e?.status === 403) {
                 root.classList.add('hidden');
                 return;
@@ -1202,44 +1202,6 @@ document.addEventListener('DOMContentLoaded', () => TeamManager.init());
         const imgSrc = $('staff-qr-img').src;
         const w = window.open('', '_blank', 'width=480,height=640');
         w.document.write('<!doctype html><html><head><title>QR ' + escHtml(name) + '</title>'
-            + '<style>body{font-family:sans-serif;text-align:center;padding:24px;margin:0}'
-            + 'h2{margin:0 0 4px 0;font-size:18px}p{margin:0 0 18px 0;font-size:12px;color:#666}'
-            + 'img{width:280px;height:280px;border:1px solid #ddd}.code{font-family:monospace;letter-spacing:0.15em;margin-top:10px;font-size:13px}</style>'
-            + '</head><body><h2>' + escHtml(name) + '</h2><p>' + escHtml(pos) + '</p>'
-            + '<img src="' + escAttr(imgSrc) + '"/><div class="code">' + escHtml(code) + '</div>'
-            + '<scr' + 'ipt>setTimeout(function(){window.print();window.close();},300);</scr' + 'ipt>'
-            + '</body></html>');
-        w.document.close();
-    }
-
-    
-    
-
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        
-        let retries = 0;
-        const waitForApi = setInterval(() => {
-            retries++;
-            if (typeof AmbiletAPI !== 'undefined' && typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer && AmbiletAuth.isOrganizer()) {
-                clearInterval(waitForApi);
-                loadStaff();
-            }
-            if (retries > 20) clearInterval(waitForApi);
-        }, 200);
-
-        
-        $('staff-add-btn')?.addEventListener('click', () => openStaffModal(null));
-        $('staff-modal-close')?.addEventListener('click', closeStaffModal);
-        $('staff-f-cancel')?.addEventListener('click', closeStaffModal);
-        $('staff-f-save')?.addEventListener('click', saveStaff);
-        $('staff-f-delete')?.addEventListener('click', deleteStaff);
-        $('staff-qr-close')?.addEventListener('click', closeStaffQr);
-        $('staff-qr-print')?.addEventListener('click', printStaffQr);
-    });
-})();
-</script>
-                                                                                                              w.document.write('<!doctype html><html><head><title>QR ' + escHtml(name) + '</title>'
             + '<style>body{font-family:sans-serif;text-align:center;padding:24px;margin:0}'
             + 'h2{margin:0 0 4px 0;font-size:18px}p{margin:0 0 18px 0;font-size:12px;color:#666}'
             + 'img{width:280px;height:280px;border:1px solid #ddd}.code{font-family:monospace;letter-spacing:0.15em;margin-top:10px;font-size:13px}</style>'

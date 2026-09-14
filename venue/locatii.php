@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         document.getElementById('hero-count').textContent = fmtInt(res.data.venues.length);
 
         grid.innerHTML = res.data.venues.map((v, idx) => {
-            
+            // Rotate accent gradients for visual variety across cards.
             const gradients = [
                 'linear-gradient(135deg, #3b82f6, #1e40af)',
                 'linear-gradient(135deg, #10b981, #047857)',
@@ -153,4 +153,3 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
-                                                           

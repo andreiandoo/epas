@@ -277,7 +277,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const from = new Date(Date.now() - parseInt(days, 10) * 86400000);
         $('r-from').value = from.toISOString().slice(0,10);
         $('r-to').value = to.toISOString().slice(0,10);
-        
+        // Fix bg-white conflict: elimin bg-white cand adaug bg-primary
         document.querySelectorAll('.lv-range-btn').forEach(b => {
             b.classList.remove('bg-primary', 'text-white', 'border-primary');
             b.classList.add('bg-white');
@@ -287,9 +287,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         loadReport();
     }
 
-    
-    
-    
+    // Skeleton loader: pentru schimbari de perioada arata bare gri animate in loc
+    // de cifrele vechi + overlay spinner pe fiecare card breakdown. Consistent cu
+    // leisure-sales.
     const R_STAT_TARGETS = ['r-total-revenue', 'r-total-tickets', 'r-total-orders', 'r-avg', 'r-total-commission', 'r-net-revenue',
         'r-issuer-primary-revenue', 'r-issuer-primary-net', 'r-issuer-primary-tickets', 'r-issuer-primary-commission', 'r-issuer-primary-vat',
         'r-issuer-secondary-revenue', 'r-issuer-secondary-net', 'r-issuer-secondary-tickets', 'r-issuer-secondary-commission', 'r-issuer-secondary-vat'];
@@ -341,7 +341,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('r-total-tickets').textContent = t.tickets || 0;
             $('r-total-orders').textContent = t.orders || 0;
             $('r-avg').textContent = fmtMoney(t.avg_order);
-            
+            // Comision AmBilet
             $('r-total-commission').textContent = fmtMoney(t.commission);
             $('r-net-revenue').textContent = fmtMoney(t.net_revenue);
             renderIssuers(data.by_issuer || {});
@@ -378,7 +378,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
     }
 
-    
+    // Carduri incasari per societate emitenta
     function renderIssuerPaymentBreakdown(el, byPayment) {
         const pm = byPayment || {};
         const total = (Number(pm.cash) || 0) + (Number(pm.card) || 0) + (Number(pm.online) || 0);
@@ -403,9 +403,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
     }
     function renderIssuerVat(prefix, row) {
-        
-        
-        
+        // Afiseaza Net + TVA lângă suma brută cand societatea e platitoare TVA
+        // (vat_payer=true). Cand nu e — ascundem, dar aratam totusi 'Net' egal cu
+        // brutul ca sa dispara ambiguitatea 'brut vs net'.
         const netWrap = $(prefix + '-net-wrap');
         const netEl = $(prefix + '-net');
         const vatWrap = $(prefix + '-vat-wrap');
@@ -416,7 +416,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const vatAmt = parseFloat(row.vat_amount || 0);
         const isVat = !!row.vat_payer && vatAmt > 0;
         if (netEl) netEl.textContent = fmtMoney(net);
-        if (netWrap) netWrap.classList.remove('hidden'); 
+        if (netWrap) netWrap.classList.remove('hidden'); // aratam net-ul mereu — cu sau fara TVA
         if (isVat) {
             if (vatWrap) vatWrap.classList.remove('hidden');
             if (vatEl) vatEl.textContent = fmtMoney(vatAmt);
@@ -429,16 +429,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function renderIssuers(byIssuer) {
         const cards = $('r-issuer-cards');
         const prim = byIssuer.primary || {};
-        const sec = byIssuer.secondary; 
+        const sec = byIssuer.secondary; // null cand nu are secondary_issuer
         cards.classList.remove('hidden');
-        
+        // Primary
         $('r-issuer-primary-name').textContent = prim.name || 'Societatea principală';
         $('r-issuer-primary-revenue').textContent = fmtMoney(prim.revenue || 0);
         $('r-issuer-primary-tickets').textContent = prim.tickets || 0;
         $('r-issuer-primary-commission').textContent = fmtMoney(prim.commission || 0);
         renderIssuerPaymentBreakdown($('r-issuer-primary-payment'), prim.by_payment);
         renderIssuerVat('r-issuer-primary', prim);
-        
+        // Secondary (afisat doar cand organizatorul are has_secondary_issuer)
         const secCard = $('r-issuer-secondary-card');
         if (sec) {
             secCard.classList.remove('hidden');
@@ -457,7 +457,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
-    
+    // Breakdown per metoda plata: Cash / Card / Online
     const PM_META = {
         cash:   { label: '💵 Cash',   color: 'amber',    hex: '#F59E0B' },
         card:   { label: '💳 Card',   color: 'indigo',   hex: '#6366F1' },
@@ -495,7 +495,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         `).join('');
     }
 
-    
+    // Bilete FIZICE emise (componente pachet + individuale), fara parintele pachet
     function renderComponents(rows, totalPhysical) {
         const totalEl = $('r-physical-total');
         if (totalEl) totalEl.textContent = totalPhysical || 0;
@@ -529,17 +529,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
     }
 
-    
+    // ============ Sectiune Scanari (chart stacked + modal detalii) ============
     let scansChart = null;
     let scansRows = [];
-    
+    // Offset in zile fata de azi. 0 = azi in centru. -30 = ferestra mutata cu 30 zile in urma.
     let scansCenterOffset = 0;
 
     function fmtDateISO(d) {
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
     function computeScansRange() {
-        
+        // 30 zile totale, azi in centru = 15 zile inainte + 14 zile dupa (sau invers)
         const today = new Date();
         today.setDate(today.getDate() + scansCenterOffset);
         const from = new Date(today);
@@ -707,26 +707,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!currentEventId) {
             $('r-error').textContent = 'Nu există un eveniment de tip Locație de agrement.';
             $('r-error').classList.remove('hidden');
-            return;
-        }
-        document.querySelectorAll('.lv-range-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
-        $('r-apply').addEventListener('click', loadReport);
-        $('r-export').addEventListener('click', exportCsv);
-        $('r-scans-modal-close')?.addEventListener('click', closeScansModal);
-        // Navigare fereastra 30 zile pentru chart-ul Scanari
-        $('r-scans-prev')?.addEventListener('click', () => { scansCenterOffset -= 30; loadScansChart(); });
-        $('r-scans-next')?.addEventListener('click', () => { scansCenterOffset += 30; loadScansChart(); });
-        $('r-scans-today')?.addEventListener('click', () => { scansCenterOffset = 0; loadScansChart(); });
-        // Auto-load chart-ul Scanari cand pagina deschide (independent de loadReport)
-        loadScansChart();
-        setRange('30');
-    });
-})();
-</script>
-<?php
-require_once dirname(__DIR__) . '/includes/scripts.php';
-?>
-                                  ').classList.remove('hidden');
             return;
         }
         document.querySelectorAll('.lv-range-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));

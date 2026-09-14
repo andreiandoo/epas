@@ -73,11 +73,11 @@ $skipJsComponents = true;
 </header>
 
 <script>
-
-
-
-
-
+// Role switcher wiring. Reads AmbiletMultiAuth cookies to figure out
+// which realms the user is authenticated in, populates the dropdown,
+// and handles switching by flipping `ambilet_active_role` before
+// redirecting to the target panel. No API round-trip needed — all
+// tokens are already persisted from the login step.
 (function () {
     function getCookie(name) {
         const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
@@ -106,13 +106,13 @@ $skipJsComponents = true;
 
     function initSwitcher() {
         const roles = detectAvailableRoles();
-        if (roles.length <= 1) return; 
+        if (roles.length <= 1) return; // Nothing to switch to.
 
         const container = document.getElementById('venue-role-switcher');
         const items = document.getElementById('venue-role-switcher-items');
         if (!container || !items) return;
 
-        
+        // Populate — skip venue-owner (already here).
         items.innerHTML = roles
             .filter(r => r !== 'venue-owner')
             .map(r => {
@@ -157,7 +157,7 @@ $skipJsComponents = true;
         if (logout) {
             logout.addEventListener('click', async (e) => {
                 e.preventDefault();
-                
+                // Clear the venue-owner cookie + active-role marker.
                 setCookie('ambilet_venue_token', '', -1);
                 setCookie('ambilet_active_role', '', -1);
                 window.location.href = '/autentificare';
@@ -165,11 +165,11 @@ $skipJsComponents = true;
         }
     }
 
-    
-
-
-
-
+    /**
+     * Populate the topbar's identity (avatar + name + email) from
+     * /venue-owner/me. Silent-fails on 401 by redirecting to the login
+     * page — the shell can't work without a live token.
+     */
     async function loadIdentity() {
         const token = getCookie('ambilet_venue_token');
         if (!token) {
@@ -208,44 +208,15 @@ $skipJsComponents = true;
                 avatarEl.textContent = initial;
             }
         } catch (e) {
-            
+            // Non-fatal — keep the placeholder.
         }
     }
 
-    
-
-
-
-
-
-
-    async function detectOrganizerLink() {
-        
-        if (getCookie('ambilet_organizer_token')) return;
-        if (typeof AmbiletVenueAPI === 'undefined') return;
-
-        try {
-            const res = await AmbiletVenueAPI.linkOrganizer();
-            if (res && res.success && res.data && res.data.linked && res.data.token) {
-                setCookie('ambilet_organizer_token', res.data.token, 30);
-                
-                
-                initSwitcher();
-            }
-        } catch (e) {
-            
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        initSwitcher();
-        initUserMenu();
-        loadIdentity();
-        detectOrganizerLink();
-    });
-})();
-</script>
-                                                                                                                                                                                            me header switcher (already wired above) show a "Vezi ca
+    /**
+     * If the venue owner shares an email with an organizer account on
+     * this marketplace, ask the backend for a matching organizer token
+     * and drop it into the ambilet_organizer_token cookie. That lets
+     * the same header switcher (already wired above) show a "Vezi ca
      * Organizator" option without the user having to log in twice.
      */
     async function detectOrganizerLink() {

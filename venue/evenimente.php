@@ -184,10 +184,10 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const ciPct = sold > 0 ? Math.round(ci / sold * 100) : 0;
             const fillColor = pct >= 75 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
 
-            
-            
-            
-            
+            // Compact poster: 18×18 (72px), just the image or a
+            // date tile. Smaller than the previous 28-32 sizes and
+            // without the gradient overlay, so the whole row stays
+            // short even on desktop.
             const posterHtml = posterUrl
                 ? `<div class="w-18 h-18 rounded-lg overflow-hidden flex-shrink-0" style="width:72px;height:72px;">
                        <img src="${posterUrl}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center text-white\\' style=\\'background:linear-gradient(135deg, #7c3aed, #ec4899);\\'><span class=\\'text-[9px] uppercase\\'>' + '${dm.month}' + '</span><span class=\\'text-xl font-black leading-none\\'>' + '${dm.day}' + '</span></div>';">
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }).join('');
     }
 
-    
+    // Filter chip clicks
     document.querySelectorAll('.venue-filter-chip').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.venue-filter-chip').forEach(b => b.classList.remove('active'));
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         });
     });
 
-    
+    // Load
     try {
         const params = new URLSearchParams(window.location.search);
         const venueId = params.get('venue_id');
@@ -287,4 +287,3 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 </script>
 
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
-                                                                                                                                                                                                                        
