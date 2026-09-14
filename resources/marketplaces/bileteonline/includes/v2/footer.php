@@ -1,32 +1,29 @@
 <?php
 /**
- * bilete.online — homepage v2 footer, cookie consent and page scripts.
- * Expects $HV2 from home-v2/data.php.
+ * bilete.online v2 footer, cookie consent and scripts.
+ *
+ * Expects $V2NAV from v2/nav.php. Page variables:
+ *   $v2Scripts     page scripts under assets/v2/js, loaded after base.js, e.g. ['home.js']
+ *   $v2ClientData  data for the page script, printed as JSON in #v2-data
  */
-$hv2FootCities = array_slice($HV2['destinations'] ?: $HV2['citiesList'], 0, 6);
-$hv2FootCats = array_slice($HV2['categories'], 0, 6);
-$hv2ClientData = [
-    'libs' => [hv2_asset('vendor/gsap-3.15.0.min.js'), hv2_asset('vendor/ScrollTrigger-3.15.0.min.js'), hv2_asset('vendor/lenis-1.3.26.min.js')],
-    'cities' => $HV2['suggest']['cities'],
-    'attractions' => $HV2['suggest']['attractions'],
-    'categories' => $HV2['suggest']['categories'],
-];
+$v2FootCities = array_slice($V2NAV['citiesList'], 0, 6);
+$v2FootCats = array_slice($V2NAV['categories'], 0, 6);
 ?>
 <footer class="ftr" aria-labelledby="ftr-h">
   <svg class="ftr-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true"><use href="#drum-g"/></svg>
   <h2 class="sr" id="ftr-h">Despre bilete.online</h2>
   <div class="wrap ftr-grid">
     <div class="ftr-brand">
-      <a href="/" aria-label="bilete.online, pagina principală"><?= hv2_brand('brand brand-lg') ?></a>
+      <a href="/" aria-label="bilete.online, pagina principală"><?= v2_brand('brand brand-lg') ?></a>
       <p>Experiențele încep înainte de intrare. Bilete la atracții, muzee, parcuri și experiențe din toată România.</p>
       <ul class="ftr-contact">
-        <li><a href="mailto:<?= hv2_e(SUPPORT_EMAIL) ?>"><?= hv2_ic('envelope-simple') ?><?= hv2_e(SUPPORT_EMAIL) ?></a></li>
-        <li><a href="tel:+40750292962"><?= hv2_ic('phone') ?>0750 292 962</a></li>
-        <li><span><?= hv2_ic('clock') ?>Luni - vineri, 09:00 - 18:00</span></li>
+        <li><a href="mailto:<?= v2_e(SUPPORT_EMAIL) ?>"><?= v2_ic('envelope-simple') ?><?= v2_e(SUPPORT_EMAIL) ?></a></li>
+        <li><a href="tel:+40750292962"><?= v2_ic('phone') ?>0750 292 962</a></li>
+        <li><span><?= v2_ic('clock') ?>Luni - vineri, 09:00 - 18:00</span></li>
       </ul>
     </div>
-    <nav aria-label="Orașe"><h3>Explorează</h3><ul class="fl"><?php foreach ($hv2FootCities as $c): ?><li><a href="<?= hv2_e($c['href']) ?>"><?= hv2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/orase">Toate orașele</a></li></ul></nav>
-    <nav aria-label="Activități"><h3>Activități</h3><ul class="fl"><?php foreach ($hv2FootCats as $c): ?><li><a href="<?= hv2_e($c['href']) ?>"><?= hv2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/categorii">Toate categoriile</a></li></ul></nav>
+    <nav aria-label="Orașe"><h3>Explorează</h3><ul class="fl"><?php foreach ($v2FootCities as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/orase">Toate orașele</a></li></ul></nav>
+    <nav aria-label="Activități"><h3>Activități</h3><ul class="fl"><?php foreach ($v2FootCats as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/categorii">Toate categoriile</a></li></ul></nav>
     <nav aria-label="Despre"><h3>bilete.online</h3><ul class="fl"><li><a href="/cum-functioneaza">Cum funcționează</a></li><li><a href="/card-cadou">Card cadou</a></li><li><a href="/ghiduri">Ghiduri</a></li><li><a href="/pentru-locatii">Pentru locații</a></li><li><a href="/contact">Contact</a></li></ul></nav>
     <nav aria-label="Ajutor"><h3>Ajutor</h3><ul class="fl"><li><a href="/ajutor">Centrul de ajutor</a></li><li><a href="/recuperare-comanda">Recuperează comanda</a></li><li><a href="/cont/bilete">Biletele mele</a></li><li><a href="/cookies">Politica de cookies</a></li></ul></nav>
   </div>
@@ -56,7 +53,7 @@ $hv2ClientData = [
   <div class="cc-panel">
     <div class="cc-top">
       <h2 id="cc-title">Setări cookies</h2>
-      <button class="icon-btn" type="button" data-cc-action="close"><?= hv2_ic('x') ?><span class="sr">Închide setările</span></button>
+      <button class="icon-btn" type="button" data-cc-action="close"><?= v2_ic('x') ?><span class="sr">Închide setările</span></button>
     </div>
     <p>Alege ce categorii permiți. Cookies esențiale rămân active pentru funcționarea platformei.</p>
     <ul class="cc-list">
@@ -73,7 +70,12 @@ $hv2ClientData = [
   </div>
 </div>
 
-<script type="application/json" id="hv2-data"><?= json_encode($hv2ClientData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
-<script defer src="<?= hv2_asset('home.js') ?>"></script>
+<?php if (!empty($v2ClientData)): ?>
+<script type="application/json" id="v2-data"><?= json_encode($v2ClientData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+<?php endif; ?>
+<script defer src="<?= v2_asset('js/base.js') ?>"></script>
+<?php foreach (($v2Scripts ?? []) as $v2Js): ?>
+<script defer src="<?= v2_asset('js/' . $v2Js) ?>"></script>
+<?php endforeach; ?>
 </body>
 </html>
