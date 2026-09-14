@@ -8,7 +8,26 @@
             storageUrl: '<?= STORAGE_URL ?>',
             locale: '<?= SITE_LOCALE ?>',
             currency: 'RON',
-            currencySymbol: 'lei'
+            currencySymbol: 'lei',
+            cartoKey: '<?= defined('CARTO_API_KEY') ? CARTO_API_KEY : '' ?>'
+        };
+
+        // Leaflet tile layer. CARTO basemaps need an API key (keyless tiles
+        // get an "API KEY REQUIRED" watermark) — without one we fall back to
+        // OpenStreetMap. style: 'rastertiles/voyager' | 'light_all' | 'dark_all'.
+        window.AmbiletTileLayer = function (style) {
+            const key = (window.AMBILET && window.AMBILET.cartoKey) || '';
+            if (key) {
+                return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(key), {
+                    attribution: '&copy; OpenStreetMap, &copy; CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 20,
+                });
+            }
+            return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                maxZoom: 19,
+            });
         };
 
         // Flatpickr — calendar custom DD/MM/YYYY pe orice <input type="date">

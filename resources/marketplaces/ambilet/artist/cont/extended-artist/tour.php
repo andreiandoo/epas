@@ -1657,7 +1657,7 @@ function tourOptimizer() {
         renderOpportunityMap() {
             if (!this.opportunityMap) {
                 this.opportunityMap = L.map('opportunityMap').setView([45.9432, 24.9668], 6);
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(this.opportunityMap);
+                AmbiletTileLayer('light_all').addTo(this.opportunityMap);
             } else {
                 this.opportunityMap.eachLayer(layer => {
                     if (layer instanceof L.Marker || layer instanceof L.CircleMarker) this.opportunityMap.removeLayer(layer);
@@ -1691,7 +1691,7 @@ function tourOptimizer() {
             if (!this.planner.optimized) return;
             if (!this.plannerMap) {
                 this.plannerMap = L.map('plannerMap').setView([45.9432, 24.9668], 6);
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(this.plannerMap);
+                AmbiletTileLayer('light_all').addTo(this.plannerMap);
             } else {
                 this.plannerMap.eachLayer(layer => {
                     if (layer instanceof L.Marker || layer instanceof L.Polyline) this.plannerMap.removeLayer(layer);

@@ -1752,13 +1752,10 @@ function initLeafletMap(locations) {
             attributionControl: false
         });
 
-        // OpenStreetMap standard tiles — no API key. CARTO basemaps now
-        // overlay "API KEY REQUIRED" on keyless requests. OSM's tile policy
-        // requires a visible attribution, hence the small control below.
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19
-        }).addTo(map);
-        L.control.attribution({ prefix: false }).addAttribution('&copy; OpenStreetMap').addTo(map);
+        // CARTO voyager when a key is configured, else OpenStreetMap.
+        // Both require a visible attribution, hence the small control.
+        AmbiletTileLayer('rastertiles/voyager').addTo(map);
+        L.control.attribution({ prefix: false }).addTo(map);
 
         globeMap = map;
 

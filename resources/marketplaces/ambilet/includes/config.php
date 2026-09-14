@@ -40,6 +40,9 @@ define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 // in its env). Rotate by updating both sides simultaneously.
 define('CACHE_BUST_TOKEN', 'cb_a3K8Qm2vR9LpZx5TfYwH7nB4Js6DgEcUiVqOpW1XzMyN0kLrCh');
 
+// CARTO basemaps (harti). Gol = tile-uri OpenStreetMap, fara cheie.
+define('CARTO_API_KEY', '');
+
 // Site Configuration
 define('SITE_NAME', 'AmBilet');
 define('SITE_TAGLINE', 'Bilete Evenimente Romania');

@@ -2748,10 +2748,7 @@ function reservationPage() {
             const lat = center.lat || center[0];
             const lng = center.lng || center[1];
             const map = L.map('locationMap').setView([lat, lng], (cfg.zoom || 13) - 1);
-            // OpenStreetMap tiles (no API key; CARTO now watermarks keyless use)
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap', maxZoom: 19,
-            }).addTo(map);
+            AmbiletTileLayer('light_all').addTo(map);
             const icon = L.divIcon({
                 html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">📍</div>`,
                 className: '', iconSize: [48, 48],
