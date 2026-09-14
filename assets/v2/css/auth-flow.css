@@ -1,0 +1,93 @@
+/* bilete.online v2: account flows that sit in a hero card: forgot password (/parola-uitata) and new password
+   (/resetare-parola). Needs base.css. */
+
+/* =================== HERO =================== */
+/* the footer follows straight after (same deep green, with the drum line), so the glows stay clear of the bottom edge
+   and the hero runs into it without a seam */
+.af-hero{position:relative;isolation:isolate;overflow:hidden;overflow:clip;background:radial-gradient(55% 60% at 100% 0%, rgba(43,182,115,.2), rgba(43,182,115,0) 70%), radial-gradient(40% 45% at 0% 20%, rgba(242,169,0,.12), rgba(242,169,0,0) 70%), var(--deep);color:var(--on-deep)}
+.af-hero :focus-visible{outline-color:var(--online)}
+.af-hero .deco-arches{left:-120px;top:42%;width:340px;opacity:.14}
+@media (max-width:599px){.af-hero .deco-arches{display:none}}
+.af-in{position:relative;z-index:1;display:grid;gap:var(--space-7);min-height:min(100svh, 980px);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(72px, 10vw, 140px);align-content:center}
+@media (min-width:1024px){.af-in{grid-template-columns:minmax(0,1fr) minmax(0,500px);align-items:center;column-gap:var(--space-8)}}
+@media (max-width:1023px){.af-in{min-height:0}}
+.af-hero .crumbs,.af-hero .crumbs a{color:var(--on-deep-muted)}
+.af-hero .crumbs a:hover{color:#FFFFFF}
+.af-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
+.af-h{max-width:12ch;margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5}
+.af-lead{max-width:50ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}
+.af-steps{list-style:none;display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:10px;max-width:540px;margin:var(--space-6) 0 0;padding:0}
+.af-steps li{padding:14px 16px;border:1px solid rgba(247,247,245,.16);border-radius:var(--r-m);background:rgba(247,247,245,.06)}
+.af-steps small{display:block;font-size:.625rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--on-deep-muted)}
+.af-steps b{display:block;margin-top:2px;font-size:1.25rem;font-weight:700;line-height:1.2;letter-spacing:-.02em;color:#F7F7F5}
+@media (max-width:479px){.af-steps{gap:8px}.af-steps li{padding:12px 10px}.af-steps b{font-size:1rem;letter-spacing:-.03em}}
+/* password tips on the dark side */
+.af-tips{max-width:540px;margin:var(--space-6) 0 0;padding:18px 20px;border:1px solid rgba(247,247,245,.16);border-radius:var(--r-m);background:rgba(247,247,245,.06)}
+.af-tips b{display:block;color:#F7F7F5}
+.af-tips ul{list-style:none;display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:8px 16px;margin:10px 0 0;padding:0}
+@media (max-width:479px){.af-tips ul{grid-template-columns:minmax(0,1fr)}}
+.af-tips li{display:flex;align-items:center;gap:8px;font-size:.9375rem;color:var(--on-deep-muted)}
+.af-tips .ic{flex:none;width:16px;height:16px;color:#7FD1A6}
+
+/* =================== CARD =================== */
+.af-card{position:relative;padding:clamp(24px, 3vw, 36px);border-radius:var(--r-l);background:var(--surface);color:var(--ink);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.af-card :focus-visible{outline-color:var(--action)}
+.af-card .btn{white-space:normal;text-align:center;line-height:1.25;text-wrap:balance}
+.af-card .btn:disabled{opacity:.7;cursor:progress}
+.af-view[hidden]{display:none}
+.af-view:not([hidden]){animation:af-in var(--dur-enter, .32s) var(--ease-out) both}
+@keyframes af-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.af-view:not([hidden]){animation:none}}
+.af-back{display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--space-4);font-size:.9375rem;font-weight:600;color:var(--muted);text-decoration:none}
+.af-back .ic{width:16px;height:16px}
+.af-back:hover{color:var(--green)}
+.af-card-k{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.af-card-k.is-ok{color:var(--action)}
+.af-card-k.is-bad{color:var(--red-text)}
+.af-card-h{margin:6px 0 0;font-size:clamp(2rem, 3.4vw, 2.75rem);font-weight:700;line-height:1.05;letter-spacing:-.035em;color:var(--green)}
+.af-card-h:focus{outline:none}
+.af-card-p{margin:8px 0 0;color:var(--muted);line-height:1.5}
+.af-card-p strong{color:var(--ink);overflow-wrap:anywhere}
+.af-error{margin:var(--space-4) 0 0;padding:12px 16px;border-radius:12px;background:#FCE9E8;color:var(--red-text);font-size:.9375rem;font-weight:600;line-height:1.45}
+.af-error[hidden]{display:none}
+.af-form{display:grid;gap:16px;margin-top:var(--space-5)}
+.af-field label{display:block;margin-bottom:6px;font-size:.875rem;font-weight:700}
+.af-field input{display:block;width:100%;padding:14px 16px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:500 1.0625rem/1.3 var(--font);transition:border-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-micro) var(--ease-out)}
+.af-field input::placeholder{color:var(--placeholder);font-weight:500}
+.af-field input:hover{border-color:#CFD3CC}
+.af-field input:focus-visible{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(43,182,115,.22)}
+.af-field input[aria-invalid="true"]{border-color:var(--red)}
+.af-wide{width:100%}
+.af-card-foot{margin:var(--space-5) 0 0;padding-top:var(--space-4);border-top:1px solid var(--line);font-size:.9375rem;color:var(--muted)}
+.af-card-foot a,.af-card-p a,.af-note a{color:var(--green);font-weight:700}
+
+/* password field: show / hide, strength, match */
+.af-pass{position:relative}
+.af-pass input{padding-right:96px}
+.af-eye{position:absolute;right:6px;top:50%;translate:0 -50%;min-height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--green);font:700 .875rem/1 var(--font);cursor:pointer}
+.af-eye:hover{background:var(--tint-green)}
+.af-meter{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:4px;margin-top:10px}
+.af-meter i{height:6px;border-radius:999px;background:var(--line);transition:background-color var(--dur-state, .2s) var(--ease-out)}
+.af-meter[data-score="1"] i:nth-child(-n+1){background:var(--red)}
+.af-meter[data-score="2"] i:nth-child(-n+2){background:#E0A100}
+.af-meter[data-score="3"] i:nth-child(-n+3),.af-meter[data-score="4"] i{background:var(--action)}
+.af-hint{display:block;min-height:1.3em;margin-top:6px;font-size:.8125rem;font-weight:600;color:var(--muted)}
+.af-hint[data-tone="bad"]{color:var(--red-text)}
+.af-hint[data-tone="mid"]{color:#8A5A00}
+.af-hint[data-tone="ok"]{color:var(--green)}
+
+/* result states */
+.af-badge{display:grid;place-items:center;width:64px;height:64px;margin-bottom:var(--space-4);border-radius:50%;background:var(--tint-green);color:var(--green)}
+.af-badge .ic{width:30px;height:30px}
+.af-badge.is-bad{background:#FCE9E8;color:var(--red-text)}
+.af-email{margin:4px 0 0;font-size:1.125rem;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+.af-help{margin-top:var(--space-5);padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg)}
+.af-help b{display:block}
+.af-help ul{list-style:none;display:grid;gap:8px;margin:10px 0 0;padding:0}
+.af-help li{display:flex;align-items:flex-start;gap:8px;font-size:.9375rem;line-height:1.45;color:var(--muted)}
+.af-help .ic{flex:none;width:16px;height:16px;margin-top:3px;color:var(--action)}
+.af-actions{display:grid;gap:10px;margin-top:var(--space-5)}
+@media (min-width:480px){.af-actions.is-2{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.af-note{margin-top:var(--space-4);padding:12px 16px;border-radius:12px;background:var(--tint-green);color:var(--green);font-size:.9375rem;font-weight:600;line-height:1.45}
+.af-note[hidden]{display:none}
+.af-link-btn{display:inline;margin:var(--space-4) 0 0;padding:0;border:0;background:none;color:var(--green);font:700 .9375rem/1.4 var(--font);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
