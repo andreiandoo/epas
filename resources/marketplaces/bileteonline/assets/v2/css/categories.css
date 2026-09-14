@@ -1,0 +1,98 @@
+/* bilete.online v2: categories catalog (/categorii). Needs base.css + cities.css (hero, search, hubs, FAQ, CTA). */
+
+/* =================== HERO: category map =================== */
+.cg-map{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px;margin-top:22px}
+.cg-tile{display:grid;align-content:start;gap:12px;min-height:128px;padding:18px;border-radius:var(--r-m);color:var(--ink);text-decoration:none}
+.cg-tile:nth-child(1){background:var(--red);color:#FFFFFF;transform:rotate(-2deg)}
+.cg-tile:nth-child(2){background:var(--tint-green);transform:rotate(2deg)}
+.cg-tile:nth-child(3){background:#FBE7B0;transform:rotate(1.5deg)}
+.cg-tile:nth-child(4){background:var(--green);color:#FFFFFF;transform:rotate(-1.5deg)}
+.cg-tile span{font-size:1.875rem;line-height:1}
+.cg-tile b{font-size:1.25rem;font-weight:700;line-height:1.15;letter-spacing:-.02em;overflow-wrap:break-word}
+
+/* =================== CATEGORY GRID =================== */
+.cg-main{background:var(--bg)}
+.cg-grid{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-5);margin:0;padding:0}
+@media (min-width:640px){.cg-grid{grid-template-columns:repeat(2, minmax(0,1fr))}}
+@media (min-width:1024px){.cg-grid{grid-template-columns:repeat(3, minmax(0,1fr))}}
+.cg-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;overflow:clip;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);transition:border-color var(--dur-state) var(--ease-out), box-shadow var(--dur-state) var(--ease-out), transform var(--dur-state) var(--ease-out)}
+.cg-card[hidden]{display:none}
+.cg-card:hover{border-color:#CFD3CC;box-shadow:0 24px 40px -30px rgba(14,72,55,.5);transform:translateY(-2px)}
+.cg-top{position:relative;display:block;aspect-ratio:16 / 10;overflow:hidden;background:var(--deep)}
+.cg-top img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 700ms var(--ease-out)}
+.cg-card:hover .cg-top img{transform:scale(1.05)}
+.cg-top::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg, rgba(6,34,26,.55) 0%, rgba(6,34,26,0) 45%);pointer-events:none}
+.cg-emoji{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 110%, #155E48 0%, var(--deep) 62%);font-size:4.5rem;line-height:1}
+.cg-badges{position:absolute;z-index:1;left:14px;right:14px;bottom:14px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.cg-badges span{padding:6px 11px;border-radius:999px;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.cg-badges span:first-child{background:rgba(6,34,26,.82);color:#F7F7F5}
+.cg-badges span:last-child{background:rgba(247,247,245,.95);color:var(--ink)}
+.cg-body{display:flex;flex:1;flex-direction:column;gap:10px;padding:18px 20px 20px}
+.cg-body h3{margin:0;font-size:1.5rem;font-weight:700;line-height:1.1;letter-spacing:-.025em}
+.cg-body h3 a{color:var(--ink);text-decoration:none;transition:color var(--dur-micro) var(--ease-out)}
+.cg-body h3 a:hover,.cg-card:hover h3 a{color:var(--green)}
+.cg-desc{display:-webkit-box;margin:0;overflow:hidden;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.55;color:var(--muted)}
+.cg-subs{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 0;padding:0}
+.cg-subs a{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);font-size:.8125rem;font-weight:600;text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
+.cg-subs a:hover{border-color:var(--green);color:var(--green)}
+.cg-subs .is-more{border-color:var(--ink);background:var(--ink);color:#FFFFFF}
+.cg-subs .is-more:hover{border-color:var(--green);background:var(--green);color:#FFFFFF}
+.cg-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
+.cg-foot a{display:inline-flex;align-items:center;gap:6px;padding:4px 0;color:var(--green);font-weight:700;text-decoration:none}
+.cg-foot .ic{width:18px;height:18px;transition:transform var(--dur-micro) var(--ease-out)}
+.cg-foot a:hover .ic{transform:translateX(3px)}
+.cg-none-mail{font-weight:500}
+.cg-none-mail a{color:var(--green);font-weight:700}
+
+/* =================== TAXONOMY =================== */
+.cg-tax{background:var(--surface)}
+.cg-tax-intro{max-width:56rem}
+.cg-tax h2,.cg-local h2{margin:0;font-size:var(--text-h2);font-weight:700;line-height:1.04;letter-spacing:-.04em;color:var(--green)}
+.cg-tax-intro > p:last-child{max-width:60ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--muted)}
+.cg-tax-grid{list-style:none;display:grid;gap:var(--space-4);margin:var(--space-7) 0 0;padding:0}
+@media (min-width:900px){.cg-tax-grid{grid-template-columns:repeat(3, minmax(0,1fr))}}
+.cg-tax-card{padding:26px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--bg)}
+.cg-tax-card small{font-size:var(--text-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--action)}
+.cg-tax-card h3{margin:10px 0 0;font-size:clamp(1.5rem, 2.4vw, 2rem);font-weight:700;line-height:1.08;letter-spacing:-.03em}
+.cg-tax-card ul{list-style:none;display:grid;gap:10px;margin:18px 0 0;padding:0}
+.cg-tax-card li{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.cg-tax-card li .ic{flex:none;width:16px;height:16px;color:var(--action)}
+.cg-tax-card.is-dark{border-color:var(--deep);background:var(--deep);color:var(--on-deep)}
+.cg-tax-card.is-dark small{color:#9FE0BF}
+.cg-tax-card.is-dark h3{color:#F7F7F5}
+.cg-tax-card.is-dark li{color:var(--on-deep-muted)}
+.cg-tax-card.is-dark li .ic{color:var(--online)}
+
+/* =================== INTENT HUBS (cities.css) on the page ground =================== */
+.cg-hubs{background:var(--bg)}
+.cg-hubs .ct-hub{background:var(--surface)}
+
+/* =================== CATEGORIES × CITIES =================== */
+.cg-local{position:relative;overflow:hidden;overflow:clip;background:var(--deep);color:var(--on-deep)}
+.cg-local > .wrap{position:relative}
+.cg-local .topo{position:absolute;left:0;top:-60px;width:100%;height:calc(100% + 120px);fill:none;stroke:rgba(159,224,191,.08);stroke-width:1.2;pointer-events:none}
+.cg-local .topo path{vector-effect:non-scaling-stroke}
+.cg-local :focus-visible{outline-color:var(--online)}
+.cg-local-grid{display:grid;gap:var(--space-7)}
+@media (min-width:1024px){.cg-local-grid{grid-template-columns:repeat(2, minmax(0,1fr));align-items:center;gap:var(--space-8)}}
+.cg-local .kicker{color:#9FE0BF}
+.cg-local h2{color:#F7F7F5}
+.cg-local-grid > div:first-child > p:not(.kicker){max-width:52ch;margin:var(--space-4) 0 var(--space-6);font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}
+.cg-links{overflow:hidden;overflow:clip;border-radius:var(--r-l);background:#F7F7F5;color:var(--ink);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.cg-links :focus-visible{outline-color:var(--action)}
+.cg-links-top{padding:22px 24px 18px;border-bottom:1px dashed var(--line)}
+.cg-links-top small{font-size:var(--text-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--action)}
+.cg-links-top h3{margin:6px 0 0;font-size:1.75rem;font-weight:700;letter-spacing:-.03em;color:var(--green)}
+.cg-links ul{list-style:none;display:grid;gap:10px;margin:0;padding:16px}
+.cg-links a{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out)}
+.cg-links a:hover{border-color:var(--green)}
+.cg-links strong{font-weight:700}
+.cg-links span{grid-column:1;font-size:.875rem;color:var(--muted)}
+.cg-links .ic{grid-row:1 / 3;grid-column:2;width:20px;height:20px;color:var(--green);transition:transform var(--dur-micro) var(--ease-out)}
+.cg-links a:hover .ic{transform:translateX(3px)}
+
+@media (prefers-reduced-motion: no-preference){
+  @supports (animation-timeline: view()){
+    .cg-tax-intro,.cg-local-grid > div:first-child{animation:ct-rise linear both;animation-timeline:view();animation-range:entry 0% cover 22%}
+  }
+}
