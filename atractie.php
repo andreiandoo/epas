@@ -1,14 +1,15 @@
 <?php
 /**
- * Single attraction landing — /atractie/{slug}  (F4, GYG-style v4 design).
+ * Single attraction landing — /atractie/{slug} (v2 design).
  *
  * Pure render: expects $_GET['slug']. Pulls the attraction detail (name,
  * description, gallery, geo, type, city, county + linked activities + sibling
  * attractions in the same city/county) from the core API in a SINGLE call and
- * renders a GetYourGuide-style POI page that cross-links to the activities and
- * nearby attractions. Non-breaking: 404s cleanly when the slug isn't a real
- * attraction. Uses only the bilete.online prebuilt CSS token vocabulary
- * (paper / ink / vermilion / ochre / forest / mint / rose / shadow-ticket …).
+ * renders a POI page that cross-links to the activities and nearby
+ * attractions. 404s cleanly when the slug isn't a real attraction.
+ *
+ * Top to bottom: hero (type · city, title, subtitle, type and address, actions, photo), about + gallery + map,
+ * linked activities, "Explorează {oraș}" band, other attractions in the city and in the county, lightbox.
  */
 
 $pageCacheTTL = 300;
@@ -18,7 +19,7 @@ require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 
 $slug = $slug ?? ($_GET['slug'] ?? '');
-if (!preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
+if (!is_string($slug) || !preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     http_response_code(404);
     require __DIR__ . '/404.php';
     exit;
@@ -32,11 +33,8 @@ if (!$attraction) {
     exit;
 }
 
-$bo_img = function ($u) {
-    $u = (string) $u;
-    if ($u === '') return '';
-    return str_starts_with($u, 'http') ? $u : rtrim(STORAGE_URL, '/') . '/' . ltrim($u, '/');
-};
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
 
 $atName       = $attraction['name'] ?? 'Atracție';
 $atSubtitle   = $attraction['subtitle'] ?? '';
@@ -47,14 +45,14 @@ $atCity       = $attraction['city'] ?? null;
 $atCitySlug   = $atCity['slug'] ?? '';
 $atCityName   = $atCity['name'] ?? '';
 $atCounty     = $attraction['county'] ?? '';
-$atCover      = $bo_img($attraction['cover_image_url'] ?? '');
-$atGallery    = array_values(array_filter(array_map($bo_img, (array) ($attraction['gallery'] ?? []))));
+$atCover      = v2_media_url($attraction['cover_image_url'] ?? null) ?? '';
+$atGallery    = array_values(array_filter(array_map('v2_media_url', (array) ($attraction['gallery'] ?? []))));
 $atAddress    = $attraction['address'] ?? '';
 $atLat        = $attraction['latitude'] ?? null;
 $atLng        = $attraction['longitude'] ?? null;
-$atActivities = is_array($attraction['activities'] ?? null) ? $attraction['activities'] : [];
-$cityAttractions   = is_array($attraction['city_attractions'] ?? null) ? $attraction['city_attractions'] : [];
-$countyAttractions = is_array($attraction['county_attractions'] ?? null) ? $attraction['county_attractions'] : [];
+$atActivities = is_array($attraction['activities'] ?? null) ? array_values($attraction['activities']) : [];
+$cityAttractions   = is_array($attraction['city_attractions'] ?? null) ? array_values($attraction['city_attractions']) : [];
+$countyAttractions = is_array($attraction['county_attractions'] ?? null) ? array_values($attraction['county_attractions']) : [];
 
 // Lightbox images: cover first (if present), then the gallery.
 $lightbox = array_values(array_filter(array_merge($atCover ? [$atCover] : [], $atGallery)));
@@ -74,11 +72,6 @@ $cardUrl = function ($a) {
     return $cs ? '/' . $cs . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? '');
 };
 
-// Header context — treat as the city it sits in (so the header adapts).
-$headerContext = $atCityName !== ''
-    ? ['type' => 'city', 'label' => $atCityName, 'slug' => $atCitySlug]
-    : ['type' => 'homepage'];
-
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
 if ($atCityName && $atCitySlug) {
     $breadcrumbs[] = ['name' => $atCityName, 'url' => SITE_URL . '/' . $atCitySlug];
@@ -86,14 +79,12 @@ if ($atCityName && $atCitySlug) {
 $breadcrumbs[] = ['name' => $atName, 'url' => SITE_URL . '/atractie/' . $slug];
 
 // Kicker line (type · city)
-$kicker = trim(mb_strtoupper($atType) . ($atCityName ? ' · ' . mb_strtoupper($atCityName) : ''), ' ·') ?: 'ATRACȚIE';
+$kicker = trim($atType . ($atCityName ? ' · ' . $atCityName : ''), ' ·') ?: 'Atracție';
 
 $pageTitleRaw = $atName . ($atCityName ? ' — ' . $atCityName : '') . ' | bilete.online';
 $pageDescription = $atDesc !== '' ? mb_substr(trim(strip_tags($atDesc)), 0, 160) : ('Activități, tururi și bilete pentru ' . $atName . ($atCityName ? ' din ' . $atCityName : '') . '.');
 $canonicalUrl = SITE_URL . '/atractie/' . $slug;
 $ogImage = $atCover ?: (SITE_URL . '/assets/images/og-default.jpg');
-$currentPage = 'attraction';
-$cssBundle = 'listing';
 
 $structuredData = [[
     '@context' => 'https://schema.org',
@@ -104,245 +95,209 @@ $structuredData = [[
     'image' => $atCover ?: null,
     'address' => $atAddress ? ['@type' => 'PostalAddress', 'streetAddress' => $atAddress, 'addressLocality' => $atCityName, 'addressRegion' => $atCounty] : null,
     'geo' => ($atLat && $atLng) ? ['@type' => 'GeoCoordinates', 'latitude' => $atLat, 'longitude' => $atLng] : null,
+], [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => array_map(fn ($bc, $i) => [
+        '@type' => 'ListItem',
+        'position' => $i + 1,
+        'name' => $bc['name'],
+        'item' => $bc['url'],
+    ], $breadcrumbs, array_keys($breadcrumbs)),
 ]];
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+$mapsUrl = ($atLat && $atLng) ? 'https://www.google.com/maps/search/?api=1&query=' . urlencode($atLat . ',' . $atLng) : '';
+$attrArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 
-// Small renderer for an attraction "rail" card (city/county columns).
-$renderAttractionRow = function (array $p) use ($bo_img) {
-    $img = $bo_img($p['cover_image_url'] ?? '');
+// Row for the "other attractions" columns.
+$renderAttractionRow = function (array $p, int $i) {
+    $img = v2_media_url($p['cover_image_url'] ?? null);
     $name = $p['name'] ?? '';
     $meta = trim(($p['type']['name'] ?? '') . (!empty($p['city']['name']) ? ' · ' . $p['city']['name'] : ''), ' ·');
-    $href = '/atractie/' . ($p['slug'] ?? '');
     ?>
-    <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>" class="group flex items-center gap-4 rounded-2xl border-2 border-ink bg-paper p-3 transition hover:-translate-y-0.5 hover:shadow-ticket">
-        <span class="h-20 w-24 shrink-0 overflow-hidden rounded-xl border border-ink/15 bg-ink">
-            <?php if ($img): ?>
-                <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($name, ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
-            <?php else: ?>
-                <span class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-[10px] font-bold text-paper">FOTO</span>
-            <?php endif; ?>
-        </span>
-        <span class="min-w-0 flex-1">
-            <span class="block truncate font-display text-2xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($name) ?></span>
-            <?php if ($meta): ?><span class="mt-1 block truncate text-sm text-ink-soft"><?= htmlspecialchars($meta) ?></span><?php endif; ?>
-        </span>
-        <span class="text-ink-soft transition group-hover:translate-x-1 group-hover:text-vermilion">→</span>
-    </a>
+    <li><a class="trow" href="/atractie/<?= v2_e($p['slug'] ?? '') ?>">
+      <span class="trow-media"><?= $img ? v2_photo([$img, 0, 0, '']) : v2_fallback($name, $i) ?></span>
+      <span class="trow-text"><b><?= v2_e($name) ?></b><?php if ($meta): ?><small><?= v2_e($meta) ?></small><?php endif; ?></span>
+      <?= v2_ic('arrow-right') ?>
+    </a></li>
     <?php
 };
+
+$v2Styles = ['attraction.css'];
+$v2Scripts = ['attraction.js'];
+$v2HeaderOverlay = true;
+$v2HeadExtra = $lightbox ? '<link rel="preload" as="image" href="' . v2_e($lightbox[0]) . '" fetchpriority="high">' : '';
+$v2ClientData = ['gallery' => array_map(fn ($src) => ['src' => $src, 'alt' => $atName], $lightbox)];
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
-
-<div x-data='{ lbOpen:false, lbIndex:0, imgs: <?= htmlspecialchars(json_encode($lightbox, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>,
-    open(i){ this.lbIndex=i; this.lbOpen=true; document.body.style.overflow="hidden"; },
-    close(){ this.lbOpen=false; document.body.style.overflow=""; },
-    next(){ this.lbIndex=(this.lbIndex+1)%this.imgs.length; },
-    prev(){ this.lbIndex=(this.lbIndex-1+this.imgs.length)%this.imgs.length; } }'
-    @keydown.window.escape="close()">
-
-<!-- ===================== HERO ===================== -->
-<section class="relative overflow-hidden border-b-2 border-ink bg-paper">
-    <div class="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-12">
-        <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm font-bold text-ink-soft">
-            <?php foreach ($breadcrumbs as $i => $bc): ?>
-                <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
-                <?php if ($i < count($breadcrumbs) - 1): ?>
-                    <a href="<?= htmlspecialchars($bc['url'], ENT_QUOTES) ?>" class="hover:text-vermilion"><?= htmlspecialchars($bc['name']) ?></a>
-                <?php else: ?>
-                    <span aria-current="page" class="text-ink"><?= htmlspecialchars($bc['name']) ?></span>
-                <?php endif; ?>
-            <?php endforeach; ?>
+<main id="main" tabindex="-1">
+  <!-- ===================== HERO ===================== -->
+  <section class="th" aria-labelledby="th-h">
+    <?= $attrArches ?>
+    <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="th-in">
+      <div class="th-copy">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <?php foreach ($breadcrumbs as $i => $bc): ?>
+            <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
+            <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
+          <?php endforeach; ?>
         </nav>
-
-        <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_600px] lg:items-end">
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion"><?= htmlspecialchars($kicker) ?></p>
-                <h1 class="mt-3 font-display text-6xl font-bold leading-[.86] sm:text-7xl"><?= htmlspecialchars($atName) ?></h1>
-                <?php if ($atSubtitle): ?><p class="mt-4 font-display text-2xl text-ink-soft"><?= htmlspecialchars($atSubtitle) ?></p><?php endif; ?>
-
-                <div class="mt-6 flex flex-wrap items-center gap-3 text-sm font-bold">
-                    <?php if ($atType): ?>
-                        <span class="inline-flex items-center gap-2 rounded-full bg-paper-2 px-4 py-2 text-ink-soft">
-                            <?php if ($atTypeIcon): ?><span><?= htmlspecialchars($atTypeIcon) ?></span><?php endif; ?>
-                            <?= htmlspecialchars($atType) ?>
-                        </span>
-                    <?php endif; ?>
-                    <?php if ($atAddress): ?>
-                        <span class="inline-flex items-center gap-2 rounded-full bg-paper-2 px-4 py-2 text-ink-soft">
-                            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                            <?= htmlspecialchars($atAddress) ?>
-                        </span>
-                    <?php endif; ?>
-                </div>
-
-                <div class="mt-7 flex flex-wrap gap-3">
-                    <?php if (!empty($atActivities)): ?>
-                        <a href="#activitati" class="rounded-full bg-vermilion px-6 py-4 font-bold text-paper transition hover:bg-vermilion-d">Vezi ce poți face aici</a>
-                    <?php elseif ($atCitySlug): ?>
-                        <a href="/<?= htmlspecialchars($atCitySlug) ?>" class="rounded-full bg-vermilion px-6 py-4 font-bold text-paper transition hover:bg-vermilion-d">Activități în <?= htmlspecialchars($atCityName) ?></a>
-                    <?php endif; ?>
-                    <?php if ($atLat && $atLng): ?>
-                        <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($atLat . ',' . $atLng) ?>" target="_blank" rel="noopener" class="rounded-full border-2 border-ink bg-paper px-6 py-4 font-bold transition hover:bg-ink hover:text-paper">Deschide în Maps</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <?php if ($lightbox): ?>
-                <button type="button" @click="open(0)" class="group relative h-[420px] overflow-hidden rounded-[2rem] border-2 border-ink bg-ink shadow-deep">
-                    <img src="<?= htmlspecialchars($lightbox[0], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($atName, ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="eager">
-                    <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/55 via-transparent to-transparent"></span>
-                    <?php if (count($lightbox) > 1): ?>
-                        <span class="absolute bottom-5 left-5 rounded-full bg-paper px-5 py-3 text-sm font-bold text-ink shadow-ticket">Vezi galeria (<?= count($lightbox) ?>)</span>
-                    <?php endif; ?>
-                </button>
-            <?php else: ?>
-                <div class="h-[420px] overflow-hidden rounded-[2rem] border-2 border-ink bg-ink">
-                    <div class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-6 text-center font-display text-4xl font-bold"><?= htmlspecialchars($atName) ?></span></div>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
-</section>
-
-<!-- ===================== ABOUT + MAP ===================== -->
-<section class="bg-paper">
-    <div class="mx-auto grid max-w-[1500px] gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_.8fr] lg:py-16">
-        <div>
-            <?php if ($atDesc): ?>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion">DESPRE</p>
-                <h2 class="mt-2 font-display text-5xl font-bold leading-none">Despre <?= htmlspecialchars($atName) ?></h2>
-                <div class="article-prose mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft"><?= nl2br(htmlspecialchars($atDesc)) ?></div>
-            <?php endif; ?>
-
-            <?php if (count($lightbox) > 1): ?>
-                <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    <?php foreach (array_slice($lightbox, 1, 6) as $gi => $g): ?>
-                        <button type="button" @click="open(<?= $gi + 1 ?>)" class="overflow-hidden rounded-2xl border-2 border-ink bg-ink">
-                            <img src="<?= htmlspecialchars($g, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($atName, ENT_QUOTES) ?>" class="h-40 w-full object-cover transition duration-500 hover:scale-105" loading="lazy">
-                        </button>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <?php if ($atLat && $atLng): ?>
-        <div class="self-start overflow-hidden rounded-[2rem] border-2 border-ink shadow-ticket">
-            <iframe title="Hartă <?= htmlspecialchars($atName, ENT_QUOTES) ?>" width="100%" height="380" style="border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=15&output=embed"></iframe>
-            <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($atLat . ',' . $atLng) ?>" target="_blank" rel="noopener" class="block bg-ink px-5 py-3 text-center font-bold text-paper transition hover:bg-vermilion">Deschide în Google Maps</a>
-        </div>
+        <p class="th-kicker"><?= v2_e($kicker) ?></p>
+        <h1 class="th-h" id="th-h"><?= v2_e($atName) ?></h1>
+        <?php if ($atSubtitle): ?><p class="th-sub"><?= v2_e($atSubtitle) ?></p><?php endif; ?>
+        <?php if ($atType || $atAddress): ?>
+        <ul class="th-chips">
+          <?php if ($atType): ?><li><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span><?php endif; ?><?= v2_e($atType) ?></li><?php endif; ?>
+          <?php if ($atAddress): ?><li><?= v2_ic('map-pin') ?><?= v2_e($atAddress) ?></li><?php endif; ?>
+        </ul>
         <?php endif; ?>
-    </div>
-</section>
-
-<!-- ===================== LINKED ACTIVITIES ===================== -->
-<section id="activitati" class="border-y-2 border-ink bg-paper-2">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-            <div class="max-w-3xl">
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion">TURURI ȘI EXPERIENȚE</p>
-                <h2 class="mt-2 font-display text-5xl font-bold leading-none">Activități la <?= htmlspecialchars($atName) ?></h2>
-            </div>
-            <?php if ($atCitySlug): ?><a href="/<?= htmlspecialchars($atCitySlug) ?>" class="rounded-full border-2 border-ink bg-paper px-5 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Toate activitățile din <?= htmlspecialchars($atCityName) ?></a><?php endif; ?>
+        <div class="th-cta">
+          <?php if (!empty($atActivities)): ?>
+            <a class="btn btn-light" href="#activitati">Vezi ce poți face aici<?= v2_ic('arrow-right') ?></a>
+          <?php elseif ($atCitySlug): ?>
+            <a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Activități în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+          <?php endif; ?>
+          <?php if ($mapsUrl): ?>
+            <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Maps</a>
+          <?php endif; ?>
         </div>
+      </div>
 
-        <?php if (!empty($atActivities)): ?>
-            <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                <?php foreach ($atActivities as $a): ?>
-                    <a href="<?= htmlspecialchars($cardUrl($a)) ?>" class="group flex flex-col overflow-hidden rounded-[1.5rem] border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-1">
-                        <span class="relative block h-44 overflow-hidden bg-ink">
-                            <?php if (!empty($a['cover_image_url'])): ?>
-                                <img src="<?= htmlspecialchars($bo_img($a['cover_image_url']), ENT_QUOTES) ?>" alt="<?= htmlspecialchars($a['title'] ?? '', ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
-                            <?php else: ?>
-                                <span class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-3 text-center font-display text-lg font-bold"><?= htmlspecialchars(mb_substr($a['title'] ?? '', 0, 20)) ?></span></span>
-                            <?php endif; ?>
-                            <?php if (!empty($a['category']['name'])): ?><span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink shadow-ticket"><?= htmlspecialchars($a['category']['name']) ?></span><?php endif; ?>
-                        </span>
-                        <span class="flex flex-1 flex-col p-4">
-                            <span class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion"><?= htmlspecialchars($a['title'] ?? '') ?></span>
-                            <span class="mt-2 text-sm text-ink-soft"><?= htmlspecialchars(trim(($a['city']['name'] ?? '') . (!empty($a['duration_minutes']) ? ' · ' . $durationLabel((int) $a['duration_minutes']) : ''), ' ·')) ?></span>
-                            <?php if (!empty($a['cheapest_price_cents'])): ?>
-                                <span class="mt-auto pt-3 font-bold"><span class="text-xs font-normal text-ink-soft">de la</span> <?= $pricedFromCents($a['cheapest_price_cents']) ?></span>
-                            <?php endif; ?>
-                        </span>
-                    </a>
-                <?php endforeach; ?>
-            </div>
+      <div class="th-media">
+        <?php if ($lightbox): ?>
+        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Deschide galeria: <?= v2_e($atName) ?>">
+          <img src="<?= v2_e($lightbox[0]) ?>" alt="<?= v2_e($atName) ?>" fetchpriority="high" decoding="async">
+          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>Vezi galeria (<?= count($lightbox) ?>)</span><?php endif; ?>
+        </button>
         <?php else: ?>
-            <div class="mt-8 rounded-[1.5rem] border-2 border-dashed border-ink/30 bg-paper p-7">
-                <h3 class="font-display text-3xl font-bold leading-none">Momentan nu există activități direct asociate.</h3>
-                <p class="mt-3 text-ink-soft">Descoperă experiențe și evenimente disponibile în <?= htmlspecialchars($atCityName ?: 'zonă') ?>.</p>
-                <?php if ($atCitySlug): ?><a href="/<?= htmlspecialchars($atCitySlug) ?>" class="mt-5 inline-flex rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Vezi activitățile din <?= htmlspecialchars($atCityName) ?></a><?php endif; ?>
-            </div>
+        <div class="th-arch is-empty"><?= v2_fallback($atName) ?><?php if ($atCityName !== '' || $atType !== ''): ?><span class="th-arch-name" aria-hidden="true"><?php if ($atCityName !== '' && $atType !== ''): ?><small><?= v2_e($atType) ?></small><?php endif; ?><?= v2_e($atCityName !== '' ? $atCityName : $atType) ?></span><?php endif; ?></div>
         <?php endif; ?>
+      </div>
     </div>
-</section>
+  </section>
+  <div id="hdr-sentinel" aria-hidden="true"></div>
 
-<!-- ===================== EXPLORE CITY CTA ===================== -->
-<?php if ($atCitySlug && $atCover): ?>
-<section class="relative min-h-[360px] overflow-hidden border-b-2 border-ink">
-    <img src="<?= htmlspecialchars($atCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($atCityName, ENT_QUOTES) ?>" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
-    <div class="absolute inset-0 bg-ink/65"></div>
-    <div class="relative mx-auto flex min-h-[360px] max-w-[1500px] items-center justify-center px-4 py-14 text-center sm:px-6">
-        <div>
-            <p class="font-mono text-xs tracking-[.18em] text-paper/70">EXPLOREAZĂ</p>
-            <h2 class="mt-2 font-display text-5xl font-bold leading-none text-paper sm:text-6xl"><?= htmlspecialchars($atCityName) ?></h2>
-            <a href="/<?= htmlspecialchars($atCitySlug) ?>" class="mt-7 inline-flex rounded-full bg-vermilion px-7 py-4 font-bold text-paper transition hover:bg-vermilion-d">Toate activitățile din <?= htmlspecialchars($atCityName) ?></a>
-        </div>
+  <!-- ===================== ABOUT + MAP ===================== -->
+  <?php if ($atDesc || count($lightbox) > 1 || $mapsUrl): ?>
+  <section class="sec tabout" aria-labelledby="<?= $atDesc ? 'tabout-h' : 'th-h' ?>">
+    <div class="wrap tabout-grid">
+      <div>
+        <?php if ($atDesc): ?>
+          <p class="kicker">Despre</p>
+          <h2 id="tabout-h">Despre <?= v2_e($atName) ?></h2>
+          <div class="tabout-body"><?= nl2br(v2_e($atDesc)) ?></div>
+        <?php endif; ?>
+
+        <?php if (count($lightbox) > 1): ?>
+          <ul class="tthumbs">
+            <?php foreach (array_slice($lightbox, 1, 6) as $gi => $g): ?>
+            <li><button type="button" data-gallery="<?= $gi + 1 ?>" aria-haspopup="dialog" aria-controls="lb"><img src="<?= v2_e($g) ?>" alt="<?= v2_e($atName) ?>" loading="lazy" decoding="async"></button></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
+      </div>
+
+      <?php if ($mapsUrl): ?>
+      <div class="tmap">
+        <iframe title="Hartă <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=15&output=embed"></iframe>
+        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <?php endif; ?>
     </div>
-</section>
-<?php endif; ?>
+  </section>
+  <?php endif; ?>
 
-<!-- ===================== NEARBY ATTRACTIONS ===================== -->
-<?php if (!empty($cityAttractions) || !empty($countyAttractions)): ?>
-<section class="bg-paper">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <div class="grid gap-12 lg:grid-cols-2">
-            <?php if (!empty($cityAttractions)): ?>
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion">ÎN <?= htmlspecialchars(mb_strtoupper($atCityName ?: 'ORAȘ')) ?></p>
-                <h2 class="mt-2 font-display text-4xl font-bold leading-none">Alte atracții din oraș</h2>
-                <div class="mt-6 space-y-3">
-                    <?php foreach ($cityAttractions as $p) { $renderAttractionRow($p); } ?>
-                </div>
-            </div>
-            <?php endif; ?>
+  <!-- ===================== LINKED ACTIVITIES ===================== -->
+  <section class="sec tact" id="activitati" aria-labelledby="tact-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">Tururi și experiențe</p><h2 id="tact-h">Activități la <?= v2_e($atName) ?></h2></div>
+        <?php if ($atCitySlug): ?><a class="sec-link" href="/<?= v2_e($atCitySlug) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </div>
 
-            <?php if (!empty($countyAttractions)): ?>
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion"><?= $atCounty ? 'JUDEȚUL ' . htmlspecialchars(mb_strtoupper($atCounty)) : 'ÎN APROPIERE' ?></p>
-                <h2 class="mt-2 font-display text-4xl font-bold leading-none">Atracții din apropiere</h2>
-                <div class="mt-6 space-y-3">
-                    <?php foreach ($countyAttractions as $p) { $renderAttractionRow($p); } ?>
-                </div>
-            </div>
-            <?php endif; ?>
-        </div>
+      <?php if (!empty($atActivities)): ?>
+      <ul class="xp-grid" data-reveal>
+        <?php foreach ($atActivities as $ai => $a): $aImg = v2_media_url($a['cover_image_url'] ?? null); ?>
+        <li class="xp">
+          <a href="<?= v2_e($cardUrl($a)) ?>">
+            <span class="xp-media"><?= $aImg ? v2_photo([$aImg, 0, 0, '']) : v2_fallback($a['title'] ?? '', $ai) ?><?php if (!empty($a['category']['name'])): ?><span class="xp-badges"><span><?= v2_e($a['category']['name']) ?></span></span><?php endif; ?></span>
+            <span class="xp-body">
+              <span class="xp-title"><?= v2_e($a['title'] ?? '') ?></span>
+              <span class="xp-meta"><?php if (!empty($a['city']['name'])): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['city']['name']) ?></span><?php endif; ?><?php if (!empty($a['duration_minutes'])): ?><span><?= v2_ic('clock') ?><?= v2_e($durationLabel((int) $a['duration_minutes'])) ?></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if (!empty($a['cheapest_price_cents'])): ?><span class="xp-price">de la<b><?= v2_e($pricedFromCents($a['cheapest_price_cents'])) ?></b></span><?php endif; ?></span>
+            </span>
+          </a>
+        </li>
+        <?php endforeach; ?>
+      </ul>
+      <?php else: ?>
+      <div class="tempty">
+        <h3>Momentan nu există activități direct asociate.</h3>
+        <p>Descoperă experiențe și evenimente disponibile în <?= v2_e($atCityName ?: 'zonă') ?>.</p>
+        <?php if ($atCitySlug): ?><a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Vezi activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <svg class="tempty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+      </div>
+      <?php endif; ?>
     </div>
-</section>
-<?php endif; ?>
+  </section>
 
-<!-- ===================== LIGHTBOX ===================== -->
-<?php if ($lightbox): ?>
-<div x-show="lbOpen" x-cloak @click.self="close()" class="fixed inset-0 z-[95] bg-ink/90 p-4 backdrop-blur-sm" style="display:none">
-    <div class="mx-auto flex h-full max-w-6xl flex-col">
-        <div class="mb-4 flex items-center justify-between text-paper">
-            <p class="font-display text-2xl font-bold"><?= htmlspecialchars($atName) ?></p>
-            <button type="button" @click="close()" class="grid h-11 w-11 place-items-center rounded-full bg-paper text-2xl text-ink">×</button>
-        </div>
-        <div class="grid min-h-0 flex-1 place-items-center">
-            <img :src="imgs[lbIndex]" :alt="'<?= htmlspecialchars($atName, ENT_QUOTES) ?>'" class="max-h-full max-w-full rounded-[1.5rem] border-2 border-paper object-contain">
-        </div>
-        <div class="mt-4 flex items-center justify-center gap-2" x-show="imgs.length > 1">
-            <button type="button" @click="prev()" class="rounded-full bg-paper px-5 py-3 font-bold text-ink">←</button>
-            <span class="px-3 py-3 font-bold text-paper" x-text="(lbIndex+1)+' / '+imgs.length"></span>
-            <button type="button" @click="next()" class="rounded-full bg-paper px-5 py-3 font-bold text-ink">→</button>
-        </div>
+  <!-- ===================== EXPLORE CITY CTA ===================== -->
+  <?php if ($atCitySlug && $atCover): ?>
+  <section class="texp" aria-labelledby="texp-h">
+    <img src="<?= v2_e($atCover) ?>" alt="<?= v2_e($atCityName) ?>" loading="lazy" decoding="async">
+    <div class="wrap texp-in">
+      <p class="kicker">Explorează</p>
+      <h2 id="texp-h"><?= v2_e($atCityName) ?></h2>
+      <a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
     </div>
-</div>
-<?php endif; ?>
+  </section>
+  <?php endif; ?>
 
-</div><!-- /x-data -->
+  <!-- ===================== NEARBY ATTRACTIONS ===================== -->
+  <?php if (!empty($cityAttractions) || !empty($countyAttractions)): ?>
+  <section class="sec tnear" aria-label="Alte atracții">
+    <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
+    <div class="wrap tnear-grid">
+      <?php if (!empty($cityAttractions)): ?>
+      <div>
+        <p class="kicker">În <?= v2_e($atCityName ?: 'oraș') ?></p>
+        <h2>Alte atracții din oraș</h2>
+        <ul class="trows">
+          <?php foreach ($cityAttractions as $i => $p) { $renderAttractionRow($p, $i); } ?>
+        </ul>
+      </div>
+      <?php endif; ?>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+      <?php if (!empty($countyAttractions)): ?>
+      <div>
+        <p class="kicker"><?= $atCounty ? 'Județul ' . v2_e($atCounty) : 'În apropiere' ?></p>
+        <h2>Atracții din apropiere</h2>
+        <ul class="trows">
+          <?php foreach ($countyAttractions as $i => $p) { $renderAttractionRow($p, $i + 1); } ?>
+        </ul>
+      </div>
+      <?php endif; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <?php if ($lightbox): ?>
+  <!-- ===================== LIGHTBOX ===================== -->
+  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-labelledby="lb-title" hidden>
+    <div class="lb-top">
+      <p class="lb-title" id="lb-title"><?= v2_e($atName) ?></p>
+      <span class="lb-count" id="lb-count">1 / <?= count($lightbox) ?></span>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Închide galeria</span></button>
+    </div>
+    <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
+    <div class="lb-nav"<?= count($lightbox) < 2 ? ' hidden' : '' ?>>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="Fotografia anterioară"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="Fotografia următoare"><?= v2_ic('arrow-right') ?></button>
+    </div>
+  </div>
+  <?php endif; ?>
+</main>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>
