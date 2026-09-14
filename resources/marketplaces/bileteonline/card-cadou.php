@@ -1,404 +1,314 @@
 <?php
 /**
- * /card-cadou — Gift card landing page.
- * Pure static landing with Alpine.js configurator (live preview).
+ * Gift card landing: /card-cadou (v2 design).
+ *
+ * Static landing with a live configurator: value, recipient, delivery, design and message update the card previews
+ * (gift.js). Buying a gift card is not wired on this site (no proxy action, cart item or payment step), so "Adaugă
+ * în coș" says so and points to the contact page instead of silently doing nothing.
+ *
+ * Top to bottom: hero (live card), why, configurator + preview, how it works, occasions, eligible activities,
+ * balance check, FAQ, final CTA.
  */
-require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . "/includes/api.php";
 
-// 30-minute page cache — static / rarely-changing content. Skips POST,
-// preview, nocache, and admin sessions (see includes/page-cache.php).
 $pageCacheTTL = 1800;
-require_once __DIR__ . "/includes/page-cache.php";
+require_once __DIR__ . '/includes/page-cache.php';
+require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
+require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
+
+$gcMoney = fn (int $value): string => v2_thousands($value) . ' RON';
+$amounts = [50, 100, 150, 250, 500, 1000];
+$defaultAmount = 250;
+$themes = [['wow', 'Wow / surpriză'], ['natura', 'Natură / calm'], ['sarbatoare', 'Sărbătoare'], ['premium', 'Premium']];
+$tomorrow = (new DateTimeImmutable('tomorrow', new DateTimeZone('Europe/Bucharest')))->format('Y-m-d');
+
+$why = [
+    ['Libertate de alegere', 'Destinatarul alege orașul, categoria, data și activitatea potrivită.', ''],
+    ['Livrare rapidă', 'Cardul poate fi livrat digital pe email, imediat sau programat.', 'is-mint'],
+    ['Mesaj personalizat', 'Adaugi un mesaj care transformă cardul într-un cadou personal.', ''],
+    ['Sold reutilizabil', 'Dacă nu se folosește integral, soldul poate rămâne disponibil conform regulamentului.', 'is-deep'],
+];
+$steps = [
+    ['Alegi valoarea', 'Selectezi suma potrivită sau o valoare personalizată.'],
+    ['Scrii mesajul', 'Adaugi numele destinatarului și o urare personală.'],
+    ['Îl trimiți', 'Cardul ajunge pe email imediat sau la data aleasă.'],
+    ['Ei aleg experiența', 'Codul se folosește în coș sau checkout pentru activități eligibile.'],
+];
+$useCases = [
+    ['Zi de naștere', 'Pentru cineva care preferă amintiri în loc de obiecte.'],
+    ['Cuplu', 'O ieșire în doi: muzeu, atelier, escape room sau tur.'],
+    ['Familie', 'Activități pentru copii, weekenduri și vacanțe.'],
+    ['Corporate', 'Cadouri pentru echipe, clienți sau parteneri.'],
+    ['Last minute', 'Cadou digital, rapid, fără livrare fizică.'],
+    ['Mulțumesc', 'Un gest elegant pentru cineva care a ajutat.'],
+];
+$eligible = [
+    ['escape-rooms', 'Escape rooms'], ['muzee-expozitii', 'Muzee'], ['parcuri-de-distractii', 'Parcuri'],
+    ['natura-outdoor', 'Natură'], ['ateliere-experiente-creative', 'Ateliere'], ['familie-copii', 'Familie'],
+];
+$faqs = [
+    ['Cum se livrează cardul cadou?', 'Cardul cadou este livrat digital pe email, fie către tine, fie direct către destinatar, în funcție de opțiunea aleasă.'],
+    ['Unde poate fi folosit?', 'Poate fi folosit pentru activitățile eligibile de pe bilete.online: escape rooms, muzee, parcuri, ateliere, natură și alte experiențe listate.'],
+    ['Poate fi folosit parțial?', 'Da. Dacă soldul cardului este mai mare decât valoarea comenzii, diferența poate rămâne disponibilă până la expirarea cardului, conform regulamentului.'],
+    ['Pot programa trimiterea?', 'Da, cardul poate fi trimis imediat sau programat pentru o dată aleasă, dacă această opțiune este activă în checkout.'],
+    ['Pot cumpăra carduri cadou pentru companie?', 'Da. Pentru volume mai mari sau cadouri corporate, poți folosi formularul de contact sau o pagină dedicată comenzilor bulk.'],
+];
 
 $pageTitleRaw = 'Card cadou bilete.online — dăruiește o experiență, nu un obiect';
 $pageDescription = 'Card cadou digital bilete.online pentru activități, experiențe și ieșiri memorabile. Alegi valoarea, scrii mesajul, destinatarul primește email cu cod unic.';
-$pageKeywords = 'card cadou bilete online, card cadou experiente, voucher cadou activitati, cadou digital online, gift card romania';
 $canonicalUrl = SITE_URL . '/card-cadou';
-$currentPage = 'card-cadou';
-$cssBundle = 'static';
-
-$breadcrumbs = [
-    ['name' => 'Acasă', 'url' => SITE_URL . '/'],
-    ['name' => 'Card cadou', 'url' => $canonicalUrl],
-];
-
-$structuredData = [
-    [
-        '@context' => 'https://schema.org',
-        '@type' => 'Product',
-        'name' => 'Card cadou bilete.online',
-        'description' => 'Card cadou digital pentru activități și experiențe — escape rooms, muzee, parcuri, ateliere, natură.',
-        'brand' => ['@type' => 'Brand', 'name' => 'bilete.online'],
-        'offers' => [
-            '@type' => 'AggregateOffer',
-            'priceCurrency' => 'RON',
-            'lowPrice' => '50',
-            'highPrice' => '1000',
-            'offerCount' => '6',
-        ],
+$ogImage = v2_asset('img/cat-familie-copii.webp');
+$structuredData = [[
+    '@context' => 'https://schema.org',
+    '@type' => 'Product',
+    'name' => 'Card cadou bilete.online',
+    'description' => 'Card cadou digital pentru activități și experiențe — escape rooms, muzee, parcuri, ateliere, natură.',
+    'brand' => ['@type' => 'Brand', 'name' => 'bilete.online'],
+    'offers' => ['@type' => 'AggregateOffer', 'priceCurrency' => 'RON', 'lowPrice' => (string) min($amounts), 'highPrice' => (string) max($amounts), 'offerCount' => (string) count($amounts)],
+], [
+    '@context' => 'https://schema.org',
+    '@type' => 'FAQPage',
+    'mainEntity' => array_map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $faqs),
+], [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Card cadou', 'item' => $canonicalUrl],
     ],
-];
+]];
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+$gcArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
+$v2Styles = ['gift.css'];
+$v2Scripts = ['gift.js'];
+$v2HeaderOverlay = true;
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
-
-<div x-data="giftCardPage()">
-
-<!-- HERO -->
-<section class="relative overflow-hidden border-b-2 border-ink">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_16%,rgba(232,69,39,.28),transparent_30%),radial-gradient(circle_at_15%_75%,rgba(218,154,51,.26),transparent_30%),radial-gradient(circle_at_48%_44%,rgba(30,74,61,.16),transparent_34%)]" aria-hidden="true"></div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
-        <div class="mt-8 grid lg:grid-cols-[1fr_.92fr] gap-12 items-center">
-            <div>
-                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">CARD CADOU DIGITAL · EXPERIENȚE · BILETE QR</p>
-                <h1 class="mt-6 font-display text-6xl sm:text-8xl lg:text-[6.8rem] font-700 leading-[.82]">Dăruiește ceva de făcut.</h1>
-                <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
-                    Un card cadou bilete.online nu obligă pe nimeni să aleagă un obiect. Îi lași să aleagă o experiență: escape room, muzeu, parc, atelier, natură sau o ieșire de weekend.
-                </p>
-                <div class="mt-8 flex flex-wrap gap-3">
-                    <a href="#cumpara" class="rounded-full bg-vermilion text-paper px-6 py-4 font-700 text-lg hover:bg-vermilion-d transition">Cumpără card cadou</a>
-                    <a href="#cum-functioneaza" class="rounded-full border-2 border-ink px-6 py-4 font-700 text-lg hover:bg-ink hover:text-paper transition">Cum funcționează</a>
-                </div>
-            </div>
-
-            <div class="relative min-h-[600px]" aria-hidden="true">
-                <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-3 shadow-deep"></div>
-                <div class="ticket absolute inset-x-0 top-0 mx-auto max-w-[520px] min-h-[350px] rounded-[2rem] border-2 border-ink bg-vermilion text-paper overflow-hidden shadow-deep -rotate-3" style="--perf:100%">
-                    <div class="absolute inset-0 opacity-20 bg-dotgrid-light-md"></div>
-                    <div class="relative p-8 sm:p-10 min-h-[350px] flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-center justify-between gap-4">
-                                <p class="font-mono text-xs tracking-[.22em] text-paper/65">GIFT CARD</p>
-                                <p class="font-mono text-xs text-paper/65">bilete.online</p>
-                            </div>
-                            <p class="mt-10 font-display text-7xl sm:text-8xl font-700 leading-none" x-text="money(amount)"></p>
-                            <p class="mt-4 text-paper/75 text-lg">pentru <strong x-text="recipient || 'cineva care merită o ieșire bună'"></strong></p>
-                        </div>
-                        <div class="flex items-end justify-between gap-4">
-                            <div>
-                                <p class="font-mono text-[10px] tracking-[.18em] text-paper/55">COD EXEMPLU</p>
-                                <p class="font-mono tracking-[.25em] text-lg">GIFT-2026-WOW</p>
-                            </div>
-                            <div class="w-16 h-16 rounded-2xl bg-paper text-ink grid place-items-center rotate-6">
-                                <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7m0 0S9.5 2 7 4s5 3 5 3Zm0 0s2.5-5 5-3-5 3-5 3Z"/></svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="floaty absolute left-0 bottom-28 w-60 rounded-3xl border-2 border-ink bg-paper p-5 shadow-deep rotate-6">
-                    <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">MESAJ PERSONALIZAT</p>
-                    <p class="mt-2 font-display text-2xl font-700">„Alege o experiență care te scoate din casă."</p>
-                </div>
-
-                <div class="floaty absolute right-0 bottom-6 w-64 rounded-3xl border-2 border-ink bg-forest text-paper p-5 shadow-deep -rotate-6" style="animation-delay:-2.3s">
-                    <p class="font-mono text-[10px] tracking-[.18em] text-paper/50">SE POATE FOLOSI LA</p>
-                    <div class="mt-3 flex flex-wrap gap-2 text-xs font-700">
-                        <span class="rounded-full bg-paper text-ink px-3 py-1">escape rooms</span>
-                        <span class="rounded-full bg-paper/10 px-3 py-1">muzee</span>
-                        <span class="rounded-full bg-paper/10 px-3 py-1">parcuri</span>
-                        <span class="rounded-full bg-paper/10 px-3 py-1">ateliere</span>
-                        <span class="rounded-full bg-paper/10 px-3 py-1">natură</span>
-                    </div>
-                </div>
-            </div>
+<main id="main" tabindex="-1">
+  <!-- ===================== HERO ===================== -->
+  <section class="gc-hero" aria-labelledby="gc-h">
+    <?= $gcArches ?>
+    <svg class="gc-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="gc-hero-in">
+      <div>
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Card cadou</span></nav>
+        <p class="gc-kicker">Card cadou digital · experiențe · bilete QR</p>
+        <h1 class="gc-h" id="gc-h">Dăruiește ceva de făcut.</h1>
+        <p class="gc-lead">Un card cadou bilete.online nu obligă pe nimeni să aleagă un obiect. Îi lași să aleagă o experiență: escape room, muzeu, parc, atelier, natură sau o ieșire de weekend.</p>
+        <div class="gc-cta">
+          <a class="btn btn-light" href="#cumpara">Cumpără card cadou<?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-outline-light" href="#cum-functioneaza">Cum funcționează</a>
         </div>
-    </div>
-</section>
+      </div>
 
-<!-- WHY -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-    <div class="grid lg:grid-cols-[.8fr_1.2fr] gap-10 items-start">
-        <div class="lg:sticky lg:top-28">
-            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">DE CE</p>
-            <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Un cadou care nu rămâne pe raft.</h2>
-            <p class="mt-5 text-lg text-ink-soft leading-relaxed">Cardul cadou este perfect când nu știi exact ce activitate ar prefera cineva, dar știi sigur că i-ar prinde bine o ieșire, o experiență sau un moment memorabil.</p>
+      <div class="gc-hero-art" aria-hidden="true">
+        <div class="gc-card is-hero" data-theme="wow">
+          <div class="gc-card-top"><span>Gift card</span><span>bilete.online</span></div>
+          <p class="gc-card-amount" data-gc="amount"><?= v2_e($gcMoney($defaultAmount)) ?></p>
+          <p class="gc-card-for">pentru <strong data-gc="recipient" data-fallback="cineva care merită o ieșire bună">cineva care merită o ieșire bună</strong></p>
+          <div class="gc-card-bottom">
+            <div><small>Cod exemplu</small><b>GIFT-2026-WOW</b></div>
+            <span class="gc-card-gift"><?= v2_ic('gift') ?></span>
+          </div>
         </div>
-        <div class="grid md:grid-cols-2 gap-4">
-            <article class="soft-card p-6"><h3 class="font-display text-3xl font-700">Libertate de alegere</h3><p class="mt-2 text-ink-soft">Destinatarul alege orașul, categoria, data și activitatea potrivită.</p></article>
-            <article class="soft-card p-6 bg-mint"><h3 class="font-display text-3xl font-700">Livrare rapidă</h3><p class="mt-2 text-ink-soft">Cardul poate fi livrat digital pe email, imediat sau programat.</p></article>
-            <article class="soft-card p-6"><h3 class="font-display text-3xl font-700">Mesaj personalizat</h3><p class="mt-2 text-ink-soft">Adaugi un mesaj care transformă cardul într-un cadou personal.</p></article>
-            <article class="soft-card p-6 bg-ink text-paper"><h3 class="font-display text-3xl font-700">Sold reutilizabil</h3><p class="mt-2 text-paper/60">Dacă nu se folosește integral, soldul poate rămâne disponibil conform regulamentului.</p></article>
-        </div>
+        <div class="gc-note is-quote"><small>Mesaj personalizat</small><p>„Alege o experiență care te scoate din casă.”</p></div>
+        <div class="gc-note is-uses"><small>Se poate folosi la</small><ul><li>escape rooms</li><li>muzee</li><li>parcuri</li><li>ateliere</li><li>natură</li></ul></div>
+      </div>
     </div>
-</section>
+  </section>
+  <div id="hdr-sentinel" aria-hidden="true"></div>
 
-<!-- CONFIGURATOR -->
-<section id="cumpara" class="border-y-2 border-ink bg-paper-2/60">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div class="grid lg:grid-cols-[1fr_460px] gap-8 items-start">
-            <div>
-                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">CONFIGURATOR</p>
-                <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Construiește cardul cadou.</h2>
-                <p class="mt-5 text-lg text-ink-soft leading-relaxed max-w-2xl">Alege valoarea, destinatarul, mesajul și momentul livrării. Cardul se generează și se trimite digital pe email.</p>
-
-                <form class="mt-8 rounded-[2rem] border-2 border-ink bg-paper p-6 sm:p-8 shadow-ticket">
-                    <div class="grid sm:grid-cols-2 gap-4">
-                        <label>
-                            <span class="block mb-1.5 text-sm font-700">Valoare card</span>
-                            <select class="field" x-model.number="amount">
-                                <option :value="50">50 lei</option>
-                                <option :value="100">100 lei</option>
-                                <option :value="150">150 lei</option>
-                                <option :value="250">250 lei</option>
-                                <option :value="500">500 lei</option>
-                                <option :value="1000">1000 lei</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span class="block mb-1.5 text-sm font-700">Pentru cine este?</span>
-                            <input class="field" x-model="recipient" placeholder="ex. Maria, Alex, Ana și Vlad" />
-                        </label>
-                        <label>
-                            <span class="block mb-1.5 text-sm font-700">Email destinatar</span>
-                            <input class="field" type="email" placeholder="destinatar@example.ro" />
-                        </label>
-                        <label>
-                            <span class="block mb-1.5 text-sm font-700">Când se trimite?</span>
-                            <select class="field" x-model="delivery">
-                                <option value="now">Imediat după cumpărare</option>
-                                <option value="scheduled">La o dată aleasă</option>
-                                <option value="me">Îl trimit eu mai târziu</option>
-                            </select>
-                        </label>
-                        <label x-show="delivery==='scheduled'" x-collapse>
-                            <span class="block mb-1.5 text-sm font-700">Data trimiterii</span>
-                            <input class="field" type="date" />
-                        </label>
-                        <label>
-                            <span class="block mb-1.5 text-sm font-700">Design</span>
-                            <select class="field" x-model="theme">
-                                <option value="vermilion">Wow / surpriză</option>
-                                <option value="forest">Natură / calm</option>
-                                <option value="ochre">Sărbătoare</option>
-                                <option value="ink">Premium</option>
-                            </select>
-                        </label>
-                        <label class="sm:col-span-2">
-                            <span class="block mb-1.5 text-sm font-700">Mesaj personalizat</span>
-                            <textarea class="field min-h-32" x-model="message" maxlength="180" placeholder="Scrie un mesaj scurt pentru destinatar."></textarea>
-                            <span class="mt-1 block text-xs text-ink-soft" x-text="message.length + '/180 caractere'"></span>
-                        </label>
-                    </div>
-
-                    <div class="mt-6 rounded-2xl bg-mint border border-forest/20 p-4">
-                        <p class="font-700 text-forest">Ce primește destinatarul?</p>
-                        <p class="mt-1 text-sm text-ink-soft">Un email cu cardul cadou, cod unic, mesajul tău și link direct către activitățile eligibile.</p>
-                    </div>
-
-                    <div class="mt-6 flex flex-wrap gap-3">
-                        <button type="button" class="rounded-full bg-vermilion text-paper px-6 py-4 font-700 hover:bg-vermilion-d transition">Adaugă în coș</button>
-                        <button type="button" class="rounded-full border-2 border-ink px-6 py-4 font-700 hover:bg-ink hover:text-paper transition">Previzualizează</button>
-                    </div>
-                </form>
-            </div>
-
-            <aside class="lg:sticky lg:top-28">
-                <div class="ticket rounded-[2rem] border-2 border-ink overflow-hidden shadow-deep"
-                     :class="{
-                       'bg-vermilion text-paper': theme==='vermilion',
-                       'bg-forest text-paper': theme==='forest',
-                       'bg-ochre text-ink': theme==='ochre',
-                       'bg-ink text-paper': theme==='ink'
-                     }"
-                     style="--perf:100%">
-                    <div class="relative min-h-[520px] p-8 flex flex-col justify-between">
-                        <div class="absolute inset-0 opacity-20 bg-dotgrid-light-md" aria-hidden="true"></div>
-                        <div class="relative">
-                            <div class="flex items-center justify-between gap-4">
-                                <p class="font-mono text-xs tracking-[.22em] opacity-65">GIFT CARD</p>
-                                <p class="font-mono text-xs opacity-65">bilete.online</p>
-                            </div>
-                            <p class="mt-12 font-display text-7xl font-700 leading-none" x-text="money(amount)"></p>
-                            <p class="mt-4 text-lg opacity-75">pentru <strong x-text="recipient || 'cineva drag'"></strong></p>
-                            <div class="mt-8 rounded-3xl bg-white/10 border border-white/15 p-5">
-                                <p class="font-display text-2xl font-700" x-text="message || 'Alege o experiență care te scoate din casă.'"></p>
-                            </div>
-                        </div>
-
-                        <div class="relative flex items-end justify-between gap-4">
-                            <div>
-                                <p class="font-mono text-[10px] tracking-[.18em] opacity-60">COD CARD</p>
-                                <p class="font-mono tracking-[.25em] text-lg">GIFT-2026-WOW</p>
-                            </div>
-                            <div class="w-20 h-20 rounded-2xl bg-paper text-ink grid place-items-center rotate-6">
-                                <svg viewBox="0 0 24 24" class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7m0 0S9.5 2 7 4s5 3 5 3Zm0 0s2.5-5 5-3-5 3-5 3Z"/></svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-        </div>
-    </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section id="cum-functioneaza" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-    <div class="max-w-3xl">
-        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">CUM FUNCȚIONEAZĂ</p>
-        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Din cadou în bilet, în câțiva pași.</h2>
-    </div>
-    <div class="mt-10 grid md:grid-cols-4 gap-4">
-        <?php
-        $steps = [
-            ['n' => 1, 'title' => 'Alegi valoarea',  'desc' => 'Selectezi suma potrivită sau o valoare personalizată.', 'dark' => false],
-            ['n' => 2, 'title' => 'Scrii mesajul',   'desc' => 'Adaugi numele destinatarului și o urare personală.',    'dark' => false],
-            ['n' => 3, 'title' => 'Îl trimiți',      'desc' => 'Cardul ajunge pe email imediat sau la data aleasă.',     'dark' => false],
-            ['n' => 4, 'title' => 'Ei aleg experiența', 'desc' => 'Codul se folosește în coș sau checkout pentru activități eligibile.', 'dark' => true],
-        ];
-        foreach ($steps as $s):
-        ?>
-            <article class="rounded-3xl border-2 border-ink <?= $s['dark'] ? 'bg-ink text-paper' : 'bg-paper' ?> p-6">
-                <p class="font-display text-5xl font-700 <?= $s['dark'] ? 'text-ochre' : 'text-vermilion' ?>"><?= $s['n'] ?></p>
-                <h3 class="mt-3 font-display text-2xl font-700"><?= htmlspecialchars($s['title']) ?></h3>
-                <p class="mt-2 <?= $s['dark'] ? 'text-paper/60' : 'text-ink-soft' ?>"><?= htmlspecialchars($s['desc']) ?></p>
-            </article>
+  <!-- ===================== WHY ===================== -->
+  <section class="sec gc-why" aria-labelledby="gc-why-h">
+    <div class="wrap gc-why-grid">
+      <div class="gc-why-intro">
+        <p class="kicker">De ce</p>
+        <h2 id="gc-why-h">Un cadou care nu rămâne pe raft.</h2>
+        <p>Cardul cadou este perfect când nu știi exact ce activitate ar prefera cineva, dar știi sigur că i-ar prinde bine o ieșire, o experiență sau un moment memorabil.</p>
+      </div>
+      <ul class="gc-why-list">
+        <?php foreach ($why as [$whyTitle, $whyText, $whyClass]): ?>
+        <li class="gc-why-card <?= $whyClass ?>"><h3><?= v2_e($whyTitle) ?></h3><p><?= v2_e($whyText) ?></p></li>
         <?php endforeach; ?>
+      </ul>
     </div>
-</section>
+  </section>
 
-<!-- USE CASES -->
-<section class="border-y-2 border-ink bg-ink text-paper">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div class="grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-start">
-            <div>
-                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">PENTRU CE OCAZII</p>
-                <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Când nu vrei încă un cadou generic.</h2>
-                <p class="mt-5 text-lg text-paper/60 leading-relaxed">Cardul cadou funcționează pentru oameni diferiți pentru că nu presupune că știi exact ce vor. Le dai opțiuni, nu o alegere forțată.</p>
+  <!-- ===================== CONFIGURATOR ===================== -->
+  <section class="sec gc-build" id="cumpara" aria-labelledby="gc-build-h">
+    <div class="wrap gc-build-grid">
+      <div>
+        <p class="kicker">Configurator</p>
+        <h2 id="gc-build-h">Construiește cardul cadou.</h2>
+        <p class="gc-build-lead">Alege valoarea, destinatarul, mesajul și momentul livrării. Cardul se generează și se trimite digital pe email.</p>
+
+        <form class="gc-form" id="gc-form" novalidate>
+          <div class="gc-fields">
+            <div class="gc-field">
+              <label for="gc-amount">Valoare card</label>
+              <select id="gc-amount">
+                <?php foreach ($amounts as $amount): ?><option value="<?= $amount ?>"<?= $amount === $defaultAmount ? ' selected' : '' ?>><?= v2_thousands($amount) ?> lei</option><?php endforeach; ?>
+              </select>
             </div>
-            <div class="grid sm:grid-cols-2 gap-4">
-                <?php
-                $useCases = [
-                    ['t' => 'Zi de naștere', 'd' => 'Pentru cineva care preferă amintiri în loc de obiecte.'],
-                    ['t' => 'Cuplu',         'd' => 'O ieșire în doi: muzeu, atelier, escape room sau tur.'],
-                    ['t' => 'Familie',       'd' => 'Activități pentru copii, weekenduri și vacanțe.'],
-                    ['t' => 'Corporate',     'd' => 'Cadouri pentru echipe, clienți sau parteneri.'],
-                    ['t' => 'Last minute',   'd' => 'Cadou digital, rapid, fără livrare fizică.'],
-                    ['t' => 'Mulțumesc',     'd' => 'Un gest elegant pentru cineva care a ajutat.'],
-                ];
-                foreach ($useCases as $uc): ?>
-                    <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-700"><?= htmlspecialchars($uc['t']) ?></h3><p class="mt-2 text-paper/60"><?= htmlspecialchars($uc['d']) ?></p></article>
-                <?php endforeach; ?>
+            <div class="gc-field">
+              <label for="gc-recipient">Pentru cine este?</label>
+              <input id="gc-recipient" type="text" maxlength="60" autocomplete="off" placeholder="ex. Maria, Alex, Ana și Vlad">
             </div>
+            <div class="gc-field">
+              <label for="gc-email">Email destinatar</label>
+              <input id="gc-email" type="email" autocomplete="off" placeholder="destinatar@example.ro">
+            </div>
+            <div class="gc-field">
+              <label for="gc-delivery">Când se trimite?</label>
+              <select id="gc-delivery">
+                <option value="now">Imediat după cumpărare</option>
+                <option value="scheduled">La o dată aleasă</option>
+                <option value="me">Îl trimit eu mai târziu</option>
+              </select>
+            </div>
+            <div class="gc-field" id="gc-date-field" hidden>
+              <label for="gc-date">Data trimiterii</label>
+              <input id="gc-date" type="date" min="<?= v2_e($tomorrow) ?>">
+            </div>
+            <div class="gc-field">
+              <label for="gc-theme">Design</label>
+              <select id="gc-theme">
+                <?php foreach ($themes as [$themeKey, $themeLabel]): ?><option value="<?= $themeKey ?>"><?= v2_e($themeLabel) ?></option><?php endforeach; ?>
+              </select>
+            </div>
+            <div class="gc-field is-wide">
+              <label for="gc-message">Mesaj personalizat</label>
+              <textarea id="gc-message" rows="4" maxlength="180" placeholder="Scrie un mesaj scurt pentru destinatar." aria-describedby="gc-count"></textarea>
+              <span class="gc-count" id="gc-count">0/180 caractere</span>
+            </div>
+          </div>
+
+          <div class="gc-info">
+            <span class="gc-info-ic"><?= v2_ic('envelope-simple') ?></span>
+            <p><b>Ce primește destinatarul?</b>Un email cu cardul cadou, cod unic, mesajul tău și link direct către activitățile eligibile.</p>
+          </div>
+
+          <div class="gc-actions">
+            <button class="btn btn-primary" type="button" id="gc-add"><?= v2_ic('shopping-cart-simple') ?>Adaugă în coș</button>
+            <button class="btn btn-ghost" type="button" id="gc-show" aria-controls="gc-preview">Previzualizează</button>
+          </div>
+          <p class="gc-msg" id="gc-msg" role="status"></p>
+        </form>
+      </div>
+
+      <aside class="gc-preview-wrap" aria-label="Previzualizare card cadou">
+        <div class="gc-card is-preview" id="gc-preview" data-theme="wow" tabindex="-1">
+          <div class="gc-card-top"><span>Gift card</span><span>bilete.online</span></div>
+          <p class="gc-card-amount" data-gc="amount"><?= v2_e($gcMoney($defaultAmount)) ?></p>
+          <p class="gc-card-for">pentru <strong data-gc="recipient" data-fallback="cineva drag">cineva drag</strong></p>
+          <p class="gc-card-message" data-gc="message" data-fallback="Alege o experiență care te scoate din casă.">Alege o experiență care te scoate din casă.</p>
+          <div class="gc-card-bottom">
+            <div><small>Cod card</small><b>GIFT-2026-WOW</b></div>
+            <span class="gc-card-gift"><?= v2_ic('gift') ?></span>
+          </div>
         </div>
+      </aside>
     </div>
-</section>
+  </section>
 
-<!-- ELIGIBLE -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+  <!-- ===================== HOW IT WORKS ===================== -->
+  <section class="sec gc-how" id="cum-functioneaza" aria-labelledby="gc-how-h">
+    <div class="wrap">
+      <div class="gc-how-intro"><p class="kicker">Cum funcționează</p><h2 id="gc-how-h">Din cadou în bilet, în câțiva pași.</h2></div>
+      <ol class="gc-steps">
+        <?php foreach ($steps as $si => [$stepTitle, $stepText]): ?>
+        <li class="gc-step<?= $si === count($steps) - 1 ? ' is-last' : '' ?>"><span class="gc-step-n"><?= $si + 1 ?></span><h3><?= v2_e($stepTitle) ?></h3><p><?= v2_e($stepText) ?></p></li>
+        <?php endforeach; ?>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================== OCCASIONS ===================== -->
+  <section class="sec gc-uses" aria-labelledby="gc-uses-h">
+    <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
+    <div class="wrap gc-uses-grid">
+      <div>
+        <p class="kicker">Pentru ce ocazii</p>
+        <h2 id="gc-uses-h">Când nu vrei încă un cadou generic.</h2>
+        <p>Cardul cadou funcționează pentru oameni diferiți pentru că nu presupune că știi exact ce vor. Le dai opțiuni, nu o alegere forțată.</p>
+      </div>
+      <ul class="gc-uses-list">
+        <?php foreach ($useCases as [$useTitle, $useText]): ?><li><h3><?= v2_e($useTitle) ?></h3><p><?= v2_e($useText) ?></p></li><?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== ELIGIBLE ===================== -->
+  <section class="sec gc-eligible" aria-labelledby="gc-eligible-h">
+    <div class="wrap">
+      <div class="sec-head">
         <div>
-            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">ACTIVITĂȚI ELIGIBILE</p>
-            <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">La ce se poate folosi?</h2>
-            <p class="mt-5 text-lg text-ink-soft max-w-3xl">Cardul cadou poate fi folosit pentru activitățile eligibile din platformă: escape rooms, muzee, parcuri, ateliere, natură sau experiențe pentru familie.</p>
+          <p class="kicker">Activități eligibile</p>
+          <h2 id="gc-eligible-h">La ce se poate folosi?</h2>
+          <p class="gc-eligible-lead">Cardul cadou poate fi folosit pentru activitățile eligibile din platformă: escape rooms, muzee, parcuri, ateliere, natură sau experiențe pentru familie.</p>
         </div>
-        <a href="/categorii" class="rounded-full bg-ink text-paper px-6 py-4 font-700 hover:bg-vermilion transition">Vezi toate categoriile</a>
-    </div>
-
-    <div class="mt-10 grid md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <?php
-        $eligible = [
-            ['href' => '/escape-rooms',         'emoji' => '🕵️', 'title' => 'Escape rooms'],
-            ['href' => '/muzee-expozitii',      'emoji' => '🖼️', 'title' => 'Muzee'],
-            ['href' => '/parcuri-de-distractii','emoji' => '🎡', 'title' => 'Parcuri'],
-            ['href' => '/natura-outdoor',       'emoji' => '🌲', 'title' => 'Natură'],
-            ['href' => '/ateliere-experiente-creative', 'emoji' => '🎨', 'title' => 'Ateliere'],
-            ['href' => '/familie-copii',        'emoji' => '👨‍👩‍👧', 'title' => 'Familie'],
-        ];
-        foreach ($eligible as $e): ?>
-            <a href="<?= htmlspecialchars($e['href'], ENT_QUOTES) ?>" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition">
-                <p class="text-3xl"><?= $e['emoji'] ?></p>
-                <h3 class="mt-3 font-display text-2xl font-700"><?= htmlspecialchars($e['title']) ?></h3>
-            </a>
+        <a class="btn btn-ghost" href="/categorii">Vezi toate categoriile<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <ul class="gc-cats">
+        <?php foreach ($eligible as [$catSlug, $catTitle]): ?>
+        <li><a class="gc-cat" href="/<?= v2_e($catSlug) ?>">
+          <span class="gc-cat-media"><img src="<?= v2_e(v2_asset('img/cat-' . $catSlug . '-320.webp')) ?>" srcset="<?= v2_e(v2_asset('img/cat-' . $catSlug . '-320.webp')) ?> 320w, <?= v2_e(v2_asset('img/cat-' . $catSlug . '.webp')) ?> 640w" sizes="(min-width: 1024px) 15vw, (min-width: 600px) 30vw, 45vw" width="640" height="800" alt="" loading="lazy" decoding="async"></span>
+          <b><?= v2_e($catTitle) ?><?= v2_ic('arrow-right') ?></b>
+        </a></li>
         <?php endforeach; ?>
+      </ul>
     </div>
-</section>
+  </section>
 
-<!-- BALANCE / TRUST -->
-<section class="border-y-2 border-ink bg-paper-2/70">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div class="grid lg:grid-cols-2 gap-8 items-center">
-            <div>
-                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">GESTIONARE SOLD</p>
-                <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Cod unic. Sold clar. Folosire simplă.</h2>
-                <p class="mt-5 text-lg text-ink-soft leading-relaxed">Destinatarul introduce codul în coș sau checkout. Dacă valoarea comenzii este mai mică decât soldul disponibil, diferența poate rămâne pe card, conform regulamentului.</p>
-            </div>
-            <div class="ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-ticket" style="--perf:100%">
-                <div class="p-6 sm:p-8">
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">VERIFICARE CARD</p>
-                    <h3 class="mt-3 font-display text-4xl font-700">GIFT-2026-WOW</h3>
-                    <div class="mt-6 grid grid-cols-2 gap-4">
-                        <div class="rounded-2xl bg-mint border border-forest/20 p-4"><p class="text-sm text-ink-soft">Sold disponibil</p><p class="font-display text-4xl font-700">180 lei</p></div>
-                        <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4"><p class="text-sm text-ink-soft">Valabil până la</p><p class="font-display text-4xl font-700">2027</p></div>
-                    </div>
-                    <a href="/voucher" class="mt-6 inline-flex rounded-full bg-vermilion text-paper px-6 py-4 font-700 hover:bg-vermilion-d transition">Verifică un card</a>
-                </div>
-            </div>
-        </div>
+  <!-- ===================== BALANCE ===================== -->
+  <section class="sec gc-balance" aria-labelledby="gc-balance-h">
+    <div class="wrap gc-balance-grid">
+      <div>
+        <p class="kicker">Gestionare sold</p>
+        <h2 id="gc-balance-h">Cod unic. Sold clar. Folosire simplă.</h2>
+        <p>Destinatarul introduce codul în coș sau checkout. Dacă valoarea comenzii este mai mică decât soldul disponibil, diferența poate rămâne pe card, conform regulamentului.</p>
+      </div>
+      <div class="gc-check">
+        <small>Verificare card</small>
+        <h3>GIFT-2026-WOW</h3>
+        <dl>
+          <div class="is-mint"><dt>Sold disponibil</dt><dd>180 lei</dd></div>
+          <div><dt>Valabil până la</dt><dd>2027</dd></div>
+        </dl>
+        <a class="btn btn-primary" href="/voucher">Verifică un card<?= v2_ic('arrow-right') ?></a>
+      </div>
     </div>
-</section>
+  </section>
 
-<!-- FAQ -->
-<section class="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20" x-data="{ open: 0 }">
-    <div class="text-center max-w-3xl mx-auto">
-        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">FAQ</p>
-        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Întrebări frecvente</h2>
-    </div>
-
-    <div class="mt-10 space-y-3">
-        <?php
-        $faqs = [
-            ['q' => 'Cum se livrează cardul cadou?',                'a' => 'Cardul cadou este livrat digital pe email, fie către tine, fie direct către destinatar, în funcție de opțiunea aleasă.'],
-            ['q' => 'Unde poate fi folosit?',                       'a' => 'Poate fi folosit pentru activitățile eligibile de pe bilete.online: escape rooms, muzee, parcuri, ateliere, natură și alte experiențe listate.'],
-            ['q' => 'Poate fi folosit parțial?',                    'a' => 'Da. Dacă soldul cardului este mai mare decât valoarea comenzii, diferența poate rămâne disponibilă până la expirarea cardului, conform regulamentului.'],
-            ['q' => 'Pot programa trimiterea?',                     'a' => 'Da, cardul poate fi trimis imediat sau programat pentru o dată aleasă, dacă această opțiune este activă în checkout.'],
-            ['q' => 'Pot cumpăra carduri cadou pentru companie?',   'a' => 'Da. Pentru volume mai mari sau cadouri corporate, poți folosi formularul de contact sau o pagină dedicată comenzilor bulk.'],
-        ];
-        foreach ($faqs as $i => $f): ?>
-            <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
-                <button type="button" @click="open = open === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="open === <?= $i ?>" class="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4">
-                    <span class="font-display text-2xl sm:text-3xl font-700"><?= htmlspecialchars($f['q']) ?></span>
-                    <span class="text-3xl font-700" x-text="open === <?= $i ?> ? '−' : '+'"></span>
-                </button>
-                <div x-show="open === <?= $i ?>" x-collapse x-cloak class="px-5 sm:px-6 pb-6 text-ink-soft leading-relaxed"><?= htmlspecialchars($f['a']) ?></div>
-            </article>
+  <!-- ===================== FAQ ===================== -->
+  <section class="sec gc-faq" aria-labelledby="gc-faq-h">
+    <div class="wrap gc-faq-grid">
+      <div><p class="kicker">FAQ</p><h2 id="gc-faq-h">Întrebări frecvente</h2></div>
+      <div>
+        <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
+        <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
         <?php endforeach; ?>
+      </div>
     </div>
-</section>
+  </section>
 
-<!-- FINAL CTA -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
-    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
-        <div class="absolute inset-0 opacity-15 bg-dotgrid-cta" aria-hidden="true"></div>
-        <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
-            <div>
-                <p class="font-mono text-xs tracking-[.2em] text-paper/60">CADOU DIGITAL</p>
-                <h2 class="mt-3 font-display text-5xl sm:text-6xl font-700 leading-[.9]">Trimite o experiență, nu încă un obiect.</h2>
-                <p class="mt-4 max-w-2xl text-paper/75 text-lg">Alege valoarea, scrie mesajul și lasă destinatarul să aleagă activitatea potrivită.</p>
-            </div>
-            <a href="#cumpara" class="rounded-full bg-paper text-ink px-6 py-4 font-700 text-center hover:bg-ink hover:text-paper transition">Cumpără card cadou</a>
+  <!-- ===================== FINAL CTA ===================== -->
+  <section class="gc-final" aria-labelledby="gc-final-h">
+    <div class="wrap">
+      <div class="gc-final-in">
+        <?= $gcArches ?>
+        <div>
+          <p class="kicker">Cadou digital</p>
+          <h2 id="gc-final-h">Trimite o experiență, nu încă un obiect.</h2>
+          <p>Alege valoarea, scrie mesajul și lasă destinatarul să aleagă activitatea potrivită.</p>
         </div>
+        <a class="btn btn-light" href="#cumpara">Cumpără card cadou<?= v2_ic('arrow-right') ?></a>
+      </div>
     </div>
-</section>
-
-</div><!-- /x-data="giftCardPage()" -->
-
-<script>
-// Gift card live-preview state. Plain inline because it's only used on this page.
-function giftCardPage() {
-    return {
-        amount: 250,
-        recipient: '',
-        delivery: 'now',
-        theme: 'vermilion',
-        message: '',
-        money(v) {
-            return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', maximumFractionDigits: 0 }).format(v);
-        },
-    };
-}
-</script>
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
+  </section>
+</main>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>
