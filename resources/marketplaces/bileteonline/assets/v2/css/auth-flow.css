@@ -46,7 +46,7 @@
 .af-card-k.is-bad{color:var(--red-text)}
 .af-card-h{margin:6px 0 0;font-size:clamp(2rem, 3.4vw, 2.75rem);font-weight:700;line-height:1.05;letter-spacing:-.035em;color:var(--green)}
 .af-card-h:focus{outline:none}
-.af-card-p{margin:8px 0 0;color:var(--muted);line-height:1.5}
+.af-card-p{margin:8px 0 0;color:var(--muted);line-height:1.5;text-wrap:pretty}
 .af-card-p strong{color:var(--ink);overflow-wrap:anywhere}
 .af-error{margin:var(--space-4) 0 0;padding:12px 16px;border-radius:12px;background:#FCE9E8;color:var(--red-text);font-size:.9375rem;font-weight:600;line-height:1.45}
 .af-error[hidden]{display:none}
@@ -91,3 +91,17 @@
 .af-note{margin-top:var(--space-4);padding:12px 16px;border-radius:12px;background:var(--tint-green);color:var(--green);font-size:.9375rem;font-weight:600;line-height:1.45}
 .af-note[hidden]{display:none}
 .af-link-btn{display:inline;margin:var(--space-4) 0 0;padding:0;border:0;background:none;color:var(--green);font:700 .9375rem/1.4 var(--font);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+/* email verification (/verify-email) */
+.af-spinner{display:block;width:56px;height:56px;margin-bottom:var(--space-4);border:5px solid var(--tint-green);border-top-color:var(--action);border-radius:50%;animation:af-spin .8s linear infinite}
+@keyframes af-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.af-spinner{animation-duration:2.4s}}
+.af-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.af-nw{white-space:nowrap} /* a hyphen is a break opportunity: keep "Verifică-ți" in one piece */
+.af-note b{display:block}
+.af-field.is-inline{margin-top:var(--space-4)}
+.af-field[hidden]{display:none}
+.af-stack{display:grid;gap:10px;margin-top:var(--space-4)}
+.af-stack .btn[hidden]{display:none}
+.af-small{margin:var(--space-4) 0 0;font-size:.875rem;line-height:1.5;color:var(--muted)}
+.af-small a{color:var(--green);font-weight:700}
