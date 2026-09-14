@@ -524,7 +524,9 @@ h1,h2,h3{text-wrap:balance}
 
 /* toasts from assets/js/components/notifications.js: under the header on phones, bottom right on larger screens */
 .toast-container{position:fixed;z-index:90;left:var(--gutter);right:var(--gutter);top:calc(var(--hdr-h) + 12px);display:grid;justify-items:center;gap:8px;pointer-events:none}
-@media (min-width:768px){.toast-container{left:auto;top:auto;right:24px;bottom:24px;justify-items:end}}
+/* below the sticky reservation timer of the cart and checkout pages, not on top of it */
+body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
+@media (min-width:768px){.toast-container,body:has(.co-timer:not(.hidden)) .toast-container{left:auto;top:auto;right:24px;bottom:24px;justify-items:end}}
 .toast{display:flex;align-items:flex-start;gap:12px;max-width:420px;padding:14px 18px 14px 14px;border-radius:var(--r-m);background:var(--deep);color:#F7F7F5;font-size:.9375rem;font-weight:600;line-height:1.4;box-shadow:var(--shadow-pop);opacity:0;transform:translateY(-8px);transition:opacity var(--dur-state) var(--ease-out), transform var(--dur-state) var(--ease-out);pointer-events:auto}
 @media (min-width:768px){.toast{transform:translateY(8px)}}
 .toast.show{opacity:1;transform:none}
