@@ -511,6 +511,33 @@ h1,h2,h3{text-wrap:balance}
 /* the fixed header is solid from the start and the content starts below it */
 .page-main{padding-top:var(--hdr-h)}
 
+/* =================== CHECKOUT FLOW: order steps, legacy `hidden` class, toasts =================== */
+/* cart, checkout and thank-you reuse the previous stack's scripts, which show and hide elements with a `hidden` class */
+.hidden{display:none !important}
+.steps{list-style:none;margin:0;padding:5px;display:flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.steps li{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;color:var(--muted);font-size:.9375rem;font-weight:600;line-height:1;white-space:nowrap}
+.steps b{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--surface-2);color:var(--ink);font-size:.8125rem;font-weight:700}
+.steps .is-done b{background:var(--tint-green);color:var(--green)}
+.steps [aria-current="step"]{background:var(--deep);color:#F7F7F5}
+.steps [aria-current="step"] b{background:var(--online);color:#0B2F24}
+@media (max-width:479px){.steps li{gap:6px;padding-right:10px;font-size:.8125rem}.steps b{width:24px;height:24px;font-size:.75rem}}
+
+/* toasts from assets/js/components/notifications.js: under the header on phones, bottom right on larger screens */
+.toast-container{position:fixed;z-index:90;left:var(--gutter);right:var(--gutter);top:calc(var(--hdr-h) + 12px);display:grid;justify-items:center;gap:8px;pointer-events:none}
+@media (min-width:768px){.toast-container{left:auto;top:auto;right:24px;bottom:24px;justify-items:end}}
+.toast{display:flex;align-items:flex-start;gap:12px;max-width:420px;padding:14px 18px 14px 14px;border-radius:var(--r-m);background:var(--deep);color:#F7F7F5;font-size:.9375rem;font-weight:600;line-height:1.4;box-shadow:var(--shadow-pop);opacity:0;transform:translateY(-8px);transition:opacity var(--dur-state) var(--ease-out), transform var(--dur-state) var(--ease-out);pointer-events:auto}
+@media (min-width:768px){.toast{transform:translateY(8px)}}
+.toast.show{opacity:1;transform:none}
+.toast.hiding{opacity:0}
+.toast > div{color:inherit}
+.toast > div:first-child{flex:none}
+.toast svg{display:block;width:20px;height:20px;margin-top:1px}
+.toast-success svg{color:var(--online)}
+.toast-info svg{color:#9FE0BF}
+.toast-warning svg{color:#F2C04D}
+.toast-error{background:#5C1F1B}
+.toast-error svg{color:#FF9C95}
+
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{transition-duration:0ms !important;transition-delay:0ms !important;animation-duration:0ms !important;animation-delay:0ms !important}
 }
