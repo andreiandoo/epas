@@ -757,9 +757,6 @@ $ambiletBackendDown = isBackendUnreachable();
             <span id="cartSubtotal" class="text-base font-semibold text-gray-900">0 lei</span>
         </div>
 
-        <!-- Promo discount (display:none until a promo is applied — we
-             toggle via inline style because Tailwind's `flex` class
-             outranks the [hidden] attribute on specificity). -->
         <div id="cartDiscountRow" class="flex items-center justify-between mb-2" style="display:none">
             <span class="text-sm text-gray-600">
                 Reducere

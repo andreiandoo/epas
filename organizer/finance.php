@@ -88,8 +88,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- Breakdown-ul cardului selectat: un singur panou, pe toată lățimea,
-                 sub carduri — încape mult mai bine decât înghesuit în card. -->
             <div id="breakdown-panel" class="hidden p-6 mb-8 bg-white border rounded-2xl border-border">
                 <div class="flex items-start justify-between gap-4 mb-4">
                     <div>

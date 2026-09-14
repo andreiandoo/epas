@@ -475,8 +475,6 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div id="plannerMap" style="height: 320px; margin-bottom: 16px;"></div>
 
                                 <div class="bg-white border border-border rounded-2xl">
-                                    <!-- Sticky toolbar — rămâne vizibilă cât scroll-uiești prin orașe.
-                                         Auto-recalc rulează la 1s după orice editare → nu mai e nevoie de buton manual. -->
                                     <div class="sticky top-0 z-30 px-5 py-3 bg-white border-b shadow-sm border-border rounded-t-2xl">
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             <h3 class="font-bold text-secondary">Itinerar optim</h3>
@@ -1659,7 +1657,7 @@ function tourOptimizer() {
         renderOpportunityMap() {
             if (!this.opportunityMap) {
                 this.opportunityMap = L.map('opportunityMap').setView([45.9432, 24.9668], 6);
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(this.opportunityMap);
+                AmbiletTileLayer('light_all').addTo(this.opportunityMap);
             } else {
                 this.opportunityMap.eachLayer(layer => {
                     if (layer instanceof L.Marker || layer instanceof L.CircleMarker) this.opportunityMap.removeLayer(layer);
@@ -1693,7 +1691,7 @@ function tourOptimizer() {
             if (!this.planner.optimized) return;
             if (!this.plannerMap) {
                 this.plannerMap = L.map('plannerMap').setView([45.9432, 24.9668], 6);
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(this.plannerMap);
+                AmbiletTileLayer('light_all').addTo(this.plannerMap);
             } else {
                 this.plannerMap.eachLayer(layer => {
                     if (layer instanceof L.Marker || layer instanceof L.Polyline) this.plannerMap.removeLayer(layer);

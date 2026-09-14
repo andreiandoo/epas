@@ -46,10 +46,6 @@
   <!-- Toast container (used by JS for in-app feedback) -->
   <div class="scanapp-toasts" id="scanapp-toasts" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Register service worker (scope = /organizator/scan/).
-       Defer registration by 2s after window.load so it doesn't compete with
-       the initial page render — the SW is a progressive enhancement and
-       its presence on the FIRST visit gives the user no benefit. -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
@@ -61,20 +57,6 @@
     }
   </script>
 
-  <!-- Core scan-app JS bundle. Order matters: auth → contexts → app init.
-       Page-specific scripts can listen for ScanApp.toast / EventContext.subscribe().
-       defer scripts execute in document order, so any page-specific JS MUST be
-       emitted AFTER these via $scanPageScript, otherwise it runs before
-       ScanAuth / AppContext / EventContext are defined.
-
-       PERF P1/3 — All 6 core files (auth, api, app-context, event-context,
-       scanner, app) are concatenated server-side by /api/scan-bundle.php and
-       delivered as one HTTP request. Saves 5 round-trips per page load.
-       Bundle URL is invalidated automatically by max(mtime) → ?v= so source
-       edits are picked up on next request.
-
-       Emergency rollback: add ?bundle=0 to the URL to fall back to individual
-       script tags (useful if the bundle ever serves something stale). -->
 <?php
     $coreDir = dirname(__DIR__, 2) . '/assets/js/scan-app/';
     $coreFiles = ['auth.js', 'api.js', 'app-context.js', 'event-context.js', 'scanner.js', 'app.js'];

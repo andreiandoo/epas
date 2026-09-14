@@ -48,7 +48,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Decontare (compensare AmBilet <-> locație) pe jumătăți de lună: 1-15 și 16-ultima_zi -->
         <section class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
             <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border bg-slate-50">
                 <div>

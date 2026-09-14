@@ -74,8 +74,6 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
             </div>
 
-            <!-- Online Join Section (shown only for online events; QR
-                 section hidden alongside via #ticket-card[data-online]) -->
             <div id="online-join-section" class="hidden flex-col items-center justify-center p-6 lg:p-8 lg:w-80 bg-gradient-to-br from-primary/5 to-red-500/5">
                 <div class="text-center">
                     <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary/10 text-primary">

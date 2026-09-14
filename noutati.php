@@ -155,9 +155,6 @@ require_once __DIR__ . '/includes/header.php';
             <p class="text-slate-500 max-w-md mx-auto">Reveniți curând — publicăm updates regulat cu noi funcționalități și îmbunătățiri.</p>
         </div>
 
-        <!-- Sentinel for IntersectionObserver — triggers next-page load
-             ~400px before it enters the viewport so the spinner appears
-             seamless as the visitor scrolls. -->
         <div id="noutati-sentinel" aria-hidden="true" class="h-1"></div>
     </main>
 

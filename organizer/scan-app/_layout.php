@@ -42,23 +42,10 @@ $tabs = [
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
 
-    <!-- PERF: preconnect to the API origin so the DNS lookup + TCP + TLS
-         handshake happens IN PARALLEL with HTML parsing. By the time JS
-         fires the first /api/scan-proxy → core.tixello.com request, the
-         connection is already warm. Saves ~100-300ms on cold visits
-         (mobile data, first session). dns-prefetch is a cheaper fallback
-         that older browsers honor.
-
-         Scope: only the scan-app layout. Other marketplace pages remain
-         untouched. -->
     <link rel="preconnect" href="https://core.tixello.com" crossorigin>
     <link rel="dns-prefetch" href="https://core.tixello.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
-    <!-- PWA: manifest + iOS apple-touch-icon + theme. We declare a single
-         apple-touch-icon at 180x180 (iOS picks the closest match and resizes;
-         no point making 4 GD calls on first load). The manifest itself
-         enumerates the icon sizes for Android Chrome / Edge. -->
     <link rel="manifest" href="/organizator/scan/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/organizator/scan/icon.php?size=180">
     <link rel="icon" type="image/png" sizes="192x192" href="/organizator/scan/icon.php?size=192">
@@ -84,9 +71,6 @@ $tabs = [
 </head>
 <body class="scanapp-body" data-scan-page="<?= htmlspecialchars($scanPage) ?>">
 
-  <!-- Pre-auth gate: redirects to /organizator/login if no token. Runs BEFORE the
-       rest of the page renders so unauthenticated users don't see a flash of
-       the dark UI. -->
   <script>
     (function () {
       if (typeof AmbiletAuth === 'undefined') return;
@@ -97,11 +81,6 @@ $tabs = [
     })();
   </script>
 
-  <!-- Top bar: ported from tixello-app/src/components/Header.js but trimmed
-       for web (no 48px paddingTop — browser chrome already gives us space).
-       Logo left, status pill + refresh button right. The refresh button
-       used to be a bell icon which confused users (no notifications exist
-       yet), so it's a circular-arrow icon now to clearly signal its action. -->
   <header class="scanapp-topbar">
     <div class="scanapp-topbar__inner">
       <a class="scanapp-topbar__left" href="/organizator/scan/panou" aria-label="Aplicație Scan">

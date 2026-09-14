@@ -636,7 +636,6 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 </nav>
 
-<!-- ============ B4: SELECTOR LIMBĂ DESKTOP (fixed top-right, hidden mobile) ============ -->
 <div class="hidden lg:flex fixed top-4 right-4 z-50 items-center gap-1 bg-white/95 backdrop-blur rounded-full px-2 py-1 shadow-lg border border-forest-200" style="font-size:11px;">
     <span class="text-forest-600 text-[10px] uppercase tracking-wider font-bold px-1.5" data-i18n="lang_label">Limbă</span>
     <?php foreach ($_langLabels as $code => $label): ?>
@@ -691,15 +690,6 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 </section>
 
-<!-- ============ RESERVATION TIMER BAR ============
-     Sticky top, vizibil DOAR cand cart-ul are item-uri + cart_end_time e setat
-     in localStorage de AmbiletCart.startReservationTimer(). Re-foloseste id=countdown
-     ca scripts-ul global de timer (din cart.js / cart-page.js) sa sincronizeze
-     daca user-ul are deja tab cu /cos deschis. -->
-<!-- ============ QUICK STATS BAR ============
-     Sticky doar cand timer-bar NU e activ (are clasa lg:sticky by default,
-     scoasa de JS in setupCartTimer cand timer-ul apare — ca sa nu ai 2
-     bare sticky suprapuse). -->
 <section id="quick-stats-bar" class="bg-white border-y border-forest-100 lg:sticky lg:top-0 lg:z-20 backdrop-blur">
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
         <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-forest-100">
@@ -760,10 +750,6 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 </section>
 
-<!-- ============ RESERVATION TIMER BAR ============
-     Plasat SUB quick-stats. Cand e vizibil, JS scoate 'lg:sticky' de pe
-     quick-stats, iar timer-bar devine sticky-top. Fundal solid (#f8f1e3)
-     ca sa nu se vada continut prin el. -->
 <div id="timer-bar" class="hidden sticky top-0 z-30 border-b border-warning/20" style="display:none; background:#f8f1e3;">
     <div class="px-4 py-2.5 mx-auto max-w-7xl">
         <div class="flex items-center justify-center gap-2 text-sm">
@@ -869,9 +855,6 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
 
                 <!-- ===== MODE A: Picker categorii (carduri mari cu imagine) ===== -->
-                <!-- Se afiseaza cand:
-                     - exista categorii configurate de organizator (>=2 sau pachete + categorii)
-                     - utilizatorul nu a ales inca o categorie -->
                 <div x-show="selectedDate && !loadingTickets && hasDisplayableTickets && showCategoryPicker"
                      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <template x-for="cat in publicCategoryGroups" :key="cat.id">
@@ -894,11 +877,7 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
 
                 <!-- ===== MODE B: Bilete din categoria selectata ===== -->
-                <!-- Se afiseaza in 2 cazuri:
-                     - utilizatorul a selectat o categorie (selectedCategoryId)
-                     - nu sunt categorii definite → fallback la lista flat (showCategoryPicker = false) -->
                 <div x-show="selectedDate && !loadingTickets && hasDisplayableTickets && !showCategoryPicker" class="space-y-4">
-                    <!-- Breadcrumb back (vizibil doar cand exista picker, adica avem mai multe categorii) -->
                     <div x-show="hasMultipleCategories" class="flex items-center justify-between gap-3 mb-2">
                         <button type="button" @click="selectedCategoryId = null"
                                 class="inline-flex items-center gap-2 text-sm font-semibold text-forest-700 hover:text-forest-900 transition-colors">
@@ -1040,9 +1019,6 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
                     </template>
 
-                    <!-- Chip-uri mici cu celelalte categorii — afisate sub lista
-                         de bilete cand utilizatorul e intr-o categorie selectata.
-                         Permit navigarea rapida la alta categorie fara back-button. -->
                     <div x-show="hasMultipleCategories && otherCategoryChips.length > 0" class="pt-6 mt-6 border-t border-forest-100">
                         <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="other_categories" x-text="t('other_categories') || 'Alte categorii de bilete'"></p>
                         <!-- Pe mobile: 1 chip per rand (texte lungi de categorie nu se mai taie). -->
@@ -1065,7 +1041,6 @@ require_once __DIR__ . '/includes/head.php';
                     </div>
                 </div>
 
-                <!-- Upsell CTA (apare după ce e cel puțin un bilet în coș + există servicii disponibile) -->
                 <div x-show="cartCount > 0 && !upsellDismissed && services.length > 0" x-transition class="mt-6">
                     <div class="bg-gradient-to-br from-lake-700 via-forest-700 to-forest-800 rounded-3xl p-6 lg:p-8 text-white relative overflow-hidden">
                         <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-lake-400/20 blur-3xl"></div>
@@ -2773,10 +2748,7 @@ function reservationPage() {
             const lat = center.lat || center[0];
             const lng = center.lng || center[1];
             const map = L.map('locationMap').setView([lat, lng], (cfg.zoom || 13) - 1);
-            // OpenStreetMap tiles (no API key; CARTO now watermarks keyless use)
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap', maxZoom: 19,
-            }).addTo(map);
+            AmbiletTileLayer('light_all').addTo(map);
             const icon = L.divIcon({
                 html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">📍</div>`,
                 className: '', iconSize: [48, 48],

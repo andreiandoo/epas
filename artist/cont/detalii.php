@@ -254,7 +254,6 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     </div>
                 </div>
 
-                <!-- ============================== TAB: GALERIE & MEDIA ============================== -->
                 <div data-tab="gallery" class="tab-section hidden space-y-6">
                     <!-- Discografie -->
                     <div class="rounded-2xl border border-border bg-white p-6">
@@ -426,7 +425,6 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     </div>
                 </div>
 
-                <!-- ============================== TAB: BOOKING & CONTACT ============================== -->
                 <div data-tab="booking" class="tab-section hidden space-y-6">
 
                     <!-- Public contact — gradient hero card -->

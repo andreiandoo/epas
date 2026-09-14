@@ -498,10 +498,6 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
 
-        <!-- Below-the-fold sections: rendered OUTSIDE the flex row so the
-             sticky-cart's containing block is just the event header. This
-             lets the cart unstick right after the description ends, instead
-             of remaining glued past tour/artist/venue. -->
         <div class="mt-8 space-y-8 mobile:mt-0 mobile:space-y-0">
             <!-- Tour Events Section -->
             <section id="tour-events-section" style="display:none;" class="mobile:border-b mobile:border-border">

@@ -164,9 +164,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <!-- ============ ANGAJATI PERMANENTI (leisure) ============ -->
-        <!-- Sectiune dedicata pentru organizatorii leisure (Sf. Ana etc.) care
-             au angajati pe ture cu coduri QR fixe individuale, distinct de
-             "Echipa" de mai sus (admin/manager/staff cu access la panou). -->
         <div id="permanent-staff-section" class="hidden mt-8 pt-6 border-t-2 border-border" data-permanent-staff-section>
             <div class="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>

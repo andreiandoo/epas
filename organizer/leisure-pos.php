@@ -29,7 +29,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input id="lv-visit-date" type="date" value="<?= date('Y-m-d') ?>" class="text-sm border-0 p-0 focus:outline-none focus:ring-0 bg-transparent">
                 </label>
 
-                <!-- Casa POS: Deschidere / Inchidere. Un singur buton vizibil in functie de starea sesiunii. -->
                 <button id="lv-cash-open" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700">
                     🔓 Deschidere casă
                 </button>
@@ -37,7 +36,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     🔒 Închidere casă
                     <span id="lv-cash-open-since" class="ml-1 opacity-80 text-[10px]"></span>
                 </button>
-                <!-- Raport X: mid-shift snapshot, vizibil doar cand casa e deschisa. Toggle panou dedesubt. -->
                 <button id="lv-cash-xreport" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" aria-expanded="false" aria-controls="lv-cash-xreport-panel">
                     📊 Raport X
                 </button>
@@ -79,7 +77,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
 
-        <!-- Raport X: bani in casa (cash + card) de la deschiderea sesiunii curente. Casa-only. -->
         <!-- Design aliniat 1:1 cu sectiunea CASA din leisure-dashboard.php -->
         <section id="lv-cash-xreport-panel" class="hidden mb-4 overflow-hidden border-2 shadow-sm rounded-2xl border-emerald-300 bg-emerald-50 print:hidden" role="region" aria-labelledby="lv-cash-xreport-title">
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-emerald-200 bg-emerald-100/60">
@@ -125,7 +122,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <div class="grid lg:grid-cols-3 gap-6 print:hidden items-start">
-            <!-- Grid bilete: header eliminat, categoriile devin acordeoane full-width fara padding -->
             <div class="lg:col-span-2 bg-white border rounded-2xl border-border overflow-hidden relative">
                 <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
                 <div id="lv-grid" class="hidden"></div>
@@ -139,9 +135,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- Panou 'Desfasurator casa' — vizibil DOAR cand casa e inchisa
-                 (cart-ul e ascuns in paralel). Arata sesiunile deschise/inchise
-                 pe ziua curenta pentru operator. -->
             <div id="lv-cash-timeline-panel" class="hidden bg-white border rounded-2xl border-border flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2 flex-wrap">
                     <h2 class="font-bold text-secondary">📋 Desfășurător casă</h2>
@@ -155,7 +148,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- Sumar coș: sticky pe desktop cu overflow intern, ca sa vezi tot fara scroll de pagina -->
             <div id="lv-cart-panel" class="bg-white border rounded-2xl border-border flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
                     <h2 class="font-bold text-secondary">Coș</h2>
@@ -184,7 +176,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
 
-                <!-- Date firma (opțional — pentru factura B2B). Plasat sub Date client pt fluxul B2B. -->
                 <details id="lv-company-section" class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary flex items-center gap-2">
                         <span>🏢 Date firmă (opțional)</span>
