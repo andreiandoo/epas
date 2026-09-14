@@ -146,6 +146,20 @@
       });
   });
 
+  // links from other pages say why: /contact?motiv=retur (comanda, retur, locatie, …) opens the form on that reason
+  var MOTIV = { comanda: 'order', bilete: 'order', retur: 'refund', rambursare: 'refund', card: 'gift', voucher: 'gift', 'card-cadou': 'gift',
+    locatie: 'venue', organizator: 'venue', parteneriat: 'partnership', presa: 'press', altele: 'other' };
+  try {
+    var motiv = String(new URLSearchParams(window.location.search).get('motiv') || '').toLowerCase();
+    var picked = MOTIV[motiv] || (REASONS[motiv] ? motiv : '');
+    if (picked) {
+      f.reason.value = picked;
+      if (!window.location.hash) {
+        window.addEventListener('load', function () { $('formular').scrollIntoView({ block: 'start' }); });
+      }
+    }
+  } catch (e) {}
+
   updateReason();
   updateCount();
 })();
