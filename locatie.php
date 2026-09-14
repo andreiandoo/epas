@@ -1,21 +1,25 @@
 <?php
 /**
- * bilete.online — /locatie/{slug}  (single location detail)
+ * Single venue: /locatie/{slug} (v2 design).
  *
- * Renders one venue: identity, gallery, activities list, program/address,
- * SEO entity links. Pulls real data via `GET /venues/{slug}` and shows a
- * minimal "not found" if the slug doesn't match.
+ * Pure render: expects $_GET['slug']. Reads the venue from `GET /venues/{slug}` and 404s cleanly when the
+ * slug doesn't match. Understands both the core API shape (city as plain text, cover_image, schedule,
+ * coordinates, similar_venues) and the older one the page was first built on (city {name, slug},
+ * cover_image_url, opening_hours, rating, activities), whichever the response carries.
  *
- * Layout follows designs/single-location.html: hero + sticky nav +
- * activities list with venue sidebar + about + program + FAQ.
+ * Top to bottom: hero (type · city, title, lead, stats, photo carousel), sticky section nav, activities with
+ * the venue card, about, program & address with the map, FAQ, similar venues, final CTA, gallery lightbox.
+ * Hero, map, empty state and lightbox come from attraction.css + attraction.js (the same family of place pages).
  */
 
+$pageCacheTTL = 300;
+require_once __DIR__ . '/includes/page-cache.php';
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 
 $slug = $_GET['slug'] ?? '';
-if (! preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
+if (!is_string($slug) || !preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     http_response_code(404);
     require __DIR__ . '/404.php';
     exit;
@@ -23,524 +27,606 @@ if (! preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
 
 $venueResp = api_cached("venue_detail_{$slug}", fn () => api_get('/venues/' . urlencode($slug)), 300);
 $venue = $venueResp['data']['venue'] ?? $venueResp['data'] ?? null;
-
-if (! $venue || empty($venue['name'])) {
+if (!is_array($venue) || empty($venue['name'])) {
     http_response_code(404);
     require __DIR__ . '/404.php';
     exit;
 }
 
-$name = navFlatName($venue['name'] ?? '');
-$cityName = navFlatName($venue['city']['name'] ?? $venue['city_name'] ?? '');
-$citySlug = $venue['city']['slug'] ?? $venue['city_slug'] ?? '';
-$address  = $venue['address'] ?? '';
-$rating   = $venue['rating'] ?? null;
-$reviewsCount = (int) ($venue['reviews_count'] ?? 0);
-$venueType = $venue['type'] ?? $venue['venue_type'] ?? '';
-$description = navFlatName($venue['description'] ?? '');
-$shortDescription = navFlatName($venue['short_description'] ?? '');
-$coverImage = $venue['cover_image_url'] ?? $venue['image'] ?? null;
-$gallery = is_array($venue['gallery'] ?? null) ? array_filter($venue['gallery']) : [];
-$activities = $venue['activities'] ?? [];
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
 
-// Map venue types to RO labels
+// Plain text from a scalar, a translations array or a {name} object.
+$vnText = function ($v): string {
+    if (is_array($v) && array_key_exists('name', $v)) {
+        $v = $v['name'];
+    }
+    if (is_array($v)) {
+        $v = $v['ro'] ?? $v['en'] ?? reset($v);
+    }
+    return is_scalar($v) ? trim((string) $v) : '';
+};
+
+// Prose without markup (headings left out, blocks spaced, inline tags joined), cut at a word boundary.
+$vnExcerpt = function (string $text, int $max): string {
+    $text = preg_replace('#<(script|style|h[1-6])\b[^>]*>.*?</\1\s*>#is', ' ', $text);
+    $text = preg_replace(['#</li>\s*</(?:ul|ol)>#i', '#</li>#i'], ['. ', '; '], $text); // list items read as a sentence
+    $text = preg_replace('#<(?:br|/p|/div|/blockquote|/ul|/ol)\b[^>]*>#i', ' ', $text);
+    $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    if (mb_strlen($text) <= $max) {
+        return $text;
+    }
+    $cut = mb_substr($text, 0, $max);
+    $space = mb_strrpos($cut, ' ');
+    return rtrim($space !== false && $space > $max * 0.6 ? mb_substr($cut, 0, $space) : $cut, ' ,.;:–-') . '…';
+};
+
+// Descriptions come from the admin rich editor: keep the text formatting, drop scripts, styles and attributes.
+$vnRich = function (string $html): string {
+    $html = trim(preg_replace('#<(script|style|iframe|object|embed|noscript|template)\b[^>]*>.*?</\1\s*>#is', '', $html));
+    if ($html === strip_tags($html)) {
+        return implode('', array_map(fn ($p) => '<p>' . nl2br(v2_e(trim($p))) . '</p>', preg_split('/\R\s*\R/u', $html)));
+    }
+    $html = strip_tags($html, '<p><br><strong><b><em><i><u><ul><ol><li><a><h2><h3><h4><blockquote>');
+    $html = preg_replace_callback('#<(/?)([a-z0-9]+)\b([^>]*)>#i', function ($m) {
+        $tag = strtolower($m[2]);
+        if ($tag === 'h2') {
+            $tag = 'h3'; // the description sits under the section's own h2
+        }
+        if ($m[1] === '/') {
+            return '</' . $tag . '>';
+        }
+        if ($tag === 'a') {
+            if (preg_match('#\bhref\s*=\s*(["\'])((?:https?://|/|mailto:|tel:)[^"\']*)\1#i', $m[3], $h)) {
+                $href = html_entity_decode($h[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                return '<a href="' . v2_e($href) . '"' . (preg_match('#^https?://#i', $href) ? ' target="_blank" rel="noopener nofollow"' : '') . '>';
+            }
+            return ''; // no safe link: keep the text only (the stray </a> is ignored by the parser)
+        }
+        return '<' . $tag . '>';
+    }, $html);
+    return trim($html);
+};
+
+$vnPrice = function (int $cents): string {
+    return number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, ',', '.') . ' lei';
+};
+
+// ------------------------------------------------------------------ venue
+$name = $vnText($venue['name']);
+$cityRaw = $venue['city'] ?? null;
+$cityName = is_array($cityRaw) ? $vnText($cityRaw) : $vnText($venue['city_name'] ?? $cityRaw);
+$citySlug = is_array($cityRaw) ? (string) ($cityRaw['slug'] ?? '') : (string) ($venue['city_slug'] ?? '');
+if ($citySlug === '' && $cityName !== '') {
+    // The core API sends the city as plain text: link it only when it is one of the site's cities.
+    $cityGuess = trim(preg_replace('/[^a-z0-9]+/', '-', mb_strtolower(strtr($cityName, [
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+        'Ă' => 'a', 'Â' => 'a', 'Î' => 'i', 'Ș' => 's', 'Ş' => 's', 'Ț' => 't', 'Ţ' => 't',
+    ]))), '-');
+    if (isset($V2NAV['cities'][$cityGuess])) {
+        $citySlug = $cityGuess;
+    }
+}
+if (!preg_match('/^[a-z0-9-]*$/', $citySlug)) {
+    $citySlug = '';
+}
+$county = $vnText($venue['state'] ?? '');
+$address = $vnText($venue['address'] ?? '');
+$rating = is_numeric($venue['rating'] ?? null) && $venue['rating'] > 0 ? (float) $venue['rating'] : null;
+$reviewsCount = (int) ($venue['reviews_count'] ?? 0);
+
 $typeLabels = [
     'escape_room' => 'Escape room', 'museum' => 'Muzeu', 'park' => 'Parc',
     'adventure_park' => 'Parc aventură', 'workshop' => 'Atelier', 'tour' => 'Tur ghidat',
     'aquarium' => 'Acvariu', 'zoo' => 'Grădină zoologică', 'cave' => 'Peșteră',
     'leisure_venue' => 'Centru de agrement',
 ];
-$typeLabel = $typeLabels[$venueType] ?? ucfirst(str_replace('_', ' ', (string) $venueType)) ?: 'Locație';
+$vnType = function (array $v) use ($typeLabels, $vnText): string {
+    $raw = $v['type'] ?? $v['venue_type'] ?? '';
+    if (is_string($raw) && $raw !== '') {
+        return $typeLabels[$raw] ?? ucfirst(str_replace('_', ' ', $raw));
+    }
+    $cats = is_array($v['categories'] ?? null) ? array_values($v['categories']) : [];
+    return $vnText($raw) ?: ($cats ? $vnText($cats[0]) : '') ?: 'Locație';
+};
+$typeLabel = $vnType($venue);
 
-// Activities normalized
+$descRaw = $vnText($venue['description'] ?? '');
+$descHtml = $descRaw !== '' ? $vnRich($descRaw) : '';
+$hasAbout = trim(strip_tags($descHtml)) !== '';
+$shortDescription = $vnText($venue['short_description'] ?? '');
+$lead = $shortDescription !== '' ? $vnExcerpt($shortDescription, 260) : ($descRaw !== '' ? $vnExcerpt($descRaw, 220) : '');
+
+// Photos: cover first, then the gallery. The hero shows up to 6, the lightbox all of them.
+$coverImage = v2_media_url($venue['cover_image_url'] ?? $venue['cover_image'] ?? $venue['image'] ?? null);
+$photos = $coverImage ? [$coverImage] : [];
+foreach ((array) ($venue['gallery'] ?? []) as $photo) {
+    $photo = v2_media_url(is_array($photo) ? ($photo['url'] ?? $photo['src'] ?? null) : $photo);
+    if ($photo && !in_array($photo, $photos, true)) {
+        $photos[] = $photo;
+    }
+}
+$photos = array_slice($photos, 0, 20);
+$heroPhotos = array_slice($photos, 0, 6);
+
+// Opening hours: free text in the admin ("Luni - Vineri: 10:00 - 22:00" per line), or a list.
+$hoursRaw = $venue['opening_hours'] ?? $venue['schedule'] ?? null;
+$hours = [];
+if (is_string($hoursRaw)) {
+    $hours = preg_split('/\R/u', $hoursRaw);
+} elseif (is_array($hoursRaw)) {
+    foreach ($hoursRaw as $day => $time) {
+        $hours[] = (is_string($day) ? $day . ': ' : '') . $vnText($time);
+    }
+}
+$hours = array_values(array_filter(array_map('trim', $hours), 'strlen'));
+
+$lat = $venue['latitude'] ?? $venue['lat'] ?? null;
+$lng = $venue['longitude'] ?? $venue['lng'] ?? null;
+$hasGeo = is_numeric($lat) && is_numeric($lng) && ((float) $lat != 0.0 || (float) $lng != 0.0);
+$googleMaps = (string) ($venue['google_maps_url'] ?? '');
+$mapsQuery = $hasGeo ? $lat . ',' . $lng : trim($address . ($address !== '' && $cityName !== '' ? ', ' : '') . ($address !== '' ? $cityName : ''));
+$mapsUrl = preg_match('#^https?://\S+$#i', $googleMaps) ? $googleMaps
+    : ($mapsQuery !== '' ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($mapsQuery) : '');
+
+// ------------------------------------------------------------------ activities
 $normalizedActivities = [];
-$cheapestPrice = null;
-foreach ($activities as $a) {
-    $aTitle = navFlatName($a['title'] ?? $a['name'] ?? '');
-    $aSlug  = $a['slug'] ?? '';
-    if (! $aTitle || ! $aSlug) continue;
+$cheapestCents = null;
+foreach ((array) ($venue['activities'] ?? []) as $a) {
+    if (!is_array($a)) {
+        continue;
+    }
+    $aTitle = $vnText($a['title'] ?? $a['name'] ?? '');
+    $aSlug = (string) ($a['slug'] ?? '');
+    if ($aTitle === '' || !preg_match('/^[a-z0-9][a-z0-9-]*$/', $aSlug)) {
+        continue;
+    }
     $cents = (int) ($a['cheapest_price_cents'] ?? 0);
-    $priceLei = $cents > 0 ? (int) round($cents / 100) : null;
-    if ($priceLei !== null && ($cheapestPrice === null || $priceLei < $cheapestPrice)) {
-        $cheapestPrice = $priceLei;
+    if ($cents > 0 && ($cheapestCents === null || $cents < $cheapestCents)) {
+        $cheapestCents = $cents;
+    }
+    $aCity = is_array($a['city'] ?? null) ? (string) ($a['city']['slug'] ?? '') : '';
+    $tags = [];
+    foreach ((array) ($a['tags'] ?? []) as $tag) {
+        if (($tag = $vnText($tag)) !== '' && count($tags) < 4) {
+            $tags[] = $tag;
+        }
     }
     $normalizedActivities[] = [
-        'title'       => $aTitle,
-        'slug'        => $aSlug,
-        'url'         => '/activitate/' . $aSlug,
-        'image'       => $a['cover_image_url'] ?? null,
-        'description' => navFlatName($a['short_description'] ?? $a['description'] ?? '') ?: '',
-        'duration'    => isset($a['duration_minutes']) && $a['duration_minutes'] ? ((int) $a['duration_minutes']) . ' min' : '',
-        'price'       => $priceLei,
-        'category'    => navFlatName($a['category']['name'] ?? '') ?: '',
-        'tags'        => array_slice(is_array($a['tags'] ?? null) ? $a['tags'] : [], 0, 4),
+        'title' => $aTitle,
+        'url' => preg_match('/^[a-z0-9][a-z0-9-]*$/', $aCity) ? '/' . $aCity . '/' . $aSlug : '/activitate/' . $aSlug,
+        'image' => v2_media_url($a['cover_image_url'] ?? $a['image'] ?? null),
+        'description' => $vnExcerpt($vnText($a['short_description'] ?? $a['description'] ?? ''), 240),
+        'duration' => v2_duration((int) ($a['duration_minutes'] ?? 0)),
+        'price' => $cents > 0 ? $vnPrice($cents) : '',
+        'category' => $vnText($a['category'] ?? ''),
+        'tags' => $tags,
     ];
 }
+$activityCount = count($normalizedActivities);
 
-// Similar venues — same city, exclude current. Best-effort + cached.
-$similarVenues = [];
-if ($citySlug) {
+// ------------------------------------------------------------------ similar venues
+$similarRaw = $venue['similar_venues'] ?? null;
+if (!is_array($similarRaw) && $citySlug !== '') {
+    // Older API: the detail had no similar list, ask for the city's venues.
     $simResp = api_cached("venues_city_{$citySlug}", fn () => api_get('/venues', ['per_page' => 7, 'city' => $citySlug]), 600);
-    $simRaw = $simResp['data']['venues'] ?? $simResp['data']['items'] ?? (is_array($simResp['data'] ?? null) ? $simResp['data'] : []);
-    foreach ((is_array($simRaw) ? $simRaw : []) as $sv) {
-        $svSlug = $sv['slug'] ?? '';
-        $svName = navFlatName($sv['name'] ?? '');
-        if (! $svSlug || ! $svName || $svSlug === $slug) continue;
-        $svType = $sv['type'] ?? $sv['venue_type'] ?? '';
-        $similarVenues[] = [
-            'name'  => $svName,
-            'slug'  => $svSlug,
-            'url'   => '/locatie/' . $svSlug,
-            'image' => $sv['cover_image_url'] ?? $sv['image'] ?? null,
-            'type'  => $typeLabels[$svType] ?? (ucfirst(str_replace('_', ' ', (string) $svType)) ?: 'Locație'),
-            'desc'  => navFlatName($sv['short_description'] ?? $sv['description'] ?? '') ?: '',
-        ];
-        if (count($similarVenues) >= 3) break;
+    $similarRaw = $simResp['data']['venues'] ?? $simResp['data']['items'] ?? (is_array($simResp['data'] ?? null) ? $simResp['data'] : []);
+}
+$similarVenues = [];
+foreach ((array) $similarRaw as $sv) {
+    if (!is_array($sv)) {
+        continue;
+    }
+    $svSlug = (string) ($sv['slug'] ?? '');
+    $svName = $vnText($sv['name'] ?? '');
+    if ($svName === '' || $svSlug === $slug || !preg_match('/^[a-z][a-z0-9-]+$/', $svSlug)) {
+        continue;
+    }
+    $similarVenues[] = [
+        'name' => $svName,
+        'url' => '/locatie/' . $svSlug,
+        'image' => v2_media_url($sv['cover_image_url'] ?? $sv['image'] ?? $sv['cover_image'] ?? null),
+        'type' => $vnType($sv),
+        'desc' => $vnExcerpt($vnText($sv['short_description'] ?? $sv['description'] ?? ''), 140),
+        'city' => $vnText($sv['city'] ?? ''),
+    ];
+    if (count($similarVenues) >= 3) {
+        break;
     }
 }
 
-// SEO
-$pageTitleRaw = $name . ' — ' . ($cityName ?: 'România') . ' · ' . SITE_NAME;
-$pageDescription = $shortDescription ?: ($description ? mb_substr(strip_tags($description), 0, 160) : "Bilete pentru activități la {$name}" . ($cityName ? " în {$cityName}" : '') . '. Rezervi online, primești QR pe email.');
-$canonicalUrl = SITE_URL . '/locatie/' . $slug;
-$currentPage  = 'locatie';
-$cssBundle    = 'listing';
-$ogImage      = $coverImage ?: ($gallery[0] ?? null);
-
-$breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
-if ($cityName && $citySlug) {
-    $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . $citySlug];
+// ------------------------------------------------------------------ page
+$stats = [];
+if ($rating) {
+    $stats[] = ['star', number_format($rating, 1, ',', ''), 'rating mediu'];
 }
-$breadcrumbs[] = ['name' => 'Locații', 'url' => SITE_URL . '/locatii'];
-$breadcrumbs[] = ['name' => $name, 'url' => $canonicalUrl];
+if ($reviewsCount > 0) {
+    $stats[] = ['users-three', v2_thousands($reviewsCount), 'recenzii'];
+}
+if ($cheapestCents !== null) {
+    $stats[] = ['coins', $vnPrice($cheapestCents), 'de la / bilet'];
+}
+$stats[] = ['qr-code', 'QR', 'intrare rapidă'];
 
-$structuredData = [[
+$navLinks = [['activitati', 'Activități']];
+if ($hasAbout) {
+    $navLinks[] = ['despre', 'Despre'];
+}
+$navLinks[] = ['program', 'Program & adresă'];
+$navLinks[] = ['faq', 'FAQ'];
+if ($similarVenues) {
+    $navLinks[] = ['similare', 'Locații similare'];
+}
+
+$faqs = [
+    ['Cum cumpăr biletele pentru ' . $name . '?', 'Alegi activitatea de mai sus, selectezi data și ora, completezi datele și primești biletul cu QR pe email.'],
+    ['Pot anula sau reprograma biletul?', 'Politica de anulare este stabilită de fiecare locație și e afișată pe pagina activității înainte de plată.'],
+    ['Trebuie să-mi creez cont?', 'Nu, poți cumpăra ca invitat. Contul îți ajută însă să-ți regăsești biletele și istoricul.'],
+    ['Cum intru cu biletul la locație?', 'Arăți codul QR de pe bilet — în email sau în cont. Personalul scanează și ești înăuntru.'],
+];
+
+$breadcrumbs = [['name' => 'Acasă', 'url' => '/']];
+if ($cityName !== '' && $citySlug !== '') {
+    $breadcrumbs[] = ['name' => $cityName, 'url' => '/' . $citySlug];
+}
+$breadcrumbs[] = ['name' => 'Locații', 'url' => '/operatori'];
+$breadcrumbs[] = ['name' => $name, 'url' => '/locatie/' . $slug];
+
+$pageTitleRaw = $name . ' — ' . ($cityName ?: 'România') . ' · ' . SITE_NAME;
+$pageDescription = $shortDescription !== '' ? $vnExcerpt($shortDescription, 160)
+    : ($descRaw !== '' ? $vnExcerpt($descRaw, 160) : "Bilete pentru activități la {$name}" . ($cityName ? " în {$cityName}" : '') . '. Rezervi online, primești QR pe email.');
+$canonicalUrl = SITE_URL . '/locatie/' . $slug;
+$ogImage = $photos[0] ?? (SITE_URL . '/assets/images/og-default.jpg');
+
+$vnClean = function (array $data) use (&$vnClean): array {
+    foreach ($data as $k => $v) {
+        if (is_array($v)) {
+            $data[$k] = $v = $vnClean($v);
+        }
+        if ($v === null || $v === '' || $v === []) {
+            unset($data[$k]);
+        }
+    }
+    return $data;
+};
+$structuredData = [$vnClean([
     '@context' => 'https://schema.org',
     '@type' => 'LocalBusiness',
     'name' => $name,
     'url' => $canonicalUrl,
-    'image' => $coverImage,
-    'address' => $address ? [
+    'image' => array_slice($photos, 0, 3),
+    'description' => $pageDescription,
+    'address' => ($address !== '' || $cityName !== '') ? [
         '@type' => 'PostalAddress',
         'streetAddress' => $address,
         'addressLocality' => $cityName,
+        'addressRegion' => $county,
         'addressCountry' => 'RO',
     ] : null,
-    'aggregateRating' => ($rating && $reviewsCount > 0) ? [
-        '@type' => 'AggregateRating',
-        'ratingValue' => (float) $rating,
-        'reviewCount' => $reviewsCount,
-    ] : null,
-    'description' => $pageDescription,
+    'geo' => $hasGeo ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $lat, 'longitude' => (float) $lng] : null,
+    'aggregateRating' => ($rating && $reviewsCount > 0) ? ['@type' => 'AggregateRating', 'ratingValue' => $rating, 'reviewCount' => $reviewsCount] : null,
+]), [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => array_map(fn ($bc, $pos) => [
+        '@type' => 'ListItem',
+        'position' => $pos + 1,
+        'name' => $bc['name'],
+        'item' => SITE_URL . $bc['url'],
+    ], $breadcrumbs, array_keys($breadcrumbs)),
 ]];
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+$vnArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
+$activitiesLabel = v2_num($activityCount, 'activitate', 'activități');
+
+$v2Styles = ['attraction.css', 'venue.css'];
+$v2Scripts = ['attraction.js', 'venue.js'];
+$v2HeaderOverlay = true;
+$v2HeadExtra = $photos ? '<link rel="preload" as="image" href="' . v2_e($photos[0]) . '" fetchpriority="high">' : '';
+$v2ClientData = ['gallery' => array_map(fn ($src) => ['src' => $src, 'alt' => $name], $photos)];
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
-
-<main x-data="venuePage(<?= htmlspecialchars(json_encode([
-    'activities' => $normalizedActivities,
-    'gallery'    => array_merge($coverImage ? [$coverImage] : [], array_slice($gallery, 0, 5)),
-]), ENT_QUOTES) ?>)">
-
-<!-- HERO -->
-<section class="relative overflow-hidden border-b border-ink/10">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(232,69,39,.14),transparent_34%),radial-gradient(circle_at_90%_25%,rgba(30,74,61,.16),transparent_30%)]"></div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 lg:pt-14 pb-12 lg:pb-16">
-        <nav aria-label="Breadcrumb" class="mb-6 text-sm text-ink-soft">
-            <ol class="flex flex-wrap items-center gap-2">
-                <?php foreach ($breadcrumbs as $i => $b): ?>
-                    <?php if ($i > 0): ?><li aria-hidden="true">/</li><?php endif; ?>
-                    <li>
-                        <?php if ($i < count($breadcrumbs) - 1): ?>
-                            <a href="<?= htmlspecialchars($b['url'], ENT_QUOTES) ?>" class="hover:text-vermilion"><?= htmlspecialchars($b['name']) ?></a>
-                        <?php else: ?>
-                            <span class="text-ink font-bold"><?= htmlspecialchars($b['name']) ?></span>
-                        <?php endif; ?>
-                    </li>
-                <?php endforeach; ?>
-            </ol>
+<main id="main" tabindex="-1">
+  <!-- ===================== HERO ===================== -->
+  <section class="th vn-hero" aria-labelledby="th-h">
+    <?= $vnArches ?>
+    <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="th-in">
+      <div class="th-copy">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <?php foreach ($breadcrumbs as $bi => $bc): ?>
+            <?php if ($bi > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
+            <?php if ($bi < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bc['url']) ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
+          <?php endforeach; ?>
         </nav>
-
-        <div class="grid lg:grid-cols-[1.04fr_.96fr] gap-10 lg:gap-14 items-center">
-            <div>
-                <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="stamp inline-flex items-center gap-2 px-3 py-1 rounded-full bg-vermilion text-paper border-vermilion font-mono text-[11px] tracking-[.12em]"><?= htmlspecialchars(strtoupper($typeLabel)) ?></span>
-                    <?php if ($cityName): ?>
-                        <span class="stamp inline-flex items-center gap-2 px-3 py-1 rounded-full bg-paper border-ink/30 text-ink-soft font-mono text-[11px] tracking-[.12em]"><?= htmlspecialchars(strtoupper($cityName)) ?></span>
-                    <?php endif; ?>
-                    <?php if (count($normalizedActivities) > 0): ?>
-                        <span class="stamp inline-flex items-center gap-2 px-3 py-1 rounded-full bg-paper border-ink/30 text-ink-soft font-mono text-[11px] tracking-[.12em]"><?= count($normalizedActivities) ?> ACTIVITĂȚI</span>
-                    <?php endif; ?>
-                </div>
-
-                <h1 class="font-display text-[clamp(2.6rem,7vw,6.2rem)] leading-[.86] font-bold max-w-4xl"><?= htmlspecialchars($name) ?></h1>
-
-                <?php if ($shortDescription || $description): ?>
-                    <p class="mt-6 text-xl lg:text-2xl text-ink-soft leading-relaxed max-w-2xl"><?= htmlspecialchars($shortDescription ?: mb_substr(strip_tags($description), 0, 220)) ?></p>
-                <?php endif; ?>
-
-                <div class="mt-7 flex flex-wrap items-center gap-3 text-sm">
-                    <?php if (count($normalizedActivities) > 0): ?>
-                        <a href="#activitati" class="px-6 py-3 rounded-full bg-ink text-paper font-bold hover:bg-ink-2 transition">Vezi activitățile</a>
-                    <?php endif; ?>
-                    <a href="#program" class="px-6 py-3 rounded-full bg-paper border-2 border-ink font-bold hover:bg-ink hover:text-paper transition">Program & adresă</a>
-                    <a href="#faq" class="px-6 py-3 rounded-full bg-paper-2 border border-ink/10 font-bold hover:bg-paper-3 transition">Întrebări</a>
-                </div>
-
-                <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
-                    <?php if ($rating): ?>
-                        <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
-                            <p class="font-display text-2xl font-bold"><?= htmlspecialchars(number_format((float) $rating, 1)) ?></p>
-                            <p class="text-xs text-ink-soft">rating mediu</p>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($reviewsCount > 0): ?>
-                        <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
-                            <p class="font-display text-2xl font-bold"><?= htmlspecialchars((string) $reviewsCount) ?></p>
-                            <p class="text-xs text-ink-soft">recenzii</p>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($cheapestPrice !== null): ?>
-                        <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
-                            <p class="font-display text-2xl font-bold"><?= htmlspecialchars((string) $cheapestPrice) ?> lei</p>
-                            <p class="text-xs text-ink-soft">de la / bilet</p>
-                        </div>
-                    <?php endif; ?>
-                    <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
-                        <p class="font-display text-2xl font-bold">QR</p>
-                        <p class="text-xs text-ink-soft">intrare rapidă</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="relative">
-                <div class="ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep" style="--perf:100%">
-                    <div class="relative aspect-[4/3] bg-ink">
-                        <template x-for="(img,i) in gallery" :key="img">
-                            <img x-show="active===i" x-transition.opacity :src="img" :alt="<?= htmlspecialchars(json_encode($name), ENT_QUOTES) ?> + ' — imagine ' + (i+1)" class="absolute inset-0 w-full h-full object-cover opacity-90" loading="lazy" onerror="this.style.display='none'">
-                        </template>
-                        <div x-show="gallery.length === 0" class="absolute inset-0 grid place-items-center">
-                            <span class="text-8xl opacity-30">📍</span>
-                        </div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent pointer-events-none"></div>
-                        <div class="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-4">
-                            <div>
-                                <p class="font-mono text-[10px] tracking-[.22em] text-paper/70">GALERIE LOCAȚIE</p>
-                                <p class="font-display text-3xl text-paper font-bold"><?= htmlspecialchars($typeLabel) ?></p>
-                            </div>
-                            <div class="flex gap-2" x-show="gallery.length > 1">
-                                <template x-for="(img,i) in gallery" :key="i">
-                                    <button @click="active=i" :class="active===i ? 'bg-vermilion w-7' : 'bg-paper/60 w-2.5'" class="h-2.5 rounded-full transition-all"></button>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <p class="th-kicker"><?= v2_e($typeLabel) ?><?= $cityName !== '' ? ' · ' . v2_e($cityName) : '' ?></p>
+        <h1 class="th-h" id="th-h"><?= v2_e($name) ?></h1>
+        <?php if ($lead !== ''): ?><p class="th-sub"><?= v2_e($lead) ?></p><?php endif; ?>
+        <?php if ($activityCount || $address !== ''): ?>
+        <ul class="th-chips">
+          <?php if ($activityCount): ?><li><?= v2_ic('ticket') ?><?= v2_e($activitiesLabel) ?></li><?php endif; ?>
+          <?php if ($address !== ''): ?><li><?= v2_ic('map-pin') ?><?= v2_e($address) ?></li><?php endif; ?>
+        </ul>
+        <?php endif; ?>
+        <div class="th-cta">
+          <?php if ($activityCount): ?><a class="btn btn-light" href="#activitati">Vezi activitățile<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+          <a class="btn btn-outline-light" href="#program"><?= v2_ic('map-pin') ?>Program &amp; adresă</a>
+          <a class="btn btn-outline-light" href="#faq">Întrebări</a>
         </div>
-    </div>
-</section>
+        <dl class="vn-stats">
+          <?php foreach ($stats as [$statIcon, $statValue, $statLabel]): ?>
+          <div><dt><?= v2_e($statLabel) ?></dt><dd><?= v2_ic($statIcon) ?><?= v2_e($statValue) ?></dd></div>
+          <?php endforeach; ?>
+        </dl>
+      </div>
 
-<!-- STICKY MINI NAV -->
-<section class="sticky top-[64px] z-30 bg-paper/90 backdrop-blur-md border-b border-ink/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="flex items-center gap-2 overflow-x-auto no-bar py-3 text-sm font-bold">
-            <a href="#activitati" class="shrink-0 px-4 py-2 rounded-full bg-ink text-paper">Activități</a>
-            <a href="#despre" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">Despre</a>
-            <a href="#program" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">Program & adresă</a>
-            <a href="#faq" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">FAQ</a>
-        </div>
-    </div>
-</section>
-
-<!-- ACTIVITIES LIST -->
-<section id="activitati" class="max-w-7xl mx-auto px-4 sm:px-6 py-14 lg:py-20">
-    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
-        <div>
-            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">ACTIVITĂȚI ÎN ACEASTĂ LOCAȚIE</p>
-            <h2 class="font-display text-[clamp(2rem,5vw,4rem)] font-bold leading-[.92]">Alege experiența potrivită</h2>
-            <p class="mt-4 text-ink-soft text-lg max-w-2xl">Aceeași locație poate avea bilete diferite: acces general, tururi ghidate, intervale orare, camere tematice, ateliere sau abonamente.</p>
-        </div>
-        <div class="ticket bg-paper-2 border-2 border-ink rounded-2xl p-4 max-w-md" style="--perf:100%">
-            <p class="font-bold">Cumperi mai multe activități?</p>
-            <p class="text-sm text-ink-soft mt-1">Rezervi separat fiecare activitate. Toate biletele ajung pe email, cu QR.</p>
-        </div>
-    </div>
-
-    <div class="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
-        <div>
-            <?php if (! empty($normalizedActivities)): ?>
-                <p class="text-sm text-ink-soft mb-4"><?= count($normalizedActivities) ?> activități disponibile</p>
-                <div class="space-y-4">
-                    <?php foreach ($normalizedActivities as $a): ?>
-                        <article class="ticket bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft hover:-translate-y-1 transition" style="--perf:72%; --punch:#F4EFE3">
-                            <div class="grid md:grid-cols-[240px_1fr]">
-                                <a href="<?= htmlspecialchars($a['url'], ENT_QUOTES) ?>" class="relative min-h-[220px] bg-ink block overflow-hidden">
-                                    <?php if ($a['image']): ?>
-                                        <img src="<?= htmlspecialchars($a['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($a['title'], ENT_QUOTES) ?>" class="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-105" loading="lazy">
-                                    <?php else: ?>
-                                        <div class="absolute inset-0 grid place-items-center text-paper/30 text-6xl">🎫</div>
-                                    <?php endif; ?>
-                                    <?php if ($a['category']): ?>
-                                        <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-paper text-ink text-[11px] font-bold"><?= htmlspecialchars($a['category']) ?></div>
-                                    <?php endif; ?>
-                                    <?php if ($a['duration']): ?>
-                                        <div class="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-ink/80 text-paper text-[11px] font-mono"><?= htmlspecialchars($a['duration']) ?></div>
-                                    <?php endif; ?>
-                                </a>
-                                <div class="p-5 lg:p-6 grid md:grid-cols-[1fr_150px] gap-5">
-                                    <div>
-                                        <h3 class="font-display text-2xl lg:text-3xl leading-[1] font-bold">
-                                            <a href="<?= htmlspecialchars($a['url'], ENT_QUOTES) ?>" class="hover:text-vermilion transition"><?= htmlspecialchars($a['title']) ?></a>
-                                        </h3>
-                                        <?php if ($a['description']): ?>
-                                            <p class="mt-3 text-ink-soft leading-relaxed line-clamp-3"><?= htmlspecialchars($a['description']) ?></p>
-                                        <?php endif; ?>
-                                        <?php if (! empty($a['tags'])): ?>
-                                            <div class="mt-4 flex flex-wrap gap-2">
-                                                <?php foreach ($a['tags'] as $tag): ?>
-                                                    <span class="px-2.5 py-1 rounded-full bg-paper-2 border border-ink/10 text-xs font-bold"><?= htmlspecialchars((string) $tag) ?></span>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="md:border-l-2 md:border-dashed md:border-ink/20 md:pl-5 flex md:flex-col items-end md:items-stretch justify-between gap-4">
-                                        <?php if ($a['price'] !== null): ?>
-                                            <div class="text-right md:text-left">
-                                                <p class="text-xs text-ink-soft">de la</p>
-                                                <p class="font-display text-3xl font-bold"><?= htmlspecialchars((string) $a['price']) ?> lei</p>
-                                            </div>
-                                        <?php endif; ?>
-                                        <a href="<?= htmlspecialchars($a['url'], ENT_QUOTES) ?>" class="inline-flex justify-center px-5 py-3 rounded-full bg-vermilion text-paper font-bold hover:bg-vermilion-d transition">Rezervă</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <div class="border-2 border-dashed border-ink/30 rounded-3xl p-10 text-center bg-paper-2">
-                    <h3 class="font-display text-3xl font-bold">Nu există încă activități listate pentru această locație.</h3>
-                    <p class="mt-2 text-ink-soft">Revino în curând sau caută în alte locații apropiate.</p>
-                    <?php if ($citySlug): ?>
-                        <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>" class="mt-5 inline-flex px-6 py-3 rounded-full bg-ink text-paper font-bold">Vezi activități în <?= htmlspecialchars($cityName) ?></a>
-                    <?php else: ?>
-                        <a href="/categorii" class="mt-5 inline-flex px-6 py-3 rounded-full bg-ink text-paper font-bold">Explorează categorii</a>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- Sticky venue card -->
-        <aside class="lg:sticky lg:top-40 space-y-4">
-            <div class="ticket bg-ink text-paper rounded-3xl overflow-hidden border-2 border-ink shadow-deep" style="--perf:100%">
-                <div class="p-6">
-                    <p class="font-mono text-[10px] tracking-[.22em] text-paper/50 mb-3">FIȘA LOCAȚIEI</p>
-                    <h3 class="font-display text-3xl font-bold leading-none"><?= htmlspecialchars($name) ?></h3>
-                    <div class="mt-5 space-y-3 text-sm">
-                        <?php if ($address): ?>
-                            <div class="flex items-start gap-3">
-                                <svg viewBox="0 0 24 24" class="w-5 h-5 text-ochre shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                                <span><?= htmlspecialchars($address) ?><?= $cityName ? ', ' . htmlspecialchars($cityName) : '' ?></span>
-                            </div>
-                        <?php endif; ?>
-                        <?php if (! empty($venue['opening_hours'])): ?>
-                            <div class="flex items-start gap-3">
-                                <svg viewBox="0 0 24 24" class="w-5 h-5 text-ochre shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                                <span><?= htmlspecialchars(is_string($venue['opening_hours']) ? $venue['opening_hours'] : 'Vezi programul') ?></span>
-                            </div>
-                        <?php endif; ?>
-                        <?php if (count($normalizedActivities) > 0): ?>
-                            <div class="flex items-start gap-3">
-                                <svg viewBox="0 0 24 24" class="w-5 h-5 text-ochre shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7H4m16 5H4m16 5H4"/></svg>
-                                <span><?= count($normalizedActivities) ?> activități disponibile</span>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="mt-6 grid grid-cols-2 gap-2">
-                        <a href="#program" class="px-4 py-3 rounded-2xl bg-paper text-ink font-bold text-center hover:bg-paper-2 transition">Adresă</a>
-                        <a href="#activitati" class="px-4 py-3 rounded-2xl bg-vermilion text-paper font-bold text-center hover:bg-vermilion-d transition">Bilete</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-paper-2 rounded-3xl border border-ink/10 p-5">
-                <p class="font-bold">Căutări SEO targetate</p>
-                <div class="mt-3 flex flex-wrap gap-2 text-sm">
-                    <?php if ($citySlug): ?>
-                        <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">activități <?= htmlspecialchars($cityName) ?></a>
-                        <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>/activitati-copii" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">copii <?= htmlspecialchars($cityName) ?></a>
-                        <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>/activitati-weekend" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">weekend <?= htmlspecialchars($cityName) ?></a>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </aside>
-    </div>
-</section>
-
-<!-- ABOUT -->
-<?php if ($description): ?>
-    <section id="despre" class="bg-paper-2 border-y border-ink/10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-[.9fr_1.1fr] gap-12">
-            <div>
-                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">DESPRE LOCAȚIE</p>
-                <h2 class="font-display text-[clamp(2rem,5vw,4rem)] font-bold leading-[.92]"><?= htmlspecialchars($name) ?> — <span class="text-vermilion italic">despre</span></h2>
-            </div>
-            <div class="text-[17px] leading-relaxed text-ink-soft prose-venue">
-                <?= $description /* Trusted HTML from API; sanitize if external input ever lands here */ ?>
-            </div>
-        </div>
-    </section>
-<?php endif; ?>
-
-<!-- PROGRAM & ADDRESS -->
-<section id="program" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
-    <div class="grid lg:grid-cols-[1fr_1fr] gap-8 lg:gap-12">
-        <div>
-            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">PROGRAM, ADRESĂ & ACCES</p>
-            <h2 class="font-display text-[clamp(2rem,5vw,3.8rem)] font-bold leading-[.95]">Cum ajungi la <?= htmlspecialchars($name) ?></h2>
-
-            <div class="mt-8 grid sm:grid-cols-2 gap-4">
-                <?php if ($address): ?>
-                    <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
-                        <p class="font-bold text-lg">Adresă</p>
-                        <p class="mt-2 text-ink-soft"><?= htmlspecialchars($address) ?><?= $cityName ? '<br>' . htmlspecialchars($cityName) : '' ?></p>
-                        <a href="https://maps.google.com/?q=<?= urlencode($address . ' ' . $cityName) ?>" target="_blank" rel="noopener" class="inline-flex mt-3 text-vermilion font-bold underline-wobble">Deschide în Maps</a>
-                    </div>
-                <?php endif; ?>
-                <?php if (! empty($venue['opening_hours'])): ?>
-                    <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
-                        <p class="font-bold text-lg">Program</p>
-                        <p class="mt-2 text-ink-soft"><?= htmlspecialchars(is_string($venue['opening_hours']) ? $venue['opening_hours'] : 'Vezi pagina locației') ?></p>
-                    </div>
-                <?php endif; ?>
-                <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
-                    <p class="font-bold text-lg">Recomandare</p>
-                    <p class="mt-2 text-ink-soft">Ajungi cu 10–15 minute înainte de intervalul ales, mai ales pentru activitățile cu grup.</p>
-                </div>
-                <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
-                    <p class="font-bold text-lg">Bilet QR</p>
-                    <p class="mt-2 text-ink-soft">După plată primești biletul cu QR pe email și în cont. Nu trebuie să-l printezi.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="ticket bg-ink rounded-[2rem] overflow-hidden border-2 border-ink min-h-[420px] relative" style="--perf:100%">
-            <div class="absolute inset-0 opacity-70" style="background-image:linear-gradient(rgba(244,239,227,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(244,239,227,.08) 1px, transparent 1px); background-size:38px 38px;"></div>
-            <div class="absolute inset-8 rounded-[1.5rem] border-2 border-paper/25"></div>
-            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-paper">
-                <div class="mx-auto w-20 h-20 rounded-full bg-vermilion grid place-items-center shadow-deep">
-                    <svg viewBox="0 0 24 24" class="w-9 h-9" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                </div>
-                <p class="font-display text-4xl font-bold mt-4"><?= htmlspecialchars($cityName ?: 'România') ?></p>
-                <p class="text-paper/65 mt-2 max-w-sm"><?= htmlspecialchars($address ?: 'Vezi pagina locației pentru detalii despre poziție.') ?></p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- FAQ -->
-<section id="faq" class="max-w-5xl mx-auto px-4 sm:px-6 py-16 lg:py-24" x-data="{open:0}">
-    <div class="text-center max-w-3xl mx-auto">
-        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">FAQ</p>
-        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Întrebări frecvente</h2>
-    </div>
-    <div class="mt-10 space-y-3">
-        <?php $faqs = [
-            ['Cum cumpăr biletele pentru ' . $name . '?', 'Alegi activitatea de mai sus, selectezi data și ora, completezi datele și primești biletul cu QR pe email.'],
-            ['Pot anula sau reprograma biletul?', 'Politica de anulare este stabilită de fiecare locație și e afișată pe pagina activității înainte de plată.'],
-            ['Trebuie să-mi creez cont?', 'Nu, poți cumpăra ca invitat. Contul îți ajută însă să-ți regăsești biletele și istoricul.'],
-            ['Cum intru cu biletul la locație?', 'Arăți codul QR de pe bilet — în email sau în cont. Personalul scanează și ești înăuntru.'],
-        ]; foreach ($faqs as $i => $faq): ?>
-            <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
-                <button @click="open=open===<?= $i ?>?null:<?= $i ?>" class="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4">
-                    <span class="font-display text-2xl sm:text-3xl font-bold"><?= htmlspecialchars($faq[0]) ?></span>
-                    <span class="text-3xl font-bold" x-text="open===<?= $i ?>?'−':'+'"></span>
-                </button>
-                <div x-show="open===<?= $i ?>" x-collapse class="px-5 sm:px-6 pb-6 text-ink-soft leading-relaxed"><?= htmlspecialchars($faq[1]) ?></div>
-            </article>
-        <?php endforeach; ?>
-    </div>
-</section>
-
-<?php if (! empty($similarVenues)): ?>
-<!-- SIMILAR VENUES -->
-<section id="similare" class="bg-paper-2 border-y border-ink/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
-        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-9">
-            <div>
-                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">LOCAȚII SIMILARE</p>
-                <h2 class="font-display text-[clamp(2rem,5vw,3.8rem)] font-bold leading-[.95]">Mai multe locuri de vizitat<?= $cityName ? ' în ' . htmlspecialchars($cityName) : '' ?></h2>
-            </div>
-            <?php if ($citySlug): ?>
-                <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>" class="inline-flex px-6 py-3 rounded-full bg-ink text-paper font-bold hover:bg-vermilion transition">Vezi toate locațiile</a>
-            <?php endif; ?>
-        </div>
-        <div class="grid md:grid-cols-3 gap-5">
-            <?php foreach ($similarVenues as $sv): ?>
-                <a href="<?= htmlspecialchars($sv['url'], ENT_QUOTES) ?>" class="ticket block bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft hover:-translate-y-1 transition" style="--perf:100%">
-                    <div class="h-52 bg-ink overflow-hidden">
-                        <?php if ($sv['image']): ?>
-                            <img src="<?= htmlspecialchars($sv['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($sv['name'], ENT_QUOTES) ?>" class="h-full w-full object-cover opacity-90" loading="lazy" onerror="this.style.display='none'">
-                        <?php else: ?>
-                            <div class="h-full grid place-items-center text-paper/30 text-6xl">📍</div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="p-5">
-                        <p class="font-mono text-[10px] tracking-[.18em] text-vermilion"><?= htmlspecialchars(strtoupper($sv['type'])) ?></p>
-                        <h3 class="font-display text-2xl font-bold mt-1"><?= htmlspecialchars($sv['name']) ?></h3>
-                        <?php if ($sv['desc']): ?>
-                            <p class="text-sm text-ink-soft mt-2 line-clamp-2"><?= htmlspecialchars($sv['desc']) ?></p>
-                        <?php endif; ?>
-                    </div>
-                </a>
+      <div class="th-media vn-media">
+        <?php if ($heroPhotos): ?>
+        <div class="vn-frame">
+          <button class="th-arch" id="vn-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Deschide galeria: <?= v2_e($name) ?>">
+            <?php foreach ($heroPhotos as $pi => $photo): ?>
+            <img class="vn-slide<?= $pi === 0 ? ' is-on' : '' ?>" src="<?= v2_e($photo) ?>" alt="" <?= $pi === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?> decoding="async">
             <?php endforeach; ?>
+            <?php if (count($photos) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>Vezi galeria (<?= count($photos) ?>)</span><?php endif; ?>
+          </button>
         </div>
+        <div class="vn-cap">
+          <p><small>Galerie locație</small><b><?= v2_e($typeLabel) ?></b></p>
+          <?php if (count($heroPhotos) > 1): ?>
+          <div class="vn-dots" role="group" aria-label="Fotografii">
+            <?php foreach ($heroPhotos as $pi => $photo): ?>
+            <button type="button" data-slide="<?= $pi ?>" aria-pressed="<?= $pi === 0 ? 'true' : 'false' ?>"><span class="sr">Fotografia <?= $pi + 1 ?> din <?= count($heroPhotos) ?></span></button>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
+        </div>
+        <?php else: ?>
+        <div class="vn-frame"><div class="th-arch is-empty"><?= v2_fallback($name) ?><span class="th-arch-name" aria-hidden="true"><?php if ($cityName !== ''): ?><small><?= v2_e($typeLabel) ?></small><?= v2_e($cityName) ?><?php else: ?><?= v2_e($typeLabel) ?><?php endif; ?></span></div></div>
+        <?php endif; ?>
+      </div>
     </div>
-</section>
-<?php endif; ?>
+  </section>
+  <div id="hdr-sentinel" aria-hidden="true"></div>
 
-<!-- FINAL CTA -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
-    <div class="ticket relative bg-vermilion text-paper rounded-3xl overflow-hidden border-2 border-ink p-10 sm:p-14 text-center" style="--perf:100%; --punch:#F4EFE3">
-        <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(#fff 1.5px,transparent 1.5px);background-size:26px 26px"></div>
-        <div class="relative">
-            <p class="font-mono text-[10px] tracking-[.22em] text-paper/70 mb-3"><?= htmlspecialchars(strtoupper($name)) ?></p>
-            <h2 class="font-display text-[clamp(2rem,5vw,3.6rem)] font-bold leading-[0.95]">Alege activitatea, rezervă online,<br>intră cu QR.</h2>
-            <p class="mt-4 text-paper/85 text-lg max-w-xl mx-auto">Toate experiențele acestei locații într-un singur loc: program, prețuri, disponibilitate și bilete digitale.</p>
-            <div class="mt-8 flex flex-wrap justify-center gap-3">
-                <?php if (! empty($normalizedActivities)): ?>
-                    <a href="#activitati" class="px-7 py-4 rounded-full bg-ink text-paper font-bold hover:bg-ink-2 transition">Vezi activitățile</a>
+  <!-- ===================== SECTION NAV ===================== -->
+  <nav class="vn-nav" aria-label="Secțiunile paginii">
+    <div class="wrap">
+      <ul id="vn-nav">
+        <?php foreach ($navLinks as $ni => [$navId, $navLabel]): ?>
+        <li><a href="#<?= $navId ?>"<?= $ni === 0 ? ' aria-current="true"' : '' ?>><?= v2_e($navLabel) ?></a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ===================== ACTIVITIES + VENUE CARD ===================== -->
+  <section class="sec vn-acts" id="activitati" aria-labelledby="vn-acts-h">
+    <div class="wrap">
+      <div class="vn-acts-head">
+        <div>
+          <p class="kicker">Activități în această locație</p>
+          <h2 id="vn-acts-h">Alege experiența potrivită</h2>
+          <p class="vn-lead">Aceeași locație poate avea bilete diferite: acces general, tururi ghidate, intervale orare, camere tematice, ateliere sau abonamente.</p>
+        </div>
+        <div class="vn-note">
+          <span class="vn-note-ic"><?= v2_ic('ticket') ?></span>
+          <p><b>Cumperi mai multe activități?</b>Rezervi separat fiecare activitate. Toate biletele ajung pe email, cu QR.</p>
+        </div>
+      </div>
+
+      <div class="vn-acts-grid">
+        <div>
+          <?php if ($normalizedActivities): ?>
+          <p class="vn-count"><?= v2_e(v2_num($activityCount, 'activitate disponibilă', 'activități disponibile')) ?></p>
+          <ul class="vn-list">
+            <?php foreach ($normalizedActivities as $ai => $a): ?>
+            <li class="vn-act">
+              <span class="vn-act-media">
+                <?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $ai) ?>
+                <?php if ($a['category'] !== ''): ?><span class="vn-badge"><?= v2_e($a['category']) ?></span><?php endif; ?>
+                <?php if ($a['duration'] !== ''): ?><span class="vn-dur"><?= v2_ic('clock') ?><?= v2_e($a['duration']) ?></span><?php endif; ?>
+              </span>
+              <div class="vn-act-body">
+                <h3><a href="<?= v2_e($a['url']) ?>"><?= v2_e($a['title']) ?></a></h3>
+                <?php if ($a['description'] !== ''): ?><p><?= v2_e($a['description']) ?></p><?php endif; ?>
+                <?php if ($a['tags']): ?>
+                <ul class="vn-tags"><?php foreach ($a['tags'] as $tag): ?><li><?= v2_e($tag) ?></li><?php endforeach; ?></ul>
                 <?php endif; ?>
-                <?php if ($citySlug): ?>
-                    <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>" class="px-7 py-4 rounded-full bg-paper text-ink font-bold hover:bg-paper-2 transition">Explorează <?= htmlspecialchars($cityName) ?></a>
-                <?php else: ?>
-                    <a href="/categorii" class="px-7 py-4 rounded-full bg-paper text-ink font-bold hover:bg-paper-2 transition">Explorează categorii</a>
-                <?php endif; ?>
+              </div>
+              <div class="vn-act-buy">
+                <?php if ($a['price'] !== ''): ?><p class="vn-price">de la<b><?= v2_e($a['price']) ?></b></p><?php endif; ?>
+                <span class="btn btn-primary" aria-hidden="true">Rezervă<?= v2_ic('arrow-right') ?></span>
+              </div>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+          <?php else: ?>
+          <div class="tempty">
+            <h3>Nu există încă activități listate pentru această locație.</h3>
+            <p>Revino în curând sau caută în alte locații apropiate.</p>
+            <?php if ($citySlug !== ''): ?>
+            <a class="btn btn-light" href="/<?= v2_e($citySlug) ?>">Vezi activități în <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+            <?php else: ?>
+            <a class="btn btn-light" href="/categorii">Explorează categorii<?= v2_ic('arrow-right') ?></a>
+            <?php endif; ?>
+            <svg class="tempty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+          </div>
+          <?php endif; ?>
+        </div>
+
+        <aside class="vn-side" aria-label="Fișa locației">
+          <div class="vn-card">
+            <p class="vn-card-k">Fișa locației</p>
+            <h3><?= v2_e($name) ?></h3>
+            <?php if ($address !== '' || $hours || $activityCount): ?>
+            <ul class="vn-facts">
+              <?php if ($address !== ''): ?><li><?= v2_ic('map-pin') ?><span><?= v2_e($address . ($cityName !== '' ? ', ' . $cityName : '')) ?></span></li><?php endif; ?>
+              <?php if ($hours): ?><li><?= v2_ic('clock') ?><span><?= implode('<br>', array_map('v2_e', $hours)) ?></span></li><?php endif; ?>
+              <?php if ($activityCount): ?><li><?= v2_ic('ticket') ?><span><?= v2_e(v2_num($activityCount, 'activitate disponibilă', 'activități disponibile')) ?></span></li><?php endif; ?>
+            </ul>
+            <?php endif; ?>
+            <div class="vn-card-cta">
+              <a class="btn btn-outline-light" href="#program">Adresă</a>
+              <a class="btn btn-light" href="#activitati">Bilete</a>
             </div>
-        </div>
+          </div>
+          <?php if ($citySlug !== ''): ?>
+          <div class="vn-search">
+            <h3>Căutări utile</h3>
+            <div class="chips-links">
+              <a href="/<?= v2_e($citySlug) ?>">activități <?= v2_e($cityName) ?></a>
+              <a href="/<?= v2_e($citySlug) ?>/activitati-copii">copii <?= v2_e($cityName) ?></a>
+              <a href="/<?= v2_e($citySlug) ?>/activitati-weekend">weekend <?= v2_e($cityName) ?></a>
+            </div>
+          </div>
+          <?php endif; ?>
+        </aside>
+      </div>
     </div>
-</section>
+  </section>
 
+  <?php if ($hasAbout): ?>
+  <!-- ===================== ABOUT ===================== -->
+  <section class="sec vn-about" id="despre" aria-labelledby="vn-about-h">
+    <div class="wrap vn-about-grid">
+      <div>
+        <p class="kicker">Despre locație</p>
+        <h2 id="vn-about-h"><?= v2_e($name) ?> — <span>despre</span></h2>
+      </div>
+      <div class="vn-prose"><?= $descHtml ?></div>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- ===================== PROGRAM & ADDRESS ===================== -->
+  <section class="sec vn-prog" id="program" aria-labelledby="vn-prog-h">
+    <div class="wrap vn-prog-grid">
+      <div>
+        <p class="kicker">Program, adresă &amp; acces</p>
+        <h2 id="vn-prog-h">Cum ajungi la <?= v2_e($name) ?></h2>
+        <ul class="vn-info">
+          <?php if ($address !== ''): ?>
+          <li>
+            <span class="vn-info-ic"><?= v2_ic('map-pin') ?></span>
+            <h3>Adresă</h3>
+            <p><?= v2_e($address) ?><?php if ($cityName !== ''): ?><br><?= v2_e($cityName) ?><?php endif; ?></p>
+            <?php if ($mapsUrl): ?><a href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener">Deschide în Maps<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+          </li>
+          <?php endif; ?>
+          <?php if ($hours): ?>
+          <li>
+            <span class="vn-info-ic"><?= v2_ic('clock') ?></span>
+            <h3>Program</h3>
+            <p><?= implode('<br>', array_map('v2_e', $hours)) ?></p>
+          </li>
+          <?php endif; ?>
+          <li>
+            <span class="vn-info-ic"><?= v2_ic('users-three') ?></span>
+            <h3>Recomandare</h3>
+            <p>Ajungi cu 10–15 minute înainte de intervalul ales, mai ales pentru activitățile cu grup.</p>
+          </li>
+          <li>
+            <span class="vn-info-ic"><?= v2_ic('qr-code') ?></span>
+            <h3>Bilet QR</h3>
+            <p>După plată primești biletul cu QR pe email și în cont. Nu trebuie să-l printezi.</p>
+          </li>
+        </ul>
+      </div>
+
+      <?php if ($hasGeo): ?>
+      <div class="tmap vn-map">
+        <iframe title="Hartă <?= v2_e($name) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= rawurlencode($lat . ',' . $lng) ?>&amp;z=15&amp;output=embed"></iframe>
+        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <?php else: ?>
+      <div class="vn-mapart">
+        <span class="vn-pin"><?= v2_ic('map-pin') ?></span>
+        <p class="vn-mapart-city"><?= v2_e($cityName ?: 'România') ?></p>
+        <p class="vn-mapart-addr"><?= v2_e($address !== '' ? $address : 'Vezi pagina locației pentru detalii despre poziție.') ?></p>
+        <?php if ($mapsUrl): ?><a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener">Deschide în Maps<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- ===================== FAQ ===================== -->
+  <section class="sec vn-faq" id="faq" aria-labelledby="vn-faq-h">
+    <div class="wrap vn-faq-grid">
+      <div>
+        <p class="kicker">FAQ</p>
+        <h2 id="vn-faq-h">Întrebări frecvente</h2>
+      </div>
+      <div>
+        <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
+        <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </section>
+
+  <?php if ($similarVenues): ?>
+  <!-- ===================== SIMILAR VENUES ===================== -->
+  <section class="sec vn-sim" id="similare" aria-labelledby="vn-sim-h">
+    <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">Locații similare</p><h2 id="vn-sim-h">Mai multe locuri de vizitat<?= $cityName !== '' ? ' în ' . v2_e($cityName) : '' ?></h2></div>
+        <?php if ($citySlug !== ''): ?><a class="sec-link" href="/<?= v2_e($citySlug) ?>">Vezi toate locațiile<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </div>
+      <ul class="vn-sim-grid">
+        <?php foreach ($similarVenues as $svi => $sv): ?>
+        <li><a class="vn-simcard" href="<?= v2_e($sv['url']) ?>">
+          <span class="vn-simcard-media"><?= $sv['image'] ? v2_photo([$sv['image'], 0, 0, '']) : v2_fallback($sv['name'], $svi) ?></span>
+          <span class="vn-simcard-body">
+            <span class="vn-simcard-k"><?= v2_e($sv['type']) ?></span>
+            <span class="vn-simcard-t"><?= v2_e($sv['name']) ?></span>
+            <?php if ($sv['desc'] !== ''): ?><span class="vn-simcard-d"><?= v2_e($sv['desc']) ?></span><?php endif; ?>
+            <span class="vn-simcard-f"><?php if ($sv['city'] !== ''): ?><span class="vn-simcard-city"><?= v2_ic('map-pin') ?><?= v2_e($sv['city']) ?></span><?php endif; ?><span class="xp-go"><?= v2_ic('arrow-right') ?></span></span>
+          </span>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- ===================== FINAL CTA ===================== -->
+  <section class="vn-final" aria-labelledby="vn-final-h">
+    <div class="wrap">
+      <div class="vn-final-in">
+        <?= $vnArches ?>
+        <p class="kicker"><?= v2_e($name) ?></p>
+        <h2 id="vn-final-h">Alege activitatea, rezervă online, intră cu QR.</h2>
+        <p class="vn-final-text">Toate experiențele acestei locații într-un singur loc: program, prețuri, disponibilitate și bilete digitale.</p>
+        <div class="vn-final-cta">
+          <?php if ($activityCount): ?><a class="btn btn-light" href="#activitati">Vezi activitățile<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+          <?php if ($citySlug !== ''): ?>
+          <a class="btn btn-outline-light" href="/<?= v2_e($citySlug) ?>">Explorează <?= v2_e($cityName) ?></a>
+          <?php else: ?>
+          <a class="btn btn-outline-light" href="/categorii">Explorează categorii</a>
+          <?php endif; ?>
+        </div>
+        <svg class="vn-final-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <?php if ($photos): ?>
+  <!-- ===================== LIGHTBOX ===================== -->
+  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-labelledby="lb-title" hidden>
+    <div class="lb-top">
+      <p class="lb-title" id="lb-title"><?= v2_e($name) ?></p>
+      <span class="lb-count" id="lb-count">1 / <?= count($photos) ?></span>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Închide galeria</span></button>
+    </div>
+    <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
+    <div class="lb-nav"<?= count($photos) < 2 ? ' hidden' : '' ?>>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="Fotografia anterioară"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="Fotografia următoare"><?= v2_ic('arrow-right') ?></button>
+    </div>
+  </div>
+  <?php endif; ?>
 </main>
-
-<style>
-    .prose-venue p { margin-bottom: 1rem; }
-    .prose-venue a { color: #E84527; background-image: linear-gradient(currentColor, currentColor); background-size: 100% 2px; background-repeat: no-repeat; background-position: 0 100%; }
-    .prose-venue a:hover { background-size: 0 2px; }
-    .no-bar::-webkit-scrollbar { display: none; }
-    .no-bar { -ms-overflow-style: none; scrollbar-width: none; }
-</style>
-
-<script>
-function venuePage(data) {
-    return {
-        active: 0,
-        gallery: data.gallery || [],
-        activities: data.activities || [],
-    };
-}
-</script>
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>

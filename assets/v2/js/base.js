@@ -9,20 +9,21 @@
   var hdr = $('hdr');
 
   /* ---------- header: solid once the content reaches it (pages with a hero; the others render it solid) ---------- */
+  // Checked on scroll, not with an IntersectionObserver: on a hero taller than the screen the sentinel starts below
+  // the fold, and an anchor jump straight past it (below the fold -> above the header) is no change in intersection,
+  // so the observer never fired and the header stayed transparent over the content.
   var sentinel = $('hdr-sentinel');
-  if (hdr && sentinel && 'IntersectionObserver' in window) {
-    var io = null;
-    var watchHeader = function () {
-      if (io) io.disconnect();
-      var h = hdr.offsetHeight;
-      io = new IntersectionObserver(function (entries) {
-        var e = entries[0];
-        hdr.classList.toggle('is-solid', !e.isIntersecting && e.boundingClientRect.top < h + 1);
-      }, { rootMargin: '-' + h + 'px 0px 0px 0px', threshold: 0 });
-      io.observe(sentinel);
+  if (hdr && sentinel) {
+    var solidQueued = false;
+    var checkSolid = function () {
+      solidQueued = false;
+      hdr.classList.toggle('is-solid', sentinel.getBoundingClientRect().top < hdr.offsetHeight + 1);
     };
-    watchHeader();
-    desktopMQ.addEventListener('change', watchHeader);
+    window.addEventListener('scroll', function () {
+      if (!solidQueued) { solidQueued = true; window.requestAnimationFrame(checkSolid); }
+    }, { passive: true });
+    window.addEventListener('resize', checkSolid);
+    checkSolid();
   }
 
   /* ---------- mobile menu ---------- */
