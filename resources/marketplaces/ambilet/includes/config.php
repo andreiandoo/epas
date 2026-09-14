@@ -41,7 +41,7 @@ define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 define('CACHE_BUST_TOKEN', 'cb_a3K8Qm2vR9LpZx5TfYwH7nB4Js6DgEcUiVqOpW1XzMyN0kLrCh');
 
 // CARTO basemaps (harti). Gol = tile-uri OpenStreetMap, fara cheie.
-define('CARTO_API_KEY', '');
+define('CARTO_API_KEY', 'cb1_3jw5_1_d9521efce19fbe0388edad3c');
 
 // Site Configuration
 define('SITE_NAME', 'AmBilet');
