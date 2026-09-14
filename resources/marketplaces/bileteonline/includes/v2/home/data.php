@@ -35,7 +35,7 @@ const V2_FAQ = [
     ['Ce tip de bilete găsesc pe bilete.online?', 'Bilete pentru experiențe și atracții: escape rooms, parcuri de distracții, muzee, castele, parcuri de aventură, acvarii, grădini zoologice și ateliere. Toate locurile unde te duci să faci ceva.'],
     ['Cum primesc biletul după cumpărare?', 'Imediat după plată primești biletul cu cod QR pe email și în cont. La intrare doar îl scanezi, fără tipărire obligatorie.'],
     ['Pot anula sau reprograma un bilet?', 'Politica de anulare este stabilită de fiecare locație și e afișată clar pe pagina experienței, înainte de plată.'],
-    ['Am o locație. Cum îmi listez activitatea?', 'Îți creezi cont de organizator, primești o pagină dedicată, optimizată pentru căutări, și începi să vinzi cu un comision de 1%. Platforma e operată tehnologic de Tixello.'],
+    ['Am o locație. Cum îmi listez activitatea?', 'Îți creezi cont de organizator, primești o pagină dedicată, optimizată pentru căutări, și începi să vinzi cu un comision de 2%. Platforma e operată tehnologic de Tixello.'],
     ['Pot oferi un card cadou?', 'Da. Cumperi un card cadou de orice valoare, scrii un mesaj personalizat și ajunge instant pe email. Se poate folosi la orice locație de pe platformă, timp de 12 luni.'],
     ['E nevoie de cont pentru a cumpăra?', 'Nu. Poți cumpăra ca invitat, doar cu un email. Contul te ajută însă să îți regăsești biletele și istoricul.'],
 ];

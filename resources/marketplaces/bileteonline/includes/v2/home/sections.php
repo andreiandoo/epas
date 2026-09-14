@@ -385,7 +385,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
         </div>
       </div>
       <ul class="partners-list">
-        <?php foreach ([['Comision de 1%', 'Fără abonament și fără costuri ascunse.'], ['Pagină dedicată', 'O pagină proprie, făcută să fie găsită în căutări.'], ['Scanare QR la intrare', 'De pe telefon sau cu un scanner USB.'], ['Plăți și decontări clare', 'Vezi vânzările și banii în timp real.']] as [$t, $d]): ?>
+        <?php foreach ([['Comision de 2%', 'Fără abonament și fără costuri ascunse.'], ['Pagină dedicată', 'O pagină proprie, făcută să fie găsită în căutări.'], ['Scanare QR la intrare', 'De pe telefon sau cu un scanner USB.'], ['Plăți și decontări clare', 'Vezi vânzările și banii în timp real.']] as [$t, $d]): ?>
         <li><?= v2_ic('check-circle') ?><span><b><?= $t ?></b><span><?= $d ?></span></span></li>
         <?php endforeach; ?>
       </ul>
