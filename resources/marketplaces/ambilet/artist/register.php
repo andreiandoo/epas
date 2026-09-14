@@ -81,8 +81,6 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
                                 class="w-full input">
                             <input type="hidden" id="artist_picker_value" value="">
 
-                            <!-- Selected artist preview (shown after a pick).
-                                 JS toggles `hidden` and adds `flex` when populating. -->
                             <div id="artist_selected" class="items-center hidden gap-3 p-3 mt-2 border rounded-lg border-primary/30 bg-primary/5">
                                 <img id="artist_selected_logo" src="" class="object-cover w-10 h-10 bg-gray-200 rounded-full" alt="">
                                 <div class="flex-1 min-w-0">

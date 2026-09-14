@@ -91,9 +91,6 @@ require __DIR__ . '/_layout.php';
   </div>
 </div>
 
-<!-- Seating widget modal — same /seating/embed page the Android app's
-     WebView loads. We iframe it here and listen for postMessage from the
-     iframe (confirm / cancel / ready) so the behavior is 1:1 with mobile. -->
 <div class="scanapp-seating-modal" id="scanapp-seating-modal" role="dialog" aria-modal="true">
   <div class="scanapp-seating-modal__inner">
     <div class="scanapp-seating-modal__header">

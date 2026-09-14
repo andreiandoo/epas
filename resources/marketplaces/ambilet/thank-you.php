@@ -53,9 +53,6 @@ require_once __DIR__ . '/includes/header.php';
             <p id="printingText" class="text-lg text-muted" data-i18n="tickets_printing">Biletele tale se printează...</p>
         </div>
 
-        <!-- Online-event access panel — populated by thank-you.js when
-             the order is for an online event. Hidden by default; shows
-             the join button per ticket + lobby info. -->
         <div id="onlineAccessPanel" class="hidden mb-6">
             <div class="p-6 md:p-8 bg-gradient-to-br from-primary/5 to-red-500/5 border-2 border-primary/20 rounded-2xl">
                 <div class="flex items-center justify-center gap-2 mb-2 text-sm font-bold text-primary uppercase tracking-widest">

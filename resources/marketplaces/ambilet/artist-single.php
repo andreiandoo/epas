@@ -92,7 +92,6 @@ require_once __DIR__ . '/includes/header.php';
             <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight mobile:text-2xl">
                 <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
             </h1>
-            <!-- Verified Badge — afișat doar dacă artistul are profilul verificat (artist-claim.js). -->
             <div id="verifiedBadge" class="hidden w-[34px] h-[34px] bg-emerald-500 rounded-full items-center justify-center cursor-help shadow-md ring-2 ring-emerald-400/40" title="Profil verificat" aria-label="Profil verificat">
                 <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M20 6L9 17l-5-5"/>
@@ -152,12 +151,6 @@ require_once __DIR__ . '/includes/header.php';
                 </button>
             </div>
 
-            <!--
-              Claim CTA — populated by ArtistClaim.init() in artist-claim.js.
-              Shows one of: "Revendică profilul" / "Profil verificat" badge /
-              "Cerere în review" badge / "Editează profilul" (if logged in
-              as the owning artist account).
-            -->
             <div id="claimCtaContainer" class="hidden mb-5"></div>
             <div id="socialLinksContainer" class="flex flex-wrap gap-2.5">
                 <a href="#" id="socialFacebook" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-colors hidden" target="_blank">
@@ -263,10 +256,6 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <!--
-                  Booking direct artist — afișat doar dacă artistul are listing
-                  activ. Wired up de BookingRequestModal.init() / populateDetails.
-                -->
                 <div id="bookingCtaContainer" class="hidden mt-10">
                     <div class="flex items-center justify-between mb-5">
                         <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
@@ -406,7 +395,6 @@ require_once __DIR__ . '/includes/header.php';
     </section>
 </div>
 
-<!-- Booking Request Modal — wired up by BookingRequestModal in artist-booking-modal.js -->
 <div id="bookingRequestModal" class="fixed inset-0 z-[9998] hidden items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
     <div class="w-full max-w-2xl bg-white rounded-2xl shadow-2xl my-auto" onclick="event.stopPropagation()">
         <div class="flex items-start justify-between gap-3 p-6 border-b border-gray-100">
@@ -420,8 +408,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <form id="bookingRequestForm" class="p-6 space-y-4">
-            <!-- Honeypot — hidden from humans, auto-filled by bots. Backend
-                 silently drops submissions where this carries a value. -->
             <div style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
                 <label for="artist_website_url">Website (nu completați)</label>
                 <input type="text" name="website_url" id="artist_website_url" tabindex="-1" autocomplete="off" value="">

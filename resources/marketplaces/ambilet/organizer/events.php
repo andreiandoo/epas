@@ -146,9 +146,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <span class="mobile:hidden">Trimite spre aprobare</span>
                             </button>
-                            <!-- Delete event button — only revealed for draft / pending_review / rejected
-                                 events by loadEventForEdit; classList toggles its .hidden class. Kept the
-                                 id="edit-delete-btn" so the existing JS handler (line ~1311) still binds. -->
                             <button type="button" id="edit-delete-btn" class="hidden btn btn-sm btn-error" title="Șterge evenimentul">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 <span class="mobile:hidden">Șterge</span>
@@ -210,12 +207,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </aside>
 
                 <!-- Accordion Form -->
-                <!-- autocomplete="off" + name="search" trick disables Chrome's
-                     form data autofill for the event name/venue/date/ticket
-                     fields. Chrome remembers values per (origin, field name)
-                     and was re-injecting Machines / 25 sep 2026 / 4 ticket
-                     types from a previous session whenever the page loaded
-                     in create mode. -->
                 <form id="create-event-form" autocomplete="off" name="event-create-no-autofill" class="min-w-0 pb-16 space-y-3 lg:space-y-4">
                     <!-- Hidden fields -->
                     <input type="hidden" id="saved-event-id" value="">

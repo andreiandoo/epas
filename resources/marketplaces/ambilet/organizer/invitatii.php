@@ -199,8 +199,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
         <div class="flex items-center justify-between gap-3 px-6 py-3 border-t border-border flex-shrink-0 flex-wrap">
             <div class="flex items-center gap-4 text-xs text-muted flex-wrap">
-                <!-- Ticket-type chips (colors match the admin/public map) are injected
-                     here from seatingData.ticket_types by renderSeatModal(). -->
                 <div id="seat-modal-tt-legend" class="flex items-center gap-3 flex-wrap"></div>
                 <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#a51c30"></span>Selectat de tine</span>
                 <span class="inline-flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full" style="background:#9ca3af"></span>Vândut / rezervat</span>

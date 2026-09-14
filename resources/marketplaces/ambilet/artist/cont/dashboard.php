@@ -116,9 +116,6 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
             </div>
         </div>
 
-        <!-- Social stats — one card per platform. Filled by JS. The whole
-             block is hidden when there are no trackable IDs / synced
-             stats yet (decided by JS based on the social_stats payload). -->
         <div id="social-stats-section" class="mb-8 hidden">
             <div class="mb-4 flex items-center justify-between">
                 <div>
@@ -225,8 +222,6 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
 
         <!-- Profile completion + Next event -->
         <div class="mb-6 grid gap-6 lg:grid-cols-3">
-            <!-- Profile completion (replaces the design's "Performance" chart since
-                 we don't track per-artist ticket sales yet) -->
             <div id="completion-card" class="rounded-2xl border border-border bg-white p-6 lg:col-span-2">
                 <div class="mb-6 flex items-center justify-between">
                     <div>

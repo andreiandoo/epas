@@ -24,10 +24,6 @@ require __DIR__ . '/_layout.php';
     <div class="scanapp-reports-banner__text">Acest eveniment s-a încheiat. Doar rapoartele sunt disponibile.</div>
   </div>
 
-  <!-- ========================================================================
-       ADMIN VIEW (owner/admin role) — primary stat, 2x2 grid, quick actions,
-       recent activity, close shift.
-  ======================================================================== -->
   <div id="scanapp-admin-view" hidden>
 
     <!-- Reports-only mode: show 2x2 colored summary instead of live stats -->
@@ -54,12 +50,6 @@ require __DIR__ . '/_layout.php';
       </div>
     </div>
 
-    <!-- Live stats: mockup-driven 2×2 grid — Scanați / Vândute / Încasări
-         / Disponibile. Every card is a button and reuses the existing
-         data-modal handlers wired in panou.js (scanned → guest-list,
-         sold → TicketSalesByType, revenue → SalesBreakdown,
-         available → Remaining). Rate + progress bar moved off the
-         primary card; the Capacitate section below keeps them. -->
     <div id="scanapp-live-stats">
       <div class="scanapp-stats-section">
       <div class="scanapp-mock-grid">
@@ -108,11 +98,6 @@ require __DIR__ . '/_layout.php';
         </button>
       </div>
 
-      <!-- Hidden legacy fields kept as no-op targets so panou.js's
-           renderStats can still write to scanapp-stat-total / -remaining
-           / -capacity / -checkedin-pct without a null-ref crash. The
-           progress bar element is retained hidden too for the same
-           reason — no display, no cost. -->
       <div hidden aria-hidden="true">
         <span id="scanapp-stat-total">0</span>
         <span id="scanapp-stat-remaining">0</span>
@@ -122,9 +107,6 @@ require __DIR__ . '/_layout.php';
       </div>
       </div><!-- /.scanapp-stats-section -->
 
-      <!-- Capacitate — sold / total_capacity progress bar (semantic
-           differs from the check-in bar above: this shows how full the
-           event is regardless of who's already entered). -->
       <div class="scanapp-capacity-section" id="scanapp-capacity-section" hidden>
         <div class="scanapp-capacity-header">
           <span class="scanapp-capacity-title">Capacitate</span>
@@ -138,10 +120,6 @@ require __DIR__ . '/_layout.php';
         </div>
       </div>
 
-      <!-- Online vs. la ușă — stacked bar, click a segment to expand
-           the per-ticket-type breakdown UNDER the bar. Second click on
-           the same segment collapses. Populated by panou.js from
-           stats.online_count / .door_count / .by_source_and_type. -->
       <div class="scanapp-online-door-section" id="scanapp-online-door-section" hidden>
         <div class="scanapp-section-title">Online vs. la ușă</div>
         <div class="scanapp-online-door-bar" id="scanapp-od-bar">
@@ -200,18 +178,10 @@ require __DIR__ . '/_layout.php';
         Închide Tura
       </button>
 
-      <!-- Pull-to-refresh hint. Data already refreshes on a 30s poll
-           and via Reverb when connected, so this is purely a visual
-           reminder that the user CAN also pull down for an on-demand
-           refresh. Kept low-contrast so it doesn't compete with the
-           real stats above. -->
       <div class="scanapp-pull-hint">↓ Trage în jos pentru refresh</div>
     </div>
   </div>
 
-  <!-- ========================================================================
-       SCANNER VIEW (staff/manager role) — turnover, my stats, big actions.
-  ======================================================================== -->
   <div id="scanapp-scanner-view" hidden>
 
     <!-- Turnover card (Cash + Card) -->

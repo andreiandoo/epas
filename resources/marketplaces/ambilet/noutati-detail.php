@@ -190,8 +190,6 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <article class="max-w-4xl mx-auto px-6 md:px-12 py-10 md:py-16">
-    <!-- Hero image (if any) — pulled out of the intro band so it sits ABOVE
-         the body but visually separates the metadata band from the article. -->
     <?php if (!empty($update['featured_image'])): ?>
     <figure class="mb-12 -mx-6 md:mx-0">
         <img src="<?= htmlspecialchars($update['featured_image']) ?>"
@@ -202,11 +200,6 @@ require_once __DIR__ . '/includes/header.php';
     </figure>
     <?php endif; ?>
 
-    <!-- Body — already sanitized server-side via HTMLPurifier profile
-         "system_update", so echoing raw is safe.
-         NOTE: Tailwind Typography's `prose` classes aren't part of the
-         ambilet build, so styling is done via the scoped stylesheet
-         below instead of prose-* utilities. -->
     <div id="noutati-body">
         <?= $update['body'] ?? '' ?>
     </div>

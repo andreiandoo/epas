@@ -475,8 +475,6 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div id="plannerMap" style="height: 320px; margin-bottom: 16px;"></div>
 
                                 <div class="bg-white border border-border rounded-2xl">
-                                    <!-- Sticky toolbar — rămâne vizibilă cât scroll-uiești prin orașe.
-                                         Auto-recalc rulează la 1s după orice editare → nu mai e nevoie de buton manual. -->
                                     <div class="sticky top-0 z-30 px-5 py-3 bg-white border-b shadow-sm border-border rounded-t-2xl">
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             <h3 class="font-bold text-secondary">Itinerar optim</h3>

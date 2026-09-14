@@ -82,7 +82,6 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
             </div>
 
-            <!-- Coming soon notice (replaces rewards / badges / levels until benefits are announced) -->
             <div class="p-6 mb-6 text-center bg-white border rounded-xl lg:rounded-2xl border-border">
                 <div class="mb-3 text-4xl">✨</div>
                 <h2 class="mb-2 text-xl font-bold text-secondary">Adună puncte, în scurt timp anunțăm beneficiile!</h2>

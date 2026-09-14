@@ -84,11 +84,6 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 <div id="tab-<?= $t['id'] ?>" class="analiza-tab-panel hidden space-y-4"></div>
             <?php endforeach; ?>
 
-            <!-- Skeleton loader — shown during first analyticsAll fetch,
-                 hidden once loadAll() unwraps the response. Uses tailwind
-                 animate-pulse on grey blocks the same shape/size as the
-                 real content so the user sees the page structure land
-                 before the numbers themselves. -->
             <div id="analiza-loading" class="space-y-4">
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="p-5 bg-white border rounded-2xl border-slate-200 md:col-span-2 animate-pulse">

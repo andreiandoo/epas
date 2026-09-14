@@ -9,8 +9,6 @@
 $currentPage = $currentPage ?? getCurrentPage();
 ?>
 
-<!-- Ascunde linkurile condiționate până când JS-ul detectează tipul organizatorului.
-     Previne "flash of all sidebar links" la încărcarea paginii. -->
 <style>
   body:not([data-org-type]) [data-org-show] { display: none !important; }
   body[data-org-type="leisure"] [data-org-show="standard"] { display: none !important; }
@@ -130,8 +128,6 @@ $currentPage = $currentPage ?? getCurrentPage();
             </a>
         </div>
 
-        <!-- SCAN APP SIDEBAR SECTION (removed 2026-06-14 per request) — entry
-             point is now the 'Aplicație Scan' button in dashboard.php. -->
 
 
         <div class="flex flex-col pt-4 mt-4 space-y-1 border-t border-slate-700">

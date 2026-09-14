@@ -213,14 +213,6 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <!-- QR SCANNABILITY FIX (Sf. Ana + toti clientii):
-         Android Chrome "Force dark mode" (chrome://flags, activat de multi useri)
-         inverseaza AUTO fundalurile albe pe pagini. QR-urile albe cu module negre
-         devin negre cu module albe → scanner-ele nu le mai detecteaza (asteapta
-         black-on-white). Fix: aplicam color-scheme:light DOAR pe wrapperele QR
-         + img-urile care servesc coduri QR (qrserver.com, /qr, data:image cu QR).
-         Restul paginii isi pastreaza dark mode-ul preferat de user.
-         Non-breaking: doar CSS aditional, nu suprascrie stiluri existente pe alte elemente. -->
     <style>
         img[src*="qrserver.com"],
         img[src*="/qr-code"],
@@ -296,7 +288,6 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <meta name="twitter:site" content="@ambilet">
     <meta name="twitter:creator" content="@ambilet">
 
-    <!-- Schema.org Structured Data: single @graph block with site, page and breadcrumb nodes. -->
     <?php
         $schemaGraph = $siteAndOrgSchema['@graph'];
         if ($pageSchema) {
@@ -358,14 +349,6 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     })();
     </script>
 
-    <!-- Tracking Scripts (head) — injected on first interaction, else shortly after page load.
-         The scripts live in a JS string rather than the markup so they never compete with
-         critical resources. They used to wait 7s (10s without requestIdleCallback), which meant
-         any visitor who left sooner without touching anything was never measured at all — i.e.
-         precisely the bounces. That undercounted sessions and made bounce rate look far better
-         than it is. Firing on `load` keeps the "don't block rendering" property (everything
-         critical has already finished by then) while shrinking the blind window to ~1s.
-         It also lets Google's tag detector actually find the tag, which it never could before. -->
     <?php
     if (!isset($trackingHeadScripts)) {
         require_once __DIR__ . '/tracking.php';

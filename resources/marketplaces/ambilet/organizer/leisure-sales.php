@@ -93,7 +93,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Stats secundare: Comenzi / Cos mediu / Bilete fizice / Bilete tranzactii + breakdown categorii -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div class="p-4 bg-white border rounded-2xl border-border">
                 <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🧾 Comenzi</p>

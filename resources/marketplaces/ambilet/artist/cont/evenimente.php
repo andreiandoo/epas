@@ -104,10 +104,6 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     <input type="text" id="filter-search" placeholder="Caută eveniment, locație, oraș…" class="input pl-10">
                 </div>
 
-                <!-- City filter — pr-10 reserves room for the SVG arrow
-                     drawn via partials/_forms.css `select` rule. Without
-                     it, the .input padding (1rem) overrides and the arrow
-                     overlaps the option text. -->
                 <select id="filter-city" class="input w-full pr-10 lg:w-auto">
                     <option value="">Toate orașele</option>
                 </select>
