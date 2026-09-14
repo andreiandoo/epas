@@ -3,8 +3,10 @@
  * bilete.online v2 footer, cookie consent and scripts.
  *
  * Expects $V2NAV from v2/nav.php. Page variables:
- *   $v2Scripts     page scripts under assets/v2/js, loaded after base.js, e.g. ['home.js']
- *   $v2ClientData  data for the page script, printed as JSON in #v2-data
+ *   $v2Scripts        page scripts under assets/v2/js, loaded after base.js, e.g. ['home.js']
+ *   $v2LegacyScripts  scripts of the previous stack a page still needs, paths from the site root, loaded
+ *                     before base.js, e.g. ['assets/js/config.js', 'assets/js/cart.js'] for the cart
+ *   $v2ClientData     data for the page script, printed as JSON in #v2-data
  */
 $v2FootCities = array_slice($V2NAV['citiesList'], 0, 8);
 $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
@@ -101,6 +103,9 @@ $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
 <?php if (!empty($v2ClientData)): ?>
 <script type="application/json" id="v2-data"><?= json_encode($v2ClientData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
 <?php endif; ?>
+<?php foreach (($v2LegacyScripts ?? []) as $v2LegacyJs): ?>
+<script defer src="<?= asset($v2LegacyJs) ?>"></script>
+<?php endforeach; ?>
 <script defer src="<?= v2_asset('js/base.js') ?>"></script>
 <?php foreach (($v2Scripts ?? []) as $v2Js): ?>
 <script defer src="<?= v2_asset('js/' . $v2Js) ?>"></script>
