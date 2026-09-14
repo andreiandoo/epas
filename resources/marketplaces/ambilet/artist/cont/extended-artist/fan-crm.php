@@ -753,7 +753,7 @@ function fanCrm() {
                 const el = document.getElementById('fanMap');
                 if (!el) return;
                 this.map = L.map('fanMap').setView([this.mapData.center?.lat || 45.94, this.mapData.center?.lng || 24.97], this.mapData.zoom || 6);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(this.map);
+                AmbiletTileLayer('light_all').addTo(this.map);
             }
             // Curăță layere vechi
             if (this.heatLayer) this.map.removeLayer(this.heatLayer);

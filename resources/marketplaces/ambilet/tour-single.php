@@ -1003,10 +1003,7 @@ $scriptsExtra = <<<'JS'
 
             const map = L.map(canvas, { scrollWheelZoom: false, zoomControl: true });
             _mapInstance = map;
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 18,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            }).addTo(map);
+            AmbiletTileLayer('light_all').addTo(map);
 
             // Markers
             const bounds = [];
