@@ -1,53 +1,60 @@
 <?php
 /**
- * Faceted activity search — /cauta  (F5).
+ * Faceted activity search — /cauta (v2 design).
  *
- * Server-side faceted search over the Activities API. The header command-search
- * + every "Caută" CTA land here with ?q=. Facets (city, category, price,
- * interests, traveler types, sort) are plain query-string toggles, so the page
- * is fully crawlable + shareable and needs no client-side state. Also backs the
- * discovery landings /interese/{slug} and /pentru-cine/{slug} (preset facets).
+ * Facets are plain query-string links, so results stay crawlable and shareable without client state:
+ * text (q), day (data=Y-m-d), city, category, max price, traveller type, interests, sort, page.
+ * Also backs /interese/{slug} and /pentru-cine/{slug} (preset facets, see .htaccess).
  */
-
 $pageCacheTTL = 120;
 require_once __DIR__ . '/includes/page-cache.php';
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
 
 // ---- Input ----
-$q        = isset($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
-$cityF    = (isset($_GET['city']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['city'])) ? $_GET['city'] : '';
-$catF     = (isset($_GET['category']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['category'])) ? $_GET['category'] : '';
-$intF     = array_values(array_filter(array_map('trim', explode(',', (string) ($_GET['interests'] ?? '')))));
-$travF    = array_values(array_filter(array_map('trim', explode(',', (string) ($_GET['traveler_types'] ?? '')))));
+$slugParam = function (string $key): string {
+    $v = $_GET[$key] ?? '';
+    return is_string($v) && preg_match('/^[a-z][a-z0-9-]+$/', $v) ? $v : '';
+};
+$csvParam = function (string $key): array {
+    $v = $_GET[$key] ?? '';
+    return is_string($v) ? array_values(array_filter(array_map('trim', explode(',', $v)), function ($s) {
+        return (bool) preg_match('/^[a-z0-9-]+$/', $s);
+    })) : [];
+};
+$q        = isset($_GET['q']) && is_string($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
+$cityF    = $slugParam('city');
+$catF     = $slugParam('category');
+$intF     = $csvParam('interests');
+$travF    = $csvParam('traveler_types');
 $priceAllowed = [50, 100, 200, 500];
 $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $priceAllowed, true)) ? (int) $_GET['max_price'] : null;
-$sortAllowed = ['recommended', 'cheapest', 'soon'];
-$sort     = (isset($_GET['sort']) && in_array($_GET['sort'], $sortAllowed, true)) ? $_GET['sort'] : 'recommended';
+$sortOptions = ['recommended' => 'Recomandate', 'cheapest' => 'Cele mai ieftine', 'soon' => 'Cele mai apropiate'];
+$sort     = (isset($_GET['sort']) && is_string($_GET['sort']) && isset($sortOptions[$_GET['sort']])) ? $_GET['sort'] : 'recommended';
 $page     = max(1, (int) ($_GET['page'] ?? 1));
-// Date ("Când" in the homepage search): a real calendar day from today up to 90 days ahead.
-$tzB      = new DateTimeZone('Europe/Bucharest');
-$todayB   = new DateTimeImmutable('today', $tzB);
-$dateF    = '';
+
+// Day ("Când" in the homepage search): a real calendar day from today up to 90 days ahead.
+$tz = new DateTimeZone('Europe/Bucharest');
+$today = new DateTimeImmutable('today', $tz);
+$dateF = '';
 if (isset($_GET['data']) && is_string($_GET['data']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['data'])) {
-    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $_GET['data'], $tzB);
-    if ($d && $d->format('Y-m-d') === $_GET['data'] && $d >= $todayB && $d <= $todayB->modify('+90 days')) {
+    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $_GET['data'], $tz);
+    if ($d && $d->format('Y-m-d') === $_GET['data'] && $d >= $today && $d <= $today->modify('+90 days')) {
         $dateF = $_GET['data'];
     }
 }
-$bo_date_label = function (string $iso) use ($tzB, $todayB): string {
-    $d = new DateTimeImmutable($iso, $tzB);
-    $days = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
-    $months = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-    $label = $days[(int) $d->format('w')] . ', ' . $d->format('j') . ' ' . $months[(int) $d->format('n') - 1];
-    $diff = (int) $todayB->diff($d)->format('%r%a');
+$roDays = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+$roDaysShort = ['dum', 'lun', 'mar', 'mie', 'joi', 'vin', 'sâm'];
+$roMonths = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
+$dayLabel = function (string $iso) use ($tz, $today, $roDays, $roMonths): string {
+    $d = new DateTimeImmutable($iso, $tz);
+    $diff = (int) $today->diff($d)->format('%r%a');
+    $label = $roDays[(int) $d->format('w')] . ', ' . $d->format('j') . ' ' . $roMonths[(int) $d->format('n') - 1];
     return $diff === 0 ? 'azi, ' . $label : ($diff === 1 ? 'mâine, ' . $label : $label);
 };
-$dateQuick = [];
-foreach (['Azi' => $todayB, 'Mâine' => $todayB->modify('+1 day'), 'Sâmbătă' => $todayB->modify((int) $todayB->format('w') === 6 ? 'today' : 'next saturday'), 'Duminică' => $todayB->modify((int) $todayB->format('w') === 0 ? 'today' : 'next sunday')] as $dl => $dd) {
-    if (!in_array($dd->format('Y-m-d'), $dateQuick, true)) $dateQuick[$dl] = $dd->format('Y-m-d');
-}
 
 // ---- Fetch ----
 $params = ['per_page' => 24, 'page' => $page];
@@ -68,7 +75,7 @@ $total = (int) ($pagination['total'] ?? count($items));
 if ($dateF && ($resp['data']['applied_date'] ?? null) !== $dateF && $items) {
     // Core deployment without the `date` filter: check this page's activities one by one
     // (available-dates, cached 10 min). The count then covers this page only.
-    $horizon = (int) $todayB->diff(new DateTimeImmutable($dateF, $tzB))->format('%a') + 1;
+    $horizon = (int) $today->diff(new DateTimeImmutable($dateF, $tz))->format('%a') + 1;
     $dateJobs = [];
     foreach ($items as $i => $a) {
         if (!empty($a['slug'])) {
@@ -80,214 +87,234 @@ if ($dateF && ($resp['data']['applied_date'] ?? null) !== $dateF && $items) {
     $total = count($items);
     $pagination = ['current_page' => 1, 'last_page' => 1, 'total' => $total];
 }
+$cards = [];
+foreach ($items as $a) {
+    if (is_array($a) && ($n = v2_activity($a))) {
+        $cards[] = $n;
+    }
+}
 
-// ---- Facet option pools ----
-$navCities     = navGetCities(24);
-$navCategories = navGetCategories(24);
-// Interests / traveler types facets derived from the current result set.
+// Interest and traveller-type facets come from the current results (plus whatever is already selected).
+$prettySlug = fn (string $s) => mb_convert_case(str_replace('-', ' ', $s), MB_CASE_TITLE, 'UTF-8');
 $intNames = [];
 $travNames = [];
 foreach ($items as $a) {
-    foreach ((array) ($a['interests'] ?? []) as $i) if (!empty($i['slug'])) $intNames[$i['slug']] = $i['name'] ?? $i['slug'];
-    foreach ((array) ($a['traveler_types'] ?? []) as $t) if (!empty($t['slug'])) $travNames[$t['slug']] = $t['name'] ?? $t['slug'];
+    foreach ((array) ($a['interests'] ?? []) as $x) if (!empty($x['slug'])) $intNames[$x['slug']] = $x['name'] ?? $x['slug'];
+    foreach ((array) ($a['traveler_types'] ?? []) as $x) if (!empty($x['slug'])) $travNames[$x['slug']] = $x['name'] ?? $x['slug'];
 }
+foreach ($intF as $s) $intNames[$s] = $intNames[$s] ?? $prettySlug($s);
+foreach ($travF as $s) $travNames[$s] = $travNames[$s] ?? $prettySlug($s);
 
-// ---- Query-string helpers (facet toggles) ----
-$baseGet = $_GET; unset($baseGet['page']);
-$bo_qs = function (array $over) use ($baseGet) {
-    $p = array_merge($baseGet, $over);
-    foreach ($p as $k => $v) { if ($v === '' || $v === null || $v === []) unset($p[$k]); }
+// ---- Links (only the validated parameters are carried over) ----
+$baseGet = array_filter([
+    'q' => $q, 'data' => $dateF, 'city' => $cityF, 'category' => $catF,
+    'interests' => implode(',', $intF), 'traveler_types' => implode(',', $travF),
+    'max_price' => $maxPrice ? (string) $maxPrice : '', 'sort' => $sort === 'recommended' ? '' : $sort,
+], fn ($v) => $v !== '');
+$qs = function (array $over = []) use ($baseGet): string {
+    $p = array_filter(array_merge($baseGet, $over), fn ($v) => $v !== '' && $v !== null);
     return $p ? '/cauta?' . http_build_query($p) : '/cauta';
 };
-$bo_toggle_csv = function (string $key, string $val) use ($baseGet, $bo_qs) {
-    $cur = array_values(array_filter(array_map('trim', explode(',', (string) ($baseGet[$key] ?? '')))));
-    $cur = in_array($val, $cur, true) ? array_diff($cur, [$val]) : array_merge($cur, [$val]);
-    return $bo_qs([$key => implode(',', $cur)]);
+$toggleCsv = function (string $key, array $current, string $val) use ($qs): string {
+    $next = in_array($val, $current, true) ? array_values(array_diff($current, [$val])) : array_merge($current, [$val]);
+    return $qs([$key => implode(',', $next)]);
 };
-$bo_has_csv = fn (string $key, string $val) => in_array($val, array_filter(array_map('trim', explode(',', (string) ($baseGet[$key] ?? '')))), true);
 
-$bo_img = function ($u) {
-    $u = (string) $u; if ($u === '') return '';
-    return str_starts_with($u, 'http') ? $u : rtrim(STORAGE_URL, '/') . '/' . ltrim($u, '/');
-};
-$durationLabel = function (int $m): string { if ($m <= 0) return ''; if ($m < 60) return $m . ' min'; $h = intdiv($m, 60); $r = $m % 60; return $r ? "{$h}h {$r}m" : "{$h}h"; };
-$priceFrom = fn ($c) => $c ? number_format($c / 100, 0, ',', '.') . ' lei' : '';
-$cardUrl = fn ($a) => ($a['city']['slug'] ?? '') ? '/' . $a['city']['slug'] . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? '');
+$cityOptions = array_slice($V2NAV['citiesList'], 0, 12);
+if ($cityF && !in_array($cityF, array_column($cityOptions, 'slug'), true)) {
+    $cityOptions[] = $V2NAV['cities'][$cityF] ?? ['slug' => $cityF, 'name' => $prettySlug($cityF)];
+}
+$cityName = $cityF ? ($V2NAV['cities'][$cityF]['name'] ?? $prettySlug($cityF)) : '';
+$catName = $catF ? ($V2NAV['categoryBySlug'][$catF]['name'] ?? $prettySlug($catF)) : '';
 
-// ---- Contextual H1 (also serves /interese & /pentru-cine presets) ----
+// ---- Heading, active filters ----
 $heading = 'Caută activități';
 if ($q !== '') {
-    $heading = 'Rezultate pentru „' . $q . '"';
-} elseif ($travF && isset($travNames[$travF[0]])) {
+    $heading = 'Rezultate pentru „' . $q . '”';
+} elseif ($travF) {
     $heading = 'Activități pentru ' . mb_strtolower($travNames[$travF[0]]);
-} elseif ($intF && isset($intNames[$intF[0]])) {
+} elseif ($intF) {
     $heading = 'Activități · ' . $intNames[$intF[0]];
 } elseif ($catF) {
-    foreach ($navCategories as $c) if ($c['slug'] === $catF) { $heading = $c['label']; break; }
+    $heading = $catName;
+} elseif ($cityF) {
+    $heading = 'Activități în ' . $cityName;
 } elseif ($dateF) {
-    $heading = 'Activități disponibile ' . $bo_date_label($dateF);
+    $heading = 'Activități disponibile ' . $dayLabel($dateF);
 }
 
-$activeCount = ($q !== '' ? 1 : 0) + ($cityF ? 1 : 0) + ($catF ? 1 : 0) + count($intF) + count($travF) + ($maxPrice ? 1 : 0) + ($dateF ? 1 : 0);
+$active = [];
+if ($q !== '') $active[] = ['„' . $q . '”', $qs(['q' => ''])];
+if ($dateF) $active[] = [mb_convert_case(mb_substr($dayLabel($dateF), 0, 1), MB_CASE_UPPER, 'UTF-8') . mb_substr($dayLabel($dateF), 1), $qs(['data' => ''])];
+if ($cityF) $active[] = [$cityName, $qs(['city' => ''])];
+if ($catF) $active[] = [$catName, $qs(['category' => ''])];
+if ($maxPrice) $active[] = ['Sub ' . $maxPrice . ' lei', $qs(['max_price' => ''])];
+foreach ($travF as $s) $active[] = [$travNames[$s], $toggleCsv('traveler_types', $travF, $s)];
+foreach ($intF as $s) $active[] = [$intNames[$s], $toggleCsv('interests', $intF, $s)];
+$activeCount = count($active);
+$clearAll = $qs(['data' => '', 'city' => '', 'category' => '', 'interests' => '', 'traveler_types' => '', 'max_price' => '']);
 
-$pageTitleRaw = ($q !== '' ? $heading : 'Caută activități, experiențe și atracții') . ' | bilete.online';
-$pageDescription = 'Caută și filtrează activități pe bilete.online după oraș, categorie, preț, interese și pentru cine. Rezervi online cu bilet QR.';
+$farDate = $dateF && $today->diff(new DateTimeImmutable($dateF, $tz))->days >= 10;
+
+// ---- Page ----
+$pageTitle = $q !== '' ? $heading : 'Caută activități, experiențe și atracții';
+$pageDescription = 'Caută și filtrează activități pe bilete.online după zi, oraș, categorie, preț, interese și pentru cine. Rezervi online, intri cu bilet QR.';
 $canonicalUrl = SITE_URL . '/cauta';
-$currentPage = 'cauta';
-$cssBundle = 'listing';
-$headerContext = ['type' => 'homepage'];
-$bodyClass = '';
+$structuredData = [[
+    '@context' => 'https://schema.org', '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Căutare', 'item' => SITE_URL . '/cauta'],
+    ],
+]];
+$v2Styles = ['search.css'];
+$v2Scripts = ['search.js'];
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
+<main id="main" class="page-main" tabindex="-1">
+  <section class="sr-hero" aria-labelledby="sr-h">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Căutare</span></nav>
+      <h1 class="sr-h" id="sr-h"><?= v2_e($heading) ?></h1>
+      <p class="sr-count"><b><?= $total ?></b> <?= $total === 1 ? 'rezultat' : 'rezultate' ?><?= $dateF ? ' disponibile ' . v2_e($dayLabel($dateF)) : '' ?></p>
 
-<section class="border-b border-ink/10 bg-paper">
-    <div class="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-10">
-        <p class="font-mono text-xs tracking-[.18em] text-vermilion">CĂUTARE</p>
-        <h1 class="mt-2 font-display text-5xl font-bold leading-none sm:text-6xl"><?= htmlspecialchars($heading) ?></h1>
-        <p class="mt-3 text-ink-soft"><strong><?= $total ?></strong> <?= $total === 1 ? 'rezultat' : 'rezultate' ?></p>
+      <form class="sr-search" action="/cauta" method="get" role="search">
+        <?= v2_ic('magnifying-glass') ?>
+        <label class="sr" for="sr-q">Caută activități</label>
+        <input id="sr-q" name="q" type="search" value="<?= v2_e($q) ?>" placeholder="Caută activități, atracții sau orașe" autocomplete="off">
+        <?php foreach ($baseGet as $k => $v): if ($k === 'q') continue; ?><input type="hidden" name="<?= v2_e($k) ?>" value="<?= v2_e($v) ?>"><?php endforeach; ?>
+        <button class="btn btn-primary" type="submit">Caută</button>
+      </form>
 
-        <form action="/cauta" method="get" class="mt-6 max-w-3xl rounded-full border-2 border-ink bg-paper p-2">
-            <div class="flex items-center gap-2">
-                <svg viewBox="0 0 24 24" class="ml-3 h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" class="w-full bg-transparent px-2 py-3 font-bold outline-none placeholder:text-ink-soft/70" placeholder="Caută activități, orașe, experiențe...">
-                <?php foreach (['city' => $cityF, 'category' => $catF, 'interests' => implode(',', $intF), 'traveler_types' => implode(',', $travF), 'data' => $dateF] as $hk => $hv): ?>
-                    <?php if ($hv !== ''): ?><input type="hidden" name="<?= $hk ?>" value="<?= htmlspecialchars($hv, ENT_QUOTES) ?>"><?php endif; ?>
-                <?php endforeach; ?>
-                <button class="shrink-0 rounded-full bg-vermilion px-6 py-3 font-bold text-paper transition hover:bg-vermilion-d">Caută</button>
-            </div>
-        </form>
+      <ul class="sr-days" aria-label="Alege ziua">
+        <li><a class="day day-any" href="<?= v2_e($qs(['data' => ''])) ?>"<?= $dateF === '' ? ' aria-current="true"' : '' ?>><span class="day-dow">Oricând</span><?= v2_ic('calendar-blank') ?></a></li>
+        <?php for ($i = 0; $i < 10; $i++): $day = $today->modify('+' . $i . ' day'); $iso = $day->format('Y-m-d'); ?>
+        <li><a class="day" href="<?= v2_e($qs(['data' => $iso])) ?>"<?= $dateF === $iso ? ' aria-current="true"' : '' ?>><span class="day-dow"><?= $i === 0 ? 'Azi' : ($i === 1 ? 'Mâine' : $roDaysShort[(int) $day->format('w')]) ?></span><span class="day-num"><?= $day->format('j') ?></span><span class="sr">, <?= v2_e($roDays[(int) $day->format('w')] . ' ' . $day->format('j') . ' ' . $roMonths[(int) $day->format('n') - 1]) ?></span></a></li>
+        <?php endfor; ?>
+        <li>
+          <form class="day day-more<?= $farDate ? ' is-picked' : '' ?>" action="/cauta" method="get">
+            <?= v2_ic('calendar-blank') ?><span class="day-opt"><?= $farDate ? v2_e((new DateTimeImmutable($dateF, $tz))->format('j') . ' ' . mb_substr($roMonths[(int) (new DateTimeImmutable($dateF, $tz))->format('n') - 1], 0, 3)) : 'Alte date' ?></span>
+            <?php foreach ($baseGet as $k => $v): if ($k === 'data') continue; ?><input type="hidden" name="<?= v2_e($k) ?>" value="<?= v2_e($v) ?>"><?php endforeach; ?>
+            <label class="sr" for="sr-date">Alege altă dată</label>
+            <input id="sr-date" type="date" name="data" value="<?= v2_e($dateF) ?>" min="<?= $today->format('Y-m-d') ?>" max="<?= $today->modify('+90 days')->format('Y-m-d') ?>">
+          </form>
+        </li>
+      </ul>
     </div>
-</section>
+  </section>
 
-<section class="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-10">
-    <div class="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <!-- Facets -->
-        <aside class="space-y-6">
-            <?php if ($activeCount): ?>
-                <a href="<?= htmlspecialchars($bo_qs(['city' => '', 'category' => '', 'interests' => '', 'traveler_types' => '', 'max_price' => '', 'data' => '', 'q' => $q]), ENT_QUOTES) ?>" class="inline-flex rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">Șterge filtrele (<?= $activeCount ?>) ×</a>
-            <?php endif; ?>
-
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">DATA</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach ($dateQuick as $dl => $dv): ?>
-                        <a href="<?= htmlspecialchars($bo_qs(['data' => $dateF === $dv ? '' : $dv]), ENT_QUOTES) ?>" class="rounded-full border-2 px-3 py-1.5 text-sm font-bold transition <?= $dateF === $dv ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>"><?= $dl ?></a>
-                    <?php endforeach; ?>
-                </div>
-                <form action="/cauta" method="get" class="mt-3 flex items-center gap-2">
-                    <?php foreach ($baseGet as $hk => $hv): if ($hk === 'data' || !is_string($hv) || $hv === '') continue; ?>
-                        <input type="hidden" name="<?= htmlspecialchars((string) $hk, ENT_QUOTES) ?>" value="<?= htmlspecialchars($hv, ENT_QUOTES) ?>">
-                    <?php endforeach; ?>
-                    <label class="sr-only" for="cauta-data">Alege o dată</label>
-                    <input id="cauta-data" type="date" name="data" value="<?= htmlspecialchars($dateF, ENT_QUOTES) ?>" min="<?= $todayB->format('Y-m-d') ?>" max="<?= $todayB->modify('+90 days')->format('Y-m-d') ?>" class="min-w-0 flex-1 rounded-full border-2 border-ink/15 bg-paper-2 px-3 py-1.5 text-sm font-bold">
-                    <button class="shrink-0 rounded-full bg-ink px-3 py-1.5 text-sm font-bold text-paper">Aplică</button>
-                </form>
+  <section class="sr-body" aria-labelledby="sr-results-h">
+    <div class="wrap sr-grid">
+      <aside class="sr-filters" aria-labelledby="sr-filters-h">
+        <h2 class="sr-filters-h" id="sr-filters-h">Filtre</h2>
+        <button class="sr-filter-toggle" type="button" aria-expanded="false" aria-controls="sr-filter-body"><?= v2_ic('list') ?>Filtre<?php if ($activeCount): ?><span class="sr-badge"><?= $activeCount ?></span><?php endif; ?><?= v2_ic('caret-down') ?></button>
+        <div class="sr-filter-body" id="sr-filter-body">
+          <?php if ($cityOptions): ?>
+          <section class="fgroup">
+            <h3 class="flabel">Oraș</h3>
+            <div class="fchips">
+              <?php foreach ($cityOptions as $c): ?><a class="fchip" href="<?= v2_e($qs(['city' => $cityF === $c['slug'] ? '' : $c['slug']])) ?>"<?= $cityF === $c['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($c['name']) ?></a><?php endforeach; ?>
             </div>
-
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">PREȚ MAXIM</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach ($priceAllowed as $p): ?>
-                        <a href="<?= htmlspecialchars($bo_qs(['max_price' => $maxPrice === $p ? '' : $p]), ENT_QUOTES) ?>" class="rounded-full border-2 px-4 py-2 text-sm font-bold transition <?= $maxPrice === $p ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>">sub <?= $p ?> lei</a>
-                    <?php endforeach; ?>
-                </div>
+          </section>
+          <?php endif; ?>
+          <?php if ($V2NAV['categories']): ?>
+          <section class="fgroup">
+            <h3 class="flabel">Categorie</h3>
+            <div class="fchips">
+              <?php foreach ($V2NAV['categories'] as $c): ?><a class="fchip" href="<?= v2_e($qs(['category' => $catF === $c['slug'] ? '' : $c['slug']])) ?>"<?= $catF === $c['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($c['name']) ?></a><?php endforeach; ?>
             </div>
-
-            <?php if (!empty($navCities)): ?>
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">ORAȘ</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach (array_slice($navCities, 0, 12) as $c): ?>
-                        <a href="<?= htmlspecialchars($bo_qs(['city' => $cityF === $c['slug'] ? '' : $c['slug']]), ENT_QUOTES) ?>" class="rounded-full border-2 px-3 py-1.5 text-sm font-bold transition <?= $cityF === $c['slug'] ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>"><?= htmlspecialchars($c['label']) ?></a>
-                    <?php endforeach; ?>
-                </div>
+          </section>
+          <?php endif; ?>
+          <section class="fgroup">
+            <h3 class="flabel">Preț maxim</h3>
+            <div class="fchips">
+              <?php foreach ($priceAllowed as $p): ?><a class="fchip" href="<?= v2_e($qs(['max_price' => $maxPrice === $p ? '' : $p])) ?>"<?= $maxPrice === $p ? ' aria-current="true"' : '' ?>>Sub <?= $p ?> lei</a><?php endforeach; ?>
             </div>
-            <?php endif; ?>
-
-            <?php if (!empty($navCategories)): ?>
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">CATEGORIE</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach (array_slice($navCategories, 0, 12) as $c): ?>
-                        <a href="<?= htmlspecialchars($bo_qs(['category' => $catF === $c['slug'] ? '' : $c['slug']]), ENT_QUOTES) ?>" class="rounded-full border-2 px-3 py-1.5 text-sm font-bold transition <?= $catF === $c['slug'] ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>"><?= htmlspecialchars($c['label']) ?></a>
-                    <?php endforeach; ?>
-                </div>
+          </section>
+          <?php if ($travNames): ?>
+          <section class="fgroup">
+            <h3 class="flabel">Pentru cine</h3>
+            <div class="fchips">
+              <?php foreach ($travNames as $s => $n): ?><a class="fchip" href="<?= v2_e($toggleCsv('traveler_types', $travF, $s)) ?>"<?= in_array($s, $travF, true) ? ' aria-current="true"' : '' ?>><?= v2_e($n) ?></a><?php endforeach; ?>
             </div>
-            <?php endif; ?>
-
-            <?php if (!empty($intNames)): ?>
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">INTERESE</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach ($intNames as $s => $n): ?>
-                        <a href="<?= htmlspecialchars($bo_toggle_csv('interests', $s), ENT_QUOTES) ?>" class="rounded-full border-2 px-3 py-1.5 text-sm font-bold transition <?= $bo_has_csv('interests', $s) ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>"><?= htmlspecialchars($n) ?></a>
-                    <?php endforeach; ?>
-                </div>
+          </section>
+          <?php endif; ?>
+          <?php if ($intNames): ?>
+          <section class="fgroup">
+            <h3 class="flabel">Interese</h3>
+            <div class="fchips">
+              <?php foreach ($intNames as $s => $n): ?><a class="fchip" href="<?= v2_e($toggleCsv('interests', $intF, $s)) ?>"<?= in_array($s, $intF, true) ? ' aria-current="true"' : '' ?>><?= v2_e($n) ?></a><?php endforeach; ?>
             </div>
-            <?php endif; ?>
-
-            <?php if (!empty($travNames)): ?>
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">PENTRU CINE</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach ($travNames as $s => $n): ?>
-                        <a href="<?= htmlspecialchars($bo_toggle_csv('traveler_types', $s), ENT_QUOTES) ?>" class="rounded-full border-2 px-3 py-1.5 text-sm font-bold transition <?= $bo_has_csv('traveler_types', $s) ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper-2 hover:border-ink' ?>"><?= htmlspecialchars($n) ?></a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-        </aside>
-
-        <!-- Results -->
-        <div>
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <p class="text-sm font-bold text-ink-soft"><?= $total ?> rezultate<?= $dateF ? ' disponibile ' . htmlspecialchars($bo_date_label($dateF)) : '' ?></p>
-                <div class="flex gap-2 text-sm font-bold">
-                    <?php foreach (['recommended' => 'Recomandate', 'cheapest' => 'Preț', 'soon' => 'Curând'] as $sk => $sl): ?>
-                        <a href="<?= htmlspecialchars($bo_qs(['sort' => $sk === 'recommended' ? '' : $sk]), ENT_QUOTES) ?>" class="rounded-full px-3 py-1.5 transition <?= $sort === $sk ? 'bg-ink text-paper' : 'bg-paper-2 hover:bg-ink hover:text-paper' ?>"><?= $sl ?></a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <?php if (empty($items)): ?>
-                <div class="rounded-[2rem] border-2 border-ink bg-paper p-10 text-center">
-                    <p class="font-display text-4xl font-bold leading-none">Niciun rezultat.</p>
-                    <p class="mt-3 text-ink-soft">Încearcă alți termeni sau șterge câteva filtre.</p>
-                    <a href="/cauta" class="mt-5 inline-flex rounded-full bg-vermilion px-6 py-3 font-bold text-paper">Resetează căutarea</a>
-                </div>
-            <?php else: ?>
-                <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                    <?php foreach ($items as $a): $title = is_array($a['title'] ?? null) ? navFlatName($a['title']) : ($a['title'] ?? ''); ?>
-                        <a href="<?= htmlspecialchars($cardUrl($a)) ?>" class="group overflow-hidden rounded-[1.5rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-1">
-                            <div class="relative h-44 overflow-hidden bg-ink">
-                                <?php $img = $bo_img($a['cover_image_url'] ?? ''); if ($img): ?>
-                                    <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($title, ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
-                                <?php else: ?>
-                                    <div class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-3 text-center font-display text-lg font-bold"><?= htmlspecialchars(mb_substr($title, 0, 22)) ?></span></div>
-                                <?php endif; ?>
-                                <?php if (!empty($a['category']['name'])): ?><span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($a['category']['name']) ?></span><?php endif; ?>
-                            </div>
-                            <div class="p-4">
-                                <p class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion"><?= htmlspecialchars($title) ?></p>
-                                <p class="mt-2 text-sm text-ink-soft"><?= htmlspecialchars(trim(($a['city']['name'] ?? '') . (!empty($a['duration_minutes']) ? ' · ' . $durationLabel((int) $a['duration_minutes']) : ''), ' ·')) ?></p>
-                                <?php if (!empty($a['cheapest_price_cents'])): ?><p class="mt-3 font-bold"><span class="text-xs font-normal text-ink-soft">de la</span> <?= $priceFrom($a['cheapest_price_cents']) ?></p><?php endif; ?>
-                            </div>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-
-                <?php $last = (int) ($pagination['last_page'] ?? 1); if ($last > 1): ?>
-                    <div class="mt-10 flex flex-wrap items-center justify-center gap-2">
-                        <?php for ($p = 1; $p <= min($last, 12); $p++): ?>
-                            <a href="<?= htmlspecialchars($bo_qs(['page' => $p === 1 ? '' : $p]), ENT_QUOTES) ?>" class="grid h-11 min-w-11 place-items-center rounded-full border-2 px-3 font-bold transition <?= $page === $p ? 'border-ink bg-ink text-paper' : 'border-ink/15 hover:border-ink' ?>"><?= $p ?></a>
-                        <?php endfor; ?>
-                    </div>
-                <?php endif; ?>
-            <?php endif; ?>
+          </section>
+          <?php endif; ?>
         </div>
-    </div>
-</section>
+      </aside>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+      <div class="sr-results">
+        <h2 class="sr" id="sr-results-h">Rezultate</h2>
+        <div class="sr-bar">
+          <?php if ($active): ?>
+          <ul class="sr-active" aria-label="Filtre active">
+            <?php foreach ($active as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> (elimină)</span></a></li><?php endforeach; ?>
+            <?php if ($activeCount > 1): ?><li><a class="aclear" href="<?= v2_e($clearAll) ?>">Șterge filtrele</a></li><?php endif; ?>
+          </ul>
+          <?php endif; ?>
+          <nav class="sr-sort" aria-label="Ordonează rezultatele">
+            <?php foreach ($sortOptions as $key => $label): ?><a href="<?= v2_e($qs(['sort' => $key === 'recommended' ? '' : $key])) ?>"<?= $sort === $key ? ' aria-current="true"' : '' ?>><?= $label ?></a><?php endforeach; ?>
+          </nav>
+        </div>
+
+        <?php if ($cards): ?>
+        <ul class="xp-grid" data-reveal>
+          <?php foreach ($cards as $i => $a): ?>
+          <li class="xp">
+            <a href="<?= v2_e($a['href']) ?>">
+              <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?></span>
+              <span class="xp-body">
+                <span class="xp-cat"><?= v2_e($a['catName']) ?></span>
+                <span class="xp-title"><?= v2_e($a['title']) ?></span>
+                <span class="xp-meta"><?php if ($a['city']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['city']) ?></span><?php endif; ?><?php if ($a['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['dur']) ?></span><?php endif; ?></span>
+                <span class="xp-foot">
+                  <?php if ($dateF): ?><span class="xp-avail"><?= v2_ic('check-circle') ?><span>Disponibil <?= v2_e(explode(',', $dayLabel($dateF))[0]) ?></span></span>
+                  <?php else: ?><span class="xp-avail is-muted"><?= v2_ic('calendar-blank') ?><span>Vezi zilele disponibile</span></span><?php endif; ?>
+                  <?php if ($a['price']): ?><span class="xp-price">de la<b><?= $a['price'] ?> lei</b></span><?php endif; ?>
+                </span>
+              </span>
+            </a>
+          </li>
+          <?php endforeach; ?>
+        </ul>
+
+        <?php $last = max(1, (int) ($pagination['last_page'] ?? 1)); if ($last > 1): ?>
+        <nav class="pager" aria-label="Pagini de rezultate">
+          <?php if ($page > 1): ?><a href="<?= v2_e($qs(['page' => $page - 1 > 1 ? $page - 1 : ''])) ?>" aria-label="Pagina anterioară"><?= v2_ic('arrow-left') ?></a><?php endif; ?>
+          <?php for ($p = 1; $p <= min($last, 12); $p++): ?>
+            <?php if ($p === $page): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($qs(['page' => $p === 1 ? '' : $p])) ?>"><?= $p ?></a><?php endif; ?>
+          <?php endfor; ?>
+          <?php if ($page < $last): ?><a href="<?= v2_e($qs(['page' => $page + 1])) ?>" aria-label="Pagina următoare"><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        </nav>
+        <?php endif; ?>
+
+        <?php else: ?>
+        <div class="sr-empty">
+          <h2>Nu am găsit nimic pentru căutarea asta.</h2>
+          <p><?= $dateF ? 'Încearcă altă zi, ' : 'Încearcă ' ?>alt oraș sau renunță la câteva filtre.</p>
+          <div class="sr-empty-cta">
+            <?php if ($activeCount): ?><a class="btn btn-light" href="<?= v2_e($clearAll) ?>">Șterge filtrele</a><?php endif; ?>
+            <a class="btn btn-ghost" href="/cauta">Vezi toate experiențele</a>
+          </div>
+          <?php if ($V2NAV['categories']): ?>
+          <div class="fchips">
+            <?php foreach (array_slice($V2NAV['categories'], 0, 6) as $c): ?><a class="fchip" href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a><?php endforeach; ?>
+          </div>
+          <?php endif; ?>
+          <svg class="sr-empty-line" viewBox="0 590 3240 310" aria-hidden="true"><use href="#drum-g"/></svg>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </section>
+</main>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>

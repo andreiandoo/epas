@@ -1,21 +1,21 @@
 <?php
 /**
- * bilete.online — homepage v2: small shared helpers for the v2 partials.
- * Prefixed hv2_ so nothing collides with the rest of the site.
+ * bilete.online v2: small helpers shared by the v2 partials and pages.
+ * Prefixed v2_ so nothing collides with the rest of the site.
  */
 
-function hv2_e($s): string
+function v2_e($s): string
 {
     return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function hv2_ic(string $name, string $cls = 'ic'): string
+function v2_ic(string $name, string $cls = 'ic'): string
 {
     return '<svg class="' . $cls . '" aria-hidden="true"><use href="#i-' . $name . '"/></svg>';
 }
 
 /** Romanian counting: 1 experiență, 5 experiențe, 20 de experiențe, 101 experiențe. */
-function hv2_num(int $n, string $one, string $many): string
+function v2_num(int $n, string $one, string $many): string
 {
     if ($n === 1) {
         return '1 ' . $one;
@@ -25,23 +25,23 @@ function hv2_num(int $n, string $one, string $many): string
     return $n . ' ' . ($de ? 'de ' : '') . $many;
 }
 
-function hv2_exp(int $n): string
+function v2_exp(int $n): string
 {
-    return hv2_num($n, 'experiență', 'experiențe');
+    return v2_num($n, 'experiență', 'experiențe');
 }
 
-function hv2_thousands(int $n): string
+function v2_thousands(int $n): string
 {
     return number_format($n, 0, ',', '.');
 }
 
-function hv2_asset(string $path): string
+function v2_asset(string $path): string
 {
-    return asset('assets/home-v2/' . ltrim($path, '/'));
+    return asset('assets/v2/' . ltrim($path, '/'));
 }
 
 /** API media paths come either absolute or relative to the core storage. */
-function hv2_media_url($path): ?string
+function v2_media_url($path): ?string
 {
     if (!is_string($path) || $path === '') {
         return null;
@@ -52,12 +52,12 @@ function hv2_media_url($path): ?string
     return rtrim(STORAGE_URL, '/') . '/' . ltrim($path, '/');
 }
 
-function hv2_cauta(string $term): string
+function v2_cauta(string $term): string
 {
     return '/cauta?q=' . rawurlencode($term);
 }
 
-function hv2_duration(int $minutes): string
+function v2_duration(int $minutes): string
 {
     if ($minutes <= 0) {
         return '';
@@ -69,17 +69,17 @@ function hv2_duration(int $minutes): string
 }
 
 /** <img> from a [src, width, height, alt] tuple; dimensions only when known. */
-function hv2_photo(?array $photo, string $extra = ''): string
+function v2_photo(?array $photo, string $extra = ''): string
 {
     if (!$photo || empty($photo[0])) {
         return '';
     }
     $dims = !empty($photo[1]) ? ' width="' . (int) $photo[1] . '" height="' . (int) $photo[2] . '"' : '';
-    return '<img src="' . hv2_e($photo[0]) . '"' . $dims . ' alt="' . hv2_e($photo[3] ?? '') . '" loading="lazy" decoding="async"' . $extra . '>';
+    return '<img src="' . v2_e($photo[0]) . '"' . $dims . ' alt="' . v2_e($photo[3] ?? '') . '" loading="lazy" decoding="async"' . $extra . '>';
 }
 
 /** Image-less state: a segment of the brand line on deep green, picked from the name. */
-function hv2_fallback(string $seed, ?int $position = null): string
+function v2_fallback(string $seed, ?int $position = null): string
 {
     static $segs = [
         ['1060 585 220 310', '220 / 310'], ['1455 585 290 310', '290 / 310'],
@@ -96,7 +96,7 @@ function hv2_fallback(string $seed, ?int $position = null): string
     return '<span class="fb" aria-hidden="true"><svg viewBox="' . $vb . '" style="aspect-ratio:' . $ar . '"><use href="#drum-g"/></svg></span>';
 }
 
-function hv2_brand(string $cls = 'brand'): string
+function v2_brand(string $cls = 'brand'): string
 {
     return '<span class="' . $cls . '" role="img" aria-label="bilete.online">'
         . '<svg class="s" viewBox="24 33 148 205" aria-hidden="true"><use href="#sym-g"/></svg>'
@@ -104,7 +104,7 @@ function hv2_brand(string $cls = 'brand'): string
 }
 
 /** Shape of an activity from /activities, as the cards need it. */
-function hv2_activity(array $a): ?array
+function v2_activity(array $a): ?array
 {
     $title = navFlatName($a['title'] ?? '');
     $slug = (string) ($a['slug'] ?? '');
@@ -122,17 +122,17 @@ function hv2_activity(array $a): ?array
         'cat' => (string) ($cat['slug'] ?? ''),
         'catName' => navFlatName($cat['name'] ?? ''),
         'price' => (int) round(((int) ($a['cheapest_price_cents'] ?? 0)) / 100),
-        'dur' => hv2_duration((int) ($a['duration_minutes'] ?? 0)),
+        'dur' => v2_duration((int) ($a['duration_minutes'] ?? 0)),
         'rating' => round((float) ($reviews['average'] ?? 0), 1),
         'reviews' => (int) ($reviews['count'] ?? 0),
-        'image' => hv2_media_url($a['cover_image_url'] ?? null),
+        'image' => v2_media_url($a['cover_image_url'] ?? null),
         'href' => $citySlug !== '' ? '/' . $citySlug . '/' . $slug : '/activitate/' . $slug,
         'dates' => [],
     ];
 }
 
 /** Shape of an attraction from /attractions or /attractions/{slug}. */
-function hv2_attraction(array $a): ?array
+function v2_attraction(array $a): ?array
 {
     $slug = (string) ($a['slug'] ?? '');
     $name = navFlatName($a['name'] ?? '');
@@ -144,7 +144,7 @@ function hv2_attraction(array $a): ?array
         'name' => $name,
         'city' => is_array($a['city'] ?? null) ? navFlatName($a['city']['name'] ?? '') : '',
         'type' => is_array($a['type'] ?? null) ? (string) ($a['type']['name'] ?? '') : '',
-        'image' => hv2_media_url($a['cover_image_url'] ?? null),
+        'image' => v2_media_url($a['cover_image_url'] ?? null),
         'href' => '/atractie/' . $slug,
     ];
 }

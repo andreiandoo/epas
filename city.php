@@ -1,9 +1,14 @@
 <?php
 /**
- * Single city landing — /{city-slug}.
+ * Single city landing — /{city-slug} (v2 design).
  *
  * Pure render: expects $_GET['slug'] (or `$slug` already set by the
  * slug.php dispatcher with `$cityData` pre-fetched).
+ *
+ * Top to bottom: hero (search, popular categories, photo gallery, rotating category cards), in-page nav,
+ * GetYourGuide widget (right after the nav when the city has no listings of its own, otherwise after them),
+ * activities and events with filters, interests and traveller styles, attractions, guides, nearby cities,
+ * local guide (city text, local searches, intents, FAQ, city facts, other cities, owner invitation), newsletter.
  */
 
 $pageCacheTTL = 300;
@@ -14,7 +19,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 
 $slug = $slug ?? ($_GET['slug'] ?? '');
 
-if (!preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
+if (!is_string($slug) || !preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     http_response_code(404);
     require __DIR__ . '/404.php';
     exit;
@@ -29,12 +34,14 @@ if (!$cityData) {
     exit;
 }
 
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
+
 // ============================================================
 // City data extraction
 // ============================================================
-// Pull the full API response (city + affiliates) so we can render the
-// GetYourGuide widget without a second network call. Both helpers share
-// the same upstream cache key, so this stays cheap.
+// The full API response (city + affiliates) feeds the GetYourGuide widget without a second
+// network call: both helpers share the same upstream cache key.
 $cityResponse  = navGetCityResponseBySlug($slug);
 $gygCityId     = trim((string) ($cityData['getyourguide_city_id'] ?? ''));
 $gygPartnerId  = trim((string) ($cityResponse['affiliates']['getyourguide_partner_id'] ?? ''));
@@ -56,13 +63,11 @@ $regionName = is_array($cityData['region'] ?? null)
     ? navFlatName($cityData['region']['name'] ?? '')
     : (is_string($cityData['region'] ?? null) ? $cityData['region'] : '');
 $eventCount = (int) ($cityData['events_count'] ?? 0);
-$lat = $cityData['latitude'] ?? null;
-$lng = $cityData['longitude'] ?? null;
 
 // Pagination + filter parsing
 $pageNum = max(1, (int) ($_GET['page'] ?? 1));
-$categoryFilter = isset($_GET['category']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['category']) ? $_GET['category'] : null;
-$searchQuery = isset($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
+$categoryFilter = isset($_GET['category']) && is_string($_GET['category']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['category']) ? $_GET['category'] : null;
+$searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
 
 // Price filter — whitelisted (same set as category page)
 $priceMaxAllowed = [50, 100, 200, 500];
@@ -71,16 +76,17 @@ $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $pr
     : null;
 
 // Sort — whitelisted to API-supported values
-$sortAllowed = ['recommended', 'price_asc', 'price_desc', 'name_asc', 'date_asc'];
-$sort = (isset($_GET['sort']) && in_array($_GET['sort'], $sortAllowed, true)) ? $_GET['sort'] : 'recommended';
+$sortOptions = ['recommended' => 'Recomandate', 'price_asc' => 'Preț crescător', 'price_desc' => 'Preț descrescător', 'name_asc' => 'Alfabetic', 'date_asc' => 'Data evenimentului'];
+$sort = (isset($_GET['sort']) && is_string($_GET['sort']) && isset($sortOptions[$_GET['sort']])) ? $_GET['sort'] : 'recommended';
 
-// Fetch parent categories for quick-link grid + filter dropdown (max 12)
-$topCategories = navGetCategories(12);
+// Parent categories for the filters, popular chips, rotating hero cards and the interest grid (max 12).
+$topCategories = array_slice($V2NAV['categories'], 0, 12);
+$catNameOf = function (string $catSlug) use ($V2NAV): string {
+    return $V2NAV['categoryBySlug'][$catSlug]['name'] ?? ucwords(str_replace('-', ' ', $catSlug));
+};
 
-// Fetch events + activities for this city. These are two INDEPENDENT upstream
-// calls, so we run them CONCURRENTLY (curl_multi via api_cached_many) instead
-// of sequentially — on a cold cache this is one round-trip of wall-time rather
-// than the sum of both. Cache semantics are identical to api_cached().
+// Events, activities and attractions are INDEPENDENT upstream calls, so they run CONCURRENTLY
+// (curl_multi via api_cached_many): one round-trip of wall-time on a cold cache.
 $evParams = ['city' => $slug, 'page' => $pageNum, 'per_page' => 18, 'time_scope' => 'upcoming'];
 if ($categoryFilter) $evParams['category'] = $categoryFilter;
 if ($searchQuery !== '') $evParams['search'] = $searchQuery;
@@ -107,11 +113,17 @@ $listings = api_cached_many([
         'params'   => $actParams,
         'ttl'      => 300,
     ],
+    'attractions' => [
+        'key'      => "v2_city_attractions_{$slug}",
+        'endpoint' => '/attractions',
+        'params'   => ['city' => $slug, 'per_page' => 8],
+        'ttl'      => 300,
+    ],
 ]);
 
 $eventsResp = $listings['events'] ?? ['data' => []];
 $events = $eventsResp['data'] ?? [];
-$evPagination = $eventsResp['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => count($events)];
+$evPagination = $eventsResp['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => is_array($events) ? count($events) : 0];
 if (!is_array($events)) $events = [];
 
 $actResp = $listings['activities'] ?? ['data' => []];
@@ -122,22 +134,30 @@ $actPagination = $actResp['data']['pagination'] ?? ['last_page' => 1, 'total' =>
 // Unified card list — activities first (primary content), then events.
 $cards = [];
 foreach ($activities as $a) {
+    if (!is_array($a) || !($n = v2_activity($a))) {
+        continue;
+    }
     $cards[] = [
-        'title'       => is_array($a['title'] ?? null) ? navFlatName($a['title']) : ($a['title'] ?? ''),
-        'cat'         => $a['category']['name'] ?? '',
-        'cover'       => $a['cover_image_url'] ?? '',
-        'price_cents' => $a['cheapest_price_cents'] ?? null,
-        'url'         => ($a['city']['slug'] ?? $citySlug ?? '') ? '/' . ($a['city']['slug'] ?? $citySlug) . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? ''),
+        'title'       => $n['title'],
+        'cat'         => $n['catName'],
+        'image'       => $n['image'],
+        'dur'         => $n['dur'],
+        'price_cents' => isset($a['cheapest_price_cents']) ? (int) $a['cheapest_price_cents'] : null,
+        'url'         => $n['href'],
         'cta'         => 'Vezi activitatea',
     ];
 }
 foreach ($events as $ev) {
+    if (!is_array($ev) || empty($ev['slug'])) {
+        continue;
+    }
     $cards[] = [
         'title'       => navEventTitle($ev),
         'cat'         => navEventCategoryLabel($ev),
-        'cover'       => $ev['cover_image_url'] ?? $ev['image_url'] ?? '',
-        'price_cents' => $ev['cheapest_price_cents'] ?? null,
-        'url'         => '/bilete/' . ($ev['slug'] ?? ''),
+        'image'       => v2_media_url($ev['cover_image_url'] ?? $ev['image_url'] ?? null),
+        'dur'         => '',
+        'price_cents' => isset($ev['cheapest_price_cents']) ? (int) $ev['cheapest_price_cents'] : null,
+        'url'         => '/bilete/' . $ev['slug'],
         'cta'         => 'Vezi bilete',
     ];
 }
@@ -148,76 +168,85 @@ $pagination = [
     'total'        => (int) ($evPagination['total'] ?? count($events)) + (int) ($actPagination['total'] ?? count($activities)),
 ];
 
-// GetYourGuide affiliate widget (activities grid). Rendered ONCE — either high
-// up the page when this city has no own activities/events (so GYG fills the
-// page) or as the lower "extra" section when we do have our own content. The
-// SDK is lazy-loaded only when the widget nears the viewport.
+// Attractions in this city (points of interest). Section hidden when none.
+$atData = $listings['attractions']['data'] ?? [];
+$atRaw = $atData['items'] ?? $atData['data'] ?? (is_array($atData) ? $atData : []);
+$cityAttractions = [];
+foreach ((is_array($atRaw) ? $atRaw : []) as $at) {
+    if (!is_array($at) || !($n = v2_attraction($at))) {
+        continue;
+    }
+    $n['count'] = (int) ($at['activities_count'] ?? 0);
+    $cityAttractions[] = $n;
+    if (count($cityAttractions) >= 8) break;
+}
+
+// GetYourGuide affiliate widget (activities grid). Rendered ONCE — right after the section nav when
+// this city has no own activities/events (so GYG fills the page) or as the lower "extra" section when
+// we do have our own content. city.js loads the SDK only when the widget nears the viewport.
 $gygPromote = $gygWidgetEnabled && empty($cards);
 $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId, $gygPromote) {
     $gygUrl = 'https://www.getyourguide.com/' . rawurlencode($slug) . '-l' . rawurlencode($gygCityId) . '/';
     ?>
-    <style>
-    #getyourguide .activities__card__content__title { min-height: 0 !important; color: #1B1714 !important; }
-    #getyourguide .activities__card .smartcrop { border-radius: 8px 8px 0 0 !important; }
-    #getyourguide img.smartcrop__image {transition: 300ms all ease-in-out!important}
-    #getyourguide .activities__card[data-v-7fb4e755] { border: 1px solid #e3e3e3 !important; }
-    #getyourguide .activities__card:hover img.smartcrop__image {
-        transform: scale(1.1)!important;
-        transition: 300ms all ease-in-out!important;
-    }
-    </style>
-    <section id="getyourguide" class="<?= $gygPromote ? 'bg-white' : 'border-t border-ink/10 bg-white' ?>">
-        <div class="px-4 py-14 mx-auto max-w-[1500px] sm:px-6 lg:py-16">
-            <div class="text-center mb-8">
-                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3"><?= $gygPromote ? 'ACTIVITĂȚI ȘI TURURI' : 'EXTRA · PRIN PARTENERII NOȘTRI' ?></p>
-                <h2 class="font-display text-[clamp(1.8rem,3vw,2.8rem)] font-700 leading-[1.05] mb-3"><?= $gygPromote ? 'Activități și tururi în ' : 'Mai multe activități și tururi în ' ?><?= htmlspecialchars($cityName) ?></h2>
-                <p class="leading-relaxed text-ink-soft">Selecție de tururi ghidate, experiențe și activități disponibile prin GetYourGuide.</p>
-            </div>
-            <div id="gyg-mount"
-                data-gyg-href="https://widget.getyourguide.com/default/activities.frame"
-                data-gyg-location-id="<?= htmlspecialchars($gygCityId, ENT_QUOTES) ?>"
-                data-gyg-locale-code="ro-RO"
-                data-gyg-widget="activities"
-                data-gyg-number-of-items="40"
-                data-gyg-partner-id="<?= htmlspecialchars($gygPartnerId, ENT_QUOTES) ?>"
-                aria-label="Activități GetYourGuide pentru <?= htmlspecialchars($cityName, ENT_QUOTES) ?>">
-                <span class="text-xs text-ink-soft">Powered by <a target="_blank" rel="sponsored noopener" href="<?= htmlspecialchars($gygUrl, ENT_QUOTES) ?>" class="underline">GetYourGuide</a></span>
-            </div>
-        </div>
-    </section>
-    <script>
-    (function () {
-        var el = document.getElementById('gyg-mount');
-        if (!el) return;
-        var done = false;
-        function load() { if (done) return; done = true; var s = document.createElement('script'); s.async = true; s.defer = true; s.src = 'https://widget.getyourguide.com/dist/pa.umd.production.min.js'; document.body.appendChild(s); }
-        if ('IntersectionObserver' in window) {
-            var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { load(); io.disconnect(); } }); }, { rootMargin: '600px' });
-            io.observe(el);
-        } else { load(); }
-    })();
-    </script>
+  <section class="sec gyg" id="getyourguide" aria-labelledby="gyg-h">
+    <div class="wrap">
+      <div class="gyg-head">
+        <p class="kicker"><?= $gygPromote ? 'Activități și tururi' : 'Extra · prin partenerii noștri' ?></p>
+        <h2 id="gyg-h"><?= $gygPromote ? 'Activități și tururi în ' : 'Mai multe activități și tururi în ' ?><?= v2_e($cityName) ?></h2>
+        <p>Selecție de tururi ghidate, experiențe și activități disponibile prin GetYourGuide.</p>
+      </div>
+      <div id="gyg-mount"
+        data-gyg-href="https://widget.getyourguide.com/default/activities.frame"
+        data-gyg-location-id="<?= v2_e($gygCityId) ?>"
+        data-gyg-locale-code="ro-RO"
+        data-gyg-widget="activities"
+        data-gyg-number-of-items="40"
+        data-gyg-partner-id="<?= v2_e($gygPartnerId) ?>"
+        aria-label="Activități GetYourGuide pentru <?= v2_e($cityName) ?>">
+        <span class="gyg-powered">Powered by <a target="_blank" rel="sponsored noopener" href="<?= v2_e($gygUrl) ?>">GetYourGuide</a></span>
+      </div>
+    </div>
+  </section>
     <?php
 };
+
+// ---- Links (only validated parameters are carried over; filter links land on the listing) ----
+$baseGet = array_filter([
+    'q'         => $searchQuery,
+    'category'  => (string) $categoryFilter,
+    'max_price' => $maxPrice !== null ? (string) $maxPrice : '',
+    'sort'      => $sort === 'recommended' ? '' : $sort,
+], fn ($v) => $v !== '');
+$cityUrl = function (array $over = []) use ($baseGet, $slug): string {
+    $p = array_filter(array_merge($baseGet, $over), fn ($v) => $v !== '' && $v !== null);
+    return '/' . $slug . ($p ? '?' . http_build_query($p) : '') . '#activitati';
+};
+$catLink = fn (string $catSlug): string => '/' . $slug . '?category=' . rawurlencode($catSlug) . '#activitati';
 
 // Active filter chips
 $activeChips = [];
 if ($searchQuery !== '') {
-    $activeChips[] = ['label' => '„' . $searchQuery . '"', 'remove_qs' => navResetQueryString($_GET, ['q'])];
+    $activeChips[] = ['„' . $searchQuery . '”', $cityUrl(['q' => ''])];
 }
 if ($categoryFilter) {
-    $catLabel = '';
-    foreach ($topCategories as $c) { if ($c['slug'] === $categoryFilter) { $catLabel = $c['label']; break; } }
-    if (!$catLabel) $catLabel = ucwords(str_replace('-', ' ', $categoryFilter));
-    $activeChips[] = ['label' => $catLabel, 'remove_qs' => navResetQueryString($_GET, ['category'])];
+    $activeChips[] = [$catNameOf($categoryFilter), $cityUrl(['category' => ''])];
 }
 if ($maxPrice !== null) {
-    $activeChips[] = ['label' => 'Sub ' . $maxPrice . ' lei', 'remove_qs' => navResetQueryString($_GET, ['max_price'])];
+    $activeChips[] = ['Sub ' . $maxPrice . ' lei', $cityUrl(['max_price' => ''])];
 }
 if ($sort !== 'recommended') {
-    $sortLabels = ['price_asc' => 'Preț crescător', 'price_desc' => 'Preț descrescător', 'name_asc' => 'Alfabetic', 'date_asc' => 'Data evenimentului'];
-    $activeChips[] = ['label' => 'Sortat: ' . ($sortLabels[$sort] ?? $sort), 'remove_qs' => navResetQueryString($_GET, ['sort'])];
+    $activeChips[] = ['Sortat: ' . $sortOptions[$sort], $cityUrl(['sort' => ''])];
 }
+
+$priceHtml = function (?int $cents): string {
+    if ($cents === null) {
+        return '';
+    }
+    if ($cents === 0) {
+        return '<span class="xp-price"><b>Gratuit</b></span>';
+    }
+    return '<span class="xp-price">de la<b>' . v2_e(number_format($cents / 100, 0, ',', '.')) . ' lei</b></span>';
+};
 
 // ============================================================
 // SEO setup
@@ -228,8 +257,6 @@ $canonicalUrl = SITE_URL . '/' . $slug;
 $ogImage = $cityCover
     ? (str_starts_with($cityCover, 'http') ? $cityCover : STORAGE_URL . '/' . ltrim($cityCover, '/'))
     : (SITE_URL . '/assets/images/og-default.jpg');
-$currentPage = 'city';
-$cssBundle = 'listing';
 
 $breadcrumbs = [
     ['name' => 'Acasă', 'url' => SITE_URL . '/'],
@@ -270,6 +297,16 @@ $structuredData[] = [
         'itemListElement' => $itemListElements,
     ],
 ];
+$structuredData[] = [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => array_map(fn ($bc, $i) => [
+        '@type' => 'ListItem',
+        'position' => $i + 1,
+        'name' => $bc['name'],
+        'item' => $bc['url'],
+    ], $breadcrumbs, array_keys($breadcrumbs)),
+];
 
 // FAQPage JSON-LD when admin set FAQs for this city
 if (!empty($cityFaqs)) {
@@ -285,804 +322,550 @@ if (!empty($cityFaqs)) {
 }
 
 // ============================================================
-// GYG-style discovery data (real images + DB-derived lists)
+// Discovery data (real images + DB-derived lists)
 // ============================================================
-// Context for the v6 header (Explore button + search placeholder + hero).
-$headerContext = ['type' => 'city', 'label' => $cityName, 'slug' => $slug];
-
-$bo_img = function ($u) {
-    $u = (string) $u;
-    if ($u === '') return '';
-    return str_starts_with($u, 'http') ? $u : rtrim(STORAGE_URL, '/') . '/' . ltrim($u, '/');
-};
-
-// Gallery — real city cover + activity covers (graceful when empty).
+// Gallery — city cover (or the provisional city photo), then activity covers, then attraction covers.
+$coverResolved = v2_media_url($cityCover) ?? v2_media_url($cityImage) ?? '';
 $gallery = [];
-$coverResolved = $cityCover ? $bo_img($cityCover) : ($cityImage ? $bo_img($cityImage) : '');
-if ($coverResolved) $gallery[] = ['src' => $coverResolved, 'alt' => $cityName];
+if ($coverResolved !== '') {
+    $gallery[] = ['src' => $coverResolved, 'alt' => $cityName];
+} elseif (!empty($V2NAV['cities'][$slug]['photo'][0])) {
+    $cityPhoto = $V2NAV['cities'][$slug]['photo'];
+    $gallery[] = ['src' => $cityPhoto[0], 'alt' => ($cityPhoto[3] ?? '') !== '' ? $cityPhoto[3] : $cityName];
+}
 foreach ($activities as $a) {
-    $img = $bo_img($a['cover_image_url'] ?? '');
-    if ($img === '') continue;
-    $gallery[] = ['src' => $img, 'alt' => (is_array($a['title'] ?? null) ? navFlatName($a['title']) : ($a['title'] ?? $cityName))];
     if (count($gallery) >= 5) break;
+    $img = is_array($a) ? v2_media_url($a['cover_image_url'] ?? null) : null;
+    if ($img) $gallery[] = ['src' => $img, 'alt' => navFlatName($a['title'] ?? '') ?: $cityName];
+}
+foreach ($cityAttractions as $at) {
+    if (count($gallery) >= 5) break;
+    if ($at['image']) $gallery[] = ['src' => $at['image'], 'alt' => $at['name']];
+}
+$heroPhoto = $gallery[0] ?? null;
+
+// Rotating category cards in the hero (6 categories).
+$wheelItems = [];
+foreach (array_slice($topCategories, 0, 6) as $cat) {
+    $wheelItems[] = ['label' => $cat['name'], 'image' => $cat['image'], 'srcset' => $cat['srcset'], 'href' => $catLink($cat['slug'])];
+}
+if (empty($wheelItems)) {
+    foreach (['Escape rooms', 'Muzee & expoziții', 'Parcuri de distracții', 'Parcuri de aventură'] as $label) {
+        $wheelItems[] = ['label' => $label, 'image' => null, 'srcset' => '', 'href' => '/' . $slug];
+    }
 }
 
-// Nearby = other featured cities (geo "nearby" lands with F2; until then this
-// is a relevant cross-link set rather than strict proximity).
-$nearbyCities = [];
-foreach (navGetCities(12) as $c) {
-    if (($c['slug'] ?? '') === $slug) continue;
-    $nearbyCities[] = $c;
-    if (count($nearbyCities) >= 5) break;
-}
+// Other cities: the same region first (the nearest we can tell without coordinates), then the rest.
+$otherCitiesAll = array_values(array_filter($V2NAV['citiesList'], fn ($c) => $c['slug'] !== $slug));
+$cityRegion = $V2NAV['cities'][$slug]['region'] ?? $regionName;
+$sameRegion = $cityRegion !== '' ? array_values(array_filter($otherCitiesAll, fn ($c) => $c['region'] === $cityRegion)) : [];
+$nearbyCities = array_slice(array_merge($sameRegion, array_values(array_filter($otherCitiesAll, fn ($c) => !in_array($c, $sameRegion, true)))), 0, 5);
+$otherCities = array_slice($otherCitiesAll, 0, 8);
 
-// Real editorial guides (Inspiration). Falls back to empty → section hidden.
-$cityGuides = [];
-try {
-    $gr = api_cached("city_guides_{$slug}", fn () => api_get('/blog-articles', ['per_page' => 3, 'status' => 'published']), 300);
-    $rg = $gr['data']['articles'] ?? $gr['data']['items'] ?? $gr['data'] ?? [];
-    foreach ((array) $rg as $g) {
-        $gt = navFlatName($g['title'] ?? '');
-        $gs = $g['slug'] ?? '';
-        if ($gt === '' || $gs === '') continue;
-        $cityGuides[] = [
-            'title'   => $gt,
-            'href'    => '/ghiduri/' . ltrim($gs, '/'),
-            'kicker'  => mb_strtoupper(navFlatName($g['category']['name'] ?? '') ?: 'Ghid'),
-            'excerpt' => navFlatName($g['excerpt'] ?? ''),
-            'image'   => $bo_img($g['image_url'] ?? ''),
-        ];
-        if (count($cityGuides) >= 3) break;
-    }
-} catch (\Throwable $e) {}
-
-// F4 — Attractions in this city (points of interest). Hidden when none.
-$cityAttractions = [];
-try {
-    $atResp = api_cached("city_attractions_{$slug}", fn () => api_get('/attractions', ['city' => $slug, 'per_page' => 8]), 300);
-    $atRaw = $atResp['data']['items'] ?? $atResp['data']['data'] ?? (is_array($atResp['data'] ?? null) ? $atResp['data'] : []);
-    foreach ((is_array($atRaw) ? $atRaw : []) as $at) {
-        $an = $at['name'] ?? '';
-        $as = $at['slug'] ?? '';
-        if ($an === '' || $as === '') continue;
-        $cityAttractions[] = [
-            'name'  => $an,
-            'slug'  => $as,
-            'image' => $bo_img($at['cover_image_url'] ?? ''),
-            'type'  => $at['type']['name'] ?? '',
-            'count' => $at['activities_count'] ?? null,
-        ];
-        if (count($cityAttractions) >= 8) break;
-    }
-} catch (\Throwable $e) {}
+// Editorial guides (Inspiration). Section hidden when none.
+$cityGuides = array_slice($V2NAV['guides'], 0, 3);
 
 // Traveler types — city-scoped search links (city.php handles ?q), so these
 // always resolve to real filtered results without needing dedicated routes.
-$cityLow = mb_strtolower($cityName);
 $travelerTypes = [
-    ['icon' => '👨‍👩‍👧', 'title' => 'Pentru familii',  'desc' => 'Activități sigure, interactive și ușor de planificat cu copiii.',       'href' => '/' . $slug . '?q=' . rawurlencode('copii')],
-    ['icon' => '💛',      'title' => 'Pentru cupluri',  'desc' => 'Tururi, experiențe cadou, date night și activități de seară.',           'href' => '/' . $slug . '?q=' . rawurlencode('cuplu')],
-    ['icon' => '☔',      'title' => 'Când plouă',      'desc' => 'Muzee, ateliere, escape rooms și experiențe indoor.',                    'href' => '/' . $slug . '?q=' . rawurlencode('indoor')],
-    ['icon' => '🎒',      'title' => 'Pentru turiști',  'desc' => 'Atracții principale, tururi ghidate și experiențe de primă vizită.',     'href' => '/' . $slug . '?q=' . rawurlencode('tur')],
+    ['icon' => 'users-three',   'title' => 'Pentru familii', 'desc' => 'Activități sigure, interactive și ușor de planificat cu copiii.',   'href' => '/' . $slug . '?q=' . rawurlencode('copii') . '#activitati'],
+    ['icon' => 'heart',         'title' => 'Pentru cupluri', 'desc' => 'Tururi, experiențe cadou, date night și activități de seară.',       'href' => '/' . $slug . '?q=' . rawurlencode('cuplu') . '#activitati'],
+    ['icon' => 'cloud-rain',    'title' => 'Când plouă',     'desc' => 'Muzee, ateliere, escape rooms și experiențe indoor.',                'href' => '/' . $slug . '?q=' . rawurlencode('indoor') . '#activitati'],
+    ['icon' => 'castle-turret', 'title' => 'Pentru turiști', 'desc' => 'Atracții principale, tururi ghidate și experiențe de primă vizită.', 'href' => '/' . $slug . '?q=' . rawurlencode('tur') . '#activitati'],
 ];
-?>
-<?php
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
-?>
 
-<!-- ============================== HERO (GYG things-to-do) ============================== -->
-<section class="relative overflow-hidden border-b border-ink/10 bg-paper" x-data="cityHero(<?= htmlspecialchars(json_encode($gallery, JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>)">
-    <div class="absolute inset-0 opacity-[.08]" style="background-image:radial-gradient(#1B1714 1.2px,transparent 1.3px);background-size:18px 18px"></div>
-    <div class="relative mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-14">
-        <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm font-bold text-ink-soft">
-            <?php foreach ($breadcrumbs as $i => $bc): ?>
-                <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
-                <?php if ($i < count($breadcrumbs) - 1): ?>
-                    <a href="<?= htmlspecialchars($bc['url'], ENT_QUOTES) ?>" class="hover:text-vermilion"><?= htmlspecialchars($bc['name']) ?></a>
-                <?php else: ?>
-                    <span aria-current="page" class="text-ink"><?= htmlspecialchars($bc['name']) ?></span>
-                <?php endif; ?>
-            <?php endforeach; ?>
+// Intent hubs (connect the city page to the programmatic intent pages).
+$intentLinks = [
+    ['activitati-azi',       'clock',       'azi în ' . $cityName],
+    ['activitati-weekend',   'sun',         'weekend'],
+    ['activitati-gratuite',  'gift',        'gratuite'],
+    ['activitati-copii',     'users-three', 'copii'],
+    ['activitati-indoor',    'cloud-rain',  'indoor'],
+    ['activitati-romantice', 'heart',       'romantice'],
+];
+
+$cityArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
+
+// An API outage would otherwise be cached as a half-empty page for five minutes.
+if (empty($V2NAV['categories'])) {
+    $skipPageCache = true;
+}
+
+$v2Styles = ['city.css'];
+$v2Scripts = ['city.js'];
+$v2HeaderOverlay = true;
+$v2HeadExtra = $heroPhoto ? '<link rel="preload" as="image" href="' . v2_e($heroPhoto['src']) . '" fetchpriority="high">' : '';
+$v2ClientData = ['gallery' => $gallery];
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
+?>
+<main id="main" tabindex="-1">
+  <!-- ============================== HERO ============================== -->
+  <section class="ch" aria-labelledby="ch-h">
+    <svg class="ch-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="ch-in">
+      <div class="ch-copy">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <?php foreach ($breadcrumbs as $i => $bc): ?>
+            <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
+            <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
+          <?php endforeach; ?>
         </nav>
-
-        <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_560px]">
-            <div>
-                <h1 class="mt-3 font-display text-3xl font-bold leading-[.84]">Lucruri de făcut în <span class="text-5xl"><?= htmlspecialchars($cityName) ?></span></h1>
-                <p class="max-w-4xl mt-6 text-xl leading-relaxed text-ink-soft">
-                    <?php if ($cityDescription): ?>
-                        <?= htmlspecialchars($cityDescription) ?>
-                    <?php else: ?>
-                        <?= htmlspecialchars($cityName) ?> combină atracții, muzee, tururi, experiențe de familie, escape rooms și activități outdoor. Alege activități pentru weekend, bilete pentru atracții, tururi culturale sau experiențe cadou — rezervi online cu bilet QR.
-                    <?php endif; ?>
-                </p>
-                <form action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" method="get" class="max-w-3xl p-2 border-2 rounded-full mt-7 border-ink bg-paper shadow-deep hidden" role="search" aria-label="Caută activități în <?= htmlspecialchars($cityName) ?>">
-                    <div class="flex items-center gap-2">
-                        <svg viewBox="0 0 24 24" class="w-5 h-5 ml-3 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        <label class="sr-only" for="city-search">Caută activități în <?= htmlspecialchars($cityName) ?></label>
-                        <input id="city-search" name="q" class="w-full px-2 py-3 font-bold bg-transparent outline-none placeholder:text-ink-soft/70" placeholder="Caută activități în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>: copii, muzee, escape rooms..." />
-                        <button type="submit" class="px-6 py-3 font-bold transition rounded-full shrink-0 bg-vermilion text-paper hover:bg-vermilion-d">Caută</button>
-                    </div>
-                </form>
-                <?php if (!empty($topCategories)): ?>
-                <div class="flex flex-wrap items-center gap-2 mt-5 text-sm">
-                    <span class="font-bold text-ink-soft">Populare:</span>
-                    <?php foreach (array_slice($topCategories, 0, 4) as $cat): ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1.5 font-bold transition hover:bg-ink hover:text-paper">
-                            <?php if (!empty($cat['icon_emoji'])): ?><?= htmlspecialchars($cat['icon_emoji']) ?> <?php endif; ?><?= htmlspecialchars($cat['label']) ?>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Categorii populare — un card pe rând, care intră pe arcul cercului
-                 (swing pe rază) cu fade 0→100%, apoi iese tot pe arc; ciclează
-                 continuu prin categorii. Cardul stă drept (text lizibil), doar
-                 poziția lui descrie arcul. -->
-            <style>
-            .cw-card { transition: opacity .85s ease, transform .85s cubic-bezier(.18,.7,.2,1); will-change: transform, opacity; }
-            .cw-rest      { opacity: 1; transform: translate(-50%, 50%) translateY(-230px); }
-            .cw-start-in  { opacity: 0; transform: translate(-50%, 50%) rotate(-130deg) translateY(-230px) rotate(130deg); }
-            .cw-start-out { opacity: 0; transform: translate(-50%, 50%) rotate(130deg) translateY(-230px) rotate(-130deg); }
-            @media (prefers-reduced-motion: reduce) { .cw-card { transition: opacity .4s ease; } .cw-start-in, .cw-start-out { transform: translate(-50%, 50%) translateY(-230px); } }
-            </style>
-            <?php
-            $wheelGrad = ['from-vermilion to-vermilion-d', 'from-forest to-ink', 'from-sky to-ink', 'from-ochre to-vermilion-d'];
-            $bo_cat_img = function ($u) {
-                $u = (string) $u;
-                if ($u === '') return '';
-                return str_starts_with($u, 'http') ? $u : rtrim(STORAGE_URL, '/') . '/' . ltrim($u, '/');
-            };
-            $wheelItems = [];
-            foreach (array_slice($topCategories, 0, 6) as $cat) {
-                $wheelItems[] = [
-                    'icon'  => $cat['icon_emoji'] ?? '🎫',
-                    'label' => $cat['label'],
-                    'image' => $bo_cat_img($cat['image'] ?? ''),
-                    'href'  => '/' . $slug . '?category=' . rawurlencode($cat['slug']),
-                ];
-            }
-            if (empty($wheelItems)) {
-                $wheelItems = [
-                    ['icon' => '🔐', 'label' => 'Escape rooms', 'image' => '', 'href' => '/' . $slug],
-                    ['icon' => '🏛️', 'label' => 'Muzee & expoziții', 'image' => '', 'href' => '/' . $slug],
-                    ['icon' => '🎡', 'label' => 'Parcuri de distracții', 'image' => '', 'href' => '/' . $slug],
-                    ['icon' => '🧗', 'label' => 'Parcuri de aventură', 'image' => '', 'href' => '/' . $slug],
-                ];
-            }
-            ?>
-            <div class="relative h-[360px] overflow-hidden"
-                 x-data="{ i: 0, n: <?= count($wheelItems) ?>, paused: false }"
-                 x-init="setInterval(() => { if (!paused && n > 1) i = (i + 1) % n }, 3000)"
-                 @mouseenter="paused = true" @mouseleave="paused = false">
-                <?php foreach ($wheelItems as $i => $w): ?>
-                    <a href="<?= htmlspecialchars($w['href'], ENT_QUOTES) ?>"
-                       x-show="i === <?= $i ?>" x-cloak
-                       x-transition:enter="cw-card" x-transition:enter-start="cw-start-in" x-transition:enter-end="cw-rest"
-                       x-transition:leave="cw-card" x-transition:leave-start="cw-rest" x-transition:leave-end="cw-start-out"
-                       class="cw-card absolute bottom-0 left-1/2 h-[210px] w-[210px] overflow-hidden rounded-[1.75rem] border-2 border-ink bg-ink text-paper shadow-deep">
-                        <?php if (!empty($w['image'])): ?>
-                            <img src="<?= htmlspecialchars($w['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($w['label'], ENT_QUOTES) ?>" class="absolute inset-0 object-cover w-full h-full" loading="lazy">
-                            <div class="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/35 to-transparent"></div>
-                        <?php else: ?>
-                            <div class="absolute inset-0 bg-gradient-to-br <?= $wheelGrad[$i % 4] ?>"></div>
-                        <?php endif; ?>
-                        <div class="absolute inset-x-0 bottom-0 p-5">
-                            <span class="block text-4xl leading-none"><?= htmlspecialchars($w['icon']) ?></span>
-                            <span class="block mt-2 text-2xl font-bold leading-none font-display"><?= htmlspecialchars($w['label']) ?></span>
-                        </div>
-                    </a>
-                <?php endforeach; ?>
-            </div>
+        <h1 class="ch-h" id="ch-h"><span class="ch-pre">Lucruri de făcut în</span> <span class="ch-city"><?= v2_e($cityName) ?></span></h1>
+        <p class="ch-lead">
+          <?php if ($cityDescription !== ''): ?>
+            <?= v2_e($cityDescription) ?>
+          <?php else: ?>
+            <?= v2_e($cityName) ?> combină atracții, muzee, tururi, experiențe de familie, escape rooms și activități outdoor. Alege activități pentru weekend, bilete pentru atracții, tururi culturale sau experiențe cadou — rezervi online cu bilet QR.
+          <?php endif; ?>
+        </p>
+        <form class="ch-search" action="/<?= v2_e($slug) ?>#activitati" method="get" role="search" aria-label="Caută activități în <?= v2_e($cityName) ?>">
+          <?= v2_ic('magnifying-glass') ?>
+          <label class="sr" for="city-search">Caută activități în <?= v2_e($cityName) ?></label>
+          <input id="city-search" name="q" type="search" placeholder="Caută activități în <?= v2_e($cityName) ?>: copii, muzee, escape rooms..." autocomplete="off">
+          <button class="btn btn-primary" type="submit">Caută</button>
+        </form>
+        <?php if (!empty($topCategories)): ?>
+        <div class="ch-pop">
+          <span>Populare:</span>
+          <?php foreach (array_slice($topCategories, 0, 4) as $cat): ?><a href="<?= v2_e($catLink($cat['slug'])) ?>"><?= v2_e($cat['name']) ?></a><?php endforeach; ?>
         </div>
-    </div>
-
-    <!-- Gallery lightbox -->
-    <div x-show="open" x-cloak class="fixed inset-0 z-[90] bg-ink/90 p-4 backdrop-blur-sm" @keydown.escape.window="open=false" @click.self="open=false">
-        <div class="flex flex-col h-full max-w-6xl mx-auto">
-            <div class="flex items-center justify-between gap-4 mb-4 text-paper">
-                <p class="text-3xl font-bold font-display" x-text="g[i] ? g[i].alt : ''"></p>
-                <button @click="open=false" class="grid text-2xl font-bold rounded-full h-11 w-11 place-items-center bg-paper text-ink">×</button>
-            </div>
-            <div class="grid flex-1 min-h-0 place-items-center">
-                <img :src="g[i] ? g[i].src : ''" :alt="g[i] ? g[i].alt : ''" class="max-h-full max-w-full rounded-[2rem] object-contain">
-            </div>
-            <div class="flex items-center justify-center gap-2 mt-4">
-                <button @click="prev()" class="px-5 py-3 font-bold rounded-full bg-paper text-ink">←</button>
-                <span class="text-paper" x-text="(i + 1) + ' / ' + g.length"></span>
-                <button @click="next()" class="px-5 py-3 font-bold rounded-full bg-paper text-ink">→</button>
-            </div>
-        </div>
-    </div>
-</section>
-
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('cityHero', (gallery) => ({
-        g: Array.isArray(gallery) ? gallery : [],
-        open: false,
-        i: 0,
-        openG(idx) { if (!this.g.length) return; this.i = Math.max(0, Math.min(idx, this.g.length - 1)); this.open = true; },
-        next() { if (this.g.length) this.i = (this.i + 1) % this.g.length; },
-        prev() { if (this.g.length) this.i = (this.i - 1 + this.g.length) % this.g.length; },
-    }));
-});
-</script>
-
-<!-- ============================== STICKY SECTION NAV ============================== -->
-<section class="sticky top-[72px] z-40 border-y border-ink/10 bg-paper/95 backdrop-blur-xl">
-    <div class="mx-auto flex max-w-[1500px] gap-2 overflow-x-auto px-4 py-3 text-sm font-bold sm:px-6">
-        <a href="#activitati" class="shrink-0 rounded-full bg-ink px-4 py-2.5 text-paper">Top activități</a>
-        <a href="#interese" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Explorează după interes</a>
-        <?php if (!empty($cityAttractions)): ?><a href="#attractions" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Atracții</a><?php endif; ?>
-        <?php if (!empty($cityGuides)): ?><a href="#guides" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Ghiduri</a><?php endif; ?>
-        <?php if (!empty($nearbyCities)): ?><a href="#nearby" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Aproape de <?= htmlspecialchars($cityName) ?></a><?php endif; ?>
-        <a href="#ghid-local" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">FAQ</a>
-    </div>
-</section>
-
-<!-- ============================== GETYOURGUIDE WIDGET (slot promovat — orașe fără activități proprii) ============================== -->
-<?php if ($gygPromote) { $renderGygSection(); } ?>
-
-<!-- ============================== EVENTS LISTING ============================== -->
-<section id="activitati" x-data="cityFilters()" class="bg-white">
-    <div class="pb-16 mx-auto w-full bg-white">
-
-        <!-- FILTER TOOLBAR -->
-        <div class="sticky z-30 top-34 bg-paper/95 backdrop-blur-md border-y border-ink/10 w-full mb-6">
-            <div class="max-w-[1500px] mx-auto px-4 py-2 sm:px-6">
-                <!-- DESKTOP -->
-                <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
-                    <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
-                    <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
-                    <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
-
-                    <div class="relative flex-1 max-w-xs">
-                        <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none transition-colors" />
-                    </div>
-
-                    <!-- Categorie -->
-                    <?php
-                    $catFilterLabel = 'Categorie';
-                    if ($categoryFilter) {
-                        foreach ($topCategories as $c) { if ($c['slug'] === $categoryFilter) { $catFilterLabel = $c['label']; break; } }
-                        if ($catFilterLabel === 'Categorie') $catFilterLabel = ucwords(str_replace('-', ' ', $categoryFilter));
-                    }
-                    ?>
-                    <div class="relative">
-                        <button type="button" @click="open = open==='cat' ? null : 'cat'" class="<?= $categoryFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                            <span><?= htmlspecialchars($catFilterLabel) ?></span>
-                            <svg :class="open==='cat' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
-                        <div x-show="open==='cat'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-64 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto">
-                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['category']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= !$categoryFilter ? 'bg-ink text-paper' : '' ?>">Toate categoriile</a>
-                            <?php foreach ($topCategories as $c): ?>
-                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['category' => $c['slug']]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $categoryFilter === $c['slug'] ? 'bg-ink text-paper' : '' ?>">
-                                    <?php if (!empty($c['icon_emoji'])): ?><span class="mr-1"><?= htmlspecialchars($c['icon_emoji']) ?></span><?php endif; ?>
-                                    <?= htmlspecialchars($c['label']) ?>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <!-- Preț -->
-                    <div class="relative">
-                        <button type="button" @click="open = open==='price' ? null : 'price'" class="<?= $maxPrice !== null ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                            <span><?= $maxPrice !== null ? 'Sub ' . $maxPrice . ' lei' : 'Preț' ?></span>
-                            <svg :class="open==='price' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
-                        <div x-show="open==='price'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-56 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
-                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === null ? 'bg-ink text-paper' : '' ?>">Orice preț</a>
-                            <?php foreach ($priceMaxAllowed as $cap): ?>
-                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === $cap ? 'bg-ink text-paper' : '' ?>">Sub <?= $cap ?> lei</a>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <!-- Sortare -->
-                    <div class="relative">
-                        <?php $sortLabels = ['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată']; ?>
-                        <button type="button" @click="open = open==='sort' ? null : 'sort'" class="<?= $sort !== 'recommended' ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                            <span><?= htmlspecialchars($sortLabels[$sort] ?? 'Sortare') ?></span>
-                            <svg :class="open==='sort' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
-                        <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
-                            <?php foreach ($sortLabels as $value => $label): ?>
-                                <a href="<?= htmlspecialchars($value === 'recommended' ? navBuildUrl($slug, $_GET, [], ['sort']) : navBuildUrl($slug, $_GET, ['sort' => $value]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $sort === $value ? 'bg-ink text-paper' : '' ?>">
-                                    <?= htmlspecialchars($label) ?>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="px-5 py-2.5 rounded-full bg-vermilion text-paper font-600 hover:bg-vermilion-d transition-colors">Caută</button>
-                </form>
-
-                <!-- MOBILE -->
-                <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="flex items-center gap-2 lg:hidden">
-                    <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
-                    <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
-                    <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
-                    <div class="relative flex-1">
-                        <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none" />
-                    </div>
-                    <button type="button" @click="sheet=true" class="relative shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-ink font-600 text-sm">
-                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
-                        Filtre
-                        <?php if (!empty($activeChips)): ?><span class="grid place-items-center w-5 h-5 rounded-full bg-vermilion text-paper text-[11px] font-700"><?= count($activeChips) ?></span><?php endif; ?>
-                    </button>
-                </form>
-
-                <!-- active chips -->
-                <?php if (!empty($activeChips)): ?>
-                    <div class="flex flex-wrap items-center gap-2 mt-3">
-                        <?php foreach ($activeChips as $ch): ?>
-                            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?><?= htmlspecialchars($ch['remove_qs'], ENT_QUOTES) ?>" class="group flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full bg-paper-2 border border-ink/15 text-sm hover:border-ink transition">
-                                <span><?= htmlspecialchars($ch['label']) ?></span>
-                                <svg class="w-3.5 h-3.5 text-ink-soft group-hover:text-vermilion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                            </a>
-                        <?php endforeach; ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="ml-1 text-sm font-600 text-vermilion underline-wobble">Șterge tot</a>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- MOBILE FILTER SHEET -->
-        <div x-show="sheet" x-cloak class="lg:hidden fixed inset-0 z-[70]" @keydown.escape.window="sheet=false">
-            <div x-show="sheet" x-transition.opacity class="absolute inset-0 bg-ink/50" @click="sheet=false"></div>
-            <div x-show="sheet"
-                 x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0"
-                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
-                 class="absolute bottom-0 inset-x-0 bg-paper rounded-t-3xl border-t-2 border-ink max-h-[88vh] overflow-y-auto">
-                <div class="sticky top-0 flex items-center justify-between px-5 py-4 border-b bg-paper border-ink/10">
-                    <h2 class="text-xl font-display font-700">Filtre</h2>
-                    <button @click="sheet=false" class="grid border-2 rounded-full place-items-center w-9 h-9 border-ink/15" aria-label="Închide">
-                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                    </button>
-                </div>
-                <div class="p-5 space-y-6">
-                    <div>
-                        <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">CATEGORIE</p>
-                        <div class="flex flex-wrap gap-2">
-                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['category']), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= !$categoryFilter ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Toate</a>
-                            <?php foreach ($topCategories as $c): ?>
-                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['category' => $c['slug']]), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $categoryFilter === $c['slug'] ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
-                                    <?= htmlspecialchars($c['label']) ?>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <div>
-                        <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">PREȚ MAXIM</p>
-                        <div class="flex flex-wrap gap-2">
-                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $maxPrice === null ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Orice</a>
-                            <?php foreach ($priceMaxAllowed as $cap): ?>
-                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $maxPrice === $cap ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Sub <?= $cap ?> lei</a>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <div>
-                        <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">SORTARE</p>
-                        <div class="flex flex-wrap gap-2">
-                            <?php foreach (['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată'] as $value => $label):
-                                $url = $value === 'recommended' ? navBuildUrl($slug, $_GET, [], ['sort']) : navBuildUrl($slug, $_GET, ['sort' => $value]);
-                            ?>
-                                <a href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $sort === $value ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
-                                    <?= htmlspecialchars($label) ?>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <?php if (empty($cards)): ?>
-            <div class="p-10 text-center border-2 ticket bg-white border-ink rounded-3xl sm:p-16 max-w-[1500px] mx-auto" style="--perf:100%">
-                <p class="text-3xl font-display font-700">
-                    <?php if ($categoryFilter): ?>
-                        Nicio activitate din această categorie în <?= htmlspecialchars($cityName) ?>.
-                    <?php else: ?>
-                        Încă nu sunt activități listate aici.
-                    <?php endif; ?>
-                </p>
-                <p class="mt-2 text-ink-soft">Reveniți în curând — operatorii își vor adăuga curând experiențele.</p>
-                <a href="/categorii" class="inline-block px-5 py-3 mt-5 transition rounded-full bg-ink text-paper font-700 hover:bg-vermilion">Vezi alte categorii</a>
-            </div>
-        <?php else: ?>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-[1500px] mx-auto">
-                <?php foreach ($cards as $ev):
-                    $evTitle = $ev['title'];
-                    $evCat = $ev['cat'];
-                    $evUrl = $ev['url'];
-                    $evCover = $ev['cover'];
-                    $evPriceCents = $ev['price_cents'] ?? null;
-                    $evPrice = navFormatPriceCents($evPriceCents);
-                ?>
-                    <article class="flex flex-col overflow-hidden border-2 ticket ticket-lift group bg-paper border-ink rounded-2xl" style="--perf:100%">
-                        <a href="<?= htmlspecialchars($evUrl, ENT_QUOTES) ?>" class="block">
-                            <?php if ($evCover): ?>
-                                <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="object-cover w-full h-44" loading="lazy" width="600" height="320">
-                            <?php else: ?>
-                                <div class="p-4 duotone h-36 bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion">
-                                    <div class="grid-tex"></div>
-                                    <?php if ($evCat): ?>
-                                        <span class="relative font-mono text-[10px] text-paper/90 bg-ink/25 px-2 py-1 rounded"><?= htmlspecialchars(strtoupper($evCat)) ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
-                        </a>
-
-                        <div class="flex flex-col flex-1 p-5">
-                            <?php if ($evCat): ?>
-                                <p class="font-mono text-[10px] text-ink-soft tracking-wider"><?= htmlspecialchars(strtoupper($evCat)) ?></p>
-                            <?php endif; ?>
-                            <a href="<?= htmlspecialchars($evUrl, ENT_QUOTES) ?>" class="group">
-                                <h3 class="font-display text-2xl font-700 leading-tight mt-1.5 group-hover:text-vermilion transition-colors"><?= htmlspecialchars($evTitle) ?></h3>
-                            </a>
-
-                            <div class="flex items-end justify-between gap-3 pt-5 mt-auto">
-                                <div>
-                                    <?php if ($evPriceCents !== null && $evPriceCents > 0): ?>
-                                        <p class="text-xs text-ink-soft">de la</p>
-                                    <?php endif; ?>
-                                    <p class="text-2xl font-display font-700"><?= htmlspecialchars($evPrice) ?></p>
-                                </div>
-                                <a href="<?= htmlspecialchars($evUrl, ENT_QUOTES) ?>" class="px-4 py-2.5 rounded-full bg-ink text-paper text-sm font-700 hover:bg-vermilion transition-colors"><?= htmlspecialchars($ev['cta']) ?></a>
-                            </div>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- pagination -->
-            <?php if (($pagination['last_page'] ?? 1) > 1): ?>
-                <nav class="flex flex-wrap justify-center gap-2 mt-10" aria-label="Pagini">
-                    <?php
-                    $baseQs = $_GET;
-                    unset($baseQs['slug'], $baseQs['page']);
-                    $baseLink = '/' . $slug . ($baseQs ? '?' . http_build_query($baseQs) . '&' : '?');
-                    $current = (int) ($pagination['current_page'] ?? 1);
-                    $last = (int) ($pagination['last_page'] ?? 1);
-                    $start = max(1, $current - 3);
-                    $end = min($last, $start + 6);
-                    $start = max(1, $end - 6);
-                    ?>
-                    <?php if ($current > 1): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current - 1 ?>" class="px-4 py-2 text-sm border-2 rounded-full border-ink/20 hover:border-ink font-600">‹ Anterior</a>
-                    <?php endif; ?>
-                    <?php for ($p = $start; $p <= $end; $p++): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $p ?>" class="px-4 py-2 rounded-full border-2 font-600 text-sm <?= $p === $current ? 'bg-ink text-paper border-ink' : 'border-ink/20 hover:border-ink' ?>"><?= $p ?></a>
-                    <?php endfor; ?>
-                    <?php if ($current < $last): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current + 1 ?>" class="px-4 py-2 text-sm border-2 rounded-full border-ink/20 hover:border-ink font-600">Următor ›</a>
-                    <?php endif; ?>
-                </nav>
-            <?php endif; ?>
         <?php endif; ?>
+      </div>
+
+      <div class="ch-media">
+        <div class="ch-arch">
+          <?php if ($heroPhoto): ?>
+          <img src="<?= v2_e($heroPhoto['src']) ?>" alt="<?= v2_e($heroPhoto['alt']) ?>" fetchpriority="high" decoding="async">
+          <?php else: ?>
+          <?= v2_fallback($cityName) ?>
+          <?php endif; ?>
+          <?php if ($gallery): ?>
+          <button class="ch-gal" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb">
+            <span class="ch-thumbs" aria-hidden="true"><?php foreach (array_slice($gallery, 0, 3) as $g): ?><img src="<?= v2_e($g['src']) ?>" alt="" loading="lazy" decoding="async"><?php endforeach; ?></span>
+            <span>Galerie foto</span><b><?= count($gallery) ?></b>
+          </button>
+          <?php endif; ?>
+        </div>
+        <!-- Categorii populare: one card at a time swings in along the arch, then out; cycles continuously. -->
+        <div class="orbit" data-orbit role="group" aria-label="Categorii populare în <?= v2_e($cityName) ?>">
+          <?php foreach ($wheelItems as $i => $w): ?>
+          <a class="oc<?= $i === 0 ? ' is-on' : '' ?>" href="<?= v2_e($w['href']) ?>">
+            <span class="oc-media"><?= $w['image'] ? v2_photo([$w['image'], 640, 800, ''], $w['srcset'] ? ' srcset="' . v2_e($w['srcset']) . '" sizes="170px"' : '') : v2_fallback($w['label'], $i) ?></span>
+            <span class="oc-name"><?= v2_e($w['label']) ?></span>
+            <span class="oc-meta">în <?= v2_e($cityName) ?></span>
+          </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
     </div>
-</section>
+  </section>
+  <div id="hdr-sentinel" aria-hidden="true"></div>
 
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('cityFilters', () => ({ open: null, sheet: false }));
-});
-</script>
+  <!-- ============================== STICKY SECTION NAV ============================== -->
+  <nav class="cnav" aria-label="Secțiunile paginii">
+    <div class="wrap cnav-in">
+      <a href="#activitati" aria-current="true">Top activități</a>
+      <a href="#interese">Explorează după interes</a>
+      <?php if (!empty($cityAttractions)): ?><a href="#attractions">Atracții</a><?php endif; ?>
+      <?php if (!empty($cityGuides)): ?><a href="#guides">Ghiduri</a><?php endif; ?>
+      <?php if (!empty($nearbyCities)): ?><a href="#nearby">Aproape de <?= v2_e($cityName) ?></a><?php endif; ?>
+      <a href="#ghid-local">FAQ</a>
+    </div>
+  </nav>
 
-<!-- ============================== GETYOURGUIDE WIDGET (slot „extra", jos) ============================== -->
-<?php if ($gygWidgetEnabled && ! $gygPromote) { $renderGygSection(); } ?>
+  <!-- ============================== GETYOURGUIDE (promoted: cities without own listings) ============================== -->
+  <?php if ($gygPromote) { $renderGygSection(); } ?>
 
-<!-- ============================== EXPLOREAZĂ DUPĂ INTERES (categorii + traveler) ============================== -->
-<section id="interese" class="bg-paper">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <div class="grid gap-10 lg:grid-cols-[1fr_360px]">
-            <!-- Left: categorii locale -->
-            <div>
-                <div class="flex items-end justify-between gap-4">
-                    <div>
-                        <h2 class="mt-2 font-display text-5xl font-bold leading-none">Explorează după interes</h2>
-                        <p class="mt-2 text-ink-soft">Categorii utile ca să găsești mai repede ce cauți în <?= htmlspecialchars($cityName) ?>.</p>
-                    </div>
-                </div>
-                <?php if (!empty($topCategories)): ?>
-                <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <?php foreach ($topCategories as $cat): ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="group flex items-center gap-4 rounded-2xl border-2 border-ink bg-paper p-4 shadow-ticket transition hover:-translate-y-0.5">
-                            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-paper-2 text-2xl"><?= htmlspecialchars($cat['icon_emoji'] ?? '🎫') ?></span>
-                            <span class="min-w-0">
-                                <span class="block truncate font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></span>
-                                <?php if (!empty($cat['count_n'])): ?>
-                                    <span class="mt-1 block text-sm text-ink-soft"><?= (int) $cat['count_n'] ?> <?= ((int) $cat['count_n']) === 1 ? 'activitate' : 'activități' ?></span>
-                                <?php endif; ?>
-                            </span>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
+  <!-- ============================== ACTIVITIES + EVENTS ============================== -->
+  <section class="cl" id="activitati" aria-labelledby="cl-h">
+    <div class="wrap cl-head">
+      <h2 id="cl-h">Top activități în <?= v2_e($cityName) ?></h2>
+      <p class="cl-count"><b><?= (int) $pagination['total'] ?></b> <?= (int) $pagination['total'] === 1 ? 'rezultat' : 'rezultate' ?></p>
+    </div>
+
+    <div class="ctb">
+      <div class="wrap">
+        <div class="ctb-in">
+          <form class="ctb-search" action="/<?= v2_e($slug) ?>#activitati" method="get" role="search" aria-label="Caută în <?= v2_e($cityName) ?>">
+            <?= v2_ic('magnifying-glass') ?>
+            <label class="sr" for="cl-q">Caută în <?= v2_e($cityName) ?></label>
+            <input id="cl-q" name="q" type="search" value="<?= v2_e($searchQuery) ?>" placeholder="Caută în <?= v2_e($cityName) ?>…" autocomplete="off">
+            <?php foreach ($baseGet as $k => $v): if ($k === 'q') continue; ?><input type="hidden" name="<?= v2_e($k) ?>" value="<?= v2_e($v) ?>"><?php endforeach; ?>
+            <button class="btn btn-primary ctb-go" type="submit"><span>Caută</span><?= v2_ic('arrow-right') ?></button>
+          </form>
+
+          <div class="ctb-dds">
+            <details class="dd">
+              <summary class="dd-btn<?= $categoryFilter ? ' is-set' : '' ?>"><?= v2_e($categoryFilter ? $catNameOf($categoryFilter) : 'Categorie') ?><?= v2_ic('caret-down') ?></summary>
+              <div class="dd-pop">
+                <ul>
+                  <li><a href="<?= v2_e($cityUrl(['category' => ''])) ?>"<?= !$categoryFilter ? ' aria-current="true"' : '' ?>>Toate categoriile</a></li>
+                  <?php foreach ($topCategories as $c): ?><li><a href="<?= v2_e($cityUrl(['category' => $c['slug']])) ?>"<?= $categoryFilter === $c['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($c['name']) ?></a></li><?php endforeach; ?>
+                </ul>
+              </div>
+            </details>
+            <details class="dd">
+              <summary class="dd-btn<?= $maxPrice !== null ? ' is-set' : '' ?>"><?= $maxPrice !== null ? 'Sub ' . $maxPrice . ' lei' : 'Preț' ?><?= v2_ic('caret-down') ?></summary>
+              <div class="dd-pop">
+                <ul>
+                  <li><a href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>>Orice preț</a></li>
+                  <?php foreach ($priceMaxAllowed as $cap): ?><li><a href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Sub <?= $cap ?> lei</a></li><?php endforeach; ?>
+                </ul>
+              </div>
+            </details>
+            <details class="dd">
+              <summary class="dd-btn<?= $sort !== 'recommended' ? ' is-set' : '' ?>"><?= v2_e($sort !== 'recommended' ? $sortOptions[$sort] : 'Sortare') ?><?= v2_ic('caret-down') ?></summary>
+              <div class="dd-pop is-right">
+                <ul>
+                  <?php foreach ($sortOptions as $value => $label): ?><li><a href="<?= v2_e($cityUrl(['sort' => $value === 'recommended' ? '' : $value])) ?>"<?= $sort === $value ? ' aria-current="true"' : '' ?>><?= v2_e($label) ?></a></li><?php endforeach; ?>
+                </ul>
+              </div>
+            </details>
+          </div>
+
+          <button class="ctb-open" type="button" data-sheet-open aria-haspopup="dialog" aria-controls="cl-sheet" aria-expanded="false"><?= v2_ic('list') ?>Filtre<?php if ($activeChips): ?><span class="ctb-n"><?= count($activeChips) ?></span><?php endif; ?></button>
+        </div>
+
+        <?php if ($activeChips): ?>
+        <ul class="cl-active" aria-label="Filtre active">
+          <?php foreach ($activeChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> (elimină)</span></a></li><?php endforeach; ?>
+          <li><a class="aclear" href="/<?= v2_e($slug) ?>#activitati">Șterge tot</a></li>
+        </ul>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <!-- phone filter sheet (shown inline when JavaScript is off) -->
+    <div class="sheet" id="cl-sheet" role="dialog" aria-modal="true" aria-labelledby="cl-sheet-h">
+      <div class="sheet-panel">
+        <div class="sheet-top">
+          <h2 id="cl-sheet-h">Filtre</h2>
+          <button class="icon-btn" type="button" data-sheet-close><?= v2_ic('x') ?><span class="sr">Închide filtrele</span></button>
+        </div>
+        <div class="sheet-body">
+          <section class="fgroup">
+            <h3 class="flabel">Categorie</h3>
+            <div class="fchips">
+              <a class="fchip" href="<?= v2_e($cityUrl(['category' => ''])) ?>"<?= !$categoryFilter ? ' aria-current="true"' : '' ?>>Toate</a>
+              <?php foreach ($topCategories as $c): ?><a class="fchip" href="<?= v2_e($cityUrl(['category' => $c['slug']])) ?>"<?= $categoryFilter === $c['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($c['name']) ?></a><?php endforeach; ?>
             </div>
-
-            <!-- Right: pentru cine (traveler types) -->
-            <aside class="rounded-[2rem] bg-ink p-6 text-paper">
-                <h3 class="mt-2 font-display text-3xl font-bold leading-none">Alege după stilul tău</h3>
-                <div class="mt-5 space-y-3">
-                    <?php foreach ($travelerTypes as $tt): ?>
-                        <a href="<?= htmlspecialchars($tt['href'], ENT_QUOTES) ?>" class="group flex items-center gap-3 rounded-xl bg-paper/10 p-3 transition hover:bg-paper hover:text-ink">
-                            <span class="text-2xl"><?= $tt['icon'] ?></span>
-                            <span>
-                                <span class="block font-bold"><?= htmlspecialchars($tt['title']) ?></span>
-                                <span class="mt-1 block text-xs text-paper/60 group-hover:text-ink-soft"><?= htmlspecialchars($tt['desc']) ?></span>
-                            </span>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-            </aside>
-        </div>
-    </div>
-</section>
-
-<!-- ============================== ATRACTII (F4) ============================== -->
-<?php if (!empty($cityAttractions)): ?>
-<section id="attractions" class="bg-white">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <div class="flex items-end justify-between gap-4">
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACȚII DE NERATAT</p>
-                <h2 class="mt-2 font-display text-5xl font-bold leading-none sm:text-6xl">Atracții de neratat în <?= htmlspecialchars($cityName) ?></h2>
-                <p class="mt-2 max-w-2xl text-ink-soft">Descoperă locurile care definesc orașul și vezi activitățile disponibile în jurul lor.</p>
+          </section>
+          <section class="fgroup">
+            <h3 class="flabel">Preț maxim</h3>
+            <div class="fchips">
+              <a class="fchip" href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>>Orice</a>
+              <?php foreach ($priceMaxAllowed as $cap): ?><a class="fchip" href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Sub <?= $cap ?> lei</a><?php endforeach; ?>
             </div>
-            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/atractii" class="shrink-0 text-sm font-bold text-vermilion underline-wobble">Toate atracțiile →</a>
-        </div>
-        <div class="grid gap-4 mt-8 sm:grid-cols-2 lg:grid-cols-4">
-            <?php $atBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d']; foreach ($cityAttractions as $ai => $at): ?>
-                <a href="/atractie/<?= htmlspecialchars($at['slug'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-1">
-                    <div class="relative h-44 overflow-hidden">
-                        <?php if (!empty($at['image'])): ?>
-                            <img src="<?= htmlspecialchars($at['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
-                        <?php else: ?>
-                            <div class="grid h-full place-items-center bg-gradient-to-br <?= $atBg[$ai % count($atBg)] ?> text-paper"><span class="px-4 text-xl font-bold text-center font-display"><?= htmlspecialchars($at['name']) ?></span></div>
-                        <?php endif; ?>
-                        <?php if (!empty($at['count'])): ?><span class="absolute px-3 py-1 text-xs font-bold rounded-full left-3 top-3 bg-paper text-ink shadow-ticket"><?= (int) $at['count'] ?> activități</span><?php endif; ?>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="font-display text-2xl font-bold leading-tight group-hover:text-vermilion"><?= htmlspecialchars($at['name']) ?></h3>
-                        <?php if (!empty($at['type'])): ?><p class="mt-2 line-clamp-2 text-sm text-ink-soft"><?= htmlspecialchars($at['type']) ?></p><?php endif; ?>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<?php if (!empty($cityGuides)): ?>
-<!-- ============================== GUIDES ============================== -->
-<section id="guides" class="bg-paper-2">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-                <h2 class="mt-2 text-6xl font-bold leading-none font-display">Ghiduri și idei pentru <?= htmlspecialchars($cityName) ?></h2>
+          </section>
+          <section class="fgroup">
+            <h3 class="flabel">Sortare</h3>
+            <div class="fchips">
+              <?php foreach ($sortOptions as $value => $label): ?><a class="fchip" href="<?= v2_e($cityUrl(['sort' => $value === 'recommended' ? '' : $value])) ?>"<?= $sort === $value ? ' aria-current="true"' : '' ?>><?= v2_e($label) ?></a><?php endforeach; ?>
             </div>
-            <a href="/ghiduri" class="px-5 py-3 font-bold transition rounded-full bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
+          </section>
         </div>
-        <div class="grid gap-5 mt-8 lg:grid-cols-3">
-            <?php foreach ($cityGuides as $guide): ?>
-                <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
-                    <?php if (!empty($guide['image'])): ?>
-                        <img src="<?= htmlspecialchars($guide['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($guide['title'], ENT_QUOTES) ?>" class="object-cover w-full h-56 transition duration-500 group-hover:scale-105" loading="lazy">
-                    <?php else: ?>
-                        <div class="grid h-56 place-items-center bg-gradient-to-br from-forest to-ink text-paper"><span class="text-2xl font-bold font-display opacity-80">Ghid</span></div>
-                    <?php endif; ?>
-                    <div class="p-5">
-                        <p class="font-mono text-xs tracking-[.16em] text-ink-soft"><?= htmlspecialchars($guide['kicker']) ?></p>
-                        <p class="mt-2 text-4xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
-                        <?php if (!empty($guide['excerpt'])): ?><p class="mt-3 line-clamp-3 text-ink-soft"><?= htmlspecialchars($guide['excerpt']) ?></p><?php endif; ?>
-                        <p class="mt-4 text-sm font-bold text-vermilion">Citește ghidul →</p>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </div>
+      </div>
     </div>
-</section>
-<?php endif; ?>
 
-<?php if (!empty($nearbyCities)): ?>
-<!-- ============================== NEARBY ============================== -->
-<section id="nearby" class="bg-white">
-    <div class="mx-auto text-center max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <h2 class="mt-2 text-5xl font-bold leading-none font-display">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
-        <p class="max-w-3xl mx-auto mt-3 text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
-        <div class="grid gap-4 mt-8 md:grid-cols-2 xl:grid-cols-5">
-            <?php $nbBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d','from-ink to-forest']; foreach ($nearbyCities as $ni => $nc): ?>
-                <a href="<?= htmlspecialchars($nc['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
-                    <div class="grid h-40 place-items-end bg-gradient-to-br <?= $nbBg[$ni % count($nbBg)] ?> p-4">
-                        <span class="font-mono text-[10px] tracking-wider text-paper/80">ORAȘ</span>
-                    </div>
-                    <div class="p-4">
-                        <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($nc['label']) ?></p>
-                        <p class="mt-1 text-sm text-ink-soft">Activități și experiențe locale</p>
-                    </div>
-                </a>
-            <?php endforeach; ?>
+    <div class="wrap">
+      <?php if (empty($cards)): ?>
+      <div class="cl-empty">
+        <h3>
+          <?php if ($categoryFilter): ?>
+            Nicio activitate din această categorie în <?= v2_e($cityName) ?>.
+          <?php else: ?>
+            Încă nu sunt activități listate aici.
+          <?php endif; ?>
+        </h3>
+        <p>Reveniți în curând — operatorii își vor adăuga curând experiențele.</p>
+        <div class="cl-empty-cta">
+          <a class="btn btn-light" href="/categorii">Vezi alte categorii</a>
+          <?php if ($activeChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>#activitati">Șterge filtrele</a><?php endif; ?>
         </div>
+        <svg class="cl-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+      </div>
+      <?php else: ?>
+      <ul class="xp-grid" data-reveal>
+        <?php foreach ($cards as $i => $card): ?>
+        <li class="xp">
+          <a href="<?= v2_e($card['url']) ?>">
+            <span class="xp-media"><?= $card['image'] ? v2_photo([$card['image'], 0, 0, '']) : v2_fallback($card['title'], $i) ?></span>
+            <span class="xp-body">
+              <span class="xp-cat"><?= v2_e($card['cat']) ?></span>
+              <span class="xp-title"><?= v2_e($card['title']) ?></span>
+              <span class="xp-meta"><?php if ($card['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($card['dur']) ?></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_e($card['cta']) ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($card['price_cents']) ?></span>
+            </span>
+          </a>
+        </li>
+        <?php endforeach; ?>
+      </ul>
+
+      <?php
+      $current = (int) $pagination['current_page'];
+      $last = max(1, (int) $pagination['last_page']);
+      if ($last > 1):
+          $start = max(1, $current - 3);
+          $end = min($last, $start + 6);
+          $start = max(1, $end - 6);
+      ?>
+      <nav class="pager" aria-label="Pagini">
+        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($cityUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Anterior</a><?php endif; ?>
+        <?php for ($p = $start; $p <= $end; $p++): ?>
+          <?php if ($p === $current): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($cityUrl(['page' => $p > 1 ? $p : ''])) ?>"><?= $p ?></a><?php endif; ?>
+        <?php endfor; ?>
+        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($cityUrl(['page' => $current + 1])) ?>" rel="next">Următor<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </nav>
+      <?php endif; ?>
+      <?php endif; ?>
     </div>
-</section>
-<?php endif; ?>
+  </section>
 
-<!-- ============================== EDITORIAL + CROSS-LINKS ============================== -->
-<section id="ghid-local" class="px-4 py-20 mx-auto max-w-7xl sm:px-6 lg:py-28">
-    <div class="grid lg:grid-cols-[1fr_.75fr] gap-14 items-start">
+  <!-- ============================== GETYOURGUIDE ("extra" slot, below our own listings) ============================== -->
+  <?php if ($gygWidgetEnabled && !$gygPromote) { $renderGygSection(); } ?>
 
-        <article class="max-w-3xl">
-            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">GHID LOCAL</p>
-            <h2 class="font-display text-[clamp(2.1rem,4vw,4rem)] font-700 leading-[0.92] mb-7">
-                <?php if ($citySeoTitle): ?>
-                    <?= htmlspecialchars($citySeoTitle) ?>
-                <?php else: ?>
-                    Ce să faci în <?= htmlspecialchars($cityName) ?>: idei pentru weekend, familie sau o zi liberă.
-                <?php endif; ?>
-            </h2>
+  <!-- ============================== EXPLOREAZĂ DUPĂ INTERES (categorii + traveler) ============================== -->
+  <section class="sec ci" id="interese" aria-labelledby="ci-h">
+    <div class="wrap ci-grid">
+      <div>
+        <div class="sec-head">
+          <div>
+            <h2 id="ci-h">Explorează după interes</h2>
+            <p class="sec-sub">Categorii utile ca să găsești mai repede ce cauți în <?= v2_e($cityName) ?>.</p>
+          </div>
+        </div>
+        <?php if (!empty($topCategories)): ?>
+        <ul class="ctiles" data-reveal>
+          <?php foreach ($topCategories as $cat): ?>
+          <li>
+            <a class="ctile" href="<?= v2_e($catLink($cat['slug'])) ?>">
+              <span class="ctile-media"><?= $cat['thumb'] ? v2_photo([$cat['thumb'], 0, 0, '']) : v2_fallback($cat['name']) ?></span>
+              <span class="ctile-text"><b><?= v2_e($cat['name']) ?></b><?php if ($cat['count'] > 0): ?><small><?= v2_num($cat['count'], 'activitate', 'activități') ?></small><?php endif; ?></span>
+              <?= v2_ic('arrow-right') ?>
+            </a>
+          </li>
+          <?php endforeach; ?>
+        </ul>
+        <?php endif; ?>
+      </div>
 
-            <?php if ($citySeoHtml): ?>
-                <div class="prose-custom text-[17px] leading-relaxed text-ink-soft">
-                    <?= strip_tags($citySeoHtml, '<p><h2><h3><h4><strong><em><b><i><u><a><ul><ol><li><blockquote><br><span>') ?>
-                </div>
+      <aside class="styles" aria-labelledby="styles-h">
+        <?= $cityArches ?>
+        <h3 id="styles-h">Alege după stilul tău</h3>
+        <ul>
+          <?php foreach ($travelerTypes as $tt): ?>
+          <li><a class="style" href="<?= v2_e($tt['href']) ?>"><span class="style-ic"><?= v2_ic($tt['icon']) ?></span><span><b><?= v2_e($tt['title']) ?></b><small><?= v2_e($tt['desc']) ?></small></span></a></li>
+          <?php endforeach; ?>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================== ATRACȚII ============================== -->
+  <?php if (!empty($cityAttractions)): ?>
+  <section class="sec attr" id="attractions" aria-labelledby="attr-h">
+    <svg class="attr-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <h2 id="attr-h">Atracții de neratat în <?= v2_e($cityName) ?></h2>
+          <p class="sec-sub">Descoperă locurile care definesc orașul și vezi activitățile disponibile în jurul lor.</p>
+        </div>
+        <div class="sec-tools">
+          <a class="sec-link" href="/<?= v2_e($slug) ?>/atractii">Toate atracțiile<?= v2_ic('arrow-right') ?></a>
+          <div class="rail-btns" data-for="attr-rail">
+            <button class="rail-btn" type="button" data-dir="-1" aria-label="Atracțiile anterioare"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" data-dir="1" aria-label="Atracțiile următoare"><?= v2_ic('arrow-right') ?></button>
+          </div>
+        </div>
+      </div>
+      <ul class="rail" id="attr-rail">
+        <?php foreach ($cityAttractions as $at): ?>
+        <li class="at"><a href="<?= v2_e($at['href']) ?>">
+          <span class="at-media"><?= $at['image'] ? v2_photo([$at['image'], 0, 0, '']) : v2_fallback($at['name']) ?><?php if ($at['count'] > 0): ?><span class="at-badge"><?= v2_num($at['count'], 'activitate', 'activități') ?></span><?php endif; ?></span>
+          <span class="at-name"><?= v2_e($at['name']) ?><?= v2_ic('arrow-right') ?></span>
+          <?php if ($at['type'] !== ''): ?><span class="at-meta"><span><?= v2_e($at['type']) ?></span></span><?php endif; ?>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- ============================== GHIDURI ============================== -->
+  <?php if (!empty($cityGuides)): ?>
+  <section class="sec insp" id="guides" aria-labelledby="guides-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="guides-h">Ghiduri și idei pentru <?= v2_e($cityName) ?></h2>
+        <a class="sec-link" href="/ghiduri">Toate ghidurile<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <ul class="cg-grid" data-reveal>
+        <?php foreach ($cityGuides as $g): ?>
+        <li class="ia"><a href="<?= v2_e($g['href']) ?>">
+          <span class="ia-media"><?= $g['cover'] ? v2_photo($g['cover']) : v2_fallback($g['slug']) ?></span>
+          <span class="ia-text">
+            <span class="ia-cat"><?= v2_e($g['category'] !== '' ? $g['category'] : 'Ghid') ?></span>
+            <h3><?= v2_e($g['title']) ?></h3>
+            <?php if ($g['excerpt'] !== ''): ?><p><?= v2_e($g['excerpt']) ?></p><?php endif; ?>
+            <span class="ia-more">Citește ghidul<?= v2_ic('arrow-right') ?></span>
+          </span>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- ============================== ORAȘE APROPIATE ============================== -->
+  <?php if (!empty($nearbyCities)): ?>
+  <section class="sec cn" id="nearby" aria-labelledby="nearby-h">
+    <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <h2 id="nearby-h">Alte orașe de explorat lângă <?= v2_e($cityName) ?></h2>
+          <p class="sec-sub">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= v2_e($cityName) ?>.</p>
+        </div>
+      </div>
+      <ul class="ncities" data-reveal>
+        <?php foreach ($nearbyCities as $i => $nc): ?>
+        <li class="nc"><a href="<?= v2_e($nc['href']) ?>">
+          <span class="nc-media"><?= $nc['photo'] ? v2_photo([$nc['photo'][0], $nc['photo'][1], $nc['photo'][2], '']) : v2_fallback($nc['name'], $i) ?></span>
+          <span class="nc-body"><b><?= v2_e($nc['name']) ?><?= v2_ic('arrow-right') ?></b><small><?= $nc['count'] ? v2_exp($nc['count']) : 'Activități și experiențe locale' ?></small></span>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- ============================== GHID LOCAL + CROSS-LINKS ============================== -->
+  <section class="sec lg" id="ghid-local" aria-labelledby="lg-h">
+    <div class="wrap lg-grid">
+      <article class="lg-main">
+        <p class="kicker">Ghid local</p>
+        <h2 class="lg-h" id="lg-h">
+          <?php if ($citySeoTitle !== ''): ?>
+            <?= v2_e($citySeoTitle) ?>
+          <?php else: ?>
+            Ce să faci în <?= v2_e($cityName) ?>: idei pentru weekend, familie sau o zi liberă.
+          <?php endif; ?>
+        </h2>
+
+        <div class="lg-body">
+          <?php if ($citySeoHtml !== ''): ?>
+            <?= strip_tags($citySeoHtml, '<p><h2><h3><h4><strong><em><b><i><u><a><ul><ol><li><blockquote><br><span>') ?>
+          <?php else: ?>
+            <?php if ($cityDescription !== ''): ?>
+              <p><?= nl2br(v2_e($cityDescription)) ?></p>
             <?php else: ?>
-                <div class="space-y-5 text-[17px] leading-relaxed text-ink-soft">
-                    <?php if ($cityDescription): ?>
-                        <p><?= nl2br(htmlspecialchars($cityDescription)) ?></p>
-                    <?php else: ?>
-                        <p>
-                            <?= htmlspecialchars($cityName) ?> oferă o gamă largă de activități pentru weekend sau o zi liberă: poți combina o plimbare în centru cu un escape room, o vizită la muzee, o activitate pentru copii sau o ieșire de aventură în apropiere.
-                        </p>
-                    <?php endif; ?>
-                    <p>
-                        Această pagină adună activitățile disponibile în oraș și în zona apropiată, cu informații utile despre preț, durată, public potrivit și disponibilitate. După plată, biletul ajunge pe email cu cod QR și poate fi scanat direct la intrare.
-                    </p>
-                </div>
+              <p><?= v2_e($cityName) ?> oferă o gamă largă de activități pentru weekend sau o zi liberă: poți combina o plimbare în centru cu un escape room, o vizită la muzee, o activitate pentru copii sau o ieșire de aventură în apropiere.</p>
             <?php endif; ?>
-
-            <!-- Local search crosslinks -->
-            <?php if (!empty($topCategories)): ?>
-            <div class="mt-10">
-                <h3 class="text-3xl font-display font-700">Căutări locale utile</h3>
-                <div class="flex flex-wrap gap-2 mt-4">
-                    <?php foreach ($topCategories as $cat): ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">
-                            <?= htmlspecialchars(mb_strtolower($cat['label'])) ?> <?= htmlspecialchars($cityName) ?>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- Intent crosslinks (SEO gold — connects city pages to intent system) -->
-            <div class="mt-8">
-                <h3 class="text-3xl font-display font-700">După ce ai chef</h3>
-                <div class="flex flex-wrap gap-2 mt-4">
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-azi" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">⏰ azi în <?= htmlspecialchars($cityName) ?></a>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-weekend" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">🎉 weekend</a>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-gratuite" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">🎁 gratuite</a>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-copii" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">🧒 copii</a>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-indoor" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">🏛️ indoor</a>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-romantice" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">💞 romantice</a>
-                </div>
-            </div>
-
-            <!-- FAQ from admin (if any) -->
-            <?php if (!empty($cityFaqs)): ?>
-            <div class="mt-10" x-data="{ active: 0 }">
-                <h3 class="mb-5 text-3xl font-display font-700">Întrebări frecvente despre <?= htmlspecialchars($cityName) ?></h3>
-                <div class="space-y-3">
-                    <?php foreach ($cityFaqs as $i => $f): ?>
-                        <div class="overflow-hidden border-2 border-ink rounded-xl bg-paper">
-                            <button type="button" @click="active = active === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="active === <?= $i ?>" class="flex items-center justify-between w-full gap-4 px-5 py-4 text-left">
-                                <span class="font-600 text-[16px]"><?= htmlspecialchars($f['q']) ?></span>
-                                <span class="grid transition-transform duration-300 border-2 rounded-full shrink-0 place-items-center w-7 h-7 border-ink" :class="active === <?= $i ?> && 'rotate-45 bg-vermilion border-vermilion text-paper'">
-                                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                                </span>
-                            </button>
-                            <div x-show="active === <?= $i ?>" x-collapse x-cloak>
-                                <p class="px-5 pb-5 leading-relaxed text-ink-soft"><?= htmlspecialchars($f['a']) ?></p>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-        </article>
-
-        <!-- Sidebar: city snapshot + nearby cities -->
-        <aside class="space-y-5">
-            <div class="p-6 overflow-hidden ticket bg-ink text-paper rounded-2xl" style="--perf:100%">
-                <p class="font-mono text-[10px] tracking-[.2em] text-ochre"><?= htmlspecialchars(strtoupper($cityName)) ?> PE SCURT</p>
-                <h3 class="mt-2 text-3xl font-display font-700"><?= htmlspecialchars($cityName) ?> pe scurt</h3>
-                <dl class="mt-6 space-y-4">
-                    <div class="flex justify-between gap-6 pb-3 border-b border-paper/10">
-                        <dt class="text-paper/60">Activități listate</dt>
-                        <dd class="font-700"><?= $eventCount ?: '—' ?></dd>
-                    </div>
-                    <?php if ($countyName): ?>
-                    <div class="flex justify-between gap-6 pb-3 border-b border-paper/10">
-                        <dt class="text-paper/60">Județ</dt>
-                        <dd class="font-700"><?= htmlspecialchars($countyName) ?></dd>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($regionName): ?>
-                    <div class="flex justify-between gap-6 pb-3 border-b border-paper/10">
-                        <dt class="text-paper/60">Regiune</dt>
-                        <dd class="font-700"><?= htmlspecialchars($regionName) ?></dd>
-                    </div>
-                    <?php endif; ?>
-                    <div class="flex justify-between gap-6">
-                        <dt class="text-paper/60">Bilete QR</dt>
-                        <dd class="font-700 text-ochre">Da</dd>
-                    </div>
-                </dl>
-            </div>
-
-            <!-- Other featured cities -->
-            <?php
-            $otherCities = array_filter(navGetCities(20), fn ($c) => $c['slug'] !== $slug);
-            if (!empty($otherCities)):
-            ?>
-            <div class="p-6 border-2 bg-paper-2 border-ink rounded-2xl">
-                <p class="font-mono text-[10px] tracking-[.2em] text-vermilion">ALTE ORAȘE</p>
-                <h3 class="mt-2 text-2xl font-display font-700">Poți căuta și aici</h3>
-                <div class="grid grid-cols-2 gap-2 mt-5">
-                    <?php foreach (array_slice($otherCities, 0, 8) as $c): ?>
-                        <a href="<?= htmlspecialchars($c['href'], ENT_QUOTES) ?>" class="px-3 py-2 transition border rounded-xl bg-paper border-ink/10 hover:bg-ink hover:text-paper">
-                            <?= htmlspecialchars($c['label']) ?>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-                <a href="/orase" class="inline-block mt-4 text-sm font-700 text-vermilion underline-wobble">Toate orașele →</a>
-            </div>
-            <?php endif; ?>
-
-            <!-- Owner CTA -->
-            <div class="p-6 border-2 bg-vermilion text-paper border-ink rounded-2xl">
-                <p class="font-mono text-[10px] tracking-[.2em] text-paper/75">PENTRU OPERATORI LOCALI</p>
-                <h3 class="mt-2 text-3xl font-display font-700">Ai o activitate în <?= htmlspecialchars($cityName) ?>?</h3>
-                <p class="mt-3 text-paper/80">Pagină dedicată, bilete QR, disponibilitate online și comision 2%.</p>
-                <a href="/pentru-locatii" class="inline-flex px-5 py-3 mt-5 transition rounded-full bg-paper text-ink font-700 hover:bg-ink hover:text-paper">Listează activitatea</a>
-            </div>
-        </aside>
-    </div>
-</section>
-
-<!-- ============================== NEWSLETTER ============================== -->
-<section class="bg-vermilion text-paper" x-data="{ email:'', sent:false, loading:false, error:'', async submit(){ if(this.loading||this.sent) return; this.loading=true; this.error=''; try{ const r = await fetch('/api/proxy.php?action=newsletter.subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:this.email, source:'city-<?= htmlspecialchars($slug, ENT_QUOTES) ?>'})}); if(r.ok){ this.sent=true; } else { this.error='A apărut o eroare. Încearcă din nou.'; } }catch(e){ this.error='A apărut o eroare. Încearcă din nou.'; } this.loading=false; } }">
-    <div class="mx-auto grid max-w-[1500px] lg:grid-cols-2">
-        <div class="flex items-center px-4 py-12 sm:px-6 lg:px-12 lg:py-16">
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-paper/60">NEWSLETTER BILETE.ONLINE</p>
-                <h2 class="mt-2 font-display text-5xl font-bold leading-none">Primește idei de activități în <?= htmlspecialchars($cityName) ?></h2>
-                <p class="mt-3 max-w-xl text-paper/75">Activități noi, ghiduri locale și idei de weekend, direct pe email.</p>
-                <form @submit.prevent="submit()" class="mt-6 flex max-w-xl gap-2 rounded-full bg-paper p-2 text-ink">
-                    <input type="email" required x-model="email" :disabled="sent" class="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-bold outline-none placeholder:text-ink-soft/70" placeholder="emailul tău">
-                    <button type="submit" :disabled="loading || sent" class="shrink-0 rounded-full bg-ink px-6 py-2.5 font-bold text-paper transition hover:bg-vermilion-d disabled:opacity-60">
-                        <span x-show="!loading && !sent">Abonează-mă</span>
-                        <span x-show="loading" x-cloak>…</span>
-                        <span x-show="sent" x-cloak>✓ Gata</span>
-                    </button>
-                </form>
-                <p x-show="sent" x-cloak class="mt-3 font-bold">Te-ai abonat cu succes. Mulțumim!</p>
-                <p x-show="error" x-cloak class="mt-3 font-bold" x-text="error"></p>
-            </div>
+            <p>Această pagină adună activitățile disponibile în oraș și în zona apropiată, cu informații utile despre preț, durată, public potrivit și disponibilitate. După plată, biletul ajunge pe email cu cod QR și poate fi scanat direct la intrare.</p>
+          <?php endif; ?>
         </div>
-        <div class="min-h-[240px] lg:min-h-[300px]">
-            <?php $nlImg = $coverResolved ?: ($gallery[1]['src'] ?? ''); ?>
-            <?php if ($nlImg): ?>
-                <img src="<?= htmlspecialchars($nlImg, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($cityName, ENT_QUOTES) ?>" class="object-cover w-full h-full" loading="lazy">
-            <?php else: ?>
-                <div class="grid h-full min-h-[240px] place-items-center bg-vermilion-d"><span class="font-display text-5xl font-bold opacity-40"><?= htmlspecialchars($cityName) ?></span></div>
-            <?php endif; ?>
-        </div>
-    </div>
-</section>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+        <?php if (!empty($topCategories)): ?>
+        <div class="lg-block">
+          <h3>Căutări locale utile</h3>
+          <div class="chips-links">
+            <?php foreach ($topCategories as $cat): ?><a href="<?= v2_e($catLink($cat['slug'])) ?>"><?= v2_e(mb_strtolower($cat['name'])) ?> <?= v2_e($cityName) ?></a><?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="lg-block">
+          <h3>După ce ai chef</h3>
+          <div class="chips-links intents">
+            <?php foreach ($intentLinks as [$intentSlug, $icon, $label]): ?><a href="/<?= v2_e($slug) ?>/<?= $intentSlug ?>"><?= v2_ic($icon) ?><?= v2_e($label) ?></a><?php endforeach; ?>
+          </div>
+        </div>
+
+        <?php if (!empty($cityFaqs)): ?>
+        <div class="lg-block">
+          <h3>Întrebări frecvente despre <?= v2_e($cityName) ?></h3>
+          <?php foreach ($cityFaqs as $i => $f): ?>
+          <details class="qa"<?= $i === 0 ? ' open' : '' ?>><summary><?= v2_e($f['q']) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($f['a']) ?></p></details>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+      </article>
+
+      <aside class="lg-aside">
+        <div class="snap">
+          <h3><?= v2_e($cityName) ?> pe scurt</h3>
+          <dl>
+            <div><dt>Activități listate</dt><dd><?= $eventCount ?: '—' ?></dd></div>
+            <?php if ($countyName): ?><div><dt>Județ</dt><dd><?= v2_e($countyName) ?></dd></div><?php endif; ?>
+            <?php if ($regionName): ?><div><dt>Regiune</dt><dd><?= v2_e($regionName) ?></dd></div><?php endif; ?>
+            <div><dt>Bilete QR</dt><dd class="snap-yes"><?= v2_ic('qr-code') ?>Da</dd></div>
+          </dl>
+        </div>
+
+        <?php if (!empty($otherCities)): ?>
+        <div class="ocities">
+          <p class="kicker">Alte orașe</p>
+          <h3>Poți căuta și aici</h3>
+          <ul>
+            <?php foreach ($otherCities as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?>
+          </ul>
+          <a class="sec-link" href="/orase">Toate orașele<?= v2_ic('arrow-right') ?></a>
+        </div>
+        <?php endif; ?>
+
+        <div class="owner">
+          <?= $cityArches ?>
+          <p class="kicker">Pentru operatori locali</p>
+          <h3>Ai o activitate în <?= v2_e($cityName) ?>?</h3>
+          <p>Pagină dedicată, bilete QR, disponibilitate online și comision 2%.</p>
+          <a class="btn btn-primary" href="/pentru-locatii">Listează activitatea<?= v2_ic('arrow-right') ?></a>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================== NEWSLETTER ============================== -->
+  <section class="nl" aria-labelledby="nl-h">
+    <div class="wrap nl-grid">
+      <div class="nl-copy">
+        <p class="kicker">Newsletter bilete.online</p>
+        <h2 id="nl-h">Primește idei de activități în <?= v2_e($cityName) ?></h2>
+        <p class="nl-lead">Activități noi, ghiduri locale și idei de weekend, direct pe email.</p>
+        <form class="nl-form" data-newsletter="city-<?= v2_e($slug) ?>" data-msg="nl-msg" data-ok="Te-ai abonat cu succes. Mulțumim!" data-err="A apărut o eroare. Încearcă din nou." data-keep>
+          <label class="sr" for="nl-email">Emailul tău</label>
+          <input id="nl-email" name="email" type="email" required placeholder="emailul tău" autocomplete="email">
+          <button class="btn btn-primary" type="submit">Abonează-mă</button>
+        </form>
+        <p class="form-msg" id="nl-msg" role="status" hidden></p>
+      </div>
+      <?php $nlImg = $coverResolved ?: ($gallery[1]['src'] ?? ($gallery[0]['src'] ?? '')); ?>
+      <div class="nl-media">
+        <?php if ($nlImg): ?>
+        <img src="<?= v2_e($nlImg) ?>" alt="<?= v2_e($cityName) ?>" loading="lazy" decoding="async">
+        <?php else: ?>
+        <?= v2_fallback($cityName) ?><span class="nl-name"><?= v2_e($cityName) ?></span>
+        <?php endif; ?>
+      </div>
+    </div>
+  </section>
+
+  <?php if ($gallery): ?>
+  <!-- gallery lightbox -->
+  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-labelledby="lb-title" hidden>
+    <div class="lb-top">
+      <p class="lb-title" id="lb-title"><?= v2_e($gallery[0]['alt']) ?></p>
+      <span class="lb-count" id="lb-count">1 / <?= count($gallery) ?></span>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Închide galeria</span></button>
+    </div>
+    <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
+    <div class="lb-nav"<?= count($gallery) < 2 ? ' hidden' : '' ?>>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="Fotografia anterioară"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="Fotografia următoare"><?= v2_ic('arrow-right') ?></button>
+    </div>
+  </div>
+  <?php endif; ?>
+</main>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>

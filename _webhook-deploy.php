@@ -7,7 +7,7 @@
  *
  * SETUP:
  * 1. Urcă acest fișier pe server: bilete.online/_webhook-deploy.php
- * 2. Schimbă DEPLOY_SECRET mai jos
+ * 2. Pune secretul în data/deploy-secret.php pe server (vezi mai jos), NU în acest fișier
  * 3. GitHub repo → Settings → Webhooks → Add webhook:
  *    - Payload URL: https://bilete.online/_webhook-deploy.php
  *    - Content type: application/json
@@ -17,8 +17,11 @@
 
 // ===================== CONFIGURATION =====================
 
-// Secret key - SCHIMBĂ ASTA! Generează cu: https://randomkeygen.com/
-define('DEPLOY_SECRET', '477f8cfb448e9b3988f20d5b0dcb1a624142f5b6f12b167bfadc18a6bd96a409');
+// Secret shared with the GitHub webhook. Not committed, because the repository is public: it comes
+// from the DEPLOY_SECRET environment variable or from data/deploy-secret.php on the server, a file
+// containing only  <?php return 'the-secret';  (a PHP file, so fetching it over the web shows nothing).
+$deploySecretFile = __DIR__ . '/data/deploy-secret.php';
+define('DEPLOY_SECRET', (string) (getenv('DEPLOY_SECRET') ?: (is_file($deploySecretFile) ? (include $deploySecretFile) : '')));
 
 // GitHub repo details
 define('GITHUB_USER', 'andreiandoo');
@@ -165,7 +168,7 @@ function cleanupTemp($path) {
 // ===================== STATUS PAGE (GET) =====================
 
 // The status page, its logs and the manual deploy are only for someone holding the secret.
-$hasKey = hash_equals(DEPLOY_SECRET, (string) ($_GET['key'] ?? ''));
+$hasKey = DEPLOY_SECRET !== '' && hash_equals(DEPLOY_SECRET, (string) ($_GET['key'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (!$hasKey) {
@@ -240,7 +243,10 @@ $isManualTest = isset($_GET['test']) && $hasKey;
 logMsg("=== Deploy started ===");
 
 // Verify signature (skip for manual test)
-if (!$isManualTest && DEPLOY_SECRET !== 'CHANGE_THIS_TO_RANDOM_SECRET') {
+if (DEPLOY_SECRET === '') {
+    logMsg("DEPLOY_SECRET is not configured (data/deploy-secret.php)", 'ERROR');
+}
+if (!$isManualTest) {
     if (!verifySignature($payload, $signature)) {
         logMsg("Invalid signature", 'ERROR');
     }
