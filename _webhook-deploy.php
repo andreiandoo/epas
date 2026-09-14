@@ -164,7 +164,14 @@ function cleanupTemp($path) {
 
 // ===================== STATUS PAGE (GET) =====================
 
+// The status page, its logs and the manual deploy are only for someone holding the secret.
+$hasKey = hash_equals(DEPLOY_SECRET, (string) ($_GET['key'] ?? ''));
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (!$hasKey) {
+        http_response_code(404);
+        exit;
+    }
     header('Content-Type: text/html; charset=utf-8');
     ?>
     <!DOCTYPE html>
@@ -191,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 <strong>Repo:</strong> <?= GITHUB_USER ?>/<?= GITHUB_REPO ?><br>
                 <strong>Deploy path:</strong> <?= DEPLOY_PATH ?>
             </p>
-            <a href="?test=1" class="btn">Test Manual Deploy</a>
+            <a href="?test=1&amp;key=<?= htmlspecialchars(urlencode((string) $_GET['key'])) ?>" class="btn">Test Manual Deploy</a>
         </div>
 
         <?php if (file_exists(LOG_FILE)): ?>
@@ -216,7 +223,7 @@ Events: Just the push event</pre>
     <?php
 
     // Manual test deploy
-    if (isset($_GET['test']) && $_GET['test'] === '1') {
+    if (isset($_GET['test']) && $_GET['test'] === '1' && $hasKey) {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         // Continue to deploy logic below
     } else {
@@ -228,7 +235,7 @@ Events: Just the push event</pre>
 
 $payload = file_get_contents('php://input');
 $signature = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
-$isManualTest = isset($_GET['test']);
+$isManualTest = isset($_GET['test']) && $hasKey;
 
 logMsg("=== Deploy started ===");
 
