@@ -903,11 +903,7 @@ async function loadEvents() {
         const events = allEvents;
         allEventsCache = events; // Cache for instant filtering
         updatePillCounts(events);
-
-        // Update sidebar events count
-        const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
-        const navCount = document.getElementById('nav-events-count');
-        if (navCount) navCount.textContent = activeEvents || events.length;
+        // #nav-events-count is owned by organizer-sidebar.php (server-side count).
 
         // Apply current filters (status + search)
         applyFilters();
@@ -942,7 +938,8 @@ function getEventDisplayStatus(event) {
     if (event.is_cancelled || event.status === 'cancelled') return 'cancelled';
     if (event.is_postponed || event.status === 'postponed') return 'postponed';
     if (isEnded) return 'ended';
-    if (event.status === 'draft' || event.status === 'pending_review') return 'draft';
+    // Rejected = not approved → Ciorne (was counted as "În derulare").
+    if (event.status === 'draft' || event.status === 'pending_review' || event.status === 'rejected') return 'draft';
     return 'ongoing';
 }
 

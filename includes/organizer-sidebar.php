@@ -191,13 +191,14 @@ window.addEventListener('load', async function () {
         }
     } catch (e) {}
 
-    // Catalog count badge.
+    // Catalog count badge — "în derulare", counted server-side over ALL the
+    // organizer's events (meta.counts); the list is paginated, so counting
+    // its first page was wrong. Sole writer of #nav-events-count.
     try {
-        const r = await BileteOnlineAPI.organizer.getEvents();
-        const _d = r && r.data;
-        const items = Array.isArray(_d) ? _d : (_d && (Array.isArray(_d.data) ? _d.data : (_d.events || _d.items))) || [];
+        const r = await BileteOnlineAPI.organizer.getEvents({ with_counts: 1 });
+        const meta = (r && (r.meta || (r.data && r.data.meta))) || {};
         const navCount = document.getElementById('nav-events-count');
-        if (navCount) navCount.textContent = Array.isArray(items) ? items.length : 0;
+        if (navCount && meta.counts) navCount.textContent = meta.counts.ongoing;
     } catch (e) {}
 });
 </script>
