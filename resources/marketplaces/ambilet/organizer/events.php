@@ -639,18 +639,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <p class="mt-1 text-xs text-muted">Cate bilete poate cumpara un client intr-o comanda</p>
                                     </div>
                                 </div>
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label class="label">Inceput vanzari</label>
-                                        <input type="text" name="sales_start_at" class="input" data-datetime placeholder="zz/ll/aaaa --:--" autocomplete="off">
-                                        <p class="mt-1 text-xs text-muted">Cand incep vanzarile (gol = imediat)</p>
-                                    </div>
-                                    <div>
-                                        <label class="label">Sfarsit vanzari</label>
-                                        <input type="text" name="sales_end_at" class="input" data-datetime placeholder="zz/ll/aaaa --:--" autocomplete="off">
-                                        <p class="mt-1 text-xs text-muted">Cand se opresc vanzarile (gol = la inceput eveniment)</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1575,12 +1563,6 @@ async function loadEventForEdit(eventId) {
         if (event.capacity) form.querySelector('[name="capacity"]').value = event.capacity;
         if (event.max_tickets_per_order) form.querySelector('[name="max_tickets_per_order"]').value = event.max_tickets_per_order;
         // Local "YYYY-MM-DDTHH:MM" (no UTC shift); flatpickr-aware setter.
-        if (event.sales_start_at) {
-            setDateInputValue(form.querySelector('[name="sales_start_at"]'), String(event.sales_start_at).slice(0, 16));
-        }
-        if (event.sales_end_at) {
-            setDateInputValue(form.querySelector('[name="sales_end_at"]'), String(event.sales_end_at).slice(0, 16));
-        }
 
         // Genres - populate after category is loaded
         if (event.genres && event.genres.length > 0) {
@@ -2554,12 +2536,6 @@ function collectFormData() {
 
     const maxTickets = form.querySelector('[name="max_tickets_per_order"]').value;
     if (maxTickets) data.max_tickets_per_order = parseInt(maxTickets);
-
-    const salesStart = form.querySelector('[name="sales_start_at"]').value;
-    if (salesStart) data.sales_start_at = salesStart;
-
-    const salesEnd = form.querySelector('[name="sales_end_at"]').value;
-    if (salesEnd) data.sales_end_at = salesEnd;
 
     if (ticketTypes.length > 0) data.ticket_types = ticketTypes;
 
