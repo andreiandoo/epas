@@ -1,6 +1,6 @@
 <?php
 /**
- * City × Intent SEO landing page.
+ * City × Intent SEO landing page (v2 "Arcada").
  * Handles BOTH:
  *   /{city}/{intent}     — city-scoped (e.g. /brasov/activitati-indoor)
  *   /{intent}            — global (e.g. /activitati-azi)
@@ -8,6 +8,9 @@
  * One PHP file → 100 cities × 25 intents × pagination = thousands of SEO pages.
  * Data and SEO meta come from the marketplace API; this file is pure render +
  * cross-link composition.
+ *
+ * Top to bottom: hero (breadcrumbs, intent, intro, CTAs, cover or brand arch with the intent icon), results
+ * (cards, pagination) or the empty state, cross links (other intents here, the same intent in other cities), SEO copy.
  */
 
 $pageCacheTTL = 300;
@@ -48,56 +51,106 @@ if (!is_array($apiData) || empty($apiData['success']) || !isset($apiData['data']
     exit;
 }
 
-$data = $apiData['data'];
-$intent = $data['intent'] ?? null;
-$city = $data['city'] ?? null;
-$meta = $data['meta'] ?? [];
-$events = $data['events'] ?? [];
-$pagination = $data['pagination'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => 0];
-$crossLinks = $data['cross_links'] ?? ['other_intents_for_city' => [], 'same_intent_for_cities' => []];
+require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
 
-// Accent color → Tailwind class mapping (safelisted in tailwind.config.cjs)
-$accent = $meta['accent_color'] ?? 'vermilion';
-$accentMap = [
-    'vermilion' => ['text' => 'text-vermilion', 'bg' => 'bg-vermilion', 'bg-light' => 'bg-vermilion/10', 'hover' => 'hover:bg-vermilion-d'],
-    'forest'    => ['text' => 'text-forest',    'bg' => 'bg-forest',    'bg-light' => 'bg-forest/10',    'hover' => 'hover:bg-forest-l'],
-    'ochre'     => ['text' => 'text-ochre',     'bg' => 'bg-ochre',     'bg-light' => 'bg-ochre/15',     'hover' => 'hover:bg-vermilion-d'],
-    'sky'       => ['text' => 'text-sky',       'bg' => 'bg-sky',       'bg-light' => 'bg-sky/10',       'hover' => 'hover:bg-ink-2'],
-];
-$accentClasses = $accentMap[$accent] ?? $accentMap['vermilion'];
+$data = $apiData['data'];
+$intent = is_array($data['intent'] ?? null) ? $data['intent'] : [];
+$city = is_array($data['city'] ?? null) ? $data['city'] : null;
+$meta = is_array($data['meta'] ?? null) ? $data['meta'] : [];
+$events = is_array($data['events'] ?? null) ? $data['events'] : [];
+$pagination = array_merge(['current_page' => 1, 'last_page' => 1, 'total' => 0], is_array($data['pagination'] ?? null) ? $data['pagination'] : []);
+$crossLinks = array_merge(['other_intents_for_city' => [], 'same_intent_for_cities' => []], is_array($data['cross_links'] ?? null) ? $data['cross_links'] : []);
+
+$currentPageNum = max(1, (int) $pagination['current_page']);
+$lastPage = max(1, (int) $pagination['last_page']);
+$total = max(0, (int) $pagination['total']);
+$otherIntents = array_values(array_filter((array) $crossLinks['other_intents_for_city'], fn ($l) => is_array($l) && !empty($l['path']) && !empty($l['name'])));
+$sameIntent = array_values(array_filter((array) $crossLinks['same_intent_for_cities'], fn ($l) => is_array($l) && !empty($l['path']) && !empty($l['name'])));
+
+// Global intents come with the city left out of the text templates ("… în  · bilete.online", "pentru : …"):
+// drop the dangling preposition and tidy the spacing it leaves. Texts with a city are not affected.
+$clean = static function ($text): string {
+    $text = (string) $text;
+    $text = preg_replace('/[ \t]+(?:în|din|pentru|la)[ \t]*(?=[·:;.,!?]|$)/um', '', $text);
+    $text = preg_replace('/[ \t]*·[ \t]*/u', ' · ', $text);
+    $text = preg_replace('/[ \t]{2,}/u', ' ', $text);
+    return trim($text);
+};
+
+$intentName = (string) ($intent['name'] ?? 'Activități');
+$intentSlugSafe = (string) ($intent['slug'] ?? $intentSlug);
+$cityName = $city ? (string) ($city['name'] ?? '') : '';
+$h1 = $clean($meta['h1'] ?? $meta['title'] ?? $intentName);
+$intro = $clean($meta['intro_copy'] ?? '');
+$intentIcon = (string) ($meta['icon'] ?? '');
+$cover = v2_media_url($meta['cover_image_url'] ?? null);
+$basePath = (string) ($meta['canonical_path'] ?? '/');
+$accentClass = ['vermilion' => 'is-red', 'forest' => 'is-green', 'ochre' => 'is-yellow', 'sky' => 'is-blue'][$meta['accent_color'] ?? 'vermilion'] ?? 'is-red';
+$seoParagraphs = [];
+if (!empty($meta['seo_copy'])) {
+    // seo_copy is plain text: paragraphs split on blank lines
+    $seoParagraphs = array_values(array_filter(array_map($clean, preg_split('/\n\s*\n/', trim((string) $meta['seo_copy'])))));
+}
 
 // SEO setup for head.php
-$pageTitleRaw = $meta['title'] ?? ('Activități · ' . SITE_NAME);
-$pageDescription = $meta['description'] ?? SITE_TAGLINE;
-$canonicalUrl = SITE_URL . ($meta['canonical_path'] ?? '/');
-$ogImage = !empty($meta['cover_image_url']) ? $meta['cover_image_url'] : SITE_URL . '/assets/images/og-default.jpg';
+$pageTitleRaw = $clean($meta['title'] ?? ('Activități · ' . SITE_NAME));
+$pageDescription = $clean($meta['description'] ?? SITE_TAGLINE);
+$canonicalUrl = SITE_URL . $basePath . ($pageNum > 1 ? '?page=' . $pageNum : '');
+$ogImage = $cover;
 $noindex = !empty($meta['noindex']);
 $currentPage = 'intent';
-$cssBundle = 'listing';
+$v2Styles = ['intent.css'];
+
+$pageUrl = static fn (int $p): string => $basePath . ($p > 1 ? '?page=' . $p : '');
+$searchUrl = '/cauta?intent=' . urlencode($intentSlugSafe) . ($city ? '&city=' . urlencode((string) ($city['slug'] ?? '')) : '');
 
 // Breadcrumbs
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
 if ($city) {
-    $breadcrumbs[] = ['name' => $city['name'], 'url' => SITE_URL . '/' . $city['slug']];
+    $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . ($city['slug'] ?? '')];
 }
-$breadcrumbs[] = ['name' => $intent['name'] ?? 'Activități', 'url' => $canonicalUrl];
+$breadcrumbs[] = ['name' => $intentName, 'url' => SITE_URL . $basePath];
 
-// Structured data: CollectionPage + ItemList of top 10 events
-$itemListElements = [];
-foreach (array_slice($events, 0, 10) as $i => $ev) {
-    $evTitle = is_array($ev['title'] ?? null)
-        ? ($ev['title']['ro'] ?? $ev['title']['en'] ?? reset($ev['title']))
-        : ($ev['title'] ?? 'Activitate');
-    $evSlug = $ev['slug'] ?? '';
-    $itemListElements[] = [
-        '@type' => 'ListItem',
-        'position' => $i + 1,
-        'name' => $evTitle,
-        'url' => SITE_URL . '/bilete/' . $evSlug,
+// Cards
+$cards = [];
+foreach ($events as $ev) {
+    if (!is_array($ev)) {
+        continue;
+    }
+    $title = navFlatName($ev['title'] ?? '');
+    if ($title === '') {
+        $title = 'Activitate';
+    }
+    $slug = (string) ($ev['slug'] ?? '');
+    $category = is_array($ev['marketplace_event_category'] ?? null) ? navFlatName($ev['marketplace_event_category']['name'] ?? '') : '';
+    $cityLabel = is_array($ev['marketplace_city'] ?? null)
+        ? navFlatName($ev['marketplace_city']['name'] ?? '')
+        : (string) (is_array($ev['venue'] ?? null) ? ($ev['venue']['city'] ?? '') : '');
+    $cents = $ev['cheapest_price_cents'] ?? null;
+    $cards[] = [
+        'title' => $title,
+        'href' => $slug !== '' ? '/bilete/' . $slug : v2_cauta($title),
+        'category' => $category,
+        'city' => $cityLabel,
+        'image' => v2_media_url($ev['cover_image_url'] ?? $ev['image_url'] ?? null),
+        'cents' => $cents === null ? null : (int) $cents,
     ];
 }
+
+// Structured data: CollectionPage + ItemList of top 10 events, BreadcrumbList
 $structuredData = [];
-if (!empty($itemListElements)) {
+if ($cards) {
+    $itemListElements = [];
+    foreach (array_slice($events, 0, 10) as $i => $ev) {
+        $itemListElements[] = [
+            '@type' => 'ListItem',
+            'position' => $i + 1,
+            'name' => $cards[$i]['title'],
+            'url' => SITE_URL . '/bilete/' . ($ev['slug'] ?? ''),
+        ];
+    }
     $structuredData[] = [
         '@context' => 'https://schema.org',
         '@type' => 'CollectionPage',
@@ -108,257 +161,181 @@ if (!empty($itemListElements)) {
         'isPartOf' => ['@type' => 'WebSite', 'name' => SITE_NAME, 'url' => SITE_URL],
         'mainEntity' => [
             '@type' => 'ItemList',
-            'numberOfItems' => $pagination['total'],
+            'numberOfItems' => $total,
             'itemListElement' => $itemListElements,
         ],
     ];
 }
+$structuredData[] = [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => array_map(fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc['name'], 'item' => $bc['url']], $breadcrumbs, array_keys($breadcrumbs)),
+];
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
-
-// Helper: format ticket price from cents (or display "Gratuit" / "—")
-function _intentFormatPrice(?int $cents): string {
-    if ($cents === null) return '—';
-    if ($cents === 0) return 'Gratuit';
-    return number_format($cents / 100, 0, ',', '.') . ' lei';
-}
-
-// Helper: extract translated title
-function _intentTitle(array $ev, string $locale = 'ro'): string {
-    if (is_array($ev['title'] ?? null)) {
-        return $ev['title'][$locale] ?? $ev['title']['ro'] ?? $ev['title']['en'] ?? reset($ev['title']);
-    }
-    return $ev['title'] ?? 'Activitate';
-}
-
-// Helper: extract category label
-function _intentCategoryLabel(array $ev, string $locale = 'ro'): string {
-    $cat = $ev['marketplace_event_category'] ?? null;
-    if (!$cat || !is_array($cat)) return '';
-    if (is_array($cat['name'] ?? null)) {
-        return $cat['name'][$locale] ?? $cat['name']['ro'] ?? '';
-    }
-    return $cat['name'] ?? '';
-}
-
-// Helper: extract city label
-function _intentCityLabel(array $ev, string $locale = 'ro'): string {
-    $c = $ev['marketplace_city'] ?? null;
-    if ($c && is_array($c['name'] ?? null)) {
-        return $c['name'][$locale] ?? $c['name']['ro'] ?? '';
-    }
-    return $ev['venue']['city'] ?? '';
-}
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
+<main id="main" class="page-main" tabindex="-1">
 
-<!-- ============================== BREADCRUMB ============================== -->
-<nav class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 text-xs font-mono tracking-wider text-ink-soft" aria-label="Breadcrumb">
-    <ol class="flex flex-wrap items-center gap-2">
-        <?php foreach ($breadcrumbs as $i => $bc): ?>
-            <li class="flex items-center gap-2">
-                <?php if ($i > 0): ?>
-                    <span class="text-ink-soft/40">›</span>
-                <?php endif; ?>
-                <?php if ($i < count($breadcrumbs) - 1): ?>
-                    <a href="<?= htmlspecialchars($bc['url'], ENT_QUOTES) ?>" class="hover:text-vermilion transition"><?= htmlspecialchars($bc['name']) ?></a>
-                <?php else: ?>
-                    <span class="text-ink"><?= htmlspecialchars($bc['name']) ?></span>
-                <?php endif; ?>
-            </li>
-        <?php endforeach; ?>
-    </ol>
-</nav>
-
-<!-- ============================== HERO ============================== -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-    <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] <?= $accentClasses['text'] ?> -rotate-3"><?= htmlspecialchars($city ? 'LOCAL' : 'CATALOG') ?></p>
-
-    <h1 class="mt-5 font-display text-[clamp(2.6rem,7vw,5.4rem)] font-700 leading-[.92] tracking-tight">
-        <?php if (!empty($meta['icon'])): ?>
-            <span class="inline-block align-middle mr-2 text-5xl sm:text-6xl"><?= htmlspecialchars($meta['icon']) ?></span>
-        <?php endif; ?>
-        <?= htmlspecialchars($meta['h1'] ?? $meta['title'] ?? '') ?>
-    </h1>
-
-    <?php if (!empty($meta['intro_copy'])): ?>
-        <p class="mt-6 text-lg sm:text-xl text-ink-soft max-w-3xl leading-relaxed"><?= htmlspecialchars($meta['intro_copy']) ?></p>
-    <?php endif; ?>
-
-    <div class="mt-8 flex flex-wrap items-center gap-4">
-        <a href="#activitati" class="px-6 py-3.5 rounded-full <?= $accentClasses['bg'] ?> text-paper font-600 <?= $accentClasses['hover'] ?> transition">
-            Vezi <?= (int) $pagination['total'] ?> <?= $pagination['total'] === 1 ? 'activitate' : 'activități' ?>
-        </a>
-        <?php if ($city): ?>
-            <a href="/<?= htmlspecialchars($city['slug'], ENT_QUOTES) ?>" class="text-ink-soft hover:text-ink underline-wobble font-600">Toate activitățile din <?= htmlspecialchars($city['name']) ?> →</a>
-        <?php else: ?>
-            <a href="/orase" class="text-ink-soft hover:text-ink underline-wobble font-600">Caută după oraș →</a>
-        <?php endif; ?>
-    </div>
-</section>
-
-<!-- ============================== ACTIVITĂȚI ============================== -->
-<section id="activitati" class="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
-
-    <?php if (empty($events)): ?>
-        <!-- EMPTY STATE -->
-        <div class="ticket bg-paper border-2 border-ink rounded-3xl p-10 sm:p-16 text-center" style="--perf:100%">
-            <p class="font-display text-3xl sm:text-4xl font-700">Nimic disponibil acum.</p>
-            <p class="mt-3 text-ink-soft max-w-xl mx-auto">Pagina rămâne activă — verifică din nou peste câteva zile sau încearcă o altă intenție.</p>
-
-            <?php if (!empty($crossLinks['other_intents_for_city'])): ?>
-                <div class="mt-8 flex flex-wrap justify-center gap-2">
-                    <?php foreach (array_slice($crossLinks['other_intents_for_city'], 0, 6) as $li): ?>
-                        <a href="<?= htmlspecialchars($li['path'], ENT_QUOTES) ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink text-sm font-600">
-                            <?php if (!empty($li['icon'])): ?><?= htmlspecialchars($li['icon']) ?> <?php endif; ?><?= htmlspecialchars($li['name']) ?>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
+  <!-- ============================== HERO ============================== -->
+  <section class="it-hero <?= $accentClass ?>" aria-labelledby="it-h">
+    <div class="wrap it-grid">
+      <div class="it-text">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <?php foreach ($breadcrumbs as $i => $bc): ?>
+            <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
+            <?php if ($i < count($breadcrumbs) - 1): ?>
+              <a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a>
+            <?php else: ?>
+              <span aria-current="page"><?= v2_e($bc['name']) ?></span>
             <?php endif; ?>
+          <?php endforeach; ?>
+        </nav>
+        <?php if ($intentIcon !== ''): ?><span class="it-icon-sm" aria-hidden="true"><?= v2_e($intentIcon) ?></span><?php endif; ?>
+        <p class="kicker"><?= $city ? 'Local · ' . v2_e($cityName) : 'Catalog' ?></p>
+        <h1 class="it-h" id="it-h"><?= v2_e($h1) ?></h1>
+        <?php if ($intro !== ''): ?><p class="it-lead"><?= v2_e($intro) ?></p><?php endif; ?>
+        <div class="it-cta">
+          <?php if ($total > 0): ?>
+          <a class="btn btn-primary" href="#activitati">Vezi <?= v2_e(v2_num($total, 'activitate', 'activități')) ?><?= v2_ic('arrow-right') ?></a>
+          <?php endif; ?>
+          <?php /* with nothing listed yet, the way onward (the city, or all cities) becomes the main button */ ?>
+          <?php $itMoreClass = $total > 0 ? 'it-link' : 'btn btn-primary'; ?>
+          <?php if ($city): ?>
+          <a class="<?= $itMoreClass ?>" href="/<?= v2_e($city['slug'] ?? '') ?>">Toate activitățile din <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+          <?php else: ?>
+          <a class="<?= $itMoreClass ?>" href="/orase">Caută după oraș<?= v2_ic('arrow-right') ?></a>
+          <?php endif; ?>
         </div>
-    <?php else: ?>
-        <!-- RESULTS HEADER -->
-        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8">
-            <p class="font-mono text-xs tracking-[.2em] text-ink-soft">
-                <?= (int) $pagination['total'] ?> rezultate
-                <?php if ($pagination['last_page'] > 1): ?>
-                    · pagina <?= (int) $pagination['current_page'] ?> din <?= (int) $pagination['last_page'] ?>
-                <?php endif; ?>
-            </p>
-            <a href="/cauta?intent=<?= urlencode($intent['slug']) ?><?= $city ? '&city=' . urlencode($city['slug']) : '' ?>" class="text-sm font-600 underline-wobble self-start sm:self-end">
-                Filtre avansate →
-            </a>
+      </div>
+      <div class="it-art" aria-hidden="true">
+        <div class="it-arch<?= $cover ? '' : ' is-empty' ?>">
+          <?php if ($cover): ?><img src="<?= v2_e($cover) ?>" alt="" decoding="async" fetchpriority="high"><?php else: ?><?= v2_fallback($intentName) ?><?php endif; ?>
+          <?php if ($intentIcon !== ''): ?><span class="it-icon"><?= v2_e($intentIcon) ?></span><?php endif; ?>
         </div>
-
-        <!-- GRID -->
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <?php foreach ($events as $ev):
-                $evTitle = _intentTitle($ev, SITE_LOCALE);
-                $evCat = _intentCategoryLabel($ev, SITE_LOCALE);
-                $evCity = _intentCityLabel($ev, SITE_LOCALE);
-                $evSlug = $ev['slug'] ?? '';
-                $evCover = $ev['cover_image_url'] ?? $ev['image_url'] ?? '';
-                $evPrice = _intentFormatPrice($ev['cheapest_price_cents'] ?? null);
-            ?>
-                <article class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
-                    <?php if ($evCover): ?>
-                        <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="h-40 w-full object-cover" loading="lazy" width="600" height="320">
-                    <?php else: ?>
-                        <div class="duotone <?= $accentClasses['bg'] ?> h-32 flex items-center justify-center text-paper/50 font-mono text-xs tracking-wider">
-                            <div class="grid-tex"></div>
-                            <span class="relative">FĂRĂ POZĂ</span>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="p-4 flex-1 flex flex-col">
-                        <p class="font-mono text-[10px] text-ink-soft tracking-wider">
-                            <?php if ($evCat): ?><?= htmlspecialchars(strtoupper($evCat)) ?><?php endif; ?>
-                            <?php if ($evCat && $evCity): ?> · <?php endif; ?>
-                            <?php if ($evCity): ?><?= htmlspecialchars(strtoupper($evCity)) ?><?php endif; ?>
-                        </p>
-                        <h3 class="font-display text-xl font-700 leading-tight mt-1.5"><?= htmlspecialchars($evTitle) ?></h3>
-
-                        <div class="mt-auto pt-4 flex items-center justify-between gap-3">
-                            <p class="text-ink-soft">
-                                <?php if (($ev['cheapest_price_cents'] ?? null) !== null && $ev['cheapest_price_cents'] > 0): ?>
-                                    <span class="text-xs">de la </span>
-                                <?php endif; ?>
-                                <span class="font-display text-lg font-700 text-ink"><?= htmlspecialchars($evPrice) ?></span>
-                            </p>
-                            <a href="/bilete/<?= htmlspecialchars($evSlug, ENT_QUOTES) ?>" class="px-3 py-1.5 rounded-full bg-ink text-paper text-xs font-600 group-hover:<?= $accentClasses['bg'] ?> transition-colors">
-                                Vezi bilete
-                            </a>
-                        </div>
-                    </div>
-                </article>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- PAGINATION -->
-        <?php if ($pagination['last_page'] > 1): ?>
-            <nav class="mt-10 flex justify-center gap-2" aria-label="Pagini">
-                <?php
-                $base = $meta['canonical_path'] ?? '/';
-                $maxLinks = 7;
-                $start = max(1, $pagination['current_page'] - 3);
-                $end = min($pagination['last_page'], $start + $maxLinks - 1);
-                $start = max(1, $end - $maxLinks + 1);
-                ?>
-                <?php if ($pagination['current_page'] > 1): ?>
-                    <a href="<?= htmlspecialchars($base) ?>?page=<?= $pagination['current_page'] - 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">‹ Anterior</a>
-                <?php endif; ?>
-                <?php for ($p = $start; $p <= $end; $p++): ?>
-                    <a href="<?= htmlspecialchars($base) ?>?page=<?= $p ?>" class="px-4 py-2 rounded-full border-2 font-600 text-sm <?= $p === $pagination['current_page'] ? 'bg-ink text-paper border-ink' : 'border-ink/20 hover:border-ink' ?>"><?= $p ?></a>
-                <?php endfor; ?>
-                <?php if ($pagination['current_page'] < $pagination['last_page']): ?>
-                    <a href="<?= htmlspecialchars($base) ?>?page=<?= $pagination['current_page'] + 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">Următor ›</a>
-                <?php endif; ?>
-            </nav>
-        <?php endif; ?>
-    <?php endif; ?>
-</section>
-
-<!-- ============================== CROSS-LINKING ============================== -->
-<?php if (!empty($crossLinks['other_intents_for_city']) || !empty($crossLinks['same_intent_for_cities'])): ?>
-<section class="bg-paper-2 border-y border-ink/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14 grid lg:grid-cols-2 gap-10">
-
-        <?php if (!empty($crossLinks['other_intents_for_city'])): ?>
-        <div>
-            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">EXPLOREAZĂ ALTE INTENȚII</p>
-            <h2 class="font-display text-2xl sm:text-3xl font-700 leading-tight mb-5">
-                <?php if ($city): ?>
-                    Și mai multe activități în <?= htmlspecialchars($city['name']) ?>
-                <?php else: ?>
-                    Alte tipuri de activități
-                <?php endif; ?>
-            </h2>
-            <div class="flex flex-wrap gap-2">
-                <?php foreach ($crossLinks['other_intents_for_city'] as $li): ?>
-                    <a href="<?= htmlspecialchars($li['path'], ENT_QUOTES) ?>" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-paper border border-ink/15 hover:border-ink hover:bg-ink hover:text-paper transition text-sm font-600">
-                        <?php if (!empty($li['icon'])): ?><span><?= htmlspecialchars($li['icon']) ?></span><?php endif; ?>
-                        <?= htmlspecialchars($li['name']) ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
-        <?php if (!empty($crossLinks['same_intent_for_cities'])): ?>
-        <div>
-            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">ÎN ALTE ORAȘE</p>
-            <h2 class="font-display text-2xl sm:text-3xl font-700 leading-tight mb-5">
-                <?= htmlspecialchars($intent['name']) ?> în alte orașe
-            </h2>
-            <div class="flex flex-wrap gap-2">
-                <?php foreach ($crossLinks['same_intent_for_cities'] as $li): ?>
-                    <a href="<?= htmlspecialchars($li['path'], ENT_QUOTES) ?>" class="px-4 py-2 rounded-full bg-paper border border-ink/15 hover:border-ink hover:bg-ink hover:text-paper transition text-sm font-600">
-                        <?= htmlspecialchars($li['name']) ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+      </div>
     </div>
-</section>
-<?php endif; ?>
+  </section>
 
-<!-- ============================== SEO COPY ============================== -->
-<?php if (!empty($meta['seo_copy'])): ?>
-<section class="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-    <article class="ticket bg-paper border-2 border-ink rounded-3xl p-6 sm:p-10 prose-custom" style="--perf:100%">
-        <h2 class="font-display text-2xl sm:text-3xl font-700 mb-4"><?= htmlspecialchars($meta['h1'] ?? $intent['name']) ?></h2>
-        <div class="text-ink-soft text-[17px] leading-relaxed space-y-4">
-            <?php
-            // Render seo_copy as paragraphs (split on \n\n) with simple link auto-detection — admin writes plain text/markdown-lite
-            $paragraphs = preg_split('/\n\s*\n/', trim($meta['seo_copy']));
-            foreach ($paragraphs as $p):
-                echo '<p>' . nl2br(htmlspecialchars($p)) . '</p>';
-            endforeach;
-            ?>
+  <!-- ============================== ACTIVITĂȚI ============================== -->
+  <section class="it-list" id="activitati" aria-labelledby="it-list-h">
+    <div class="wrap">
+      <?php if (!$cards): ?>
+      <div class="it-empty">
+        <h2 id="it-list-h">Nimic disponibil acum.</h2>
+        <p>Pagina rămâne activă — verifică din nou peste câteva zile sau încearcă o altă intenție.</p>
+        <?php if ($otherIntents): ?>
+        <div class="chips-links it-chips">
+          <?php foreach (array_slice($otherIntents, 0, 6) as $li): ?>
+          <a href="<?= v2_e($li['path']) ?>"><?php if (!empty($li['icon'])): ?><span aria-hidden="true"><?= v2_e($li['icon']) ?></span><?php endif; ?><?= v2_e($li['name']) ?></a>
+          <?php endforeach; ?>
         </div>
-    </article>
-</section>
-<?php endif; ?>
+        <?php endif; ?>
+        <?php if ($city): ?>
+        <a class="btn btn-light" href="/<?= v2_e($city['slug'] ?? '') ?>">Toate activitățile din <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+        <?php else: ?>
+        <a class="btn btn-light" href="/cauta"><?= v2_ic('magnifying-glass') ?>Caută activități</a>
+        <?php endif; ?>
+        <svg class="it-empty-line" viewBox="1455 585 1210 310" aria-hidden="true"><use href="#drum-g"/></svg>
+      </div>
+      <?php else: ?>
+      <div class="sec-head it-head">
+        <div>
+          <p class="kicker">Activități</p>
+          <h2 id="it-list-h"><?= v2_e($intentName) ?><?= $city ? ' în ' . v2_e($cityName) : '' ?></h2>
+        </div>
+        <div class="it-meta">
+          <p><?= v2_e(v2_num($total, 'rezultat', 'rezultate')) ?><?php if ($lastPage > 1): ?> · pagina <?= $currentPageNum ?> din <?= $lastPage ?><?php endif; ?></p>
+          <a class="sec-link" href="<?= v2_e($searchUrl) ?>">Filtre avansate<?= v2_ic('arrow-right') ?></a>
+        </div>
+      </div>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+      <ul class="xp-grid">
+        <?php foreach ($cards as $i => $c): ?>
+        <li class="xp">
+          <a href="<?= v2_e($c['href']) ?>">
+            <span class="xp-media"><?= $c['image'] ? v2_photo([$c['image'], 0, 0, '']) : v2_fallback($c['title'], $i) ?></span>
+            <span class="xp-body">
+              <span class="xp-cat"><?= v2_e(implode(' · ', array_filter([$c['category'], $c['city']]))) ?></span>
+              <span class="xp-title"><?= v2_e($c['title']) ?></span>
+              <span class="xp-meta"><?php if ($c['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($c['city']) ?></span><?php endif; ?></span>
+              <span class="xp-foot">
+                <span class="xp-go">Vezi bilete<?= v2_ic('arrow-right') ?></span>
+                <?php if ($c['cents'] === null): ?>
+                <span class="xp-price"><b>—</b></span>
+                <?php elseif ($c['cents'] === 0): ?>
+                <span class="xp-price"><b>Gratuit</b></span>
+                <?php else: ?>
+                <span class="xp-price">de la<b><?= v2_thousands((int) round($c['cents'] / 100)) ?> lei</b></span>
+                <?php endif; ?>
+              </span>
+            </span>
+          </a>
+        </li>
+        <?php endforeach; ?>
+      </ul>
+
+      <?php if ($lastPage > 1):
+          $maxLinks = 7;
+          $start = max(1, $currentPageNum - 3);
+          $end = min($lastPage, $start + $maxLinks - 1);
+          $start = max(1, $end - $maxLinks + 1);
+      ?>
+      <nav class="pager" aria-label="Pagini">
+        <?php if ($currentPageNum > 1): ?><a href="<?= v2_e($pageUrl($currentPageNum - 1)) ?>" rel="prev" aria-label="Pagina anterioară"><?= v2_ic('arrow-left') ?></a><?php endif; ?>
+        <?php for ($p = $start; $p <= $end; $p++): ?>
+          <?php if ($p === $currentPageNum): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($pageUrl($p)) ?>"><?= $p ?></a><?php endif; ?>
+        <?php endfor; ?>
+        <?php if ($currentPageNum < $lastPage): ?><a href="<?= v2_e($pageUrl($currentPageNum + 1)) ?>" rel="next" aria-label="Pagina următoare"><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </nav>
+      <?php endif; ?>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- ============================== CROSS-LINKING ============================== -->
+  <?php if ($otherIntents || $sameIntent): ?>
+  <section class="it-cross" aria-label="Explorează mai departe">
+    <div class="wrap it-cross-grid">
+      <?php if ($otherIntents): ?>
+      <div>
+        <p class="kicker">Explorează alte intenții</p>
+        <h2><?= $city ? 'Și mai multe activități în ' . v2_e($cityName) : 'Alte tipuri de activități' ?></h2>
+        <div class="chips-links it-chips">
+          <?php foreach ($otherIntents as $li): ?>
+          <a href="<?= v2_e($li['path']) ?>"><?php if (!empty($li['icon'])): ?><span aria-hidden="true"><?= v2_e($li['icon']) ?></span><?php endif; ?><?= v2_e($li['name']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+      <?php if ($sameIntent): ?>
+      <div>
+        <p class="kicker">În alte orașe</p>
+        <h2><?= v2_e($intentName) ?> în alte orașe</h2>
+        <div class="chips-links it-chips">
+          <?php foreach ($sameIntent as $li): ?>
+          <a href="<?= v2_e($li['path']) ?>"><?= v2_e($li['name']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- ============================== SEO COPY ============================== -->
+  <?php if ($seoParagraphs): ?>
+  <section class="it-seo" aria-labelledby="it-seo-h">
+    <div class="wrap">
+      <article class="seo it-seo-card">
+        <h2 id="it-seo-h"><?= v2_e($h1 !== '' ? $h1 : $intentName) ?></h2>
+        <?php foreach ($seoParagraphs as $p): ?>
+        <p><?= nl2br(v2_e($p)) ?></p>
+        <?php endforeach; ?>
+      </article>
+    </div>
+  </section>
+  <?php endif; ?>
+</main>
+
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>

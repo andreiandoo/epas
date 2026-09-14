@@ -1,0 +1,63 @@
+/* bilete.online v2: city × intent landing (/{oras}/activitati-*, /activitati-*). Needs base.css. The accent of the
+   intent (API accent_color) tints the hero through --it / --it-soft. */
+
+/* =================== HERO =================== */
+.it-hero{--it:var(--red-text);--it-soft:rgba(228,58,51,.12);position:relative;overflow:hidden;overflow:clip;padding-block:clamp(20px, 3vw, 32px) clamp(44px, 6vw, 80px);background:radial-gradient(55% 90% at 100% 0%, var(--it-soft), rgba(247,247,245,0) 70%), var(--bg)}
+.it-hero.is-green{--it:var(--action);--it-soft:rgba(43,182,115,.16)}
+.it-hero.is-yellow{--it:#8F6200;--it-soft:rgba(242,169,0,.2)}
+.it-hero.is-blue{--it:var(--blue);--it-soft:rgba(45,108,205,.14)}
+.it-grid{display:grid;gap:var(--space-6);align-items:center}
+@media (min-width:1024px){.it-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}}
+.it-hero .crumbs{margin-bottom:var(--space-5)}
+.it-hero .kicker{color:var(--it)}
+.it-h{margin:0;max-width:18ch;font-size:clamp(2.5rem, 6vw, 4.75rem);font-weight:700;line-height:1;letter-spacing:-.045em;color:var(--green)}
+.it-icon-sm{display:grid;place-items:center;width:58px;height:66px;margin-bottom:16px;border-radius:50% 50% 12px 12px / 42% 42% 12px 12px;background:var(--surface);box-shadow:0 0 0 1px var(--line), 0 14px 30px -20px rgba(14,72,55,.5);font-size:1.75rem;line-height:1}
+@media (min-width:1024px){.it-icon-sm{display:none}}
+.it-lead{margin:var(--space-4) 0 0;max-width:58ch;font-size:var(--text-lead);line-height:1.5;color:var(--muted)}
+.it-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin-top:var(--space-6)}
+.it-link{display:inline-flex;align-items:center;gap:6px;padding:6px 0;color:var(--green);font-weight:700;text-decoration:none}
+.it-link:hover{text-decoration:underline;text-underline-offset:3px}
+.it-link .ic{width:18px;height:18px;transition:transform var(--dur-micro) var(--ease-out)}
+.it-link:hover .ic{transform:translateX(3px)}
+.it-art{display:none}
+@media (min-width:1024px){.it-art{display:block}}
+.it-arch{position:relative;width:min(100%, 420px);aspect-ratio:4 / 5;margin-left:auto;overflow:hidden;overflow:clip;border-radius:50% 50% var(--r-l) var(--r-l) / 40% 40% var(--r-l) var(--r-l);background:var(--deep);box-shadow:0 40px 80px -40px rgba(14,72,55,.55)}
+.it-arch::after{content:"";position:absolute;inset:12px;border:1.5px solid rgba(247,247,245,.28);border-radius:50% 50% 20px 20px / 40% 40% 20px 20px;pointer-events:none}
+.it-arch img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.it-arch .fb{position:absolute;inset:0;place-items:end center;padding-bottom:12%}
+.it-arch .fb svg{height:32%}
+.it-icon{position:absolute;left:50%;top:36%;translate:-50% -50%;display:grid;place-items:center;width:108px;height:108px;border-radius:50%;background:rgba(247,247,245,.96);box-shadow:0 0 0 10px rgba(247,247,245,.14), 0 24px 40px -20px rgba(0,0,0,.45);font-size:3.25rem;line-height:1}
+
+/* =================== RESULTS =================== */
+.it-list,.it-cross,.it-seo{padding-block:clamp(48px, 7vw, 96px)}
+.it-list{background:var(--surface)}
+.it-head{align-items:end}
+.it-head h2{max-width:22ch}
+.it-meta{display:grid;justify-items:end;gap:6px;text-align:right}
+@media (max-width:767px){.it-meta{justify-items:start;text-align:left}}
+.it-meta p{margin:0;font-size:.9375rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.it-list .xp-go{display:inline-flex;align-items:center;gap:6px;font-size:.875rem;font-weight:700;color:var(--green)}
+.it-list .xp-go .ic{width:16px;height:16px;transition:transform var(--dur-micro) var(--ease-out)}
+.it-list .xp a:hover .xp-go .ic{transform:translateX(3px)}
+/* a paginated listing stacks on phones instead of the swipe rail used by the homepage rows */
+@media (max-width:599px){.it-list .xp-grid{grid-auto-flow:row;grid-template-columns:minmax(0,1fr);grid-auto-columns:auto;margin:0;padding:0;overflow:visible;scroll-snap-type:none}}
+
+.it-empty{position:relative;display:grid;justify-items:center;max-width:780px;margin-inline:auto;padding:clamp(36px, 6vw, 60px) clamp(20px, 4vw, 48px) 0;overflow:hidden;overflow:clip;border-radius:var(--r-l);background:radial-gradient(70% 90% at 50% 0%, #155E48, var(--deep) 70%);color:var(--on-deep);text-align:center;--drum-main:url(#drum-on-dark);--drum-cave:url(#drum-on-dark);--drum-dot:#7FD1A6;--drum-col:#F2A900}
+.it-empty :focus-visible{outline-color:var(--online)}
+.it-empty h2{margin:0;font-size:clamp(1.75rem, 3.6vw, 2.5rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;color:#F7F7F5}
+.it-empty > p{margin:10px 0 0;max-width:48ch;color:var(--on-deep-muted)}
+.it-empty .chips-links{justify-content:center;margin-top:var(--space-5)}
+.it-empty .chips-links a{border-color:rgba(247,247,245,.2);background:rgba(247,247,245,.06);color:#F7F7F5}
+.it-empty .chips-links a:hover{border-color:var(--online);color:#FFFFFF}
+.it-empty .btn{margin-top:var(--space-5)}
+.it-empty-line{display:block;width:min(100%, 540px);height:auto;margin:var(--space-6) auto 0}
+
+/* =================== CROSS LINKS + SEO =================== */
+.it-cross{background:var(--bg)}
+.it-cross-grid{display:grid;gap:var(--space-7)}
+@media (min-width:1024px){.it-cross-grid{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.it-cross h2{margin:0 0 var(--space-5);font-size:clamp(1.5rem, 2.8vw, 2.125rem);font-weight:700;line-height:1.15;letter-spacing:-.03em;color:var(--green)}
+.it-chips a{display:inline-flex;align-items:center;gap:6px}
+.it-chips a span{font-size:1rem;line-height:1}
+.it-seo{background:var(--surface)}
+.it-seo-card{max-width:820px;margin-inline:auto}
