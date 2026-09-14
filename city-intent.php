@@ -82,7 +82,8 @@ $clean = static function ($text): string {
 $intentName = (string) ($intent['name'] ?? 'Activități');
 $intentSlugSafe = (string) ($intent['slug'] ?? $intentSlug);
 $cityName = $city ? (string) ($city['name'] ?? '') : '';
-$h1 = $clean($meta['h1'] ?? $meta['title'] ?? $intentName);
+// Without an h1 the title stands in, minus its " · bilete.online" suffix (that belongs in <title> only)
+$h1 = $clean($meta['h1'] ?? preg_replace('/\s*·\s*' . preg_quote(SITE_NAME, '/') . '\s*$/u', '', (string) ($meta['title'] ?? $intentName)));
 $intro = $clean($meta['intro_copy'] ?? '');
 $intentIcon = (string) ($meta['icon'] ?? '');
 $cover = v2_media_url($meta['cover_image_url'] ?? null);
