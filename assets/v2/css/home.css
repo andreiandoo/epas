@@ -109,7 +109,6 @@
 .chip:hover{border-color:var(--green)}
 .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green);color:#FFFFFF}
 .pop-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:var(--space-3)}
-.link-btn{padding:8px 4px;border:0;background:none;color:var(--muted);font:600 .875rem/1 var(--font);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .done-btn{padding:10px 18px;border:0;border-radius:999px;background:var(--action);color:#FFFFFF;font:700 .875rem/1 var(--font);cursor:pointer}
 @media (max-width:767px){
   .pop{left:0;right:0;min-width:0}

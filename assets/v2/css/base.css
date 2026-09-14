@@ -130,6 +130,7 @@ h1,h2,h3{text-wrap:balance}
 .btn-ghost:hover{border-color:var(--green)}
 .btn-light{background:var(--online);color:#0B2F24}
 .btn-light:hover{background:#45C487}
+.link-btn{padding:8px 4px;border:0;background:none;color:var(--muted);font:600 .875rem/1 var(--font);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sec-tools{display:flex;align-items:center;gap:var(--space-5)}
 .kicker{margin:0 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--action)}
 
