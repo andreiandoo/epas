@@ -17,17 +17,29 @@
         // OpenStreetMap. style: 'rastertiles/voyager' | 'light_all' | 'dark_all'.
         window.AmbiletTileLayer = function (style) {
             const key = (window.AMBILET && window.AMBILET.cartoKey) || '';
-            if (key) {
-                return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(key), {
-                    attribution: '&copy; OpenStreetMap, &copy; CARTO',
-                    subdomains: 'abcd',
-                    maxZoom: 20,
-                });
-            }
-            return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            const osm = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap',
                 maxZoom: 19,
             });
+            if (!key) return osm();
+
+            const layer = L.tileLayer('https://basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(key), {
+                attribution: '&copy; OpenStreetMap, &copy; CARTO',
+                maxZoom: 20,
+            });
+            // CARTO answers 403 to a key it doesn't accept (inactive, or the
+            // domain isn't allowed). Swap to OSM on the first tile error so a
+            // rejected key can never leave a blank map.
+            let swapped = false;
+            layer.on('tileerror', function () {
+                if (swapped) return;
+                swapped = true;
+                const map = layer._map;
+                if (!map) return;
+                map.removeLayer(layer);
+                osm().addTo(map);
+            });
+            return layer;
         };
 
         // Flatpickr — calendar custom DD/MM/YYYY pe orice <input type="date">
