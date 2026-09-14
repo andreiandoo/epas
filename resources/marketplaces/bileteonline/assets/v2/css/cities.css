@@ -1,5 +1,6 @@
 /* bilete.online v2: cities catalog (/orase). Needs base.css. The categories catalog (/categorii) loads it too for the
-   hero, search, hubs, FAQ and final CTA, with categories.css on top. */
+   hero, search, hubs, FAQ and final CTA, with categories.css on top; the guides index (/ghiduri) also for the filter
+   sidebar and cards, with guides.css on top. */
 #lista,#ct-title{scroll-margin-top:calc(var(--hdr-h) + 24px)}
 
 /* =================== HERO =================== */
