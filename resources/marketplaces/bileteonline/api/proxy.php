@@ -3949,6 +3949,49 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.promo-code.activate':
+    case 'organizer.promo-code.deactivate':
+        // Turn a code on or off without deleting it; core refuses to turn on an expired or used-up code (400).
+        $codeId = $_GET['code_id'] ?? '';
+        if (!preg_match('/^\d+$/', (string) $codeId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing code_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/promo-codes/' . $codeId . ($action === 'organizer.promo-code.activate' ? '/activate' : '/deactivate');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.promo-code.stats':
+        // Discount given, order value and customers for one code.
+        $codeId = $_GET['code_id'] ?? '';
+        if (!preg_match('/^\d+$/', (string) $codeId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing code_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/promo-codes/' . $codeId . '/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.promo-code.usage':
+        // The orders that used one code, newest first.
+        $codeId = $_GET['code_id'] ?? '';
+        if (!preg_match('/^\d+$/', (string) $codeId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing code_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = max(1, (int) $_GET['page']);
+        if (isset($_GET['per_page'])) $params['per_page'] = min(max(1, (int) $_GET['per_page']), 50);
+        $endpoint = '/organizer/promo-codes/' . $codeId . '/usage' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER TEAM ====================
 
     case 'organizer.team':

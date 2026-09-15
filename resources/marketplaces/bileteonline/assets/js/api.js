@@ -548,6 +548,10 @@ const BileteOnlineAPI = {
         if (endpoint === '/organizer/payouts' || endpoint.includes('/organizer/payouts?')) return 'organizer.payouts';
 
         // Organizer promo codes
+        if (endpoint.match(/\/organizer\/promo-codes\/\d+\/activate$/)) return 'organizer.promo-code.activate';
+        if (endpoint.match(/\/organizer\/promo-codes\/\d+\/deactivate$/)) return 'organizer.promo-code.deactivate';
+        if (endpoint.match(/\/organizer\/promo-codes\/\d+\/stats$/)) return 'organizer.promo-code.stats';
+        if (endpoint.match(/\/organizer\/promo-codes\/\d+\/usage$/)) return 'organizer.promo-code.usage';
         if (endpoint.match(/\/organizer\/promo-codes\/\d+$/)) return 'organizer.promo-code';
         if (endpoint === '/organizer/promo-codes' || endpoint.includes('/organizer/promo-codes?')) return 'organizer.promo-codes';
 
@@ -917,7 +921,7 @@ const BileteOnlineAPI = {
         }
 
         // Organizer promo code endpoint - extract code ID
-        const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)$/);
+        const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)(?:\/(?:activate|deactivate|stats|usage))?$/);
         if (organizerPromoCodeMatch) {
             return `code_id=${encodeURIComponent(organizerPromoCodeMatch[1])}`;
         }
