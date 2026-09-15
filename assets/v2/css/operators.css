@@ -1,0 +1,71 @@
+/* bilete.online v2: operators catalog (/operatori). Needs base.css + cities.css (hero, filter column, cards, the
+   "operator page" section layout, final CTA); markup in operatori.php, filters in assets/v2/js/operators.js. */
+
+/* =================== HERO =================== */
+.os-quick{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.os-quick button{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1.5px solid rgba(247,247,245,.28);border-radius:999px;background:transparent;color:#F7F7F5;font:700 .9375rem/1 var(--font);cursor:pointer;transition:border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
+.os-quick button:hover{border-color:#F7F7F5;background:rgba(247,247,245,.08)}
+.os-quick button span{font-size:.8125rem;font-weight:600;color:var(--on-deep-muted);font-variant-numeric:tabular-nums}
+.os-quick button[aria-pressed="true"]{border-color:#F7F7F5;background:#F7F7F5;color:var(--deep)}
+.os-quick button[aria-pressed="true"] span{color:var(--muted)}
+
+/* hero card: the operator with the most activities and its first ones */
+.os-graph-box{margin-top:20px;padding:18px;border-radius:var(--r-m);background:var(--surface-2)}
+.os-graph-op{display:flex;align-items:center;gap:12px;min-width:0}
+.os-graph-op > div{min-width:0}
+.os-graph-op b{display:block;overflow:hidden;font-size:1.25rem;font-weight:700;letter-spacing:-.02em;color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
+.os-graph-op small{display:block;color:var(--muted)}
+.os-avatar{display:grid;place-items:center;flex:none;width:48px;height:48px;overflow:hidden;border-radius:14px;background:#E43A33;color:#FFFFFF;font-size:1.25rem;font-weight:700}
+.os-avatar img{width:100%;height:100%;object-fit:cover}
+.os-graph-rows{display:grid;gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.os-graph-rows li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.os-graph-rows span{min-width:0;overflow:hidden;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.os-graph-rows b{flex:none;font-size:.875rem;color:var(--action-hover)}
+.os-graph-empty{margin:16px 0 0;line-height:1.5;color:var(--muted)}
+
+/* =================== FILTERS =================== */
+.os-filter{padding:18px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface)}
+.os-field{display:grid;gap:6px}
+.os-field label{font-size:.875rem;font-weight:700;color:var(--ink)}
+.os-select{position:relative;display:flex}
+.os-select select{width:100%;min-height:48px;padding:0 42px 0 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:500 1rem/1.2 var(--font);-webkit-appearance:none;appearance:none;cursor:pointer}
+.os-select select:hover{border-color:#BFC4BE}
+.os-select select:focus-visible{outline:none;border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.18)}
+.os-select .ic{position:absolute;right:14px;top:50%;width:18px;height:18px;color:var(--muted);transform:translateY(-50%);pointer-events:none}
+.os-check{display:flex;align-items:center;gap:10px;min-height:44px;margin-top:8px;font-weight:700;cursor:pointer}
+.os-check input{flex:none;width:20px;height:20px;margin:0;accent-color:var(--action)}
+.os-filter .ct-note a{display:inline-flex;align-items:center;gap:6px;min-height:36px;margin-top:6px;font-weight:700;color:var(--action);text-decoration:none}
+.os-filter .ct-note a:hover{text-decoration:underline;text-underline-offset:3px}
+.os-filter .ct-note a .ic{width:16px;height:16px}
+
+/* =================== OPERATOR CARDS =================== */
+.os-logo{position:absolute;z-index:1;left:14px;top:14px;width:52px;height:52px;overflow:hidden;border:2px solid rgba(247,247,245,.92);border-radius:14px;background:#FFFFFF}
+.os-logo img{display:block;width:100%;height:100%;object-fit:cover}
+.os-meta{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.os-verified,.os-chip{display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:0 10px;border-radius:999px;font-size:.75rem;font-weight:700;line-height:1.2}
+.os-verified{background:var(--tint-green);color:var(--action-hover)}
+.os-verified .ic{width:14px;height:14px}
+.os-chip{background:var(--bg);color:var(--ink)}
+/* two full-width rows: side by side, "Activități în Cluj-Napoca" and "Vezi operatorul" each wrapped onto two lines */
+.os-card .ct-links{grid-template-columns:minmax(0,1fr)}
+.os-card .ct-links a{text-align:center}
+.os-none-sub{margin-top:-6px!important;font-weight:500!important}
+.os-state{display:grid;justify-items:center;gap:10px;padding:44px 24px;border:1.5px dashed #CFD3CC;border-radius:var(--r-l);background:var(--surface);text-align:center}
+.os-state.is-error{border-style:solid;border-color:#F3C1BE;background:#FFF8F7}
+.os-state h3{margin:0;font-size:1.375rem;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.os-state p{max-width:52ch;margin:0;line-height:1.5;color:var(--muted)}
+.os-state-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px}
+
+/* =================== WHAT AN OPERATOR PAGE HOLDS =================== */
+.os-features{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+@media (min-width:640px){.os-features{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.os-feature{padding:22px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--bg)}
+.os-feature small{font-size:var(--text-label);font-weight:700;letter-spacing:.12em;color:var(--action)}
+.os-feature h3{margin:6px 0 0;font-size:1.5rem;font-weight:700;line-height:1.15;letter-spacing:-.025em;color:var(--ink)}
+.os-feature p{margin:6px 0 0;line-height:1.5;color:var(--muted)}
+.os-feature.is-mint{border-color:#CDE6D8;background:var(--tint-green)}
+.os-feature.is-mint small{color:var(--action-hover)}
+.os-feature.is-deep{border-color:var(--deep);background:var(--deep)}
+.os-feature.is-deep small{color:#FFD66B}
+.os-feature.is-deep h3{color:#F7F7F5}
+.os-feature.is-deep p{color:var(--on-deep-muted)}
