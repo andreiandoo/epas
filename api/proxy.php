@@ -3684,6 +3684,9 @@ switch ($action) {
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        // core filters on these too; they were dropped here, so "Check-in făcut / În așteptare" never filtered
+        if (isset($_GET['checked_in']) && in_array($_GET['checked_in'], ['0', '1'], true)) $params['checked_in'] = $_GET['checked_in'];
+        if (isset($_GET['ticket_type_id']) && ctype_digit((string) $_GET['ticket_type_id'])) $params['ticket_type_id'] = $_GET['ticket_type_id'];
         $endpoint = '/organizer/events/' . urlencode($eventId) . '/participants' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
