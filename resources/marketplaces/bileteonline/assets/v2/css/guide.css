@@ -8,7 +8,6 @@
 @media (max-width:599px){.gd-hero .deco-arches{display:none}}
 .gd-line{position:absolute;z-index:0;left:-4%;bottom:-6px;width:108%;height:auto;aspect-ratio:3240 / 310;opacity:.22;pointer-events:none}
 .gd-hero-in{position:relative;z-index:1;padding-block:calc(var(--hdr-h) + var(--space-5)) clamp(72px, 9vw, 120px)}
-.gd-hero.has-cover .gd-hero-in{padding-bottom:clamp(110px, 14vw, 200px)}
 .gd-hero .crumbs,.gd-hero .crumbs a{color:var(--on-deep-muted)}
 .gd-hero .crumbs a:hover{color:#FFFFFF}
 .gd-hero .crumbs [aria-current]{max-width:min(46ch, 100%);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -20,9 +19,6 @@ a.gd-topic-link:hover{background:#45C487}
 .gd-h{max-width:22ch;margin:var(--space-4) 0 0;font-size:clamp(2.25rem, 4.6vw, 4rem);font-weight:700;line-height:1.04;letter-spacing:-.04em;color:#F7F7F5;overflow-wrap:break-word}
 .gd-lead{max-width:62ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}
 
-.gd-cover{position:relative;z-index:2;margin-top:calc(-1 * clamp(80px, 11vw, 160px));margin-bottom:0}
-.gd-cover img{display:block;width:100%;max-height:560px;aspect-ratio:16 / 7;object-fit:cover;border-radius:var(--r-l);background:var(--surface-2);box-shadow:0 40px 80px -48px rgba(14,72,55,.6)}
-@media (max-width:599px){.gd-cover img{aspect-ratio:4 / 3}}
 
 .gd-strip{display:grid;align-items:center;gap:14px 24px;margin-top:var(--space-5);padding:18px 22px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface)}
 @media (min-width:900px){.gd-strip{grid-template-columns:minmax(0,1fr) auto}}
@@ -124,3 +120,32 @@ a.gd-topic-link:hover{background:#45C487}
 .gd-rel-body small{font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--action)}
 .gd-rel-body b{font-size:1.25rem;font-weight:700;line-height:1.2;letter-spacing:-.02em}
 .gd-rel-body span{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5;color:var(--muted)}
+
+/* =================== HERO IMAGE: the guide's own image in an arch =================== */
+/* The arch rises from the bottom, the photo settles from a slight zoom, an outline arch echoes it and a read-time tag
+   lands last. Only with an image uploaded in the admin. */
+.gd-hero.has-art .gd-hero-in{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:clamp(36px, 6vw, 72px)}
+@media (min-width:1024px){.gd-hero.has-art .gd-hero-in{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}}
+.gd-hero-copy{min-width:0}
+.gd-art{position:relative;justify-self:center;width:min(100%, 460px);margin:0 0 12px}
+@media (min-width:1024px){.gd-art{justify-self:end;margin:0}}
+.gd-art-frame{position:relative;z-index:1;display:block;aspect-ratio:4 / 5;overflow:hidden;border-radius:50% 50% 28px 28px / 38% 38% 28px 28px;background:var(--deep-2);box-shadow:0 60px 100px -50px rgba(0,0,0,.7)}
+.gd-art-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gd-art-ring{position:absolute;inset:18px -18px -18px 18px;border:2px solid rgba(43,182,115,.6);border-radius:50% 50% 30px 30px / 38% 38% 30px 30px;pointer-events:none}
+.gd-art-tag{position:absolute;z-index:2;left:-14px;bottom:34px;display:inline-flex;align-items:center;gap:8px;max-width:calc(100% + 14px);padding:10px 16px 10px 12px;border-radius:999px;background:#F7F7F5;color:var(--ink);font-size:.875rem;font-weight:700;box-shadow:0 24px 44px -22px rgba(0,0,0,.6)}
+.gd-art-tag .ic{width:18px;height:18px;color:var(--green)}
+.gd-art-tag b{margin-left:4px;padding:3px 9px;border-radius:999px;background:var(--tint-green, #E3F4EA);color:var(--green);font-size:.75rem;white-space:nowrap}
+.gd-art-line{position:absolute;z-index:2;left:-40%;right:-20%;bottom:-8%;width:160%;height:auto;opacity:.5;pointer-events:none}
+@media (max-width:599px){.gd-art{width:min(100%, 360px)}.gd-art-tag{left:8px;bottom:22px}.gd-art-ring{inset:12px -10px -12px 10px}}
+@media (prefers-reduced-motion: no-preference){
+  .gd-art-frame{animation:gd-arch 1100ms var(--ease-out) both}
+  .gd-art-frame img{animation:gd-zoom 1700ms var(--ease-out) both}
+  .gd-art-ring{animation:gd-ring 1200ms var(--ease-out) 250ms both}
+  .gd-art-tag{animation:gd-tag 700ms var(--ease-out) 750ms both}
+  .gd-art-line{animation:gd-line 1400ms var(--ease-inout) 400ms both}
+  @keyframes gd-arch{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes gd-zoom{from{transform:scale(1.2)}to{transform:scale(1)}}
+  @keyframes gd-ring{from{opacity:0;transform:translate(-18px, -18px)}to{opacity:1;transform:none}}
+  @keyframes gd-tag{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+  @keyframes gd-line{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+}

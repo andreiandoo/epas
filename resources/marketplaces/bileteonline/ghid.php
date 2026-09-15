@@ -8,7 +8,8 @@
  * from the guide, with a generic set when it has none. There is deliberately no table of contents: the body has no
  * stable heading anchors.
  *
- * Top to bottom: hero (topic, read time, date, title, excerpt), cover, "activities for this guide" strip, body + FAQ
+ * Top to bottom: hero (topic, read time, date, title, excerpt, and the guide's own image in an arch beside them),
+ * "activities for this guide" strip, body + FAQ
  * beside the sidebar (linked event, gift card, share), recommended activities rail, related guides.
  */
 
@@ -119,7 +120,7 @@ $gdMonths = [1 => 'ianuarie', 2 => 'februarie', 3 => 'martie', 4 => 'aprilie', 5
 $dateIso = $ts ? date('c', $ts) : null;
 $dateLabel = $ts ? (int) date('j', $ts) . ' ' . $gdMonths[(int) date('n', $ts)] . ' ' . date('Y', $ts) : '';
 
-// Only the guide's own image makes the cover: the provisional local photos are too small for a full-width picture.
+// Only the guide's own image (uploaded in the admin) is shown: no stand-in photos.
 $coverUrl = v2_media_url($article['image_url'] ?? null);
 $content = (string) ($article['content'] ?? '');
 $contentHtml = trim(strip_tags($content, '<img><iframe>')) !== '' ? $gdRenderShortcodes($content) : '';
@@ -247,10 +248,11 @@ include __DIR__ . '/includes/v2/header.php';
 <main id="main" tabindex="-1">
   <article class="gd" aria-labelledby="gd-h">
     <!-- ===================== HERO ===================== -->
-    <header class="gd-hero<?= $coverUrl ? ' has-cover' : '' ?>">
+    <header class="gd-hero<?= $coverUrl ? ' has-art' : '' ?>">
       <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
       <svg class="gd-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
       <div class="wrap gd-hero-in">
+        <div class="gd-hero-copy">
         <nav class="crumbs" aria-label="Breadcrumb">
           <?php foreach ($breadcrumbs as $bi => $bc): ?>
             <?php if ($bi > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
@@ -264,13 +266,19 @@ include __DIR__ . '/includes/v2/header.php';
         </p>
         <h1 class="gd-h" id="gd-h"><?= v2_e($title) ?></h1>
         <?php if ($excerpt !== ''): ?><p class="gd-lead"><?= v2_e($excerpt) ?></p><?php endif; ?>
+        </div>
+        <?php if ($coverUrl): ?>
+        <figure class="gd-art">
+          <span class="gd-art-ring" aria-hidden="true"></span>
+          <span class="gd-art-frame"><img src="<?= v2_e($coverUrl) ?>" alt="<?= v2_e($title) ?>" fetchpriority="high" decoding="async"></span>
+          <span class="gd-art-tag" aria-hidden="true"><?= v2_ic('clock') ?><?= v2_e($readTime) ?> de citit<?php if ($catName !== ''): ?><b><?= v2_e($catName) ?></b><?php endif; ?></span>
+          <svg class="gd-art-line" viewBox="900 585 2340 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+        </figure>
+        <?php endif; ?>
       </div>
     </header>
     <div id="hdr-sentinel" aria-hidden="true"></div>
 
-    <?php if ($coverUrl): ?>
-    <figure class="wrap gd-cover"><img src="<?= v2_e($coverUrl) ?>" alt="<?= v2_e($title) ?>" fetchpriority="high" decoding="async"></figure>
-    <?php endif; ?>
 
     <?php if ($topicHref !== ''): ?>
     <!-- ===================== ACTIVITIES FOR THIS GUIDE ===================== -->
