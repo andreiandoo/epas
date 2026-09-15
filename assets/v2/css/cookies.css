@@ -1,0 +1,61 @@
+/* bilete.online v2: cookie policy (/cookies). Needs base.css; the banner and settings dialog are styled there. */
+
+/* =================== HERO =================== */
+.cp-hero{position:relative;isolation:isolate;overflow:hidden;overflow:clip;background:radial-gradient(55% 70% at 100% 0%, rgba(43,182,115,.2), rgba(43,182,115,0) 70%), radial-gradient(45% 55% at 0% 100%, rgba(242,169,0,.14), rgba(242,169,0,0) 70%), var(--deep);color:var(--on-deep)}
+.cp-hero :focus-visible{outline-color:var(--online)}
+.cp-hero .deco-arches{right:-80px;left:auto;top:28%;width:340px;opacity:.12}
+@media (max-width:599px){.cp-hero .deco-arches{display:none}}
+.cp-in{position:relative;z-index:1;max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(56px, 8vw, 96px)}
+.cp-hero .crumbs,.cp-hero .crumbs a{color:var(--on-deep-muted)}
+.cp-hero .crumbs a:hover{color:#FFFFFF}
+.cp-kicker{margin:var(--space-5) 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
+.cp-h{max-width:17ch;margin:0;font-size:clamp(2.5rem, 6vw, 4.75rem);font-weight:700;line-height:1;letter-spacing:-.045em;color:#F7F7F5;text-wrap:balance}
+.cp-lead{max-width:62ch;margin:var(--space-5) 0 0;font-size:var(--text-lead);line-height:1.6;color:var(--on-deep-muted)}
+.cp-cta{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-6)}
+.cp-cta .btn .ic{width:20px;height:20px}
+@media (max-width:479px){.cp-cta .btn{flex:1 1 100%}}
+.cp-status{max-width:62ch;min-height:1.5em;margin:var(--space-4) 0 0;font-size:.9375rem;font-weight:600;line-height:1.5;color:#DDF3E6}
+
+/* =================== CATEGORIES =================== */
+.cp-body{background:var(--bg)}
+.cp-cards{display:grid;gap:var(--space-4)}
+@media (min-width:640px){.cp-cards{grid-template-columns:repeat(2, minmax(0,1fr))}}
+@media (min-width:1100px){.cp-cards{grid-template-columns:repeat(4, minmax(0,1fr))}}
+.cp-card{display:flex;flex-direction:column;padding:22px 24px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface)}
+.cp-card-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.cp-card-k{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--action)}
+.cp-card h2{margin:var(--space-4) 0 0;font-size:1.625rem;font-weight:700;line-height:1.1;letter-spacing:-.03em;color:var(--green)}
+.cp-card p:not(.cp-card-k){margin:8px 0 0;color:var(--muted);line-height:1.55}
+.cp-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#ECEDE8;color:var(--muted);font-size:.75rem;font-weight:700;white-space:nowrap}
+.cp-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7}
+.cp-pill[data-on="true"]{background:var(--tint-green);color:var(--green)}
+.cp-pill[data-on="true"]::before{opacity:1}
+.cp-card.is-soft{background:var(--surface-2, #EFEFEA)}
+.cp-card.is-soft .cp-pill:not([data-on="true"]){background:var(--surface)}
+.cp-card.is-mint{border-color:#CFE8D9;background:var(--tint-green)}
+.cp-card.is-mint .cp-pill{background:var(--surface)}
+.cp-card.is-deep{border-color:transparent;background:var(--deep)}
+.cp-card.is-deep .cp-card-k{color:#FFD66B}
+.cp-card.is-deep h2{color:#F7F7F5}
+.cp-card.is-deep p:not(.cp-card-k){color:var(--on-deep-muted)}
+.cp-card.is-deep .cp-pill{background:rgba(247,247,245,.1);color:var(--on-deep-muted)}
+.cp-card.is-deep .cp-pill[data-on="true"]{background:var(--online);color:#0B2F24}
+
+/* =================== POLICY TEXT =================== */
+.cp-prose{max-width:760px;margin-top:clamp(48px, 7vw, 80px)}
+.cp-prose h2{margin:clamp(32px, 5vw, 48px) 0 0;font-size:clamp(1.75rem, 3.2vw, 2.25rem);font-weight:700;line-height:1.1;letter-spacing:-.035em;color:var(--green)}
+.cp-prose h2:first-child{margin-top:0}
+.cp-prose p{margin:var(--space-4) 0 0;font-size:1.0625rem;line-height:1.7;color:var(--muted)}
+.cp-prose strong{color:var(--ink)}
+.cp-prose a{color:var(--green);font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.cp-prose a:hover{color:var(--action)}
+
+/* =================== FINAL CTA =================== */
+.cp-final{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-5);margin-top:clamp(48px, 7vw, 80px);padding:clamp(24px, 4vw, 44px);overflow:hidden;border-radius:var(--r-l);background:radial-gradient(60% 90% at 100% 0%, rgba(242,169,0,.28), rgba(242,169,0,0) 70%), var(--action);color:#FFFFFF;isolation:isolate}
+.cp-final::after{content:"";position:absolute;inset:0;z-index:-1;background-image:radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.4px);background-size:16px 16px;opacity:.25;pointer-events:none}
+.cp-final-k{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.cp-final h2{margin:var(--space-2) 0 0;font-size:clamp(1.75rem, 3.4vw, 2.5rem);font-weight:700;line-height:1.08;letter-spacing:-.035em}
+.cp-btn-white{background:#FFFFFF;color:var(--green)}
+.cp-btn-white:hover{background:#F0F5F2}
+.cp-final :focus-visible{outline-color:#FFFFFF}
+@media (max-width:479px){.cp-final .btn{flex:1 1 100%}}

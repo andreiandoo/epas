@@ -1,115 +1,104 @@
 <?php
 /**
- * bilete.online — /cookies
+ * Cookie policy: /cookies (v2 design).
  *
- * Cookie policy + entry point for the preferences modal. The actual
- * banner + modal lives globally in includes/cookie-consent.php (auto-
- * included from footer). This page exists so the policy is crawlable
- * + linkable from the banner / footer.
+ * The policy text, the four categories and the ways to change the choice. The banner and the settings dialog are
+ * global (includes/v2/footer.php + base.js); the buttons here open that dialog through data-cc-action="open", so
+ * nothing is wiped and the page doesn't reload (the old page deleted the saved choice and reloaded to bring the banner
+ * back). cookies.js shows, on each category card and under the hero buttons, what the visitor has allowed right now,
+ * and follows the dialog as it saves.
  *
- * The "Schimbă preferințele" button just resets the saved consent so
- * the global Alpine component shows the banner again on next paint —
- * works without any extra wiring.
+ * The old text pointed to a floating cookie button that the v2 pages don't have; that sentence now names the buttons
+ * on this page and the Cookies link in the footer.
  */
 
 require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . "/includes/api.php";
+require_once __DIR__ . '/includes/api.php';
 
-// 30-minute page cache — static / rarely-changing content. Skips POST,
-// preview, nocache, and admin sessions (see includes/page-cache.php).
+// 30-minute page cache: static content (the visitor's own choice is read in the browser).
 $pageCacheTTL = 1800;
-require_once __DIR__ . "/includes/page-cache.php";
+require_once __DIR__ . '/includes/page-cache.php';
 
-$pageTitleRaw    = 'Politica de cookies — ' . SITE_NAME;
+require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
+
+$cpCards = [
+    ['essential', 'Necesare', 'Esențiale', 'Coș, checkout, login, sesiune, securitate, memorarea consimțământului și măsurare de audiență first-party strict agregată. Mereu active.', ''],
+    ['analytics', 'Măsurare', 'Analytics', 'Instrumente terțe (Google Analytics), conversii și erori. Pornite doar cu acordul tău.', 'is-soft'],
+    ['personalization', 'Recomandări', 'Personalizare', 'Recomandări după oraș/categorii vizitate, filtre preferate. Local, fără reclame externe.', 'is-mint'],
+    ['marketing', 'Campanii', 'Marketing', 'Pixeli Meta / Google / TikTok pentru campanii și remarketing. Doar după accept explicit.', 'is-deep'],
+];
+
+$pageTitleRaw = 'Politica de cookies — ' . SITE_NAME;
 $pageDescription = 'Cum folosește bilete.online cookies pentru funcționarea platformei, analytics, personalizare și marketing. Cum îți gestionezi preferințele.';
-$canonicalUrl    = SITE_URL . '/cookies';
-$currentPage     = 'cookies';
-$cssBundle       = 'static';
+$canonicalUrl = SITE_URL . '/cookies';
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+$v2Styles = ['cookies.css'];
+$v2Scripts = ['cookies.js'];
+$v2HeaderOverlay = true;
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
-
-<main>
-
-<section class="relative overflow-hidden border-b-2 border-ink">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_82%_14%,rgba(232,69,39,.18),transparent_30%),radial-gradient(circle_at_16%_72%,rgba(30,74,61,.18),transparent_34%)]"></div>
-    <div class="relative max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-12 sm:pb-16">
-        <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
-            <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Cookies</span>
-        </nav>
-        <p class="mt-8 stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">POLITICĂ COOKIES</p>
-        <h1 class="mt-6 font-display text-5xl sm:text-7xl font-bold leading-[.85]">Cum folosim cookies pe bilete.online</h1>
-        <p class="mt-6 max-w-3xl text-lg sm:text-xl text-ink-soft leading-relaxed">
-            Folosim cookies pentru funcționarea platformei (coș, checkout, login) și, doar cu acordul tău, pentru analytics, personalizare și marketing.
-            Poți schimba alegerea oricând din banner sau din butonul de mai jos.
-        </p>
-
-        <div class="mt-8 flex flex-wrap gap-3">
-            <button onclick="(function(){ try{ localStorage.removeItem('bo_cookie_consent_v1'); }catch(e){} location.reload(); })()" class="rounded-full bg-vermilion text-paper px-6 py-3.5 font-bold hover:bg-vermilion-d transition">Schimbă preferințele</button>
-            <a href="/confidentialitate" class="rounded-full border-2 border-ink px-6 py-3.5 font-bold hover:bg-ink hover:text-paper transition">Politica de confidențialitate</a>
-        </div>
+<main id="main" tabindex="-1">
+  <section class="cp-hero" aria-labelledby="cp-h">
+    <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
+    <div class="cp-in">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Cookies</span></nav>
+      <p class="cp-kicker">Politică cookies</p>
+      <h1 class="cp-h" id="cp-h">Cum folosim cookies pe bilete.online</h1>
+      <p class="cp-lead">Folosim cookies pentru funcționarea platformei (coș, checkout, login) și, doar cu acordul tău, pentru analytics, personalizare și marketing. Poți schimba alegerea oricând din banner sau din butonul de mai jos.</p>
+      <div class="cp-cta">
+        <button class="btn btn-light" type="button" data-cc-action="open"><?= v2_ic('lock-simple') ?>Schimbă preferințele</button>
+        <a class="btn btn-outline-light" href="/confidentialitate">Politica de confidențialitate</a>
+      </div>
+      <p class="cp-status" id="cp-status" role="status"></p>
     </div>
-</section>
+    <div id="hdr-sentinel" aria-hidden="true"></div>
+  </section>
 
-<section class="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
-    <div class="grid lg:grid-cols-4 gap-5">
-        <article class="rounded-3xl border-2 border-ink bg-paper p-6">
-            <p class="font-mono text-xs tracking-[.18em] text-vermilion">NECESARE</p>
-            <h2 class="mt-3 font-display text-3xl font-bold">Esențiale</h2>
-            <p class="mt-2 text-ink-soft">Coș, checkout, login, sesiune, securitate, memorarea consimțământului și măsurare de audiență first-party strict agregată. Mereu active.</p>
+  <section class="sec cp-body" aria-label="Categorii și politică">
+    <div class="wrap">
+      <div class="cp-cards">
+        <?php foreach ($cpCards as [$cardKey, $cardK, $cardTitle, $cardText, $cardTone]): ?>
+        <article class="cp-card <?= $cardTone ?>">
+          <div class="cp-card-top">
+            <p class="cp-card-k"><?= v2_e($cardK) ?></p>
+            <span class="cp-pill" data-cp-state="<?= $cardKey ?>" data-on="<?= $cardKey === 'essential' ? 'true' : 'false' ?>"><?= $cardKey === 'essential' ? 'Mereu active' : 'Oprit' ?></span>
+          </div>
+          <h2><?= v2_e($cardTitle) ?></h2>
+          <p><?= v2_e($cardText) ?></p>
         </article>
-        <article class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6">
-            <p class="font-mono text-xs tracking-[.18em] text-vermilion">MĂSURARE</p>
-            <h2 class="mt-3 font-display text-3xl font-bold">Analytics</h2>
-            <p class="mt-2 text-ink-soft">Instrumente terțe (Google Analytics), conversii și erori. Pornite doar cu acordul tău.</p>
-        </article>
-        <article class="rounded-3xl border-2 border-ink/15 bg-mint p-6">
-            <p class="font-mono text-xs tracking-[.18em] text-forest">RECOMANDĂRI</p>
-            <h2 class="mt-3 font-display text-3xl font-bold">Personalizare</h2>
-            <p class="mt-2 text-ink-soft">Recomandări după oraș/categorii vizitate, filtre preferate. Local, fără reclame externe.</p>
-        </article>
-        <article class="rounded-3xl border-2 border-ink bg-ink text-paper p-6">
-            <p class="font-mono text-xs tracking-[.18em] text-ochre">CAMPANII</p>
-            <h2 class="mt-3 font-display text-3xl font-bold">Marketing</h2>
-            <p class="mt-2 text-paper/60">Pixeli Meta / Google / TikTok pentru campanii și remarketing. Doar după accept explicit.</p>
-        </article>
-    </div>
+        <?php endforeach; ?>
+      </div>
 
-    <div class="mt-12 prose-venue max-w-4xl text-lg leading-relaxed text-ink-soft">
-        <h2 class="font-display text-4xl font-bold text-ink">Ce sunt cookies?</h2>
+      <div class="cp-prose">
+        <h2>Ce sunt cookies?</h2>
         <p>Cookies sunt fișiere mici stocate de browser pentru a-ți face experiența online predictibilă: coșul tău rămâne plin, sesiunea de login persistă, preferințele se țin minte.</p>
 
-        <h2 class="font-display text-4xl font-bold text-ink mt-10">Categoriile noastre de cookies</h2>
+        <h2>Categoriile noastre de cookies</h2>
         <p><strong>Esențiale</strong> — necesare pentru funcționarea platformei (coș, checkout, login, securitate) plus măsurarea de audiență first-party, strict agregată: fără partajare cu terți, fără urmărire cross-site, cu IP anonimizat și retenție limitată. Conform ghidului CNIL privind audience measurement, această măsurare poate fi exceptată de la consimțământ, așa că rămâne mereu activă. Aceste cookies nu pot fi dezactivate.</p>
         <p><strong>Analytics</strong> — instrumente terțe (de ex. Google Analytics), conversii și rapoarte avansate. Se activează doar cu acordul tău.</p>
         <p><strong>Personalizare</strong> — folosim preferințele tale (orașul, categoriile vizitate) pentru recomandări mai relevante. Opțional.</p>
         <p><strong>Marketing</strong> — pixeli pentru campanii Meta, Google Ads, TikTok și audiențe personalizate. Doar cu accept explicit.</p>
 
-        <h2 class="font-display text-4xl font-bold text-ink mt-10">Cum îți gestionezi alegerea</h2>
+        <h2>Cum îți gestionezi alegerea</h2>
         <p>La prima vizită apare un banner unde poți alege: <strong>Acceptă toate</strong>, <strong>Refuză opționale</strong> sau <strong>Personalizează</strong>.</p>
-        <p>Poți schimba oricând setările din butonul plutitor 🍪 (stânga-jos pe orice pagină) sau din butonul „Schimbă preferințele" din partea de sus a acestei pagini.</p>
+        <p>Poți schimba oricând setările din butonul „Schimbă preferințele” din partea de sus a acestei pagini sau din cel de la finalul ei. Pagina aceasta este legată din subsolul oricărei pagini, la <strong>Cookies</strong>.</p>
 
-        <h2 class="font-display text-4xl font-bold text-ink mt-10">Drepturile tale</h2>
+        <h2>Drepturile tale</h2>
         <p>Conform GDPR, ai dreptul să fii informat despre prelucrarea datelor tale, să ai acces la ele, să le rectifici, să le ștergi sau să te opui prelucrării. Pentru orice solicitare GDPR, scrie-ne pe <a href="/contact">pagina de contact</a> sau consultă <a href="/confidentialitate">Politica de confidențialitate</a>.</p>
-    </div>
+      </div>
 
-    <div class="mt-12 rounded-3xl border-2 border-ink bg-vermilion text-paper p-8 flex flex-wrap items-center justify-between gap-5">
+      <div class="cp-final">
         <div>
-            <p class="font-mono text-xs tracking-[.2em] text-paper/65">SCHIMBĂ ORICÂND</p>
-            <h2 class="mt-2 font-display text-4xl font-bold">Vrei să-ți modifici preferințele?</h2>
+          <p class="cp-final-k">Schimbă oricând</p>
+          <h2>Vrei să-ți modifici preferințele?</h2>
         </div>
-        <button onclick="(function(){ try{ localStorage.removeItem('bo_cookie_consent_v1'); }catch(e){} location.reload(); })()" class="rounded-full bg-paper text-ink px-6 py-3.5 font-bold hover:bg-ink hover:text-paper transition">Deschide bannerul</button>
+        <button class="btn cp-btn-white" type="button" data-cc-action="open">Deschide setările cookies</button>
+      </div>
     </div>
-</section>
-
+  </section>
 </main>
-
-<style>
-    .prose-venue h2 { margin-top: 1.75rem; margin-bottom: .8rem; }
-    .prose-venue p { margin-bottom: 1rem; }
-    .prose-venue a { color: #E84527; font-weight: 700; background-image: linear-gradient(currentColor,currentColor); background-size: 100% 2px; background-repeat: no-repeat; background-position: 0 100%; }
-    .prose-venue a:hover { background-size: 0 2px; }
-</style>
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>
